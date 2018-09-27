@@ -1,0 +1,1030 @@
+
+:mod:`DAQ_Scan_main`
+====================
+
+.. py:module:: DAQ_Scan_main
+
+
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+.. py:class:: QSpinBox_ro(**kwargs)
+
+   
+
+   
+
+   .. method:: __init__(**kwargs)
+
+      
+
+
+   
+
+
+
+.. py:class:: PresetScalableGroupMove(**opts)
+
+   |
+
+   ================ =============
+   **Attributes**    **Type**
+   *opts*            dictionnary
+   ================ =============
+
+   .. seealso:: :class:`hardware.DAQ_Move_Stage_type`
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(**opts)
+
+      
+
+
+
+   
+
+   .. method:: addNew(typ)
+
+      
+      Add a child.
+
+      =============== ===========
+      **Parameters**   **Type**
+      *typ*            string
+      =============== ===========
+
+      
+
+
+   
+
+
+
+.. py:class:: PresetScalableGroupDet(**opts)
+
+   =============== ==============
+   **Attributes**    **Type**
+   *opts*            dictionnary
+   *options*         string list
+   =============== ==============
+
+   .. seealso:: :class:`hardware0D.DAQ_0DViewer_Det_type`, :class:`hardware1D.DAQ_1DViewer_Det_type`, :class:`hardware2D.DAQ_2DViewer_Det_type`
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(**opts)
+
+      
+
+
+
+   
+
+   .. method:: addNew(typ)
+
+      
+      Add a child.
+
+      =============== ===========
+      **Parameters**    **Type**
+      *typ*             string
+      =============== ===========
+
+      
+
+
+   
+
+
+
+
+
+.. function:: set_param_from_param(param_old,param_new)
+
+   
+   Walk through parameters children and set values using new parameter values.
+
+   
+
+
+
+
+
+.. py:class:: DAQ_Scan
+
+   ======================= =====================================
+   **Attributes**          **Type**
+   *title*                 string
+   *splash_sc*             instance of QtWidgets.QSplashScreen
+   *init_prog*             boolean
+   *widgetsettings*        instance of QtWidgets.QWidget
+   *dockarea*              instance of pyqtgraph.DockArea
+   *mainwindow*            instance of pyqtgraph.DockArea
+   *dockarea*              instance of pyqtgraph.DockArea
+   *plot_items*            list
+   *plot_colors*           string list
+   *wait_time*             int
+   *settings_tree*         instance of pyqtgraph.parametertree
+   *DAQscan_settings*      instance of pyqtgraph.parametertree
+   *scan_parameters*       dictionnary
+   *date*                  instance of QDateTime
+   *params_dataset*        dictionnary list
+   *params_scan*           dictionnary list
+   *param*                 dictionnary list
+   *params_move*           dictionnary list
+   *params_det*            dictionnary list
+   *preset_params*         instance of pyqtgraph.parametertree
+   *dataset_attributes*    instance of pyqtgraph.parametertree
+   *scan_attributes*       instance of pyqtgraph.parametertree
+   *scan_x_axis*           float array
+   *scan_y_axis*           float array
+   *scan_data_1D*          double precision float array
+   *scan_data_2D*          double precision float array
+   *ind_scan*              int
+   *scan_data_2D_to_save*  double precision float array
+   *scan_data_1D_to_save*  double precision float array
+   *save_parameters*       dictionnary
+   *det_modules_scan*      Object list
+   *move_modules_scan*     Object list
+   *menubar*               instance of QMenuBar
+   *log_signal*            instance of pyqtSignal
+   ======================= =====================================
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__()
+
+      
+      | DAQ_Scan(parent,fname="",move_modules=None,detector_modules=None) is a user interface that will enable scanning of motors controlled by the module DAQ_Move and acquisition of signals using DAQ_0DViewer,DAQ_1DViewer or DAQ_2DViewer.
+      |
+      | Parent is the parent Widget ( a QWidget in general).
+      |
+      | Fname is a path pointing to a png image to be displayed at the beginning in the 2D viewer of the scan module.
+      |
+      | Move_modules is a dict of the type move_modules=dict(polarization=DAQ_Move_polarization) where DAQ_Move_polarization is an instance of the DAQ_Move class.
+      |
+      | Detector_modules is a dict of the type detector_modules=dict(current=DAQ_0D_current) where DAQ_0D_current is an instance of the DAQ_0DViewer class.
+      |
+      | The detector module can be any instance in the list:  DAQ_0DViewer, DAQ_1DViewer, DAQ_2DViewer. These modules have in common a signal: export_data_signal exporting a dict of the type: dict:=[x_axis=...,data=list of vectors...,data_measurements=list of floats] to be connected to main GUI
+      |
+
+
+
+      .. seealso:: :meth:`move_to_crosshair`, :meth:`DAQscan_settings_changed`, :meth:`update_plot_det_items`, :meth:`update_scan_type`, :meth:`add_comments`, :meth:`add_log`, :meth:`set_scan`, :meth:`Quit_fun`, :meth:`start_scan`, :meth:`stop_scan`, :meth:`set_ini_positions`
+
+      
+
+
+
+   
+
+   .. method:: save_layout_state()
+
+      
+      Save the current layout state in the select_file obtained pathname file.
+      Once done dump the pickle.
+
+      .. seealso:: :meth:`DAQ_utils.select_file`
+
+      
+
+
+
+   
+
+   .. method:: load_layout_state()
+
+      
+      Load and restore a layout state from the select_file obtained pathname file.
+
+      .. seealso:: :meth:`DAQ_utils.select_file`
+
+      
+
+
+
+   
+
+   .. method:: add_log(txt)
+
+      
+      Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
+
+      =============== =========== ======================
+      **Parameters**    **Type**   **Description**
+      *txt*             string     the log info to add.
+      =============== =========== ======================
+
+      
+
+
+
+   
+
+   .. method:: create_menu(menubar)
+
+      
+      Create the menubar object looking like :
+          * **Docked windows**
+              * Load Layout
+              * Save Layout
+              * Clear Moves/Detector
+              * Show/Hide Log Window
+          * **Preset Modes**
+              * Create a preset
+          * **Load Presets**
+              * Mock preset
+              * Canon preset
+
+      | Connect each action to his referenced function.
+      |
+      | Finnaly store the directory list of xml files paths into the load_actions list.
+
+      =============== ======================= =====================================
+      **Parameters**   **Type**                 **Description**
+      *menubar*         instance of QMenuBar    The generic menubar object of menu
+      =============== ======================= =====================================
+
+      .. seealso:: :meth:`clear_move_det_controllers`, :meth:`load_layout_state`, :meth:`save_layout_state`, :meth:`show_file_attributes`, :meth:`set_preset_mode`
+
+      
+
+
+
+   
+
+   .. method:: clear_move_det_controllers()
+
+      
+      Remove all docks containing Moves or Viewers.
+
+      .. seealso:: :meth:`Quit_fun`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: set_Mock_preset()
+
+      
+      Set a Mock preset in 5 steps :
+          * **Connex_U** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list.
+          * **Connex_V** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list.
+          * **DAQ0D** : initialize viewer's dock and modules procedure. Append an instance of DAQ_Viewer to the detector_modules list.
+          * **DAQ1D** : initialize viewer's dock and modules procedure. Append an instance of DAQ_Viewer to the detector_modules list.
+          * **DAQ2D** : initialize viewer's dock and modules procedure. Append an instance of DAQ_Viewer to the detector_modules list.
+
+      :returns: The initialized Mock preset containing all the modules needed.
+      :rtype: (object list, object list) tuple
+
+      .. seealso:: :meth:`DAQ_Move_main.DAQ_Move`, :meth:`stop_moves`, :meth:`DAQ_viewer_main.DAQ_Viewer`
+
+      
+
+
+
+   
+
+   .. method:: set_canon_preset()
+
+      
+      Set a Canon preset in 6 steps :
+          * **Connex_U** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list. Update settings tree with com_port child.
+          * **Connex_V** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list. Update settings tree with com_port child.
+          * **Loading Detector Modules** (Hardware parameter settings procedure):
+              * *Kinesis* Power : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
+              * *Kinesis* Polarization : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
+              * *Kinesis_Flipper* Flipper : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
+              * *Kinesis_Flipper* Injection power : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
+              * *Kinesis Injection* power : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
+              * *PI* Delay : Append an instance of DAQ_Move to the move_modules list.
+
+              Update settings tree with :
+                  * *scaling*
+                  * *offset*
+                  * *use_scaling*
+                  * *move_bounds*
+                  * *limits*
+                  * *devices*
+
+          * **DAQ0d Keithley_Pico** : Initialize docks and modules procedure.
+
+          Update settings tree with :
+              * *Visa_ressources limits option*
+              * *Visa_ressources*
+              * *overshoot*
+
+          * **DAQ0D NIDAQ** : Initialize docks and modules procedure.
+
+          Update settings tree with :
+              * *Analog_Input NIDAQ_type*
+              * *limits NIDAQ_devices*
+              * *NIDAQ_devices*
+              * *channels*
+              * *overshoot*
+
+          * **DAQ2D OrsayCamera** : Initialize docks and modules procedure.
+
+          Update settings tree with :
+              * *overshoot*
+
+      .. seealso:: :meth:`DAQ_Move_main.DAQ_Move`, :meth:`stop_moves`
+
+      
+
+
+
+   
+
+   .. method:: set_file_preset(filename)
+
+      
+      Set a file preset from the converted xml file given by the filename parameter.
+
+      * For each move in the obtained preset_params parameterTree's "move_type" children:
+          * append to the move docks the corresponding Dock
+          * append to the move_modules list the corresponding instance of DAQ_Move object.
+          * in case of conex move type, update the settings tree with
+              * *axis_adress*
+              * *com_port limits*
+              * *com_port values*
+      * For each detector in the obtained preset_param tree:
+          * append to the det_types the corresponding det_type child.
+          * append to the detector_modules list the corresponding instance of DAQ_Move object.
+          * Update settings tree with avershoot
+
+      =============== =========== ===================================================
+      **Parameters**    **Type**    **Description**
+      *filename*        string      the name of the xml file to be converted/treated
+      =============== =========== ===================================================
+
+      :returns: The updated (Move modules list, Detector modules list).
+      :rtype: (Object list, Object list) tuple
+
+      .. seealso:: :meth:`custom_tree.XML_file_to_parameter`, :meth:`set_param_from_param`, :meth:`stop_moves`, :meth:`update_status`, :meth:`DAQ_Move_main.DAQ_Move`, :meth:`DAQ_viewer_main.DAQ_Viewer`
+
+      
+
+
+
+   
+
+   .. method:: set_preset_mode(filename)
+
+      
+      | Set the preset mode from the given filename.
+      |
+      | In case of "mock" or "canon" move, set the corresponding preset calling set_(*)_preset procedure.
+      |
+      | Else set the preset file using set_file_preset function.
+      | Once done connect the move and detector modules to logger to recipe/transmit informations.
+
+      Finally update DAQ_scan_settings tree with :
+          * Detectors
+          * Move
+          * plot_form.
+
+      =============== =========== =============================================
+      **Parameters**    **Type**    **Description**
+      *filename*        string      the name of the preset file to be treated
+      =============== =========== =============================================
+
+      .. seealso:: :meth:`set_Mock_preset`, :meth:`set_canon_preset`, :meth:`set_file_preset`, :meth:`add_log`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: stop_moves()
+
+      
+      Foreach module of the move module object liost, stop motion.
+
+      .. seealso:: :meth:`stop_scan`, :meth:`DAQ_Move_main.DAQ_Move.Stop_Motion`
+
+      
+
+
+
+   
+
+   .. method:: update_scan_type(param)
+
+      
+      Update the scan type from the given parameter.
+
+      =============== ================================= ========================
+      **Parameters**    **Type**                         **Description**
+      *param*           instance of pyqtgraph parameter  the parameter to treat
+      =============== ================================= ========================
+
+      .. seealso:: :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: update_plot_det_items(param)
+
+      
+      Add the scan_options-plot_form child to the DAQscan_settings tree from the selected value of the given parameter.
+
+      =============== ================================= ========================
+      **Parameters**    **Type**                         **Description**
+      *param*           instance of pyqtgraph parameter  the parameter to treat
+      =============== ================================= ========================
+
+      
+
+
+
+   
+
+   .. method:: DAQscan_settings_changed(param,changes)
+
+      
+      Check for changes in the given (parameter,change,information) tuple list.
+      In case of value changed, update the DAQscan_settings tree consequently.
+
+      =============== ============================================ ==============================
+      **Parameters**    **Type**                                     **Description**
+      *param*           instance of pyqtgraph parameter              the parameter to be checked
+      *changes*         (parameter,change,information) tuple list    the current changes state
+      =============== ============================================ ==============================
+
+      
+
+
+
+   
+
+   .. method:: move_to_crosshair(posx=None,posy=None)
+
+      
+      Compute the scaled position from the given x/y position and send the command_DAQ signal with computed values as attributes.
+
+
+      =============== =========== ==============================
+      **Parameters**    **Type**   **Description**
+      *posx*           float       the original x position
+      *posy*           float       the original y position
+      =============== =========== ==============================
+
+      .. seealso:: :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: set_ini_positions()
+
+      
+      Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
+
+      
+
+
+
+   
+
+   .. method:: Quit_fun()
+
+      
+      Quit the current instance of DAQ_scan and close on cascade move and detector modules.
+
+      .. seealso:: :meth:`Quit_fun`
+
+      
+
+
+
+   
+
+   .. method:: start_scan()
+
+      
+      Start an acquisition calling the set_scan function.
+      Emit the command_DAQ signal "start_acquisition".
+
+      .. seealso:: :meth:`set_scan`
+
+      
+
+
+
+   
+
+   .. method:: stop_scan()
+
+      
+      Emit the command_DAQ signal "stop_acquisiion".
+
+      .. seealso:: :meth:`set_ini_positions`
+
+      
+
+
+
+   
+
+   .. method:: add_comments()
+
+      
+      Add a scan info description child in the settings tree converting the xml concerned parameter to string and setting the child value consequently.
+
+      .. seealso:: :meth:`custom_tree.XML_string_to_parameter`, :meth:`custom_tree.parameter_to_xml_string`
+
+      
+
+
+
+   
+
+   .. method:: update_file_paths(update_h5=False)
+
+      
+      | Update the raw datas into the h5 file given by base_path child in DAQscan_setttings tree.
+      |
+      | Set metadata about dataset.
+      | Check in the raw data group (in h5 file) and save metadata into.
+      | Check if logger exist.
+      | Set attributes to the current group, such as scan_type.
+
+      =============== =========== ======================================
+      **Parameters**    **Type**    **Description**
+      *update_h5*       boolean    1/0 to update the associated h5 file
+      =============== =========== ======================================
+
+      .. seealso:: :meth:`DAQ_utils.set_current_scan_path`, :meth:`set_metadata_about_dataset`, :meth:`save_metadata`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: show_file_attributes(type_info="dataset")
+
+      
+      Switch the type_info value.
+
+      In case of :
+          * *scan* : Set parameters showing top false
+          * *dataset* : Set parameters showing top false
+          * *preset* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save preset parameters in a xml file).
+
+      Finally, in case of accepted preset type info, save the preset parameters in a xml file.
+
+      =============== =========== ====================================
+      **Parameters**    **Type**    **Description**
+      *type_info*       string      The file type information between
+                                      * scan
+                                      * dataset
+                                      * preset
+      =============== =========== ====================================
+
+      .. seealso:: :meth:`custom_tree.parameter_to_xml_file`, :meth:`create_menu`
+
+      
+
+
+
+   
+
+   .. method:: set_metadata_about_dataset()
+
+      
+      Set the date value of the data_set_info-date_time child of the data_set_attributes tree.
+      Show the 'dataset' file attributes.
+
+      .. seealso:: :meth:`show_file_attributes`
+
+      
+
+
+
+   
+
+   .. method:: set_metadata_about_current_scan()
+
+      
+      Set the date/time and author values of the scan_info child of the scan_attributes tree.
+      Show the 'scan' file attributes.
+
+      .. seealso:: :meth:`show_file_attributes`
+
+      
+
+
+
+   
+
+   .. method:: save_metadata(node,type_info="dataset_info")
+
+      
+      Switch the type_info value with :
+          * *'dataset_info'* : Give the params attributes the dataset_attributes values
+          * *'dataset'* : Give the params attributes the scan_attributes values
+
+      |
+      | Once done, course the params and add string casted date/time metadata as an element of attributes array.
+      | Save the contents of given parameter object into a xml string unde the attributes settings.
+
+      =============== =================== =========================================
+      **Parameters**    **Type**           **Description**
+      *node*            pytables h5 node   Root node to be treated
+      *type_info*       string             File type info between :
+                                              * 'dataset_info'
+                                              * 'scan_info'
+      =============== =================== =========================================
+
+      .. seealso:: :meth:`custom_tree.parameter_to_xml_string`
+
+      
+
+
+
+   
+
+   .. method:: set_scan()
+
+      
+      Set the scan in 8 steps :
+          * **Set the filename and path**
+          * **Set the moves positions according to data from user**
+          * **Get the name and list of all move modules used for this scan**
+          * **Get the name and list of all detector modules used for this scan**
+          * Switch the 'scan_option-scan_type' child value of the DAQ_scan settings tree between
+              * *Scan1D* :
+                  * Get the start/stop/step values from the tree
+                  * Define a linscape distributions as an axis
+                  * Set the scan_saves consequently.
+              * *Scan2D* :
+                  * Check the number of modules.
+                  * Get the start/stop/step values from the tree
+                  * Define linscape distributions as two axis
+                  * Set the corresponding scan (linear or spiral)
+                  * Set the scan_saves consequently
+          * **Check if the modules are initialized**
+          * **Do the acquisition calling the DAQ_Scan_Acquisition object**
+          * **Connect the queue-command, the update_scan_GUI and thread_status functions.**
+
+      .. seealso:: :meth:`update_file_paths`, :meth:`DAQ_utils.set_scan_spiral`, :meth:`DAQ_utils.set_scan_linear`, :meth:`DAQ_Scan_Acquisition`, :meth:`DAQ_Scan_main.queue_command`, :meth:`update_scan_GUI`, :meth:`thread_status`
+
+      
+
+
+
+   
+
+   .. method:: update_scan_GUI(datas)
+
+      
+      Update the graph in the Graphic Interface from the given datas switching 0D/1D/2D consequently.
+
+      =============== =============================== ===========================
+      **Parameters**    **Type**                       **Description**
+      *datas*           double precision float array   the data values to update
+      =============== =============================== ===========================
+
+      .. seealso:: :meth:`update_2D_graph`, :meth:`update_1D_graph`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: save_scan()
+
+      
+      Not implemented.
+
+      
+
+
+
+   
+
+   .. method:: update_2D_graph(datas)
+
+      
+      Update the 2D graphic window in the Graphic Interface with the given datas (if not none).
+
+      Depending on scan type :
+          * *2D scan* :
+              * Calibrate the axis positions between graphic and scan
+              * Update scan datas with the given datas values.
+              * Set an image with the updated scan data
+          * *1D scan* :
+              * Calibrate the axis positions between graphic and scan
+              * Update scan datas with the given datas values.
+              * Concatenate 1D vectors to make a 2D image
+              * Set an image with the updated scan data
+
+      =============== =============================== ===========================
+      **Parameters**    **Type**                       **Description**
+      *datas*           double precision float array   the data values to update
+      =============== =============================== ===========================
+
+      .. seealso:: :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: update_1D_graph(datas)
+
+      
+      Update the 1D graphic window in the Graphic Interface with the given datas.
+
+      Depending of scan type :
+          * *'Linear back to start'* scan :
+              * Calibrate axis positions between graph and scan
+              * Update scan datas from the given datas values
+              * Set data on item attribute
+          * *'linear'* or else scan :
+              * Calibrate axis positions between graph and scan
+              * Update scan datas from the given datas values
+
+      =============== ============================== =====================================
+      **Parameters**    **Type**                      **Description**
+      *datas*          Double precision float array   The datas to be showed in the graph
+      =============== ============================== =====================================
+
+      .. seealso:: :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: thread_status(status)
+
+      
+      | General function to get datas/infos from all threads back to the main.
+      |
+
+      Switch the status with :
+          * *"Update status"* : Update the status bar with the status attribute txt message
+          * *"Update_scan_index"* : Set the value of the User Interface - indice_scan_sb attribute.
+          * *"Scan_done"* : Save the scan and init the positions
+          * *"Timeout"* : Set the "Timeout occured" in the User Interface-log message
+
+      .. seealso:: :meth:`update_status`, :meth:`save_scan`, :meth:`set_ini_positions`
+
+      
+
+
+
+   
+
+   .. method:: update_status(txt,wait_time=0,log_type=None)
+
+      
+      Show the txt message in the status bar with a delay of wait_time ms.
+
+      =============== =========== =======================
+      **Parameters**    **Type**    **Description**
+      *txt*             string      The message to show
+      *wait_time*       int         the delay of showing
+      *log_type*        string      the type of the log
+      =============== =========== =======================
+
+      
+
+
+   
+
+
+
+.. py:class:: DAQ_Scan_Acquisition(settings=None,h5_file=None,h5_file_current_group=None,move_modules=list,detector_modules=list,scan_moves=list,scan_saves=list)
+
+   =========================== ========================================
+   **Attributes**               **Type**
+   *scan_data_tmp*              instance of pyqtSignal
+   *status_sig*                 instance of pyqtSignal
+   *stop_scan_flag*             boolean
+   *settings*                   instance og pyqtgraph.parametertree
+   *filters*                    instance of tables.Filters
+   *ind_scan*                   int
+   *detector_modules*           Object list
+   *detector_modules_names*     string list
+   *move_modules*               Object list
+   *move_modules_names*         string list
+   *scan_moves*                 float list
+   *scan_x_axis*                float array
+   *scan_y_axis*                float array
+   *scan_z_axis*                float array
+   *scan_x_axis_unique*         float array
+   *scan_y_axis_unique*         float array
+   *scan_z_axis_unique*         float array
+   *scan_shape*                 int
+   *Nscan_steps*                int
+   *scan_read_positions*        list
+   *scan_read_datas*            list
+   *scan_saves*                 dictionnary list
+   *move_done_flag*             boolean
+   *det_done_flag*              boolean
+   *timeout_scan_flag*          boolean
+   *timer*                      instance of QTimer
+   *move_done_positions*        dictionnary
+   *det_done_datas*             dictionnary
+   *h5_file*                    instance class File from tables module
+   *h5_file_current_group*      instance of Group
+   *h5_file_det_groups*         Group list
+   *h5_file_move_groups*        Group list
+   *h5_file_channels_group*     Group dictionnary
+   =========================== ========================================
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(settings=None,h5_file=None,h5_file_current_group=None,move_modules=list,detector_modules=list,scan_moves=list,scan_saves=list)
+
+      
+      DAQ_Scan_Acquisition deal with the acquisition part of DAQ_Scan.
+
+      .. seealso:: :meth:`custom_tree.parameter_to_xml_string`
+
+      
+
+
+
+   
+
+   .. method:: queue_command(command)
+
+      
+      Treat the queue of commands from the current command to act, between :
+          * *start_acquisition*
+          * *stop_acquisition*
+          * *set_ini_position*
+          * *move_stages*
+
+      =============== ============== =========================
+      **Parameters**    **Type**      **Description**
+      command           string list   the command string list
+      =============== ============== =========================
+
+      .. seealso:: :meth:`start_acquisition`, :meth:`set_ini_positions`, :meth:`move_stages`
+
+      
+
+
+
+   
+
+   .. method:: set_ini_positions()
+
+      
+      | Set the positions from the scan_move attribute.
+      |
+      | Move all activated modules to specified positions.
+      | Check the module corresponding to the name assigned in pos.
+
+      .. seealso:: :meth:`DAQ_Move_main.DAQ_Move.Move_Abs`
+
+      
+
+
+
+   
+
+   .. method:: move_done(name,position)
+
+      
+      | Update the move_done_positions attribute if needed.
+      | If position attribute is setted, for all move modules launched, update scan_read_positions with a [modulename, position] list.
+
+      ============== ============ =================
+      **Parameters**    **Type**    **Description**
+      *name*            string     the module name
+      *position*        float      ???
+      ============== ============ =================
+
+      
+
+
+
+   
+
+   .. method:: det_done(data)
+
+      
+      | Initialize 0D/1D/2D datas from given data parameter.
+      | Update h5_file group and array.
+      | Save 0D/1D/2D datas.
+
+      =============== ============================== ======================================
+      **Parameters**    **Type**                      **Description**
+      *data*          Double precision float array   The initializing data of the detector
+      =============== ============================== ======================================
+
+      
+
+
+
+   
+
+   .. method:: timeout()
+
+      
+      Send the status signal *'Time out during acquisition'* and stop the timer.
+
+      
+
+
+
+   
+
+   .. method:: move_stages(positions)
+
+      
+      Move all the activated modules to the specified positions.
+
+      =============== ============ =============================================
+      **Parameters**    **Type**    **Description**
+      *positions*       tuple list  The list of the positions related to indices
+      =============== ============ =============================================
+
+      .. seealso:: :meth:`DAQ_Move_main.DAQ_Move.Move_Abs`, :meth:`move_done`, :meth:`det_done`, :meth:`check_array_in_h5`, :meth:`wait_for_move_done`, :meth:`wait_for_det_done`, :meth:`det_done`
+
+      
+
+
+
+   
+
+   .. method:: start_acquisition()
+
+      
+
+
+
+   
+
+   .. method:: check_array_in_h5(arr_name,group,obj)
+
+      
+
+
+
+   
+
+   .. method:: wait_for_det_done()
+
+      
+
+
+
+   
+
+   .. method:: wait_for_move_done()
+
+      
+
+
+   
+
+

@@ -1,0 +1,520 @@
+
+:mod:`utility_classes`
+======================
+
+.. py:module:: utility_classes
+
+
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+.. py:class:: DAQ_Viewer_base(parent=None,params_state=None)
+
+   ===================== ===================================
+   **Attributes**          **Type**
+   *hardware_averaging*    boolean
+   *data_grabed_signal*    instance of pyqtSignal
+   *params*                list
+   *settings*              instance of pyqtgraph Parameter
+   *parent*                ???
+   *status*                dictionnary
+   ===================== ===================================
+
+   .. seealso:: :class:`send_param_status`
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(parent=None,params_state=None)
+
+      
+
+
+
+   
+
+   .. method:: emit_status(status)
+
+      
+      Emit the status signal from the given status.
+
+      =============== ============ =====================================
+      **Parameters**    **Type**     **Description**
+      *status*                       the status information to transmit
+      =============== ============ =====================================
+
+      
+
+
+
+   
+
+   .. method:: update_settings(settings_parameter_dict)
+
+      
+      Update the settings tree from settings_parameter_dict.
+      Finally do a commit to activate changes.
+
+      ========================== ============= =====================================================
+      **Parameters**              **Type**      **Description**
+      *settings_parameter_dict*   dictionnnary  a dictionnary listing path and associated parameter
+      ========================== ============= =====================================================
+
+      .. seealso:: :meth:`send_param_status`, :meth:`commit_settings`
+
+      
+
+
+
+   
+
+   .. method:: commit_settings(param)
+
+      
+      Not implemented.
+
+      
+
+
+
+   
+
+   .. method:: send_param_status(param,changes)
+
+      
+      Check for changes in the given (parameter,change,information) tuple list.
+      In case of value changed, send the 'update_settings' ThreadCommand with concerned path,data and change as attributes.
+
+      =============== ============================================ ============================
+      **Parameters**    **Type**                                    **Description**
+      *param*           instance of pyqtgraph parameter             The parameter to check
+      *changes*         (parameter,change,information) tuple list   The changes list to course
+      =============== ============================================ ============================
+
+      .. seealso:: :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+   
+
+
+
+.. py:class:: DAQ_TCP_server(parent=None,params_state=None)
+
+   ==================== ===============================
+   **Attributes**         **Type**
+   *message_list*         string list
+   *socket_types*         string list
+   *params*               dictionnary list
+   *ind_data*             int
+   *data_mock*            double precision float array
+   *connected_clients*    list
+   *listening*            boolean
+   *processing*           ???
+   ==================== ===============================
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(parent=None,params_state=None)
+
+      
+      :param Ip: either None (then one use socket.gethostname()) or 'localhost' or '127.0.0.1' or '' for all available ressource
+      :type Ip: str
+      :param port: the port on which we want to communicate
+      :type port: int
+
+      
+
+
+
+   
+
+   .. method:: queue_command(command)
+
+      
+      Treat the given command.
+      In case of :
+      * 'Ini_Server' command name : update status attribute with init_server function
+      * 'process_cmds' command name : process  the 'Send Data 2D' command.
+
+      =============== ============== ================================================
+      **Parameters**    **Type**       **Description**
+      *command*         string list    a string list representing the command socket
+      =============== ============== ================================================
+
+      .. seealso:: :meth:`init_server`, :meth:`process_cmds`
+
+      
+
+
+
+   
+
+   .. method:: close_server()
+
+      
+      Close the current opened server.
+      Update the settings tree consequently.
+
+      .. seealso:: :meth:`set_connected_clients_table`, :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+
+   
+
+   .. method:: init_server()
+
+      
+
+
+
+   
+
+   .. method:: timerEvent(event)
+
+      
+      Called by set timers.
+      If the process is free, start the listen_client function.
+
+      =============== ==================== ==============================================
+      **Parameters**   **Type**              **Description**
+
+      *event*          QTimerEvent object    Containing id from timer issuing this event
+      =============== ==================== ==============================================
+
+      .. seealso:: :meth:`listen_client`
+
+      
+
+
+
+   
+
+   .. method:: set_connected_clients_table()
+
+      
+      
+      
+
+
+
+   
+
+   .. method:: print_status(status)
+
+      
+      Print the given status.
+
+      =============== ============= ================================================
+      **Parameters**    **Type**       **Description**
+      *status*          string list    a string list representing the status socket
+      =============== ============= ================================================
+
+      
+
+
+
+   
+
+   .. method:: listen_client()
+
+      
+      Server function.
+      Used to listen incoming message from a client.
+      Start a connection and :
+      * if current socket corresponding to the serversocket attribute :
+
+          * Read received command
+          * Send the 'Update_Status' thread command if needed (log is not valid)
+
+      * Else, in case of :
+
+          * data received from client : process it reading commands from sock. Process the command or quit if asked.
+          * client disconnected : remove from socket list
+
+
+      .. seealso:: :meth:`find_socket_type_within_connected_clients`, :meth:`set_connected_clients_table`, :meth:`DAQ_utils.ThreadCommand`, :meth:`read_commands`, :meth:`process_cmds`, :meth:`utility_classes.DAQ_Viewer_base.emit_status`
+
+      
+
+
+
+   
+
+   .. method:: read_commands(sock)
+
+      
+      Read the commands from the given socket.
+
+      =============== ============
+      **Parameters**    **Type**
+      *sock*
+      =============== ============
+
+      :returns: The readed and decoded message
+      :rtype: message_bytes
+
+      .. seealso:: :meth:`check_received_length`
+
+      
+
+
+
+   
+
+   .. method:: send_command(sock,command="Send Data 0D")
+
+      
+      Send one of the message contained in self.message_list toward a socket with identity socket_type.
+      First send the length of the command with 4bytes.
+
+      =============== =========== ==========================
+      **Parameters**    **Type**    **Description**
+      *sock*             ???        The current socket
+      *command*         string      The command as a string
+      =============== =========== ==========================
+
+      .. seealso:: :meth:`utility_classes.DAQ_Viewer_base.emit_status`, :meth:`DAQ_utils.ThreadCommand`, :meth:`message_to_bytes`
+
+      
+
+
+
+   
+
+   .. method:: find_socket_within_connected_clients(client_type)
+
+      
+      Find a socket from a conneceted client with socket type corresponding.
+
+      =============== =========== ================================
+      **Parameters**    **Type**    **Description**
+      *client_type*      string     The corresponding client type
+      =============== =========== ================================
+
+      :returns: the socket dictionnary
+      :rtype: dictionnary
+
+      
+
+
+
+   
+
+   .. method:: find_socket_type_within_connected_clients(sock)
+
+      
+      Find a socket type from a connected client with socket content corresponding.
+
+      =============== =========== ===================================
+      **Parameters**    **Type**   **Description**
+      *sock*             ???       The socket content corresponding.
+      =============== =========== ===================================
+
+      :returns: the socket dictionnary
+      :rtype: dictionnary
+
+      
+
+
+
+   
+
+   .. method:: process_cmds(command,command_sock=None)
+
+      
+      Process the given command.
+
+      Depending on the command name :
+      * Done :
+
+          * Find a socket from the 'GRABBER' connected client.
+          * Send data to a viewer or a client (depending on command_sock).
+
+      * Info : Find a socket from the 'GRABBER' connected client and read infos.
+
+      * Send Data 0D :
+
+          * Find a socket from the 'GRABBER' connected client.
+          * set a 1D Mock data.
+
+      * Send Data 1D :
+
+          * Find a socket from the 'GRABBER' connected client.
+          * set a 1D Mock data.
+
+      * Send Data 2D :
+
+          * Find a socket from the 'GRABBER' connected client.
+          * set a 2D Mock data.
+
+      =============== =========== ==========================
+      **Parameters**    **Type**    **Description**
+      *command*         string      the command as a string
+      *command_sock*    ???
+      =============== =========== ==========================
+
+      .. seealso:: :meth:`find_socket_within_connected_clients`, :meth:`read_data`, :meth:`send_data`, :meth:`utility_classes.DAQ_Viewer_base.emit_status`, :meth:`DAQ_utils.ThreadCommand`, :meth:`send_command`, :meth:`set_1D_Mock_data`, :meth:`set_2D_Mock_data`, :meth:`process_cmds`
+
+      
+
+
+
+   
+
+   .. method:: read_info(sock,dtype=None)
+
+      
+      Read the 64bits float informations contained in the given socket in three steps :
+          * get the info type.
+          * get data length.
+          * get data.
+
+
+      =============== ===================== =========================
+      **Parameters**    **Type**             **Description**
+      *sock*             ???                 the socket to be readed
+      *dtype*           numpy float 64bits   ???
+      =============== ===================== =========================
+
+      :returns: the readed data.
+      :rtype: big indian 64bits float
+
+      .. seealso:: :meth:`check_received_length`, :meth:`utility_classes.DAQ_Viewer_base.emit_status`, :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+
+   
+
+   .. method:: read_data(sock,dtype=None)
+
+      
+      Read the unsigned 32bits int data contained in the given socket in five steps :
+          * get back the message
+          * get the data length
+          * get the number of row
+          * get the number of column
+          * get data
+
+      =============== ===================== =========================
+      **Parameters**    **Type**             **Description**
+      *sock*              ???                the socket to be readed
+      *dtype*           numpy unint 32bits   ???
+      =============== ===================== =========================
+
+      .. seealso:: :meth:`check_received_length`
+
+      
+
+
+
+   
+
+   .. method:: check_received_length(sock,length)
+
+      
+      Check the received length compared to the effective received data bytes.
+
+      =============== =========== ====================
+      **Parameters**    **Type**   **Description**
+      *sock*            ???        the readed socket
+      *length*          int        the expected length
+      =============== =========== ====================
+
+      
+
+
+
+   
+
+   .. method:: send_data(sock,data)
+
+      
+      To match digital and labview, send again a command.
+
+      =============== ============================== ====================
+      **Parameters**   **Type**                       **Description**
+      *sock*                                          the socket receipt
+      *data*           double precision float array   the data to be sent
+      =============== ============================== ====================
+
+      .. seealso:: :meth:`send_command`, :meth:`check_send_data`
+
+      
+
+
+
+   
+
+   .. method:: check_send_data(sock,data)
+
+      
+      Check the sent data.
+
+      
+
+
+
+   
+
+   .. method:: message_to_bytes()
+
+      
+      Convert message to bytes
+
+      =============== =========== ============================
+      **Parameters**    **Type**   **Description**
+
+      *message*          string     message to be sent around
+      =============== =========== ============================
+
+      *message* value in ["Quit","Send Data 0D","Send Data 1D","Send Data 2D","Status","Done","Server Closed"]
+
+      :returns: * **message_bytes** (*bytes array*) -- encoded version of message
+                * *bytes array* -- int32 length of message bytes as a 4 bytes array
+
+      
+
+
+
+   
+
+   .. method:: set_1D_Mock_data()
+
+      
+
+
+
+   
+
+   .. method:: set_2D_Mock_data()
+
+      
+
+
+   
+
+

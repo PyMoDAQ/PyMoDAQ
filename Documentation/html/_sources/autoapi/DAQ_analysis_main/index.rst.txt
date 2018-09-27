@@ -1,0 +1,351 @@
+
+:mod:`DAQ_analysis_main`
+========================
+
+.. py:module:: DAQ_analysis_main
+
+
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+
+
+.. function:: h5tree_to_QTree(h5file,base_node,base_tree_elt=None)
+
+   
+   | Convert a loaded h5 file to a QTreeWidgetItem element structure containing two columns.
+   | The first is the name of the h5 current node, the second is the path of the node in the h5 structure.
+   |
+   | Recursive function discreasing on base_node.
+
+   ==================   ======================================== ===============================
+   **Parameters**        **Type**                                 **Description**
+
+     *h5file*            instance class File from tables module   loaded h5 file
+
+     *base_node*         pytables h5 node                         parent node
+
+     *base_tree_elt*     QTreeWidgetItem                          parent QTreeWidgetItem element
+   ==================   ======================================== ===============================
+
+   :returns: h5 structure copy converted into QtreeWidgetItem structure.
+   :rtype: QTreeWidgetItem
+
+   .. seealso:: :func:`h5tree_to_QTree`
+
+   
+
+
+
+
+
+.. py:class:: DAQ_Analysis(parent=None,title=None)
+
+   ======================== =========================================
+   **Attributes**            **Type**
+
+   *dockarea*                instance of pyqtgraph.DockArea
+   *mainwindow*              instance of pyqtgraph.DockArea
+   *title*                   string
+   *waitime*                 int
+   *h5file*                  instance class File from tables module
+   *loaded_data*             2D array
+   *loaded_data_scan_type*   string
+   *x_axis*                  float array
+   *y_axis*                  float array
+   *data_buffer*             list of data
+   *ui*                      QObject
+   ======================== =========================================
+
+   :raises: *parent Exception* -- If parent argument is None in constructor abort
+
+   .. seealso:: :class:`set_GUI`
+
+   .. rubric:: References
+
+   PyQt5, pyqtgraph, QtWidgets, QObject
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(parent=None,title=None)
+
+      
+
+
+
+   
+
+   .. method:: set_GUI()
+
+      
+      Create the graphic interface of the h5 file analyser, including:
+          * *h5 file dock* : QtreeWidget (custom instance of Tree_layout) showing the contents of the h5 file
+          * *status bar* : the top_down information bar
+          * *tree_dock* : The QTree viewer
+          * *1D viewer dock* : the preview window of 1D data
+          * *2D viewer dock* : the preview window of 2D data
+          * *Navigator viewer dock* : the global navigator graphic interface
+
+      .. seealso:: :meth:`show_h5_attributes`, :meth:`show_h5_data`, :meth:`DAQ_Utils.custom_parameter_tree.Table_custom`, :meth:`update_viewer_data`
+
+      
+
+
+
+   
+
+   .. method:: update_status(txt,wait_time=1000)
+
+      
+      | Update the statut bar showing a Message with a delay of wait_time ms (1s by default)
+
+      ================ ======== ===========================
+      **Parameters**   **Type**     **Description**
+
+       *txt*            string   the text message to show
+
+       *wait_time*      int      the delay time of showing
+      ================ ======== ===========================
+
+      
+
+
+
+   
+
+   .. method:: Quit_fun()
+
+      
+      |
+      | Close the current instance of DAQ_Analysis
+
+      
+
+
+
+   
+
+   .. method:: create_menu(menubar)
+
+      
+      Set the filemenu structure with three elements splited by a separator at the 2nd position :
+          * *open DAQ_scan file* : calling the do_load intern method
+          * *close h5 file*      : calling the close_h5 intern method
+          * *Quit*               : calling the Quit_fun intern method
+
+      ================ =============================================== ====================================
+       **Parameters**           **Type**                                      **Description**
+
+       *menubar*        instance of pyqtgraph.DockArea menuBar object   the generic menuBar object of menu
+      ================ =============================================== ====================================
+
+      .. seealso:: :meth:`do_load`, :meth:`close_h5`, :meth:`Quit_fun`
+
+      
+
+
+
+   
+
+   .. method:: close_h5()
+
+      
+      | Close the loaded h5 file if exists with clearing the ui-h5 tree structure
+
+      
+
+
+
+   
+
+   .. method:: do_load(check_state)
+
+      
+      | Call the loading h5 file procedure
+
+      ================ ========= =============================
+      **Parameters**   **Type**      **Description**
+
+      *check_state*     none       not used
+      ================ ========= =============================
+
+      .. seealso:: :meth:`load_h5_file`
+
+      
+
+
+
+   
+
+   .. method:: load_h5_file(path=None)
+
+      
+      | Load the specific h5 file calling the open_5h_file procedure
+
+      ================ ============ =======================================
+      **Parameters**    **Type**            **Description**
+
+       *path*           string        the current path to the file to load
+      ================ ============ =======================================
+
+      .. seealso:: :meth:`open_5h_file`, :meth:`update_status`, :meth:`DAQ_utils.select_file`
+
+      
+
+
+
+   
+
+   .. method:: open_5h_file(filename)
+
+      
+      | Store the h5 file from the tables attributes and populate tree with raw h5 data
+
+      =============== ========== =============================
+      **Parameters**   **Type**         **Description**
+
+       *filename*      string     name of the h5 file to load
+      =============== ========== =============================
+
+      .. seealso:: :meth:`populate_tree`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: populate_tree()
+
+      
+      | Init the ui-tree and store data into calling the h5_tree_to_Qtree convertor method
+
+      .. seealso:: :meth:`h5tree_to_QTree`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: show_h5_attributes(item,col)
+
+      
+      | Show the h5 attribute using the intern tree structure and update settings and User Interface custom tree
+
+      ================= ====================== ====================================
+      **Parameters**      **Type**              **Description**
+
+       *item*           tables Group instance   contain the root node of the tree
+
+       *col*                                    not used
+      ================= ====================== ====================================
+
+      .. seealso:: :meth:`DAQ_Utils.custom_parameter_tree.XML_string_to_parameter`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: show_h5_data(item,col)
+
+      
+      Show the h5 data reading in the tree structure with update (if needed) of :
+          * viewer 1D
+          * viewer 2D
+          * navigator 1D
+          * navigator 2D
+
+      =============== ====================== ===================================
+      **Parameters**   **Type**               **Description**
+
+       *item*          tables Group instance  contain the root node of the tree
+       *col*                                  not used
+      =============== ====================== ===================================
+
+      .. seealso:: :meth:`show_h5_attributes`, :meth:`set_axis`, :meth:`get_scan_parent_node`, :meth:`get_scan_parent_node`, :meth:`update_viewer_data`, :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: update_viewer_data(posx=0,posy=0)
+
+      
+      | Update the viewer informations from an x/y given position and store data.
+      | Ruled by the viewer type (0D,1D,2D)
+
+      ================ ========= ==============================
+      **Parameters**   **Type**        **Description**
+
+       *posx*           int       the x position of the viewer
+
+       *posy*           int       the y position of the viewer
+      ================ ========= ==============================
+
+      .. seealso:: :meth:`update_status`
+
+      
+
+
+
+   
+
+   .. method:: set_axis(node,axis_type,Npts)
+
+      
+      | Set axis values from node and a linspace regular distribution
+
+      ================ ======================= ==========================================
+      **Parameters**     **Type**                **Description**
+
+       *node*           tables Group instance   the root node of the local treated tree
+      ================ ======================= ==========================================
+
+      :returns: the computed values axis.
+      :rtype: float array
+
+      
+
+
+
+   
+
+   .. method:: get_scan_parent_node(node)
+
+      
+      | Get the root level node from the given node (if exists)
+
+      ================ ===================== ==========================================
+      **Parameters**    **Type**              **Description**
+
+       *node*           tables Node instance   the root node of the local treated tree
+      ================ ===================== ==========================================
+
+      :returns: root level node.
+      :rtype: Node instance
+
+      
+
+
+   
+
+

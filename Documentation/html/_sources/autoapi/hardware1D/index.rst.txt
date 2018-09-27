@@ -1,0 +1,421 @@
+
+:mod:`hardware1D`
+=================
+
+.. py:module:: hardware1D
+
+
+
+
+
+
+
+
+
+Module Contents
+---------------
+
+
+
+.. py:class:: DAQ_1DViewer_Det_type
+
+   Enum class of Det Type.
+
+   =============== ===============
+   **Attributes**   **Type**
+   *Mock*           int
+   *Picoscope*      int
+   *names*          string list
+   =============== ===============
+
+
+   
+
+   
+
+   
+
+   .. method:: names()
+
+      
+
+
+   
+
+
+
+.. py:class:: DAQ_1DViewer_Mock(parent=None,params_state=None)
+
+   ==================== ==================
+   **Atrributes**        **Type**
+   *params*              dictionnary list
+   *hardware_averaging*  boolean
+   *x_axis*              1D numpy array
+   *ind_data*            int
+   ==================== ==================
+
+   .. seealso:: :class:`utility_classes.DAQ_Viewer_base`
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(parent=None,params_state=None)
+
+      
+
+
+
+   
+
+   .. method:: commit_settings(param)
+
+      
+      Setting the mock data
+
+      ============== ========= =================
+      **Parameters**  **Type**  **Description**
+      *param*         none      not used
+      ============== ========= =================
+
+      .. seealso:: :meth:`set_Mock_data`
+
+      
+
+
+
+   
+
+   .. method:: set_Mock_data()
+
+      
+      For each parameter of the settings tree :
+          * compute linspace numpy distribution with local parameters values
+          * shift right the current data of ind_data position
+          * add computed results to the data_mock list
+
+      :returns: The computed data_mock list.
+      :rtype: list
+
+      
+
+
+
+   
+
+   .. method:: Ini_Detector()
+
+      
+      Initialisation procedure of the detector updating the status dictionnary.
+
+      .. seealso:: :meth:`set_Mock_data`, :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+
+   
+
+   .. method:: Close()
+
+      
+      Not implemented.
+
+      
+
+
+
+   
+
+   .. method:: Grab(Naverage=1)
+
+      
+      | Start new acquisition
+      |
+
+      For each integer step of naverage range:
+          * set mock data
+          * wait 100 ms
+          * update the data_tot array
+
+      |
+      | Send the data_grabed_signal once done.
+
+      =============== ======== ===============================================
+      **Parameters**  **Type**  **Description**
+      *Naverage*      int       Number of spectrum to average.
+                                Specify the threshold of the mean calculation
+      =============== ======== ===============================================
+
+      .. seealso:: :meth:`set_Mock_data`
+
+      
+
+
+
+   
+
+   .. method:: Stop()
+
+      
+      not implemented.
+
+      
+
+
+   
+
+
+
+.. py:class:: DAQ_1DViewer_Picoscope(parent=None,params_state=None)
+
+   ==================== ==============================
+   **Attributes**        **Type**
+   *hardware_averaging*  boolean
+   *params*              dictionnary list
+   *pico*                instance of Picoscope_5000A
+   *x_axis*              1D numpy array
+   *Nsample_available*   int
+   *buffers*             generic list
+   ==================== ==============================
+
+   .. seealso:: :class:`utility_classes.DAQ_Viewer_base`
+
+
+   
+
+   
+
+   
+
+   .. method:: __init__(parent=None,params_state=None)
+
+      
+
+
+
+   
+
+   .. method:: get_active_channels()
+
+      
+      Get the active communications channels of the Picoscope 5000A.
+
+      
+
+
+
+   
+
+   .. method:: emit_x_axis()
+
+      
+      Emit the thread command "x_axis" with x_axis as an attribute.
+
+      .. seealso:: :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+
+   
+
+   .. method:: get_xaxis(Nsamples,time_window)
+
+      
+      Get the current x_axis with Picoscope 5000A profile.
+
+      =============== ============= =================================
+      **Parameters**   **Type**      **Description**
+      *Nsamples*       int           The number of time axis samples
+      *time_window*    float/int ??  The time window full size
+      =============== ============= =================================
+
+      :returns: The x_axis and his length couple.
+      :rtype: (1D numpy array,int) tuple
+
+      
+
+
+
+   
+
+   .. method:: commit_settings(param)
+
+      
+      | Activate the parameters changes in the hardware.
+      | Disconnect the data ready signal to preserve correct transmission.
+      |
+
+      The given parameter offer 5 differents profiles :
+          * **channels**  : Activate the channels update on the Picoscope 5000A
+          * **Nsegments** : Set segments on the Picoscope 5000A
+          * **trigger**   : Set the trig options on the Picoscope 5000A
+          * **temporal**  : Set number of samples and resolution of time on the Picoscope 5000A
+          * **dynamic**   : Set channels to dynamic range.
+
+      |
+      | Send the data ready signal ance done.
+
+      =============== ================================ ==========================
+      **Parameters**   **Type**                        **Description**
+      *param*         instance of pyqtgraph.parameter  The parameter to activate
+      =============== ================================ ==========================
+
+      .. seealso:: :meth:`Data_ready`, :meth:`get_active_channels`, :meth:`DAQ_utils.ThreadCommand`, :meth:`set_channels_to_dynamic_range`, :meth:`Ini_Detector`, :meth:`set_buffers`
+
+      
+
+
+
+   
+
+   .. method:: update_pico_settings()
+
+      
+      | Update the Picoscope 5000A from the settings tree values.
+      |
+
+      The update is made on 4 times :
+          * **Communication channels** update
+          * **Number of segments** update
+          * **Trigger** update
+          * **Temporal** update
+
+      |
+      | Send the data ready signal once done.
+
+      .. seealso:: :meth:`commit_settings`, :meth:`set_buffers`, :meth:`Data_ready`
+
+      
+
+
+
+   
+
+   .. method:: set_channels_to_dynamic_range(dynamic_range)
+
+      
+      | Update the settings tree from the given dynamic_range value.
+      |
+
+      The dynamic range values are included in :
+          * **8** bits
+          * **12** bits
+          * **14** bits
+          * **15** bits
+          * **16** bits
+
+      =============== ========= =========================================
+      **Parameters**   **Type**  **Description**
+      *dynamic_range*  string    The dynamic range in number of bit form.
+      =============== ========= =========================================
+
+      
+
+
+
+   
+
+   .. method:: Ini_Detector()
+
+      
+      Initialisation procedure of the detector with Picoscope 5000A profile.
+
+      .. seealso:: :meth:`DAQ_utils.ThreadCommand`, :meth:`update_pico_settings`
+
+      
+
+
+
+   
+
+   .. method:: set_overflow(ind)
+
+      
+      =============== ========== ==========================================================================================
+      **Parameters**   **Type**   **Description**
+      *ind*            int         the integer value of overflow threshold to be converted to the Picoscope trigger channel
+      =============== ========== ==========================================================================================
+
+      
+
+
+
+   
+
+   .. method:: set_buffers()
+
+      
+      Set and populate the buffer from the active communication channels of the Picoscope 5000A.
+
+      .. seealso:: :meth:`DAQ_utils.ThreadCommand`, :meth:`get_active_channels`
+
+      
+
+
+
+   
+
+   .. method:: Close()
+
+      
+      Close the current instance of Picoscope 5000A.
+
+      
+
+
+
+   
+
+   .. method:: Stop()
+
+      
+      Stop actions on Picoscope 5000A.
+
+      
+
+
+
+   
+
+   .. method:: Grab(Naverage=1)
+
+      
+      | Start a new acquisition.
+      |
+      | Grab the current values with Picoscope 5000A profile procedure.
+
+      =============== ======== ===============================================
+      **Parameters**  **Type**  **Description**
+      *Naverage*      int       Number of spectrum to average
+      =============== ======== ===============================================
+
+      :returns: the updated status.
+      :rtype: string list
+
+      .. seealso:: :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+
+   
+
+   .. method:: Data_ready()
+
+      
+      | Cast the raw data (from Picoscope's communication channel) to export considering time axis in ms.
+      | Send the data grabed signal once done.
+
+      .. seealso:: :meth:`get_active_channels`, :meth:`DAQ_utils.ThreadCommand`
+
+      
+
+
+   
+
+

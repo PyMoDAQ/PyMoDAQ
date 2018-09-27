@@ -1,0 +1,90 @@
+DAQ_Analysis
+============
+
+parameter type
+--------------
+show_h5_attributes
+show_h5_data
+set_axis 
+get_scan_parent
+
+DAQ_Measurement
+===============
+
+attribute type
+--------------
+DAQ_Measurement
+
+parameter type
+--------------
+init
+update_measurement_subtype
+
+DAQ_Metheor
+===========
+
+Attributes type
+---------------
+devices
+
+parameter type
+--------------
+init
+send_data
+create_menu
+save_datas
+update_plot_process
+
+DAQ_Process_data
+================
+
+Attributes type
+---------------
+omega_grid
+time_grid
+
+parameter type
+--------------
+params_state
+process_cmd
+update_data
+
+DAQ_Move
+========
+
+Attributes type
+---------------
+parent
+
+parameter type
+--------------
+init
+
+x_axis/y_axis => int array
+
+links !!!!!!!!!
+---------------
+
+Viewer1D -> DAQ_Metheor 1
+
+
+Done
+----
+DAQ_Viewer -> DAQ_Scan 3
+DAQ_Move -> DAQ_Scan 2
+hardware0/1/2D <-> DAQ_Viewer
+DAQ_Utils <-> DAQ_Viewer
+QObject -> DAQ_Viewer
+QWidget -> DAQ_Viewer
+pyqtgraph.parameter <-> attr DAQ_Viewer
+pyqtgraph.parameter <-> DAQ_Move_base
+pyqtgraph.parameter <-> DAQ_Move_Kinesis
+DAQ_Detector -> attr DAQ_Viewer
+DAQ_Process_data -> DAQ_metheor 1
+pyqtSignal -> DAQ_metheor 3
+pyqtSignal -> DAQ_Process_data 2
+pyqtgraph.parameter -> DAQ_Process_data 1
+pyqtSignal -> DAQ_Move 5
+threadCommand <-> DAQ_Move
+UI_Form -> DAQ_Move 1
+pyqtgraph.parameter <-> DAQ_Move

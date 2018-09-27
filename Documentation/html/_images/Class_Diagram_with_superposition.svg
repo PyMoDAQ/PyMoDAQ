@@ -1,0 +1,1426 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="194cm" height="141cm" viewBox="279 -1705 3877 2814" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g>
+    <rect style="fill: #ffffff" x="315.338" y="519.51" width="525.9" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="315.338" y="519.51" width="525.9" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="578.288" y="539.51">
+        <a xlink:href="file:../autoapi/DAQ_analysis_main/index.html#DAQ_analysis_main.DAQ_Analysis">DAQ_Analysis
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="315.338" y="547.51" width="525.9" height="212"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="315.338" y="547.51" width="525.9" height="212"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="560.71"> command_DAQ_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="576.71"> log_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="592.71">+dockarea: instance of pyqtgraph.DockArea</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="608.71">+mainwindow: instance of pyqtgraph.DockArea</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="624.71">+title: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="640.71">+waittime: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="656.71">+h5file: instance of class File from tables module</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="672.71">+loaded_data: 2D array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="688.71">+loaded_data_scan_type: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="704.71">+x_axis: float array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="720.71">+y_axis: float array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="736.71">+data_buffer: list of data</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="752.71">+ui: QObject</text>
+    <rect style="fill: #ffffff" x="315.338" y="759.51" width="525.9" height="212"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="315.338" y="759.51" width="525.9" height="212"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="772.71">+set_GUI(parent:instance of DockArea,title:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="788.71">+update_status(txt:string,wait_time:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="804.71">+Quit_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="820.71">+create_menu(menubar:instance of pyqtgraph.DowkArea menubar object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="836.71">+close_h5()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="852.71">+load_h5_file(path:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="868.71">+open_5h_file(filename:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="884.71">+populate_tree()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="900.71">+show_h5_attributes(item,col)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="916.71">+show_h5_data(item,col)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="932.71">+update_viewer_data(posx:int,posy:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="948.71">+set_axis(node,axis_type,Npts)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="318.338" y="964.71">+get_scan_parent(node)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="392.512" y="407.67" width="371.9" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="392.512" y="407.67" width="371.9" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="578.462" y="427.67">
+        <a xlink:href="https://doc.qt.io/qt-5.10/qtwidgets-index.html">QWidget
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="392.512" y="435.67" width="371.9" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="392.512" y="435.67" width="371.9" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="395.512" y="448.87">+https://doc.qt.io/qt-5.10/qtwidgets-index.html</text>
+    <rect style="fill: #ffffff" x="392.512" y="455.67" width="371.9" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="392.512" y="455.67" width="371.9" height="8"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="1597.39" y="743.068" width="371.9" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1597.39" y="743.068" width="371.9" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="1783.34" y="763.068">
+        <a xlink:href="https://doc.qt.io/qt-5.10/qtwidgets-index.html">QObject
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="1597.39" y="771.068" width="371.9" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1597.39" y="771.068" width="371.9" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1600.39" y="784.268">+https://doc.qt.io/qt-5.10/qtwidgets-index.html</text>
+    <rect style="fill: #ffffff" x="1597.39" y="791.068" width="371.9" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1597.39" y="791.068" width="371.9" height="8"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2145.7" y="220" width="387.3" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2145.7" y="220" width="387.3" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2339.35" y="240">
+        <a xlink:href="file:../autoapi/DAQ_Measurement_main/index.html#DAQ_Measurement_main.DAQ_Measurement">DAQ_Measurement
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2145.7" y="248" width="387.3" height="116"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2145.7" y="248" width="387.3" height="116"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="261.2"> measurement_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="277.2">+ui: instance of QObject</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="293.2">+wait_time: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="309.2">+parent</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="325.2">+xdata</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="341.2">+ydata</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="357.2">+measurement_types</text>
+    <rect style="fill: #ffffff" x="2145.7" y="364" width="387.3" height="100"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2145.7" y="364" width="387.3" height="100"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="377.2">+update_measurement()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="393.2">+update_measurement_subtype(mtype,update:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="409.2">+Quit_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="425.2">-init(parent)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="441.2">-update_status(txt:string,wait_time:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2148.7" y="457.2">-update_data(xdata:float list,ydata:float list)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2172.36" y="0" width="333.4" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2172.36" y="0" width="333.4" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2339.06" y="20">
+        <a xlink:href="http://pyqt.sourceforge.net/Docs/PyQt5/designer.html">UI_Form
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2172.36" y="28" width="333.4" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2172.36" y="28" width="333.4" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2175.36" y="41.2">+Created by: PyQt5 UI code generator 5.5.1</text>
+    <rect style="fill: #ffffff" x="2172.36" y="48" width="333.4" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2172.36" y="48" width="333.4" height="8"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="972.93" y="-397.456" width="456.6" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="972.93" y="-397.456" width="456.6" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="1201.23" y="-377.456">
+        <a xlink:href="http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html">pyqtSignal
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="972.93" y="-369.456" width="456.6" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="972.93" y="-369.456" width="456.6" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="975.93" y="-356.256">+http://pyqt.sourceforge.net/Docs/PyQt5/signals_slots.html</text>
+    <rect style="fill: #ffffff" x="972.93" y="-349.456" width="456.6" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="972.93" y="-349.456" width="456.6" height="8"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="1570.28" y="-319.9" width="425.8" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1570.28" y="-319.9" width="425.8" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="1783.18" y="-299.9">
+        <a xlink:href="http://www.pyqtgraph.org/documentation/parametertree/">pyqtgraph.parameter
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="1570.28" y="-291.9" width="425.8" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1570.28" y="-291.9" width="425.8" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1573.28" y="-278.7">+http://www.pyqtgraph.org/documentation/parametertree/</text>
+    <rect style="fill: #ffffff" x="1570.28" y="-271.9" width="425.8" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1570.28" y="-271.9" width="425.8" height="8"/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1783.34,725.832 1783.34,673.5 858.756,673.5 858.756,588.25 839.238,588.25 839.238,588.51 "/>
+    <polygon style="fill: #ffffff" points="1775.34,725.832 1783.34,741.832 1791.34,725.832 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1775.34,725.832 1783.34,741.832 1791.34,725.832 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1783.34,724.832 1783.34,672.232 2339.36,672.232 2339.36,463.732 "/>
+    <polygon style="fill: #ffffff" points="1775.34,724.832 1783.34,740.832 1791.34,724.832 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1775.34,724.832 1783.34,740.832 1791.34,724.832 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2339.06,74.2361 2339.06,180.151 2339.36,180.151 2339.36,220 "/>
+    <polygon style="fill: #ffffff" points="2347.06,74.2361 2339.06,58.2361 2331.06,74.2361 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2347.06,74.2361 2339.06,58.2361 2331.06,74.2361 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1454.7,-341.456 2045.3,-341.456 2045.3,-341.477 2057.33,-341.477 "/>
+    <polygon style="fill: #000000" points="1429.53,-341.456 1443.53,-346.256 1457.53,-341.456 1443.53,-336.656 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-341.456 1443.53,-346.256 1457.53,-341.456 1443.53,-336.656 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2047.3" y="-345.467"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1461.53" y="-345.456"> 1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1461.53" y="-329.456"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2053.33" y="-345.477"></text>
+  </g>
+  <g>
+    <rect style="fill: #e5e5e5" x="2660.78" y="-480.25" width="1264.41" height="1588"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="2660.78" y="-480.25" width="1264.41" height="1588"/>
+    <rect style="fill: #e5e5e5" x="2660.78" y="-500.25" width="65.6" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="2660.78" y="-500.25" width="65.6" height="20"/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2662.78" y="-486.25"><a xlink:href="file:Class_Diagram_DAQ_Move_details.svg">DAQ_Move</a>
+    
+</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2679.86" y="-106.744" width="279.5" height="44"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2679.86" y="-106.744" width="279.5" height="44"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="2819.61" y="-91.544">&lt;&lt;enum&gt;&gt;</text>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2819.61" y="-70.744">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_Stage_type">DAQ_Move_Stage_type
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2679.86" y="-62.744" width="279.5" height="116"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2679.86" y="-62.744" width="279.5" height="116"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-49.544">+Mock: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-33.544">+Conex: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-17.544">+Kinesis: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-1.544">+Kinesis_flipper: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="14.456">+PI: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="30.456">+PiezoConcept: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="46.456">+comon_parameters: dictionnary list</text>
+    <rect style="fill: #ffffff" x="2679.86" y="53.256" width="279.5" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2679.86" y="53.256" width="279.5" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="66.456">+names(cls)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2679.86" y="-446.744" width="448.9" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2679.86" y="-446.744" width="448.9" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2904.31" y="-426.744">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_base">DAQ_Move_base
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2679.86" y="-418.744" width="448.9" height="148"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2679.86" y="-418.744" width="448.9" height="148"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-405.544">+Move_Done_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-389.544">+params: list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-373.544">-parent</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-357.544">-controller</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-341.544">-stage</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-325.544">-status: dictionnary</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-309.544">-current_position: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-293.544">+target_position: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-277.544">-settings</text>
+    <rect style="fill: #ffffff" x="2679.86" y="-270.744" width="448.9" height="132"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2679.86" y="-270.744" width="448.9" height="132"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-257.544">+get_position_with_scaling(pos:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-241.544">+set_position_with_scaling(pos:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-225.544">+emit_status(status:ordered dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-209.544">+poll_moving()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-193.544">+Move_Done(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-177.544">+update_settings(settings_parameter_dict:dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-161.544">+send_param_status(param:instance of pyqtgraph.parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2682.86" y="-145.544">                   changes:tuple list)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3380.78" y="-430.736" width="510.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="-430.736" width="510.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3636.03" y="-410.736">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_Mock">DAQ_Move_Mock
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3380.78" y="-402.736" width="510.5" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="-402.736" width="510.5" height="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-389.536">+params: sictionnary</text>
+    <rect style="fill: #ffffff" x="3380.78" y="-382.736" width="510.5" height="116"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="-382.736" width="510.5" height="116"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-369.536">+Ini_Stage(controller:instance of the specific controller object,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-353.536">           stage:instance of the stage (axis or wathever) object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-337.536">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-321.536">+Stop_Motion()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-305.536">+Check_position()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-289.536">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-273.536">+Move_Home()</text>
+  </g>
+  <g>
+    <polygon style="fill: #ffffff" points="400,160 552.3,160 564.3,172 564.3,290 400,290 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="400,160 552.3,160 564.3,172 564.3,290 400,290 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="552.3,160 552.3,172 564.3,172 "/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="407" y="183.65">
+      <tspan x="407" y="183.65">Add your notes here</tspan>
+      <tspan x="407" y="199.65">with</tspan>
+      <tspan x="407" y="215.65">full </tspan>
+      <tspan x="407" y="231.65">description</tspan>
+      <tspan x="407" y="247.65">of </tspan>
+      <tspan x="407" y="263.65">the</tspan>
+      <tspan x="407" y="279.65">program</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3380.78" y="-250.1" width="518.2" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="-250.1" width="518.2" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3639.88" y="-230.1">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_Conex">DAQ_Move_Conex
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3380.78" y="-222.1" width="518.2" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="-222.1" width="518.2" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-208.9">+ports: list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-192.9">+conex_path: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-176.9">+params: dictionnary list</text>
+    <rect style="fill: #ffffff" x="3380.78" y="-170.1" width="518.2" height="148"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="-170.1" width="518.2" height="148"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-156.9">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-140.9">+Ini_Stage(controller:instance of the specific controller object ,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-124.9">           stage:instance of the stage (axis or whatever) object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-108.9">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-92.9">+Stop_Motion()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-76.9">+Check_position()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-60.9">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-44.9">+Move_Rel(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="-28.9">+Move_Home()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-392.744 3359.2,-392.744 3359.2,-236.1 3380.78,-236.1 "/>
+    <polygon style="fill: #ffffff" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3380.78" y="9.89946" width="518.2" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="9.89946" width="518.2" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3639.88" y="29.8995">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_Kinesis">DAQ_Move_Kinesis
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3380.78" y="37.8995" width="518.2" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="37.8995" width="518.2" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="51.0995">+Kinesis_path: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="67.0995">+serialnumbers: int list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="83.0995">+params: dictionnary list</text>
+    <rect style="fill: #ffffff" x="3380.78" y="89.8995" width="518.2" height="132"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="89.8995" width="518.2" height="132"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="103.099">+commit_settings(param:instance of pyqtgraph.parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="119.099">+Ini_Stage(controller:instance of the specific controller object ,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="135.099">           stage:instance of the stage (axis or whatever) object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="151.099">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="167.099">+Stop_Motion()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="183.099">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="199.099">+Move_Rel(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="215.099">+Move_Home()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-392.744 3339.2,-392.744 3339.2,23.8995 3380.78,23.8995 "/>
+    <polygon style="fill: #ffffff" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-392.744 3262.77,-392.744 3262.77,-392.736 3380.78,-392.736 "/>
+    <polygon style="fill: #ffffff" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3380.78" y="249.9" width="510.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="249.9" width="510.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3636.03" y="269.9">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_Kinesis_Flipper">DAQ_Move_Kinesis_Flipper
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3380.78" y="277.9" width="510.5" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="277.9" width="510.5" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="291.1">+Kinesis_path: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="307.1">+serialnumbers: int list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="323.1">+params: dictionnary list</text>
+    <rect style="fill: #ffffff" x="3380.78" y="329.9" width="510.5" height="148"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="329.9" width="510.5" height="148"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="343.1">+init(param)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="359.1">+Ini_Stage(controller:instance of the specific controller object,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="375.1">           stage:instance of the stage (axis or wathever) object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="391.1">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="407.1">+Stop_Motion()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="423.1">+Check_position()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="439.1">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="455.1">+Move_Rel(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="471.1">+Move_Home()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-392.744 3321.2,-392.744 3321.2,263.9 3380.78,263.9 "/>
+    <polygon style="fill: #ffffff" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3380.78" y="509.9" width="510.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="509.9" width="510.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3636.03" y="529.9">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_PI">DAQ_move_PI
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3380.78" y="537.9" width="510.5" height="68"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="537.9" width="510.5" height="68"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="551.1">+GCS_path</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="567.1">+gcs_devices: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="583.1">+devices: instance of GCSDevice</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="599.1">+params: dictionnary list</text>
+    <rect style="fill: #ffffff" x="3380.78" y="605.9" width="510.5" height="212"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="605.9" width="510.5" height="212"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="619.1">+commit_settings(param:instance of pyqtgraph.parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="635.1">+enumerate_devices()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="651.1">+Ini_devices()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="667.1">+Ini_Stage(controller:instance of the specific controller object,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="683.1">           stage:instance of the stage (axis or whatever) object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="699.1">+is_referenced(axe:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="715.1">+set_referencing(axes:string list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="731.1">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="747.1">+Stop_Motion()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="763.1">+Check_position()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="779.1">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="795.1">+Move_Rel(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="811.1">+Move_Home()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-392.744 3301.2,-392.744 3301.2,523.9 3380.78,523.9 "/>
+    <polygon style="fill: #ffffff" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3380.78" y="849.9" width="510.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="849.9" width="510.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3636.03" y="869.9">
+        <a xlink:href="file:../autoapi/hardware/index.html#hardware.DAQ_Move_PiezoConcept">DAQ_Move_PiezoConcept
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3380.78" y="877.9" width="510.5" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="877.9" width="510.5" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="891.1">+ports: string list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="907.1">+TTL_children: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="923.1">+params: dictionnary list</text>
+    <rect style="fill: #ffffff" x="3380.78" y="929.9" width="510.5" height="132"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3380.78" y="929.9" width="510.5" height="132"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="943.1">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="959.1">+Ini_Stage(controller:instance of the specific controller object,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="975.1">           stage:instance of the stage (axis or whatever) object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="991.1">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="1007.1">+Check_position()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="1023.1">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="1039.1">+Move_Rel(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3383.78" y="1055.1">+Move_Home()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-392.744 3279.2,-392.744 3279.2,863.9 3380.78,863.9 "/>
+    <polygon style="fill: #ffffff" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3147,-400.744 3131,-392.744 3147,-384.744 "/>
+  </g>
+  <g>
+    <rect style="fill: #e5e5e5" x="958.296" y="-230.296" width="1075.24" height="708.83"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="958.296" y="-230.296" width="1075.24" height="708.83"/>
+    <rect style="fill: #e5e5e5" x="958.296" y="-250.296" width="127.2" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="958.296" y="-250.296" width="127.2" height="20"/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="960.296" y="-236.296">DAQ_Metheor_main</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="983.942" y="-192.001" width="433.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="983.942" y="-192.001" width="433.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="1200.69" y="-172.001">
+        <a xlink:href="file:../autoapi/DAQ_metheor_main_v3/index.html#DAQ_metheor_main_v3.DAQ_Metheor">DAQ_Metheor
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="983.942" y="-164.001" width="433.5" height="292"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="983.942" y="-164.001" width="433.5" height="292"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-150.801"> log_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-134.801"> update_settings_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-118.801"> process_data_sig: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-102.801"> params: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-86.8008">+det_name: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-70.8008">+dock_viewer_settings: instance of Dock</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-54.8008">+dock_viewer: instance of Dock</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-38.8008">+fft_widget: instance of QWidget</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-22.8008">+dock_fft: instance of Dock</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="-6.8008">+temperature_widget: instance of QWidget</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="9.1992">+dock_temperature: instance of Dock</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="25.1992">+dock_settings: instance of Dock</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="41.1992">+temperature_viewer: instance of Viewer1D</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="57.1992">+date: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="73.1992">+daq_type: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="89.1992">+control_type: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="105.199">+devices</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="121.199">+process_object: instance of DAQ_Process_data</text>
+    <rect style="fill: #ffffff" x="983.942" y="127.999" width="433.5" height="324"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="983.942" y="127.999" width="433.5" height="324"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="141.199">+emit_log(txt:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="157.199">+add_log(txt:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="173.199">+quit_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="189.199">-init(parent,fname:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="205.199">-save_current(filetype:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="221.199">-load_data(file_type:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="237.199">-set_laser_controller()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="253.199">-send_data(datas)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="269.199">-create_menu(menubar)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="285.199">-save_datas(filepathname:string,datas,file_type:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="301.199">-update_calibrations_regions()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="317.199">-update_plot_process(data)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="333.199">-process_temperature()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="349.199">-process_temperature_constants()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="365.199">-process_temperature_calibration()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="381.199">-update_status(txt:string,wait_time:int,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="397.199">               log_type)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="413.199">-calculate_gamma()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="429.199">-thread_status(status:string list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="986.942" y="445.199">-parameter_tree_changed(param,changes:tuple list)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="1566.53" y="65.7356" width="433.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1566.53" y="65.7356" width="433.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="1783.28" y="85.7356">
+        <a xlink:href="file:../autoapi/DAQ_metheor_main_v3/index.html#DAQ_metheor_main_v3.DAQ_Process_data">DAQ_Process_data
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="1566.53" y="93.7356" width="433.5" height="212"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1566.53" y="93.7356" width="433.5" height="212"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="106.936"> data_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="122.936"> status_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="138.936"> params: list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="154.936">+settings: instance of pyqtgraph.parameter</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="170.936">+Npts: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="186.936">+data_AS: int array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="202.936">+time_axis: int array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="218.936">+omega_grid</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="234.936">+time_grid</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="250.936">+c: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="266.936">+group_index_fiber_R: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="282.936">+group_index_fiber_AS: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="298.936">+group_index_fiber_S: float</text>
+    <rect style="fill: #ffffff" x="1566.53" y="305.736" width="433.5" height="148"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1566.53" y="305.736" width="433.5" height="148"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="318.936">-init(params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="334.936">-emit_status(status:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="350.936">-update_settings(settings_parameter_dict:dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="366.936">-commit_settings(param:instance of pyqtgraph.parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="382.936">-send_param_status(param,changes:tuple list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="398.936">-process_cmd(status)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="414.936">-update_data(data)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="430.936">-create_FFT_axis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1569.53" y="446.936">-process_data()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1541.36,263.736 1480,263.736 1480,-192.001 1417.44,-192.001 "/>
+    <polygon style="fill: #000000" points="1566.53,263.736 1552.53,268.536 1538.53,263.736 1552.53,258.936 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1566.53,263.736 1552.53,268.536 1538.53,263.736 1552.53,258.936 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1482" y="31.8676"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1534.53" y="259.736">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1421.44" y="-196.001"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="947.758,-383.456 940,-383.456 940,573.51 841.238,573.51 "/>
+    <polygon style="fill: #000000" points="972.93,-383.456 958.93,-378.656 944.93,-383.456 958.93,-388.256 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="972.93,-383.456 958.93,-378.656 944.93,-383.456 958.93,-388.256 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="942" y="91.027"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="940.93" y="-387.456">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="845.238" y="569.51"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1201.23,-316.284 1201.23,-275.414 1200.69,-275.414 1200.69,-192.001 "/>
+    <polygon style="fill: #000000" points="1201.23,-341.456 1206.03,-327.456 1201.23,-313.456 1196.43,-327.456 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1201.23,-341.456 1206.03,-327.456 1201.23,-313.456 1196.43,-327.456 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1200.96" y="-279.414"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1212.23" y="-329.456">3</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1204.69" y="-196.001"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-316.284 1429.53,-260.62 1526.24,-260.62 1526.24,222.152 1566.53,222.152 1566.53,65.7356 "/>
+    <polygon style="fill: #000000" points="1429.53,-341.456 1434.33,-327.456 1429.53,-313.456 1424.73,-327.456 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-341.456 1434.33,-327.456 1429.53,-313.456 1424.73,-327.456 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1528.24" y="-23.234"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1440.53" y="-329.456">2</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1570.53" y="77.7356"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1783.18,-238.728 1783.18,-92.0822 1783.28,-92.0822 1783.28,65.7356 "/>
+    <polygon style="fill: #000000" points="1783.18,-263.9 1787.98,-249.9 1783.18,-235.9 1778.38,-249.9 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1783.18,-263.9 1787.98,-249.9 1783.18,-235.9 1778.38,-249.9 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1783.23" y="-96.0822"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1794.18" y="-251.9">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1787.28" y="61.7356"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1783.34,724.832 1783.34,590.402 1783.28,590.402 1783.28,453.736 "/>
+    <polygon style="fill: #ffffff" points="1775.34,724.832 1783.34,740.832 1791.34,724.832 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1775.34,724.832 1783.34,740.832 1791.34,724.832 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="783.652,435.67 921,435.67 921,-178.113 935.436,-178.113 935.436,-178.386 "/>
+    <polygon style="fill: #ffffff" points="783.652,427.67 767.652,435.67 783.652,443.67 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="783.652,427.67 767.652,435.67 783.652,443.67 "/>
+  </g>
+  <g>
+    <rect style="fill: #e5e5e5" x="1242.1" y="-1682.92" width="2912.05" height="1082.64"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="1242.1" y="-1682.92" width="2912.05" height="1082.64"/>
+    <rect style="fill: #e5e5e5" x="1242.1" y="-1702.92" width="81" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="1242.1" y="-1702.92" width="81" height="20"/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1244.1" y="-1688.92">
+        <a xlink:href="Class_Diagram_DAQ_Viewer_details.svg">DAQ_Viewer
+    </a>
+</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2680.78" y="160" width="487.4" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2680.78" y="160" width="487.4" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2924.48" y="180">
+        <a xlink:href="file:../autoapi/DAQ_Move_main/index.html#DAQ_Move_main.DAQ_Move">DAQ_Move
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2680.78" y="188" width="487.4" height="292"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2680.78" y="188" width="487.4" height="292"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="201.2"> command_stage: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="217.2"> move_done_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="233.2"> update_settings_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="249.2"> log_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="265.2"> bounds_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="281.2"> params: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="297.2">+ui: instance of UI_Form</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="313.2">+parent</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="329.2">+title: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="345.2">+wait_time: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="361.2">+Initialized_state: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="377.2">+Move_done: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="393.2">+controller</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="409.2">+stage</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="425.2">+current_position: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="441.2">+target_position: float</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="457.2">+wait_position_flag: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="473.2">+stage_types</text>
+    <rect style="fill: #ffffff" x="2680.78" y="480" width="487.4" height="308"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2680.78" y="480" width="487.4" height="308"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="493.2">+parameter_tree_changed(param:instance of pyqtgraph.parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="509.2">                        changes:tuple list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="525.2">+set_setting_tree(index:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="541.2">+stage_changed(index:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="557.2">+Quit_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="573.2">+IniStage_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="589.2">+Move_Abs(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="605.2">+Move_Rel(position:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="621.2">+Move_Home()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="637.2">+Get_position()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="653.2">+Stop_Motion()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="669.2">+show_settings()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="685.2">+show_fine_tuning()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="701.2">-init(parent,title:string,preset,init:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="717.2">-set_enabled_move_buttons(enable:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="733.2">-thread_status(status:instance of ThreadCommand)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="749.2">-update_status(txt:string,wait_time:int,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="765.2">               log_type:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2683.78" y="781.2">-chock_out_bounds(position:float)</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2339.06,74.2361 2339.06,197.967 2597.06,197.967 2597.06,197.958 "/>
+    <polygon style="fill: #ffffff" points="2347.06,74.2361 2339.06,58.2361 2331.06,74.2361 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2347.06,74.2361 2339.06,58.2361 2331.06,74.2361 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1783.34,724.832 1783.34,672.088 2581.37,672.088 2581.37,502.58 "/>
+    <polygon style="fill: #ffffff" points="1775.34,724.832 1783.34,740.832 1791.34,724.832 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1775.34,724.832 1783.34,740.832 1791.34,724.832 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #bfbfbf" points="1996.08,-305.9 1996.08,-299.214 2600,-299.214 2600,230 2680.78,230 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="2298.04" y="-303.214"></text>
+    <polygon style="fill: #bfbfbf" points="2300.04,-303.214 2300.04,-311.214 2308.04,-307.214 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2000.08" y="-293.9"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2676.78" y="226"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2021.25,-281.9 2580,-281.9 2580,-355.932 2580.05,-355.932 "/>
+    <polygon style="fill: #000000" points="1996.08,-281.9 2010.08,-286.7 2024.08,-281.9 2010.08,-277.1 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1996.08,-281.9 2010.08,-286.7 2024.08,-281.9 2010.08,-277.1 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2582" y="-322.916"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2028.08" y="-285.9">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2576.05" y="-359.932"></text>
+  </g>
+  <g>
+    <rect style="fill: #e5e5e5" x="299.134" y="-1683.84" width="560.867" height="966.975"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="299.134" y="-1683.84" width="560.867" height="966.975"/>
+    <rect style="fill: #e5e5e5" x="299.134" y="-1703.84" width="65.6" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #4d4d4d" x="299.134" y="-1703.84" width="65.6" height="20"/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="301.134" y="-1689.84">
+        <a xlink:href="file:Class_Diagram_DAQ_Scan_details.svg">DAQ_Scan
+    </a>
+</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="1260.42" y="-1644.73" width="495.1" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1260.42" y="-1644.73" width="495.1" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="1507.97" y="-1624.73">
+        <a xlink:href="file:../autoapi/DAQ_viewer_main/index.html#DAQ_viewer_main.DAQ_Viewer">DAQ_viewer
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="1260.42" y="-1616.73" width="495.1" height="452"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1260.42" y="-1616.73" width="495.1" height="452"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1603.53">+command_detector: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1587.53">+grab_done_signal: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1571.53">+quit_signal: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1555.53">+update_settings_signal: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1539.53">+overshoot_signal: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1523.53">+log_signal: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1507.53">+params: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1491.53">-widgetsettings: instance of QWidget</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1475.53">-title: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1459.53">-DAQ_Type: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1443.53">-dockarea</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1427.53">-bkg</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1411.53">-filters: instance of tables.Filters</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1395.53">+settings: instance of pyqtgraph parameter tree</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1379.53">-measurement_module</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1363.53">-detector: instance of DAQ_Detector</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1347.53">-wait_time: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1331.53">-save_file_pathname: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1315.53">-ind_continuous_grab: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1299.53">-Initialized_state: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1283.53">-snapshot_pathname: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1267.53">-x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1251.53">-y_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1235.53">-current_datas: dictionnary</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1219.53">-data_to_save_export: ordered dictionnary</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1203.53">-do_save_data: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1187.53">-do_continuous_save: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1171.53">+file_continuous_save</text>
+    <rect style="fill: #ffffff" x="1260.42" y="-1164.73" width="495.1" height="532"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1260.42" y="-1164.73" width="495.1" height="532"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1151.53">+init(dock_settings,dock_viewer,title:string,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1135.53">      DAQ_type:string,preset,init:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1119.53">+change_viewer(DAQ_type:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1103.53">+load_data()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1087.53">+take_bkg()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1071.53">+save_settings(path:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1055.53">+load_settings(path:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1039.53">+update_com()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1023.53">+parameter_tree_changed(param:instance of ppyqtgraph parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-1007.53">                        changes:tuple list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-991.534">+get_scaling_options()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-975.534">+set_setting_tree()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-959.534">+set_continuous_save()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-943.534">+save_export_data(datas:dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-927.534">+save_datas(path:string,datas:dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-911.534">+update_status(txt:string,wait_time:int,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-895.534">               log_type:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-879.534">+save_new()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-863.534">+save_current()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-847.534">+SnapShot(pathname:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-831.534">+Grab(grab_state:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-815.534">+IniDet_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-799.534">+Quit_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-783.534">+show_settings()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-767.534">+set_enabled_Ini_buttons(enable:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-751.534">+set_enable_recursive(children:settings tree node,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-735.534">                      enable:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-719.534">+set_enabled_grab_buttons(enable:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-703.534">+show_temp_data(datas:ordered dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-687.534">+show_data(datas:ordered dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-671.534">+get_data_from_viewer(datas: 	ordered dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-655.534">+thread_status(status:ThreadCommand())</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1263.42" y="-639.534">+raise_timeout()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2379.8" y="-1559.4" width="210.2" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1559.4" width="210.2" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2484.9" y="-1539.4">
+        <a xlink:href="file:../autoapi/hardware0D/index.html#hardware0D.DAQ_0DViewer_Mock">DAQ_0DViewer_Mock
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2379.8" y="-1531.4" width="210.2" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1531.4" width="210.2" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1518.2">+params: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1502.2">+x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1486.2">+ind_data: int</text>
+    <rect style="fill: #ffffff" x="2379.8" y="-1479.4" width="210.2" height="116"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1479.4" width="210.2" height="116"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1466.2">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1450.2">+commit_settings(param)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1434.2">+set_Mock_data()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1418.2">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1402.2">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1386.2">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1370.2">+Stop()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2379.8" y="-1079.4" width="441.2" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1079.4" width="441.2" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2600.4" y="-1059.4">
+        <a xlink:href="file:../autoapi/hardware0D/index.html#hardware0D.DAQ_0DViewer_NIDAQ">DAQ_0DViewer_NIDAQ
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2379.8" y="-1051.4" width="441.2" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1051.4" width="441.2" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1038.2">+data_grabed_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1022.2">+params: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1006.2">+task</text>
+    <rect style="fill: #ffffff" x="2379.8" y="-999.404" width="441.2" height="164"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-999.404" width="441.2" height="164"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-986.204">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-970.204">+commit_settings(param:instance of pyqtgraph.parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-954.204">+update_NIDAQ_devices(cls)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-938.204">+update_NIDAQ_channels(device:string,type_signal:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-922.204">+refresh_hardware()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-906.204">+update_task()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-890.204">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-874.204">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-858.204">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-842.204">+Stop()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="2379.8" y="-1339.4" width="495.1" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1339.4" width="495.1" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2627.35" y="-1319.4">
+        <a xlink:href="file:../autoapi/hardware0D/index.html#hardware0D.DAQ_0DViewer_Keithley_Pico">DAQ_0DViewer_Keithley_Pico
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="2379.8" y="-1311.4" width="495.1" height="100"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1311.4" width="495.1" height="100"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1298.2">+data_grabed_signal: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1282.2">+VISA_rm</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1266.2">+com_ports</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1250.2">+params:  	dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1234.2">+keithley</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1218.2">+settings</text>
+    <rect style="fill: #ffffff" x="2379.8" y="-1211.4" width="495.1" height="100"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="2379.8" y="-1211.4" width="495.1" height="100"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1198.2">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1182.2">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1166.2">+commit_settings(param: 	instance of pyqtgraph.paramete)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1150.2">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1134.2">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2382.8" y="-1118.2">+Stop()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="1860" y="-1480" width="418.1" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1860" y="-1480" width="418.1" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="2069.05" y="-1460">
+        <a xlink:href="file:../autoapi/DAQ_viewer_main/index.html#DAQ_viewer_main.DAQ_Detector">DAQ_Detector
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="1860" y="-1452" width="418.1" height="324"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1860" y="-1452" width="418.1" height="324"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1438.8">+status_sig: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1422.8">+data_detector_sig: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1406.8">+data_detector_temp_sig: instance of pyqt Signal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1390.8">-waiting_for_data: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1374.8">-controller</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1358.8">-detector_name: string</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1342.8">-detector</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1326.8">-controller_adress</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1310.8">+grab_state: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1294.8">-single_grab: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1278.8">-x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1262.8">-y_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1246.8">-datas: dictionnary</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1230.8">-ind_average: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1214.8">-Naverage: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1198.8">-average_done: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1182.8">-hardware_averaging: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1166.8">-show_averaging: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1150.8">-wait_time: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1134.8">+DAQ_type: string</text>
+    <rect style="fill: #ffffff" x="1860" y="-1128" width="418.1" height="132"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1860" y="-1128" width="418.1" height="132"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1114.8">+init(settings_parameter,detector_name:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1098.8">+update_settings(settings_parameter_dict:dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1082.8">+queue_command(command:ThreadCommand)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1066.8">+Ini_Detector(params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1050.8">+data_ready(datas:ordered dictionnary)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1034.8">+Single(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1018.8">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1863" y="-1002.8">+Close()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1454.7,-359.456 2620,-359.456 2620,174 2680.78,174 "/>
+    <polygon style="fill: #000000" points="1429.53,-359.456 1443.53,-364.256 1457.53,-359.456 1443.53,-354.656 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-359.456 1443.53,-364.256 1457.53,-359.456 1443.53,-354.656 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2622" y="-96.728"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1461.53" y="-363.456">5</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2676.78" y="170"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1201.23,-422.628 1201.23,-459.207 1199.32,-459.207 1199.32,-1590.82 1260.13,-1590.82 1260.13,-1590.73 "/>
+    <polygon style="fill: #000000" points="1201.23,-397.456 1196.43,-411.456 1201.23,-425.456 1206.03,-411.456 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1201.23,-397.456 1196.43,-411.456 1201.23,-425.456 1206.03,-411.456 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1201.32" y="-1029.01"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1212.23" y="-401.456">7</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1264.13" y="-1594.73"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="789.203,407.67 899.619,407.67 899.619,-460 1199.62,-460 1199.62,-1606.73 1260.04,-1606.73 "/>
+    <polygon style="fill: #000000" points="764.031,407.67 778.031,402.87 792.031,407.67 778.031,412.47 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="764.031,407.67 778.031,402.87 792.031,407.67 778.031,412.47 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1049.62" y="-464"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="796.031" y="403.67">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1256.04" y="-1610.73"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1834.83,-1466 1800.76,-1466 1800.76,-1630.73 1755.52,-1630.73 "/>
+    <polygon style="fill: #000000" points="1860,-1466 1846,-1461.2 1832,-1466 1846,-1470.8 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1860,-1466 1846,-1461.2 1832,-1466 1846,-1470.8 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1802.76" y="-1552.37"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1828" y="-1470">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-1634.73"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2354.63,-1545.4 2300,-1545.4 2300,-978.734 1755.52,-978.734 "/>
+    <polygon style="fill: #ffffff" points="2379.8,-1545.4 2365.8,-1540.6 2351.8,-1545.4 2365.8,-1550.2 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2379.8,-1545.4 2365.8,-1540.6 2351.8,-1545.4 2365.8,-1550.2 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2302" y="-1266.07"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2347.8" y="-1549.4">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-982.734"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2354.63,-1325.4 2320,-1325.4 2320,-962.734 1755.52,-962.734 "/>
+    <polygon style="fill: #ffffff" points="2379.8,-1325.4 2365.8,-1320.6 2351.8,-1325.4 2365.8,-1330.2 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2379.8,-1325.4 2365.8,-1320.6 2351.8,-1325.4 2365.8,-1330.2 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2322" y="-1148.07"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2347.8" y="-1329.4">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-966.734"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2354.63,-1065.4 2340,-1065.4 2340,-946.734 1755.52,-946.734 "/>
+    <polygon style="fill: #ffffff" points="2379.8,-1065.4 2365.8,-1060.6 2351.8,-1065.4 2365.8,-1070.2 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2379.8,-1065.4 2365.8,-1060.6 2351.8,-1065.4 2365.8,-1070.2 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2342" y="-1010.07"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2347.8" y="-1069.4">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-950.734"></text>
+  </g>
+  <g>
+    <polygon style="fill: #ffffff" points="2380,-1640 2553.75,-1640 2565.75,-1628 2565.75,-1590.25 2380,-1590.25 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2380,-1640 2553.75,-1640 2565.75,-1628 2565.75,-1590.25 2380,-1590.25 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="2553.75,-1640 2553.75,-1628 2565.75,-1628 "/>
+    <text font-size="25.4" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2387" y="-1605.85">
+      <tspan x="2387" y="-1605.85">HARDWARE 0D</tspan>
+    </text>
+  </g>
+  <g>
+    <polygon style="fill: #ffffff" points="3005.66,-1645.66 3179.41,-1645.66 3191.41,-1633.66 3191.41,-1595.91 3005.66,-1595.91 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3005.66,-1645.66 3179.41,-1645.66 3191.41,-1633.66 3191.41,-1595.91 3005.66,-1595.91 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="3179.41,-1645.66 3179.41,-1633.66 3191.41,-1633.66 "/>
+    <text font-size="25.4" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3012.66" y="-1611.51">
+      <tspan x="3012.66" y="-1611.51">HARDWARE 1D</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3000" y="-1562.43" width="241" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3000" y="-1562.43" width="241" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3120.5" y="-1542.43">
+        <a xlink:href="file:../autoapi/hardware1D/index.html#hardware1D.DAQ_1DViewer_Mock">DAQ_1DViewer_Mock
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3000" y="-1534.43" width="241" height="68"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3000" y="-1534.43" width="241" height="68"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1521.23">+params: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1505.23">+hardware_averaging: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1489.23">+x_axis:  	1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1473.23">+ind_data: int</text>
+    <rect style="fill: #ffffff" x="3000" y="-1466.43" width="241" height="116"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3000" y="-1466.43" width="241" height="116"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1453.23">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1437.23">+commit_settings(param)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1421.23">+set_Mock_data()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1405.23">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1389.23">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1373.23">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1357.23">+Stop()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3000" y="-1305.46" width="502.8" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3000" y="-1305.46" width="502.8" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3251.4" y="-1285.46">
+        <a xlink:href="file:../autoapi/hardware1D/index.html#hardware1D.DAQ_1DViewer_Picoscope">DAQ_1DViewer_Picoscope
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3000" y="-1277.46" width="502.8" height="100"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3000" y="-1277.46" width="502.8" height="100"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1264.26">+hardware_averaging: boolean</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1248.26">+params:  	dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1232.26">+pico: instance of Picoscope_5000A</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1216.26">+x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1200.26">+Nsample_available: int</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1184.26">+buffers:  	generic list</text>
+    <rect style="fill: #ffffff" x="3000" y="-1177.46" width="502.8" height="228"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3000" y="-1177.46" width="502.8" height="228"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1164.26">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1148.26">+get_active_channels()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1132.26">+emit_x_axis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1116.26">+get_xaxis(Nsamples:int,time_window)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1100.26">+commit_settings(param: 	instance of pyqtgraph.parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1084.26">+update_pico_settings()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1068.26">+set_channels_to_dynamic_range(dynamic_range:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1052.26">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1036.26">+set_overflow(ind)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1020.26">+set_buffers()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-1004.26">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-988.256">+Stop()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-972.256">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3003" y="-956.256">+Data_ready()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2974.83,-1548.43 2940,-1548.43 2940,-820 1755.52,-820 1755.52,-818.734 "/>
+    <polygon style="fill: #ffffff" points="3000,-1548.43 2986,-1543.63 2972,-1548.43 2986,-1553.23 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3000,-1548.43 2986,-1543.63 2972,-1548.43 2986,-1553.23 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="2347.76" y="-824"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2968" y="-1552.43">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-822.734"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2974.83,-1291.46 2960,-1291.46 2960,-802.734 1755.52,-802.734 "/>
+    <polygon style="fill: #ffffff" points="3000,-1291.46 2986,-1286.66 2972,-1291.46 2986,-1296.26 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3000,-1291.46 2986,-1286.66 2972,-1291.46 2986,-1296.26 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2962" y="-1051.1"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2968" y="-1295.46">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-806.734"></text>
+  </g>
+  <g>
+    <polygon style="fill: #ffffff" points="3606,-1640 3779.75,-1640 3791.75,-1628 3791.75,-1590.25 3606,-1590.25 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3606,-1640 3779.75,-1640 3791.75,-1628 3791.75,-1590.25 3606,-1590.25 "/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 1; stroke: #000000" points="3779.75,-1640 3779.75,-1628 3791.75,-1628 "/>
+    <text font-size="25.4" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3613" y="-1605.85">
+      <tspan x="3613" y="-1605.85">HARDWARE 2D</tspan>
+    </text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3606" y="-1560" width="210.2" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-1560" width="210.2" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3711.1" y="-1540">
+        <a xlink:href="file:../autoapi/hardware2D/index.html#hardware2D.DAQ_2DViewer_Mock">DAQ_2DViewer_Mock
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3606" y="-1532" width="210.2" height="52"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-1532" width="210.2" height="52"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1518.8">+params: dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1502.8">+x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1486.8">+y_axis: 1D numpy array</text>
+    <rect style="fill: #ffffff" x="3606" y="-1480" width="210.2" height="148"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-1480" width="210.2" height="148"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1466.8">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1450.8">+commit_settings(param)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1434.8">+set_Mock_data()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1418.8">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1402.8">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1386.8">+get_xaxis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1370.8">+get_yaxis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1354.8">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1338.8">+Stop()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3606" y="-1306" width="425.8" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-1306" width="425.8" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3818.9" y="-1286">
+        <a xlink:href="file:../autoapi/hardware2D/index.html#hardware2D.DAQ_2DViewer_OrsayCamera">DAQ_2DViewer_OrsayCamera
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3606" y="-1278" width="425.8" height="132"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-1278" width="425.8" height="132"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1264.8">+params:  	dictionnary list</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1248.8">+x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1232.8">+y_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1216.8">+camera</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1200.8">+data</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1184.8">+CCDSIZEX</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1168.8">+CCDSIZEY</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1152.8">+data_pointer</text>
+    <rect style="fill: #ffffff" x="3606" y="-1146" width="425.8" height="196"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-1146" width="425.8" height="196"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1132.8">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1116.8">+commit_settings(param)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1100.8">+dataLocker(camera,datatype:int,sx,sy,sz)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1084.8">+dataUnlocker(camera:c_void pointer 	,newdata:bool)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1068.8">+emit_data()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1052.8">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1036.8">+timerEvent(event:QTimerEvent object 	)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1020.8">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-1004.8">+get_xaxis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-988.8">+get_yaxis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-972.8">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-956.8">+Stop()</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="3606" y="-920" width="310.3" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-920" width="310.3" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="3761.15" y="-900">
+        <a xlink:href="file:../autoapi/hardware2D/index.html#hardware2D.DAQ_2DViewer_TCP_GRABBER">DAQ_2DViewer_TCP_GRABBER
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="3606" y="-892" width="310.3" height="68"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-892" width="310.3" height="68"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-878.8">+command_server: instance of pyqtSignal</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-862.8">+x_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-846.8">+y_axis: 1D numpy array</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-830.8">+data</text>
+    <rect style="fill: #ffffff" x="3606" y="-824" width="310.3" height="148"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="3606" y="-824" width="310.3" height="148"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-810.8">+init(parent,params_state)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-794.8">+data_ready(data)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-778.8">+commit_settings(param)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-762.8">+Ini_Detector()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-746.8">+Close()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-730.8">+get_xaxis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-714.8">+get_yaxis()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-698.8">+Grab(Naverage:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3609" y="-682.8">+Stop()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3580.83,-1546 3520,-1546 3520,-786.734 1755.52,-786.734 "/>
+    <polygon style="fill: #ffffff" points="3606,-1546 3592,-1541.2 3578,-1546 3592,-1550.8 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3606,-1546 3592,-1541.2 3578,-1546 3592,-1550.8 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3522" y="-1170.37"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="3574" y="-1550">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-790.734"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3580.83,-1292 3540,-1292 3540,-770.734 1755.52,-770.734 "/>
+    <polygon style="fill: #ffffff" points="3606,-1292 3592,-1287.2 3578,-1292 3592,-1296.8 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3606,-1292 3592,-1287.2 3578,-1292 3592,-1296.8 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3542" y="-1035.37"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="3574" y="-1296">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-774.734"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3580.83,-906 3560,-906 3560,-754.734 1755.52,-754.734 "/>
+    <polygon style="fill: #ffffff" points="3606,-906 3592,-901.2 3578,-906 3592,-910.8 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="3606,-906 3592,-901.2 3578,-906 3592,-910.8 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3562" y="-834.367"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="3574" y="-910">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1759.52" y="-758.734"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1454.7,-383.456 2526.78,-383.456 2526.78,-383.583 2561.56,-383.583 "/>
+    <polygon style="fill: #000000" points="1429.53,-383.456 1443.53,-388.256 1457.53,-383.456 1443.53,-378.656 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-383.456 1443.53,-388.256 1457.53,-383.456 1443.53,-378.656 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="2528.78" y="-387.519"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1461.53" y="-387.456">2</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2557.56" y="-387.583"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1454.7,-383.456 2524.1,-383.456 2524.1,-383.583 2561.86,-383.583 "/>
+    <polygon style="fill: #000000" points="1429.53,-383.456 1443.53,-388.256 1457.53,-383.456 1443.53,-378.656 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-383.456 1443.53,-388.256 1457.53,-383.456 1443.53,-378.656 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1976.82" y="-387.456"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1440.53" y="-371.456"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2557.86" y="-387.583"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-422.628 1429.53,-520 3761.14,-520 3761.14,-676 "/>
+    <polygon style="fill: #000000" points="1429.53,-397.456 1424.73,-411.456 1429.53,-425.456 1434.33,-411.456 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1429.53,-397.456 1424.73,-411.456 1429.53,-425.456 1434.33,-411.456 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="2595.34" y="-524"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1440.53" y="-401.456">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="3765.14" y="-664"></text>
+  </g>
+  <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2060.05,-279.078 2060.05,-275.218 2060,-275.218 2060,672.094 2100,672.094 "/>
+  <g>
+    <rect style="fill: #e5e5e5" x="299.174" y="-557.406" width="569.933" height="600"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="299.174" y="-557.406" width="569.933" height="600"/>
+    <rect style="fill: #e5e5e5" x="299.174" y="-577.406" width="73.3" height="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="299.174" y="-577.406" width="73.3" height="20"/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="301.174" y="-563.406">
+        <a xlink:href="Class_Diagram_DAQ_Utils_details.svg">DAQ_Utils
+    </a>
+</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="319.174" y="-532.104" width="425.8" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="319.174" y="-532.104" width="425.8" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="532.074" y="-512.104">
+        <a xlink:href="file:../autoapi/DAQ_utils/index.html">DAQ_Utils
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="319.174" y="-504.104" width="425.8" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="319.174" y="-504.104" width="425.8" height="8"/>
+    <rect style="fill: #ffffff" x="319.174" y="-496.104" width="425.8" height="244"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="319.174" y="-496.104" width="425.8" height="244"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-482.904">+set_scan_spiral(start_axis1:int,start_axis2:int,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-466.904">                 rmax:int,rstep:int)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-450.904">+scan_linear(start_axis1:scalar,start_axis2:scalar,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-434.904">             stop_axis1:scalar,stop_axis2:int,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-418.904">             step_axis1:float,step_axis2:float,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-402.904">             back_and_force:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-386.904">+find_part_in_path_and_subpath(base_dir,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-370.904">                               part:string,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-354.904">                               create:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-338.904">+set_current_scan_path(base_dir,base_name:string,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-322.904">                       update_h5:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-306.904">+select_file(start_path:Path object or str,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-290.904">              optional,save:boolean, optional,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-274.904">             ext:string, optional)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-258.904">+ThreadCommand(command:string,attributes:generic list)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="319.174" y="-232.104" width="502.8" height="44"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="319.174" y="-232.104" width="502.8" height="44"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="570.574" y="-216.904">&lt;&lt;tree manipulation library&gt;&gt;</text>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="570.574" y="-196.104">
+        <a xlink:href="file:../autoapi/custom_parameter_tree/index.html">custom_parameter_tree
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="319.174" y="-188.104" width="502.8" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="319.174" y="-188.104" width="502.8" height="8"/>
+    <rect style="fill: #ffffff" x="319.174" y="-180.104" width="502.8" height="196"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="319.174" y="-180.104" width="502.8" height="196"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-166.904">+walk_parameters_to_xml(parent_elt:XML element,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-150.904">                        param: 	instance of pyqtgraph parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-134.904">+parameter_to_xml_string(param:instance of pyqtgraph parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-118.904">+parameter_to_xml_file(param:instance of pyqtgraph parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-102.904">                       filename:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-86.904">+walk_xml_to_parameter(params:dictionnary list,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-70.904">                       XML_elt:XML object)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-54.904">+XML_file_to_parameter(file_name:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-38.904">+XML_string_to_parameter(xml_string:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-22.904">+iter_children(param:instance of pyqtgraph parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="-6.904">               childlist:list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="322.174" y="9.096">+()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #bfbfbf" points="319.174,-518.104 319.174,-520 280,-520 280,519.51 315.338,519.51 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="299.587" y="-524"></text>
+    <polygon style="fill: #bfbfbf" points="295.587,-524 295.587,-532 287.587,-528 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="323.174" y="-522.104"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="311.338" y="515.51"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #bfbfbf" points="744.974,-518.104 1220,-518.104 1220,-1558.73 1260.42,-1558.73 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1222" y="-1042.42"></text>
+    <polygon style="fill: #bfbfbf" points="1224,-1042.42 1224,-1050.42 1232,-1046.42 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="748.974" y="-522.104"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1256.42" y="-1562.73"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #bfbfbf" points="744.974,-486.104 744.974,-500 2640,-500 2640,160 2680.78,160 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1692.49" y="-504"></text>
+    <polygon style="fill: #bfbfbf" points="1694.49,-504 1694.49,-512 1702.49,-508 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="748.974" y="-490.104">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2676.78" y="156"></text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="339.134" y="-1644.75" width="502.8" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="339.134" y="-1644.75" width="502.8" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="590.534" y="-1624.75">
+        <a xlink:href="file:../autoapi/DAQ_Scan_main/index.html#DAQ_Scan_main.DAQ_Scan">DAQ_Scan
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="339.134" y="-1616.75" width="502.8" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="339.134" y="-1616.75" width="502.8" height="8"/>
+    <rect style="fill: #ffffff" x="339.134" y="-1608.75" width="502.8" height="532"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="339.134" y="-1608.75" width="502.8" height="532"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1595.55">+save_layout_state()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1579.55">+load_layout_state()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1563.55">+add_log()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1547.55">+create_menu(menubar)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1531.55">+clear_move_det_controllers()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1515.55">+set_Mock_preset()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1499.55">+set_canon_preset()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1483.55">+set_file_preset()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1467.55">+set_preset_mode(filename:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1451.55">+stop_moves()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1435.55">+update_scan_type(param:instance of pyqtgraph parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1419.55">+update_plot_det_items(param:instance of pyqtgraph parameter)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1403.55">+DAQscan_settings_changed(param:instance of pyqtgraph parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1387.55">                          changes:(parameter,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1371.55">                          change,information) tuple list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1355.55">+move_to_crosshair(posx:float,posy:float)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1339.55">+set_ini_positions()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1323.55">+Quit_fun()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1307.55">+start_scan()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1291.55">+stop_scan()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1275.55">+add_comments()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1259.55">+update_file_paths(update_h5:boolean)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1243.55">+show_file_attributes(type_info:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1227.55">+set_metadata_about_dataset()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1211.55">+save_metadata(node,type_info:string)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1195.55">+set_scan()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1179.55">+update_scan_GUI(datas)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1163.55">+save_scan()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1147.55">+update_2D_graph(datas)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1131.55">+update_1D_graph(datas)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1115.55">+thread_status(status:string list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1099.55">+update_status(txt:string,wait_time:int,</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-1083.55">               log_type:string)</text>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="339.134" y="-981.414" width="279.5" height="28"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="339.134" y="-981.414" width="279.5" height="28"/>
+    <text font-size="16" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:700" x="478.884" y="-961.414">
+        <a xlink:href="file:../autoapi/DAQ_Scan_main/index.html#DAQ_Scan_main.DAQ_Scan_Acquisition">DAQ_Scan_Acquisition
+    </a>
+</text>
+    <rect style="fill: #ffffff" x="339.134" y="-953.414" width="279.5" height="8"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="339.134" y="-953.414" width="279.5" height="8"/>
+    <rect style="fill: #ffffff" x="339.134" y="-945.414" width="279.5" height="164"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="339.134" y="-945.414" width="279.5" height="164"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-932.214">+queue_command(command:string list)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-916.214">+set_ini_positions()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-900.214">+move_done(name:string,position)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-884.214">+det_done(data)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-868.214">+timeout()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-852.214">+move_stages(positions)</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-836.214">+start_acquisition()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-820.214">+check_array_in_h5()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-804.214">+wait_for_det_done()</text>
+    <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="342.134" y="-788.214">+wait_for_move_done()</text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="578.462,481.906 578.462,499.59 578.288,499.59 578.288,519.51 "/>
+    <polygon style="fill: #ffffff" points="586.462,481.906 578.462,465.906 570.462,481.906 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="586.462,481.906 578.462,465.906 570.462,481.906 "/>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1235.24,-1644.73 1044.18,-1644.73 1044.18,-1644.75 841.934,-1644.75 "/>
+    <polygon style="fill: #000000" points="1260.42,-1644.73 1246.42,-1639.93 1232.42,-1644.73 1246.42,-1649.53 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1260.42,-1644.73 1246.42,-1639.93 1232.42,-1644.73 1246.42,-1649.53 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1046.18" y="-1648.74"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1228.42" y="-1648.73">many</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="845.934" y="-1648.75"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2654.69,-432.744 1432.85,-432.744 1432.85,-432.755 1432.96,-432.755 "/>
+    <polygon style="fill: #000000" points="2679.86,-432.744 2665.86,-427.944 2651.86,-432.744 2665.86,-437.544 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="2679.86,-432.744 2665.86,-427.944 2651.86,-432.744 2665.86,-437.544 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1434.85" y="-436.75"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="2647.86" y="-436.744">many</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1428.96" y="-436.755"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1260.42,-607.562 1260.42,-580 1481.53,-580 1481.53,-524.009 1481.53,-524.009 "/>
+    <polygon style="fill: #000000" points="1260.42,-632.734 1265.22,-618.734 1260.42,-604.734 1255.62,-618.734 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1260.42,-632.734 1265.22,-618.734 1260.42,-604.734 1255.62,-618.734 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1370.97" y="-584"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="1271.42" y="-620.734">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1477.53" y="-528.009"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="847.146,-210.104 879.619,-210.104 879.619,-480 1199.62,-480 1199.62,-1630.73 1260.04,-1630.73 "/>
+    <polygon style="fill: #000000" points="821.974,-210.104 835.974,-214.904 849.974,-210.104 835.974,-205.304 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="821.974,-210.104 835.974,-214.904 849.974,-210.104 835.974,-205.304 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:middle;font-family:monospace;font-style:normal;font-weight:normal" x="1039.62" y="-484"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="853.974" y="-214.104">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1256.04" y="-1634.73"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="847.146,-170.104 880,-170.104 880,-1598.75 841.934,-1598.75 "/>
+    <polygon style="fill: #000000" points="821.974,-170.104 835.974,-174.904 849.974,-170.104 835.974,-165.304 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="821.974,-170.104 835.974,-174.904 849.974,-170.104 835.974,-165.304 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="882" y="-888.425"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="853.974" y="-174.104">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="845.934" y="-1602.75"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="847.146,-122.104 880.366,-122.104 880.366,-89.2027 880.188,-89.2027 "/>
+    <polygon style="fill: #000000" points="821.974,-122.104 835.974,-126.904 849.974,-122.104 835.974,-117.304 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="821.974,-122.104 835.974,-126.904 849.974,-122.104 835.974,-117.304 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="882.366" y="-109.653"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="853.974" y="-126.104">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="884.188" y="-93.2027"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="847.146,-138.104 865.851,-138.104 865.851,-138.016 895.727,-138.016 "/>
+    <polygon style="fill: #000000" points="821.974,-138.104 835.974,-142.904 849.974,-138.104 835.974,-133.304 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="821.974,-138.104 835.974,-142.904 849.974,-138.104 835.974,-133.304 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="867.851" y="-142.06"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="853.974" y="-142.104">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="891.727" y="-142.016"></text>
+  </g>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="847.146,-90.104 880,-90.104 880,404.257 880.436,404.257 "/>
+    <polygon style="fill: #000000" points="821.974,-90.104 835.974,-94.904 849.974,-90.104 835.974,-85.304 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="821.974,-90.104 835.974,-94.904 849.974,-90.104 835.974,-85.304 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="882" y="153.076"></text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:monospace;font-style:normal;font-weight:normal" x="853.974" y="-94.104">1</text>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="876.436" y="400.257"></text>
+  </g>
+  <ellipse style="fill: #000000" cx="880.666" cy="-479.334" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="2600.61" cy="-739.128" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1481.36" cy="-190.422" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="2340.18" cy="198.427" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="880.317" cy="500.544" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1784.29" cy="673.731" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="2060.33" cy="673.144" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="2340.23" cy="673.144" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="880.188" cy="-89.2027" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="881.362" cy="-210.376" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1200.19" cy="-479.812" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1200.78" cy="-459.812" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1200.78" cy="-1606.27" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1200.82" cy="-1589.79" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="880.544" cy="-432.557" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="880.188" cy="-1597.42" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="2581.37" cy="262.153" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="2581.37" cy="502.58" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="3279.69" cy="-392.29" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="3301.6" cy="-392.044" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="3322.03" cy="-392.044" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="3339.69" cy="-392.044" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="3359.69" cy="-392.244" rx="5.6666" ry="5.6666"/>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1234.47,-1574.73 1199.23,-1574.73 1199.23,-539 921.229,-539 921.229,-521.349 921.444,-521.349 "/>
+    <polygon style="fill: #000000" points="1259.64,-1574.73 1245.64,-1569.93 1231.64,-1574.73 1245.64,-1579.53 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="1259.64,-1574.73 1245.64,-1569.93 1231.64,-1574.73 1245.64,-1579.53 "/>
+    <text font-size="12.7998" style="fill: #000000;text-anchor:end;font-family:monospace;font-style:normal;font-weight:normal" x="1227.64" y="-1578.73">1</text>
+  </g>
+  <ellipse style="fill: #000000" cx="1200.11" cy="-538.212" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1201.2" cy="-1573.62" rx="5.6666" ry="5.6666"/>
+  <ellipse style="fill: #000000" cx="1201.7" cy="-278.799" rx="5.6666" ry="5.6666"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="943.274" y1="-178.113" x2="983.942" y2="-178.001"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="902.282" y1="-138.016" x2="918.089" y2="-138.016"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="923.872" y1="-137.954" x2="936.981" y2="-137.954"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="942.043" y1="-138.068" x2="983.942" y2="-138.001"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="944.81" y1="-278.754" x2="1201.7" y2="-278.799"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="921.5" y1="-515.402" x2="921.621" y2="-502.647"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="921.236" y1="-497.324" x2="921.176" y2="-482.982"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="921.302" y1="-477.179" x2="921.338" y2="-463.043"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="921.176" y1="-457.207" x2="921.35" y2="-435.665"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="921.662" y1="-429.65" x2="921.513" y2="-277.566"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="921.092" y1="-278.617" x2="937.279" y2="-278.617"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.26" y1="-430.697" x2="1481.53" y2="-386.129"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.26" y1="-381.05" x2="1481.53" y2="-362.088"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.53" y1="-356.672" x2="1481.56" y2="-345.376"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.53" y1="-338.344" x2="1481.53" y2="-264.453"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.53" y1="-257.028" x2="1481.36" y2="-190.422"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2579.75" y1="-362.522" x2="2579.85" y2="-429.889"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2580.05" y1="-435.31" x2="2580.05" y2="-447.499"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2679.86" y1="-446.744" x2="2580.94" y2="-446.905"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.36" y1="-752.371" x2="2600.61" y2="-739.128"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.36" y1="-767.932" x2="2600.2" y2="-757.936"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.28" y1="-784.142" x2="2600.12" y2="-774.146"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.52" y1="-800.028" x2="2600.37" y2="-790.032"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.44" y1="-816.238" x2="2600.29" y2="-806.242"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.4" y1="-835.404" x2="2600.2" y2="-823.749"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2680.07" y1="245.293" x2="2581.21" y2="245.36"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2581.49" y1="244.542" x2="2581.37" y2="262.153"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="840.693" y1="557.51" x2="881.485" y2="557.609"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="880.394" y1="557.337" x2="880.317" y2="500.544"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2581.37" y1="262.153" x2="2581.37" y2="502.58"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2581.82" y1="501.217" x2="2342.96" y2="501.339"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2336.22" y1="501.211" x2="2063.42" y2="501.211"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2056.31" y1="501.211" x2="1787.18" y2="501.211"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1779.59" y1="500.934" x2="943.807" y2="500.934"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="936.826" y1="500.632" x2="880.317" y2="500.544"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="880.317" y1="500.544" x2="880.394" y2="438.748"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="880.394" y1="433.296" x2="880.394" y2="410.396"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2602.48" y1="197.967" x2="2680.78" y2="198"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2145.7" y1="234" x2="2080.85" y2="233.854"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2080.98" y1="234.419" x2="2081.44" y2="-278.105"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2081.72" y1="-285.193" x2="2081.72" y2="-295.825"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2081.45" y1="-301.823" x2="2081.45" y2="-341.352"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2062.54" y1="-341.559" x2="2082.45" y2="-341.797"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.56" y1="-517.207" x2="1481.26" y2="-502.64"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1481.26" y1="-497.289" x2="1481.26" y2="-436.94"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2059.64" y1="-361.712" x2="2059.34" y2="-381.035"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2059.64" y1="-385.792" x2="2059.34" y2="-430.087"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2059.34" y1="-435.438" x2="2059.05" y2="-516.894"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2059.05" y1="-522.84" x2="2059.34" y2="-572.486"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2060.09" y1="-571.635" x2="1507.62" y2="-572.135"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1507.97" y1="-632.734" x2="1508.62" y2="-571.635"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2874.9" y1="-1325.4" x2="2918.31" y2="-1325.63"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2918.95" y1="-1326.19" x2="2918.86" y2="-822.51"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2918.69" y1="-816.755" x2="2918.92" y2="-805.425"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2919.1" y1="-800.399" x2="2919.33" y2="-789.068"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2918.97" y1="-784.587" x2="2919.19" y2="-773.257"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2918.68" y1="-768.827" x2="2918.9" y2="-757.496"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2597.05" y1="-739.798" x2="2919.52" y2="-739.798"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2919" y1="-752.411" x2="2918.58" y2="-739.377"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.3" y1="-539.797" x2="2600.61" y2="-739.128"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2600.8" y1="-539.953" x2="2560.37" y2="-539.953"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2560.96" y1="-539.953" x2="2561.04" y2="-524.211"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2560.89" y1="-517.954" x2="2560.77" y2="-502.675"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2560.77" y1="-435.341" x2="2560.69" y2="-497.739"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2560.67" y1="-383.88" x2="2560.77" y2="-430.434"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="880.188" y1="-1597.42" x2="880.266" y2="-1631.44"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="880.266" y1="-1630.62" x2="841.934" y2="-1630.75"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="880.544" y1="-432.307" x2="897.382" y2="-432.384"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="903.038" y1="-432.384" x2="1198.04" y2="-432.735"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="1204.76" y1="-432.415" x2="1426.16" y2="-432.589"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2059.89" y1="-283.878" x2="2060.05" y2="-297.478"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2059.89" y1="-301.478" x2="2059.89" y2="-357.637"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x1="2581.37" y1="262.153" x2="2680.78" y2="262"/>
+</svg>

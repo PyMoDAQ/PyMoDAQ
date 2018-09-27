@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/PR-SVG-20010719/DTD/svg10.dtd">
+<svg width="70cm" height="38cm" viewBox="513 -102 1388 745" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <g>
+    <rect style="fill: #ffffff" x="1404.99" y="-100.593" width="494.251" height="742.746" rx="10" ry="10"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke-linejoin: round; stroke: #000000" x="1404.99" y="-100.593" width="494.251" height="742.746" rx="10" ry="10"/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="800.596" y="-100.228" width="290.945" height="294.931" rx="20" ry="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke-linejoin: round; stroke: #000000" x="800.596" y="-100.228" width="290.945" height="294.931" rx="20" ry="20"/>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="893.08" y="-71.5275">
+    <tspan x="893.08" y="-71.5275">SCAN 2D</tspan>
+  </text>
+  <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="821.364" y="-48.6897">
+    <tspan x="821.364" y="-48.6897">A given set of detectors as a function of</tspan>
+    <tspan x="821.364" y="-32.6897">two  selected move axis.</tspan>
+    <tspan x="821.364" y="-16.6897">Three type of detectors :</tspan>
+    <tspan x="821.364" y="-0.68973">   o 0D</tspan>
+    <tspan x="821.364" y="15.3103">   o 1D : data type could be 1D or 0D </tspan>
+    <tspan x="821.364" y="31.3103">(subset or average for instance)</tspan>
+    <tspan x="821.364" y="47.3103">   o 2D : data type could be 2D, 1D </tspan>
+    <tspan x="821.364" y="63.3103">(region of interest lineouts for instance),</tspan>
+    <tspan x="821.364" y="79.3103"> 0D (full integration for instance)</tspan>
+    <tspan x="821.364" y="95.3103"></tspan>
+    <tspan x="821.364" y="111.31">On the DAQ Scan 2d plot, only OD data </tspan>
+    <tspan x="821.364" y="127.31">can be shown, so in case of 1D or 2D</tspan>
+    <tspan x="821.364" y="143.31">detectors, a subset or a region of </tspan>
+    <tspan x="821.364" y="159.31">integration has  to be performed.</tspan>
+    <tspan x="821.364" y="175.31">However all datas (0d, 1d, 2d) are saved. </tspan>
+  </text>
+  <g>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="946.068,194.704 946.068,251.272 946.191,251.272 946.191,287.825 "/>
+    <polygon style="fill: #000000" points="946.191,295.325 941.191,285.325 946.191,287.825 951.191,285.325 "/>
+    <polygon style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" points="946.191,295.325 941.191,285.325 946.191,287.825 951.191,285.325 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="524.81" y="-99.3094" width="80" height="36" rx="20" ry="20"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="524.81" y="-99.3094" width="80" height="36" rx="20" ry="20"/>
+    <text font-size="12.8" style="fill: #000000;text-anchor:middle;font-family:sans-serif;font-style:normal;font-weight:normal" x="564.81" y="-77.4094">
+      <tspan x="564.81" y="-77.4094"><a xlink:href="file:Main_diagramm.svg">UP</a>
+    </tspan>
+    </text>
+  </g>
+  <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="1478.35" y="751.05">
+    <tspan x="1478.35" y="751.05"></tspan>
+  </text>
+  <g>
+    <rect style="fill: #ffffff" x="514.191" y="297.561" width="864" height="344.27" rx="10" ry="10"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke-linejoin: round; stroke: #000000" x="514.191" y="297.561" width="864" height="344.27" rx="10" ry="10"/>
+  </g>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="824.355" y="324.433">
+    <tspan x="824.355" y="324.433">Three Type Of Scan</tspan>
+  </text>
+  <text font-size="16.9333" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="613.313" y="351.814">
+    <tspan x="613.313" y="351.814">Spiral</tspan>
+  </text>
+  <text font-size="16.9333" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="897.128" y="347.585">
+    <tspan x="897.128" y="347.585">Linear</tspan>
+  </text>
+  <text font-size="16.9333" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="1179.33" y="348.894">
+    <tspan x="1179.33" y="348.894">Back and forth</tspan>
+  </text>
+  <g>
+    <rect style="fill: #ffffff" x="552.802" y="369.347" width="169.186" height="168.488"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="552.802" y="369.347" width="169.186" height="168.488"/>
+  </g>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="637.394" y1="448.966" x2="655.675" y2="448.9"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="655.577" y1="449.727" x2="655.252" y2="429.626"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="617.32" y1="430.598" x2="655.496" y2="430.598"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="617.644" y1="469.179" x2="617.32" y2="429.95"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="617.239" y1="468.531" x2="676.326" y2="468.531"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="596.571" y1="410.497" x2="676.245" y2="410.822"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="675.353" y1="467.558" x2="675.029" y2="410.822"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="596.895" y1="489.604" x2="596.814" y2="409.849"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="596.165" y1="488.632" x2="696.103" y2="488.308"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="695.385" y1="390.18" x2="695.385" y2="488.884"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="577.06" y1="390.18" x2="695.434" y2="390.199"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="576.986" y1="389.288" x2="576.763" y2="509.1"/>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="576.391" y1="508.803" x2="690.293" y2="508.821"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="682.528,513.819 692.529,508.821 682.53,503.819 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="835.255" y="368.97" width="169.186" height="168.488"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="835.255" y="368.97" width="169.186" height="168.488"/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="843.625" y1="527.726" x2="844.07" y2="380.894"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="849.046,388.673 844.077,378.658 839.046,388.642 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="853.139" y1="527.267" x2="853.584" y2="380.435"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="858.56,388.214 853.59,378.199 848.56,388.184 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="863.684" y1="527.267" x2="864.129" y2="380.435"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="869.106,388.214 864.136,378.199 859.106,388.184 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="873.198" y1="526.809" x2="873.643" y2="379.977"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="878.619,387.756 873.65,377.741 868.619,387.725 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="882.941" y1="527.267" x2="883.386" y2="380.435"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="888.363,388.214 883.393,378.199 878.363,388.184 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="892.455" y1="526.809" x2="892.9" y2="379.977"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="897.876,387.756 892.907,377.741 887.876,387.725 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="903" y1="526.809" x2="903.445" y2="379.977"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="908.422,387.756 903.452,377.741 898.422,387.725 "/>
+  </g>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="912.514" y1="526.35" x2="912.842" y2="435.455"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="917.814,443.237 912.85,433.219 907.814,443.201 "/>
+  </g>
+  <g>
+    <rect style="fill: #ffffff" x="1142.42" y="369.486" width="169.186" height="168.488"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1142.42" y="369.486" width="169.186" height="168.488"/>
+  </g>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1150.64" y1="530.197" x2="1151.07" y2="379.263"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1159.61" y1="529.739" x2="1159.99" y2="379.263"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1169.61" y1="529.466" x2="1169.54" y2="379.405"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1180.58" y1="529.371" x2="1180.13" y2="379.339"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1190.23" y1="529.739" x2="1190.53" y2="380.223"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1201.32" y1="530.019" x2="1201.29" y2="380.43"/>
+  <g>
+    <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1211.25" y1="529.28" x2="1211.21" y2="438.688"/>
+    <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" points="1216.22,446.45 1211.21,436.452 1206.22,446.454 "/>
+  </g>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1150.8" y1="380.267" x2="1159.79" y2="380.267"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1159.72" y1="528.803" x2="1170.08" y2="528.803"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1169.74" y1="380.385" x2="1180.1" y2="380.385"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1179.55" y1="528.81" x2="1191.13" y2="528.81"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1189.49" y1="380.56" x2="1202.24" y2="380.768"/>
+  <line style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #add8e6" x1="1200.58" y1="528.972" x2="1212.17" y2="528.972"/>
+  <image x="1658.45" y="-4.02139" width="190.039" height="137.561" xlink:href="./SCAN%202D/Spiral_base.PNG"/>
+  <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #00ff00" x="1696.68" y="115.432" width="6.33778" height="6.81551"/>
+  <g>
+    <rect style="fill: #ffffff" x="1748.08" y="185.814" width="100.324" height="22.3549"/>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1748.08" y="185.814" width="100.324" height="22.3549"/>
+  </g>
+  <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="1755.99" y="202.444">
+    <tspan x="1755.99" y="202.444">6.769495e-01</tspan>
+  </text>
+  <g>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1687.78" y="269.003" width="162.578" height="153.168"/>
+    <image x="1688.78" y="270.003" width="160.578" height="151.168" xlink:href="./SCAN%202D/0D_linear_0dreference.PNG"/>
+  </g>
+  <g>
+    <rect style="fill: none; fill-opacity:0; stroke-width: 2; stroke: #000000" x="1683.47" y="463.341" width="167.208" height="148.764"/>
+    <image x="1684.47" y="464.341" width="165.208" height="146.764" xlink:href="./viewer2D.PNG"/>
+  </g>
+  <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 4; stroke: #00ff00" points="1696.68,118.84 1669.26,118.84 1669.26,196.991 1748.08,196.991 "/>
+  <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 4; stroke: #00ff00" points="1688.78,345.587 1669.35,345.587 1669.35,118.803 1696.68,118.803 1696.68,118.84 "/>
+  <polyline style="fill: none; fill-opacity:0; stroke-width: 2; stroke-dasharray: 4; stroke: #00ff00" points="1684.47,537.724 1669.26,537.724 1669.26,118.752 1696.68,118.752 1696.68,118.84 "/>
+  <text font-size="12.8" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="1521.89" y="-23.5715">
+    <tspan x="1521.89" y="-23.5715">Three case of data representation : </tspan>
+  </text>
+  <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="1468.72" y="178.077">
+    <tspan x="1468.72" y="178.077">0D data grabbed :</tspan>
+    <tspan x="1468.72" y="194.077">each pixel contain a scalar</tspan>
+    <tspan x="1468.72" y="210.077"></tspan>
+    <tspan x="1468.72" y="226.077"></tspan>
+    <tspan x="1468.72" y="242.077"></tspan>
+    <tspan x="1468.72" y="258.077"></tspan>
+    <tspan x="1468.72" y="274.077"></tspan>
+    <tspan x="1468.72" y="290.077"></tspan>
+    <tspan x="1468.72" y="306.077"></tspan>
+    <tspan x="1468.72" y="322.077"></tspan>
+    <tspan x="1468.72" y="338.077">1D data grabbed :</tspan>
+    <tspan x="1468.72" y="354.077">each pixel contain a spectrum</tspan>
+    <tspan x="1468.72" y="370.077"></tspan>
+    <tspan x="1468.72" y="386.077"></tspan>
+    <tspan x="1468.72" y="402.077"></tspan>
+    <tspan x="1468.72" y="418.077"></tspan>
+    <tspan x="1468.72" y="434.077"></tspan>
+    <tspan x="1468.72" y="450.077"></tspan>
+    <tspan x="1468.72" y="466.077"></tspan>
+    <tspan x="1468.72" y="482.077"></tspan>
+    <tspan x="1468.72" y="498.077"></tspan>
+    <tspan x="1468.72" y="514.077"></tspan>
+    <tspan x="1468.72" y="530.077">2D data grabbed : </tspan>
+    <tspan x="1468.72" y="546.077">each pixel contain an image</tspan>
+  </text>
+  <text font-size="19.7556" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:700" x="1513.46" y="-57.104">
+    <tspan x="1513.46" y="-57.104">Example with spiral scan</tspan>
+  </text>
+  <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="535.823" y="563.716">
+    <tspan x="535.823" y="563.716">The scan begin at the center </tspan>
+    <tspan x="535.823" y="579.716">of the area and run in a spiral </tspan>
+    <tspan x="535.823" y="595.716">shape.</tspan>
+  </text>
+  <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="812.039" y="567.606">
+    <tspan x="812.039" y="567.606">The scan begin at the top left/down</tspan>
+    <tspan x="812.039" y="583.606">of the area and browse the zone </tspan>
+    <tspan x="812.039" y="599.606">line by line</tspan>
+  </text>
+  <text font-size="12.7998" style="fill: #000000;text-anchor:start;font-family:sans-serif;font-style:normal;font-weight:normal" x="1114.19" y="567.606">
+    <tspan x="1114.19" y="567.606">The scan begin at the top left/down </tspan>
+    <tspan x="1114.19" y="583.606">of the area and browse the zone</tspan>
+    <tspan x="1114.19" y="599.606">line by line without restarting </tspan>
+    <tspan x="1114.19" y="615.606">from the top down frontier</tspan>
+  </text>
+</svg>

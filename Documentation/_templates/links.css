@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+a:link {
+    background-color: white;
+}
+
+a:visited {
+    background-color: cyan;
+}
+
+a:hover {
+    background-color: lightblue;
+}
+
+a:active {
+    background-color: hotpink;
+} 
+</style>
+</head>
+
