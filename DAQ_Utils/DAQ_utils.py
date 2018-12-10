@@ -11,7 +11,7 @@ from pathlib import Path
 import enum
 import os
 import re
-
+import importlib
 
 
 
@@ -133,20 +133,57 @@ def get_names(mode):
     base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
     if(mode=='DAQ_Move'):
         plugin_list=find_in_path(os.path.join(base_path,'DAQ_Move_plugins'),mode)
-        plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        return plugins
+        plugins = elt_as_first_element(plugin_list,match_word='Mock')
+        #check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.DAQ_Move_' + mod, 'PyMoDAQ.plugins.DAQ_Move_plugins')
+                plugins_import.append(mod)
+            except:
+                pass
+
+
+        return plugins_import
     elif(mode=='DAQ_0DViewer'):
         plugin_list=find_in_path(os.path.join(base_path,'DAQ_Viewer_plugins','plugins_0D'),mode)
         plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        return plugins
+        #check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.DAQ_0DViewer_' + mod, 'PyMoDAQ.plugins.DAQ_Viewer_plugins.plugins_0D')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
     elif(mode=='DAQ_1DViewer'):
         plugin_list=find_in_path(os.path.join(base_path,'DAQ_Viewer_plugins','plugins_1D'),mode)
         plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        return plugins
+        #check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.DAQ_1DViewer_' + mod, 'PyMoDAQ.plugins.DAQ_Viewer_plugins.plugins_1D')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
     elif(mode=='DAQ_2DViewer'):
         plugin_list=find_in_path(os.path.join(base_path,'DAQ_Viewer_plugins','plugins_2D'),mode) 
         plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        return plugins   
+        #check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.DAQ_2DViewer_' + mod, 'PyMoDAQ.plugins.DAQ_Viewer_plugins.plugins_2D')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
 
 # class EnumMeta (EnumMeta):
 def make_enum(mode):
@@ -693,7 +730,7 @@ def select_file(start_path=None,save=True, ext=None):
         fname=QtWidgets.QFileDialog.getOpenFileName(None, 'Select a file name',start_path,filter)
 
     fname=fname[0]
-    if not( not(fname)): #execute if the user didn't cancel the file selection
+    if fname == '': #execute if the user didn't cancel the file selection
         fname=Path(fname)
         if save:
             parent=fname.parent

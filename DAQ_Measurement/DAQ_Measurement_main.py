@@ -3,7 +3,8 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSi
 
 import sys
 from PyMoDAQ.DAQ_Measurement.GUI.DAQ_Measurement_GUI import Ui_Form
-
+from PyMoDAQ.DAQ_Utils.DAQ_utils import find_index, my_moment
+from scipy.optimize import curve_fit
 import pyqtgraph as pg
 import numpy as np
 from enum import Enum
@@ -22,7 +23,7 @@ class Measurement_type(Enum):
 
     def update_measurement_subtype(self,mtype):
         measurement_gaussian_subitems= ["amp","dx","x0","offset"]
-        measurement_laurentzian_subitems= ["alpha","gamma","x0","offset","amplitude"]
+        measurement_laurentzian_subitems= ["alpha","gamma","x0","offset"]
         measurement_decay_subitems= ["N0","gamma","offset"]
         measurement_cursor_subitems=["sum","mean","std"]
         variables=", "
@@ -33,18 +34,27 @@ class Measurement_type(Enum):
 
         if mtype==self.names(self)[3]:#"Gaussian Fit":
             subitems=measurement_gaussian_subitems
-            formula="amp*exp(-2*ln(2)*(x-x0)^2/dx^2)+offset"
+            formula="amp*np.exp(-2*np.log(2)*(x-x0)**2/dx**2)+offset"
             variables=variables.join(measurement_gaussian_subitems)
                 
         elif mtype==self.names(self)[4]:#"Lorentzian Fit":
             subitems=measurement_laurentzian_subitems
             variables=variables.join(measurement_laurentzian_subitems)
-            formula="alpha/pi*gamma/2/((x-x0)^2+(gamma/2)^2)+offset"
+            formula="alpha/np.pi*gamma/2/((x-x0)**2+(gamma/2)**2)+offset"
         elif mtype==self.names(self)[5]:#"Exponential Decay Fit":
             subitems=measurement_decay_subitems
             variables=variables.join(measurement_decay_subitems)
-            formula="N0*exp(-gamma*x)+offset"
+            formula="N0*np.exp(-gamma*x)+offset"
         return [variables,formula,subitems]
+
+    def gaussian_func(self,x,amp,dx,x0,offset):
+        return amp * np.exp(-2*np.log(2)*(x-x0)**2/dx**2) + offset
+
+    def laurentzian_func(self,x,alpha,gamma,x0,offset):
+        return alpha/np.pi * 1/2*gamma /((x-x0)**2+(1/2*gamma)**2) + offset
+
+    def decaying_func(self,x,N0,gamma,offset):
+        return N0 * np.exp(-gamma*x)+offset
 
 class DAQ_Measurement(Ui_Form,QObject):
     """
@@ -184,10 +194,11 @@ class DAQ_Measurement(Ui_Form,QObject):
         """
         try:
             xlimits=self.ui.selected_region.getRegion()
-            msub_ind=self.ui.measure_subtype_combo.currentIndex()
-            measurement_results=self.measurement_type.update_measurement(xlimits[0],xlimits[1],self.xdata,self.ydata,msub_ind)
-            if measurement_results['Status'] is not None:
-                self.update_status(measurement_results['Status'],wait_time=self.wait_time)
+            mtype = self.ui.measurement_type_combo.currentText()
+            msubtype=self.ui.measure_subtype_combo.currentText()
+            measurement_results=self.do_measurement(xlimits[0],xlimits[1],self.xdata,self.ydata,mtype,msubtype)
+            if measurement_results['status'] is not None:
+                self.update_status(measurement_results['status'],wait_time=self.wait_time)
                 return
             self.ui.result_sb.setValue(measurement_results['value'])
             self.measurement_signal.emit([measurement_results['value']])
@@ -198,6 +209,90 @@ class DAQ_Measurement(Ui_Form,QObject):
                 self.ui.fit_curve.setVisible(False)
         except Exception as e:
             self.update_status(str(e),wait_time=self.wait_time)
+
+    def eval_func(self,x,*args):
+        dic = dict(zip(self.subitems, args))
+        dic.update(dict(np=np,x=x))
+        return eval(self.formula, dic)
+
+
+    def do_measurement(self, xmin, xmax, xaxis, data1D, mtype, msubtype):
+        try:
+            boundaries = find_index(xaxis, [xmin, xmax])
+            sub_xaxis = xaxis[boundaries[0][0]:boundaries[1][0]]
+            sub_data = data1D[boundaries[0][0]:boundaries[1][0]]
+            mtypes = Measurement_type.names(Measurement_type)
+            if msubtype in self.subitems:
+                msub_ind = self.subitems.index(msubtype)
+
+            measurement_results=dict(status=None, value = 0, xaxis= np.array([]), datafit =np.array([]))
+
+            if mtype == mtypes[0]:  # "Cursor Intensity Integration":
+                if msubtype == "sum":
+                    result_measurement = np.sum(sub_data)
+                elif msubtype == "mean":
+                    result_measurement = np.mean(sub_data)
+                elif msubtype == "std":
+                    result_measurement = np.std(sub_data)
+                else:
+                    result_measurement = 0
+
+            elif mtype == mtypes[1]:  # "Max":
+                result_measurement = np.max(sub_data)
+
+            elif mtype == mtypes[2]:  # "Min":
+                result_measurement = np.min(sub_data)
+
+            elif mtype == mtypes[3]:  # "Gaussian Fit":
+                measurement_results['xaxis'] = sub_xaxis
+                offset = np.min(sub_data)
+                amp = np.max(sub_data) - np.min(sub_data)
+                m = my_moment(sub_xaxis, sub_data)
+                p0 = [amp, m[1], m[0], offset]
+                popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
+                measurement_results['datafit']=self.eval_func(sub_xaxis, *popt)
+                result_measurement = popt[msub_ind]
+            elif mtype == mtypes[4]:  # "Lorentzian Fit":
+                measurement_results['xaxis'] = sub_xaxis
+                offset = np.min(sub_data)
+                amp = np.max(sub_data) - np.min(sub_data)
+                m = my_moment(sub_xaxis, sub_data)
+                p0 = [amp, m[1], m[0], offset]
+                popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
+                measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
+                if msub_ind == 4:  # amplitude
+                    result_measurement = popt[0] * 2 / (np.pi * popt[1])  # 2*alpha/(pi*gamma)
+                else:
+                    result_measurement = popt[msub_ind]
+            elif mtype == mtypes[5]:  # "Exponential Decay Fit":
+                measurement_results['xaxis'] = sub_xaxis
+                offset = min([sub_data[0], sub_data[-1]])
+                N0 = np.max(sub_data) - offset
+                polynome = np.polyfit(sub_xaxis, -np.log((sub_data - 0.99 * offset) / N0), 1)
+                p0 = [N0, polynome[0], offset]
+                popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
+                measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
+                result_measurement = popt[msub_ind]
+            # elif mtype=="Custom Formula":
+            #    #offset=np.min(sub_data)
+            #    #amp=np.max(sub_data)-np.min(sub_data)
+            #    #m=my_moment(sub_xaxis,sub_data)
+            #    #p0=[amp,m[1],m[0],offset]
+            #    popt, pcov = curve_fit(self.custom_func, sub_xaxis, sub_data,p0=[140,750,50,15])
+            #    self.curve_fitting_sig.emit([sub_xaxis,self.gaussian_func(sub_xaxis,*popt)])
+            #    result_measurement=popt[msub_ind]
+            else:
+                result_measurement = 0
+
+
+            measurement_results['value']=result_measurement
+
+
+            return measurement_results
+        except Exception as e:
+            result_measurement = 0
+            measurement_results['status'] = str(e)
+            return measurement_results
 
     def update_data(self,xdata=None,ydata=None):
         """

@@ -6,10 +6,9 @@ Created on Wed Jan 10 16:54:14 2018
 """
 
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QRectF
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 
 import sys
-import PyMoDAQ
 from PyMoDAQ.DAQ_Viewer.DAQ_GUI_settings import Ui_Form
 
 from PyMoDAQ.DAQ_Utils.plotting.viewer0D.viewer0D_main import Viewer0D
@@ -29,7 +28,6 @@ DAQ_2DViewer_Det_type=make_enum('DAQ_2DViewer')
 
 
 from collections import OrderedDict
-import pyqtgraph as pg
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -40,13 +38,12 @@ from easydict import EasyDict as edict
 
 
 from pyqtgraph.dockarea import DockArea, Dock
-from pathlib import Path
 import pickle
 import datetime
 import tables
 
 
-from enum import IntEnum
+
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
         super(QtWidgets.QSpinBox,self).__init__()
@@ -154,6 +151,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Viewer,self).__init__()
 
+        splash=QtGui.QPixmap('..//Documentation//splash.png')
+        self.splash_sc = QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
 
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()
@@ -967,6 +966,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.ui.grab_pb.setChecked(False)
         self.set_enabled_Ini_buttons(enable=True)
 
+        self.ui.settings_tree.setEnabled(True)
+
     def Grab(self,grab_state=False):
         """
             Do a grab session using 2 profile :
@@ -983,16 +984,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.command_detector.emit(ThreadCommand("Single",[self.settings.child('main_settings','Naverage').value()]))
         else:
             if not(self.ui.grab_pb.isChecked()):
+
                 #if self.do_continuous_save:
                 #    try:
                 #        self.file_continuous_save.close()
                 #    except: pass
                 self.command_detector.emit(ThreadCommand("Stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
+                self.ui.settings_tree.setEnabled(True)
             else:
 
-
-
+                self.ui.settings_tree.setEnabled(False)
                 self.thread_status(ThreadCommand("update_channels"))
                 self.set_enabled_Ini_buttons(enable=False)
                 self.command_detector.emit(ThreadCommand("Grab",[self.settings.child('main_settings','Naverage').value()]))
@@ -1189,20 +1191,20 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.ui.viewers[ind].x_axis=data['x_axis']
             elif data['type']=='Data2D':
                 self.ui.viewers[ind].setImageTemp(*data['data'])
-                if 'x_axis' in data.keys():
-                    x_offset=np.min(data['x_axis'])
-                    x_scaling=data['x_axis'][1]-data['x_axis'][0]
-                else:
-                    x_offset=0
-                    x_scaling=1
-                if 'y_axis' in data.keys():
-                    y_offset=np.min(data['y_axis'])
-                    y_scaling=data['y_axis'][1]-data['y_axis'][0]
-                else:
-                    y_offset=0
-                    y_scaling=1
-                self.ui.viewers[ind].set_scaling_axes(scaling_options=edict(scaled_xaxis=edict(label="",units=None,offset=x_offset,scaling=x_scaling),
-                                                                            scaled_yaxis=edict(label="",units=None,offset=y_offset,scaling=y_scaling)))
+                # if 'x_axis' in data.keys():
+                #     x_offset=np.min(data['x_axis'])
+                #     x_scaling=data['x_axis'][1]-data['x_axis'][0]
+                # else:
+                #     x_offset=0
+                #     x_scaling=1
+                # if 'y_axis' in data.keys():
+                #     y_offset=np.min(data['y_axis'])
+                #     y_scaling=data['y_axis'][1]-data['y_axis'][0]
+                # else:
+                #     y_offset=0
+                #     y_scaling=1
+                # self.ui.viewers[ind].set_scaling_axes(scaling_options=edict(scaled_xaxis=edict(label="",units=None,offset=x_offset,scaling=x_scaling),
+                #                                                             scaled_yaxis=edict(label="",units=None,offset=y_offset,scaling=y_scaling)))
             else:
                 if 'nav_axes' in data.keys():
                     self.ui.viewers[ind].show_data_temp(data['data'][0],nav_axes=data['nav_axes'])
@@ -1279,25 +1281,18 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 if data['type']=='Data0D':
                     self.ui.viewers[ind].show_data(data['data'])
                 elif data['type']=='Data1D':
-                    self.ui.viewers[ind].show_data(data['data'])
                     if 'x_axis' in data.keys():
                         self.ui.viewers[ind].x_axis=data['x_axis']
+                    self.ui.viewers[ind].show_data(data['data'])
+
                 elif data['type']=='Data2D':
-                    self.ui.viewers[ind].setImage(*data['data'])
                     if 'x_axis' in data.keys():
-                        x_offset=np.min(data['x_axis'])
-                        x_scaling=data['x_axis'][1]-data['x_axis'][0]
-                    else:
-                        x_offset=0
-                        x_scaling=1
-                    if 'y_axis' in data.keys():
-                        y_offset=np.min(data['y_axis'])
-                        y_scaling=data['y_axis'][1]-data['y_axis'][0]
-                    else:
-                        y_offset=0
-                        y_scaling=1
-                    self.ui.viewers[ind].set_scaling_axes(scaling_options=edict(scaled_xaxis=edict(label="",units=None,offset=x_offset,scaling=x_scaling),
-                                                                                scaled_yaxis=edict(label="",units=None,offset=y_offset,scaling=y_scaling)))
+                        self.ui.viewers[ind].x_axis = data['x_axis']
+                    if 'x_axis' in data.keys():
+                        self.ui.viewers[ind].y_axis = data['y_axis']
+                    self.ui.viewers[ind].setImage(*data['data'])
+
+
                 else:
                     if 'nav_axes' in data.keys():
                         self.ui.viewers[ind].show_data(data['data'][0],nav_axes=data['nav_axes'])
@@ -1309,6 +1304,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             if self.do_continuous_save:
                 self.do_save_continuous(datas)
+
+
 
         except Exception as e:
             self.update_status(str(e),self.wait_time,'log')
@@ -1448,26 +1445,31 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             pass
 
         elif status.command=="x_axis":
-            x_axis=status.attributes[0]
-            if type(x_axis)==list:
-                if len(x_axis)==len(self.ui.viewers):
-                    for ind,viewer in enumerate(self.ui.viewers):
-                        viewer.x_axis=x_axis[ind]
-            else:
-                for viewer in self.ui.viewers:
-                    viewer.x_axis=x_axis
+            try:
+                x_axis=status.attributes[0]
+                if type(x_axis)==list:
+                    if len(x_axis)==len(self.ui.viewers):
+                        for ind,viewer in enumerate(self.ui.viewers):
+                            viewer.x_axis=x_axis[ind]
+                else:
+                    for viewer in self.ui.viewers:
+                        viewer.x_axis=x_axis
+            except Exception as e:
+                self.update_status(str(e), self.wait_time, 'log')
 
 
         elif status.command=="y_axis":
-            y_axis=status.attributes[0]
-            if type(y_axis)==list:
-                if len(y_axis)==len(self.ui.viewers):
-                    for ind,viewer in enumerate(self.ui.viewers):
-                        viewer.y_axis=y_axis[ind]
-            else:
-                for viewer in self.ui.viewers:
-                    viewer.y_axis=y_axis
-
+            try:
+                y_axis=status.attributes[0]
+                if type(y_axis)==list:
+                    if len(y_axis)==len(self.ui.viewers):
+                        for ind,viewer in enumerate(self.ui.viewers):
+                            viewer.y_axis=y_axis[ind]
+                else:
+                    for viewer in self.ui.viewers:
+                        viewer.y_axis=y_axis
+            except Exception as e:
+                self.update_status(str(e), self.wait_time, 'log')
 
         elif status.command=="update_channels":
             pass
@@ -1495,6 +1497,16 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         elif status.command=='raise_timeout':
             self.raise_timeout()
+
+        elif status.command == 'show_splash':
+            self.ui.settings_tree.setEnabled(False)
+            self.splash_sc.show()
+            self.splash_sc.raise_()
+            self.splash_sc.showMessage(status.attributes[0], color=Qt.white)
+
+        elif status.command == 'close_splash':
+            self.splash_sc.close()
+            self.ui.settings_tree.setEnabled(True)
 
     @pyqtSlot()
     def raise_timeout(self):

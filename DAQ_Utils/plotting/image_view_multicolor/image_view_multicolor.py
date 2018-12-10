@@ -320,16 +320,16 @@ class Image_View_Multicolor(QtWidgets.QWidget):
 
         self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
 
-        self.x_axis=None
-        self.y_axis=None
+        self._x_axis=None
+        self._y_axis=None
         self.x_axis_scaled=None
         self.y_axis_scaled=None
 
         self.ui.Ini_plot_pb.clicked.connect(self.ini_plot)
-        
 
-        params = [ROIScalableGroup(name="ROIs")]    
-        self.roi_settings=Parameter.create(title='ROIs Settings', name='roissettings', type='group', children=params) 
+
+        params = [ROIScalableGroup(name="ROIs")]
+        self.roi_settings=Parameter.create(title='ROIs Settings', name='roissettings', type='group', children=params)
         self.ui.ROI_Tree.setParameters(self.roi_settings, showTop=False)
         self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
@@ -369,7 +369,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             self.ui.histogram_red.regionChanged()
             self.ui.histogram_green.regionChanged()
             self.ui.histogram_blue.regionChanged()
-        
+
         self.ui.histogram_red.region.setVisible(not self.autolevels)
         self.ui.histogram_green.region.setVisible(not self.autolevels)
         self.ui.histogram_blue.region.setVisible(not self.autolevels)
@@ -391,7 +391,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
         horlayout.addWidget(self.ui.load_ROI_pb)
         self.ui.verticalLayout_settings.addLayout(horlayout0)
         self.ui.verticalLayout_settings.addLayout(horlayout)
-        
+
 
         self.ui.ROI_Tree= ParameterTree()
         self.ui.verticalLayout_settings.addWidget(self.ui.ROI_Tree)
@@ -433,7 +433,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             self.ui.ROIs[index].sigRegionChangeFinished.connect(self.ui.ROIs[index].emit_index_signal)
 
     def save_ROI(self):
-        
+
         try:
             data=self.roi_settings.saveState()
             path=self.select_file()
@@ -461,7 +461,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
 
 
     def roi_tree_changed(self,param,changes):
-        
+
         for param, change, data in changes:
             path = self.roi_settings.childPath(param)
             if path is not None:
@@ -477,7 +477,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
                 angle=data[0].child(('angle')).value()
 
                 par=self.roi_settings.child((childName)).child((param_name))
-                
+
                 newindex=int(param_name[-2:])
 
                 if roi_type == 'RectROI':
@@ -507,7 +507,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
                 self.roiChanged()
 
             elif change == 'value':
-                
+
                 if param.name() == 'Color' or param.name() == 'angle' :
                     parent=param.parent().name()
                 else:
@@ -548,7 +548,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             size=self.ui.ROIs[index_roi].size()
             self.ui.ROIs[index_roi].setSize((size[0],param_value))
 
-    @pyqtSlot(int)        
+    @pyqtSlot(int)
     def update_roi_tree(self,index):
         roi=self.ui.ROIs['ROI_%02.0d'%index]
         pos=roi.pos()
@@ -570,7 +570,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
     def add_ROI(self,roi_type='RectROI'):
         """
         Add a new ROI selector on the plot
-        
+
         =======================      =========================================================
         **Arguments:**
         roi_type (str)               The type of ROI to instantiate: either 'RectROI' (default) or 'EllipseROI'
@@ -610,10 +610,10 @@ class Image_View_Multicolor(QtWidgets.QWidget):
         #self.ui.histogram_red.setVisible(redstate)
 
 
-     
+
     def setObjectName(self,txt):
         self.parent.setObjectName(txt)
-                
+
 
     def setvisible_roilayout(self,state):
         self.ui.ROIs_widget.setVisible(roistate)
@@ -627,15 +627,15 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             self.ui.RoiCurve_H[k].setVisible(roistate)
             self.ui.RoiCurve_V[k].setVisible(roistate)
             self.ui.RoiCurve_integrated[k].setVisible(roistate)
-           
-        if self.ui.roiBtn.isChecked():    
+
+        if self.ui.roiBtn.isChecked():
             self.roiChanged()
-        
+
         self.show_lineouts()
-        
+
         if len(self.ui.ROIs)==0 and roistate:
             self.roi_settings.child(("ROIs")).addNew('RectROI')
-           
+
     @pyqtSlot(int, int)
     def move_right_splitter(self,pos,index):
         self.ui.splitter_VRight.blockSignals(True)
@@ -717,10 +717,10 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             red_flag= data_red is not None
             self.isdata["red"]=red_flag
             green_flag= data_green is not None
-            self.isdata["green"]=green_flag   
+            self.isdata["green"]=green_flag
             blue_flag= data_blue is not None
-            self.isdata["blue"]=blue_flag        
-             
+            self.isdata["blue"]=blue_flag
+
             self.data_to_export=OrderedDict(name=self.title,data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
             self.image=edict(blue=data_blue,green=data_green,red=data_red)
             if red_flag:
@@ -768,9 +768,9 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_blue.setVisible(self.ui.blue_cb.isChecked())
 
-            self.x_axis=np.linspace(0,data_red.shape[1]-1,data_red.shape[1])
-            self.y_axis=np.linspace(0,data_red.shape[0]-1,data_red.shape[0])
-            self.x_axis_scaled,self.y_axis_scaled=self.scale_axis(self.x_axis,self.y_axis)
+            self._x_axis=np.linspace(0,data_red.shape[1]-1,data_red.shape[1])
+            self._y_axis=np.linspace(0,data_red.shape[0]-1,data_red.shape[0])
+            self.x_axis_scaled,self.y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
 
             if red_flag:
                 self.data_to_export['data2D'][self.title+'_image_red']=OrderedDict(data=data_red,x_axis=self.x_axis_scaled,y_axis=self.y_axis_scaled)
@@ -783,7 +783,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             if self.ui.roiBtn.isChecked():
                 self.roiChanged()
             else:
-            
+
                 self.data_to_export_signal.emit(self.data_to_export)
 
             if self.ui.isocurve_pb.isChecked() and red_flag:
@@ -791,6 +791,53 @@ class Image_View_Multicolor(QtWidgets.QWidget):
 
         except Exception as e:
             print(e)
+
+    @property
+    def x_axis(self):
+        return self.x_axis_scaled
+
+    @property
+    def y_axis(self):
+        return self.y_axis_scaled
+
+
+    @x_axis.setter
+    def x_axis(self, x_axis):
+        label = ''
+        units = ''
+        if type(x_axis) == dict:
+            if 'data' in x_axis:
+                xdata=x_axis['data']
+            if 'label' in x_axis:
+                label=x_axis['label']
+            if 'units' in x_axis:
+                units= x_axis['units']
+        else:
+            xdata=x_axis
+
+        x_offset = np.min(xdata)
+        x_scaling = xdata[1] - xdata[0]
+        self.scaling_options['scaled_xaxis'].update(edict(offset=x_offset, scaling=x_scaling, label=label, units=units))
+        self.set_scaling_axes(self.scaling_options)
+
+    @y_axis.setter
+    def y_axis(self, y_axis):
+        label = ''
+        units = ''
+        if type(y_axis) == dict:
+            if 'data' in y_axis:
+                ydata=y_axis['data']
+            if 'label' in y_axis:
+                label=y_axis['label']
+            if 'units' in y_axis:
+                units= y_axis['units']
+        else:
+            ydata=y_axis
+        y_offset = np.min(ydata)
+        y_scaling = ydata[1] - ydata[0]
+        self.scaling_options['scaled_yaxis'].update(edict(offset=y_offset, scaling=y_scaling, label=label, units=units))
+        self.set_scaling_axes(self.scaling_options)
+
 
     def scale_axis(self,xaxis,yaxis):
         return xaxis*self.scaling_options.scaled_xaxis.scaling+self.scaling_options.scaled_xaxis.offset,yaxis*self.scaling_options.scaled_yaxis.scaling+self.scaling_options.scaled_yaxis.offset
@@ -800,7 +847,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
         try:
             if self.image is None:
                 return
-            axes = (0, 1)    
+            axes = (0, 1)
             image = self.image
             color=self.ui.choose_trace_ROI_cb.currentText()
             if color=="red":
@@ -819,7 +866,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
 
             self.data_to_export['data0D']=OrderedDict([])
             self.data_to_export['data1D']=OrderedDict([])
-            
+
             for k in self.ui.ROIs.keys():
                 data, coords = self.ui.ROIs[k].getArrayRegion(image[color], img_source, axes, returnMappedCoords=True)
 
@@ -827,13 +874,13 @@ class Image_View_Multicolor(QtWidgets.QWidget):
                     xvals=np.linspace(np.min(np.min(coords[1,:,:])),np.max(np.max(coords[1,:,:])),data.shape[1])
                     yvals=np.linspace(np.min(np.min(coords[0,:,:])),np.max(np.max(coords[0,:,:])),data.shape[0])
                     x_axis,y_axis=self.scale_axis(xvals,yvals)
-                    
+
                     self.data_integrated_plot[k]=np.append(self.data_integrated_plot[k],np.array([[self.data_integrated_plot[k][0,-1]],[0]])+np.array([[1],[np.sum(data)]]),axis=1)
                     self.ui.RoiCurve_H[k].setData(y=np.mean(data,axis=0), x=xvals)
                     self.ui.RoiCurve_V[k].setData(y=yvals, x=np.mean(data,axis=1))
                     self.ui.RoiCurve_integrated[k].setData(y=self.data_integrated_plot[k][1,:], x=self.data_integrated_plot[k][0,:])
                     self.data_to_export['data2D'][self.title+'_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,y_axis=y_axis,data=data)
-                    
+
                     self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,data=np.mean(data,axis=0))
                     self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(k)]=OrderedDict(x_axis=y_axis,data=np.mean(data,axis=1))
                     self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(k)]=np.sum(data)
@@ -841,7 +888,7 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             self.ROI_changed.emit()
         except Exception as e:
             pass
-        
+
 
 
     def crosshairClicked(self):
@@ -888,9 +935,9 @@ class Image_View_Multicolor(QtWidgets.QWidget):
         try:
             (posx_scaled,posy_scaled)=self.scale_axis(posx,posy)
             self.crosshair_dragged.emit(posx_scaled,posy_scaled)
-            x_axis_scaled,y_axis_scaled=self.scale_axis(self.x_axis,self.y_axis)
-            indx=utils.find_index(self.x_axis,posx)[0][0]
-            indy=utils.find_index(self.y_axis,posy)[0][0]
+            x_axis_scaled,y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
+            indx=utils.find_index(self._x_axis,posx)[0][0]
+            indy=utils.find_index(self._y_axis,posy)[0][0]
 
             self.crosshairChanged(indx,indy)
 
@@ -904,10 +951,10 @@ class Image_View_Multicolor(QtWidgets.QWidget):
                 z_red=self.image["red"][indy,indx]
                 self.ui.z_label_red.setText("{:.6e}".format(z_red))
 
-            
+
             self.ui.x_label.setText("x={:.6e} ".format(posx_scaled))
             self.ui.y_label.setText("y={:.6e} ".format(posy_scaled))
-            
+
         except Exception as e:
             pass
 
@@ -928,14 +975,14 @@ class Image_View_Multicolor(QtWidgets.QWidget):
             showLineout_H = False
             showLineout_V = False
             showroiintegrated = False
-            
+
             self.ui.Lineout_H.setMouseEnabled(False, False)
             self.ui.Lineout_V.setMouseEnabled(False, False)
             self.ui.Lineout_integrated.setMouseEnabled(False, False)
             self.ui.Lineout_H.hideAxis('left')
             self.ui.Lineout_V.hideAxis('left')
             self.ui.Lineout_integrated.hideAxis('left')
-                     
+
         self.ui.Lineout_H.setVisible(showLineout_H)
         self.ui.Lineout_V.setVisible(showLineout_V)
         self.ui.Lineout_integrated.setVisible(showroiintegrated)
@@ -943,24 +990,24 @@ class Image_View_Multicolor(QtWidgets.QWidget):
         self.ui.Lineout_H.update()
         self.ui.Lineout_V.update()
         self.ui.Lineout_integrated.update()
-        
+
         QtGui.QGuiApplication.processEvents()
         self.ui.splitter_VRight.splitterMoved[int,int].emit(0.6*self.parent.height(),1)
         self.ui.splitter.moveSplitter(0.6*self.parent.width(),1)
         self.ui.splitter_VLeft.moveSplitter(0.6*self.parent.height(),1)
         self.ui.splitter_VLeft.splitterMoved[int,int].emit(0.6*self.parent.height(),1)
         QtGui.QGuiApplication.processEvents()
-        
+
 
     def crosshairChanged(self,indx=None,indy=None):
-        if self.image is None or self.x_axis is None or self.y_axis is None:
+        if self.image is None or self._x_axis is None or self._y_axis is None:
             return
-            
+
         image = self.image
         if indx is None or indy is None:
             (posx,posy)=self.ui.crosshair.get_positions()
-            indx=utils.find_index(self.x_axis,posx)[0][0]
-            indy=utils.find_index(self.y_axis,posy)[0][0]
+            indx=utils.find_index(self._x_axis,posx)[0][0]
+            indy=utils.find_index(self._y_axis,posy)[0][0]
         try:
 
             if self.isdata["blue"]:

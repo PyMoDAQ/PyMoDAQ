@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets, QAxContainer
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QVariant, QSize
 # from enum import IntEnum
 from easydict import EasyDict as edict
@@ -10,7 +10,6 @@ from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand,find_file,find_in_path,get
 import os
 import sys
 import numpy as np
-import clr
 
 comon_parameters=[  {'name': 'epsilon', 'type': 'float', 'value': 0.01},
                   {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},

@@ -19,7 +19,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'DAQ_Modular_Aquisition_Pro'
+project = 'PymoDAQ'
 copyright = '2018, Weber Sebastien'
 author = 'Weber Sebastien'
 
@@ -47,99 +47,72 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
-    'autoapi.sphinx',
+    #'autoapi.sphinx',
     'sphinx.ext.autosummary'
 ]
 numfig=True
 
 autoapi_type= 'python'
-autoapi_ignore=['DAQ_Analysis/__init__.py',
-                'DAQ_Analysis/DAQ_Analysis.pyproj',
-                'DAQ_Analysis/DAQ_Analysis.sln',
-                'DAQ_Analysis/test.xml',
-                'DAQ_Analysis/__pycache__/*',
+autoapi_ignore=['../DAQ_Analysis/__init__.py',
+                '../DAQ_Analysis/__pycache__/*',
 
-                'DAQ_Measurement/__pycache__/*',
-                'DAQ_Measurement/GUI/*',
-                'DAQ_Measurement/__init__.py',
-                'DAQ_Measurement/DAQ_Measurement.pyproj',
-                'DAQ_Measurement/DAQ_Measurement.sln',
+                '../DAQ_Measurement/__pycache__/*',
+                '../DAQ_Measurement/GUI/*',
+                '../DAQ_Measurement/__init__.py',
 
-                'DAQ_Metheor/__pycache__/*',
-                'DAQ_Metheor/Backup/*',
-                'DAQ_Metheor/GUI/*',
-                'DAQ_Metheor/__init__.py',
-                'DAQ_Metheor/DAQ_Metheor.pyproj',
-                'DAQ_Metheor/DAQ_Metheor.sln',
-                'DAQ_Metheor/DAQ_Metheor_main.py',
-                'DAQ_Metheor/DAQ_metheor_main_v2.py',
-                'DAQ_Metheor/Pipe_inOut',
-                'DAQ_Metheor/Pipe_inOutFifo',
-                'DAQ_Metheor/run DAQ_Metheor.bat',
-                'DAQ_Metheor/test.h5',
-                'DAQ_Metheor/test.xml',
-                'DAQ_Metheor/test_fft.py',
-                'DAQ_Metheor/UpgradeLog.htm',
+                '../DAQ_Move/__pycache__/*',
+                '../DAQ_Move/__init__.py',
+                '../DAQ_Move/DAQ_Move_GUI.py',
+                '../DAQ_Move/DAQ_Move_GUI.ui',
+                '../DAQ_Move/process_from_QtDesigner_DAQ_Move_GUI.bat',
+                '../DAQ_Move/run DAQ_Move.bat',
+                '../DAQ_Move/UpgradeLog.htm',
 
-                'DAQ_Move/__pycache__/*',
-                'DAQ_Move/__init__.py',
-                'DAQ_Move/DAQ_move.pyproj',
-                'DAQ_Move/DAQ_move.sln',
-                'DAQ_Move/DAQ_Move_GUI.py',
-                'DAQ_Move/DAQ_Move_GUI.ui',
-                'DAQ_Move/process_from_QtDesigner_DAQ_Move_GUI.bat',
-                'DAQ_Move/run DAQ_Move.bat',
-                'DAQ_Move/UpgradeLog.htm',
+                '../DAQ_Navigation_Visu/*',
 
-                'DAQ_Navigation_Visu/*',
+                '../DAQ_Utils/__pycache__/*',
+                '../DAQ_Utils/plotting/*',
+                '../DAQ_Utils/Tree_layout/*',
+                '../DAQ_Utils/__init__.py',
+                '../DAQ_Utils/DAQ_enums.py',
+                '../DAQ_Utils/DAQ_GUI_settings.py',
+                '../DAQ_Utils/GUI_utils.py',
 
-                'DAQ_Utils/__pycache__/*',
-                'DAQ_Utils/hardware/*',
-                'DAQ_Utils/plotting/*',
-                'DAQ_Utils/python_lib/*',
-                'DAQ_Utils/Tree_layout/*',
-                'DAQ_Utils/__init__.py',
-                'DAQ_Utils/DAQ_enums.py',
-                'DAQ_Utils/DAQ_GUI_settings.py',
-                'DAQ_Utils/GUI_utils.py',
+                '../DAQ_Viewer/__pycache__/*',
+                '../DAQ_Viewer/__init__.py',
+                '../DAQ_Viewer/client.py',
+                '../DAQ_Viewer/DAQ_GUI_settings.py',
+                '../DAQ_Viewer/DAQ_GUI_settings.ui',
+                '../DAQ_Viewer/Pipe_inOut',
+                '../DAQ_Viewer/Pipe_inOutFifo',
+                '../DAQ_Viewer/process_from_QtDesigner_DAQ_GUI_settings.bat',
 
-                'DAQ_Viewer/__pycache__/*',
-                'DAQ_Viewer/__init__.py',
-                'DAQ_Viewer/client.py',
-                'DAQ_Viewer/DAQ_GUI_settings.py',
-                'DAQ_Viewer/DAQ_GUI_settings.ui',
-                'DAQ_Viewer/DAQ_viewer_main.pyproj',
-                'DAQ_Viewer/DAQ_viewer_main.sln',
-                'DAQ_Viewer/Pipe_inOut',
-                'DAQ_Viewer/Pipe_inOutFifo',
-                'DAQ_Viewer/process_from_QtDesigner_DAQ_GUI_settings.bat',
-                'DAQ_Viewer/serveur.py',
-
-                'figures',
-                'Libraries_packages',
-                'Manuals',
-                'QtDesigner_Ressources',
-                'Tests',
-                '.gitattributes',
-                '.gitignore',
-                '.spyderworkspace',
-                '__init__.py',
-                'LICENSE',
-                'README.mp',
-                'setup.py',
-                'test.py',
-                'test_ipython.py',
-                'test_param.py',
-                'welcome.html',
+                '../figures',
+                '../Libraries_packages',
+                '../Manuals',
+                '../QtDesigner_Ressources',
+                '../Tests',
+                '../.gitattributes',
+                '../.gitignore',
+                '../.spyderworkspace',
+                '../__init__.py',
+                '../LICENSE',
+                '../README.mp',
+                '../setup.py',
+                '../test.py',
+                '../test_ipython.py',
+                '../test_param.py',
+                '../welcome.html',
 ]
-autoapi_dirs= [ 'DAQ_Analysis',
-                'DAQ_Measurement',
-                'DAQ_Metheor',
-                'DAQ_Move',
-                'DAQ_Utils',
-                'DAQ_Viewer',
-				'DAQ_Scan']
-autoapi_include_summaries=False
+autoapi_dirs= [ '../DAQ_Analysis',
+                '../DAQ_Measurement',
+                '../DAQ_Metheor',
+                '../DAQ_Move',
+                '../DAQ_Utils',
+                '../DAQ_Viewer',
+				'../DAQ_Scan']
+
+autoapi_include_summaries=True
 
 
 # Add any paths that contain templates here, relative to this directory.
@@ -152,7 +125,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = 'PyMoDAQ'
 
 # The language for content autogenerated by Sphinx. Refer to documentation
 # for a list of supported languages.
@@ -187,6 +160,7 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_logo='splash.png'
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -202,7 +176,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'DAQ_Modular_Aquisition_Pro documentation'
+htmlhelp_basename = 'PyMoDAQ documentation'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -229,7 +203,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'DAQ_Modular_Aquisition_Pro.tex', 'PyMoDAQ\\_Pro\\_Aquisition Documentation',
+    (master_doc, 'PyMoDAQ.tex', 'PyMoDAQ Documentation',
      'Weber Sebastien', 'manual'),
 ]
 
@@ -239,7 +213,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'DAQ_Modular_Aquisition_Pro', 'DAQ_Modular_Aquisition_Pro Documentation',
+    (master_doc, 'PyMoDAQ', 'PyMoDAQ Documentation',
      [author], 1)
 ]
 
@@ -250,8 +224,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'DAQ_Modular_Aquisition_Pro', 'DAQ_Modular_Aquisition_Pro Documentation',
-     author, 'DAQ_Modular_Aquisition_Pro', 'One line description of project.',
+    (master_doc, 'PyMoDAQ', 'PyMoDAQ Documentation',
+     author, 'PyMoDAQ', 'One line description of project.',
      'Miscellaneous'),
 ]
 

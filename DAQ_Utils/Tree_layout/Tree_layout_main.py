@@ -63,37 +63,42 @@ class Tree_layout(Ui_Form,QObject):
 
 
     def populate_Tree(self,data_dict):
+        try:
+            parents=[]
+            for data in data_dict:
+                str_list=[str(data['name'])]
+                if 'filename' in data.keys():
+                    str_list.append(data['filename'])
+                if 'info' in data.keys():
+                    str_list.append(data['info'])
+                parent=QtWidgets.QTreeWidgetItem(str_list)
+                Items=self.populate_sub_tree(data['contents'])
+                parent.addChildren(Items)
+                parents.append(parent)
 
-        parents=[]
-        for data in data_dict:
-            str_list=[data['name']]
-            if 'filename' in data.keys():
-                str_list.append(data['filename'])
-            if 'info' in data.keys():
-                str_list.append(data['info'])
-            parent=QtWidgets.QTreeWidgetItem(str_list)
-            Items=self.populate_sub_tree(data['contents'])
-            parent.addChildren(Items)
-            parents.append(parent)
-
-        self.ui.Tree.addTopLevelItems(parents)
-
+            self.ui.Tree.addTopLevelItems(parents)
+        except Exception as e:
+            self.status_sig.emit(str(e))
 
     def populate_sub_tree(self,datas):
-        parents=[]
-        for data in datas:
-            str_list=[data['name']]
-            if 'filename' in data.keys():
-                str_list.append(data['filename'])
-            if 'info' in data.keys():
-                str_list.append(data['info'])
-            parent = QtWidgets.QTreeWidgetItem(str_list)
-            if 'contents' in data.keys():
-                if type(data['contents'])==list:
-                    Items=self.populate_sub_tree(data['contents'])
-                    parent.addChildren(Items)
-            parents.append(parent)
-        return parents
+        try:
+            parents=[]
+            for data in datas:
+                str_list=[str(data['name'])]
+                if 'filename' in data.keys():
+                    str_list.append(data['filename'])
+                if 'info' in data.keys():
+                    str_list.append(data['info'])
+                parent = QtWidgets.QTreeWidgetItem(str_list)
+                if 'contents' in data.keys():
+                    if type(data['contents'])==list:
+                        Items=self.populate_sub_tree(data['contents'])
+                        parent.addChildren(Items)
+                parents.append(parent)
+            return parents
+        except Exception as e:
+            self.status_sig.emit(str(e))
+            return parents
 
 
 if __name__ == '__main__':

@@ -233,9 +233,11 @@ class DAQ_Move(Ui_Form,QObject):
 
 
     @pyqtSlot(int)
-    def stage_changed(self,index=0):
+    def stage_changed(self, index=0):
 
         """
+            Deprecated the main interface should not be dependant of the plugin type, especially because it may not be installed
+
             | Update the User Interface from the DAQ_Move_Stage_Type given by the position of index parameter.
             |
             | In case of Kinesis_Flipper hardware, update the Move_abs values to adapt the programm to the hardware, else re-init the Move_abs to default value.
@@ -250,16 +252,17 @@ class DAQ_Move(Ui_Form,QObject):
             --------
             Move_Abs
         """
-        if index==DAQ_Move_Stage_type['Kinesis_Flipper']: #Kinesis_Flipper
-            self.ui.Moveto_pb_bis_2.setVisible(True)
-            self.ui.Moveto_pb_bis.clicked.disconnect()
-            self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(1))
-            self.ui.Moveto_pb_bis_2.clicked.connect(lambda: self.Move_Abs(2))
-
-        else:
-            self.ui.Moveto_pb_bis_2.setVisible(False)
-            self.ui.Moveto_pb_bis.clicked.disconnect()
-            self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(self.ui.Abs_position_sb_bis.value()))
+        pass
+        # if index == DAQ_Move_Stage_type['Kinesis_Flipper']: #Kinesis_Flipper
+        #     self.ui.Moveto_pb_bis_2.setVisible(True)
+        #     self.ui.Moveto_pb_bis.clicked.disconnect()
+        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(1))
+        #     self.ui.Moveto_pb_bis_2.clicked.connect(lambda: self.Move_Abs(2))
+        #
+        # else:
+        #     self.ui.Moveto_pb_bis_2.setVisible(False)
+        #     self.ui.Moveto_pb_bis.clicked.disconnect()
+        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(self.ui.Abs_position_sb_bis.value()))
 
     def show_fine_tuning(self):
         """

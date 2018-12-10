@@ -1,1 +1,0 @@
-python DAQ_Measurement_main.py

@@ -106,7 +106,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.lo_data=[]
         self.ROI_bounds=[]
 
-        self.x_axis=None
+        self._x_axis=None
 
         self.datas=[] #datas on each channel. list of 1D arrays 
         self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
@@ -160,12 +160,6 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.ui.save_ROI_pb.clicked.connect(self.save_ROI)
         self.ui.load_ROI_pb.clicked.connect(self.load_ROI)
 
-    @property
-    def x_axis(self):
-        return self.__x_axis
-    @x_axis.setter
-    def x_axis(self,x_axis=None):
-        self.__x_axis=x_axis
 
 
     def crosshairClicked(self):
@@ -182,7 +176,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
     def update_crosshair_data(self,posx,posy,name=""):
         try:
-            indx=utils.find_index(self.x_axis,posx)[0][0]
+            indx=utils.find_index(self._x_axis,posx)[0][0]
 
             string="y="
             for data in self.datas:
@@ -258,7 +252,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                     channel.setPen(self.plot_colors[ind])
                     self.zoom_plot.append(channel)
                 self.update_Graph1D(self.datas)
-                self.ui.zoom_region.setRegion([np.min(self.x_axis),np.max(self.x_axis)])
+                self.ui.zoom_region.setRegion([np.min(self._x_axis),np.max(self._x_axis)])
                 
                 self.ui.zoom_widget.show()
                 self.ui.zoom_region.sigRegionChanged.connect(self.do_zoom)
@@ -443,21 +437,45 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         axis=self.ui.Graph1D.plotItem.getAxis(axis_settings['orientation'])
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
 
+    @property
+    def x_axis(self):
+        return self._x_axis
+
+
+    @x_axis.setter
+    def x_axis(self, x_axis):
+        label = 'Pxls'
+        units = ''
+        if type(x_axis) == dict:
+            if 'data' in x_axis:
+                xdata=x_axis['data']
+            if 'label' in x_axis:
+                label=x_axis['label']
+            if 'units' in x_axis:
+                units= x_axis['units']
+        else:
+            xdata=x_axis
+        self._x_axis=xdata
+
+        self.set_axis_label(dict(orientation='bottom',label=label,units=units))
+
+
     def update_Graph1D(self,datas):
         #self.data_to_export=edict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
         try:
-            for ind_plot,data in enumerate(datas):
-                if self.x_axis is None:
-                    self.x_axis=np.linspace(0,len(data),len(data),endpoint=False)
-                elif len(self.x_axis)!=len(data):
-                    self.x_axis=np.linspace(0,len(data),len(data),endpoint=False)
 
-                self.plot_channels[ind_plot].setData(x=self.x_axis,y=data)
+            for ind_plot,data in enumerate(datas):
+                if self._x_axis is None:
+                    self._x_axis=np.linspace(0,len(data),len(data),endpoint=False)
+                elif len(self._x_axis)!=len(data):
+                    self._x_axis=np.linspace(0,len(data),len(data),endpoint=False)
+
+                self.plot_channels[ind_plot].setData(x=self._x_axis,y=data)
                 
                 if self.ui.zoom_pb.isChecked():
-                    self.zoom_plot[ind_plot].setData(x=self.x_axis,y=data)
+                    self.zoom_plot[ind_plot].setData(x=self._x_axis,y=data)
                 self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)]['data']=data # to be saved or exported       
-                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)]['x_axis']=self.x_axis
+                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)]['x_axis']=self._x_axis
             self.measurement_dict['data']=datas[self.roi_settings.child('math_settings','channel_combo').value()] # to be used in the measurement module
             if not self.ui.Do_math_pb.isChecked(): #otherwise math is done and then data is exported
                 self.data_to_export_signal.emit(self.data_to_export)
@@ -530,7 +548,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                 self.ui.Graph_Lineouts.show()
                 self.update_N_lineouts(self.roi_settings.child('math_settings','Nlineouts_sb').value())
                 try:
-                    self.measurement_dict['x_axis']=self.x_axis
+                    self.measurement_dict['x_axis']=self._x_axis
                     self.measurement_dict['data']=self.datas[self.roi_settings.child('math_settings','channel_combo').value()]
                     self.measurement_dict['ROI_bounds']=[item.getRegion() for item in self.linear_regions]
                     self.measurement_dict['operation']=self.roi_settings.child('math_settings','math_function').value()
@@ -573,20 +591,20 @@ class Viewer1D_math(QObject):
     #    super(QObject,self).__init__()   
     #    self.data=measurement_dict['data']
     #    self.ROI_bounds=measurement_dict['ROI_bounds']
-    #    self.x_axis=measurement_dict['x_axis']
+    #    self._x_axis=measurement_dict['x_axis']
     #    self.operation=measurement_dict['operation']
     def __init__(self):
         super(QObject,self).__init__()   
         self.data=None
         self.ROI_bounds=None
-        self.x_axis=None
+        self._x_axis=None
         self.operation=None
     
     @pyqtSlot(edict) #edict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
     def get_data(self,measurement_dict):
         self.data=measurement_dict['data']
         self.ROI_bounds=measurement_dict['ROI_bounds']
-        self.x_axis=measurement_dict['x_axis']
+        self._x_axis=measurement_dict['x_axis']
         self.operation=measurement_dict['operation']
         self.update_math()
 
@@ -594,7 +612,7 @@ class Viewer1D_math(QObject):
         #self.status_sig.emit(["Update_Status","doing math"])
         data_lo=[]
         for bounds in self.ROI_bounds:
-            indexes=utils.find_index(self.x_axis,bounds)
+            indexes=utils.find_index(self._x_axis,bounds)
             ind1=indexes[0][0]
             ind2=indexes[1][0]
             if self.operation=="Mean":

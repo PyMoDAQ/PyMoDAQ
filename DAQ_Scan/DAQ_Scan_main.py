@@ -19,6 +19,7 @@ import numpy as np
 import PyMoDAQ.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 from PyMoDAQ.DAQ_Utils.plotting.image_view_multicolor import Image_View_Multicolor
+from PyMoDAQ.DAQ_Utils.manage_preset import PresetManager
 
 import matplotlib.image as mpimg
 from PyMoDAQ.DAQ_Move.DAQ_Move_main import DAQ_Move
@@ -51,167 +52,6 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
         self.setMaximum(100000)
         self.setReadOnly(True)
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-class PresetScalableGroupMove( pTypes.GroupParameter):
-    """
-        |
-
-        ================ =============
-        **Attributes**    **Type**
-        *opts*            dictionnary
-        ================ =============
-
-        See Also
-        --------
-        hardware.DAQ_Move_Stage_type
-    """
-    def __init__(self, **opts):
-        opts['type'] = 'groupmove'
-        opts['addText'] = "Add"
-        opts['addList'] = DAQ_Move_Stage_type.names('DAQ_Move')
-        pTypes.GroupParameter.__init__(self, **opts)
-
-    def addNew(self, typ):
-        """
-            Add a child.
-
-            =============== ===========
-            **Parameters**   **Type**
-            *typ*            string
-            =============== ===========
-        """
-        childnames=[par.name() for par in self.children()]
-        if childnames==[]:
-            newindex=0
-        else:
-            newindex=len(childnames)
-
-        params=DAQ_Move.params
-        for param in params:
-            if param['type']=='itemselect' or param['type']=='list':
-                param['show_pb']=True
-
-
-        class_=getattr(getattr(movehardware,'DAQ_Move_'+typ),'DAQ_Move_'+typ)
-        params_hardware=getattr(class_,'params')
-        for param in params_hardware:
-            if param['type']=='itemselect' or param['type']=='list':
-                param['show_pb']=True
-
-
-        for main_child in params:
-            if main_child['name']=='move_settings':
-                main_child['children']=params_hardware
-            elif main_child['name']=='main_settings':
-                for child in main_child['children']:
-                    if child['name']=='move_type':
-                        child['value']=typ
-                    if child['name']=='controller_ID':
-                        child['value']=random.randint(0,9999)
-
-        child={'title': 'Move {:02.0f}'.format(newindex) ,'name': 'move{:02.0f}'.format(newindex), 'type': 'group', 'removable': True, 'children': [
-                {'title': 'Name:' , 'name': 'name', 'type': 'str', 'value': 'Move {:02.0f}'.format(newindex)},
-                {'title': 'Init?:' , 'name': 'init', 'type': 'bool', 'value': True},
-                {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params
-               }],'removable':True, 'renamable':False}
-
-        self.addChild(child)
-registerParameterType('groupmove', PresetScalableGroupMove, override=True)
-class PresetScalableGroupDet( pTypes.GroupParameter):
-    """
-        =============== ==============
-        **Attributes**    **Type**
-        *opts*            dictionnary
-        *options*         string list
-        =============== ==============
-
-        See Also
-        --------
-        PyMoDAQ.DAQ_Utils.DAQ_utils.make_enum
-    """
-    def __init__(self, **opts):
-        opts['type'] = 'groupdet'
-        opts['addText'] = "Add"
-        options=[]
-        for name in DAQ_0DViewer_Det_type.names('DAQ_0DViewer'):
-            options.append('DAQ0D/'+name)
-        for name in DAQ_1DViewer_Det_type.names('DAQ_1DViewer'):
-            options.append('DAQ1D/'+name)
-        for name in DAQ_2DViewer_Det_type.names('DAQ_2DViewer'):
-            options.append('DAQ2D/'+name)
-        opts['addList'] = options
-
-        pTypes.GroupParameter.__init__(self, **opts)
-
-    def addNew(self, typ):
-        """
-            Add a child.
-
-            =============== ===========  ================
-            **Parameters**    **Type**   **Description*
-            *typ*             string     the viewer name
-            =============== ===========  ================
-        """
-        try:
-            childnames=[par.name() for par in self.children()]
-            if childnames==[]:
-                newindex=0
-            else:
-                newindex=len(childnames)
-
-            params=DAQ_Viewer.params
-            for param in params:
-                if param['type']=='itemselect' or param['type']=='list':
-                    param['show_pb']=True
-
-            for main_child in params:
-                if main_child['name']=='main_settings':
-                    for child in main_child['children']:
-                        if child['name']=='DAQ_type':
-                            child['value']=typ[0:5]
-                        if child['name']=='detector_type':
-                            child['value']=typ[6:]
-                        if child['name']=='controller_status':
-                            child['visible']=True
-                        if child['name']=='controller_ID':
-                            child['value']=random.randint(0,9999)
-
-            if '0D' in typ:
-                class_=getattr(getattr(plugins_0D,'DAQ_0DViewer_'+typ[6:]),'DAQ_0DViewer_'+typ[6:])
-            elif '1D' in typ:
-                class_=getattr(getattr(plugins_1D,'DAQ_1DViewer_'+typ[6:]),'DAQ_1DViewer_'+typ[6:])
-            elif '2D' in typ:
-                class_=getattr(getattr(plugins_2D,'DAQ_2DViewer_'+typ[6:]),'DAQ_2DViewer_'+typ[6:])
-            for main_child in params:
-                if main_child['name']=='main_settings':
-                    for child in main_child['children']:
-                        if child['name']=='axes':
-                            child['visible']=True
-
-            params_hardware=getattr(class_,'params')
-            for param in params_hardware:
-                if param['type']=='itemselect' or param['type']=='list':
-                    param['show_pb']=True
-
-            for main_child in params:
-                if main_child['name']=='detector_settings':
-                    while len(main_child['children'])!=1:
-                        for child in main_child['children']:
-                            if child['name']!='ROIselect':
-                                main_child['children'].remove(child)
-
-                    main_child['children'].extend(params_hardware)
-
-            child={'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
-                    {'title': 'Name:' , 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
-                    {'title': 'Init?:' , 'name': 'init', 'type': 'bool', 'value': True},
-                    {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params
-                   }],'removable':True, 'renamable':False}
-
-            self.addChild(child)
-        except Exception as e:
-            print(str(e))
-
-registerParameterType('groupdet', PresetScalableGroupDet, override=True)
 
 def set_param_from_param(param_old,param_new):
     """
@@ -266,7 +106,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
               *param*                 dictionnary list
               *params_move*           dictionnary list
               *params_det*            dictionnary list
-              *preset_params*         instance of pyqtgraph.parametertree
               *dataset_attributes*    instance of pyqtgraph.parametertree
               *scan_attributes*       instance of pyqtgraph.parametertree
               *scan_x_axis*           float array
@@ -500,16 +339,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                             {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''},
                             ]}]
 
-        param=[{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'}]
-        params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]# PresetScalableGroupMove(name="Moves")]
-        params_det =  [{'title': 'Detectors:', 'name': 'Detectors', 'type': 'groupdet'}]#[PresetScalableGroupDet(name="Detectors")]
-        self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
 
+        self.preset_manager=PresetManager()
 
         self.dataset_attributes=Parameter.create(name='Attributes', type='group', children=params_dataset)
         self.scan_attributes=Parameter.create(name='Attributes', type='group', children=params_scan)
-        ##self.scan_attributes_tree = ParameterTree()
-        ##self.scan_attributes_tree.setParameters(self.scan_attributes, showTop=False)
+
 
         self.scan_x_axis=None
         self.scan_y_axis=None
@@ -748,9 +583,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
         preset_menu=menubar.addMenu('Preset Modes')
-        action=preset_menu.addAction('Create a preset')
-        action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
-
+        action_new_preset=preset_menu.addAction('New preset')
+        #action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
+        action_new_preset.triggered.connect(self.create_preset)
+        action_modify_preset=preset_menu.addAction('Modify preset')
+        action_modify_preset.triggered.connect(self.modify_preset)
+        preset_menu.addSeparator()
         load_preset=preset_menu.addMenu('Load presets')
         #load_mock=load_preset.addAction('Mock preset')
         #load_STEM=load_preset.addAction('STEM preset')
@@ -776,6 +614,24 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         action_help=help_menu.addAction('Help')
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
+
+    def create_preset(self):
+        try:
+            self.preset_manager.set_new_preset()
+            self.create_menu(self.menubar)
+        except Exception as e:
+            self.update_status(str(e),log_type='log')
+
+    def modify_preset(self):
+        try:
+            path = utils.select_file(start_path='.\\preset_modes', save=False, ext='xml')
+            if path != '':
+                self.preset_manager.set_file_preset(str(path))
+
+            else:  # cancel
+                pass
+        except Exception as e:
+            self.update_status(str(e),log_type='log')
 
     def create_menu_slot(self,filename):
         return lambda: self.set_preset_mode(filename)
@@ -1344,10 +1200,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.DAQ_Move, DAQ_viewer_main.DAQ_Viewer
         """
+
         if os.path.splitext(filename)[1]=='.xml':
-            children=custom_tree.XML_file_to_parameter(filename)
-            preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=children )
-            self.preset_params=preset_params #so that it will be loaded as it is when one want to modify it (using create preset)
+            self.preset_manager.set_file_preset(filename,show=False)
             self.move_docks=[]
             self.det_docks_settings=[]
             self.det_docks_viewer=[]
@@ -1358,7 +1213,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             #################################################################
             ###### sort plugins by IDs and within the same IDs by Master and Slave status
-            plugins=[{'type': 'move', 'value': child} for child in preset_params.child(('Moves')).children()]+[{'type': 'det', 'value': child} for child in preset_params.child(('Detectors')).children()]
+            plugins=[{'type': 'move', 'value': child} for child in self.preset_manager.preset_params.child(('Moves')).children()]+[{'type': 'det', 'value': child} for child in self.preset_manager.preset_params.child(('Detectors')).children()]
             for plug in plugins:
                 plug['ID']=plug['value'].child('params','main_settings','controller_ID').value()
                 if plug["type"]=='det':
@@ -1884,29 +1739,26 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             tree.setParameters(self.scan_attributes, showTop=False)
         elif type_info=='dataset':
             tree.setParameters(self.dataset_attributes, showTop=False)
-        elif type_info=='preset':
-            tree.setParameters(self.preset_params, showTop=False)
+
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog);
-        if type_info=='preset':
-            buttonBox.addButton('Save',buttonBox.AcceptRole)
-            buttonBox.accepted.connect(dialog.accept)
-            buttonBox.addButton('Cancel',buttonBox.RejectRole)
-            buttonBox.rejected.connect(dialog.reject)
-        else:
-            buttonBox.addButton('Apply',buttonBox.AcceptRole)
-            buttonBox.accepted.connect(dialog.accept)
+        # if type_info=='preset':
+        #     buttonBox.addButton('Save',buttonBox.AcceptRole)
+        #     buttonBox.accepted.connect(dialog.accept)
+        #     buttonBox.addButton('Cancel',buttonBox.RejectRole)
+        #     buttonBox.rejected.connect(dialog.reject)
+        # else:
+        #     buttonBox.addButton('Apply',buttonBox.AcceptRole)
+        #     buttonBox.accepted.connect(dialog.accept)
+        buttonBox.addButton('Apply', buttonBox.AcceptRole)
+        buttonBox.accepted.connect(dialog.accept)
+
         vlayout.addWidget(buttonBox)
         dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
         res=dialog.exec()
 
-        if res==dialog.Accepted and type_info=='preset':
-            #save preset parameters in a xml file
-            start,end=os.path.split(os.path.realpath(__file__))
-            custom_tree.parameter_to_xml_file(self.preset_params,os.path.join(start,'preset_modes',self.preset_params.child(('filename')).value()))
-            self.create_menu(self.menubar)
 
     def set_metadata_about_dataset(self):
         """

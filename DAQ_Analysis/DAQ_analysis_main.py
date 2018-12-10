@@ -503,11 +503,11 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
                 shape=self.loaded_data
                 scan_type=self.loaded_data_scan_type
                 if scan_type=='Scan1D':
-                    ind_x=mylib.find_index(self.nav_x_axis,posx)[0][0]
+                    ind_x=utils.find_index(self.nav_x_axis,posx)[0][0]
                     data=self.loaded_data[ind_x]
                 elif scan_type=='Scan2D':
-                    ind_x=mylib.find_index(self.nav_x_axis,posx)[0][0]
-                    ind_y=mylib.find_index(self.nav_y_axis,posy)[0][0]
+                    ind_x=utils.find_index(self.nav_x_axis,posx)[0][0]
+                    ind_y=utils.find_index(self.nav_y_axis,posy)[0][0]
                     data=self.loaded_data[ind_y,ind_x]
 
                 if len(data.shape)==0: #means 0D data, plot on 1D viewer

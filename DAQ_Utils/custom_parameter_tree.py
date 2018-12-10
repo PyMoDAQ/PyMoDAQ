@@ -21,7 +21,7 @@ from PyMoDAQ.DAQ_Utils.plotting.QLED.qled import QLED
 import xml.etree.ElementTree as ET
 
 from pathlib import Path
-
+import numpy as np
 
 
 
@@ -95,8 +95,16 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         else:
             readonly='0'
 
+        if 'show_pb' in param.opts:
+            if param.opts['show_pb']:
+                show_pb='1'
+            else:
+                show_pb = '0'
+            elt = ET.Element(param.name(), title=title, type=param_type, visible=visible, removable=removable,
+                             readonly=readonly,show_pb=show_pb)
+        else:
+            elt=ET.Element(param.name(),title=title,type=param_type,visible=visible,removable=removable,readonly=readonly)
 
-        elt=ET.Element(param.name(),title=title,type=param_type,visible=visible,removable=removable,readonly=readonly)
         if 'group' not in param_type: #covers 'group', custom 'groupmove'...
             if param_type=='bool':
                 if param.value():
@@ -241,6 +249,10 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
             readonly=False
         else:
             readonly=bool(int(el.get('readonly')))
+        if 'show_pb' in el.attrib.keys():
+            show_pb = bool(int(el.get('show_pb')))
+        else:
+            show_pb = False
 
 
         if 'group' not in param_type: #covers 'group', custom 'groupmove'...
@@ -269,7 +281,7 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
                 param_value=val_text
 
             if param_type=='list':
-                param=dict(name=el.tag,title=title,type=param_type,value=param_value,values=[param_value],visible=visible,removable=removable,readonly=readonly)
+                param=dict(name=el.tag,title=title,type=param_type,value=param_value,values=[param_value],visible=visible,removable=removable,readonly=readonly,show_pb=show_pb)
             else:
                 param=dict(name=el.tag,title=title,type=param_type,value=param_value,visible=visible,removable=removable,readonly=readonly)
         else:
@@ -559,6 +571,35 @@ class Pixmap_check(QtWidgets.QWidget):
     def value(self):
         return dict(pixmap=self.label.pixmap,checked=self.checkbox.isChecked(),path=self.path)
 
+class QTimeCustom(QtWidgets.QTimeEdit):
+    def __init__(self,*args,**kwargs):
+        super(QTimeCustom,self).__init__(*args,**kwargs)
+        self.minutes_increment=1
+        self.timeChanged.connect(self.updateTime)
+        
+    def setTime(self,time):
+        hours=time.hour()
+        minutes=time.minute()
+        
+        minutes=int(np.round(minutes/self.minutes_increment)*self.minutes_increment)
+        if minutes==60:
+            minutes=0
+            hours+=1
+            
+        time.setHMS(hours,minutes,0)
+        
+        return super(QTimeCustom,self).setTime(time)
+        
+            
+    def setMinuteIncrement(self,minutes_increment):
+        self.minutes_increment=minutes_increment
+        self.updateTime(self.time())
+        
+    @pyqtSlot(QTime)
+    def updateTime(self,time):
+        self.setTime(time)
+        
+
 
 class SliderSpinBox(QtWidgets.QWidget):
 
@@ -601,7 +642,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
 
-    @pyqtSlot(int)
+
     def update_spinbox(self,val):
         """
         val is a percentage [0-100] used in order to set the spinbox value between its min and max
@@ -610,7 +651,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         max=float(self.opts['bounds'][1])
         self.spinbox.setValue(val*(max-min)/100+min)
 
-    @pyqtSlot(int)
+
     def update_slide(self,val):
         """
         val is the spinbox value between its min and max
@@ -682,6 +723,19 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.setValue = w.setChecked
             w.setEnabled(not opts.get('readonly', False))
             self.hideWidget = False
+        elif t == 'bool_push':
+            w = QtWidgets.QPushButton()
+            if 'title' in opts:
+                w.setText(opts['title'])
+            else:
+                w.setText(opts['name'])
+            w.setMaximumWidth(50)
+            w.setCheckable(True)
+            w.sigChanged = w.toggled
+            w.value = w.isChecked
+            w.setValue = w.setChecked
+            w.setEnabled(not opts.get('readonly', False))
+            self.hideWidget = False
         elif t == 'str':
             w = QtWidgets.QLineEdit()
             w.sigChanged = w.editingFinished
@@ -712,10 +766,19 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.sigChanged=w.dateTimeChanged
             w.value = w.dateTime
             w.setValue= w.setDateTime
-        elif t== 'time':
-            w=QtWidgets.QTimeEdit(QTime(QTime.currentTime()))
+        elif t== 'date':
+            w=QtWidgets.QDateEdit(QDate(QDate.currentDate()))
             w.setCalendarPopup(True)
-            w.setDisplayFormat('dd/MM/yyyy hh:mm')
+            w.setDisplayFormat('dd/MM/yyyy')
+            w.sigChanged=w.dateChanged
+            w.value = w.date
+            w.setValue= w.setDate
+            
+        elif t== 'time':
+            w=QTimeCustom(QTime(QTime.currentTime()))
+            if 'minutes_increment' in opts:
+                w.setMinuteIncrement(opts['minutes_increment'])
+            w.setDisplayFormat('hh:mm')
             w.sigChanged=w.timeChanged
             w.value = w.time
             w.setValue= w.setTime
@@ -802,6 +865,9 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             if isinstance(self.widget, (QtWidgets.QCheckBox,ColorButton.ColorButton)):
                 self.widget.setEnabled(not opts['readonly'])
 
+        if 'minutes_increment' in opts:
+            self.widget.setMinuteIncrement(opts['minutes_increment'])
+
         ## If widget is a SpinBox, pass options straight through
         if isinstance(self.widget, SpinBoxCustom):
             if 'visible' in opts:
@@ -833,11 +899,31 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
     def __init__(self, *args, **kargs):
         pTypes.SimpleParameter.__init__(self, *args, **kargs)
 
+    # def _interpretValue(self, v):
+    #     fn = {
+    #         'int': int,
+    #         'float': float,
+    #         'bool': bool,
+    #         'str': str,
+    #         'color': self._interpColor,
+    #         'colormap': self._interpColormap,
+    #         'date_time': QDateTime,
+    #         'date': QDate,
+    #         'time': QTime,
+    #         'led': QLED,
+    #         'pixmap': QtWidgets.QLabel,
+    #         'pixmap_check': Pixmap_check,
+    #         'slide': float
+    #     }[self.opts['type']]
+    #     return fn(v)
 
 
 registerParameterType('int',SimpleParameterCustom, override=True)
 registerParameterType('float', SimpleParameterCustom , override=True)
+registerParameterType('bool',SimpleParameterCustom, override=True)
+registerParameterType('bool_push',SimpleParameterCustom, override=True)
 registerParameterType('date_time', SimpleParameterCustom , override=True)
+registerParameterType('date', SimpleParameterCustom , override=True)
 registerParameterType('time', SimpleParameterCustom , override=True)
 registerParameterType('led', SimpleParameterCustom , override=True)
 registerParameterType('pixmap', SimpleParameterCustom , override=True)
@@ -1059,35 +1145,18 @@ class TableParameterItem(pTypes.WidgetParameterItem):
             --------
             Table_custom
         """
-        table = Table_custom()
-        table.setColumnCount(2)
+        w = Table_custom()
+        w.setColumnCount(2)
         if 'header' in self.param.opts.keys():
-            table.setHorizontalHeaderLabels(self.param.opts['header'])
-        table.setMaximumHeight(200)
+            w.setHorizontalHeaderLabels(self.param.opts['header'])
+        w.setMaximumHeight(200)
         #self.table.setReadOnly(self.param.opts.get('readonly', False))
-        table.value = table.get_table_value
-        table.setValue = table.set_table_value
-        table.sigChanged =table.valuechanged
-        self.widget = table.currentItemChanged
-        return table
+        w.value = w.get_table_value
+        w.setValue = w.set_table_value
+        w.sigChanged = w.itemChanged
+        return w
 
 
-    def valueChanged(self, param, val, force=False):
-        """
-            Set a new value to the self widget.
-
-            =============== ================================== ======================================
-            **Parameters**    **Type**                           **Description**
-            *param*           instance of pyqtgraph parameter    Not used
-            *val*             data dictionnary                   The dictionnary to add at the table
-            *force*           boolean                            Not used
-            =============== ================================== ======================================
-
-            See Also
-            --------
-            custom_parameter_tree.Table_custom.set_table_value
-        """
-        self.widget.set_table_value(val)
 
 class Table_custom(QtWidgets.QTableWidget):
     """
@@ -1123,6 +1192,7 @@ class Table_custom(QtWidgets.QTableWidget):
                     data[item0.text()]=item1.text()
         return data
 
+
     def set_table_value(self,data_dict):
         """
             Set the data values dictionnary to the custom table.
@@ -1142,7 +1212,7 @@ class Table_custom(QtWidgets.QTableWidget):
                 item1.setFlags(item1.flags() ^ Qt.ItemIsEditable)
                 self.setItem(ind,0,item0)
                 self.setItem(ind,1,item1)
-            self.valuechanged.emit(data_dict)
+            #self.valuechanged.emit(data_dict)
         except Exception as e:
             pass
 
@@ -1156,11 +1226,12 @@ class TableParameter(Parameter):
     """
     itemClass = TableParameterItem
     """Editable string; displayed as large text box in the tree."""
-    def __init__(self, *args, **kargs):
-        Parameter.__init__(self, *args, **kargs)
-       # self.sigValueChanged.connect(self.itemClass.valueChanged)
-    #def setValue(self,val):
-    #    self.itemClass.setValue(val)
+    # def __init(self):
+    #     super(TableParameter,self).__init__()
+
+    def setValue(self,value):
+        self.opts['value'] = value
+        self.sigValueChanged.emit(self, value)
 
 registerParameterType('table', TableParameter, override=True)
 
@@ -1368,8 +1439,9 @@ class file_browserParameterItem(pTypes.WidgetParameterItem):
             file_browser
         """
         if 'filetype' in self.param.opts:
-            if self.param.opts['filetype']:
-                self.filetype=True
+            self.filetype = self.param.opts['filetype']
+        else:
+            self.filetype = True
 
         self.w = file_browser(self.param.value(),file_type=self.filetype)
         #self.file_browser.setMaximumHeight(100)
@@ -1410,10 +1482,13 @@ class file_browser(QtWidgets.QWidget):
             --------
             set_path
         """
-        if self.filetype:
+        if self.filetype is True:
             folder_name = QtWidgets.QFileDialog.getOpenFileName(None,'Choose File',self.path)[0]
-        else:
+        elif self.filetype is False:
             folder_name = QtWidgets.QFileDialog.getExistingDirectory(None,'Choose Folder',self.path)
+
+        elif self.filetype == "save":
+            folder_name = QtWidgets.QFileDialog.getSaveFileName(None,'Enter a Filename', self.path)[0]
 
         if not( not(folder_name)): #execute if the user didn't cancel the file selection
              self.set_path(folder_name)
@@ -1623,6 +1698,7 @@ registerParameterType('text_pb', Plain_text_pbParameter, override=True)
 if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv);
-    ex=Plain_text_pb()
+    ex=QTimeCustom()
+    ex.setMinuteIncrement(30)
     ex.show()
     sys.exit(app.exec_())

@@ -21,7 +21,7 @@ class DAQ_2DViewer_Mock(DAQ_Viewer_base):
         utility_classes.DAQ_Viewer_base
     """
 
-    params= comon_parameters+[{'title': 'Nimages colors:', 'name': 'Nimagescolor', 'type': 'int', 'value': 1 , 'default':1, 'min':0, 'max': 3},
+    params = comon_parameters+[{'title': 'Nimages colors:', 'name': 'Nimagescolor', 'type': 'int', 'value': 1 , 'default':1, 'min':0, 'max': 3},
             {'title': 'Nimages pannels:', 'name': 'Nimagespannel', 'type': 'int', 'value': 1 , 'default':0, 'min':0}, 
             {'name': 'Nx', 'type': 'int', 'value': 20 , 'default':20, 'min':1},
             {'name': 'Ny', 'type': 'int', 'value': 30 , 'default':30, 'min':1},
@@ -120,7 +120,9 @@ class DAQ_2DViewer_Mock(DAQ_Viewer_base):
             self.x_axis=self.get_xaxis()
             self.y_axis=self.get_yaxis()
 
-
+            # initialize viewers with the future type of data
+            self.data_grabed_signal_temp.emit([OrderedDict(name='Mock1', data=[np.zeros((128,30))], type='Data2D'),])
+                                               #OrderedDict(name='Mock3', data=[np.zeros((128,))], type='Data1D')])
 
             self.status.x_axis=self.x_axis
             self.status.y_axis=self.y_axis
@@ -216,7 +218,7 @@ class DAQ_2DViewer_Mock(DAQ_Viewer_base):
             for indbis in range(self.settings.child(('Nimagescolor')).value()):
                 datatmptmp.append(data_tmp)
             data.append(OrderedDict(name='Mock2D_{:d}'.format(ind),data=datatmptmp, type='Data2D'))
-        data.append(OrderedDict(name='Mock2D_1D',data=[np.mean(data_tmp,axis=0)], type='Data1D'))
+        #data.append(OrderedDict(name='Mock2D_1D',data=[np.mean(data_tmp,axis=0)], type='Data1D'))
         return data
 
     def Stop(self):

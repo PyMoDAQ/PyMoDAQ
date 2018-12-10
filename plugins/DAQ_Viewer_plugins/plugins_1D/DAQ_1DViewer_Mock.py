@@ -106,8 +106,14 @@ class DAQ_1DViewer_Mock(DAQ_Viewer_base):
                 self.controller="Mock controller"
 
             self.set_Mock_data()
+
+            # initialize viewers with the future type of data
+            self.data_grabed_signal_temp.emit([OrderedDict(name='Mock1', data=[np.zeros((128,))], type='Data1D', x_axis= dict(data= self.x_axis ,label= 'Mock', units= '')),
+                                               ])
+
             self.status.initialized=True
             self.status.controller=self.controller
+            self.status.x_axis = self.x_axis
             return self.status
 
         except Exception as e:
@@ -159,7 +165,7 @@ class DAQ_1DViewer_Mock(DAQ_Viewer_base):
 
         data_tot=[data/Naverage for data in data_tot]
 
-        self.data_grabed_signal.emit([OrderedDict(name='Mock1',data=data_tot, type='Data1D'),OrderedDict(name='Mock2',data=[data_tot[1]], type='Data1D')])
+        self.data_grabed_signal.emit([OrderedDict(name='Mock1',data=data_tot, type='Data1D')])
 
     def Stop(self):
         """

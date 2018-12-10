@@ -91,6 +91,9 @@ class DAQ_0DViewer_Mock(DAQ_Viewer_base):
         else:
             self.controller="Mock controller"
         self.set_Mock_data()
+        #initialize viewers with the future type of data
+        self.data_grabed_signal_temp.emit([OrderedDict(name='Mock1',data=[0], type='Data0D')])
+
         self.status.initialized=True
         self.status.controller=self.controller
         return self.status
@@ -130,7 +133,8 @@ class DAQ_0DViewer_Mock(DAQ_Viewer_base):
                 data_tot.append(np.array([data[0]]))
                 data_tot_bis.append(np.array([1-data[0]]))
 
-        self.data_grabed_signal.emit([OrderedDict(name='Mock1',data=data_tot, type='Data0D'), OrderedDict(name='Mock2',data=data_tot_bis, type='Data0D')])
+        #self.data_grabed_signal.emit([OrderedDict(name='Mock1',data=data_tot, type='Data0D'), OrderedDict(name='Mock2',data=data_tot_bis, type='Data0D')])
+        self.data_grabed_signal.emit([OrderedDict(name='Mock1',data=data_tot, type='Data0D')])
         self.ind_data+=1
 
     def Stop(self):

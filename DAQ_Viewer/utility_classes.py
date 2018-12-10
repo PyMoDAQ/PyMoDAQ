@@ -58,6 +58,7 @@ class DAQ_Viewer_base(QObject):
         """
         if self.parent is not None:
             self.parent.status_sig.emit(status)
+            QtWidgets.QApplication.processEvents()
         else:
             print(*status)
 
@@ -132,6 +133,7 @@ class DAQ_Viewer_base(QObject):
 
     def emit_x_axis(self):
         """
+            Convenience function
             Emit the thread command "x_axis" with x_axis as an attribute.
 
             See Also
