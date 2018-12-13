@@ -1,5 +1,0 @@
-DAQ_Scan
-========
-
-Introduction
-------------

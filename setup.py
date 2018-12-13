@@ -68,9 +68,9 @@ setup(
     install_requires = [
         'numpy',
         'pyqtgraph==0.10',
-        'bitstring==1.12',
+        'bitstring',
         'easydict',
-        'pyqt5>5.8',
+        #'pyqt5',
         'tables',
         ],
     **setupOpts
