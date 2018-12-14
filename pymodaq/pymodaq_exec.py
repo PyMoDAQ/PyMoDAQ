@@ -3,12 +3,10 @@ import os
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QThread
 from pyqtgraph.dockarea import DockArea
-from pymodaq.daq_scan.daq_scan_main import DAQ_Scan
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_utils.h5browser import H5Browser
+
 
 def scan():
+    from pymodaq.daq_scan.daq_scan_main import DAQ_Scan
 
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
@@ -35,6 +33,8 @@ def scan():
 
 
 def move():
+    from pymodaq.daq_move.daq_move_main import DAQ_Move
+
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = DAQ_Move(Form,title="test",preset=[dict(object='Stage_type_combo',method='setCurrentText',value='PI')],init=False)
@@ -44,6 +44,8 @@ def move():
 
 
 def viewer():
+    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+
     from pymodaq.daq_utils.daq_enums import DAQ_type
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
@@ -56,6 +58,7 @@ def viewer():
     sys.exit(app.exec_())
 
 def h5browser():
+    from pymodaq.daq_utils.h5browser import H5Browser
     app = QtWidgets.QApplication(sys.argv);
     win = QtWidgets.QWidget()
     #h5file=tables.open_file('C:\\Users\\Weber\\Labo\\Programmes Python\\pymodaq\\daq_utils\\test.h5')

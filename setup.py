@@ -20,14 +20,16 @@ setupOpts = dict(
     description='Modular Data Acquisition with Python',
     long_description=long_description,
     license='MIT',
-    url='http:\\pymodaq.cnrs.fr',
+    url='http://pymodaq.cnrs.fr',
     author='Sébastien Weber',
     author_email='sebastien.weber@cemes.fr',
     classifiers = [
         "Programming Language :: Python :: 3",
-        #"Development Status :: 1 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: Other Environment",
-        #"Intended Audience :: Association/Organisation",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+        "Topic :: Scientific/Engineering :: Visualization",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
@@ -56,27 +58,11 @@ def get_packages():
 
 allPackages = get_packages()
 
-class Build(build.build):
-    """
-    * Clear build path before building
-    """
-
-    def run(self):
-        global path
-
-        ## Make sure build directory is clean
-        buildPath = os.path.join(path, self.build_lib)
-        if os.path.isdir(buildPath):
-            distutils.dir_util.remove_tree(buildPath)
-
-
-        ret = build.build.run(self)
-
 
 
 setup(
     version='1.0.0',
-     cmdclass={'build': Build,},
+     #cmdclass={'build': Build,},
     #           'install': Install,
     #           'deb': helpers.DebCommand,
     #           'test': helpers.TestCommand,
@@ -87,9 +73,9 @@ setup(
     #package_dir={'examples': 'examples'},  ## install examples along with the rest of the source
     package_data={},
     entry_points={'console_scripts':['pymodaq_scan=pymodaq.pymodaq_exec:scan',
-                                     'pymodaq_move=pymodaq.pymodaq_exec.move',
-                                    'pymodaq_viewer=pymodaq.pymodaq_exec.viewer',
-                                    'pymodaq_h5browser=pymodaq.pymodaq_exec.h5browser'
+                                     'pymodaq_move=pymodaq.pymodaq_exec:move',
+                                    'pymodaq_viewer=pymodaq.pymodaq_exec:viewer',
+                                    'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
                                      ]},
     install_requires = [
         'numpy',

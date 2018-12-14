@@ -2,8 +2,9 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
 import sys
+import os
 import logging
-logging.basicConfig(filename='daq_scan.log',level=logging.DEBUG)
+logging.basicConfig(filename=os.path.join(os.path.split(__file__)[0],'daq_scan.log'),level=logging.DEBUG)
 
 
 from  pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
@@ -1360,11 +1361,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status
         """
         try:
-            self.mainwindow.setVisible(False)
-            for area in self.dockarea.tempAreas:
-                area.window().setVisible(False)
+            #self.mainwindow.setVisible(False)
+            # for area in self.dockarea.tempAreas:
+            #     area.window().setVisible(False)
 
             self.splash_sc.show()
+            QtWidgets.QApplication.processEvents()
             self.splash_sc.raise_()
             self.splash_sc.showMessage('Loading Modules, please wait',color = Qt.white)
             QtWidgets.QApplication.processEvents()
@@ -1408,7 +1410,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
             self.splash_sc.close()
-            self.mainwindow.setVisible(True)
+            #self.mainwindow.setVisible(True)
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(True)
         except Exception as e:
@@ -2776,24 +2778,31 @@ class DAQ_Scan_Acquisition(QObject):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow();fname="";
-    win.setVisible(False)
+
+    fname=""
+
     splash=QtGui.QPixmap('..//documentation//splash.png')
-    splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
+    splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+
     splash_sc.show()
+    QtWidgets.QApplication.processEvents()
     splash_sc.raise_()
     splash_sc.showMessage('Loading Main components',color=Qt.white)
     QtWidgets.QApplication.processEvents()
 
+    win = QtWidgets.QMainWindow()
+    win.setVisible(False)
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000,500)
     win.setWindowTitle('pymodaq Scan')
-    win.setVisible(False)
+
+    #win.setVisible(False)
     prog = DAQ_Scan(area,fname)
-    QThread.sleep(4)
+    QThread.sleep(2)
+    win.show()
     splash_sc.finish(win)
-    win.setVisible(True)
+    #win.setVisible(True)
     
     
     sys.exit(app.exec_())

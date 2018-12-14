@@ -41,13 +41,13 @@
           <entry key="Python Console" value="244" />
           <entry key="bat" value="66" />
           <entry key="dummy" value="184" />
-          <entry key="py" value="1567" />
+          <entry key="py" value="1755" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="250" />
-          <entry key="Python" value="1811" />
+          <entry key="Python" value="1999" />
         </counts>
       </usages-collector>
     </session>
@@ -60,10 +60,10 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/../setup.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="316">
-              <caret line="91" column="41" selection-start-line="91" selection-start-column="41" selection-end-line="91" selection-end-column="41" />
+            <state relative-caret-position="95">
+              <caret line="22" column="16" selection-start-line="22" selection-start-column="16" selection-end-line="22" selection-end-column="16" />
               <folding>
-                <marker date="1544814244350" expanded="true" signature="1579:1763" ph="..." />
+                <marker date="1544818020494" expanded="true" signature="1713:1896" ph="..." />
               </folding>
             </state>
           </provider>
@@ -72,8 +72,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/__init__.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="153">
-              <caret line="9" selection-start-line="9" selection-end-line="9" />
+            <state relative-caret-position="34">
+              <caret line="2" column="44" selection-start-line="2" selection-start-column="18" selection-end-line="2" selection-end-column="44" />
               <folding>
                 <element signature="e#72#120#0" expanded="true" />
               </folding>
@@ -84,14 +84,14 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pymodaq_exec.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="336">
-              <caret line="57" column="13" selection-start-line="57" selection-start-column="4" selection-end-line="57" selection-end-column="13" />
+            <state relative-caret-position="350">
+              <caret line="60" column="53" selection-start-line="60" selection-start-column="53" selection-end-line="60" selection-end-column="53" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
-                <marker date="1544814078080" expanded="true" signature="357:359" ph="..." />
-                <marker date="1544814078080" expanded="true" signature="1067:1311" ph="..." />
-                <marker date="1544814078080" expanded="true" signature="1067:1313" ph="..." />
-                <marker date="1544814078080" expanded="true" signature="1708:1709" ph="..." />
+                <marker date="1544814713069" expanded="true" signature="146:204" ph="..." />
+                <marker date="1544814713069" expanded="true" signature="969:1213" ph="..." />
+                <marker date="1544814713069" expanded="true" signature="969:1215" ph="..." />
+                <marker date="1544814713069" expanded="true" signature="1727:1728" ph="..." />
               </folding>
             </state>
           </provider>
@@ -124,8 +124,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/daq_utils/h5browser.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="353">
-              <caret line="289" selection-start-line="289" selection-end-line="295" />
+            <state relative-caret-position="418">
+              <caret line="292" column="25" selection-start-line="292" selection-start-column="25" selection-end-line="292" selection-end-column="25" />
               <folding>
                 <element signature="e#0#42#0" expanded="true" />
               </folding>
@@ -136,8 +136,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/daq_scan/daq_scan_main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="119">
-              <caret line="13" column="45" selection-start-line="13" selection-start-column="45" selection-end-line="13" selection-end-column="45" />
+            <state relative-caret-position="418">
+              <caret line="1374" selection-start-line="1374" selection-end-line="1374" />
               <folding>
                 <element signature="e#0#42#0" expanded="true" />
               </folding>
@@ -174,6 +174,7 @@
       <find>daq_1D</find>
       <find>allPackages</find>
       <find>DAQ_Utils</find>
+      <find>self.splash_sc</find>
     </findStrings>
     <replaceStrings>
       <replace>daq_viewer</replace>
@@ -192,7 +193,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/daq_utils/plotting/viewer1D/viewer1D_GUI_dock.py" />
         <option value="$PROJECT_DIR$/DAQ_Measurement/DAQ_Measurement_main.py" />
         <option value="$PROJECT_DIR$/daq_measurement/DAQ_Measurement_main.py" />
         <option value="$PROJECT_DIR$/daq_measurement/gui/daq_measurement_GUI.py" />
@@ -240,13 +240,14 @@
         <option value="$PROJECT_DIR$/DAQ_Analysis/DAQ_analysis_main.py" />
         <option value="C:/WPy-3710/python-3.7.1.amd64/Lib/site-packages/pymodaq-1.0.0-py3.7.egg/pymodaq/__init__.py" />
         <option value="$PROJECT_DIR$/__init__.py" />
-        <option value="$PROJECT_DIR$/daq_scan/daq_scan_main.py" />
         <option value="$PROJECT_DIR$/daq_scan_exec.py" />
+        <option value="$PROJECT_DIR$/pymodaq_exec.py" />
+        <option value="$PROJECT_DIR$/daq_scan/daq_scan_main.py" />
         <option value="$PROJECT_DIR$/../setup.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="301" />
     <option name="y" value="484" />
     <option name="width" value="1167" />
@@ -335,7 +336,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.DAQ_analysis_main">
+  <component name="RunManager" selected="Python.daq_scan_main">
     <configuration name="DAQ_analysis_main" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="pymodaq" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -450,10 +451,10 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.daq_scan_main" />
         <item itemvalue="Python.DAQ_analysis_main" />
         <item itemvalue="Python.setup" />
         <item itemvalue="Python.h5browser" />
-        <item itemvalue="Python.daq_scan_main" />
         <item itemvalue="Python.daq_viewer_main" />
       </list>
     </recent_temporary>
@@ -487,7 +488,7 @@
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49785408" visible="true" weight="0.26066098" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49785408" visible="true" weight="0.26066098" />
       <window_info id="Favorites" order="1" sideWeight="0.50214595" side_tool="true" weight="0.2553305" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32936078" />
@@ -503,7 +504,7 @@
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-      <window_info anchor="right" id="Structure" order="3" sideWeight="0.50214595" side_tool="true" visible="true" weight="0.24946696" />
+      <window_info active="true" anchor="right" id="Structure" order="3" sideWeight="0.50214595" side_tool="true" visible="true" weight="0.24946696" />
     </layout>
   </component>
   <component name="VcsContentAnnotationSettings">
@@ -673,6 +674,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="459">
           <caret line="27" column="19" selection-start-line="27" selection-start-column="6" selection-end-line="27" selection-end-column="19" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -809,16 +813,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/daq_scan/daq_scan_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="119">
-          <caret line="13" column="45" selection-start-line="13" selection-start-column="45" selection-end-line="13" selection-end-column="45" />
-          <folding>
-            <element signature="e#0#42#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/daq_move/daq_move_main.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="387">
@@ -839,16 +833,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/daq_utils/h5browser.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="353">
-          <caret line="289" selection-start-line="289" selection-end-line="295" />
-          <folding>
-            <element signature="e#0#42#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/WPy-3710/python-3.7.1.amd64/Scripts/daq_scan-script.py">
       <provider selected="true" editor-type-id="text-editor">
         <state>
@@ -858,10 +842,20 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/daq_utils/h5browser.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="292" column="25" selection-start-line="292" selection-start-column="25" selection-end-line="292" selection-end-column="25" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="153">
-          <caret line="9" selection-start-line="9" selection-end-line="9" />
+        <state relative-caret-position="34">
+          <caret line="2" column="44" selection-start-line="2" selection-start-column="18" selection-end-line="2" selection-end-column="44" />
           <folding>
             <element signature="e#72#120#0" expanded="true" />
           </folding>
@@ -870,24 +864,34 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/pymodaq_exec.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="336">
-          <caret line="57" column="13" selection-start-line="57" selection-start-column="4" selection-end-line="57" selection-end-column="13" />
+        <state relative-caret-position="350">
+          <caret line="60" column="53" selection-start-line="60" selection-start-column="53" selection-end-line="60" selection-end-column="53" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
-            <marker date="1544814078080" expanded="true" signature="357:359" ph="..." />
-            <marker date="1544814078080" expanded="true" signature="1067:1311" ph="..." />
-            <marker date="1544814078080" expanded="true" signature="1067:1313" ph="..." />
-            <marker date="1544814078080" expanded="true" signature="1708:1709" ph="..." />
+            <marker date="1544814713069" expanded="true" signature="146:204" ph="..." />
+            <marker date="1544814713069" expanded="true" signature="969:1213" ph="..." />
+            <marker date="1544814713069" expanded="true" signature="969:1215" ph="..." />
+            <marker date="1544814713069" expanded="true" signature="1727:1728" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/daq_scan/daq_scan_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="1374" selection-start-line="1374" selection-end-line="1374" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/../setup.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="316">
-          <caret line="91" column="41" selection-start-line="91" selection-start-column="41" selection-end-line="91" selection-end-column="41" />
+        <state relative-caret-position="95">
+          <caret line="22" column="16" selection-start-line="22" selection-start-column="16" selection-end-line="22" selection-end-column="16" />
           <folding>
-            <marker date="1544814244350" expanded="true" signature="1579:1763" ph="..." />
+            <marker date="1544818020494" expanded="true" signature="1713:1896" ph="..." />
           </folding>
         </state>
       </provider>
