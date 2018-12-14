@@ -12,7 +12,7 @@ from distutils.command import install
 
 
 
-with open('README.md') as fd:
+with open('README.rst') as fd:
     long_description = fd.read()
 
 setupOpts = dict(
@@ -20,7 +20,7 @@ setupOpts = dict(
     description='Modular Data Acquisition with Python',
     long_description=long_description,
     license='MIT',
-    url='',
+    url='http:\\pymodaq.cnrs.fr',
     author='Sébastien Weber',
     author_email='sebastien.weber@cemes.fr',
     classifiers = [
@@ -34,6 +34,27 @@ setupOpts = dict(
         "Topic :: Software Development :: User Interfaces",
         ],)
 
+def listAllPackages(pkgroot):
+    path = os.getcwd()
+    n = len(path.split(os.path.sep))
+    subdirs = [i[0].split(os.path.sep)[n:] for i in os.walk(os.path.join(path, pkgroot)) if '__init__.py' in i[2]]
+    return ['.'.join(p) for p in subdirs]
+
+
+allPackages = (listAllPackages(pkgroot='pymodaq')) #+
+               #['pyqtgraph.'+x for x in helpers.listAllPackages(pkgroot='examples')])
+
+
+
+def get_packages():
+
+    packages=find_packages()
+    for pkg in packages:
+        if 'hardware.' in pkg:
+            packages.pop(packages.index(pkg))
+    return packages
+
+allPackages = get_packages()
 
 class Build(build.build):
     """
@@ -54,17 +75,22 @@ class Build(build.build):
 
 
 setup(
-    version='0.0.1',
-    # cmdclass={'build': Build,},
+    version='1.0.0',
+     cmdclass={'build': Build,},
     #           'install': Install,
     #           'deb': helpers.DebCommand,
     #           'test': helpers.TestCommand,
     #           'debug': helpers.DebugCommand,
     #           'mergetest': helpers.MergeTestCommand,
     #           'style': helpers.StyleCommand},
-    packages=[],#find_packages(),
+    packages=allPackages,
     #package_dir={'examples': 'examples'},  ## install examples along with the rest of the source
     package_data={},
+    entry_points={'console_scripts':['pymodaq_scan=pymodaq.pymodaq_exec:scan',
+                                     'pymodaq_move=pymodaq.pymodaq_exec.move',
+                                    'pymodaq_viewer=pymodaq.pymodaq_exec.viewer',
+                                    'pymodaq_h5browser=pymodaq.pymodaq_exec.h5browser'
+                                     ]},
     install_requires = [
         'numpy',
         'pyqtgraph==0.10',
@@ -73,6 +99,7 @@ setup(
         #'pyqt5',
         'tables',
         ],
+    include_package_data=True,
     **setupOpts
 )
 

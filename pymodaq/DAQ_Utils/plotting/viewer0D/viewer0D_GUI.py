@@ -75,7 +75,7 @@ class Ui_Form(object):
         self.show_datalist_pb.setToolTip(_translate("Form", "Show current data in a list"))
 
 from pyqtgraph import PlotWidget
-import PyMoDAQ.QtDesigner_Ressources.QtDesigner_ressources_rc
+import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

@@ -240,7 +240,7 @@ class Ui_Form(object):
         self.IniStage_pb.setText(_translate("Form", "Ini. Stage"))
         self.Ini_state_LED.setText(_translate("Form", "TextLabel"))
         self.Stage_type_combo.setToolTip(_translate("Form", "Stage Type"))
-        self.title_label.setText(_translate("Form", "PyMoDAQ Move"))
+        self.title_label.setText(_translate("Form", "pymodaq Move"))
         self.Quit_pb.setText(_translate("Form", "Quit"))
         self.label_4.setText(_translate("Form", "Current position:"))
         self.Moveto_pb_bis.setToolTip(_translate("Form", "Move to position"))
@@ -256,9 +256,9 @@ class Ui_Form(object):
         self.Find_Home_pb.setText(_translate("Form", "Find Home"))
         self.label_5.setText(_translate("Form", "Abs position:"))
 
-from PyMoDAQ import QLED
+from pymodaq import QLED
 from pyqtgraph import SpinBox
-import PyMoDAQ.QtDesigner_Ressources.QtDesigner_ressources_rc
+import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

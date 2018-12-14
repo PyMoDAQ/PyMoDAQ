@@ -1,12 +1,13 @@
 from PyQt5 import QtWidgets 
 from PyQt5.QtCore import pyqtSignal, QThread
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand
+from pymodaq.daq_utils.daq_utils import ThreadCommand
 import numpy as np
-from PyMoDAQ.DAQ_Viewer.utility_classes import DAQ_Viewer_base
+from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 from easydict import EasyDict as edict
 from collections import OrderedDict
-from PyMoDAQ.DAQ_Utils.DAQ_utils import gauss1D
-from PyMoDAQ.DAQ_Viewer.utility_classes import comon_parameters
+from pymodaq.daq_utils.daq_utils import gauss1D
+from pymodaq.daq_viewer.utility_classes import comon_parameters
+
 class DAQ_0DViewer_Mock(DAQ_Viewer_base):
     """
         =============== =================

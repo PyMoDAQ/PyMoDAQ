@@ -1,12 +1,12 @@
 from PyQt5.QtCore import QThread
 from PyQt5 import QtWidgets
 import numpy as np
-import PyMoDAQ.DAQ_Utils.DAQ_utils as mylib
-from PyMoDAQ.DAQ_Viewer.utility_classes import DAQ_Viewer_base
+import pymodaq.daq_utils.daq_utils as mylib
+from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 from easydict import EasyDict as edict
 from collections import OrderedDict
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand
-from PyMoDAQ.DAQ_Viewer.utility_classes import comon_parameters
+from pymodaq.daq_utils.daq_utils import ThreadCommand
+from pymodaq.daq_viewer.utility_classes import comon_parameters
 class DAQ_2DViewer_Mock(DAQ_Viewer_base):
     """
         =============== ==================
@@ -104,7 +104,7 @@ class DAQ_2DViewer_Mock(DAQ_Viewer_base):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand, get_xaxis, get_yaxis
+            daq_utils.ThreadCommand, get_xaxis, get_yaxis
         """
         self.status.update(edict(initialized=False,info="",x_axis=None,y_axis=None,controller=None))
         try:

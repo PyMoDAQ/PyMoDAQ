@@ -185,8 +185,8 @@ class Ui_Form(object):
         self.DAQ_type_combo.setItemText(1, _translate("Form", "DAQ1D"))
         self.DAQ_type_combo.setItemText(2, _translate("Form", "DAQ2D"))
 
-from PyMoDAQ import QLED
-import QtDesigner_ressources_rc
+from pymodaq import QLED
+import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

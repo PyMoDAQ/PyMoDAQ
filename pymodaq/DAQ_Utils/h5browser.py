@@ -3,14 +3,14 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDa
 import sip
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree
-from PyMoDAQ.DAQ_Utils.Tree_layout.Tree_layout_main import Tree_layout
-from PyMoDAQ.DAQ_Utils.DAQ_utils import h5tree_to_QTree, select_file
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
+from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file
 
 import sys
 import tables
 import numpy as np
-from PyMoDAQ.DAQ_Utils.plotting.hyperviewer.hyperviewer_main import HyperViewer
+from pymodaq.daq_utils.plotting.hyperviewer.hyperviewer_main import HyperViewer
 from collections import OrderedDict
 
 import warnings
@@ -289,7 +289,7 @@ def browse_data(fname=None):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv);
     win = QtWidgets.QWidget()
-    h5file=tables.open_file('C:\\Users\\Weber\\Labo\\Programmes Python\\PyMoDAQ\\DAQ_Utils\\test.h5')
+    #h5file=tables.open_file('C:\\Users\\Weber\\Labo\\Programmes Python\\pymodaq\\daq_utils\\test.h5')
     prog = H5Browser(win)
     win.show()
     sys.exit(app.exec_())

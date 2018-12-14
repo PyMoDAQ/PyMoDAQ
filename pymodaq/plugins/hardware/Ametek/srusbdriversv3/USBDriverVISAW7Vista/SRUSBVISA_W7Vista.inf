@@ -1,0 +1,121 @@
+;===========================================================================
+;  This file was generated using:
+;  NI-VISA Driver Development Wizard version 4.1
+;===========================================================================
+;
+;  This file is for use with Windows 7/Vista. This will not work on Windows
+;  XP/2000.  This Windows Setup Information File contains the information
+;  NI-VISA needs in order to access your instrument.  Do not modify the
+;  contents of this file unless you are sure about what you are doing.
+;
+;===========================================================================
+;
+;  Installation:
+;  To apply the contents of this file to a system's settings, right-click
+;  this file and choose "Install".  If the device was plugged in before this
+;  file is installed, the device will need to be removed from the "Unknown
+;  Devices" class in the Windows Device Manager.
+;
+;===========================================================================
+;
+;  Removal:
+;  At installation, Windows copies the file into the %SystemRoot%\inf
+;  directory using the alternate filename oem##.inf.  You may have
+;  to search all the files to find the one from which this is copied.
+;  Remove that file and its associated .pnf file (if it exists) from
+;  %SystemRoot%\inf.  Either reboot the computer, or perform a
+;  "Scan for hardware changes" from the Windows Device Manager.
+;
+;===========================================================================
+
+[Version]
+Signature=$WINDOWS NT$
+Class=visaUsbDevice
+ClassGUID={A3330EDF-239D-4206-833B-1D58952613D5}
+Provider=%Vendor0%
+DriverVer=02/13/2010,2.0
+CatalogFile=SRUSBVISA_W7Vista.cat
+
+;===========================================================================
+;  Default Installer
+;===========================================================================
+
+[DefaultInstall]
+CopyINF=SRUSBVISA_W7Vista.inf
+
+[DestinationDirs]
+
+[SourceDisksNames]
+
+[SourceDisksFiles]
+
+;===========================================================================
+;  Class Installer
+;===========================================================================
+
+[ClassInstall32]
+AddReg=AddClass_AddReg
+
+[AddClass_AddReg]
+HKR,,,0,%DeviceClassString%
+HKR,,Icon,,"-20"
+
+;===========================================================================
+
+[Manufacturer]
+%Vendor1%=USBList,NTamd64
+
+[USBList]
+%USB\VID_0A2D&PID_0018.DeviceDesc%=WinUsb_Inst, USB\VID_0A2D&PID_0018
+%USB\VID_0A2D&PID_001B.DeviceDesc%=WinUsb_Inst, USB\VID_0A2D&PID_001B
+%USB\VID_0A2D&PID_0027.DeviceDesc%=WinUsb_Inst, USB\VID_0A2D&PID_0027
+
+[USBList.NTamd64]
+%USB\VID_0A2D&PID_0018.DeviceDesc%=WinUsb_Inst, USB\VID_0A2D&PID_0018
+%USB\VID_0A2D&PID_001B.DeviceDesc%=WinUsb_Inst, USB\VID_0A2D&PID_001B
+%USB\VID_0A2D&PID_0027.DeviceDesc%=WinUsb_Inst, USB\VID_0A2D&PID_0027
+
+[PreCopySection]
+HKR,,NoSetupUI,,1
+
+[WinUsb_Inst]
+Include = winusb.inf
+Needs = WINUSB.NT
+
+[WinUsb_Inst.hw]
+AddReg=WinUsb_Inst_HW_AddReg
+
+[WinUsb_Inst.Services]
+Addservice = WinUsb, 0x00000002, WinUsb_AddService
+
+[WinUsb_AddService]
+DisplayName    = %WinUsb_Service_DisplayName%
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_DEMAND_START%
+ErrorControl   = %SERVICE_ERROR_NORMAL%
+ServiceBinary  = %12%\WinUSB.sys
+
+[WinUsb_Inst_HW_AddReg]
+HKR,,DeviceInterfaceGUIDs, 0x10000,"{761ED34A-CCFA-416b-94BB-33486DB1F5D5}"
+
+[Strings]
+Vendor0="SIGNAL RECOVERY (VISA)"
+Vendor1="SIGNAL RECOVERY (VISA)"
+USB\VID_0A2D&PID_0018.DeviceDesc="7124 Precision Lock-in Amplifier"
+USB\VID_0A2D&PID_001B.DeviceDesc="7270 DSP Lock-in Amplifier"
+USB\VID_0A2D&PID_0027.DeviceDesc="7230 DSP Lock-in Amplifier"
+DeviceClassString="NI-VISA USB Devices"
+WinUsb_Service_DisplayName="WinUSB Driver"
+
+SERVICE_BOOT_START = 0x0
+SERVICE_SYSTEM_START = 0x1
+SERVICE_AUTO_START = 0x2
+SERVICE_DEMAND_START = 0x3
+SERVICE_DISABLED = 0x4
+
+SERVICE_KERNEL_DRIVER = 0x1
+SERVICE_ERROR_IGNORE = 0x0
+SERVICE_ERROR_NORMAL = 0x1
+SERVICE_ERROR_SEVERE = 0x2
+SERVICE_ERROR_CRITICAL = 0x3
+

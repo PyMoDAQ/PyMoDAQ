@@ -2,10 +2,10 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QRectF, QPointF
 
 import sys
-import PyMoDAQ
-from PyMoDAQ.DAQ_Utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from PyMoDAQ.DAQ_Utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from PyMoDAQ.DAQ_Utils.plotting.image_view_multicolor.image_view_multicolor import Image_View_Multicolor
+import pymodaq
+from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 
 
 from collections import OrderedDict
@@ -13,13 +13,13 @@ import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree
-import PyMoDAQ.DAQ_Utils.DAQ_utils as utils
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+import pymodaq.daq_utils.daq_utils as utils
 import os
 from easydict import EasyDict as edict
 from pyqtgraph.dockarea import DockArea, Dock
 import tables
-from PyMoDAQ.DAQ_Utils.plotting.hyperviewer.signal import Signal
+from pymodaq.daq_utils.plotting.hyperviewer.signal import Signal
 #import hyperspy.api as hs
 
 
@@ -139,7 +139,7 @@ class HyperViewer(QtWidgets.QWidget,QObject):
         self.ui.viewer1D.ROI_changed_finished.connect(self.update_Navigator)
         #% 2D viewer Dock
         viewer2D_widget=QtWidgets.QWidget()
-        self.ui.viewer2D=Image_View_Multicolor(viewer2D_widget)
+        self.ui.viewer2D=Viewer2D(viewer2D_widget)
         self.ui.viewer2D.ui.auto_levels_pb.click()
         self.ui.viewer2D.ROI_changed_finished.connect(self.update_Navigator)
 
@@ -156,7 +156,7 @@ class HyperViewer(QtWidgets.QWidget,QObject):
         self.ui.navigator1D.ui.crosshair_pb.click()
         self.ui.navigator1D.data_to_export_signal.connect(self.export_data)
         navigator2D_widget=QtWidgets.QWidget()
-        self.ui.navigator2D=Image_View_Multicolor(navigator2D_widget)
+        self.ui.navigator2D=Viewer2D(navigator2D_widget)
         self.ui.navigator2D.ui.auto_levels_pb.click()
         self.ui.navigator2D.crosshair_dragged.connect(self.update_viewer_data) #export scaled position in conjonction with 2D scaled axes
         self.ui.navigator2D.ui.crosshair_pb.click()
@@ -224,7 +224,7 @@ class HyperViewer(QtWidgets.QWidget,QObject):
                 * Viewer in case of **DAQ_type** parameter name
                 * visibility of button in case of **show_averaging** parameter name
                 * visibility of naverage in case of **live_averaging** parameter name
-                * scale of axis **else** (in 2D PyMoDAQ type)
+                * scale of axis **else** (in 2D pymodaq type)
 
             Once done emit the update settings signal to link the commit.
 
@@ -236,7 +236,7 @@ class HyperViewer(QtWidgets.QWidget,QObject):
             
             See Also
             --------
-            change_viewer, DAQ_Utils.custom_parameter_tree.iter_children
+            change_viewer, daq_utils.custom_parameter_tree.iter_children
         """
         try:
             for param, change, data in changes:

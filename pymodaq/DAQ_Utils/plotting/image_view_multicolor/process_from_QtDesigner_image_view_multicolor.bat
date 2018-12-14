@@ -1,2 +1,0 @@
-cd "C:\Users\Weber\Labo\Programmes Python\python_lib\plotting\imageview_custom"
-C:\WinPython-64bit-3.4.4.6Qt5\python-3.4.4.amd64\Scripts\pyuic5.bat -x image_view_multicolor_GUI.ui	 -o image_view_multicolor_GUI.py

@@ -8,16 +8,16 @@ Created on Mon Dec  4 10:59:53 2017
 import sys
 import PyQt5
 from PyQt5 import QtWidgets,QtGui
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
-from pyqtgraph.widgets import GradientWidget , ColorButton, SpinBox
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
+from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
 from pyqtgraph.parametertree.Parameter import registerParameterType
-#from PyMoDAQ.DAQ_Utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
+#from PyMoDAQ.daq_utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
 from collections import OrderedDict
 from decimal import Decimal as D
 
-from PyMoDAQ.DAQ_Utils.plotting.QLED.qled import QLED
+from pymodaq.daq_utils.plotting.qled import QLED
 import xml.etree.ElementTree as ET
 
 from pathlib import Path
@@ -262,6 +262,8 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
                 param_value=float(val_text)
             elif param_type=='int':
                 param_value=int(val_text)
+            elif param_type=='slide':
+                param_value=float(val_text)
             elif param_type=='itemselect':
                 if val_text=='None':
                     param_value=dict(all_items=[],selected=[])
@@ -910,7 +912,7 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
     #         'date_time': QDateTime,
     #         'date': QDate,
     #         'time': QTime,
-    #         'led': QLED,
+    #         'led': qled,
     #         'pixmap': QtWidgets.QLabel,
     #         'pixmap_check': Pixmap_check,
     #         'slide': float

@@ -53,64 +53,9 @@ extensions = [
 numfig=True
 
 autoapi_type= 'python'
-autoapi_ignore=['../DAQ_Analysis/__init__.py',
-                '../DAQ_Analysis/__pycache__/*',
-
-                '../DAQ_Measurement/__pycache__/*',
-                '../DAQ_Measurement/GUI/*',
-                '../DAQ_Measurement/__init__.py',
-
-                '../DAQ_Move/__pycache__/*',
-                '../DAQ_Move/__init__.py',
-                '../DAQ_Move/DAQ_Move_GUI.py',
-                '../DAQ_Move/DAQ_Move_GUI.ui',
-                '../DAQ_Move/process_from_QtDesigner_DAQ_Move_GUI.bat',
-                '../DAQ_Move/run DAQ_Move.bat',
-                '../DAQ_Move/UpgradeLog.htm',
-
-                '../DAQ_Navigation_Visu/*',
-
-                '../DAQ_Utils/__pycache__/*',
-                '../DAQ_Utils/plotting/*',
-                '../DAQ_Utils/Tree_layout/*',
-                '../DAQ_Utils/__init__.py',
-                '../DAQ_Utils/DAQ_enums.py',
-                '../DAQ_Utils/DAQ_GUI_settings.py',
-                '../DAQ_Utils/GUI_utils.py',
-
-                '../DAQ_Viewer/__pycache__/*',
-                '../DAQ_Viewer/__init__.py',
-                '../DAQ_Viewer/client.py',
-                '../DAQ_Viewer/DAQ_GUI_settings.py',
-                '../DAQ_Viewer/DAQ_GUI_settings.ui',
-                '../DAQ_Viewer/Pipe_inOut',
-                '../DAQ_Viewer/Pipe_inOutFifo',
-                '../DAQ_Viewer/process_from_QtDesigner_DAQ_GUI_settings.bat',
-
-                '../figures',
-                '../Libraries_packages',
-                '../Manuals',
-                '../QtDesigner_Ressources',
-                '../Tests',
-                '../.gitattributes',
-                '../.gitignore',
-                '../.spyderworkspace',
-                '../__init__.py',
-                '../LICENSE',
-                '../README.mp',
-                '../setup.py',
-                '../test.py',
-                '../test_ipython.py',
-                '../test_param.py',
-                '../welcome.html',
+autoapi_ignore=[
 ]
-autoapi_dirs= [ '../DAQ_Analysis',
-                '../DAQ_Measurement',
-                '../DAQ_Metheor',
-                '../DAQ_Move',
-                '../DAQ_Utils',
-                '../DAQ_Viewer',
-				'../DAQ_Scan']
+autoapi_dirs= [ ]
 
 autoapi_include_summaries=True
 
@@ -176,7 +121,7 @@ html_logo='splash.png'
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'PyMoDAQ documentation'
+htmlhelp_basename = 'pymodaq documentation'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -203,7 +148,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'PyMoDAQ.tex', 'PyMoDAQ Documentation',
+    (master_doc, 'pymodaq.tex', 'pymodaq documentation',
      'Weber Sebastien', 'manual'),
 ]
 
@@ -213,7 +158,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'PyMoDAQ', 'PyMoDAQ Documentation',
+    (master_doc, 'pymodaq', 'pymodaq documentation',
      [author], 1)
 ]
 
@@ -224,8 +169,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'PyMoDAQ', 'PyMoDAQ Documentation',
-     author, 'PyMoDAQ', 'One line description of project.',
+    (master_doc, 'pymodaq', 'pymodaq documentation',
+     author, 'pymodaq', 'One line description of project.',
      'Miscellaneous'),
 ]
 

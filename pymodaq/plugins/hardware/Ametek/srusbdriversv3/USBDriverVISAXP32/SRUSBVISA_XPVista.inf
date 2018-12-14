@@ -1,0 +1,104 @@
+;===========================================================================
+;  This file was generated using:
+;  NI-VISA Driver Development Wizard version 4.1
+;===========================================================================
+;
+;  This file is for use with Windows XP/2000. This will not work on Windows
+;  Vista.  This Windows Setup Information File contains the information
+;  NI-VISA needs in order to access your instrument.  Do not modify the
+;  contents of this file unless you are sure about what you are doing.
+;
+;===========================================================================
+;
+;  Installation:
+;  To apply the contents of this file to a system's settings, copy this file
+;  to %SystemRoot%\inf and reboot the computer.  If the device was
+;  installed before this file is copied, the device will need to be removed
+;  from the "Unknown Devices" class in the Windows Device Manager.
+;
+;===========================================================================
+;
+;  Removal:
+;  Remove this file and its associated .PNF file (if it exists) from
+;  %SystemRoot%\inf.  Either reboot the computer, or perform a
+;  "Scan for hardware changes" from the Windows Device Manager.
+;
+;===========================================================================
+
+[Version]
+Signature=$WINDOWS NT$
+Class=visaUsbDevice
+ClassGUID={A3330EDF-239D-4206-833B-1D58952613D5}
+Provider=%Vendor0%
+DriverVer=02/13/2011,2.0
+
+[DefaultInstall.nt]
+CopyFiles=NIVIUSBK_Device_CopyFiles_Inf
+
+[DestinationDirs]
+NIVIUSBK_Device_CopyFiles_Inf = 17
+
+[NIVIUSBK_Device_CopyFiles_Inf]
+SRUSBVISA_XPVista.inf
+
+[SourceDisksNames]
+
+
+[SourceDisksFiles]
+
+
+[ClassInstall32.nt]
+AddReg=AddClass_AddReg
+
+[AddClass_AddReg]
+HKR,,,0,%DeviceClassString%
+HKR,,Icon,,"-20"
+HKR,,IconPath,0x00010000,"%11%\setupapi.dll,-20"
+
+[Manufacturer]
+%Vendor1%=USBList
+
+[USBList]
+%USB\VID_0A2D&PID_0018.DeviceDesc%=NIVIUSBK_Inst, USB\VID_0A2D&PID_0018
+%USB\VID_0A2D&PID_001B.DeviceDesc%=NIVIUSBK_Inst, USB\VID_0A2D&PID_001B
+%USB\VID_0A2D&PID_0027.DeviceDesc%=NIVIUSBK_Inst, USB\VID_0A2D&PID_0027
+
+[PreCopySection]
+HKR,,NoSetupUI,,1
+
+[NIVIUSBK_Inst]
+AddReg=NIVIUSBK_Inst_AddReg
+
+[NIVIUSBK_Inst.Services]
+Addservice = NIVIUSBK, 0x00000002, NIVIUSBK_AddService
+
+[NIVIUSBK_AddService]
+DisplayName    = %NIVIUSBK.SvcDesc%
+ServiceType    = %SERVICE_KERNEL_DRIVER%
+StartType      = %SERVICE_DEMAND_START%
+ErrorControl   = %SERVICE_ERROR_NORMAL%
+ServiceBinary  = %12%\NIVIUSBK.sys
+
+[NIVIUSBK_Inst_AddReg]
+
+[Strings]
+Vendor0="SIGNAL RECOVERY (VISA)"
+Vendor1="SIGNAL RECOVERY (VISA)"
+USB\VID_0A2D&PID_0018.DeviceDesc="7124 Precision Lock-in Amplifier"
+USB\VID_0A2D&PID_001B.DeviceDesc="7270 DSP Lock-in Amplifier"
+USB\VID_0A2D&PID_0027.DeviceDesc="7230 DSP Lock-in Amplifier"
+DeviceClassString="NI-VISA USB Devices"
+NIVIUSBK.SvcDesc="NI-VISA USB Driver"
+
+SERVICE_BOOT_START = 0x0
+SERVICE_SYSTEM_START = 0x1
+SERVICE_AUTO_START = 0x2
+SERVICE_DEMAND_START = 0x3
+SERVICE_DISABLED = 0x4
+
+SERVICE_KERNEL_DRIVER = 0x1
+SERVICE_ERROR_IGNORE = 0x0
+SERVICE_ERROR_NORMAL = 0x1
+SERVICE_ERROR_SEVERE = 0x2
+SERVICE_ERROR_CRITICAL = 0x3
+

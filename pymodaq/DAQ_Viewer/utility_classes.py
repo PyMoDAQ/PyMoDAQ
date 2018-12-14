@@ -5,13 +5,13 @@ import sys
 import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from easydict import EasyDict as edict
 import socket, select
 import numpy as np
-from PyMoDAQ.DAQ_Utils.DAQ_utils import gauss1D, gauss2D
+from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
 from collections import OrderedDict
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand
+from pymodaq.daq_utils.daq_utils import ThreadCommand
 
 comon_parameters=[{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
 
@@ -114,7 +114,7 @@ class DAQ_Viewer_base(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand
+            daq_utils.ThreadCommand
         """
        
         for param, change, data in changes:
@@ -138,7 +138,7 @@ class DAQ_Viewer_base(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand
+            daq_utils.ThreadCommand
         """
         self.emit_status(ThreadCommand("x_axis",[self.x_axis]))
 
@@ -148,7 +148,7 @@ class DAQ_Viewer_base(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand
+            daq_utils.ThreadCommand
         """
         self.emit_status(ThreadCommand("y_axis",[self.y_axis]))
  
@@ -227,7 +227,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
 
             See Also
             --------
-            set_connected_clients_table, DAQ_utils.ThreadCommand
+            set_connected_clients_table, daq_utils.ThreadCommand
         """
         for sock_dict in self.connected_clients:
             try:
@@ -318,7 +318,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
 
             See Also
             --------
-            find_socket_type_within_connected_clients, set_connected_clients_table, DAQ_utils.ThreadCommand, read_commands, process_cmds, utility_classes.DAQ_Viewer_base.emit_status
+            find_socket_type_within_connected_clients, set_connected_clients_table, daq_utils.ThreadCommand, read_commands, process_cmds, utility_classes.DAQ_Viewer_base.emit_status
         """
         try:
             self.processing=True
@@ -415,7 +415,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
 
             See Also
             --------
-            utility_classes.DAQ_Viewer_base.emit_status, DAQ_utils.ThreadCommand, message_to_bytes
+            utility_classes.DAQ_Viewer_base.emit_status, daq_utils.ThreadCommand, message_to_bytes
         """
         if command not in self.message_list:
             self.emit_status(ThreadCommand("Update_Status",['Command: '+str(command) +' not in the specified list','log']))
@@ -502,7 +502,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
 
             See Also
             --------
-            find_socket_within_connected_clients, read_data, send_data, utility_classes.DAQ_Viewer_base.emit_status, DAQ_utils.ThreadCommand, send_command, set_1D_Mock_data, set_2D_Mock_data, process_cmds           
+            find_socket_within_connected_clients, read_data, send_data, utility_classes.DAQ_Viewer_base.emit_status, daq_utils.ThreadCommand, send_command, set_1D_Mock_data, set_2D_Mock_data, process_cmds           
         """
         if command not in self.message_list:
             return
@@ -577,7 +577,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
 
             See Also
             --------
-            check_received_length, utility_classes.DAQ_Viewer_base.emit_status, DAQ_utils.ThreadCommand
+            check_received_length, utility_classes.DAQ_Viewer_base.emit_status, daq_utils.ThreadCommand
         """
         try:
 

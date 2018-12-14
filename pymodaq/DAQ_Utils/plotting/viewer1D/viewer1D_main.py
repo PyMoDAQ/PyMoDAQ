@@ -2,20 +2,20 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
 
 import sys
-import PyMoDAQ 
+import pymodaq
 
-from PyMoDAQ.DAQ_Utils.plotting.viewer1D.viewer1D_GUI_dock import Ui_Form
+from pymodaq.daq_utils.plotting.viewer1D.viewer1D_GUI_dock import Ui_Form
 
-from PyMoDAQ.DAQ_Measurement.DAQ_Measurement_main import DAQ_Measurement
+from pymodaq.daq_measurement.DAQ_Measurement_main import DAQ_Measurement
 from collections import OrderedDict
 
-from PyMoDAQ.DAQ_Utils.plotting.crosshair import Crosshair
+from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as customparameter
-from PyMoDAQ.DAQ_Utils import DAQ_utils as utils
+import pymodaq.daq_utils.custom_parameter_tree as customparameter
+from pymodaq.daq_utils import daq_utils as utils
 import os
 from easydict import EasyDict as edict
 import pickle
@@ -111,7 +111,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.datas=[] #datas on each channel. list of 1D arrays 
         self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
         self.measurement_dict=edict(x_axis=None,data=None,ROI_bounds=None,operation=None)
-        #edict to be send to the DAQ_Measurement module
+        #edict to be send to the daq_measurement module
         self.measure_data_dict=edict()
         #dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
         #and value is the result of a given lineout or measurement
@@ -626,7 +626,7 @@ class Viewer1D_math(QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form=QtWidgets.QWidget();prog = Viewer1D(Form)
-    from PyMoDAQ.DAQ_Utils.DAQ_utils import gauss1D
+    from pymodaq.daq_utils.daq_utils import gauss1D
     x=np.linspace(0,200,201);y1=gauss1D(x,75,25);
     x2=np.linspace(0,300,301);y2=gauss1D(x,120,50,2)
     prog.show_data([y1,y2]);Form.show()

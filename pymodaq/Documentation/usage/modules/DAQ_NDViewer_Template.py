@@ -1,10 +1,10 @@
 #template example
 
 #mandatory imports
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand
-from PyMoDAQ.DAQ_Viewer.utility_classes import comon_parameters
-from PyMoDAQ.DAQ_Utils import custom_parameter_tree
-from PyMoDAQ.DAQ_Viewer.utility_classes import DAQ_Viewer_base
+from pymodaq.daq_utils.daq_utils import ThreadCommand
+from pymodaq.daq_viewer.utility_classes import comon_parameters
+from pymodaq.daq_utils import custom_parameter_tree
+from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
 from PyQt5 import QtWidgets, QtCore

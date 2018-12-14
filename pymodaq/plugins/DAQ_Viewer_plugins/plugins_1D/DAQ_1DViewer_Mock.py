@@ -1,11 +1,11 @@
 from PyQt5.QtCore import QThread
-from PyMoDAQ.DAQ_Viewer.utility_classes import DAQ_Viewer_base
+from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 import numpy as np
 from easydict import EasyDict as edict
 from collections import OrderedDict
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand
-from PyMoDAQ.DAQ_Utils.DAQ_utils import gauss1D
-from PyMoDAQ.DAQ_Viewer.utility_classes import comon_parameters
+from pymodaq.daq_utils.daq_utils import ThreadCommand
+from pymodaq.daq_utils.daq_utils import gauss1D
+from pymodaq.daq_viewer.utility_classes import comon_parameters
 
 class DAQ_1DViewer_Mock(DAQ_Viewer_base):
     """
@@ -92,7 +92,7 @@ class DAQ_1DViewer_Mock(DAQ_Viewer_base):
 
             See Also
             --------
-            set_Mock_data, DAQ_utils.ThreadCommand
+            set_Mock_data, daq_utils.ThreadCommand
         """
         self.status.update(edict(initialized=False,info="",x_axis=None,y_axis=None,controller=None))
         try:

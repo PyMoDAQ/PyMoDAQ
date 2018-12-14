@@ -6,21 +6,21 @@ import random
 
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
-from PyMoDAQ.DAQ_Move.DAQ_Move_main import DAQ_Move
-from PyMoDAQ.plugins import DAQ_Move_plugins as movehardware
-from PyMoDAQ.DAQ_Viewer.DAQ_viewer_main import DAQ_Viewer
-from PyMoDAQ.plugins.DAQ_Viewer_plugins import plugins_2D, plugins_1D, plugins_0D
+from pymodaq.daq_move.daq_move_main import DAQ_Move
+from pymodaq.plugins import daq_move_plugins as movehardware
+from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+from pymodaq.plugins.daq_viewer_plugins import plugins_2D, plugins_1D, plugins_0D
 
-from PyMoDAQ.DAQ_Utils.DAQ_utils import select_file
+from pymodaq.daq_utils.daq_utils import select_file
 
-from PyMoDAQ.DAQ_Utils.DAQ_utils import make_enum
-DAQ_Move_Stage_type=make_enum('DAQ_Move')
-DAQ_0DViewer_Det_type=make_enum('DAQ_0DViewer')
-DAQ_1DViewer_Det_type=make_enum('DAQ_1DViewer')
-DAQ_2DViewer_Det_type=make_enum('DAQ_2DViewer')
+from pymodaq.daq_utils.daq_utils import make_enum
+DAQ_Move_Stage_type=make_enum('daq_move')
+DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
+DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
+DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
 
 class PresetScalableGroupMove( pTypes.GroupParameter):
     """
@@ -38,7 +38,7 @@ class PresetScalableGroupMove( pTypes.GroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'groupmove'
         opts['addText'] = "Add"
-        opts['addList'] = DAQ_Move_Stage_type.names('DAQ_Move')
+        opts['addList'] = DAQ_Move_Stage_type.names('daq_move')
         pTypes.GroupParameter.__init__(self, **opts)
 
     def addNew(self, typ):
@@ -62,7 +62,7 @@ class PresetScalableGroupMove( pTypes.GroupParameter):
                 param['show_pb']=True
 
 
-        class_=getattr(getattr(movehardware,'DAQ_Move_'+typ),'DAQ_Move_'+typ)
+        class_=getattr(getattr(movehardware,'daq_move_'+typ),'DAQ_Move_'+typ)
         params_hardware=getattr(class_,'params')
         for param in params_hardware:
             if param['type']=='itemselect' or param['type']=='list':
@@ -98,17 +98,17 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
 
         See Also
         --------
-        PyMoDAQ.DAQ_Utils.DAQ_utils.make_enum
+        pymodaq.daq_utils.daq_utils.make_enum
     """
     def __init__(self, **opts):
         opts['type'] = 'groupdet'
         opts['addText'] = "Add"
         options=[]
-        for name in DAQ_0DViewer_Det_type.names('DAQ_0DViewer'):
+        for name in DAQ_0DViewer_Det_type.names('daq_0Dviewer'):
             options.append('DAQ0D/'+name)
-        for name in DAQ_1DViewer_Det_type.names('DAQ_1DViewer'):
+        for name in DAQ_1DViewer_Det_type.names('daq_1Dviewer'):
             options.append('DAQ1D/'+name)
-        for name in DAQ_2DViewer_Det_type.names('DAQ_2DViewer'):
+        for name in DAQ_2DViewer_Det_type.names('daq_2Dviewer'):
             options.append('DAQ2D/'+name)
         opts['addList'] = options
 
@@ -148,11 +148,11 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
                             child['value']=random.randint(0,9999)
 
             if '0D' in typ:
-                class_=getattr(getattr(plugins_0D,'DAQ_0DViewer_'+typ[6:]),'DAQ_0DViewer_'+typ[6:])
+                class_=getattr(getattr(plugins_0D,'daq_0Dviewer_'+typ[6:]),'DAQ_0DViewer_'+typ[6:])
             elif '1D' in typ:
-                class_=getattr(getattr(plugins_1D,'DAQ_1DViewer_'+typ[6:]),'DAQ_1DViewer_'+typ[6:])
+                class_=getattr(getattr(plugins_1D,'daq_1Dviewer_'+typ[6:]),'DAQ_1DViewer_'+typ[6:])
             elif '2D' in typ:
-                class_=getattr(getattr(plugins_2D,'DAQ_2DViewer_'+typ[6:]),'DAQ_2DViewer_'+typ[6:])
+                class_=getattr(getattr(plugins_2D,'daq_2Dviewer_'+typ[6:]),'DAQ_2DViewer_'+typ[6:])
             for main_child in params:
                 if main_child['name']=='main_settings':
                     for child in main_child['children']:

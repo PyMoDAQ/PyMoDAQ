@@ -2,11 +2,11 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray
 
 import sys
-import PyMoDAQ
-from PyMoDAQ.DAQ_Utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from PyMoDAQ.DAQ_Utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from PyMoDAQ.DAQ_Utils.plotting.image_view_multicolor.image_view_multicolor import Image_View_Multicolor
-from PyMoDAQ.DAQ_Utils.DAQ_utils import select_file
+import pymodaq
+from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+from pymodaq.daq_utils.daq_utils import select_file
 
 
 from collections import OrderedDict
@@ -14,9 +14,9 @@ import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree
-from PyMoDAQ.DAQ_Utils.Tree_layout.Tree_layout_main import Tree_layout
-import PyMoDAQ.DAQ_Utils.DAQ_utils as utils
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
+import pymodaq.daq_utils.daq_utils as utils
 import os
 from easydict import EasyDict as edict
 from pyqtgraph.dockarea import DockArea, Dock
@@ -103,7 +103,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            show_h5_attributes, show_h5_data, DAQ_Utils.custom_parameter_tree.Table_custom, update_viewer_data
+            show_h5_attributes, show_h5_data, daq_utils.custom_parameter_tree.Table_custom, update_viewer_data
         """
         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # h5 file dock
@@ -149,7 +149,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         #% 2D viewer Dock
         viewer2D_widget=QtWidgets.QWidget()
-        self.ui.viewer2D=Image_View_Multicolor(viewer2D_widget)
+        self.ui.viewer2D=Viewer2D(viewer2D_widget)
         dock2D=Dock('Viewer2D')
         dock2D.addWidget(viewer2D_widget)
 
@@ -160,7 +160,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
         self.ui.navigator1D.ui.crosshair.crosshair_dragged.connect(self.update_viewer_data)
         self.ui.navigator1D.ui.crosshair_pb.click()
         navigator2D_widget=QtWidgets.QWidget()
-        self.ui.navigator2D=Image_View_Multicolor(navigator2D_widget)
+        self.ui.navigator2D=Viewer2D(navigator2D_widget)
         self.ui.navigator2D.crosshair_dragged.connect(self.update_viewer_data) #export scaled position in conjonction with 2D scaled axes
         self.ui.navigator2D.ui.crosshair_pb.click()
         dock_nav=Dock('Navigator')
@@ -266,7 +266,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            open_h5_file, update_status, DAQ_utils.select_file
+            open_h5_file, update_status, daq_utils.select_file
         """
         try:
             filename=select_file(start_path=path,save=False,ext='h5')
@@ -361,7 +361,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_Utils.custom_parameter_tree.XML_string_to_parameter, update_status
+            daq_utils.custom_parameter_tree.XML_string_to_parameter, update_status
         """
         try:
             node=self.h5file.get_node(item.text(2))

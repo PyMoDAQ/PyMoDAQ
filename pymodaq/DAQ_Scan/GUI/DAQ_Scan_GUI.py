@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'DAQ_Scan_GUI_v2.ui'
+# Form implementation generated from reading ui file 'daq_scan_gui_v2.ui'
 #
 # Created by: PyQt5 UI code generator 5.5.1
 #
@@ -111,7 +111,7 @@ class Ui_Form(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
 
 from pyqtgraph import PlotWidget
-import PyMoDAQ.QtDesigner_Ressources.QtDesigner_ressources_rc
+import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

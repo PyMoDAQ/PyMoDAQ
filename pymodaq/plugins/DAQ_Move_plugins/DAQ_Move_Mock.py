@@ -1,7 +1,7 @@
-from PyMoDAQ.DAQ_Move.utility_classes import DAQ_Move_base
-from PyMoDAQ.DAQ_Move.utility_classes import comon_parameters
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand
-from easydict import EasyDict as edict
+from pymodaq.daq_move.utility_classes import DAQ_Move_base  # base class
+from pymodaq.daq_move.utility_classes import comon_parameters  # common set of parameters for all actuators
+from pymodaq.daq_utils.daq_utils import ThreadCommand  # object used to send info back to the main thread
+from easydict import EasyDict as edict  # type of dict
 
 class DAQ_Move_Mock(DAQ_Move_base):
     """
@@ -61,7 +61,7 @@ class DAQ_Move_Mock(DAQ_Move_base):
 
             See Also
             --------
-             DAQ_utils.ThreadCommand
+             daq_utils.ThreadCommand
         """
         try:
             # initialize the stage and its controller status
@@ -135,7 +135,7 @@ class DAQ_Move_Mock(DAQ_Move_base):
 
             See Also
             --------
-            DAQ_Move_base.get_position_with_scaling, DAQ_utils.ThreadCommand
+            DAQ_Move_base.get_position_with_scaling, daq_utils.ThreadCommand
         """
         pos=self.current_position
         #print('Pos from controller is {}'.format(pos))
@@ -195,7 +195,7 @@ class DAQ_Move_Mock(DAQ_Move_base):
           Send the update status thread command.
             See Also
             --------
-            DAQ_utils.ThreadCommand
+            daq_utils.ThreadCommand
         """
         self.emit_status(ThreadCommand('Update_Status',['Move Home not implemented']))
 

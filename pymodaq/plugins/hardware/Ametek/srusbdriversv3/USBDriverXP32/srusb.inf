@@ -1,0 +1,114 @@
+;/*++
+;
+;Copyright (c) SIGNAL RECOVERY, part of AMETEK Advanced Measurement Technology, Inc.  All rights reserved.
+;
+;   THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+;   KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+;   IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR
+;   PURPOSE.
+;
+;Module Name:
+;
+;    SRUSB.INF
+;
+;Abstract:
+;    Installation inf for the following SIGNAL RECOVERY products
+;
+;    7124 Precision Lock-in Amplifier
+;    7270 DSP Lock-in Amplifier
+;    3830 Multiplexer
+;    3820 Universal Counter
+;    7230 DSP Lock-in Amplifier
+;    FastFlight2 Digital Signal Averager
+;
+;--*/
+
+[Version]
+Signature=$CHICAGO$
+Class="SRUSB"
+ClassGuid={F624C96D-058B-46f5-8E12-69F2F1743778}
+Provider=%MFGNAME%
+DriverVer=04/08/2011,3.0.0.0
+CatalogFile=SRUSB.cat
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=SampleClassReg     
+
+[SampleClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Device section =====================
+
+[Manufacturer]
+%MfgName%=Microsoft,NTAMD64
+
+; For Win2K
+[Microsoft]
+%USB\VID_0A2D&PID_0018.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0018   ; 7124 Precision Lock-in Amplifier
+%USB\VID_0A2D&PID_001B.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_001B   ; 7270 Lock-in Amplifier
+%USB\VID_0A2D&PID_0007.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0007   ; 3830 Multiplexer
+%USB\VID_0A2D&PID_0006.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0006   ; 3820 Universal Counter
+%USB\VID_0A2D&PID_0027.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0027   ; 7230 Lock-in Amplifier
+%USB\VID_0A2D&PID_0015.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0015   ; FastFlight2 DSA
+
+; For XP and later
+[Microsoft.NTAMD64]
+%USB\VID_0A2D&PID_0018.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0018   ; 7124 Precision Lock-in Amplifier
+%USB\VID_0A2D&PID_001B.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_001B   ; 7270 Lock-in Amplifier
+%USB\VID_0A2D&PID_0007.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0007   ; 3830 Multiplexer
+%USB\VID_0A2D&PID_0006.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0006   ; 3820 Universal Counter
+%USB\VID_0A2D&PID_0027.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0027   ; 7230 Lock-in Amplifier
+%USB\VID_0A2D&PID_0015.DeviceDesc%=srusb.Dev, USB\VID_0A2D&PID_0015   ; FastFlight2 DSA
+
+
+[srusb.Dev.NT]
+CopyFiles=srusb.Files.Ext
+
+[srusb.Dev.NT.Services]
+Addservice = srusb, 0x00000002, srusb.AddService
+
+[srusb.AddService]
+DisplayName    = %srusb.SvcDesc%
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %10%\System32\Drivers\srusb.sys
+AddReg         = srusb.AddReg
+LoadOrderGroup = Base
+
+[srusb.AddReg]
+HKR,"Parameters","MaximumTransferSize",0x10001,65536
+HKR,"Parameters","DebugLevel",0x10001,2
+
+[srusb.Files.Ext]
+srusb.sys
+
+[SourceDisksNames]
+1=%Disk_Description%,,,
+
+[SourceDisksFiles]
+srusb.sys = 1
+
+
+
+;------------------------------------------------------------------------------
+;  String Definitions
+;------------------------------------------------------------------------------
+
+[Strings]
+MfgName         = "SIGNAL RECOVERY USB XP 32 bit driver"
+Disk_Description= "USB Driver Installation Disk"
+usbsamp.SvcDesc = "USB Drivers for SIGNAL RECOVERY instruments"
+ClassName       = "SIGNAL RECOVERY"
+USB\VID_0A2D&PID_0018.DeviceDesc="7124 Precision Lock-in Amplifier"
+USB\VID_0A2D&PID_001B.DeviceDesc="7270 DSP Lock-in Amplifier"
+USB\VID_0A2D&PID_0007.DeviceDesc="3830 Multiplexer"
+USB\VID_0A2D&PID_0006.DeviceDesc="3820 Universal Counter"
+USB\VID_0A2D&PID_0027.DeviceDesc="7230 DSP Lock-in Amplifier"
+USB\VID_0A2D&PID_0015.DeviceDesc="FastFlight2 Digital Signal Averager"

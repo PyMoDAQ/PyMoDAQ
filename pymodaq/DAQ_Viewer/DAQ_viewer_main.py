@@ -9,22 +9,22 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 
 import sys
-from PyMoDAQ.DAQ_Viewer.DAQ_GUI_settings import Ui_Form
+from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
 
-from PyMoDAQ.DAQ_Utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from PyMoDAQ.DAQ_Utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from PyMoDAQ.DAQ_Utils.plotting.image_view_multicolor.image_view_multicolor import Image_View_Multicolor
-from PyMoDAQ.DAQ_Utils.plotting.hyperviewer.hyperviewer_main import HyperViewer
-import PyMoDAQ.DAQ_Utils.DAQ_utils as DAQ_utils
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand,make_enum
+from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+from pymodaq.daq_utils.plotting.hyperviewer.hyperviewer_main import HyperViewer
+import pymodaq.daq_utils.daq_utils as daq_utils
+from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum
 
-from PyMoDAQ.plugins.DAQ_Viewer_plugins import plugins_0D
-from PyMoDAQ.plugins.DAQ_Viewer_plugins import plugins_1D
-from PyMoDAQ.plugins.DAQ_Viewer_plugins import plugins_2D
+from pymodaq.plugins.daq_viewer_plugins import plugins_0D
+from pymodaq.plugins.daq_viewer_plugins import plugins_1D
+from pymodaq.plugins.daq_viewer_plugins import plugins_2D
 
-DAQ_0DViewer_Det_type=make_enum('DAQ_0DViewer')
-DAQ_1DViewer_Det_type=make_enum('DAQ_1DViewer')
-DAQ_2DViewer_Det_type=make_enum('DAQ_2DViewer')
+DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
+DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
+DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
 
 
 from collections import OrderedDict
@@ -32,7 +32,7 @@ import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 import os
 from easydict import EasyDict as edict
 
@@ -241,7 +241,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
         self.current_datas=None
-        #edict to be send to the DAQ_Measurement module from 1D traces if any
+        #edict to be send to the daq_measurement module from 1D traces if any
 
         self.data_to_save_export=OrderedDict([])
         self.do_save_data=False
@@ -332,7 +332,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             elif data_type=="Data2D":
 
                 self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Image_View_Multicolor(self.viewer_widgets[-1]))
+                self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
                 self.ui.viewers[-1].ui.auto_levels_pb.click()
 
@@ -393,23 +393,23 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer0D(self.viewer_widgets[-1]))
-            self.detector_types=DAQ_0DViewer_Det_type.names('DAQ_0DViewer')
+            self.detector_types=DAQ_0DViewer_Det_type.names('daq_0Dviewer')
             
         elif DAQ_type=="DAQ1D":
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer1D(self.viewer_widgets[-1]))
-            self.detector_types=DAQ_1DViewer_Det_type.names('DAQ_1DViewer')
+            self.detector_types=DAQ_1DViewer_Det_type.names('daq_1Dviewer')
 
         elif DAQ_type=="DAQ2D":
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Image_View_Multicolor(self.viewer_widgets[-1]))
+                self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
                 self.ui.viewers[-1].ui.auto_levels_pb.click()
 
 
-            self.detector_types=DAQ_2DViewer_Det_type.names('DAQ_2DViewer')
+            self.detector_types=DAQ_2DViewer_Det_type.names('daq_2Dviewer')
 
 
             self.settings.child('main_settings','axes').show()
@@ -468,10 +468,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.select_file, show_data, update_status
+            daq_utils.select_file, show_data, update_status
         """
         try:
-            self.load_file_pathname=DAQ_utils.select_file(start_path=self.save_file_pathname,save=False, ext=['h5','dat','txt']) #see DAQ_utils
+            self.load_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=False, ext=['h5','dat','txt']) #see daq_utils
             ext=self.load_file_pathname.suffix[1:]
             if ext=='h5':
 
@@ -529,11 +529,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.select_file, update_status
+            daq_utils.select_file, update_status
         """
         try:
             if path is None or path is False:
-                path=DAQ_utils.select_file(save=True,ext='par')
+                path=daq_utils.select_file(save=True,ext='par')
 
             settings_main=self.settings.saveState()
             if hasattr(self.ui.viewers[0],'roi_settings'):
@@ -573,7 +573,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.IniDet_fun()
 
             if path is None or path is False:
-                path=DAQ_utils.select_file(save=False,ext='par')
+                path=daq_utils.select_file(save=False,ext='par')
             with open(str(path), 'rb') as f:
                 settings = pickle.load(f)
                 settings_main=settings['settings_main']
@@ -604,7 +604,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 * Viewer in case of **DAQ_type** parameter name
                 * visibility of button in case of **show_averaging** parameter name
                 * visibility of naverage in case of **live_averaging** parameter name
-                * scale of axis **else** (in 2D PyMoDAQ type)
+                * scale of axis **else** (in 2D pymodaq type)
 
             Once done emit the update settings signal to link the commit.
 
@@ -616,7 +616,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             
             See Also
             --------
-            change_viewer, DAQ_Utils.custom_parameter_tree.iter_children
+            change_viewer, daq_utils.custom_parameter_tree.iter_children
         """
 
         for param, change, data in changes:
@@ -699,7 +699,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
     def set_setting_tree(self):
         """
             Set the local setting tree instance cleaning the current one and populate it with
-            standard options corresponding to the PyMoDAQ type viewer (0D, 1D or 2D).
+            standard options corresponding to the pymodaq type viewer (0D, 1D or 2D).
 
             See Also
             --------
@@ -715,11 +715,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 for child in self.settings.child(('detector_settings')).children()[1:]:#leave just the ROIselect group
                     child.remove()
             if self.DAQ_type=='DAQ0D':
-                obj=getattr(getattr(plugins_0D,'DAQ_0DViewer_'+self.detector_name),'DAQ_0DViewer_'+self.detector_name)
+                obj=getattr(getattr(plugins_0D,'daq_0Dviewer_'+self.detector_name),'DAQ_0DViewer_'+self.detector_name)
             elif self.DAQ_type=="DAQ1D":
-                obj=getattr(getattr(plugins_1D,'DAQ_1DViewer_'+self.detector_name),'DAQ_1DViewer_'+self.detector_name)
+                obj=getattr(getattr(plugins_1D,'daq_1Dviewer_'+self.detector_name),'DAQ_1DViewer_'+self.detector_name)
             elif self.DAQ_type=='DAQ2D':
-                obj=getattr(getattr(plugins_2D,'DAQ_2DViewer_'+self.detector_name),'DAQ_2DViewer_'+self.detector_name)
+                obj=getattr(getattr(plugins_2D,'daq_2Dviewer_'+self.detector_name),'DAQ_2DViewer_'+self.detector_name)
 
 
             params=getattr(obj,'params')
@@ -736,7 +736,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.set_current_scan_path
+            daq_utils.set_current_scan_path
         """
         if self.settings.child('continuous_saving','do_save').value():
             date=datetime.datetime.now()
@@ -745,7 +745,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.do_continuous_save=True
             # set the filename and path
             base_name=self.settings.child('continuous_saving','base_name').value()
-            scan_path,current_filename,continuous_save_path=DAQ_utils.set_current_scan_path(self.settings.child('continuous_saving','base_path').value(),
+            scan_path,current_filename,continuous_save_path=daq_utils.set_current_scan_path(self.settings.child('continuous_saving','base_path').value(),
                                                                        base_name=base_name)
 
             self.continuous_save_path=continuous_save_path
@@ -805,11 +805,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.select_file, DAQ_Utils.custom_parameter_tree.parameter_to_xml_string, update_status
+            daq_utils.select_file, daq_utils.custom_parameter_tree.parameter_to_xml_string, update_status
         """
 
         if path is None:
-            path=DAQ_utils.select_file(start_path=path,save=True, ext='h5') #see DAQ_utils
+            path=daq_utils.select_file(start_path=path,save=True, ext='h5') #see daq_utils
 
         try:
             h5file=tables.open_file(str(path),mode='w')
@@ -919,10 +919,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.select_file, SnapShot
+            daq_utils.select_file, SnapShot
         """
         self.do_save_data=True
-        self.save_file_pathname=DAQ_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see DAQ_utils
+        self.save_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
         self.SnapShot(pathname=self.save_file_pathname)
 
     def save_current(self):
@@ -931,10 +931,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.select_file, save_export_data
+            daq_utils.select_file, save_export_data
         """
         self.do_save_data=True
-        self.save_file_pathname=DAQ_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see DAQ_utils
+        self.save_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
         self.save_export_data(self.data_to_save_export)
 
     def SnapShot(self,pathname=None):
@@ -976,7 +976,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand, set_enabled_Ini_buttons
+            daq_utils.ThreadCommand, set_enabled_Ini_buttons
         """
 
         if not(grab_state):
@@ -1011,7 +1011,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            set_enabled_grab_buttons, DAQ_utils.ThreadCommand, DAQ_Detector
+            set_enabled_grab_buttons, daq_utils.ThreadCommand, DAQ_Detector
         """
         try:
             QtWidgets.QApplication.processEvents()
@@ -1055,7 +1055,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
     def Quit_fun(self):
         """
-            | Close the current instance of DAQ_Viewer_main emmiting the quit signal.
+            | Close the current instance of daq_viewer_main emmiting the quit signal.
             | Treat an exception if an error during the detector unitializing has occured.
 
         """
@@ -1480,7 +1480,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         elif status.command=='update_settings':
             try:
-                self.settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)#any changes on the detcetor settings will update accordingly the GUI
+                self.settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)#any changes on the detcetor settings will update accordingly the gui
             except: pass
             try:
                 if status.attributes[2] == 'value':
@@ -1614,7 +1614,7 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            Grab, Single, DAQ_utils.ThreadCommand
+            Grab, Single, daq_utils.ThreadCommand
         """
         if command.command=="Ini_Detector":
             status=self.Ini_Detector(*command.attributes)
@@ -1658,13 +1658,13 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            Ini_Detector, DAQ_utils.ThreadCommand
+            Ini_Detector, daq_utils.ThreadCommand
         """
         try:
             #status="Not initialized"
             status=edict(initialized=False,info="",x_axis=None,y_axis=None)
             if self.DAQ_type=='DAQ0D':
-                class_=getattr(getattr(plugins_0D,'DAQ_0DViewer_'+self.detector_name),'DAQ_0DViewer_'+self.detector_name)
+                class_=getattr(getattr(plugins_0D,'daq_0Dviewer_'+self.detector_name),'DAQ_0DViewer_'+self.detector_name)
                 self.detector=class_(self,params_state)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
@@ -1675,7 +1675,7 @@ class DAQ_Detector(QObject):
                 #status="Initialized"
 
             elif self.DAQ_type=='DAQ1D':
-                class_=getattr(getattr(plugins_1D,'DAQ_1DViewer_'+self.detector_name),'DAQ_1DViewer_'+self.detector_name)
+                class_=getattr(getattr(plugins_1D,'daq_1Dviewer_'+self.detector_name),'DAQ_1DViewer_'+self.detector_name)
                 self.detector=class_(self,params_state)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
@@ -1686,7 +1686,7 @@ class DAQ_Detector(QObject):
                 #status="Initialized"
 
             elif self.DAQ_type=='DAQ2D':
-                class_=getattr(getattr(plugins_2D,'DAQ_2DViewer_'+self.detector_name),'DAQ_2DViewer_'+self.detector_name)
+                class_=getattr(getattr(plugins_2D,'daq_2Dviewer_'+self.detector_name),'DAQ_2DViewer_'+self.detector_name)
                 self.detector=class_(self,params_state)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
@@ -1728,7 +1728,7 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand
+            daq_utils.ThreadCommand
         """
         if not(self.hardware_averaging): #to execute if the averaging has to be done software wise
             self.ind_average+=1
@@ -1770,7 +1770,7 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand, Grab
+            daq_utils.ThreadCommand, Grab
         """
         try:
             self.Grab(Naverage,live=False)
@@ -1796,7 +1796,7 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand, Grab
+            daq_utils.ThreadCommand, Grab
         """
         try:
             self.ind_average=0
@@ -1852,14 +1852,14 @@ class DAQ_Detector(QObject):
 
 
 if __name__ == '__main__':
-    from PyMoDAQ.DAQ_Utils.DAQ_enums import DAQ_type
+    from pymodaq.daq_utils.daq_enums import DAQ_type
     app = QtWidgets.QApplication(sys.argv);
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000,500)
-    win.setWindowTitle('PyMoDAQ main')
-    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ2D'].name)
+    win.setWindowTitle('pymodaq main')
+    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ1D'].name)
     win.show()
     sys.exit(app.exec_())
 

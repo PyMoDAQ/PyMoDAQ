@@ -84,7 +84,7 @@ def find_in_path(path,mode):
     paths=os.listdir(path)
     for entry in paths:
         if mode in entry:
-            if(mode=='DAQ_Move'):
+            if(mode=='daq_move'):
                 plugins.append(entry[9:-3])
             else:
                 plugins.append(entry[13:-3])
@@ -131,54 +131,54 @@ def get_names(mode):
     """
     # liste=[]
     base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
-    if(mode=='DAQ_Move'):
-        plugin_list=find_in_path(os.path.join(base_path,'DAQ_Move_plugins'),mode)
+    if(mode=='daq_move'):
+        plugin_list=find_in_path(os.path.join(base_path,'daq_move_plugins'),mode)
         plugins = elt_as_first_element(plugin_list,match_word='Mock')
         #check if modules are importable
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.DAQ_Move_' + mod, 'PyMoDAQ.plugins.DAQ_Move_plugins')
+                importlib.import_module('.daq_move_' + mod, 'pymodaq.plugins.daq_move_plugins')
                 plugins_import.append(mod)
             except:
                 pass
 
 
         return plugins_import
-    elif(mode=='DAQ_0DViewer'):
-        plugin_list=find_in_path(os.path.join(base_path,'DAQ_Viewer_plugins','plugins_0D'),mode)
+    elif(mode=='daq_0Dviewer'):
+        plugin_list=find_in_path(os.path.join(base_path,'daq_viewer_plugins','plugins_0D'),mode)
         plugins=elt_as_first_element(plugin_list,match_word='Mock')
         #check if modules are importable
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.DAQ_0DViewer_' + mod, 'PyMoDAQ.plugins.DAQ_Viewer_plugins.plugins_0D')
+                importlib.import_module('.daq_0Dviewer_' + mod, 'pymodaq.plugins.daq_viewer_plugins.plugins_0D')
                 plugins_import.append(mod)
             except:
                 pass
 
         return plugins_import
-    elif(mode=='DAQ_1DViewer'):
-        plugin_list=find_in_path(os.path.join(base_path,'DAQ_Viewer_plugins','plugins_1D'),mode)
+    elif(mode=='daq_1Dviewer'):
+        plugin_list=find_in_path(os.path.join(base_path,'daq_viewer_plugins','plugins_1D'),mode)
         plugins=elt_as_first_element(plugin_list,match_word='Mock')
         #check if modules are importable
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.DAQ_1DViewer_' + mod, 'PyMoDAQ.plugins.DAQ_Viewer_plugins.plugins_1D')
+                importlib.import_module('.daq_1Dviewer_' + mod, 'pymodaq.plugins.daq_viewer_plugins.plugins_1D')
                 plugins_import.append(mod)
             except:
                 pass
 
         return plugins_import
-    elif(mode=='DAQ_2DViewer'):
-        plugin_list=find_in_path(os.path.join(base_path,'DAQ_Viewer_plugins','plugins_2D'),mode) 
+    elif(mode=='daq_2Dviewer'):
+        plugin_list=find_in_path(os.path.join(base_path,'daq_viewer_plugins','plugins_2D'),mode)
         plugins=elt_as_first_element(plugin_list,match_word='Mock')
         #check if modules are importable
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.DAQ_2DViewer_' + mod, 'PyMoDAQ.plugins.DAQ_Viewer_plugins.plugins_2D')
+                importlib.import_module('.daq_2Dviewer_' + mod, 'pymodaq.plugins.daq_viewer_plugins.plugins_2D')
                 plugins_import.append(mod)
             except:
                 pass
@@ -206,7 +206,7 @@ def make_enum(mode):
     dict.update({'names': get_names})
     for key,value in values.items():
         dict[key]=value
-    if(mode=='DAQ_Move'):
+    if(mode=='daq_move'):
         return meta(mode+'_Stage_type',bases,dict)
     else :
         return meta(mode+'_Type',bases,dict)

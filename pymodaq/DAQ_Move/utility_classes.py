@@ -4,8 +4,8 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QVaria
 from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand,find_file,find_in_path,get_names,make_enum
+import pymodaq.daq_utils.custom_parameter_tree
+from pymodaq.daq_utils.daq_utils import ThreadCommand,find_file,find_in_path,get_names,make_enum
 
 import os
 import sys

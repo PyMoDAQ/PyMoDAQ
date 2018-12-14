@@ -2,21 +2,21 @@
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import sys
-from PyMoDAQ.DAQ_Move.DAQ_Move_GUI import Ui_Form
+from pymodaq.daq_move.daq_move_gui import Ui_Form
 
 import numpy as np
-from PyMoDAQ.DAQ_Move import utility_classes
+from pymodaq.daq_move import utility_classes
 #check for plugins to be added to the DAQ_Move_Stage_type enum
 #must be loaded to register proper custom parameter types
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree
-from PyMoDAQ.DAQ_Utils.DAQ_utils import ThreadCommand,make_enum
+import pymodaq.daq_utils.custom_parameter_tree
+from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum
 from easydict import EasyDict as edict
-import PyMoDAQ.plugins.DAQ_Move_plugins as plugins
+import pymodaq.plugins.daq_move_plugins as plugins
 
 
-DAQ_Move_Stage_type=make_enum('DAQ_Move')
+DAQ_Move_Stage_type=make_enum('daq_move')
 
 class DAQ_Move(Ui_Form,QObject):
     """
@@ -71,7 +71,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
 
-    def __init__(self,parent,title="PyMoDAQ Move",preset=None,init=False,controller_ID=-1):
+    def __init__(self,parent,title="pymodaq Move",preset=None,init=False,controller_ID=-1):
 
         # DAQ_Move object is a module used to control one motor from a specified list.
         # preset is an optional list of dicts used to preset programatically settings such as the name of the controller from the list of possible controllers, COM address...
@@ -121,7 +121,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
         ##Setting stages types
-        self.stage_types=DAQ_Move_Stage_type.names('DAQ_Move')
+        self.stage_types=DAQ_Move_Stage_type.names('daq_move')
         self.ui.Stage_type_combo.clear()
         self.ui.Stage_type_combo.addItems(self.stage_types)
 
@@ -220,7 +220,7 @@ class DAQ_Move(Ui_Form,QObject):
             for child in self.settings.child(('move_settings')).children():
                 child.remove()
 
-            class_=getattr(getattr(plugins,'DAQ_Move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
+            class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
             params=getattr(class_,'params')
             move_params=Parameter.create(name='move_settings', type='group', children=params)
 
@@ -741,7 +741,7 @@ class DAQ_Move_stage(QObject):
 
         status=edict(initialized=False,info="")
         try:
-            class_=getattr(getattr(plugins,'DAQ_Move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
+            class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
             self.hardware=class_(self,params_state)
             status.update(self.hardware.Ini_Stage(controller)) #return edict(info="", controller=, stage=)
 

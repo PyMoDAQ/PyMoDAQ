@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QObject, pyqtSignal, QLocale
 import sys
-from PyMoDAQ.DAQ_Utils.Tree_layout.Tree_form import Ui_Form
+from pymodaq.daq_utils.tree_layout.tree_form import Ui_Form
 
 
 

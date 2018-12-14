@@ -1,50 +1,42 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QTimer, QDateTime, QDate, QTime
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
 import sys
 import logging
-logging.basicConfig(filename='DAQ_scan.log',level=logging.DEBUG)
+logging.basicConfig(filename='daq_scan.log',level=logging.DEBUG)
 
 
-from PyMoDAQ.DAQ_Scan.GUI.DAQ_Scan_GUI import Ui_Form
-from PyMoDAQ.DAQ_Utils.h5browser import H5Browser
+from  pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
+from pymodaq.daq_utils.h5browser import H5Browser
 from collections import OrderedDict
-import PyMoDAQ.DAQ_Utils.DAQ_utils as utils
+import pymodaq.daq_utils.daq_utils as utils
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
-import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import PyMoDAQ.DAQ_Utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 import numpy as np
-import PyMoDAQ.QtDesigner_Ressources.QtDesigner_ressources_rc
 
-from PyMoDAQ.DAQ_Utils.plotting.image_view_multicolor import Image_View_Multicolor
-from PyMoDAQ.DAQ_Utils.manage_preset import PresetManager
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+from pymodaq.daq_utils.manage_preset import PresetManager
 
 import matplotlib.image as mpimg
-from PyMoDAQ.DAQ_Move.DAQ_Move_main import DAQ_Move
-from PyMoDAQ.DAQ_Viewer.DAQ_viewer_main import DAQ_Viewer
-from PyMoDAQ.plugins import DAQ_Move_plugins as movehardware 
+from pymodaq.daq_move.daq_move_main import DAQ_Move
+from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
-
-from PyMoDAQ.plugins.DAQ_Viewer_plugins import plugins_2D, plugins_1D, plugins_0D
-
-from PyMoDAQ.DAQ_Utils.plotting.QLED.qled import QLED
+from pymodaq.daq_utils.plotting.qled import QLED
 from easydict import EasyDict as edict
-from PyMoDAQ.DAQ_Utils import DAQ_utils
+from pymodaq.daq_utils import daq_utils
 from pathlib import Path
 import tables
 import datetime
 import pickle
 import os
-from pyqtgraph.parametertree.Parameter import registerParameterType
-from PyMoDAQ.DAQ_Utils.DAQ_utils import make_enum
-import random
+from pymodaq.daq_utils.daq_utils import make_enum
 
-DAQ_Move_Stage_type=make_enum('DAQ_Move')
-DAQ_0DViewer_Det_type=make_enum('DAQ_0DViewer')
-DAQ_1DViewer_Det_type=make_enum('DAQ_1DViewer')
-DAQ_2DViewer_Det_type=make_enum('DAQ_2DViewer')
+# DAQ_Move_Stage_type=make_enum('daq_move')
+# DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
+# DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
+# DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -127,17 +119,17 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
     def __init__(self,parent,fname="",move_modules=None,detector_modules=None):
         """
-            | DAQ_Scan(parent,fname="",move_modules=None,detector_modules=None) is a user interface that will enable scanning of motors controlled by the module DAQ_Move and acquisition of signals using DAQ_0DViewer,DAQ_1DViewer or DAQ_2DViewer.
+            | daq_scan(parent,fname="",move_modules=None,detector_modules=None) is a user interface that will enable scanning of motors controlled by the module daq_move and acquisition of signals using DAQ_0DViewer,DAQ_1DViewer or DAQ_2DViewer.
             |
             | Parent is the parent Widget ( a QWidget in general).
             |
             | Fname is a path pointing to a png image to be displayed at the beginning in the 2D viewer of the scan module.
             |
-            | Move_modules is a dict of the type move_modules=dict(polarization=DAQ_Move_polarization) where DAQ_Move_polarization is an instance of the DAQ_Move class.
+            | Move_modules is a dict of the type move_modules=dict(polarization=DAQ_Move_polarization) where DAQ_Move_polarization is an instance of the daq_move class.
             |
             | Detector_modules is a dict of the type detector_modules=dict(current=DAQ_0D_current) where DAQ_0D_current is an instance of the DAQ_0DViewer class.
             |
-            | The detector module can be any instance in the list:  DAQ_0DViewer, DAQ_1DViewer, DAQ_2DViewer. These modules have in common a signal: export_data_signal exporting a dict of the type: dict:=[x_axis=...,data=list of vectors...,data_measurements=list of floats] to be connected to main GUI
+            | The detector module can be any instance in the list:  DAQ_0DViewer, DAQ_1DViewer, DAQ_2DViewer. These modules have in common a signal: export_data_signal exporting a dict of the type: dict:=[x_axis=...,data=list of vectors...,data_measurements=list of floats] to be connected to main gui
             |
 
 
@@ -148,8 +140,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Scan,self).__init__()
-        self.title='DAQ_Scan'
-        splash=QtGui.QPixmap('..//Documentation//splash.png')
+        self.title='daq_scan'
+        splash=QtGui.QPixmap('..//documentation//splash.png')
         self.splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
         self.init_prog=True
 
@@ -181,7 +173,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         #%% init the 2D viewer
         self.ui.scan2D_graph_widget=QtWidgets.QWidget()
-        self.ui.scan2D_graph=Image_View_Multicolor(self.ui.scan2D_graph_widget)
+        self.ui.scan2D_graph=Viewer2D(self.ui.scan2D_graph_widget)
         self.ui.scan2D_layout.addWidget(self.ui.scan2D_graph_widget)
         self.ui.scan2D_graph.ui.Show_histogram.setChecked(False)
         self.ui.scan2D_graph.ui.histogram_blue.setVisible(False)
@@ -298,7 +290,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             ]},
         {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
             {'title': 'Save 2D datas:','name': 'save_2D', 'type': 'bool', 'value': True},
-            {'title': 'Base path:','name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data'},
+            {'title': 'Base path:','name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False},
             {'title': 'Base name:','name': 'base_name', 'type': 'str', 'value': 'Scan','readonly': True},
             {'title': 'Current path:','name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data','readonly': True},
             {'title': 'Current file name:','name': 'current_filename', 'type': 'list', 'value': ''},
@@ -482,7 +474,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         try:
             dockstate = self.dockarea.saveState()
-            fname=DAQ_utils.select_file(start_path=None,save=True, ext='dock')
+            fname=daq_utils.select_file(start_path=None, save=True, ext='dock')
             if fname is not None:
                 with open(str(fname), 'wb') as f:
                     pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
@@ -497,7 +489,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             DAQ_utils.select_file
         """
         try:
-            fname=DAQ_utils.select_file(save=False, ext='dock')
+            fname=daq_utils.select_file(save=False, ext='dock')
             if fname is not None:
                 with open(str(fname), 'rb') as f:
                     dockstate = pickle.load(f)
@@ -639,12 +631,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
     def load_file(self):
-        file=DAQ_utils.select_file(self.DAQscan_settings.child('saving_options','base_path').value(),save=False,ext='h5')
+        file=daq_utils.select_file(self.DAQscan_settings.child('saving_options', 'base_path').value(), save=False, ext='h5')
         self.save_parameters.h5_file_path=file
         self.update_file_settings()
 
     def save_file(self):
-        filename=DAQ_utils.select_file(self.DAQscan_settings.child('saving_options','base_path').value(),save=True,ext='h5')
+        filename=daq_utils.select_file(self.DAQscan_settings.child('saving_options', 'base_path').value(), save=True, ext='h5')
         file.copy_file(str(filename))
 
     def show_file_content(self):
@@ -663,11 +655,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
     def show_about(self):
         self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage("PyMoDAQ version 1.0.0\nModular Acquisition with Python\nWritten by Sébastien Weber", QtCore.Qt.AlignRight, QtCore.Qt.white)
+        self.splash_sc.showMessage("pymodaq version 1.0.0\nModular Acquisition with Python\nWritten by Sébastien Weber", QtCore.Qt.AlignRight, QtCore.Qt.white)
 
 
     def show_help(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("file:..//Documentation//_build//html//index.html"))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("file:..//documentation//_build//html//index.html"))
 
 
     def clear_move_det_controllers(self):
@@ -697,11 +689,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     def set_Mock_preset(self):
         """
             Set a Mock preset in 5 steps :
-                * **Move Mock** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list.
-                * **Move Mock** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list.
-                * **DAQ0D** : initialize viewer's dock and modules procedure. Append an instance of DAQ_Viewer to the detector_modules list.
-                * **DAQ1D** : initialize viewer's dock and modules procedure. Append an instance of DAQ_Viewer to the detector_modules list.
-                * **DAQ2D** : initialize viewer's dock and modules procedure. Append an instance of DAQ_Viewer to the detector_modules list.
+                * **Move Mock** : initialize docks and modules procedure. Append an instance of daq_move to the move_modules list.
+                * **Move Mock** : initialize docks and modules procedure. Append an instance of daq_move to the move_modules list.
+                * **DAQ0D** : initialize viewer's dock and modules procedure. Append an instance of daq_viewer to the detector_modules list.
+                * **DAQ1D** : initialize viewer's dock and modules procedure. Append an instance of daq_viewer to the detector_modules list.
+                * **DAQ2D** : initialize viewer's dock and modules procedure. Append an instance of daq_viewer to the detector_modules list.
 
             Returns
             -------
@@ -710,7 +702,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_Move_main.DAQ_Move, stop_moves,  DAQ_viewer_main.DAQ_Viewer
+            DAQ_Move_main.daq_move, stop_moves,  DAQ_viewer_main.daq_viewer
         """
         self.move_docks=[]
         move_forms=[]
@@ -877,15 +869,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     def set_canon_preset(self):
         """
             Set a Canon preset in 6 steps :
-                * **Connex_U** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list. Update settings tree with com_port child.
-                * **Connex_V** : initialize docks and modules procedure. Append an instance of DAQ_Move to the move_modules list. Update settings tree with com_port child.
+                * **Connex_U** : initialize docks and modules procedure. Append an instance of daq_move to the move_modules list. Update settings tree with com_port child.
+                * **Connex_V** : initialize docks and modules procedure. Append an instance of daq_move to the move_modules list. Update settings tree with com_port child.
                 * **Loading Detector Modules** (Hardware parameter settings procedure):
-                    * *Kinesis* Power : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
-                    * *Kinesis* Polarization : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
-                    * *Kinesis_Flipper* Flipper : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
-                    * *Kinesis_Flipper* Injection power : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
-                    * *Kinesis Injection* power : Append an instance of DAQ_Move to the move_modules list. Update settings tree with serial number
-                    * *PI* Delay : Append an instance of DAQ_Move to the move_modules list.
+                    * *Kinesis* Power : Append an instance of daq_move to the move_modules list. Update settings tree with serial number
+                    * *Kinesis* Polarization : Append an instance of daq_move to the move_modules list. Update settings tree with serial number
+                    * *Kinesis_Flipper* Flipper : Append an instance of daq_move to the move_modules list. Update settings tree with serial number
+                    * *Kinesis_Flipper* Injection power : Append an instance of daq_move to the move_modules list. Update settings tree with serial number
+                    * *Kinesis Injection* power : Append an instance of daq_move to the move_modules list. Update settings tree with serial number
+                    * *PI* Delay : Append an instance of daq_move to the move_modules list.
 
                     Update settings tree with :
                         * *scaling*
@@ -918,7 +910,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            DAQ_Move_main.DAQ_Move, stop_moves
+            DAQ_Move_main.daq_move, stop_moves
         """
         self.move_docks=[]
         move_forms=[]
@@ -1198,7 +1190,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.DAQ_Move, DAQ_viewer_main.DAQ_Viewer
+            custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
         """
 
         if os.path.splitext(filename)[1]=='.xml':
@@ -1428,7 +1420,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            stop_scan,  DAQ_Move_main.DAQ_Move.Stop_Motion
+            stop_scan,  DAQ_Move_main.daq_move.Stop_Motion
         """
         self.stop_scan()
         for mod in self.move_modules:
@@ -1624,7 +1616,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             base_name=self.DAQscan_settings.child('saving_options','base_name').value()
 
 
-            scan_path,current_filename,dataset_path=DAQ_utils.set_current_scan_path(base_path,base_name,update_h5)
+            scan_path,current_filename,dataset_path=daq_utils.set_current_scan_path(base_path, base_name, update_h5)
             self.DAQscan_settings.child('saving_options','current_scan_path').setValue(str(scan_path))
 
 
@@ -1653,7 +1645,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
             if not 'Raw_datas' in list(self.save_parameters.h5_file.root._v_children.keys()):
-                raw_data_group = self.save_parameters.h5_file.create_group("/", 'Raw_datas', 'Data from DAQ_Scan and detector modules')
+                raw_data_group = self.save_parameters.h5_file.create_group("/", 'Raw_datas', 'Data from daq_scan and detector modules')
                 self.save_metadata(raw_data_group,'dataset_info')
                 #selected_data_group = self.save_parameters.h5_file.create_group("/", 'Selected_datas', 'Data currently selected')
                 #analysis_data_group= self.save_parameters.h5_file.create_group("/", 'Analysed_datas', 'Data analysed from raw data')
@@ -1923,8 +1915,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
                     Rstep_2d=self.DAQscan_settings.child('scan_options','scan2D_settings','Rstep_2d').value()
                     Rmax=self.DAQscan_settings.child('scan_options','scan2D_settings','Rmax_2d').value()
-                    Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions=DAQ_utils.set_scan_spiral(start_axis1,start_axis2,
-                                                               Rmax,Rstep_2d)
+                    Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions=daq_utils.set_scan_spiral(start_axis1, start_axis2,
+                                                                                                                                       Rmax, Rstep_2d)
                 else:
                     stop_axis1=self.DAQscan_settings.child('scan_options','scan2D_settings','stop_2d_axis1').value()
                     step_axis1=self.DAQscan_settings.child('scan_options','scan2D_settings','step_2d_axis1').value()
@@ -1932,9 +1924,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     step_axis2=self.DAQscan_settings.child('scan_options','scan2D_settings','step_2d_axis2').value()
 
                     if self.DAQscan_settings.child('scan_options','scan2D_settings','scan2D_type').value()=='Linear':
-                        Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions=DAQ_utils.set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2,back_and_force=False)
+                        Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions=daq_utils.set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
                     elif self.DAQscan_settings.child('scan_options','scan2D_settings','scan2D_type').value()=='back&forth':
-                        Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions=DAQ_utils.set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2,back_and_force=True)
+                        Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions=daq_utils.set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=True)
 
 
                 self.scan_parameters.axis_2D_1=axis_1_unique
@@ -1968,8 +1960,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.PyMoDAQ=DAQ_Scan_Acquisition(self.DAQscan_settings,self.save_parameters.h5_file,self.save_parameters.current_group,
                                           self.move_modules_scan,self.det_modules_scan,self.scan_moves,self.scan_saves)
 
-            #self.DAQ_thread.PyMoDAQ=PyMoDAQ
-            #PyMoDAQ.moveToThread(self.DAQ_thread)
+            #self.DAQ_thread.pymodaq=pymodaq
+            #pymodaq.moveToThread(self.DAQ_thread)
 
 
             self.command_DAQ_signal[list].connect(self.PyMoDAQ.queue_command)
@@ -2097,6 +2089,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if self.ui.overlay2D_pb.isChecked():
                 #display list of actual saved 2Dscans
                 self.list_2Dscans()
+
+            self.save_parameters.h5_file.flush()
 
         except Exception as e:
             self.update_status(str(e),wait_time=self.wait_time,log_type='log')
@@ -2348,7 +2342,7 @@ class DAQ_Scan_Acquisition(QObject):
     status_sig = pyqtSignal(list)
     def __init__(self,settings=None,h5_file=None,h5_file_current_group=None,move_modules=[],detector_modules=[],scan_moves=[],scan_saves=[]):
         """
-            DAQ_Scan_Acquisition deal with the acquisition part of DAQ_Scan.
+            DAQ_Scan_Acquisition deal with the acquisition part of daq_scan.
 
             See Also
             --------
@@ -2464,7 +2458,7 @@ class DAQ_Scan_Acquisition(QObject):
 
             See Also
             --------
-            DAQ_Move_main.DAQ_Move.Move_Abs
+            DAQ_Move_main.daq_move.Move_Abs
         """
         try:
             positions=self.scan_moves[0]
@@ -2658,7 +2652,7 @@ class DAQ_Scan_Acquisition(QObject):
 
             See Also
             --------
-            DAQ_Move_main.DAQ_Move.Move_Abs, move_done, det_done, check_array_in_h5, wait_for_move_done, wait_for_det_done, det_done
+            DAQ_Move_main.daq_move.Move_Abs, move_done, det_done, check_array_in_h5, wait_for_move_done, wait_for_det_done, det_done
         """
         for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
             self.move_modules[ind_move].Move_Abs(pos)
@@ -2784,7 +2778,7 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow();fname="";
     win.setVisible(False)
-    splash=QtGui.QPixmap('..//Documentation//splash.png')
+    splash=QtGui.QPixmap('..//documentation//splash.png')
     splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
     splash_sc.show()
     splash_sc.raise_()
@@ -2794,7 +2788,7 @@ if __name__ == '__main__':
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000,500)
-    win.setWindowTitle('PyMoDAQ Scan')
+    win.setWindowTitle('pymodaq Scan')
     win.setVisible(False)
     prog = DAQ_Scan(area,fname)
     QThread.sleep(4)

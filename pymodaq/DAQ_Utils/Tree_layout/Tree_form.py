@@ -61,7 +61,7 @@ class Ui_Form(object):
         self.Open_Tree_Selected.setText(_translate("Form", "Open Selected"))
         self.Close_Tree.setText(_translate("Form", "Close Tree"))
 
-import PyMoDAQ.QtDesigner_Ressources.QtDesigner_ressources_rc
+import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

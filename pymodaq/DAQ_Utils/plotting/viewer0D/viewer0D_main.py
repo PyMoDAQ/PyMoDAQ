@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
 import sys
 
-from PyMoDAQ.DAQ_Utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
+from pymodaq.daq_utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
 
 import numpy as np
 from easydict import EasyDict as edict
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form=QtWidgets.QWidget();
     prog = Viewer0D(Form)
-    from PyMoDAQ.DAQ_Utils.DAQ_utils import gauss1D
+    from pymodaq.daq_utils.daq_utils import gauss1D
     x=np.linspace(0,200,201);y1=gauss1D(x,75,25);y2=gauss1D(x,120,50,2);Form.show()
     for ind,data in enumerate(y1):prog.show_data([data,y2[ind]]);QtWidgets.QApplication.processEvents()
 

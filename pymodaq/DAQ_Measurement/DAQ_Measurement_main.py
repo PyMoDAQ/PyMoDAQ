@@ -2,8 +2,8 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSize
 
 import sys
-from PyMoDAQ.DAQ_Measurement.GUI.DAQ_Measurement_GUI import Ui_Form
-from PyMoDAQ.DAQ_Utils.DAQ_utils import find_index, my_moment
+from pymodaq.daq_measurement.gui.daq_measurement_GUI import Ui_Form
+from pymodaq.daq_utils.daq_utils import find_index, my_moment
 from scipy.optimize import curve_fit
 import pyqtgraph as pg
 import numpy as np
@@ -67,7 +67,7 @@ class DAQ_Measurement(Ui_Form,QObject):
         *parent*             QObject                           The QObject initializing the UI
         *xdata*              1D numpy array                    The x axis data
         *ydata*              1D numpy array                    The y axis data
-        *measurement_types*  instance of DAQ_Utils.DAQ_enums   The type of the measurement, between:
+        *measurement_types*  instance of daq_utils.DAQ_enums   The type of the measurement, between:
                                                                     * 'Cursor_Integration'
                                                                     * 'Max'
                                                                     * 'Min'
@@ -125,7 +125,7 @@ class DAQ_Measurement(Ui_Form,QObject):
 
     def Quit_fun(self):
         """
-            Close the current instance of DAQ_Measurement.
+            Close the current instance of daq_measurement.
 
         """
         # insert anything that needs to be closed before leaving
@@ -155,7 +155,7 @@ class DAQ_Measurement(Ui_Form,QObject):
             ================ ========== =====================================================================================
             **Parameters**    **Type**   **Description**
 
-            mtype             string      the Measurement_type index of the Measurement_type array (imported from DAQ_Utils)
+            mtype             string      the Measurement_type index of the Measurement_type array (imported from daq_utils)
 
             update            boolean     the update boolean link with the update_measurement method
             ================ ========== =====================================================================================
@@ -322,7 +322,7 @@ class DAQ_Measurement(Ui_Form,QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
-    from PyMoDAQ.DAQ_Utils.DAQ_utils import gauss1D
+    from pymodaq.daq_utils.daq_utils import gauss1D
     prog = DAQ_Measurement(Form);xdata=np.linspace(0,100,101);x0=50;dx=20;ydata=10*gauss1D(xdata,x0,dx)+np.random.rand(len(xdata));prog.update_data(xdata,ydata)
     Form.show()
     sys.exit(app.exec_())

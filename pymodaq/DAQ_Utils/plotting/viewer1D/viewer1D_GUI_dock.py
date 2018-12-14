@@ -99,7 +99,7 @@ class Ui_Form(object):
         self.y_label.setText(_translate("Form", "y:"))
 
 from pyqtgraph import PlotWidget
-import QtDesigner_ressources_rc
+import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys
