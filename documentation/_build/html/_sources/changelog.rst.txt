@@ -1,0 +1,15 @@
+:orphan:
+
+=========
+Changelog
+=========
+
+
+* :release:`1.0.1 <2018-12-16>`
+* :feature:`0` Tested entry-points after installation.*.exe files created successfully with manual setup install.
+  But the link to working python is missing with pip install (python.exe and pythonw.exe) must be on the ``PATH``
+* :bug:`0` Some wrong path to save/get preset modes
+* :release:`1.0.0 <2018-12-10>`
+* :feature:`0` Renamed all modules with lowercase. Renamed imageviewer_multicolor as viewer2D
+
+

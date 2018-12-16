@@ -8,7 +8,7 @@ try:
 except ImportError:
     sys.stderr.write("Warning: could not import setuptools; falling back to distutils.\n")
     from distutils.core import setup
-from distutils.command import install
+    from distutils.command import install
 
 
 
@@ -61,7 +61,7 @@ allPackages = get_packages()
 
 
 setup(
-    version='1.0.0',
+    version='1.0.1',
      #cmdclass={'build': Build,},
     #           'install': Install,
     #           'deb': helpers.DebCommand,
@@ -76,7 +76,13 @@ setup(
                                      'pymodaq_move=pymodaq.pymodaq_exec:move',
                                     'pymodaq_viewer=pymodaq.pymodaq_exec:viewer',
                                     'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
-                                     ]},
+                                     ],
+                   'gui_scripts': ['pymodaq_scan=pymodaq.pymodaq_exec:scan',
+                                    'pymodaq_move=pymodaq.pymodaq_exec:move',
+                                    'pymodaq_viewer=pymodaq.pymodaq_exec:viewer',
+                                    'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
+                                    ]
+                  },
     install_requires = [
         'numpy',
         'pyqtgraph==0.10',

@@ -1,6 +1,0 @@
-DAQ_Utils
-=========
-
-
-Introduction
-------------

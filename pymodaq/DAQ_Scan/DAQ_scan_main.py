@@ -3,6 +3,8 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTi
 
 import sys
 import os
+#sys.path.append(os.path.split(os.path.split(os.path.split(__file__)[0])[0])[0])
+
 import logging
 logging.basicConfig(filename=os.path.join(os.path.split(__file__)[0],'daq_scan.log'),level=logging.DEBUG)
 

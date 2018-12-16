@@ -1,0 +1,306 @@
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DAQ Viewer &mdash; PyMoDAQ: Modular Data acquisition with python 1.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../static/style.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="DAQ Scan" href="DAQ_Scan.html" />
+    <link rel="prev" title="DAQ Move" href="DAQ_Move.html" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> PyMoDAQ: Modular Data acquisition with python
+          
+
+          
+            
+            <img src="../../_static/splash.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="Main_Modules.html">Main Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Move.html">DAQ Move</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Viewer</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#settings">Settings</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#data-viewers">Data Viewers</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="Plugins.html">Plugins</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../SynthesisDiagram.html">Synthesis Diagram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../classDiagram.html">Class Diagram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">API documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyMoDAQ: Modular Data acquisition with python</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../Description.html">Description</a> &raquo;</li>
+        
+          <li><a href="Main_Modules.html">Main Modules</a> &raquo;</li>
+        
+      <li>DAQ Viewer</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/usage/modules/DAQ_Viewer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="daq-viewer">
+<span id="daq-viewer-module"></span><h1>DAQ Viewer<a class="headerlink" href="#daq-viewer" title="Permalink to this headline">¶</a></h1>
+<p>Module to be used to interface any detector and plot live data and many other features
+such as data analysis. The default detectors are the mock ones (a kind of software based
+detector generating data useful to test the program). Other detectors may be loaded as
+plugins, see section: <a class="reference internal" href="Plugins.html#viewer-plugins"><span class="std std-ref">DAQ_Viewer plugin template</span></a>.</p>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>This module has a generic interface comprised of a dockable panel related to the settings and one or more viewers specific of the type of data to be acquired. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 1</span></a> displays a typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id3">
+<span id="figure-daq-viewer"></span><a class="reference internal image-reference" href="../../_images/DAQ_Viewer_pannel.png"><img alt="Viewer pannel" src="../../_images/DAQ_Viewer_pannel.png" style="width: 1016.0px; height: 541.0px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">Typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</span></p>
+</div>
+</div>
+<div class="section" id="settings">
+<h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
+<p>The settings panel is comprised of 2 sections, the top one displays buttons to select a given hardware (DAQ_type and detector). The bottom one is a Tree type parameter list displaying main settings (Main Settings section) of the module and specific settings of the chosen hardware (Detector Settings section, see Mock plugins for instance).</p>
+<div class="section" id="hardware-initialization">
+<h3>Hardware initialization<a class="headerlink" href="#hardware-initialization" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>DAQ_type: either DAQ0D, DAQ1D or DAQ2D respectively for scalar detectors (powermeter for instance), vector detectors (spectrometer for instance) and image like detectors.</li>
+<li>Detector: list of available hardware plugins of the DAQ_type type.</li>
+<li>Ini. Det: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</li>
+<li>Quit: De-initialize the hardware and quit the application</li>
+</ul>
+</div>
+<div class="section" id="data-acquisition">
+<h3>Data Acquisition<a class="headerlink" href="#data-acquisition" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><a class="reference internal" href="../../_images/run2.png"><img alt="grab" src="../../_images/run2.png" style="width: 10pt; height: 10pt;" /></a>: Start a continuous grabing of data. Detector must be initialized.</li>
+<li><a class="reference internal" href="../../_images/snap.png"><img alt="snap" src="../../_images/snap.png" style="width: 10pt; height: 10pt;" /></a>: Start a single grab (snap). Mandatory for the first time data is acquired after initialization.</li>
+<li><a class="reference internal" href="../../_images/SaveAs.png"><img alt="save" src="../../_images/SaveAs.png" style="width: 10pt; height: 10pt;" /></a>: Save current data</li>
+<li><a class="reference internal" href="../../_images/Snap&amp;Save.png"><img alt="snap&amp;save" src="../../_images/Snap&amp;Save.png" style="width: 10pt; height: 10pt;" /></a>: Do a new snap and then save the data</li>
+<li><a class="reference internal" href="../../_images/Open.png"><img alt="open" src="../../_images/Open.png" style="width: 10pt; height: 10pt;" /></a>: Load data previously saved with the save button</li>
+<li><a class="reference internal" href="../../_images/HLM.ico"><img alt="showsettings" src="../../_images/HLM.ico" style="width: 10pt; height: 10pt;" /></a>: Display or hide the settings Tree</li>
+<li><a class="reference internal" href="../../_images/Refresh2.png"><img alt="refresh" src="../../_images/Refresh2.png" style="width: 10pt; height: 10pt;" /></a>: try to refresh the hardware, for instance the list of COM ports</li>
+<li>Take bkg: do a specific snap where the data will be saved as a background</li>
+<li>Do bkg: use the background previously saved to correct the displayed (only displayed, saved data are still raw data) datas.</li>
+</ul>
+</div>
+<div class="section" id="settings-tree">
+<h3>Settings Tree<a class="headerlink" href="#settings-tree" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="main-settings">
+<h3>Main settings<a class="headerlink" href="#main-settings" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="data-viewers">
+<h2>Data Viewers<a class="headerlink" href="#data-viewers" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="d-viewer">
+<h3>0D Viewer<a class="headerlink" href="#d-viewer" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="id1">
+<h3>1D Viewer<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="id2">
+<h3>2D Viewer<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="nd-viewer">
+<span id="ndviewer"></span><h3>ND Viewer<a class="headerlink" href="#nd-viewer" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="DAQ_Scan.html" class="btn btn-neutral float-right" title="DAQ Scan" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="DAQ_Move.html" class="btn btn-neutral" title="DAQ Move" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Weber Sébastien
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -284,9 +284,9 @@ class PresetManager():
 
         if res == dialog.Accepted:
             # save preset parameters in a xml file
-            #start, end = os.path.split(os.path.realpath(__file__))
-            start = "..\\DAQ_Scan\\"
-            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(start, 'preset_modes',
+            start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
+            #start = os.path.join("..",'daq_scan')
+            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(start,'daq_scan','preset_modes',
                                                                                self.preset_params.child(
                                                                                    ('filename')).value()))
 
