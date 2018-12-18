@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ: Modular Data acquisition with python 1.0.1 documentation</title>
+  <title>Plugins &mdash; PyMoDAQ 1.0.1 documentation</title>
   
 
   
@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="../../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="How to Start" href="../How_to_start.html" />
+    <link rel="next" title="Utility Modules" href="Utility_Modules.html" />
     <link rel="prev" title="DAQ Scan" href="DAQ_Scan.html" /> 
 
   
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../../index.html" class="icon icon-home"> PyMoDAQ: Modular Data acquisition with python
+            <a href="../../index.html" class="icon icon-home"> PyMoDAQ
           
 
           
@@ -90,27 +90,31 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Main_Modules.html">Main Modules</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Plugins</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#naming-convention">Naming convention:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#hardware-settings">Hardware Settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#daq-move-plugin-template">DAQ_Move plugin template</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#daq-viewer-plugin-template">DAQ_Viewer plugin template</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#daq-move-plugin-template">DAQ Move plugin template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#emission-of-data">Emission of data</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#data-ready">Data ready?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#synchronous-example">Synchronous example:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#asynchronous-example">Asynchronous example:</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#hardware-needed-files">Hardware needed files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#specific-tcp-ip-plugin">Specific TCP/IP plugin</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="Utility_Modules.html">Utility Modules</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../SynthesisDiagram.html">Synthesis Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -125,7 +129,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">PyMoDAQ: Modular Data acquisition with python</a>
+          <a href="../../index.html">PyMoDAQ</a>
         
       </nav>
 
@@ -183,42 +187,54 @@
 </div>
 <p>Any new hardware has to be included in PyMoDAQ as a python plugin. This is a script containing a python object following a particular template and behaviour and inheriting from a base class.
 Plugins are articulated given their type: Moves or Viewers and for the last their main dimensionality: <strong>0D</strong>, <strong>1D</strong> or <strong>2D</strong>.
-It is recommended to start from the <em>template</em> plugins given with the base version of PyMoDAQ (DAQ_Move_Template, DAQ_0DViewer_Template,…)
+It is recommended to start from the <em>template</em> plugins given with the base version of PyMoDAQ (daq_move_Template, daq_NDviewer_Template,…)
 and available for each type of module
 and then check from other examples (plugin <a class="reference external" href="https://github.com/CEMES-CNRS/Plugins">repository</a>) the proper way of writing a plugin. You will find below some information on the <strong>how to</strong>
 but comparison with existing ones will be beneficial.</p>
+<div class="section" id="naming-convention">
+<h2>Naming convention:<a class="headerlink" href="#naming-convention" title="Permalink to this headline">¶</a></h2>
+<p>For the plugin to be properly recognised by PyMoDAQ, its location and name must follow these rules:</p>
+<ul class="simple">
+<li>An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)</li>
+<li>The plugin class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well)</li>
+<li>the script will be located within pymodaq’s installed package tree in <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\...\pymodaq\plugins\daq_move_plugins\</span></code></li>
+<li>A detector plugin of dimensionality N (N=0, 1 or 2) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)</li>
+<li>The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)</li>
+<li>the script will be located within pymodaq’s installed package tree in <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\...\pymodaq\plugins\daq_viewer_plugins\plugins_ND</span></code> (replace N by 0, 1 or 2)</li>
+</ul>
+</div>
 <div class="section" id="hardware-settings">
-<h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
 <p>An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
-These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 2</span></a>.
+These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a>.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object <code class="docutils literal notranslate"><span class="pre">self.settings</span></code>.
 This object is based on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id6">
-<span id="figure-settings"></span><a class="reference internal image-reference" href="../../_images/settings_example.png"><img alt="Settings example" src="../../_images/settings_example.png" style="width: 314.0px; height: 523.0px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 2 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">DAQ_2DViewer_AndorCCD</span></code> plugin)</span></p>
+<div class="figure" id="id7">
+<span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
+<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
 </div>
-<p>Here is an example of such a dictionary corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 2</span></a>:</p>
+<p>Here is an example of such a dictionary corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Dll library:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;andor_lib&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;browsepath&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">libpath</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera SN:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_serialnumber&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Model:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_model&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Readout Modes:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;readout&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;list&#39;</span><span class="p">,</span> <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;FullVertBinning&#39;</span><span class="p">,</span><span class="s1">&#39;Imaging&#39;</span><span class="p">],</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;FullVertBinning&#39;</span><span class="p">},</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Readout Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;readout_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:[</span>
-         <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Single Track Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;st_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;visible&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:[</span>
+         <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;single Track Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;st_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;visible&#39;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:[</span>
              <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Center pixel:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;st_center&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">1</span> <span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span>
              <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Height:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;st_height&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">1</span> <span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span>
              <span class="p">]},]}]}]</span>
 </pre></div>
 </div>
-<p>The list of available types of parameters <a href="#id3"><span class="problematic" id="id4">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">PyMoDAQ.DAQ_Utils.custom_parameter_tree.py</span></code>) is:</p>
+<p>The list of available types of parameters <a href="#id4"><span class="problematic" id="id5">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">pymodaq.daq_utils.custom_parameter_tree.py</span></code>) is:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 2</span></a> is of type group</li>
+<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a> is of type group</li>
 <li><code class="docutils literal notranslate"><span class="pre">int</span></code> : settable integer (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">float</span></code> : settable float (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">str</span></code> : a QLineEdit object (see Qt5 documentation)</li>
-<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 2</span></a> is a combo box</li>
+<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a> is a combo box</li>
 <li><code class="docutils literal notranslate"><span class="pre">bool</span></code> : checkable boolean</li>
 <li><code class="docutils literal notranslate"><span class="pre">led</span></code> : checkable boolean in the form of a green (True) of red (False) led</li>
 <li><code class="docutils literal notranslate"><span class="pre">date_time</span></code> : a QDateTime object (see Qt5 documentation)</li>
@@ -230,7 +246,7 @@ This object is based on the <code class="docutils literal notranslate"><span cla
 <li><code class="docutils literal notranslate"><span class="pre">text</span></code> : a text area (for comments for instance)</li>
 </ul>
 <p>Once the module is initialized, any modification on the UI hardware settings will be send to the plugin through
-the <code class="docutils literal notranslate"><span class="pre">commit_settings</span></code> method of the plugin class and illustrated below (still from the <code class="docutils literal notranslate"><span class="pre">DAQ_2DViewer_AndorCCD</span></code> plugin).
+the <code class="docutils literal notranslate"><span class="pre">commit_settings</span></code> method of the plugin class and illustrated below (still from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin).
 The <code class="docutils literal notranslate"><span class="pre">param</span></code> method argument is of the type <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> (from <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code>):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">commit_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -257,19 +273,19 @@ The <code class="docutils literal notranslate"><span class="pre">param</span></c
 </div>
 </div>
 <div class="section" id="daq-move-plugin-template">
-<h2>DAQ_Move plugin template<a class="headerlink" href="#daq-move-plugin-template" title="Permalink to this headline">¶</a></h2>
+<h2>DAQ Move plugin template<a class="headerlink" href="#daq-move-plugin-template" title="Permalink to this headline">¶</a></h2>
 <p>An actuator plugin is a python class inheriting from a base class. Let’s say you want to create the <em>template</em> plugin.
-You will first create a <code class="docutils literal notranslate"><span class="pre">DAQ_Move_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\PyMoDAQ\plugins\DAQ_Move_plugins</span></code> folder.
+You will first create a <code class="docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\pymodaq\plugins\daq_move_plugins</span></code> folder.
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_Move_Template</span></code>.</p>
-<p>See <a class="reference download internal" download="" href="../../_downloads/cbfd60e0431fe1dd39256d3027821f67/DAQ_Move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">DAQ_Move_Template.py</span></code></a> for a detailed template.</p>
+<p>See <a class="reference download internal" download="" href="../../_downloads/b4878d968c8fb2279c1be9a2115c5f0d/daq_move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed template.</p>
 </div>
 <div class="section" id="daq-viewer-plugin-template">
-<span id="viewer-plugins"></span><h2>DAQ_Viewer plugin template<a class="headerlink" href="#daq-viewer-plugin-template" title="Permalink to this headline">¶</a></h2>
+<span id="viewer-plugins"></span><h2>DAQ Viewer plugin template<a class="headerlink" href="#daq-viewer-plugin-template" title="Permalink to this headline">¶</a></h2>
 <p>A detector plugin is a python class inheriting from a base class. Let’s say you want to create the <em>template</em> plugin.
-You will first create a <code class="docutils literal notranslate"><span class="pre">DAQ_NDViewer_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\PyMoDAQ\plugins\plugins_ND\DAQ_NDViewer_plugins</span></code>
+You will first create a <code class="docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\pymodaq\plugins\daq_viewer_plugins\plugins_ND\</span></code>
 folder (with N=0, 1 or 2 depending the data dimensionality of your detector).
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_NDViewer_Template</span></code>.</p>
-<p>See <a class="reference download internal" download="" href="../../_downloads/10922e0d126796509aa7ba6bc9864ded/DAQ_NDViewer_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">DAQ_NDViewer_Template.py</span></code></a> for a detailed template.</p>
+<p>See <a class="reference download internal" download="" href="../../_downloads/f0b1f814ef190c963e5f0b36dab05d72/daq_NDviewer_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code></a> for a detailed template.</p>
 <div class="section" id="emission-of-data">
 <h3>Emission of data<a class="headerlink" href="#emission-of-data" title="Permalink to this headline">¶</a></h3>
 <p>When data are ready (see <a class="reference internal" href="#data-ready"><span class="std std-ref">Data ready?</span></a> to know about that), the plugin has to notify the viewer module in order
@@ -295,22 +311,29 @@ in the emitted list. The type of data viewer will be determined by the <em>type<
 The <em>data</em> key value is also a list of numpy arrays, their shape should be adequate with the <em>type</em> key of the dictionary.
 Each array will generate one channel within the corresponding viewer. Here is the detailed list of the possible keys:</p>
 <ul class="simple">
-<li><em>name</em>: will display the corresponding value on the viewer dock</li>
-<li><em>type</em>: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)</li>
-<li><em>data</em>: list of numpy array. Each array shape should correspond to the <em>type</em></li>
-<li><em>x_axis</em>: numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance). Default is pixel number</li>
-<li><em>y_axis</em>: numpy 1D array representing the y axis of the detector (only for 2D datas). Default is pixel number</li>
-<li><em>nav_axis</em>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="DAQ_Viewer.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">name</span></code>: will display the corresponding value on the viewer dock</li>
+<li><code class="docutils literal notranslate"><span class="pre">type</span></code>: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)</li>
+<li><code class="docutils literal notranslate"><span class="pre">data</span></code>: list of numpy array. Each array shape should correspond to the <em>type</em></li>
+<li><code class="docutils literal notranslate"><span class="pre">x_axis</span></code>: numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance). Default is pixel number</li>
+<li><code class="docutils literal notranslate"><span class="pre">y_axis</span></code>: numpy 1D array representing the y axis of the detector (only for 2D datas). Default is pixel number</li>
+<li><code class="docutils literal notranslate"><span class="pre">nav_axis</span></code>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="DAQ_Viewer.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></li>
 </ul>
 </div>
 <div class="section" id="data-ready">
-<span id="id5"></span><h3>Data ready?<a class="headerlink" href="#data-ready" title="Permalink to this headline">¶</a></h3>
+<span id="id6"></span><h3>Data ready?<a class="headerlink" href="#data-ready" title="Permalink to this headline">¶</a></h3>
 <p>One difficulty with these viewer plugins is to determine when data is ready to be read from the controller and then
 to be send to the user interface for plotting and saving. There are a few solutions:</p>
 <ul class="simple">
-<li><strong>synchrone</strong>: The simplest one. When the <code class="docutils literal notranslate"><span class="pre">Grab</span></code> command has been send to the controller (let’s say to its <code class="docutils literal notranslate"><span class="pre">grab_sync</span></code> method), the <code class="docutils literal notranslate"><span class="pre">grab_sync</span></code> method will hold and freeze the plugin until the data are ready. The Mock or Tektronix modules work like this.</li>
-<li><strong>asynchrone</strong>: There are 2 ways of doing asynchrone <em>waiting</em>. The first is to poll the controller state to check if data are ready within a loop. This polling could be done with a while loop but if nothing more is done then the plugin will still be freezed, except if one process periodically the Qt queue event using <code class="docutils literal notranslate"><span class="pre">QtWidgets.QApplication.processEvents()</span></code> method. The polling can also be done with a timer event, firing periodically a check of the data state (ready or not). Finally, the nicest/hardest solution is to use callbacks (if the controller provides one) and link it to a <code class="docutils literal notranslate"><span class="pre">emit_data</span></code> method.</li>
+<li><strong>synchronous</strong>: The simplest one. When the <code class="docutils literal notranslate"><span class="pre">grab</span></code> command has been send to the controller (let’s say to its <code class="docutils literal notranslate"><span class="pre">grab_sync</span></code> method), the <code class="docutils literal notranslate"><span class="pre">grab_sync</span></code> method will hold and freeze the plugin until the data are ready. The Mock or Tektronix modules work like this.</li>
+<li><strong>asynchronous</strong>: There are 2 ways of doing asynchronous <em>waiting</em>. The first is to poll the controller state to check if data are
+ready within a loop. This polling could be done with a while loop but if nothing more is done then the plugin will still be
+freezed, except if one process periodically the Qt queue event using <code class="docutils literal notranslate"><span class="pre">QtWidgets.QApplication.processEvents()</span></code> method. The
+polling can also be done with a timer event, firing periodically a check of the data state (ready or not). Finally, the
+nicest/hardest solution is to use callbacks (if the controller provides one) and link it to a <code class="docutils literal notranslate"><span class="pre">emit_data</span></code> method.</li>
 </ul>
+</div>
+<div class="section" id="synchronous-example">
+<h3>Synchronous example:<a class="headerlink" href="#synchronous-example" title="Permalink to this headline">¶</a></h3>
 <p>The code below illustrates the poll method using a loop:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">poll_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -319,7 +342,7 @@ to be send to the user interface for plotting and saving. There are a few soluti
     <span class="n">sleep_ms</span><span class="o">=</span><span class="mi">50</span>
     <span class="n">ind</span><span class="o">=</span><span class="mi">0</span>
     <span class="n">data_ready</span> <span class="o">=</span> <span class="bp">False</span>
-    <span class="k">while</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Check_position</span><span class="p">()</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">target_position</span><span class="p">)</span><span class="o">&gt;</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;epsilon&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">is_ready</span><span class="p">():</span>
         <span class="n">QThread</span><span class="o">.</span><span class="n">msleep</span><span class="p">(</span><span class="n">sleep_ms</span><span class="p">)</span>
 
         <span class="n">ind</span><span class="o">+=</span><span class="mi">1</span>
@@ -328,21 +351,76 @@ to be send to the user interface for plotting and saving. There are a few soluti
 
             <span class="bp">self</span><span class="o">.</span><span class="n">emit_status</span><span class="p">(</span><span class="n">ThreadCommand</span><span class="p">(</span><span class="s1">&#39;raise_timeout&#39;</span><span class="p">))</span>
             <span class="k">break</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">Check_position</span><span class="p">()</span>
+
         <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">Move_Done</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">emit_data</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="asynchronous-example">
+<h3>Asynchronous example:<a class="headerlink" href="#asynchronous-example" title="Permalink to this headline">¶</a></h3>
+<p>The code below is derived from <em>daq_Andor_SDK2</em> (in <em>andor</em> hardware folder) and shows how to create a thread waiting for data ready and triggering the emission of data</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DAQ_AndorSDK2</span><span class="p">(</span><span class="n">DAQ_Viewer_base</span><span class="p">):</span>
+
+    <span class="n">callback_signal</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span> <span class="c1">#used to talk with the callback object</span>
+    <span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">ini_camera</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="n">callback</span> <span class="o">=</span> <span class="n">AndorCallback</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">.</span><span class="n">WaitForAcquisition</span><span class="p">)</span> <span class="c1"># the callback is linked to the controller WaitForAcquisition method</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback_thread</span> <span class="o">=</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QThread</span><span class="p">()</span> <span class="c1">#creation of a Qt5 thread</span>
+        <span class="n">callback</span><span class="o">.</span><span class="n">moveToThread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">callback_thread</span><span class="p">)</span> <span class="c1">#callback object will live within this thread</span>
+        <span class="n">callback</span><span class="o">.</span><span class="n">data_sig</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emit_data</span><span class="p">)</span>  <span class="c1"># when the wait for acquisition returns (with data taken), emit_data will be fired</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback_signal</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">callback</span><span class="o">.</span><span class="n">wait_for_acquisition</span><span class="p">)</span> <span class="c1">#</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback_thread</span><span class="o">.</span><span class="n">callback</span> <span class="o">=</span> <span class="n">callback</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">grab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">Naverage</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callback_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>  <span class="c1">#trigger the wait_for_acquisition method</span>
+
+<span class="k">def</span> <span class="nf">emit_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function used to emit data obtained by callback.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="o">...</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">data_grabed_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">([</span><span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Camera&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">sizey</span><span class="p">,</span> <span class="n">sizex</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">))],</span> <span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data_shape</span><span class="p">)])</span>
+
+
+<span class="k">class</span> <span class="nc">AndorCallback</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QObject</span><span class="p">):</span>
+
+    <span class="n">data_sig</span><span class="o">=</span><span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">()</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">wait_fn</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AndorCallback</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait_fn</span> <span class="o">=</span> <span class="n">wait_fn</span>
+
+    <span class="k">def</span> <span class="nf">wait_for_acquisition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wait_fn</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="s1">&#39;DRV_NO_NEW_DATA&#39;</span><span class="p">:</span> <span class="c1">#will be returned if the main thread called CancelWait</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_sig</span><span class="o">.</span><span class="n">emit</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Documentation from Andor SDK concerning the WaitForAcquisition method of the dll:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><em>unsigned int WINAPI WaitForAcquisition(void)</em></div>
+<div class="line"><br /></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">WaitForAcquisition</span></code> can be called after an acquisition is started using StartAcquisition to put the calling thread to sleep until an Acquisition Event occurs.</div>
+<div class="line">It will use less processor resources than continuously polling with the GetStatus function. If you wish to restart the calling thread without waiting for an Acquisition event, call the function CancelWait.</div>
+</div>
+</div></blockquote>
 </div>
 </div>
 <div class="section" id="hardware-needed-files">
 <h2>Hardware needed files<a class="headerlink" href="#hardware-needed-files" title="Permalink to this headline">¶</a></h2>
 <p>If you are using/referring to custom python wrappers/dlls… within your plugin and need a place where to copy them
-in PyMoDAQ, then use the <code class="docutils literal notranslate"><span class="pre">\PyMoDAQ\plugins\hardware</span></code> folder. For instance, the <code class="docutils literal notranslate"><span class="pre">DAQ_2DViewer_AndorCCD</span></code> plugin need various files stored
-in the <code class="docutils literal notranslate"><span class="pre">andor</span></code> folder (on github repository). I would therefore copy it as <code class="docutils literal notranslate"><span class="pre">\PyMoDAQ\plugins\hardware\andor</span></code>
+in PyMoDAQ, then use the <code class="docutils literal notranslate"><span class="pre">\pymodaq\plugins\hardware</span></code> folder. For instance, the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin need various files stored
+in the <code class="docutils literal notranslate"><span class="pre">andor</span></code> folder (on github repository). I would therefore copy it as <code class="docutils literal notranslate"><span class="pre">\pymodaq\plugins\hardware\andor</span></code>
 and call whatever module I need within (meaning there is a __init__.py file in the <em>andor</em> folder) as:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">#import controller wrapper</span>
-<span class="kn">from</span> <span class="nn">PyMoDAQ.plugins.hardware.andor</span> <span class="kn">import</span> <span class="n">DAQ_AndorSDK2</span> <span class="c1">#this import the module DAQ_AndorSDK2 containing classes, methods...</span>
+<span class="kn">from</span> <span class="nn">pymodaq.plugins.hardware.andor</span> <span class="kn">import</span> <span class="n">daq_AndorSDK2</span> <span class="c1">#this import the module DAQ_AndorSDK2 containing classes, methods...</span>
 <span class="c1">#and then use it as you see fit in your module</span>
 </pre></div>
 </div>
@@ -350,8 +428,8 @@ and call whatever module I need within (meaning there is a __init__.py file in t
 <div class="section" id="specific-tcp-ip-plugin">
 <h2>Specific TCP/IP plugin<a class="headerlink" href="#specific-tcp-ip-plugin" title="Permalink to this headline">¶</a></h2>
 <p>It is possible to use a TCP/IP plugin in order to communicate with a distant client. For instance, the module
-<code class="docutils literal notranslate"><span class="pre">DAQ_2DViewer_TCP_GRABBER</span></code> is one such example. It inherits from the base <code class="docutils literal notranslate"><span class="pre">DAQ_TCP_Server</span></code> class:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">PyMoDAQ.DAQ_Viewer.utility_classes</span> <span class="kn">import</span> <span class="n">DAQ_TCP_server</span>
+<code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_TCP_GRABBER</span></code> is one such example. It inherits from the base <code class="docutils literal notranslate"><span class="pre">DAQ_TCP_Server</span></code> class:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymodaq.daq_viewer.utility_classes</span> <span class="kn">import</span> <span class="n">DAQ_TCP_server</span>
 </pre></div>
 </div>
 <p>This plugin is still experimental and focused on one particular relation with a client. Please open an issue on github
@@ -367,7 +445,7 @@ if you have specific need and/or propositions.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../How_to_start.html" class="btn btn-neutral float-right" title="How to Start" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="Utility_Modules.html" class="btn btn-neutral float-right" title="Utility Modules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="DAQ_Scan.html" class="btn btn-neutral" title="DAQ Scan" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

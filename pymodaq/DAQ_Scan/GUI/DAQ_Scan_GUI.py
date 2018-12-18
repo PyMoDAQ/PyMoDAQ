@@ -102,11 +102,11 @@ class Ui_Form(object):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
         self.set_ini_positions_pb.setText(_translate("Form", "Set Ini Positions"))
-        self.quit_pb.setToolTip(_translate("Form", "Stop Scan"))
+        self.quit_pb.setToolTip(_translate("Form", "stop Scan"))
         self.quit_pb.setText(_translate("Form", "Quit"))
         self.set_scan_pb.setText(_translate("Form", "Set Scan"))
         self.start_scan_pb.setToolTip(_translate("Form", "Start Scan"))
-        self.stop_scan_pb.setToolTip(_translate("Form", "Stop Scan"))
+        self.stop_scan_pb.setToolTip(_translate("Form", "stop Scan"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot1D), _translate("Form", "1D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
 

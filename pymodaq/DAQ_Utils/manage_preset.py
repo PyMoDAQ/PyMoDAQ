@@ -213,6 +213,11 @@ def set_param_from_param(param_old,param_new):
         except Exception as e:
             print(str(e))
 
+#check if preset_mode directory exists on the drive
+from pymodaq.daq_utils.daq_utils import get_set_local_dir
+local_path = get_set_local_dir()
+if not os.path.isdir(os.path.join(local_path, 'preset_modes')):
+    os.makedirs(os.path.join(local_path, 'preset_modes'))
 
 
 class PresetManager():
@@ -233,7 +238,7 @@ class PresetManager():
                 self.set_new_preset()
 
             elif msgBox.clickedButton() == modify_button:
-                path = select_file(start_path='..\\DAQ_Scan\\preset_modes',save=False, ext='xml')
+                path = select_file(start_path=start_path,save=False, ext='xml')
                 if path != '':
                     self.set_file_preset(str(path))
             else: #cancel
@@ -284,9 +289,9 @@ class PresetManager():
 
         if res == dialog.Accepted:
             # save preset parameters in a xml file
-            start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
+            #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(start,'daq_scan','preset_modes',
+            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(start_path,
                                                                                self.preset_params.child(
                                                                                    ('filename')).value()))
 

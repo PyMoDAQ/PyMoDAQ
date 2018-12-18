@@ -193,7 +193,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
     def Quit_fun(self):
         """
             |
-            | Close the current instance of DAQ_Analysis
+            | close the current instance of DAQ_Analysis
 
         """
         if self.h5file is not None:
@@ -206,7 +206,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
              Set the filemenu structure with three elements splited by a separator at the 2nd position :
                 * *open DAQ_scan file* : calling the do_load intern method
                 * *close h5 file*      : calling the close_h5 intern method
-                * *Quit*               : calling the Quit_fun intern method
+                * *Quit*               : calling the quit_fun intern method
 
             ================ =============================================== ====================================
              **Parameters**           **Type**                                      **Description**
@@ -216,12 +216,12 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            do_load, close_h5, Quit_fun
+            do_load, close_h5, quit_fun
         """
         file_menu=menubar.addMenu('File')
         open_action=file_menu.addAction("Open DAQ_Scan file")
         open_action.triggered.connect(self.do_load)
-        close_action=file_menu.addAction("Close h5 file")
+        close_action=file_menu.addAction("close h5 file")
         close_action.triggered.connect(self.close_h5)
         file_menu.addSeparator()
         quit_action=file_menu.addAction("Quit")
@@ -229,7 +229,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
     def close_h5(self):
         """
-            | Close the loaded h5 file if exists with clearing the ui-h5 tree structure
+            | close the loaded h5 file if exists with clearing the ui-h5 tree structure
 
         """
         if self.h5file is not None:

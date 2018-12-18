@@ -251,7 +251,7 @@ class Ui_Form(object):
         self.label_3.setText(_translate("Form", "Rel increment:"))
         self.Move_Rel_minus_pb.setText(_translate("Form", "Move Rel (-)"))
         self.Move_Rel_plus_pb.setText(_translate("Form", "Move Rel (+)"))
-        self.Stop_pb.setText(_translate("Form", "Stop Motion"))
+        self.Stop_pb.setText(_translate("Form", "stop Motion"))
         self.Get_position_pb.setText(_translate("Form", "Where am I?"))
         self.Find_Home_pb.setText(_translate("Form", "Find Home"))
         self.label_5.setText(_translate("Form", "Abs position:"))

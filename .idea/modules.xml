@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$USER_HOME$/pymodaq/plugins/.idea/plugins.iml" filepath="$USER_HOME$/pymodaq/plugins/.idea/plugins.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/pymodaq.iml" filepath="$PROJECT_DIR$/.idea/pymodaq.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../pymodaq_plugins/.idea/pymodaq_plugins.iml" filepath="$PROJECT_DIR$/../pymodaq_plugins/.idea/pymodaq_plugins.iml" />
     </modules>
   </component>
 </project>

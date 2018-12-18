@@ -34,10 +34,10 @@ Please see :doc:`the changelog </changelog>`.
    :maxdepth: 5
    :caption: Contents:
 
+   usage/Features
    usage/Installation
-   usage/Description
    usage/How_to_start
-   usage/SynthesisDiagram
+   usage/Description
    usage/classDiagram
    usage/APIdoc
 

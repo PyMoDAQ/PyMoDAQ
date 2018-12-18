@@ -11,6 +11,7 @@ logging.basicConfig(filename=os.path.join(os.path.split(__file__)[0],'daq_scan.l
 
 from  pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
 from pymodaq.daq_utils.h5browser import H5Browser
+from pymodaq.version import get_version
 from collections import OrderedDict
 import pymodaq.daq_utils.daq_utils as utils
 import pyqtgraph as pg
@@ -34,12 +35,10 @@ import tables
 import datetime
 import pickle
 import os
-from pymodaq.daq_utils.daq_utils import make_enum
+from pymodaq.daq_utils.daq_utils import get_set_local_dir
+local_path = get_set_local_dir()
 
-# DAQ_Move_Stage_type=make_enum('daq_move')
-# DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
-# DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
-# DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
+
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -139,12 +138,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            move_to_crosshair, DAQscan_settings_changed, update_plot_det_items, update_scan_type, add_comments, add_log, set_scan, Quit_fun, start_scan, stop_scan, set_ini_positions
+            move_to_crosshair, DAQscan_settings_changed, update_plot_det_items, update_scan_type, add_comments, add_log, set_scan, quit_fun, start_scan, stop_scan, set_ini_positions
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Scan,self).__init__()
         self.title='daq_scan'
-        splash=QtGui.QPixmap('..//documentation//splash.png')
+        splash=QtGui.QPixmap('splash.png')
         self.splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
         self.init_prog=True
 
@@ -276,15 +275,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Scan1D settings','name': 'scan1D_settings', 'type': 'group', 'children': [
                     {'title': 'Scan type:','name': 'scan1D_type', 'type': 'list', 'values': ['Linear','Linear back to start'],'value': 'Linear'},
                     {'title': 'Start:','name': 'start_1D', 'type': 'float', 'value': 0.},
-                    {'title': 'Stop:','name': 'stop_1D', 'type': 'float', 'value': 10.},
+                    {'title': 'stop:','name': 'stop_1D', 'type': 'float', 'value': 10.},
                     {'title': 'Step:','name': 'step_1D', 'type': 'float', 'value': 1.}
                     ]},
             {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group','visible': False, 'children': [
                     {'title': 'Scan type:','name': 'scan2D_type', 'type': 'list', 'values': ['Spiral','Linear', 'back&forth'],'value': 'Spiral'},
                     {'title': 'Start Ax1:','name': 'start_2d_axis1', 'type': 'float', 'value': 0., 'visible':True},
                     {'title': 'Start Ax2:','name': 'start_2d_axis2', 'type': 'float', 'value': 10., 'visible':True},
-                    {'title': 'Stop Ax1:','name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible':False},
-                    {'title': 'Stop Ax2:','name': 'stop_2d_axis2', 'type': 'float', 'value': 40., 'visible':False},
+                    {'title': 'stop Ax1:','name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible':False},
+                    {'title': 'stop Ax2:','name': 'stop_2d_axis2', 'type': 'float', 'value': 40., 'visible':False},
                     {'title': 'Step Ax1:','name': 'step_2d_axis1', 'type': 'float', 'value': 1., 'visible':False},
                     {'title': 'Step Ax2:','name': 'step_2d_axis2', 'type': 'float', 'value': 5., 'visible':False},
                     {'title': 'Rstep:','name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible':True},
@@ -367,7 +366,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 #        connecting
         self.log_signal[str].connect(self.add_log)
         self.ui.set_scan_pb.clicked.connect(self.set_scan)
-        self.ui.quit_pb.clicked.connect(self.Quit_fun)
+        self.ui.quit_pb.clicked.connect(self.quit_fun)
 
         self.ui.start_scan_pb.clicked.connect(self.start_scan)
         self.ui.stop_scan_pb.clicked.connect(self.stop_scan)
@@ -558,7 +557,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         file_menu.addSeparator()
         quit_action=file_menu.addAction('Quit')
-        quit_action.triggered.connect(self.Quit_fun)
+        quit_action.triggered.connect(self.quit_fun)
 
         settings_menu=menubar.addMenu('Settings')
         docked_menu=settings_menu.addMenu('Docked windows')
@@ -593,12 +592,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         #load_canon.triggered.connect(lambda: self.set_preset_mode('canon'))
 
         slots=dict([])
-        start,end=os.path.split(os.path.realpath(__file__))
-        for ind_file,file in enumerate(os.listdir(os.path.join(start,'preset_modes'))):
+        #start,end=os.path.split(os.path.realpath(__file__))
+        for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'preset_modes'))):
             if file.endswith(".xml"):
-                (filesplited,ext)=os.path.splitext(file)
+                (filesplited, ext)=os.path.splitext(file)
                 slots[filesplited]=load_preset.addAction(filesplited)
-                slots[filesplited].triggered.connect(self.create_menu_slot(os.path.join(start,'preset_modes',file)))
+                slots[filesplited].triggered.connect(self.create_menu_slot(os.path.join(local_path,'preset_modes',file)))
                 
 
 
@@ -619,7 +618,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
     def modify_preset(self):
         try:
-            path = utils.select_file(start_path='.\\preset_modes', save=False, ext='xml')
+            path = utils.select_file(start_path=os.path.join(local_path,'preset_modes'), save=False, ext='xml')
             if path != '':
                 self.preset_manager.set_file_preset(str(path))
 
@@ -658,11 +657,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
     def show_about(self):
         self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage("pymodaq version 1.0.0\nModular Acquisition with Python\nWritten by Sébastien Weber", QtCore.Qt.AlignRight, QtCore.Qt.white)
+        self.splash_sc.showMessage("PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()), QtCore.Qt.AlignRight, QtCore.Qt.white)
 
 
     def show_help(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("file:..//documentation//_build//html//index.html"))
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
 
     def clear_move_det_controllers(self):
@@ -671,20 +670,20 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            Quit_fun, update_status
+            quit_fun, update_status
         """
         try:
         #remove all docks containing Moves or Viewers
             if hasattr(self,'move_modules'):
                 if self.move_modules is not None:
                     for module in self.move_modules:
-                        module.Quit_fun()
+                        module.quit_fun()
                 self.move_modules=None
 
             if hasattr(self,'detector_modules'):
                 if self.detector_modules is not None:
                     for module in self.detector_modules:
-                        module.Quit_fun()
+                        module.quit_fun()
                 self.detector_modules=None
         except Exception as e:
             self.update_status(str(e),self.wait_time,log_type='log')
@@ -1251,6 +1250,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         mov_mod_tmp=DAQ_Move(move_forms[-1],plug_name)
 
                         mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
+                        mov_mod_tmp.ui.Quit_pb.setEnabled(False)
                         QtWidgets.QApplication.processEvents()
 
                         set_param_from_param(mov_mod_tmp.settings,plug_settings)
@@ -1301,7 +1301,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                                                             dock_viewer=self.det_docks_viewer[-1],title=plug_name,DAQ_type=plug_type)
                         detector_modules.append(det_mod_tmp)
                         detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
-
+                        detector_modules[-1].ui.Quit_pb.setEnabled(False)
                         set_param_from_param(det_mod_tmp.settings,plug_settings)
                         QtWidgets.QApplication.processEvents()
 
@@ -1424,11 +1424,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            stop_scan,  DAQ_Move_main.daq_move.Stop_Motion
+            stop_scan,  DAQ_Move_main.daq_move.stop_Motion
         """
         self.stop_scan()
         for mod in self.move_modules:
-            mod.Stop_Motion()
+            mod.stop_Motion()
 
     def update_scan_type(self,param):
         """
@@ -1498,13 +1498,13 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         self.command_DAQ_signal.emit(["set_ini_positions"])
 
-    def Quit_fun(self):
+    def quit_fun(self):
         """
             Quit the current instance of DAQ_scan and close on cascade move and detector modules.
 
             See Also
             --------
-            Quit_fun
+            quit_fun
         """
         try:
             try:
@@ -1515,7 +1515,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             for module in self.move_modules:
                 try:
-                    module.Quit_fun()
+                    module.quit_fun()
                     QtWidgets.QApplication.processEvents()
                     QThread.msleep(1000)
                     QtWidgets.QApplication.processEvents()
@@ -1524,7 +1524,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             for module in self.detector_modules:
                 try:
-                    module.Quit_fun()
+                    module.quit_fun()
                     QtWidgets.QApplication.processEvents()
                     QThread.msleep(1000)
                     QtWidgets.QApplication.processEvents()
@@ -2462,14 +2462,14 @@ class DAQ_Scan_Acquisition(QObject):
 
             See Also
             --------
-            DAQ_Move_main.daq_move.Move_Abs
+            DAQ_Move_main.daq_move.move_Abs
         """
         try:
             positions=self.scan_moves[0]
             for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
                 if pos[0]!=self.move_modules[ind_move].title: # check the module correspond to the name assigned in pos
                     raise Exception('wrong move module assignment')
-                self.move_modules[ind_move].Move_Abs(pos[1])
+                self.move_modules[ind_move].move_Abs(pos[1])
         except Exception as e:
             self.status_sig.emit(["Update_Status",str(e),'log'])
 
@@ -2656,10 +2656,10 @@ class DAQ_Scan_Acquisition(QObject):
 
             See Also
             --------
-            DAQ_Move_main.daq_move.Move_Abs, move_done, det_done, check_array_in_h5, wait_for_move_done, wait_for_det_done, det_done
+            DAQ_Move_main.daq_move.move_Abs, move_done, det_done, check_array_in_h5, wait_for_move_done, wait_for_det_done, det_done
         """
         for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
-            self.move_modules[ind_move].Move_Abs(pos)
+            self.move_modules[ind_move].move_Abs(pos)
 
     def start_acquisition(self):
         try:
@@ -2716,7 +2716,7 @@ class DAQ_Scan_Acquisition(QObject):
                 for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
                     if pos[0]!=self.move_modules[ind_move].title: # check the module correspond to the name assigned in pos
                         raise Exception('wrong move module assignment')
-                    self.move_modules[ind_move].Move_Abs(pos[1])
+                    self.move_modules[ind_move].move_Abs(pos[1])
 
                 self.wait_for_move_done()
 
@@ -2783,7 +2783,7 @@ if __name__ == '__main__':
 
     fname=""
 
-    splash=QtGui.QPixmap('..//documentation//splash.png')
+    splash=QtGui.QPixmap('splash.png')
     splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
     splash_sc.show()

@@ -98,7 +98,7 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def Stop(self):
+    def stop(self):
         pass
 
     def send_param_status(self,param,changes):
@@ -222,7 +222,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
                                                  
     def close_server(self):
         """
-            Close the current opened server.
+            close the current opened server.
             Update the settings tree consequently.
 
             See Also

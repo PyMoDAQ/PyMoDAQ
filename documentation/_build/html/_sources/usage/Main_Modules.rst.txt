@@ -5,8 +5,11 @@ Main Modules
    :maxdepth: 2
    :caption: Contents:
 
+   modules/DAQ_Scan
    modules/DAQ_Move
    modules/DAQ_Viewer
-   modules/DAQ_Scan
+
+
+
 
 

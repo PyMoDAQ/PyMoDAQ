@@ -1,7 +1,0 @@
-DAQ_Analysis
-============
-
-Introduction
-------------
-
-

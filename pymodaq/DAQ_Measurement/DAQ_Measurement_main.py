@@ -125,7 +125,7 @@ class DAQ_Measurement(Ui_Form,QObject):
 
     def Quit_fun(self):
         """
-            Close the current instance of daq_measurement.
+            close the current instance of daq_measurement.
 
         """
         # insert anything that needs to be closed before leaving

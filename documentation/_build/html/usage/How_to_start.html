@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>How to Start &mdash; PyMoDAQ: Modular Data acquisition with python 1.0.1 documentation</title>
+  <title>How to Start &mdash; PyMoDAQ 1.0.1 documentation</title>
   
 
   
@@ -31,8 +31,8 @@
   <link rel="stylesheet" href="../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Synthesis Diagram" href="SynthesisDiagram.html" />
-    <link rel="prev" title="Plugins" href="modules/Plugins.html" /> 
+    <link rel="next" title="Description" href="Description.html" />
+    <link rel="prev" title="Installation" href="Installation.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home"> PyMoDAQ: Modular Data acquisition with python
+            <a href="../index.html" class="icon icon-home"> PyMoDAQ
           
 
           
@@ -90,17 +90,18 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Description.html">Description</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">How to Start</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#daq-move">DAQ Move</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#daq-viewer">DAQ Viewer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#daq-scan">DAQ Scan</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#using-installed-exe-files-as-shortcuts">Using installed .exe files as shortcuts:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#from-command-line-tool">From command line tool:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-any-module">Run any module:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#create-a-batch-bash-file-for-quick-use">Create a batch/bash file for quick use:</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="SynthesisDiagram.html">Synthesis Diagram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Description.html">Description</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="APIdoc.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -115,7 +116,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">PyMoDAQ: Modular Data acquisition with python</a>
+          <a href="../index.html">PyMoDAQ</a>
         
       </nav>
 
@@ -165,22 +166,69 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="how-to-start">
-<h1>How to Start<a class="headerlink" href="#how-to-start" title="Permalink to this headline">¶</a></h1>
+  <blockquote>
+<div></div></blockquote>
+<div class="section" id="how-to-start">
+<span id="section-how-to-start"></span><h1>How to Start<a class="headerlink" href="#how-to-start" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<p>The entry points ar eto be used in order to start modules as stand alone entities. The DAQ_Scan entry point is the general PyMoDAQ entry point.</p>
-<div class="section" id="daq-move">
-<h2>DAQ Move<a class="headerlink" href="#daq-move" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">c:\...\PyMoDAQ\DAQ_Move\python</span> <span class="pre">DAQ_Move_main.py</span></code></p>
+<p>Various ways are possible in order to start modules from PyMoDAQ. In all cases after installation of the package
+(using <code class="docutils literal notranslate"><span class="pre">pip</span></code> or <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>, see <a class="reference internal" href="Installation.html#section-installation"><span class="std std-ref">Installation</span></a>) all the modules will be installed within the <code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python. <code class="docutils literal notranslate"><span class="pre">.exe</span></code>
+files will also be installed in the directory: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts</span></code> however they will be usable only if:</p>
+<ol class="arabic simple">
+<li>you manually installed PyMoDAQ (using the  <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> command)</li>
+<li>you installed with pip <strong>and</strong> the <code class="docutils literal notranslate"><span class="pre">python.exe</span></code> program is in windows <code class="docutils literal notranslate"><span class="pre">PATH</span></code> (add <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64</span></code> in the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable)</li>
+</ol>
+<div class="section" id="using-installed-exe-files-as-shortcuts">
+<h2>Using installed .exe files as shortcuts:<a class="headerlink" href="#using-installed-exe-files-as-shortcuts" title="Permalink to this headline">¶</a></h2>
+<p>If one of the conditions above is satisfied you can run (from the directory: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts</span></code>)</p>
+<ul class="simple">
+<li>pymodaq_scan.exe : will start the <a class="reference internal" href="modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> module</li>
+<li>pymodaq_move.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> module</li>
+<li>pymodaq_viewer.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> module</li>
+<li>pymodaq_h5browser.exe : will start a standalone <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a> module (to explore h5 files saved from DAQ_Scan or DAQ_Viewer modules)</li>
+</ul>
+<p>and you can even even create shortcuts on the desktop (see <a class="reference internal" href="Installation.html#fig-create-shortcut"><span class="std std-numref">Fig. 2</span></a>)</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id1">
+<span id="fig-create-shortcut"></span><a class="reference internal image-reference" href="../_images/create_shortcut.png"><img alt="create shortcut" src="../_images/create_shortcut.png" style="width: 861.0px; height: 642.0px;" /></a>
+<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Creating a shortcut from an .exe file</span></p>
 </div>
-<div class="section" id="daq-viewer">
-<h2>DAQ Viewer<a class="headerlink" href="#daq-viewer" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">c:\...\PyMoDAQ\DAQ_Viewer\python</span> <span class="pre">DAQ_viewer_main.py</span></code></p>
 </div>
-<div class="section" id="daq-scan">
-<h2>DAQ Scan<a class="headerlink" href="#daq-scan" title="Permalink to this headline">¶</a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">c:\...\PyMoDAQ\DAQ_Scan\python</span> <span class="pre">DAQ_scan_main.py</span></code></p>
+<div class="section" id="from-command-line-tool">
+<span id="cmdtool-exec"></span><h2>From command line tool:<a class="headerlink" href="#from-command-line-tool" title="Permalink to this headline">¶</a></h2>
+<p>Run Winpython (or Anaconda) command line tool (<code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\WinPython</span> <span class="pre">Command</span> <span class="pre">Prompt.exe</span></code>) and execute either:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_scan</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_viewer</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_move</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_h5browser</span></code></li>
+</ul>
+</div>
+<div class="section" id="run-any-module">
+<h2>Run any module:<a class="headerlink" href="#run-any-module" title="Permalink to this headline">¶</a></h2>
+<p>If one of PyMoDAQ’s module as an entry point (a <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">__name__='__main__:'</span></code> statement at the end of the script), you can run it with:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_scan.daq_scan_main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_viewer.daq_viewer_main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_move.daq_move_main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_utils.h5browser</span></code></li>
+</ul>
+<p>etc…</p>
+</div>
+<div class="section" id="create-a-batch-bash-file-for-quick-use">
+<h2>Create a batch/bash file for quick use:<a class="headerlink" href="#create-a-batch-bash-file-for-quick-use" title="Permalink to this headline">¶</a></h2>
+<p>Any command line execution can be written (on windows) in a <code class="docutils literal notranslate"><span class="pre">.bat</span></code> file, so that when you double click it all text lines within will execute.
+For instance, one could write:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line"><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">C:\WPy-3710\python-3.7.1.amd64</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts\pymodaq_scan</span></code></div>
+</div>
+</div></blockquote>
+<p>This will simulate the content of <a class="reference internal" href="#cmdtool-exec"><span class="std std-ref">From command line tool:</span></a>, while Python is not registered on windows <code class="docutils literal notranslate"><span class="pre">PATH</span></code>.
+<strong>This is by far the most convenient way for user to start the application</strong> (even if it requires some preparation from the guy installing the package…)</p>
 </div>
 </div>
 
@@ -192,10 +240,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="SynthesisDiagram.html" class="btn btn-neutral float-right" title="Synthesis Diagram" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="Description.html" class="btn btn-neutral float-right" title="Description" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="modules/Plugins.html" class="btn btn-neutral" title="Plugins" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="Installation.html" class="btn btn-neutral" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

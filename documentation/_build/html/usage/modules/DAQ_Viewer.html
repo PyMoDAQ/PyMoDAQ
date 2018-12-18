@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ Viewer &mdash; PyMoDAQ: Modular Data acquisition with python 1.0.1 documentation</title>
+  <title>DAQ Viewer &mdash; PyMoDAQ 1.0.1 documentation</title>
   
 
   
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../../index.html" class="icon icon-home"> PyMoDAQ: Modular Data acquisition with python
+            <a href="../../index.html" class="icon icon-home"> PyMoDAQ
           
 
           
@@ -90,7 +90,9 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="Main_Modules.html">Main Modules</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Move.html">DAQ Move</a></li>
@@ -104,12 +106,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="Plugins.html">Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Utility_Modules.html">Utility Modules</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../SynthesisDiagram.html">Synthesis Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -124,7 +125,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../../index.html">PyMoDAQ: Modular Data acquisition with python</a>
+          <a href="../../index.html">PyMoDAQ</a>
         
       </nav>
 
@@ -183,15 +184,15 @@
 <p>Module to be used to interface any detector and plot live data and many other features
 such as data analysis. The default detectors are the mock ones (a kind of software based
 detector generating data useful to test the program). Other detectors may be loaded as
-plugins, see section: <a class="reference internal" href="Plugins.html#viewer-plugins"><span class="std std-ref">DAQ_Viewer plugin template</span></a>.</p>
+plugins, see section: <a class="reference internal" href="Plugins.html#viewer-plugins"><span class="std std-ref">DAQ Viewer plugin template</span></a>.</p>
 <div class="section" id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
-<p>This module has a generic interface comprised of a dockable panel related to the settings and one or more viewers specific of the type of data to be acquired. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 1</span></a> displays a typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
+<p>This module has a generic interface comprised of a dockable panel related to the settings and one or more viewers specific of the type of data to be acquired. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 4</span></a> displays a typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id3">
 <span id="figure-daq-viewer"></span><a class="reference internal image-reference" href="../../_images/DAQ_Viewer_pannel.png"><img alt="Viewer pannel" src="../../_images/DAQ_Viewer_pannel.png" style="width: 1016.0px; height: 541.0px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">Typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</span></p>
+<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</span></p>
 </div>
 </div>
 <div class="section" id="settings">
@@ -200,10 +201,10 @@ plugins, see section: <a class="reference internal" href="Plugins.html#viewer-pl
 <div class="section" id="hardware-initialization">
 <h3>Hardware initialization<a class="headerlink" href="#hardware-initialization" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li>DAQ_type: either DAQ0D, DAQ1D or DAQ2D respectively for scalar detectors (powermeter for instance), vector detectors (spectrometer for instance) and image like detectors.</li>
-<li>Detector: list of available hardware plugins of the DAQ_type type.</li>
-<li>Ini. Det: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</li>
-<li>Quit: De-initialize the hardware and quit the application</li>
+<li><code class="docutils literal notranslate"><span class="pre">DAQ_type</span></code>: either DAQ0D, DAQ1D or DAQ2D respectively for scalar detectors (powermeter for instance), vector detectors (spectrometer for instance) and image like detectors.</li>
+<li><code class="docutils literal notranslate"><span class="pre">Detector</span></code>: list of available hardware plugins of the DAQ_type type.</li>
+<li><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Det</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</li>
+<li><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</li>
 </ul>
 </div>
 <div class="section" id="data-acquisition">

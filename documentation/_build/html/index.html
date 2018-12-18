@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ: Modular Data acquisition with python 1.0.1 documentation</title>
+  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.0.1 documentation</title>
   
 
   
@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="static/style.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Installation" href="usage/Installation.html" /> 
+    <link rel="next" title="PyMoDAQ features" href="usage/Features.html" /> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -50,7 +50,7 @@
           
 
           
-            <a href="#" class="icon icon-home"> PyMoDAQ: Modular Data acquisition with python
+            <a href="#" class="icon icon-home"> PyMoDAQ
           
 
           
@@ -89,12 +89,12 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/SynthesisDiagram.html">Synthesis Diagram</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">API documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -109,7 +109,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">PyMoDAQ: Modular Data acquisition with python</a>
+          <a href="#">PyMoDAQ</a>
         
       </nav>
 
@@ -180,11 +180,23 @@
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Installation.html">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/Installation.html#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage/Installation.html#windows">Windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/Installation.html#windows">Windows</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/Installation.html#step-by-step-manual-instructions">Step by Step manual instructions:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/Installation.html#using-pip">Using Pip:</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Installation.html#macos">MacOS</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Installation.html#linux">Linux</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#using-installed-exe-files-as-shortcuts">Using installed .exe files as shortcuts:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#from-command-line-tool">From command line tool:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#run-any-module">Run any module:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#create-a-batch-bash-file-for-quick-use">Create a batch/bash file for quick use:</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a><ul>
@@ -215,28 +227,34 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html">Plugins</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#naming-convention">Naming convention:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-move-plugin-template">DAQ_Move plugin template</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-viewer-plugin-template">DAQ_Viewer plugin template</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#emission-of-data">Emission of data</a></li>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#data-ready">Data ready?</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#synchronous-example">Synchronous example:</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#asynchronous-example">Asynchronous example:</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#specific-tcp-ip-plugin">Specific TCP/IP plugin</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Utility_Modules.html">Utility Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#h5browser">H5Browser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#daq-measurement">DAQ_Measurement</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#daq-move">DAQ Move</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#daq-viewer">DAQ Viewer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#daq-scan">DAQ Scan</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/SynthesisDiagram.html">Synthesis Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">API documentation</a><ul class="simple">
+<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/api/API_Move_Module.html">DAQ_Move modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Move_Module.html#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -259,7 +277,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="usage/Installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="usage/Features.html" class="btn btn-neutral float-right" title="PyMoDAQ features" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>

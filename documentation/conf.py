@@ -24,7 +24,7 @@ import sys
 
 # -- Project information -----------------------------------------------------
 # General information about the project.
-project = u'PyMoDAQ: Modular Data acquisition with python'
+project = u'PyMoDAQ'
 year = datetime.datetime.now().year
 
 copyright = u'%d, Weber Sébastien' % year
@@ -72,12 +72,17 @@ extensions = [
 ]
 numfig=True
 
-autoapi_type= 'python'
-autoapi_ignore=[]
-autoapi_dirs= [ ]
+
+# -- Options for autodocumentation ---------------------------------------------
+
+# autoapi_type= 'python'
+# autoapi_ignore=[]
+# autoapi_dirs= [ ]
 
 autoapi_include_summaries=True
-
+autodoc_member_order = "groupwise"
+autoclass_content = "class"
+autosummary_generate = []
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

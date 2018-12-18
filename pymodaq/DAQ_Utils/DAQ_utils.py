@@ -13,6 +13,17 @@ import os
 import re
 import importlib
 
+def get_set_local_dir():
+    if 'win' in sys.platform:
+        local_path = os.path.join(os.environ['HOMEDRIVE'] + os.environ['HOMEPATH'], 'pymodaq_local')
+    else:
+        local_path = os.path.join(os.environ['PATH'], 'pymodaq_local')
+
+    if not os.path.isdir(local_path):
+        os.makedirs(local_path)
+
+
+    return local_path
 
 
 def find_file(string,extension):
@@ -130,7 +141,9 @@ def get_names(mode):
         find_in_path
     """
     # liste=[]
-    base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
+    import pymodaq_plugins
+    base_path=os.path.split(pymodaq_plugins.__file__)[0]
+    #base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
     if(mode=='daq_move'):
         plugin_list=find_in_path(os.path.join(base_path,'daq_move_plugins'),mode)
         plugins = elt_as_first_element(plugin_list,match_word='Mock')
@@ -138,7 +151,7 @@ def get_names(mode):
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.daq_move_' + mod, 'pymodaq.plugins.daq_move_plugins')
+                importlib.import_module('.daq_move_' + mod, 'pymodaq_plugins.daq_move_plugins')
                 plugins_import.append(mod)
             except:
                 pass
@@ -152,7 +165,7 @@ def get_names(mode):
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.daq_0Dviewer_' + mod, 'pymodaq.plugins.daq_viewer_plugins.plugins_0D')
+                importlib.import_module('.daq_0Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_0D')
                 plugins_import.append(mod)
             except:
                 pass
@@ -165,7 +178,7 @@ def get_names(mode):
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.daq_1Dviewer_' + mod, 'pymodaq.plugins.daq_viewer_plugins.plugins_1D')
+                importlib.import_module('.daq_1Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_1D')
                 plugins_import.append(mod)
             except:
                 pass
@@ -178,7 +191,7 @@ def get_names(mode):
         plugins_import = []
         for mod in plugins:
             try:
-                importlib.import_module('.daq_2Dviewer_' + mod, 'pymodaq.plugins.daq_viewer_plugins.plugins_2D')
+                importlib.import_module('.daq_2Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_2D')
                 plugins_import.append(mod)
             except:
                 pass

@@ -26,26 +26,42 @@ comon_parameters=[  {'name': 'epsilon', 'type': 'float', 'value': 0.01},
 
 
 class DAQ_Move_base(QObject):
+    """ The base class to be herited by all actuator modules
+
+    This base class implements all necessary parameters and methods for the plugin to communicate with its parent (the
+    DAQ_Move module)
+
+    Parameters
+    ----------
+    parent : DAQ_Move_stage instance (see daq_viewer_main module)
+    params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the preset)
+
+
+    :ivar Move_Done_signal: pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
+                            position within the epsilon precision (see comon_parameters variable)
+
+    :ivar controller: the object representing the hardware in the plugin. Used to access hardware functionality
+
+    :ivar status: easydict instance to set information (str), controller object, stage object (if required) and initialized
+                  state (bool) to return to parent after initialization
+
+    :ivar settings: Parameter instance representing the hardware settings defined from the params attribute. Modifications
+                    on the GUI settings will be transferred to this attribute. It stores at all times the current state of the hardware/plugin
+
+    :ivar params: class level attribute. List of dict used to create a Parameter object. Its definition on the class level enable
+                  the automatic update of the GUI settings when changing plugins (even in preset mode creation). To be populated
+                  on the plugin level as the base class does't represents a real hardware
+
+    :ivar is_multiaxes: class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define
+                        a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID Parameter)
+
+    :ivar current_position: (float) stores the current position after each call to the check_position in the child module
+
+    :ivar target_position: (float) stores the target position the controller should reach within epsilon
+
     """
-        ================== =================================================
-        **Attributes**      **Type**
 
-        *Move_Done_signal*  instance of pyqtSignal
-        *params*            list
 
-        *parent*            QObject
-        *controller*        instance of the controller object
-        *stage*             instance of the stage (axis or whatever) object
-        *status*            dictionnary
-        *current_position*  float
-        *target_position*   float
-        *settings*          instance of pyqtgraph Parametertree
-        ================== =================================================
-
-        See Also
-        --------
-        send_param_status
-    """
     Move_Done_signal=pyqtSignal(float)
     is_multiaxes=False
     params= []
@@ -75,42 +91,6 @@ class DAQ_Move_base(QObject):
                 self.emit_status(ThreadCommand('outofbounds',[]))
         return position
 
-    def get_position_with_scaling(self,pos):
-        """
-            Get the current position from the hardware with scaling conversion.
-
-            =============== ========= =====================
-            **Parameters**  **Type**  **Description**
-             *pos*           float    the current position
-            =============== ========= =====================
-
-            Returns
-            =======
-            float
-                the computed position.
-        """
-        if self.settings.child('scaling','use_scaling').value():
-            pos=(pos-self.settings.child('scaling','offset').value())*self.settings.child('scaling','scaling').value()
-        return pos
-
-    def set_position_with_scaling(self,pos):
-        """
-            Set the current position from the parameter and hardware with scaling conversion.
-
-            =============== ========= ==========================
-            **Parameters**  **Type**  **Description**
-             *pos*           float    the position to be setted
-            =============== ========= ==========================
-
-            Returns
-            =======
-            float
-                the computed position.
-        """
-        if self.settings.child('scaling','use_scaling').value():
-            pos=pos/self.settings.child('scaling','scaling').value()+self.settings.child('scaling','offset').value()
-        return pos
-
     def emit_status(self,status):
         """
             | Emit the statut signal from the given status parameter.
@@ -131,30 +111,34 @@ class DAQ_Move_base(QObject):
         else:
             print(status)
 
-    def poll_moving(self):
+    def commit_settings(self,param):
+      """
+        to subclass to transfer parameters to hardware
+      """
+      pass
+
+    def commit_common_settings(self,param):
+        pass
+
+    def get_position_with_scaling(self,pos):
         """
-            Poll the current moving. In case of timeout emit the raise timeout Thread command.
-            
-            See Also
-            --------
-            DAQ_utils.ThreadCommand, Move_Done
+            Get the current position from the hardware with scaling conversion.
+
+            =============== ========= =====================
+            **Parameters**  **Type**  **Description**
+             *pos*           float    the current position
+            =============== ========= =====================
+
+            Returns
+            =======
+            float
+                the computed position.
         """
-        sleep_ms=50
-        ind=0
-        while np.abs(self.Check_position()-self.target_position)>self.settings.child(('epsilon')).value():
-            QThread.msleep(sleep_ms)
+        if self.settings.child('scaling','use_scaling').value():
+            pos=(pos-self.settings.child('scaling','offset').value())*self.settings.child('scaling','scaling').value()
+        return pos
 
-            ind+=1
-
-            if ind*sleep_ms>=self.settings.child(('timeout')).value():
-
-                self.emit_status(ThreadCommand('raise_timeout'))
-                break
-            self.current_position=self.Check_position()
-            QtWidgets.QApplication.processEvents()
-        self.Move_Done()
-
-    def Move_Done(self,position=None):#the position argument is just there to match some signature of child classes
+    def move_done(self, position=None):#the position argument is just there to match some signature of child classes
         """
             | Emit a move done signal transmitting the float position to hardware.
             | The position argument is just there to match some signature of child classes.
@@ -165,43 +149,32 @@ class DAQ_Move_base(QObject):
             =============== ========== =============================================================================
 
         """
-        position=self.Check_position()
+        position=self.check_position()
         self.Move_Done_signal.emit(position)
 
-    @pyqtSlot(edict)
-    def update_settings(self,settings_parameter_dict):#settings_parameter_dict=edict(path=path,param=param)
+    def poll_moving(self):
         """
-            Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.
-
-            ==========================  =========== ==========================================================================================================
-            **Arguments**               **Type**     **Description**
-            *settings_parameter_dict*   dictionnary Dictionnary with the path of the parameter in hardware structure as key and the parameter name as element
-            ==========================  =========== ==========================================================================================================
+            Poll the current moving. In case of timeout emit the raise timeout Thread command.
 
             See Also
             --------
-            send_param_status, commit_settings
+            DAQ_utils.ThreadCommand, move_done
         """
-        path=settings_parameter_dict.path
-        param=settings_parameter_dict.param
-        try:
-            self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-        except: pass
-        self.settings.child(*path[1:]).setValue(param.value())
+        sleep_ms=50
+        ind=0
+        while np.abs(self.check_position()-self.target_position)>self.settings.child(('epsilon')).value():
+            QThread.msleep(sleep_ms)
 
-        self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        self.commit_common_settings(param)
-        self.commit_settings(param)
+            ind+=1
 
+            if ind*sleep_ms>=self.settings.child(('timeout')).value():
 
-    def commit_common_settings(self,param):
-        pass
+                self.emit_status(ThreadCommand('raise_timeout'))
+                break
+            self.current_position=self.check_position()
+            QtWidgets.QApplication.processEvents()
+        self.move_done()
 
-    def commit_settings(self,param):
-      """
-        to subclass to transfer parameters to hardware
-      """
-      pass
 
     def send_param_status(self,param,changes):
         """
@@ -232,6 +205,49 @@ class DAQ_Move_base(QObject):
                 self.emit_status(ThreadCommand('update_settings',[path,data,change])) #parent is the main detector object and status_sig will be send to the GUI thrad
             elif change == 'parent':
                 pass
+
+    def set_position_with_scaling(self,pos):
+        """
+            Set the current position from the parameter and hardware with scaling conversion.
+
+            =============== ========= ==========================
+            **Parameters**  **Type**  **Description**
+             *pos*           float    the position to be setted
+            =============== ========= ==========================
+
+            Returns
+            =======
+            float
+                the computed position.
+        """
+        if self.settings.child('scaling','use_scaling').value():
+            pos=pos/self.settings.child('scaling','scaling').value()+self.settings.child('scaling','offset').value()
+        return pos
+
+    @pyqtSlot(edict)
+    def update_settings(self,settings_parameter_dict):#settings_parameter_dict=edict(path=path,param=param)
+        """
+            Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.
+
+            ==========================  =========== ==========================================================================================================
+            **Arguments**               **Type**     **Description**
+            *settings_parameter_dict*   dictionnary Dictionnary with the path of the parameter in hardware structure as key and the parameter name as element
+            ==========================  =========== ==========================================================================================================
+
+            See Also
+            --------
+            send_param_status, commit_settings
+        """
+        path=settings_parameter_dict.path
+        param=settings_parameter_dict.param
+        try:
+            self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
+        except: pass
+        self.settings.child(*path[1:]).setValue(param.value())
+
+        self.settings.sigTreeStateChanged.connect(self.send_param_status)
+        self.commit_common_settings(param)
+        self.commit_settings(param)
 
 if __name__=='__main__':
     test=DAQ_Move_base()

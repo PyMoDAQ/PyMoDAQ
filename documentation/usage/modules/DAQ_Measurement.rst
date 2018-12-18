@@ -1,6 +1,0 @@
-DAQ_Measurement
-===============
-
-Introduction
-------------
-

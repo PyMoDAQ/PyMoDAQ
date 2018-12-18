@@ -18,9 +18,9 @@ from pymodaq.daq_utils.plotting.hyperviewer.hyperviewer_main import HyperViewer
 import pymodaq.daq_utils.daq_utils as daq_utils
 from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum
 
-from pymodaq.plugins.daq_viewer_plugins import plugins_0D
-from pymodaq.plugins.daq_viewer_plugins import plugins_1D
-from pymodaq.plugins.daq_viewer_plugins import plugins_2D
+from pymodaq_plugins.daq_viewer_plugins import plugins_0D
+from pymodaq_plugins.daq_viewer_plugins import plugins_1D
+from pymodaq_plugins.daq_viewer_plugins import plugins_2D
 
 DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
 DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
@@ -108,7 +108,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 100, 'value': 100, 'min': 0},
             {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False, 'value': False},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': False, 'expanded': False,'children':[
-                    {'title': 'Stop if overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
+                    {'title': 'stop if overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
                     {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
             {'title': 'Axis options:','name':'axes','type':'group', 'visible': False, 'expanded': False, 'children':[
                     {'title': 'X axis:','name':'xaxis','type':'group','children':[
@@ -254,12 +254,12 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         ##Connecting buttons:
         self.ui.update_com_pb.clicked.connect(self.update_com) #update communications with hardware
-        self.ui.Quit_pb.clicked.connect(self.Quit_fun,type = Qt.QueuedConnection)
+        self.ui.Quit_pb.clicked.connect(self.quit_fun, type = Qt.QueuedConnection)
         self.ui.settings_pb.clicked.connect(self.show_settings)
-        self.ui.IniDet_pb.clicked.connect(self.IniDet_fun)
+        self.ui.IniDet_pb.clicked.connect(self.ini_det_fun)
         self.update_status("Ready",wait_time=self.wait_time)
-        self.ui.grab_pb.clicked.connect(lambda: self.Grab(grab_state=True))
-        self.ui.single_pb.clicked.connect(lambda: self.Grab(grab_state=False))
+        self.ui.grab_pb.clicked.connect(lambda: self.grab_data(grab_state=True))
+        self.ui.single_pb.clicked.connect(lambda: self.grab_data(grab_state=False))
         self.ui.stop_pb.clicked.connect(self.stop_all)
         self.ui.save_new_pb.clicked.connect(self.save_new)
         self.ui.save_current_pb.clicked.connect(self.save_current)
@@ -564,13 +564,13 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            IniDet_fun, update_status
+            ini_det_fun, update_status
         """
         try:
             if self.ui.Ini_state_LED.state: #means  initialzed
                 self.ui.IniDet_pb.setChecked(False)
                 QtWidgets.QApplication.processEvents()
-                self.IniDet_fun()
+                self.ini_det_fun()
 
             if path is None or path is False:
                 path=daq_utils.select_file(save=False,ext='par')
@@ -948,7 +948,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            Grab, update_status
+            grab, update_status
         """
         try:
             self.do_save_data=True
@@ -956,23 +956,23 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 raise (Exception("filepathanme has not been defined in snapshot"))
             self.save_file_pathname=pathname
 
-            self.Grab(False)
+            self.grab_data(False)
         except Exception as e:
             self.update_status(str(e),self.wait_time,'log')
 
     def stop_all(self):
-        self.command_detector.emit(ThreadCommand("Stop_all"))
+        self.command_detector.emit(ThreadCommand("stop_all"))
         if self.ui.grab_pb.isChecked():
             self.ui.grab_pb.setChecked(False)
         self.set_enabled_Ini_buttons(enable=True)
 
         self.ui.settings_tree.setEnabled(True)
 
-    def Grab(self,grab_state=False):
+    def grab_data(self, grab_state=False):
         """
             Do a grab session using 2 profile :
-                * if grab pb checked do  a continous save and send an "update_channels" thread command and a "Grab" too.
-                * if not send a "Stop_grab" thread command with settings "main settings-naverage" node value as an attribute.
+                * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
+                * if not send a "stop_grab" thread command with settings "main settings-naverage" node value as an attribute.
 
             See Also
             --------
@@ -981,7 +981,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         if not(grab_state):
 
-            self.command_detector.emit(ThreadCommand("Single",[self.settings.child('main_settings','Naverage').value()]))
+            self.command_detector.emit(ThreadCommand("single",[self.settings.child('main_settings','Naverage').value()]))
         else:
             if not(self.ui.grab_pb.isChecked()):
 
@@ -989,7 +989,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 #    try:
                 #        self.file_continuous_save.close()
                 #    except: pass
-                self.command_detector.emit(ThreadCommand("Stop_grab"))
+                self.command_detector.emit(ThreadCommand("stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
                 self.ui.settings_tree.setEnabled(True)
             else:
@@ -997,12 +997,12 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.ui.settings_tree.setEnabled(False)
                 self.thread_status(ThreadCommand("update_channels"))
                 self.set_enabled_Ini_buttons(enable=False)
-                self.command_detector.emit(ThreadCommand("Grab",[self.settings.child('main_settings','Naverage').value()]))
+                self.command_detector.emit(ThreadCommand("grab",[self.settings.child('main_settings','Naverage').value()]))
 
 
 
 
-    def IniDet_fun(self):
+    def ini_det_fun(self):
         """
             | If Init detector button checked, init the detector and connect the data detector, the data detector temp, the status and the update_settings signals to their corresponding function.
             | Once done start the detector linked thread.
@@ -1021,7 +1021,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.Initialized_state=False
 
                 if hasattr(self,'detector_thread'):
-                    self.command_detector.emit(ThreadCommand("Close"))
+                    self.command_detector.emit(ThreadCommand("close"))
                     QtWidgets.QApplication.processEvents()
                     QThread.msleep(1000)
                     if hasattr(self,'detector_thread'):
@@ -1046,16 +1046,16 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.detector_thread.detector=detector
                 self.detector_thread.start()
 
-                self.command_detector.emit(ThreadCommand("Ini_Detector",attributes=[self.settings.child(('detector_settings')).saveState(),self.controller]))
+                self.command_detector.emit(ThreadCommand("ini_detector",attributes=[self.settings.child(('detector_settings')).saveState(),self.controller]))
 
 
         except Exception as e:
             self.update_status(str(e))
             self.set_enabled_grab_buttons(enable=False)
 
-    def Quit_fun(self):
+    def quit_fun(self):
         """
-            | Close the current instance of daq_viewer_main emmiting the quit signal.
+            | close the current instance of daq_viewer_main emmiting the quit signal.
             | Treat an exception if an error during the detector unitializing has occured.
 
         """
@@ -1389,9 +1389,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             In case of :
                 * **Update_Status**   *command* : update the status from the given status attributes
-                * **Ini_Detector**    *command* : update the status with "detector initialized" value and init state if attributes not null.
-                * **Close**           *command* : Close the current thread and delete corresponding attributes on cascade.
-                * **Grab**            *command* : Do nothing
+                * **ini_detector**    *command* : update the status with "detector initialized" value and init state if attributes not null.
+                * **close**           *command* : close the current thread and delete corresponding attributes on cascade.
+                * **grab**            *command* : Do nothing
                 * **x_axis**          *command* : update x_axis from status attributes and User Interface viewer consequently.
                 * **y_axis**          *command* : update y_axis from status attributes and User Interface viewer consequently.
                 * **Update_channel**  *command* : update the viewer channels in case of 0D DAQ_type
@@ -1415,7 +1415,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             else:
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
 
-        elif status.command=="Ini_Detector":
+        elif status.command=="ini_detector":
             self.update_status("detector initialized: "+str(status.attributes[0]['initialized']),wait_time=self.wait_time)
 
             if status.attributes[0]['initialized']:
@@ -1426,7 +1426,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             else:
                 self.Initialized_state=False
 
-        elif status.command=="Close":
+        elif status.command=="close":
             try:
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
                 self.detector_thread.exit()
@@ -1441,7 +1441,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             self.Initialized_state=False
 
-        elif status.command=="Grab":
+        elif status.command=="grab":
             pass
 
         elif status.command=="x_axis":
@@ -1601,11 +1601,11 @@ class DAQ_Detector(QObject):
     def queue_command(self,command=ThreadCommand()):
         """
             Treat the given command parameter from his name :
-              * **Ini_Detector** : Send the corresponding Thread command via a status signal.
-              * **Close**        : Send the corresponding Thread command via a status signal.
-              * **Grab**         : Call the local Grab method with command(s) attributes.
-              * **Single**       : Call the local Single method with command(s) attributes.
-              * **Stop_Grab**    : Send the correpsonding Thread command via a status signal.
+              * **ini_detector** : Send the corresponding Thread command via a status signal.
+              * **close**        : Send the corresponding Thread command via a status signal.
+              * **grab**         : Call the local grab method with command(s) attributes.
+              * **single**       : Call the local single method with command(s) attributes.
+              * **stop_grab**    : Send the correpsonding Thread command via a status signal.
 
             =============== ================= ============================
             **Parameters**    *Type*           **Description**
@@ -1614,37 +1614,37 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            Grab, Single, daq_utils.ThreadCommand
+            grab, single, daq_utils.ThreadCommand
         """
-        if command.command=="Ini_Detector":
-            status=self.Ini_Detector(*command.attributes)
+        if command.command=="ini_detector":
+            status=self.ini_detector(*command.attributes)
             self.status_sig.emit(ThreadCommand(command.command,[ status,'log']))
 
-        elif command.command=="Close":
+        elif command.command=="close":
             status=self.Close()
             self.status_sig.emit(ThreadCommand(command.command,[ status,'log']))
 
-        elif command.command=="Grab":
+        elif command.command=="grab":
             self.single_grab=False
             self.grab_state=True
-            self.Grab(*command.attributes)
+            self.grab_data(*command.attributes)
 
-        elif command.command=="Single":
+        elif command.command=="single":
             self.single_grab=True
             self.grab_state=True
-            self.Single(*command.attributes)
+            self.single(*command.attributes)
 
-        elif command.command=="Stop_grab":
+        elif command.command=="stop_grab":
             self.grab_state=False
             self.status_sig.emit(ThreadCommand("Update_Status",['Stoping grab']))
 
-        elif command.command=="Stop_all":
+        elif command.command=="stop_all":
             self.grab_state=False
-            self.detector.Stop()
+            self.detector.stop()
             QtWidgets.QApplication.processEvents()
 
 
-    def Ini_Detector(self,params_state=None,controller=None):
+    def ini_detector(self, params_state=None, controller=None):
         """
             Init the detector from params_state parameter and DAQ_type class attribute :
                 * in **0D** profile : update the local status and send the "x_axis" Thread command via a status signal
@@ -1658,7 +1658,7 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            Ini_Detector, daq_utils.ThreadCommand
+            ini_detector, daq_utils.ThreadCommand
         """
         try:
             #status="Not initialized"
@@ -1668,7 +1668,7 @@ class DAQ_Detector(QObject):
                 self.detector=class_(self,params_state)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.Ini_Detector(controller))
+                status.update(self.detector.ini_detector(controller))
                 if status['x_axis'] is not None:
                     x_axis=status['x_axis']
                     self.status_sig.emit(ThreadCommand("x_axis",[x_axis]))
@@ -1679,7 +1679,7 @@ class DAQ_Detector(QObject):
                 self.detector=class_(self,params_state)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.Ini_Detector(controller))
+                status.update(self.detector.ini_detector(controller))
                 if status['x_axis'] is not None:
                     x_axis=status['x_axis']
                     self.status_sig.emit(ThreadCommand("x_axis",[x_axis]))
@@ -1690,7 +1690,7 @@ class DAQ_Detector(QObject):
                 self.detector=class_(self,params_state)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.Ini_Detector(controller))
+                status.update(self.detector.ini_detector(controller))
                 if status['x_axis'] is not None:
                     x_axis=status['x_axis']
                     self.status_sig.emit(ThreadCommand("x_axis",[x_axis]))
@@ -1757,11 +1757,11 @@ class DAQ_Detector(QObject):
         self.waiting_for_data=False
         if self.grab_state==False:
             #self.status_sig.emit(["Update_Status","Grabing braked"])
-            self.detector.Stop()
+            self.detector.stop()
 
-    def Single(self,Naverage=1):
+    def single(self, Naverage=1):
         """
-            Call the Grab method with Naverage parameter as an attribute.
+            Call the grab method with Naverage parameter as an attribute.
 
             =============== =========== ==================
             **Parameters**    **Type**    **Description**
@@ -1770,21 +1770,21 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            daq_utils.ThreadCommand, Grab
+            daq_utils.ThreadCommand, grab
         """
         try:
-            self.Grab(Naverage,live=False)
+            self.grab_data(Naverage, live=False)
             #self.ind_average=0
             #self.Naverage=Naverage
             #self.status_sig.emit(["Update_Status","Start grabing"])
-            #self.detector.Grab(Naverage)
+            #self.detector.grab(Naverage)
 
 
         except Exception as e:
 
             self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
 
-    def Grab(self,Naverage=1,live=True):
+    def grab_data(self, Naverage=1, live=True):
         """
             | Update status with 'Start Grabing' Update_status sub command of the Thread command.
             | Process events and grab naverage is needed.
@@ -1796,7 +1796,7 @@ class DAQ_Detector(QObject):
 
             See Also
             --------
-            daq_utils.ThreadCommand, Grab
+            daq_utils.ThreadCommand, grab
         """
         try:
             self.ind_average=0
@@ -1808,14 +1808,14 @@ class DAQ_Detector(QObject):
 
 
             ####TODO: choose if the live mode is only made inside the plugins (suitable with STEM plugins) or if we keep it on top?
-            ##self.detector.Grab(Naverage,live=live)
+            ##self.detector.grab(Naverage,live=live)
 
             while 1:
                 try:
                     if not(self.waiting_for_data):
                         self.waiting_for_data=True
                         QThread.msleep(self.wait_time)
-                        self.detector.Grab(Naverage,live=live)
+                        self.detector.grab_data(Naverage, live=live)
                     QtWidgets.QApplication.processEvents()
                     if self.single_grab:
                         if self.hardware_averaging:
@@ -1827,7 +1827,7 @@ class DAQ_Detector(QObject):
 
                     if self.grab_state==False:
 
-                        #self.detector.Stop()
+                        #self.detector.stop()
                         break
                 except Exception as e:
                     print(str(e))
@@ -1838,10 +1838,10 @@ class DAQ_Detector(QObject):
 
     def Close(self):
         """
-            Close the current instance of DAQ_Detector.
+            close the current instance of DAQ_Detector.
         """
         try:
-            status=self.detector.Close()
+            status=self.detector.close()
         except Exception as e:
             status=str(e)
         return status

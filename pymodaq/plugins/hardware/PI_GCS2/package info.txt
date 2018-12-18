@@ -1,1 +1,0 @@
-Package pipython to be found in the installation CD of the mercury (not all controller cd have it) than to be installed manually. It is saved in my DAQ\Libraies Package folder

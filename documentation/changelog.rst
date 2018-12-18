@@ -3,8 +3,10 @@
 =========
 Changelog
 =========
-
-
+* :release:`1.1.0 <2018-12-18>`
+* :feature:`0` removed plugins from tree structure. May be installed from github or pypi as external library
+* :feature:`0` When started from DAQ_scan, all Quit pushbutton are disabled within individual Move and Viewer modules.
+* :feature:`0` Moved the preset_mode folder out the pymodaq tree, but relative to HOMEPATH (windows) or HOME (linux & OSX) environment variable
 * :release:`1.0.1 <2018-12-16>`
 * :feature:`0` Tested entry-points after installation.*.exe files created successfully with manual setup install.
   But the link to working python is missing with pip install (python.exe and pythonw.exe) must be on the ``PATH``

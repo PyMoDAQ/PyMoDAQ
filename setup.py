@@ -10,7 +10,7 @@ except ImportError:
     from distutils.core import setup
     from distutils.command import install
 
-
+from pymodaq.version import get_version
 
 with open('README.rst') as fd:
     long_description = fd.read()
@@ -61,7 +61,7 @@ allPackages = get_packages()
 
 
 setup(
-    version='1.0.1',
+    version=get_version(),
      #cmdclass={'build': Build,},
     #           'install': Install,
     #           'deb': helpers.DebCommand,
@@ -90,6 +90,7 @@ setup(
         'easydict',
         #'pyqt5',
         'tables',
+        'pymodaq_plugins>=1.0.0',
         ],
     include_package_data=True,
     **setupOpts

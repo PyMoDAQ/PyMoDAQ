@@ -33,10 +33,10 @@ The settings panel is comprised of 2 sections, the top one displays buttons to s
 Hardware initialization
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-* DAQ_type: either DAQ0D, DAQ1D or DAQ2D respectively for scalar detectors (powermeter for instance), vector detectors (spectrometer for instance) and image like detectors.
-* Detector: list of available hardware plugins of the DAQ_type type.
-* Ini. Det: Initialize the hardware with the given settings (see :ref:`plugin_doc` for details on how to set hardware settings.)
-* Quit: De-initialize the hardware and quit the application
+* ``DAQ_type``: either DAQ0D, DAQ1D or DAQ2D respectively for scalar detectors (powermeter for instance), vector detectors (spectrometer for instance) and image like detectors.
+* ``Detector``: list of available hardware plugins of the DAQ_type type.
+* ``Ini. Det``: Initialize the hardware with the given settings (see :ref:`plugin_doc` for details on how to set hardware settings.)
+* ``Quit``: De-initialize the hardware and quit the application
 
 Data Acquisition
 ^^^^^^^^^^^^^^^^

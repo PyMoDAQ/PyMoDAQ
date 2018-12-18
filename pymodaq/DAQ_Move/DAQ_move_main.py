@@ -13,8 +13,11 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree
 from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum
 from easydict import EasyDict as edict
-import pymodaq.plugins.daq_move_plugins as plugins
 
+from pymodaq.daq_utils.daq_utils import get_set_local_dir
+local_path = get_set_local_dir()
+sys.path.append(local_path)
+import pymodaq_plugins.daq_move_plugins as plugins
 
 DAQ_Move_Stage_type=make_enum('daq_move')
 
@@ -50,7 +53,7 @@ class DAQ_Move(Ui_Form,QObject):
 
         See Also
         --------
-        set_enabled_move_buttons, set_setting_tree, stage_changed, Quit_fun, IniStage_fun, Move_Abs, Move_Rel, Move_Home, Get_position, Stop_Motion, show_settings, show_fine_tuning
+        set_enabled_move_buttons, set_setting_tree, stage_changed, quit_fun, ini_stage_fun, move_Abs, move_Rel, move_Home, get_position, stop_Motion, show_settings, show_fine_tuning
 
         References
         ----------
@@ -85,7 +88,7 @@ class DAQ_Move(Ui_Form,QObject):
         self.ui.setupUi(parent)
         self.ui.Moveto_pb_bis_2.setVisible(False)
         self.parent=parent
-        #self.parent.close_signal.connect(self.Quit_fun) #need a drived class to handle this, see form_custom in daq_utils but that was bugging
+        #self.parent.close_signal.connect(self.quit_fun) #need a drived class to handle this, see form_custom in daq_utils but that was bugging
         self.ui.title_label.setText(title)
         self.title=title
         self.ui.statusbar=QtWidgets.QStatusBar(parent)
@@ -145,22 +148,22 @@ class DAQ_Move(Ui_Form,QObject):
         self.ui.Stage_type_combo.currentIndexChanged.connect(self.set_setting_tree)
         self.ui.Stage_type_combo.currentIndexChanged.connect(self.stage_changed)
 
-        self.ui.Quit_pb.clicked.connect(self.Quit_fun)
-        self.ui.IniStage_pb.clicked.connect(self.IniStage_fun)
+        self.ui.Quit_pb.clicked.connect(self.quit_fun)
+        self.ui.IniStage_pb.clicked.connect(self.ini_stage_fun)
 
         self.update_status("Ready",wait_time=self.wait_time)
-        self.ui.Move_Abs_pb.clicked.connect(lambda: self.Move_Abs(self.ui.Abs_position_sb.value()))
-        self.ui.Move_Rel_plus_pb.clicked.connect(lambda: self.Move_Rel(self.ui.Rel_position_sb.value()))
-        self.ui.Move_Rel_minus_pb.clicked.connect(lambda: self.Move_Rel(-self.ui.Rel_position_sb.value()))
-        self.ui.Find_Home_pb.clicked.connect(self.Move_Home)
-        self.ui.Get_position_pb.clicked.connect(self.Get_position)
-        self.ui.Stop_pb.clicked.connect(self.Stop_Motion)
+        self.ui.Move_Abs_pb.clicked.connect(lambda: self.move_Abs(self.ui.Abs_position_sb.value()))
+        self.ui.Move_Rel_plus_pb.clicked.connect(lambda: self.move_Rel(self.ui.Rel_position_sb.value()))
+        self.ui.Move_Rel_minus_pb.clicked.connect(lambda: self.move_Rel(-self.ui.Rel_position_sb.value()))
+        self.ui.Find_Home_pb.clicked.connect(self.move_Home)
+        self.ui.Get_position_pb.clicked.connect(self.get_position)
+        self.ui.Stop_pb.clicked.connect(self.stop_Motion)
 
         self.ui.parameters_pb.clicked.connect(self.show_settings)
         self.ui.fine_tuning_pb.clicked.connect(self.show_fine_tuning)
         self.ui.Abs_position_sb.valueChanged.connect(self.ui.Abs_position_sb_bis.setValue)
         self.ui.Abs_position_sb_bis.valueChanged.connect(self.ui.Abs_position_sb.setValue)
-        self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(self.ui.Abs_position_sb_bis.value()))
+        self.ui.Moveto_pb_bis.clicked.connect(lambda: self.move_Abs(self.ui.Abs_position_sb_bis.value()))
 
         # set preset options
         if preset is not None:
@@ -174,6 +177,49 @@ class DAQ_Move(Ui_Form,QObject):
         #initialize the controller if init=True
         if init:
             self.ui.IniStage_pb.click()
+
+    def ini_stage_fun(self):
+        """
+            Init :
+                * a DAQ_move_stage instance if not exists
+                * a linked thread connected by signal to the DAQ_move_main instance
+
+            See Also
+            --------
+            set_enabled_move_buttons, DAQ_utils.ThreadCommand, DAQ_Move_stage, DAQ_Move_stage.queue_command, thread_status, DAQ_Move_stage.update_settings, update_status
+        """
+        try:
+            if not self.ui.IniStage_pb.isChecked():
+                try:
+                    self.set_enabled_move_buttons(enable=False)
+                    self.ui.Stage_type_combo.setEnabled(True)
+                    self.ui.Ini_state_LED.set_as_false()
+                    self.command_stage.emit(ThreadCommand(command="close"))
+                except: pass
+
+            else:
+                self.stage_name=self.ui.Stage_type_combo.currentText()
+                stage=DAQ_Move_stage(self.stage_name,self.current_position)
+                self.stage_thread=QThread()
+                stage.moveToThread(self.stage_thread)
+
+                self.command_stage[ThreadCommand].connect(stage.queue_command)
+                stage.status_sig[ThreadCommand].connect(self.thread_status)
+                self.update_settings_signal[edict].connect(stage.update_settings)
+
+                self.stage_thread.stage=stage
+                self.stage_thread.start()
+
+
+                self.ui.Stage_type_combo.setEnabled(False)
+                self.command_stage.emit(ThreadCommand(command="ini_stage",attributes=[self.settings.child(('move_settings')).saveState(),self.controller]))
+
+
+
+        except Exception as e:
+            self.update_status(str(e),wait_time=self.wait_time,log_type="log")
+
+            self.set_enabled_move_buttons(enable=False)
 
     def parameter_tree_changed(self,param,changes):
         """
@@ -205,85 +251,8 @@ class DAQ_Move(Ui_Form,QObject):
             elif change == 'parent':
                 pass
 
-    @pyqtSlot(int)
-    def set_setting_tree(self,index=0):
-        """
-            Set the move settings parameters tree, clearing the current tree and setting the 'move_settings' node.
 
-            See Also
-            --------
-            update_status
-        """
-        self.stage_name=self.ui.Stage_type_combo.currentText()
-        self.settings.child('main_settings','move_type').setValue(self.stage_name)
-        try:
-            for child in self.settings.child(('move_settings')).children():
-                child.remove()
-
-            class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
-            params=getattr(class_,'params')
-            move_params=Parameter.create(name='move_settings', type='group', children=params)
-
-
-            self.settings.child(('move_settings')).addChildren(move_params.children())
-
-
-        except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time,log_type="log")
-
-
-    @pyqtSlot(int)
-    def stage_changed(self, index=0):
-
-        """
-            Deprecated the main interface should not be dependant of the plugin type, especially because it may not be installed
-
-            | Update the User Interface from the DAQ_Move_Stage_Type given by the position of index parameter.
-            |
-            | In case of Kinesis_Flipper hardware, update the Move_abs values to adapt the programm to the hardware, else re-init the Move_abs to default value.
-
-            =============== =========== ====================================================================
-            **Parameters**   **Type**    **Description**
-
-             *index*         enum list   DAQ_Move_Stage_Type to be checked (corresponding to hardware type)
-            =============== =========== ====================================================================
-
-            See Also
-            --------
-            Move_Abs
-        """
-        pass
-        # if index == DAQ_Move_Stage_type['Kinesis_Flipper']: #Kinesis_Flipper
-        #     self.ui.Moveto_pb_bis_2.setVisible(True)
-        #     self.ui.Moveto_pb_bis.clicked.disconnect()
-        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(1))
-        #     self.ui.Moveto_pb_bis_2.clicked.connect(lambda: self.Move_Abs(2))
-        #
-        # else:
-        #     self.ui.Moveto_pb_bis_2.setVisible(False)
-        #     self.ui.Moveto_pb_bis.clicked.disconnect()
-        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.Move_Abs(self.ui.Abs_position_sb_bis.value()))
-
-    def show_fine_tuning(self):
-        """
-          Make GroupBox visible if User Interface corresponding attribute is checked to show fine tuning in.
-        """
-        if self.ui.fine_tuning_pb.isChecked():
-            self.ui.groupBox.show()
-        else:
-            self.ui.groupBox.hide()
-
-    def show_settings(self):
-        """
-          Make settings tree visible if User Interface corresponding attribute is checked to show the settings tree in.
-        """
-        if self.ui.parameters_pb.isChecked():
-
-            self.ui.settings_tree.setVisible(True)
-        else:
-            self.ui.settings_tree.setVisible(False)
-
-    def Quit_fun(self):
+    def quit_fun(self):
         """
             Leave the current instance of DAQ_Move_Main closing the parent widget.
         """
@@ -310,7 +279,6 @@ class DAQ_Move(Ui_Form,QObject):
             if ret==QtWidgets.QMessageBox.Yes:
                 self.parent.close()
 
-
     def set_enabled_move_buttons(self,enable=False):
         """
             Set the move buttons enabled (or not) in User Interface from the gridLayout_buttons course.
@@ -331,49 +299,84 @@ class DAQ_Move(Ui_Form,QObject):
         self.ui.Abs_position_sb_bis.setEnabled(enable)
         self.ui.Current_position_sb.setEnabled(enable)
 
-
-    def IniStage_fun(self):
+    @pyqtSlot(int)
+    def set_setting_tree(self,index=0):
         """
-            Init :
-                * a DAQ_move_stage instance if not exists
-                * a linked thread connected by signal to the DAQ_move_main instance
+            Set the move settings parameters tree, clearing the current tree and setting the 'move_settings' node.
 
             See Also
             --------
-            set_enabled_move_buttons, DAQ_utils.ThreadCommand, DAQ_Move_stage, DAQ_Move_stage.queue_command, thread_status, DAQ_Move_stage.update_settings, update_status
+            update_status
         """
+        self.stage_name=self.ui.Stage_type_combo.currentText()
+        self.settings.child('main_settings','move_type').setValue(self.stage_name)
         try:
-            if not self.ui.IniStage_pb.isChecked():
-                try:
-                    self.set_enabled_move_buttons(enable=False)
-                    self.ui.Stage_type_combo.setEnabled(True)
-                    self.ui.Ini_state_LED.set_as_false()
-                    self.command_stage.emit(ThreadCommand(command="Close"))
-                except: pass
+            for child in self.settings.child(('move_settings')).children():
+                child.remove()
 
-            else:
-                self.stage_name=self.ui.Stage_type_combo.currentText()
-                stage=DAQ_Move_stage(self.stage_name,self.current_position)
-                self.stage_thread=QThread()
-                stage.moveToThread(self.stage_thread)
-
-                self.command_stage[ThreadCommand].connect(stage.queue_command)
-                stage.status_sig[ThreadCommand].connect(self.thread_status)
-                self.update_settings_signal[edict].connect(stage.update_settings)
-
-                self.stage_thread.stage=stage
-                self.stage_thread.start()
+            class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
+            params=getattr(class_,'params')
+            move_params=Parameter.create(name='move_settings', type='group', children=params)
 
 
-                self.ui.Stage_type_combo.setEnabled(False)
-                self.command_stage.emit(ThreadCommand(command="Ini_Stage",attributes=[self.settings.child(('move_settings')).saveState(),self.controller]))
-
+            self.settings.child(('move_settings')).addChildren(move_params.children())
 
 
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time,log_type="log")
+            self.update_status(str(e), wait_time=self.wait_time,log_type="log")
 
-            self.set_enabled_move_buttons(enable=False)
+    def show_fine_tuning(self):
+        """
+          Make GroupBox visible if User Interface corresponding attribute is checked to show fine tuning in.
+        """
+        if self.ui.fine_tuning_pb.isChecked():
+            self.ui.groupBox.show()
+        else:
+            self.ui.groupBox.hide()
+
+
+    def show_settings(self):
+        """
+          Make settings tree visible if User Interface corresponding attribute is checked to show the settings tree in.
+        """
+        if self.ui.parameters_pb.isChecked():
+
+            self.ui.settings_tree.setVisible(True)
+        else:
+            self.ui.settings_tree.setVisible(False)
+
+
+    @pyqtSlot(int)
+    def stage_changed(self, index=0):
+
+        """
+            Deprecated the main interface should not be dependant of the plugin type, especially because it may not be installed
+
+            | Update the User Interface from the DAQ_Move_Stage_Type given by the position of index parameter.
+            |
+            | In case of Kinesis_Flipper hardware, update the Move_abs values to adapt the programm to the hardware, else re-init the Move_abs to default value.
+
+            =============== =========== ====================================================================
+            **Parameters**   **Type**    **Description**
+
+             *index*         enum list   DAQ_Move_Stage_Type to be checked (corresponding to hardware type)
+            =============== =========== ====================================================================
+
+            See Also
+            --------
+            move_Abs
+        """
+        pass
+        # if index == DAQ_Move_Stage_type['Kinesis_Flipper']: #Kinesis_Flipper
+        #     self.ui.Moveto_pb_bis_2.setVisible(True)
+        #     self.ui.Moveto_pb_bis.clicked.disconnect()
+        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.move_Abs(1))
+        #     self.ui.Moveto_pb_bis_2.clicked.connect(lambda: self.move_Abs(2))
+        #
+        # else:
+        #     self.ui.Moveto_pb_bis_2.setVisible(False)
+        #     self.ui.Moveto_pb_bis.clicked.disconnect()
+        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.move_Abs(self.ui.Abs_position_sb_bis.value()))
 
     @pyqtSlot(ThreadCommand)
     def thread_status(self,status): # general function to get datas/infos from all threads back to the main
@@ -383,10 +386,10 @@ class DAQ_Move(Ui_Form,QObject):
 
             Interpret a command from the command given by the ThreadCommand status :
                 * In case of **'Update_status'** command, call the update_status method with status attributes as parameters
-                * In case of **'Ini_Stage'** command, initialise a Stage from status attributes
-                * In case of **'Close'** command, close the launched stage thread
-                * In case of **'Check_position'** command, set the Current_position value from status attributes
-                * In case of **'Move_Done'** command, set the Current_position value, make profile of Move_Done and send the move done signal with status attributes
+                * In case of **'ini_stage'** command, initialise a Stage from status attributes
+                * In case of **'close'** command, close the launched stage thread
+                * In case of **'check_position'** command, set the Current_position value from status attributes
+                * In case of **'move_done'** command, set the Current_position value, make profile of move_done and send the move done signal with status attributes
                 * In case of **'Move_Not_Done'** command, set the current position value from the status attributes, make profile of Not_Move_Done and send the Thread Command "Move_abs"
                 * In case of **'update_settings'** command, create child "Move Settings" from  status attributes (if possible)
 
@@ -402,7 +405,7 @@ class DAQ_Move(Ui_Form,QObject):
 
             See Also
             --------
-            update_status, set_enabled_move_buttons, Get_position, DAQ_utils.ThreadCommand, parameter_tree_changed, raise_timeout
+            update_status, set_enabled_move_buttons, get_position, DAQ_utils.ThreadCommand, parameter_tree_changed, raise_timeout
         """
 
         if status.command=="Update_Status":
@@ -411,7 +414,7 @@ class DAQ_Move(Ui_Form,QObject):
             else:
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
 
-        elif status.command=="Ini_Stage":
+        elif status.command=="ini_stage":
             #status.attributes[0]=edict(initialized=bool,info="", controller=)
             self.update_status("Stage initialized: {:} info: {:}".format(status.attributes[0]['initialized'],status.attributes[0]['info']),wait_time=self.wait_time,log_type='log')
             if status.attributes[0]['initialized']:
@@ -422,9 +425,9 @@ class DAQ_Move(Ui_Form,QObject):
             else:
                 self.Initialized_state=False
             if self.Initialized_state:
-                self.Get_position()
+                self.get_position()
 
-        elif status.command=="Close":
+        elif status.command=="close":
             try:
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
                 self.stage_thread.exit()
@@ -439,11 +442,11 @@ class DAQ_Move(Ui_Form,QObject):
                 self.update_status(str(e),log_type="log")
             self.Initialized_state=False
 
-        elif status.command=="Check_position":
+        elif status.command=="check_position":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
 
-        elif status.command=="Move_Done":
+        elif status.command=="move_done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
             self.Move_done=True
@@ -455,7 +458,7 @@ class DAQ_Move(Ui_Form,QObject):
             self.current_position=status.attributes[0]
             self.Move_done=False
             self.ui.Move_Done_LED.set_as_false()
-            self.command_stage.emit(ThreadCommand(command="Move_Abs",attributes=[self.target_position]))
+            self.command_stage.emit(ThreadCommand(command="move_Abs",attributes=[self.target_position]))
         elif status.command=='update_settings':
             #ThreadCommand(command='update_settings',attributes=[path,data,change]))
             try:
@@ -504,11 +507,11 @@ class DAQ_Move(Ui_Form,QObject):
         except Exception as e:
             pass
 
-    def Move_Abs(self,position):
+    def move_Abs(self, position):
         """
             | Make the move from an absolute position.
             |
-            | The move is made if target is in bounds, sending the thread command "Reset_Stop_Motion" and "Move_Abs".
+            | The move is made if target is in bounds, sending the thread command "Reset_Stop_Motion" and "move_Abs".
 
             =============== ========== ===========================================
             **Parameters**   **Type**    **Description**
@@ -528,7 +531,7 @@ class DAQ_Move(Ui_Form,QObject):
                 self.update_status("Moving",wait_time=self.wait_time)
                 #self.check_out_bounds(position)
                 self.command_stage.emit(ThreadCommand(command="Reset_Stop_Motion"))
-                self.command_stage.emit(ThreadCommand(command="Move_Abs",attributes=[position]))
+                self.command_stage.emit(ThreadCommand(command="move_Abs",attributes=[position]))
 
 
         except Exception as e:
@@ -550,11 +553,11 @@ class DAQ_Move(Ui_Form,QObject):
     ##            raise Exception("{:s} is out of specified position bounds".format(self.title))
 
 
-    def Move_Rel(self,rel_position):
+    def move_Rel(self, rel_position):
         """
             | Make a move from the given relative psition and the current one.
             |
-            | The move is done if (current position + relative position) is in bounds sending Threads Commands "Reset_Stop_Motion" and "Move_Done"
+            | The move is done if (current position + relative position) is in bounds sending Threads Commands "Reset_Stop_Motion" and "move_done"
 
             =============== ========== ===================================================
             **Parameters**   **Type**    **Description**
@@ -573,15 +576,15 @@ class DAQ_Move(Ui_Form,QObject):
             self.update_status("Moving",wait_time=self.wait_time)
             #self.check_out_bounds(self.target_position)
             self.command_stage.emit(ThreadCommand(command="Reset_Stop_Motion"))
-            self.command_stage.emit(ThreadCommand(command="Move_Rel",attributes=[rel_position]))
+            self.command_stage.emit(ThreadCommand(command="move_Rel",attributes=[rel_position]))
 
 
         except Exception as e:
             self.update_status(str(e),log_type="log")
 
-    def Move_Home(self):
+    def move_Home(self):
         """
-            Send the thread commands "Reset_Stop_Motion" and "Move_Home" and update the status.
+            Send the thread commands "Reset_Stop_Motion" and "move_Home" and update the status.
 
             See Also
             --------
@@ -592,36 +595,36 @@ class DAQ_Move(Ui_Form,QObject):
             self.Move_done=False
             self.update_status("Moving",wait_time=self.wait_time)
             self.command_stage.emit(ThreadCommand(command="Reset_Stop_Motion"))
-            self.command_stage.emit(ThreadCommand(command="Move_Home"))
+            self.command_stage.emit(ThreadCommand(command="move_Home"))
 
 
         except Exception as e:
             self.update_status(str(e),log_type="log")
 
-    def Get_position(self):
+    def get_position(self):
         """
-            Get the current position from the launched thread via the "Check_position" Thread Command.
+            Get the current position from the launched thread via the "check_position" Thread Command.
 
             See Also
             --------
             update_status, DAQ_utils.ThreadCommand
         """
         try:
-            self.command_stage.emit(ThreadCommand(command="Check_position"))
+            self.command_stage.emit(ThreadCommand(command="check_position"))
 
         except Exception as e:
             self.update_status(str(e),log_type="log")
 
-    def Stop_Motion(self):
+    def stop_Motion(self):
         """
-            Stop any motion via the launched thread with the "Stop_Motion" Thread Command.
+            stop any motion via the launched thread with the "stop_Motion" Thread Command.
 
             See Also
             --------
             update_status, DAQ_utils.ThreadCommand
         """
         try:
-            self.command_stage.emit(ThreadCommand(command="Stop_Motion"))
+            self.command_stage.emit(ThreadCommand(command="stop_Motion"))
         except Exception as e:
             self.update_status(str(e),log_type="log")
 
@@ -668,13 +671,13 @@ class DAQ_Move_stage(QObject):
     def queue_command(self,command=ThreadCommand()):
         """
             Interpret the given Thread Command.
-                * In case of **'Ini_Stage'** command, init a stage from command attributes.
-                * In case of **'Close'** command, unitinalise the stage closing hardware and emitting the corresponding status signal
-                * In case of **'Move_Abs'** command, call the Move_Abs method with position from command attributes
-                * In case of **'Move_Rel'** command, call the Move_Rel method with the relative position from the command attributes.
-                * In case of **'Move_Home'** command, call the Move_Home method
-                * In case of **'Check_position'** command, get the current position from the Check_position method
-                * In case of **'Stop_motion'** command, stop any motion via the Stop_Motion method
+                * In case of **'ini_stage'** command, init a stage from command attributes.
+                * In case of **'close'** command, unitinalise the stage closing hardware and emitting the corresponding status signal
+                * In case of **'move_Abs'** command, call the move_Abs method with position from command attributes
+                * In case of **'move_Rel'** command, call the move_Rel method with the relative position from the command attributes.
+                * In case of **'move_Home'** command, call the move_Home method
+                * In case of **'check_position'** command, get the current position from the check_position method
+                * In case of **'Stop_motion'** command, stop any motion via the stop_Motion method
                 * In case of **'Reset_Stop_Motion'** command, set the motion_stopped attribute to false
 
             =============== =============== ================================
@@ -685,33 +688,33 @@ class DAQ_Move_stage(QObject):
 
             See Also
             --------
-            DAQ_utils.ThreadCommand, Ini_Stage, Close, Move_Abs, Move_Rel, Move_Home, Check_position, Stop_Motion
+            DAQ_utils.ThreadCommand, ini_stage, close, move_Abs, move_Rel, move_Home, check_position, stop_Motion
         """
         try:
-            if command.command=="Ini_Stage":
-                status=self.Ini_Stage(*command.attributes)# return edict(initialized=bool,info="", controller=, stage=)
+            if command.command=="ini_stage":
+                status=self.ini_stage(*command.attributes)# return edict(initialized=bool,info="", controller=, stage=)
                 self.status_sig.emit(ThreadCommand(command=command.command,attributes=[ status,'log']))
 
 
-            elif command.command=="Close":
-                status=self.Close()
+            elif command.command=="close":
+                status=self.close()
                 self.status_sig.emit(ThreadCommand(command=command.command,attributes=[status]))
 
-            elif command.command=="Move_Abs":
-                self.Move_Abs(*command.attributes)
+            elif command.command=="move_Abs":
+                self.move_Abs(*command.attributes)
 
-            elif command.command=="Move_Rel":
-                self.Move_Rel(*command.attributes)
+            elif command.command=="move_Rel":
+                self.move_Rel(*command.attributes)
 
-            elif command.command=="Move_Home":
-                self.Move_Home()
+            elif command.command=="move_Home":
+                self.move_Home()
 
-            elif command.command=="Check_position":
-                pos=self.Check_position()
+            elif command.command=="check_position":
+                pos=self.check_position()
 
 
-            elif command.command=="Stop_Motion":
-                self.Stop_Motion()
+            elif command.command=="stop_Motion":
+                self.stop_motion()
 
             elif command.command=="Reset_Stop_Motion":
                 self.motion_stoped=False
@@ -720,9 +723,9 @@ class DAQ_Move_stage(QObject):
 
 
 
-    def Ini_Stage(self,params_state=None,controller=None):
+    def ini_stage(self, params_state=None, controller=None):
         """
-            Init a stage updating the hardware and sending an hardware Move_Done signal.
+            Init a stage updating the hardware and sending an hardware move_done signal.
 
             =============== =================================== ==========================================================================================================================
             **Parameters**   **Type**                             **Description**
@@ -743,7 +746,7 @@ class DAQ_Move_stage(QObject):
         try:
             class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
             self.hardware=class_(self,params_state)
-            status.update(self.hardware.Ini_Stage(controller)) #return edict(info="", controller=, stage=)
+            status.update(self.hardware.ini_stage(controller)) #return edict(info="", controller=, stage=)
 
             self.hardware.Move_Done_signal.connect(self.Move_Done)
 
@@ -779,16 +782,16 @@ class DAQ_Move_stage(QObject):
         elif path[0]=='move_settings':
             self.hardware.update_settings(settings_parameter_dict)
 
-    def Close(self):
+    def close(self):
         """
             Uninitialize the stage closing the hardware.
 
         """
-        self.hardware.Close()
+        self.hardware.close()
         return "Stage uninitialized"
 
 
-    def Move_Abs(self,position):
+    def move_Abs(self, position):
         """
             Make the hardware absolute move from the given position.
 
@@ -800,13 +803,13 @@ class DAQ_Move_stage(QObject):
 
             See Also
             --------
-            Move_Abs
+            move_Abs
         """
         self.target_position=position
-        pos=self.hardware.Move_Abs(position)
+        pos=self.hardware.move_Abs(position)
 
 
-    def Move_Rel(self,rel_position):
+    def move_Rel(self, rel_position):
         """
             Make the hardware relative move from the given relative position added to the current one.
 
@@ -818,47 +821,47 @@ class DAQ_Move_stage(QObject):
 
             See Also
             --------
-            Move_Rel
+            move_Rel
         """
         self.target_position=self.current_position+rel_position
-        pos=self.hardware.Move_Rel(rel_position)
+        pos=self.hardware.move_Rel(rel_position)
 
 
-    def Move_Home(self):
+    def move_Home(self):
         """
             Make the hardware move to the init position.
 
         """
         self.target_position=0
-        self.hardware.Move_Home()
+        self.hardware.move_Home()
 
 
-    def Check_position(self):
+    def check_position(self):
         """
             Get the current position checking the harware position.
 
         """
-        pos=self.hardware.Check_position()
+        pos=self.hardware.check_position()
         return pos
 
 
-    def Stop_Motion(self):
+    def stop_motion(self):
         """
-            Stop hardware motion with motion_stopped attribute updtaed to True and a status signal sended with an "update_status" Thread Command
+            stop hardware motion with motion_stopped attribute updtaed to True and a status signal sended with an "update_status" Thread Command
 
             See Also
             --------
-            DAQ_utils.ThreadCommand, Stop_Motion
+            DAQ_utils.ThreadCommand, stop_Motion
         """
         self.status_sig.emit(ThreadCommand(command="Update_Status",attributes=["Motion stoping",'log']))
         self.motion_stoped=True
-        self.hardware.Stop_Motion()
+        self.hardware.stop_motion()
 
 
     @pyqtSlot(float)
     def Move_Done(self,pos):
         """
-            | Send a "Move_Done" Thread Command with the given position as an attribute and update the current position attribute.
+            | Send a "move_done" Thread Command with the given position as an attribute and update the current position attribute.
             |
             | Check if position reached within epsilon => not necessary this is done within the hardware code see polling for instance
 
@@ -869,25 +872,25 @@ class DAQ_Move_stage(QObject):
 
         #check if position reached within epsilon=> not necessary this is done within the hardware code see polling for instance
         self.current_position=pos
-        self.status_sig.emit(ThreadCommand(command="Move_Done",attributes=[pos]))
+        self.status_sig.emit(ThreadCommand(command="move_done",attributes=[pos]))
         #if self.motion_stoped:
-        #    self.status_sig.emit(ThreadCommand(command="Move_Done",attributes=[pos]))
+        #    self.status_sig.emit(ThreadCommand(command="move_done",attributes=[pos]))
         #else:
         #    if np.abs(self.target_position-pos)>self.hardware.settings.child(('epsilon')).value():
         #        self.status_sig.emit(ThreadCommand("Move_Not_Done",[pos]))
         #    else:
-        #        self.status_sig.emit(ThreadCommand("Move_Done",[pos]))
+        #        self.status_sig.emit(ThreadCommand("move_done",[pos]))
 
     @pyqtSlot(float)
     def  Move_Stoped(self,pos):
         """
-            Send a "Move_Done" Thread Command with the given position as an attribute.
+            Send a "move_done" Thread Command with the given position as an attribute.
 
             See Also
             --------
             DAQ_utils.ThreadCommand
         """
-        self.status_sig.emit(ThreadCommand("Move_Done",[pos]))
+        self.status_sig.emit(ThreadCommand("move_done",[pos]))
 
 
 
