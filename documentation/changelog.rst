@@ -3,6 +3,8 @@
 =========
 Changelog
 =========
+* :release:`1.1.1 <2018-12-18>`
+* :bug:`0` Some wrong call to plugins in preset_manager
 * :release:`1.1.0 <2018-12-18>`
 * :feature:`0` removed plugins from tree structure. May be installed from github or pypi as external library
 * :feature:`0` When started from DAQ_scan, all Quit pushbutton are disabled within individual Move and Viewer modules.

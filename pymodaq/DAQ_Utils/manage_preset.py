@@ -10,9 +10,9 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed afte
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
 from pymodaq.daq_move.daq_move_main import DAQ_Move
-from pymodaq.plugins import daq_move_plugins as movehardware
+from pymodaq_plugins import daq_move_plugins as movehardware
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.plugins.daq_viewer_plugins import plugins_2D, plugins_1D, plugins_0D
+from pymodaq_plugins.daq_viewer_plugins import plugins_2D, plugins_1D, plugins_0D
 
 from pymodaq.daq_utils.daq_utils import select_file
 
@@ -216,8 +216,9 @@ def set_param_from_param(param_old,param_new):
 #check if preset_mode directory exists on the drive
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
 local_path = get_set_local_dir()
-if not os.path.isdir(os.path.join(local_path, 'preset_modes')):
-    os.makedirs(os.path.join(local_path, 'preset_modes'))
+preset_path= os.path.join(local_path, 'preset_modes')
+if not os.path.isdir(preset_path):
+    os.makedirs(preset_path)
 
 
 class PresetManager():
@@ -238,7 +239,7 @@ class PresetManager():
                 self.set_new_preset()
 
             elif msgBox.clickedButton() == modify_button:
-                path = select_file(start_path=start_path,save=False, ext='xml')
+                path = select_file(preset_path=preset_path,save=False, ext='xml')
                 if path != '':
                     self.set_file_preset(str(path))
             else: #cancel
@@ -291,7 +292,7 @@ class PresetManager():
             # save preset parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(start_path,
+            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(preset_path,
                                                                                self.preset_params.child(
                                                                                    ('filename')).value()))
 
