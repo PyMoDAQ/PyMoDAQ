@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Changelog &mdash; PyMoDAQ 1.0.1 documentation</title>
+  <title>Changelog &mdash; PyMoDAQ 1.1.1 documentation</title>
   
 
   
@@ -62,7 +62,7 @@
             
             
               <div class="version">
-                1.0
+                1.1
               </div>
             
           
@@ -160,12 +160,23 @@
             
   <div class="section" id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="Next feature release">
-<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next feature release</a></h2><ul class="simple">
+<div class="section" id="Next bugfix release">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next bugfix release</a></h2><ul class="simple">
+<li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> Corrected the background substraction in DAQ_Viewer</li>
+</ul>
+</div>
+<div class="section" id="1.1.1">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.1.1">1.1.1</a> <span style="font-size: 75%;">2018-12-18</span></h2><ul class="simple">
+<li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> Some wrong call to plugins in preset_manager</li>
+</ul>
+</div>
+<div class="section" id="1.1.0">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.1.0">1.1.0</a> <span style="font-size: 75%;">2018-12-18</span></h2><ul class="simple">
 <li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Tested entry-points after installation.*.exe files created successfully with manual setup install.
 But the link to working python is missing with pip install (python.exe and pythonw.exe) must be on the <code class="docutils literal notranslate"><span class="pre">PATH</span></code></li>
 <li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Moved the preset_mode folder out the pymodaq tree, but relative to HOMEPATH (windows) or HOME (linux &amp; OSX) environment variable</li>
 <li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> When started from DAQ_scan, all Quit pushbutton are disabled within individual Move and Viewer modules.</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> removed plugins from tree structure. May be installed from github or pypi as external library</li>
 </ul>
 </div>
 <div class="section" id="1.0.1">

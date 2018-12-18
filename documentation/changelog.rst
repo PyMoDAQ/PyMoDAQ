@@ -3,6 +3,8 @@
 =========
 Changelog
 =========
+
+* :bug:`0` Corrected the background substraction in DAQ_Viewer
 * :release:`1.1.1 <2018-12-18>`
 * :bug:`0` Some wrong call to plugins in preset_manager
 * :release:`1.1.0 <2018-12-18>`

@@ -11,12 +11,18 @@ Plugins
 
 Any new hardware has to be included in PyMoDAQ as a python plugin. This is a script containing a python object following a particular template and behaviour and inheriting from a base class.
 Plugins are articulated given their type: Moves or Viewers and for the last their main dimensionality: **0D**, **1D** or **2D**.
-It is recommended to start from the *template* plugins given with the base version of PyMoDAQ (daq_move_Template, daq_NDviewer_Template,...)
-and available for each type of module
-and then check from other examples (plugin `repository`__) the proper way of writing a plugin. You will find below some information on the **how to**
+It is recommended to start from the *template* plugins (daq_move_Template, daq_NDviewer_Template, see below)
+and then check from other examples (pymodaq_plugins `repository`__) the proper way of writing a plugin. You will find below some information on the **how to**
 but comparison with existing ones will be beneficial.
 
-__ https://github.com/CEMES-CNRS/Plugins
+__ https://github.com/CEMES-CNRS/pymodaq_plugins
+
+Installation
+------------
+
+All plugins are located in the **pymodaq_plugins** repository on github. This constitutes a python package that will be
+installed together with PyMoDAQ (or manually install it if you don't want the up to date version). PyMoDAQ will therefore
+call the plugins from the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
 
 
 Naming convention:
@@ -26,11 +32,11 @@ For the plugin to be properly recognised by PyMoDAQ, its location and name must 
 
 * An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)
 * The plugin class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well)
-* the script will be located within pymodaq's installed package tree in ``C:\WPy-3710\...\pymodaq\plugins\daq_move_plugins\``
+* the script will be located within pymodaq_plugins installed package tree in ``C:\WPy-3710\...\pymodaq_plugins\daq_move_plugins\``
 
 * A detector plugin of dimensionality N (N=0, 1 or 2) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
 * The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
-* the script will be located within pymodaq's installed package tree in ``C:\WPy-3710\...\pymodaq\plugins\daq_viewer_plugins\plugins_ND`` (replace N by 0, 1 or 2)
+* the script will be located within pymodaq_plugins installed package tree in ``C:\WPy-3710\...\pymodaq_plugins\daq_viewer_plugins\plugins_ND`` (replace N by 0, 1 or 2)
 
 .. _hardware_settings:
 
@@ -40,7 +46,7 @@ Hardware Settings
 An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
 These settings will appear on the UI as a tree of parameters with a title and different types, see :numref:`figure_settings`.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object ``self.settings``.
-This object is based on the ``Parameter`` object defined in `pyqtgraph`__.
+This object inherits from on the ``Parameter`` object defined in `pyqtgraph`__.
 
 __ http://www.pyqtgraph.org/documentation/parametertree/index.html
 
@@ -49,10 +55,9 @@ __ http://www.pyqtgraph.org/documentation/parametertree/index.html
 .. figure:: /image/settings_example.png
    :alt: Settings example
 
-
    Typical hardware settings represented as a tree structure (here from the ``daq_2Dviewer_AndorCCD`` plugin)
 
-Here is an example of such a dictionary corresponding to :numref:`figure_settings`:
+Here is an example of such a list of dictionaries corresponding to :numref:`figure_settings`:
 
 .. code-block:: python
 
@@ -121,7 +126,7 @@ DAQ Move plugin template
 ------------------------
 
 An actuator plugin is a python class inheriting from a base class. Let's say you want to create the *template* plugin.
-You will first create a ``daq_move_Template.py`` file in the ``\pymodaq\plugins\daq_move_plugins`` folder.
+You will first create a ``daq_move_Template.py`` file in the ``\pymodaq_plugins\daq_move_plugins`` folder.
 The plugin class will be called ``DAQ_Move_Template``.
 
 See :download:`daq_move_Template.py <daq_move_Template.py>` for a detailed template.
@@ -133,7 +138,7 @@ DAQ Viewer plugin template
 --------------------------
 
 A detector plugin is a python class inheriting from a base class. Let's say you want to create the *template* plugin.
-You will first create a ``daq_NDviewer_Template.py`` file in the ``\pymodaq\plugins\daq_viewer_plugins\plugins_ND\``
+You will first create a ``daq_NDviewer_Template.py`` file in the ``\pymodaq_plugins\daq_viewer_plugins\plugins_ND\``
 folder (with N=0, 1 or 2 depending the data dimensionality of your detector).
 The plugin class will be called ``DAQ_NDViewer_Template``.
 
@@ -272,20 +277,38 @@ Documentation from Andor SDK concerning the WaitForAcquisition method of the dll
   | It will use less processor resources than continuously polling with the GetStatus function. If you wish to restart the calling thread without waiting for an Acquisition event, call the function CancelWait.
 
 
+.. _hardware_averaging:
+
+Hardware averaging:
+-------------------
+
+By default, if averaging of data is needed the Viewer module will take care of it software wise. However, if the hardware
+controller provides an efficient method to do it (that will save time) then you should set the class field
+``hardware_averaging`` to ``True``.
+
+.. code-block:: python
+
+    class DAQ_NDViewer_Template(DAQ_Viewer_base):
+    """
+     Template to be used in order to write your own viewer modules
+    """
+        hardware_averaging = True #will use the accumulate acquisition mode if averaging
+        #is True else averaging is done software wise
+
 
 
 Hardware needed files
 ---------------------
 
 If you are using/referring to custom python wrappers/dlls... within your plugin and need a place where to copy them
-in PyMoDAQ, then use the ``\pymodaq\plugins\hardware`` folder. For instance, the ``daq_2Dviewer_AndorCCD`` plugin need various files stored
-in the ``andor`` folder (on github repository). I would therefore copy it as ``\pymodaq\plugins\hardware\andor``
+in PyMoDAQ, then use the ``\pymodaq_plugins\hardware`` folder. For instance, the ``daq_2Dviewer_AndorCCD`` plugin need various files stored
+in the ``andor`` folder (on github repository). I would therefore copy it as ``\pymodaq_plugins\hardware\andor``
 and call whatever module I need within (meaning there is a __init__.py file in the *andor* folder) as:
 
 .. code-block:: python
 
     #import controller wrapper
-    from pymodaq.plugins.hardware.andor import daq_AndorSDK2 #this import the module DAQ_AndorSDK2 containing classes, methods...
+    from pymodaq_plugins.hardware.andor import daq_AndorSDK2 #this import the module DAQ_AndorSDK2 containing classes, methods...
     #and then use it as you see fit in your module
 
 
@@ -301,3 +324,16 @@ It is possible to use a TCP/IP plugin in order to communicate with a distant cli
 
 This plugin is still experimental and focused on one particular relation with a client. Please open an issue on github
 if you have specific need and/or propositions.
+
+How to contribute?
+------------------
+
+If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
+to do so!!), you will have to follow the rules as
+stated above. However, the best practice would be to *fork* pymodaq_plugins repository. On windows, you can use
+`Github Desktop`__. Then you can manually install the forked package (typically using ``pip -e install .`` from
+winpython command line where you *cd* within the forked package. This command will kind of install the package but
+any change you apply on the local folderwill be applied on the package. Once you're ready with a working plugin, you can then
+*push* your branch that will be merged with the main branch after validation.
+
+__ https://desktop.github.com/

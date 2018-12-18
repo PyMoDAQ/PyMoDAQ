@@ -105,6 +105,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
             {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
             {'title': 'Live averaging:', 'name': 'live_averaging', 'type': 'bool', 'default': False, 'value': False},
+            {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
             {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 100, 'value': 100, 'min': 0},
             {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False, 'value': False},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': False, 'expanded': False,'children':[
@@ -172,10 +173,6 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.ui.status_message=QtWidgets.QLabel()
         self.ui.status_message.setMaximumHeight(25)
         self.ui.statusbar.addWidget(self.ui.status_message)
-        self.ui.current_Naverage=QSpinBox_ro()
-        self.ui.current_Naverage.setToolTip('Current average value')
-        self.ui.statusbar.addPermanentWidget(self.ui.current_Naverage)
-        self.ui.current_Naverage.setVisible(False)
 
 
         ############IMPORTANT############################
@@ -633,14 +630,23 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.DAQ_type=param.value()
                     self.change_viewer()
                     self.settings.child('continuous_saving','do_save').setValue(False)
+                    if param.value() == 'DAQ2D':
+                        self.settings.child('main_settings', 'axes').show()
+                    else:
+                        self.settings.child('main_settings', 'axes').hide()
                 #elif param.name()=='Nviewers': #this parameter is readonly it is updated from the number of items in the data list sent to show_data
                 #    self.update_viewer_pannels(param.value())
                 elif param.name()=='show_averaging':
-                    pass
+                    self.settings.child('main_settings', 'live_averaging').setValue(False)
                 elif param.name()=='live_averaging':
-                    self.ui.current_Naverage.setVisible(param.value())
+
+                    self.settings.child('main_settings','show_averaging').setValue(False)
                     if param.value()==True:
+                        self.settings.child('main_settings', 'N_live_averaging').show()
                         self.ind_continuous_grab=0
+                        self.settings.child('main_settings', 'N_live_averaging').setValue(0)
+                    else:
+                        self.settings.child('main_settings', 'N_live_averaging').hide()
                 elif param.name() in custom_tree.iter_children(self.settings.child('main_settings','axes'),[]):
                     if self.DAQ_type=="DAQ2D":
                         for viewer in self.ui.viewers:
@@ -1258,14 +1264,15 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             if self.ui.do_bkg_cb.isChecked() and self.bkg is not None:
                 try:
                     for ind_channels,channels in enumerate(datas):
-                        for ind_channel,channel in enumerate(channels):
+                        for ind_channel,channel in enumerate(channels['data']):
                             datas[ind_channels]['data'][ind_channel]=datas[ind_channels]['data'][ind_channel]-self.bkg[ind_channels]['data'][ind_channel]
                 except Exception as e:
                     self.update_status(str(e),self.wait_time,'log')
 
 
             if self.settings.child('main_settings','live_averaging').value():
-                self.ui.current_Naverage.setValue(self.ind_continuous_grab)
+                self.settings.child('main_settings','N_live_averaging').setValue(self.ind_continuous_grab)
+                ##self.ui.current_Naverage.setValue(self.ind_continuous_grab)
                 self.ind_continuous_grab+=1
                 if self.ind_continuous_grab>1:
                     try:
