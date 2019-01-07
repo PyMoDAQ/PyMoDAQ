@@ -99,12 +99,13 @@
 <li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Viewer</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#settings">Settings</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#data-viewers">Data Viewers</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Plugins.html">Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Utility_Modules.html">Utility Modules</a></li>
 </ul>
@@ -181,26 +182,28 @@
             
   <div class="section" id="daq-viewer">
 <span id="daq-viewer-module"></span><h1>DAQ Viewer<a class="headerlink" href="#daq-viewer" title="Permalink to this headline">¶</a></h1>
-<p>Module to be used to interface any detector and plot live data and many other features
-such as data analysis. The default detectors are the mock ones (a kind of software based
-detector generating data useful to test the program). Other detectors may be loaded as
-plugins, see section: <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a>.</p>
+<p>This module is to be used to interface any detector. It will display hardware settings
+and display data as exported by the hardware plugins (see <a class="reference internal" href="Plugins.html#data-emission"><span class="std std-ref">Emission of data</span></a>). The default detector
+is a Mock ones (a kind of software based
+detector generating data and useful to test the program development). Other detectors may be loaded as
+plugins, see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a>.</p>
 <div class="section" id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p>This module has a generic interface comprised of a dockable panel related to the settings and one or more viewers
-specific of the type of data to be acquired (see <a class="reference internal" href="#data-viewers"><span class="std std-ref">Data Viewers</span></a>. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 4</span></a> displays a typical
+specific of the type of data to be acquired (see <a class="reference internal" href="data_viewers.html#data-viewers"><span class="std std-ref">Data Viewers</span></a>. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 7</span></a> displays a typical
 DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id4">
+<div class="figure" id="id1">
 <span id="figure-daq-viewer"></span><img alt="Viewer panel" src="../../_images/DAQ_Viewer_pannel.png" />
-<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Typical DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</span></p>
+<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span></p>
 </div>
 </div>
 <div class="section" id="settings">
 <h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
 <p>The settings panel is comprised of 2 sections, the top one displays buttons to select a given hardware
-(<em>DAQ type</em> and <em>Detector</em>), initialize it, grab and save data. The bottom one is a Tree type parameter
+(<em>DAQ type</em> and <em>Detector</em>), initialize it, grab and save data. The bottom one,
+<a class="reference internal" href="#figure-daq-viewer-settings"><span class="std std-numref">Fig. 8</span></a>, is a Tree type parameter
 list displaying the viewer main settings (<a class="reference internal" href="#viewer-settings"><span class="std std-ref">Main settings</span></a>) and specific settings of the chosen hardware
 (see <a class="reference internal" href="Plugins.html#hardware-settings"><span class="std std-ref">Hardware Settings</span></a>).</p>
 <div class="section" id="hardware-initialization">
@@ -229,44 +232,35 @@ vector detectors (spectrometer for instance) and image like detectors.</li>
 <li><a class="reference internal" href="../../_images/open_settings.png"><img alt="load_sett" src="../../_images/open_settings.png" style="width: 30pt; height: 15pt;" /></a>: Recall from a file the settings</li>
 </ul>
 <p>The last two options are useful only in stand alone mode. When used with the DAQ_Scan module, all settings are <em>preset</em>
-using the <em>preset manager</em> (see <a class="reference internal" href="DAQ_Scan.html#preset-manager"><span class="std std-ref">Preset manager</span></a>).</p>
+using the <em>preset manager</em> (see <a class="reference internal" href="Utility_Modules.html#preset-manager"><span class="std std-ref">Preset manager</span></a>).</p>
 </div>
 <div class="section" id="main-settings">
 <span id="viewer-settings"></span><h3>Main settings<a class="headerlink" href="#main-settings" title="Permalink to this headline">¶</a></h3>
 <p>The first tree section in the settings refers to the acquisition options. The first two items are just a reminder of the type of
 detector currently activated.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id2">
+<span id="figure-daq-viewer-settings"></span><img alt="settings" src="../../_images/settings.png" />
+<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span></p>
+</div>
 <ul class="simple">
-<li><em>DAQ type</em>: readonly string recalling the DAQ type used</li>
-<li><em>Detector type</em>: readonly string recalling the selected plugin</li>
-<li><em>Nviewers</em>: readonly integer displaying the number of data viewers</li>
-<li><em>Controller ID</em>: integer used to deal with a controller controlling multiple hardware, see <a class="reference internal" href="DAQ_Scan.html#multiple-hardware"><span class="std std-ref">Multiple hardware from one controller</span></a></li>
-<li><em>Naverage</em>: integer to set in order to do data averaging, see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>.</li>
-<li><em>Show averaging</em>: in the case of software averaging (see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>), if this is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, intermediate averaging data will be displayed</li>
-<li><em>Live averaging</em>: <em>show averaging</em> must be set tot <code class="docutils literal notranslate"><span class="pre">False</span></code>. If set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, a <em>live</em> <code class="docutils literal notranslate"><span class="pre">grab</span></code> will perform
+<li><strong>DAQ type</strong>: readonly string recalling the DAQ type used</li>
+<li><strong>Detector type</strong>: readonly string recalling the selected plugin</li>
+<li><strong>Nviewers</strong>: readonly integer displaying the number of data viewers</li>
+<li><strong>Controller ID</strong>: integer used to deal with a controller controlling multiple hardware, see <a class="reference internal" href="DAQ_Scan.html#multiple-hardware"><span class="std std-ref">Multiple hardware from one controller</span></a></li>
+<li><strong>Naverage</strong>: integer to set in order to do data averaging, see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>.</li>
+<li><strong>Show averaging</strong>: in the case of software averaging (see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>), if this is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, intermediate averaging data will be displayed</li>
+<li><strong>Live averaging</strong>: <em>show averaging</em> must be set tot <code class="docutils literal notranslate"><span class="pre">False</span></code>. If set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, a <em>live</em> <code class="docutils literal notranslate"><span class="pre">grab</span></code> will perform
 non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one should average, then set <em>Naverage</em> to this value</li>
-<li><em>Wait time (ms)</em>: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging</li>
-<li><em>Continuous saving</em>: useful for data logging. Will display new options below in order to set a h5 file to log live data</li>
-<li><em>Axis options</em>: only valid for 2D detector. You can add labels, units, scaling and offset (with respect to pixels)
-to both x and y axis of the detector</li>
+<li><strong>Wait time (ms)</strong>: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging</li>
+<li><strong>Continuous saving</strong>: useful for data logging. Will display new options below in order to set a h5 file to log live data, see <a class="reference internal" href="../saving.html#continuous-saving"><span class="std std-ref">Continuous Saving</span></a>.</li>
+<li><strong>Overshoot options</strong>: useful to protect the experiment. If this is activated, then as soon as any value of the datas exported by this
+detector reaches the <em>overshoot value</em>, the module will throw a <code class="docutils literal notranslate"><span class="pre">overshoot_signal</span></code> (boolean PyQtSignal) that will <strong>stop the DAQ_Scan execution right away</strong>.
+Other features related will soon be added (action triggered on a DAQ_Move, for instance a shutter on a laser beam)</li>
+<li><strong>Axis options</strong>: only valid for 2D detector. You can add labels, units, scaling and offset (with respect to pixels)
+to both x and y axis of the detector. Redundant with the plugin data export feature (see <a class="reference internal" href="Plugins.html#data-emission"><span class="std std-ref">Emission of data</span></a>)</li>
 </ul>
-</div>
-<div class="section" id="continuous-saving">
-<h3>Continuous saving<a class="headerlink" href="#continuous-saving" title="Permalink to this headline">¶</a></h3>
-</div>
-</div>
-<div class="section" id="data-viewers">
-<span id="id1"></span><h2>Data Viewers<a class="headerlink" href="#data-viewers" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="d-viewer">
-<h3>0D Viewer<a class="headerlink" href="#d-viewer" title="Permalink to this headline">¶</a></h3>
-</div>
-<div class="section" id="id2">
-<h3>1D Viewer<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
-</div>
-<div class="section" id="id3">
-<h3>2D Viewer<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
-</div>
-<div class="section" id="nd-viewer">
-<span id="ndviewer"></span><h3>ND Viewer<a class="headerlink" href="#nd-viewer" title="Permalink to this headline">¶</a></h3>
 </div>
 </div>
 </div>

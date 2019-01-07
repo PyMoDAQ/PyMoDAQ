@@ -32,7 +32,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Utility Modules" href="Utility_Modules.html" />
-    <link rel="prev" title="DAQ Scan" href="DAQ_Scan.html" /> 
+    <link rel="prev" title="Saving datas" href="../saving.html" /> 
 
   
   <script src="../../_static/js/modernizr.min.js"></script>
@@ -95,6 +95,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Main_Modules.html">Main Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Plugins</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#naming-convention">Naming convention:</a></li>
@@ -214,16 +216,16 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 <div class="section" id="hardware-settings">
 <span id="id2"></span><h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
 <p>An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
-These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a>.
+These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 23</span></a>.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object <code class="docutils literal notranslate"><span class="pre">self.settings</span></code>.
 This object inherits from on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id9">
 <span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
-<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
+<p class="caption"><span class="caption-number">Fig. 23 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
 </div>
-<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a>:</p>
+<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 23</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Dll library:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;andor_lib&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;browsepath&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">libpath</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera SN:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_serialnumber&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
@@ -238,11 +240,11 @@ This object inherits from on the <code class="docutils literal notranslate"><spa
 </div>
 <p>The list of available types of parameters <a href="#id4"><span class="problematic" id="id5">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">pymodaq.daq_utils.custom_parameter_tree.py</span></code>) is:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a> is of type group</li>
+<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 23</span></a> is of type group</li>
 <li><code class="docutils literal notranslate"><span class="pre">int</span></code> : settable integer (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">float</span></code> : settable float (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">str</span></code> : a QLineEdit object (see Qt5 documentation)</li>
-<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 5</span></a> is a combo box</li>
+<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 23</span></a> is a combo box</li>
 <li><code class="docutils literal notranslate"><span class="pre">bool</span></code> : checkable boolean</li>
 <li><code class="docutils literal notranslate"><span class="pre">led</span></code> : checkable boolean in the form of a green (True) of red (False) led</li>
 <li><code class="docutils literal notranslate"><span class="pre">date_time</span></code> : a QDateTime object (see Qt5 documentation)</li>
@@ -295,7 +297,7 @@ folder (with N=0, 1 or 2 depending the data dimensionality of your detector).
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_NDViewer_Template</span></code>.</p>
 <p>See <a class="reference download internal" download="" href="../../_downloads/889d5f246ff977002f43fe7fb2305bdb/daq_NDviewer_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code></a> for a detailed template.</p>
 <div class="section" id="emission-of-data">
-<h3>Emission of data<a class="headerlink" href="#emission-of-data" title="Permalink to this headline">¶</a></h3>
+<span id="data-emission"></span><h3>Emission of data<a class="headerlink" href="#emission-of-data" title="Permalink to this headline">¶</a></h3>
 <p>When data are ready (see <a class="reference internal" href="#data-ready"><span class="std std-ref">Data ready?</span></a> to know about that), the plugin has to notify the viewer module in order
 to display data and eventually save them. For this PyMoDAQ use two types of signals (see pyqtsignal documentation for details):</p>
 <ul class="simple">
@@ -307,7 +309,8 @@ used to send temporary data to update the plotting but without triggering anythi
 for data completion before moving on). It is also used in the initialisation of the plugin in order to preset the type and number of data viewers
 displayed by the viewer module. The second signal is to be used once data are fully ready to be send back to the user interface
 and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an example of emission of data:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">data_grabed_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">([</span><span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Camera&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data2D_0</span><span class="p">,</span> <span class="n">data2D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data2D&#39;</span><span class="p">,</span><span class="n">x_axis</span><span class="o">=</span><span class="n">vector_X</span><span class="p">,</span><span class="n">y_axis</span><span class="o">=</span><span class="n">vector_Y</span><span class="p">),</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x_axis</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Wavelength&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span> <span class="s2">&quot;nm&quot;</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vector_X</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">data_grabed_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">([</span><span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Camera&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data2D_0</span><span class="p">,</span> <span class="n">data2D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data2D&#39;</span><span class="p">,</span><span class="n">x_axis</span><span class="o">=</span><span class="n">vector_X</span><span class="p">,</span><span class="n">y_axis</span><span class="o">=</span><span class="n">vector_Y</span><span class="p">),</span>
                               <span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Spectrum&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data1D_0</span><span class="p">,</span> <span class="n">data1D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data1D&#39;</span><span class="p">,</span><span class="n">x_axis</span><span class="o">=</span><span class="n">vector_X</span><span class="p">),</span>
                               <span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Current&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data0D_0</span><span class="p">,</span> <span class="n">data0D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data0D&#39;</span><span class="p">),</span>
                               <span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Datacube&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">dataND_0</span><span class="p">,</span> <span class="n">dataND_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;DataND&#39;</span><span class="p">,</span> <span class="n">nav_axes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span>
@@ -322,9 +325,13 @@ Each array will generate one channel within the corresponding viewer. Here is th
 <li><code class="docutils literal notranslate"><span class="pre">name</span></code>: will display the corresponding value on the viewer dock</li>
 <li><code class="docutils literal notranslate"><span class="pre">type</span></code>: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)</li>
 <li><code class="docutils literal notranslate"><span class="pre">data</span></code>: list of numpy array. Each array shape should correspond to the <em>type</em></li>
-<li><code class="docutils literal notranslate"><span class="pre">x_axis</span></code>: numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance). Default is pixel number</li>
-<li><code class="docutils literal notranslate"><span class="pre">y_axis</span></code>: numpy 1D array representing the y axis of the detector (only for 2D datas). Default is pixel number</li>
-<li><code class="docutils literal notranslate"><span class="pre">nav_axis</span></code>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="DAQ_Viewer.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></li>
+<li><code class="docutils literal notranslate"><span class="pre">x_axis</span></code>: either a numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance,
+default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
+(see code above)</li>
+<li><code class="docutils literal notranslate"><span class="pre">y_axis</span></code>: either a numpy 1D array representing the y axis of the detector (only for 2D detector)
+(default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
+(see code above)</li>
+<li><code class="docutils literal notranslate"><span class="pre">nav_axis</span></code>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></li>
 </ul>
 </div>
 <div class="section" id="data-ready">
@@ -480,7 +487,7 @@ any change you apply on the local folderwill be applied on the package. Once you
         <a href="Utility_Modules.html" class="btn btn-neutral float-right" title="Utility Modules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="DAQ_Scan.html" class="btn btn-neutral" title="DAQ Scan" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../saving.html" class="btn btn-neutral" title="Saving datas" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -144,6 +144,8 @@ The plugin class will be called ``DAQ_NDViewer_Template``.
 
 See :download:`daq_NDviewer_Template.py <daq_NDviewer_Template.py>` for a detailed template.
 
+.. _data_emission:
+
 Emission of data
 ****************
 When data are ready (see :ref:`data_ready` to know about that), the plugin has to notify the viewer module in order
@@ -160,6 +162,7 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
 
 .. code-block:: python
 
+    x_axis = dict(label='Wavelength', units= "nm", data = vector_X)
     self.data_grabed_signal.emit([OrderedDict(name='Camera',data=[data2D_0, data2D_1,...], type='Data2D',x_axis=vector_X,y_axis=vector_Y),
                                   OrderedDict(name='Spectrum',data=[data1D_0, data1D_1,...], type='Data1D',x_axis=vector_X),
                                   OrderedDict(name='Current',data=[data0D_0, data0D_1,...], type='Data0D'),
@@ -174,9 +177,15 @@ Each array will generate one channel within the corresponding viewer. Here is th
 * ``name``: will display the corresponding value on the viewer dock
 * ``type``: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)
 * ``data``: list of numpy array. Each array shape should correspond to the *type*
-* ``x_axis``: numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance). Default is pixel number
-* ``y_axis``: numpy 1D array representing the y axis of the detector (only for 2D datas). Default is pixel number
+* ``x_axis``: either a numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance,
+  default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
+  (see code above)
+* ``y_axis``: either a numpy 1D array representing the y axis of the detector (only for 2D detector)
+  (default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
+  (see code above)
 * ``nav_axis``: in case of a ND data viewer, will be the index of the navigation axis, see :ref:`NDviewer`
+
+
 
 .. _data_ready:
 

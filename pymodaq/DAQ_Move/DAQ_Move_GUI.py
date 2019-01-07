@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'DAQ_Move_GUI.ui'
+# Form implementation generated from reading ui file 'daq_move_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -29,6 +29,7 @@ class Ui_Form(object):
         self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
@@ -72,6 +73,7 @@ class Ui_Form(object):
         font.setPointSize(20)
         self.Current_position_sb.setFont(font)
         self.Current_position_sb.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
+        self.Current_position_sb.setReadOnly(True)
         self.Current_position_sb.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
         self.Current_position_sb.setDecimals(6)
         self.Current_position_sb.setMinimum(-1000000.0)
@@ -226,6 +228,7 @@ class Ui_Form(object):
         self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.splitter)
         self.verticalLayoutWidget_2.setObjectName("verticalLayoutWidget_2")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.verticalLayoutWidget_2)
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.gridLayout_3.addWidget(self.splitter, 0, 0, 1, 1)
 
@@ -240,7 +243,7 @@ class Ui_Form(object):
         self.IniStage_pb.setText(_translate("Form", "Ini. Stage"))
         self.Ini_state_LED.setText(_translate("Form", "TextLabel"))
         self.Stage_type_combo.setToolTip(_translate("Form", "Stage Type"))
-        self.title_label.setText(_translate("Form", "pymodaq Move"))
+        self.title_label.setText(_translate("Form", "DAQ Move"))
         self.Quit_pb.setText(_translate("Form", "Quit"))
         self.label_4.setText(_translate("Form", "Current position:"))
         self.Moveto_pb_bis.setToolTip(_translate("Form", "Move to position"))
@@ -251,14 +254,14 @@ class Ui_Form(object):
         self.label_3.setText(_translate("Form", "Rel increment:"))
         self.Move_Rel_minus_pb.setText(_translate("Form", "Move Rel (-)"))
         self.Move_Rel_plus_pb.setText(_translate("Form", "Move Rel (+)"))
-        self.Stop_pb.setText(_translate("Form", "stop Motion"))
+        self.Stop_pb.setText(_translate("Form", "Stop Motion"))
         self.Get_position_pb.setText(_translate("Form", "Where am I?"))
         self.Find_Home_pb.setText(_translate("Form", "Find Home"))
         self.label_5.setText(_translate("Form", "Abs position:"))
 
-from pymodaq import QLED
+from pymodaq.daq_utils.plotting.qled import QLED
 from pyqtgraph import SpinBox
-import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

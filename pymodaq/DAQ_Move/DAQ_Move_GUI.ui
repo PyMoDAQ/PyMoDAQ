@@ -159,6 +159,9 @@
                 <property name="locale">
                  <locale language="English" country="UnitedStates"/>
                 </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
                 <property name="buttonSymbols">
                  <enum>QAbstractSpinBox::NoButtons</enum>
                 </property>
@@ -205,7 +208,7 @@
                  <string>Quit</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/close2.png</normaloff>:/Labview_icons/Icon_Library/close2.png</iconset>
                 </property>
                </widget>
@@ -244,7 +247,7 @@
                    <string/>
                   </property>
                   <property name="icon">
-                   <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                   <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                     <normaloff>:/Labview_icons/Icon_Library/go_to_1.png</normaloff>:/Labview_icons/Icon_Library/go_to_1.png</iconset>
                   </property>
                  </widget>
@@ -258,7 +261,7 @@
                    <string/>
                   </property>
                   <property name="icon">
-                   <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                   <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                     <normaloff>:/Labview_icons/Icon_Library/go_to_2.png</normaloff>:/Labview_icons/Icon_Library/go_to_2.png</iconset>
                   </property>
                  </widget>
@@ -272,7 +275,7 @@
                    <string/>
                   </property>
                   <property name="icon">
-                   <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                   <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                     <normaloff>:/Labview_icons/Icon_Library/Add_Step.png</normaloff>:/Labview_icons/Icon_Library/Add_Step.png</iconset>
                   </property>
                   <property name="checkable">
@@ -289,7 +292,7 @@
                    <string/>
                   </property>
                   <property name="icon">
-                   <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                   <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                     <normaloff>:/Labview_icons/Icon_Library/Settings.png</normaloff>:/Labview_icons/Icon_Library/Settings.png</iconset>
                   </property>
                   <property name="checkable">
@@ -353,7 +356,7 @@
                  <string>Move Abs</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/Move.png</normaloff>:/Labview_icons/Icon_Library/Move.png</iconset>
                 </property>
                </widget>
@@ -371,7 +374,7 @@
                  <string>Move Rel (-)</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/MoveDown.png</normaloff>:/Labview_icons/Icon_Library/MoveDown.png</iconset>
                 </property>
                </widget>
@@ -382,7 +385,7 @@
                  <string>Move Rel (+)</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/MoveUp.png</normaloff>:/Labview_icons/Icon_Library/MoveUp.png</iconset>
                 </property>
                </widget>
@@ -393,7 +396,7 @@
                  <string>Stop Motion</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/status_cancelled.png</normaloff>:/Labview_icons/Icon_Library/status_cancelled.png</iconset>
                 </property>
                </widget>
@@ -436,7 +439,7 @@
                  <string>Where am I?</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/home2_32.png</normaloff>:/Labview_icons/Icon_Library/home2_32.png</iconset>
                 </property>
                </widget>
@@ -447,7 +450,7 @@
                  <string>Find Home</string>
                 </property>
                 <property name="icon">
-                 <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                 <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
                   <normaloff>:/Labview_icons/Icon_Library/home2_32.png</normaloff>:/Labview_icons/Icon_Library/home2_32.png</iconset>
                 </property>
                </widget>
@@ -521,8 +524,8 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
-  <include location="../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
+  <include location="../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
+  <include location="../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
  </resources>
  <connections/>
 </ui>

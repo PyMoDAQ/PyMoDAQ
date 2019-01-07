@@ -95,11 +95,19 @@
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="Main_Modules.html">Main Modules</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Move</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Move</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#hardware-initialization">Hardware initialization</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#positioning">Positioning</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#advanced-positioning">Advanced positioning</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#settings">Settings</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Viewer.html">DAQ Viewer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Plugins.html">Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Utility_Modules.html">Utility Modules</a></li>
 </ul>
@@ -176,6 +184,118 @@
             
   <div class="section" id="daq-move">
 <span id="daq-move-module"></span><h1>DAQ Move<a class="headerlink" href="#daq-move" title="Permalink to this headline">¶</a></h1>
+<p>This module is to be used to control any actuator hardware. An actuator is, in a general sense, any parameter
+that one can control and may vary during an experiment.  The default actuator
+is a Mock one (a kind of software based
+actuator displaying a <em>position</em> and accepting absolute or relative <em>positioning</em>.</p>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>This module has a generic interface in the form of a dockable panel containing the interface for initialization,
+the manual control of the actuator <em>position</em> and a side tree like interface displaying all the settings.
+<a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 4</span></a> shows the minimal interface of the module (in order to take minimal place in the DAQ_Scan
+dashboard)</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id2">
+<span id="daq-move-gui-base"></span><img alt="daq_move_gui_base" src="../../_images/daq_move_gui_base.png" />
+<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Minimal DAQ_Move user interface</span></p>
+</div>
+</div>
+<div class="section" id="hardware-initialization">
+<h2>Hardware initialization<a class="headerlink" href="#hardware-initialization" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">Stage</span></code>: list of available hardware plugins of the DAQ_Move type.</li>
+<li><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Stage</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</li>
+<li><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</li>
+</ul>
+</div>
+<div class="section" id="positioning">
+<h2>Positioning<a class="headerlink" href="#positioning" title="Permalink to this headline">¶</a></h2>
+<p>Once the hardware initialized, the actual <em>position</em> is displayed on the <em>Current position</em> display
+(bottom of <a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 4</span></a>) while the absolute <em>position</em> can be set using the top spinbox
+and apply it using the <a class="reference internal" href="../../_images/green_arrow.png"><img alt="green_arrow" src="../../_images/green_arrow.png" style="width: 20pt; height: 20pt;" /></a> button.</p>
+</div>
+<div class="section" id="advanced-positioning">
+<h2>Advanced positioning<a class="headerlink" href="#advanced-positioning" title="Permalink to this headline">¶</a></h2>
+<p>More options can be displayed in order to precisely control the actuator by pressing the <a class="reference internal" href="../../_images/plus_button.png"><img alt="plus_button" src="../../_images/plus_button.png" style="width: 20pt; height: 20pt;" /></a> button.
+The user interface will then look like <a class="reference internal" href="#daq-move-gui-rel"><span class="std std-numref">Fig. 5</span></a>.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id3">
+<span id="daq-move-gui-rel"></span><img alt="daq_move_gui_rel" src="../../_images/daq_move_gui_rel.png" />
+<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">DAQ_Move user interface with controls</span></p>
+</div>
+<p>The two new displayed spinbox relate to Absolute positioning (redundant with the one on the top)  and
+Relative one.</p>
+<ul class="simple">
+<li><a class="reference internal" href="../../_images/home.png"><img alt="home" src="../../_images/home.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a home position (knwon position or physical switch limit)</li>
+<li><a class="reference internal" href="../../_images/abs.png"><img alt="abs" src="../../_images/abs.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach the set Absolute position</li>
+<li><a class="reference internal" href="../../_images/move_rel.png"><img alt="move_rel" src="../../_images/move_rel.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a relative position (+increment)</li>
+<li><a class="reference internal" href="../../_images/move_rel_m.png"><img alt="move_rel_m" src="../../_images/move_rel_m.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a relative position (-increment)</li>
+<li><a class="reference internal" href="../../_images/where.png"><img alt="where" src="../../_images/where.png" style="width: 60pt; height: 20pt;" /></a>: will update the current position display</li>
+<li><a class="reference internal" href="../../_images/stop.png"><img alt="stop" src="../../_images/stop.png" style="width: 60pt; height: 20pt;" /></a>: stop the current motion (if possible)</li>
+</ul>
+</div>
+<div class="section" id="settings">
+<h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
+<p>The hardware and module settings can be displayed in order to initialize correctly the actuator and add other
+options by pressing the <a class="reference internal" href="../../_images/settings_button.png"><img alt="settings" src="../../_images/settings_button.png" style="width: 20pt; height: 20pt;" /></a> button. The user interface will then look like
+<a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 6</span></a>.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id4">
+<span id="daq-move-gui-settings"></span><img alt="daq_move_gui_settings" src="../../_images/daq_move_gui_settings.png" />
+<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span></p>
+</div>
+<p>In the settings tree, there is two sections. The first relates to <em>Main settings</em> (not much there for
+the moment apart for the selected stage type and <em>Controller ID</em> that is related to multiaxes controller.
+The second relates to the hardware settings (the ones the hardware will need in order
+to initialize…). There is also specific settings explained below.</p>
+<div class="section" id="multiaxes-controller">
+<span id="id1"></span><h3>Multiaxes controller<a class="headerlink" href="#multiaxes-controller" title="Permalink to this headline">¶</a></h3>
+<p>Sometimes one hardware controller can drive multiple actuators (for instance a XY translation stage). For
+this particular case the controller should not be initialized multiple times. One should identify one actuator
+refered to as <em>Master</em> and the other ones will be referred to as <em>Slave</em>. They will share the same controller
+address represented in the settings tree by the <em>Controller ID</em> entry. These settings will be activated
+within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
+in <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 6</span></a>).</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">Controller</span> <span class="pre">ID</span></code>: unique identifier of the controller driving the stage</li>
+<li><code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">Multiaxes</span></code>: boolean</li>
+<li><code class="docutils literal notranslate"><span class="pre">Status</span></code>: Master or Slave</li>
+<li><code class="docutils literal notranslate"><span class="pre">Axis</span></code>: identifier defined in the plugin script</li>
+</ul>
+<p>See <a class="reference download internal" download="" href="../../_downloads/3cbf2dd2cc46ee5a899781c3d129fe43/daq_move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed example. These settigns are
+really valid only when the module is used within the DAQ_Scan framework taht deals with multiple modules
+at the same time.</p>
+</div>
+<div class="section" id="bounds">
+<h3>Bounds<a class="headerlink" href="#bounds" title="Permalink to this headline">¶</a></h3>
+<p>if this section is activated (by clicking the <em>Set Bounds</em> entry) then the actuator <em>positions</em> will
+be software limited bewteen <em>min</em> and <em>max</em>. This can be used to prevent the actuator to reach dangerous
+values for the experiment or anything else.</p>
+</div>
+<div class="section" id="scaling">
+<h3>Scaling<a class="headerlink" href="#scaling" title="Permalink to this headline">¶</a></h3>
+<p>If this section is activated (by clicking the <em>Use scaling</em> entry) then the <em>set</em> and <em>displayed</em> positions
+will be scaled as:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">new_position</span><span class="o">=</span><span class="n">scaling</span><span class="o">*</span><span class="n">old_position</span><span class="o">+</span><span class="n">offset</span>
+</pre></div>
+</div>
+<p>This can be useful for instance when one deals with translation stage used to delay a laser pulse with
+respect to another. In that case it is easier to work with temporal units such as <em>femtoseconds</em> compared
+to <em>mm</em> or other native controller unit.</p>
+</div>
+<div class="section" id="other-settings">
+<h3>Other settings<a class="headerlink" href="#other-settings" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">epsilon</span></code>: -<strong>very important feature</strong>- the actuator will try to reach the target position with a precision
+<em>epsilon</em>. So one could use it if one want to be sure the actuator really reached a given position before moving on.
+However if the set precision is too small, the actuator may never reached it and will issue a timeout</li>
+<li><code class="docutils literal notranslate"><span class="pre">Timeout</span></code>: maximum amout of time the module will wait for the actuator to reach the desired position.</li>
+</ul>
+</div>
+</div>
 </div>
 
 

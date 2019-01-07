@@ -10,7 +10,7 @@ from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file
 import sys
 import tables
 import numpy as np
-from pymodaq.daq_utils.plotting.hyperviewer.hyperviewer_main import HyperViewer
+from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 from collections import OrderedDict
 
 import warnings
@@ -79,7 +79,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
         H_splitter.addWidget(V_splitter2)
         
         form_viewer=QtWidgets.QWidget()
-        self.hyperviewer=HyperViewer(form_viewer)
+        self.hyperviewer=ViewerND(form_viewer)
         H_splitter.addWidget(form_viewer)
 
 

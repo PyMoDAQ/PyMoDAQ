@@ -6,6 +6,8 @@ Description
    :caption: Contents:
 
    modules/Main_Modules
+   modules/data_viewers
+   saving
    modules/Plugins
    modules/Utility_Modules
 

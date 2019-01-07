@@ -26,6 +26,29 @@ def get_set_local_dir():
     return local_path
 
 
+
+def set_enable_recursive(children,enable=False):
+    """
+        | Set enable childs of chidren root argument with enable parameter value (False as default) calling recursively the method on children.
+        |
+        | Recursivity decreasing on children argument.
+
+        =============== ===================== ==================================================
+        **Parameters**    **Type**             **Description**
+        *children*        settings tree node   The starting node of the (sub)tree to be treated
+        *enable*          boolean              the default value to map
+        =============== ===================== ==================================================
+
+    """
+    for child in children:
+        if children==[]:
+            return
+        elif type(child) is QtWidgets.QSpinBox or type(child) is QtWidgets.QComboBox or type(child) is QtWidgets.QPushButton or type(child) is QtWidgets.QListWidget:
+            child.setEnabled(enable)
+        else:
+            set_enable_recursive(child.children(),enable)
+
+
 def find_file(string,extension):
     """
         Find .extension file list from the given list and the regular expression

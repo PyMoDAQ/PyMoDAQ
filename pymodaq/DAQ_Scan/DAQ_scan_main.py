@@ -295,7 +295,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Base path:','name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False},
             {'title': 'Base name:','name': 'base_name', 'type': 'str', 'value': 'Scan','readonly': True},
             {'title': 'Current path:','name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data','readonly': True},
-            {'title': 'Current file name:','name': 'current_filename', 'type': 'list', 'value': ''},
+            {'title': 'Current scan name:','name': 'current_scanname', 'type': 'list', 'value': ''},
             {'title': 'Comments:','name': 'add_comments', 'type': 'text_pb', 'value': ''},
             {'title': 'h5file:','name': 'current_h5_file', 'type': 'text_pb', 'value': '','readonly': True},
             {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
@@ -307,6 +307,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         ]
 
         self.DAQscan_settings=Parameter.create(name='Settings', type='group', children=params)
+        try:
+            if not os.path.isdir(self.DAQscan_settings.child('saving_options', 'base_path').value()):
+                os.mkdir(self.DAQscan_settings.child('saving_options', 'base_path').value())
+        except:
+            self.update_status("The base path could'n be set, please check your options",log_type='log')
         self.settings_tree.setParameters(self.DAQscan_settings, showTop=False)
         self.DAQscan_settings.sigTreeStateChanged.connect(self.DAQscan_settings_changed)
         self.DAQscan_settings.child('Move_Detectors','Detectors').sigValueChanged.connect(self.update_plot_det_items)
@@ -461,6 +466,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     else:
                         self.DAQscan_settings.child('scan_options','scan1D_settings').hide()
                         self.DAQscan_settings.child('scan_options','scan2D_settings').show()
+
+                elif param.name() == 'base_path':
+                    try:
+                        if not os.path.isdir(self.DAQscan_settings.child('saving_options', 'base_path').value()):
+                            os.mkdir(self.DAQscan_settings.child('saving_options', 'base_path').value())
+                    except:
+                        self.update_status("The base path could'n be set, please check your options")
+
             elif change == 'parent':pass
 
 
@@ -638,8 +651,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.update_file_settings()
 
     def save_file(self):
+        if not os.path.isdir(self.DAQscan_settings.child('saving_options', 'base_path').value()):
+            os.mkdir(self.DAQscan_settings.child('saving_options', 'base_path').value())
         filename=daq_utils.select_file(self.DAQscan_settings.child('saving_options', 'base_path').value(), save=True, ext='h5')
-        file.copy_file(str(filename))
+        self.save_parameters.h5_file.copy_file(str(filename))
 
     def show_file_content(self):
         try:
@@ -1587,7 +1602,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             custom_tree.XML_string_to_parameter, custom_tree.parameter_to_xml_string
         """
         comments=self.DAQscan_settings.child('saving_options','add_comments').value()
-        scangroup=self.save_parameters.h5_file.get_node('/Raw_datas/{:s}'.format(self.DAQscan_settings.child('saving_options','current_filename').value()))
+        scangroup=self.save_parameters.h5_file.get_node('/Raw_datas/{:s}'.format(self.DAQscan_settings.child('saving_options','current_scanname').value()))
 
         param=Parameter.create(name='Attributes', type='group', children= custom_tree.XML_string_to_parameter(scangroup._v_attrs.settings.decode()))
         comments_ini=param.child('scan_info','description').value()
@@ -1663,8 +1678,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             else:
                 self.save_parameters.current_group=raw_data_group._f_get_child(current_filename)
 
-            self.DAQscan_settings.child('saving_options','current_filename').setOpts(limits=[child for child in raw_data_group._v_children if 'Scan' in child])
-            self.DAQscan_settings.child('saving_options','current_filename').setValue(str(current_filename))
+            self.DAQscan_settings.child('saving_options','current_scanname').setOpts(limits=[child for child in raw_data_group._v_children if 'Scan' in child])
+            self.DAQscan_settings.child('saving_options','current_scanname').setValue(str(current_filename))
 
             #check if logger node exist
             logger="logging"
@@ -1855,7 +1870,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             # set the filename and path
             self.update_file_paths()
             scan_path=Path(self.DAQscan_settings.child('saving_options','current_scan_path').value())
-            current_filename=self.DAQscan_settings.child('saving_options','current_filename').value()
+            current_filename=self.DAQscan_settings.child('saving_options','current_scanname').value()
 
 
             # set the moves positions according to data from user
@@ -2731,7 +2746,7 @@ class DAQ_Scan_Acquisition(QObject):
                 for ind_det, path in enumerate(paths): #path on the form edict(det_name=...,file_path=...,indexes=...)
                     if path['det_name']!=self.detector_modules[ind_det].title: # check the module correspond to the name assigned in path
                         raise Exception('wrong det module assignment')
-                    self.detector_modules[ind_det].SnapShot(str(path['file_path']))
+                    self.detector_modules[ind_det].snapshot(str(path['file_path']))
 
                 self.wait_for_det_done()
 

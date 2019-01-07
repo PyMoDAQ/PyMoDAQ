@@ -209,6 +209,23 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="rotate_pb">
+         <property name="toolTip">
+          <string>Rotate image by 90°</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/rotation2.png</normaloff>:/Labview_icons/Icon_Library/rotation2.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QLabel" name="x_label">
          <property name="text">
           <string>x:</string>

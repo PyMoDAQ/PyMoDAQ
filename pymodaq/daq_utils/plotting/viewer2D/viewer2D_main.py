@@ -49,22 +49,9 @@ class EllipseROI(pg.ROI):
     def center(self):
         return QPointF(self.pos().x()+self.size().x()/2,self.pos().y()+self.size().y()/2)
 
-    def width(self):
-        return self.size().x()
+    def emit_index_signal(self):
+        self.index_signal.emit(self.index)
 
-    def height(self):
-        return self.size().y()
-
-    def paint(self, p, opt, widget):
-        r = self.boundingRect()
-        p.setRenderHint(QtGui.QPainter.Antialiasing)
-        p.setPen(self.currentPen)
-        
-        p.scale(r.width(), r.height())## workaround for GL bug
-        r = QtCore.QRectF(r.x()/r.width(), r.y()/r.height(), 1,1)
-        
-        p.drawEllipse(r)
-        
     def getArrayRegion(self, arr, img=None, axes=(0, 1), **kwds):
         """
         Return the result of ROI.getArrayRegion() masked by the elliptical shape
@@ -82,7 +69,7 @@ class EllipseROI(pg.ROI):
         h = arr.shape[axes[1]]
         ## generate an ellipsoidal mask
         mask = np.fromfunction(lambda x,y: (((x+0.5)/(w/2.)-1)**2+ ((y+0.5)/(h/2.)-1)**2)**0.5 < 1, (w, h))
-        
+
         # reshape to match array axes
         if axes[0] > axes[1]:
             mask = mask.T
@@ -92,13 +79,26 @@ class EllipseROI(pg.ROI):
             return arr * mask,coords
         else:
             return arr * mask
+
+    def height(self):
+        return self.size().y()
+        
+    def paint(self, p, opt, widget):
+        r = self.boundingRect()
+        p.setRenderHint(QtGui.QPainter.Antialiasing)
+        p.setPen(self.currentPen)
+
+        p.scale(r.width(), r.height())## workaround for GL bug
+        r = QtCore.QRectF(r.x()/r.width(), r.y()/r.height(), 1,1)
+
+        p.drawEllipse(r)
     
     def shape(self):
         self.path = QtGui.QPainterPath()
         self.path.addEllipse(self.boundingRect())
         return self.path
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
+    def width(self):
+        return self.size().x()
 
 class RectROI(pg.ROI):
     index_signal=pyqtSignal(int)
@@ -108,10 +108,10 @@ class RectROI(pg.ROI):
         self.addRotateHandle([0, 0], [0.5, 0.5])
         self.index=index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
     def center(self):
         return QPointF(self.pos().x()+self.size().x()/2,self.pos().y()+self.size().y()/2)
+    def emit_index_signal(self):
+        self.index_signal.emit(self.index)
 
 class AxisItem_Scaled(pg.AxisItem):
     """
@@ -189,7 +189,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
 
         self.ui.scene = self.ui.graphicsView.scene()
-        
+
         self.autolevels=False
         self.ui.auto_levels_pb.clicked.connect(self.set_autolevels)
 
@@ -200,7 +200,7 @@ class Viewer2D(QtWidgets.QWidget):
         #self.ui.view = self.ui.plotitem.getViewBox()
         self.ui.view.sig_double_clicked.connect(self.double_clicked)
         self.ui.plotitem.layout.addItem(self.scaled_xaxis, *(1,1))
-        self.ui.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))        
+        self.ui.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))
         self.scaled_xaxis.linkToView(self.ui.view)
         self.scaled_yaxis.linkToView(self.ui.view)
         self.set_scaling_axes(self.scaling_options)
@@ -232,7 +232,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.plotitem.addItem(self.ui.img_green)
         self.ui.plotitem.addItem(self.ui.img_blue)
         self.ui.graphicsView.setCentralItem(self.ui.plotitem)
-        
+
         ##self.ui.graphicsView.setCentralItem(self.ui.plotitem)
         #axis=pg.AxisItem('right',linkView=self.ui.view)
         #self.ui.graphicsView.addItem(axis)
@@ -299,7 +299,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.crosshair_V_blue = self.ui.Lineout_V.plot(pen="b")
         self.ui.crosshair_V_green = self.ui.Lineout_V.plot(pen="g")
         self.ui.crosshair_V_red = self.ui.Lineout_V.plot(pen="r")
-        
+
 
         self.ui.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
         self.ui.crosshair_pb.clicked.connect(self.crosshairClicked)
@@ -308,7 +308,7 @@ class Viewer2D(QtWidgets.QWidget):
         #flipping
         self.ui.FlipUD_pb.clicked.connect(self.update_image_flip)
         self.ui.FlipLR_pb.clicked.connect(self.update_image_flip)
-
+        self.ui.rotate_pb.clicked.connect(self.update_image_flip)
 
         ## ROI stuff
         self.ui.RoiCurve_H=edict()
@@ -344,18 +344,85 @@ class Viewer2D(QtWidgets.QWidget):
         except:
             pass
 
-    def update_image_flip(self):
-        self.setImageTemp(self.ui.img_red.image,self.ui.img_green.image,self.ui.img_blue.image)
+    def add_ROI(self,roi_type='RectROI'):
+        """
+        Add a new ROI selector on the plot
+
+        =======================      =========================================================
+        **Arguments:**
+        roi_type (str)               The type of ROI to instantiate: either 'RectROI' (default) or 'EllipseROI'
+        """
+
+        self.roi_settings.child(("ROIs")).addNew(roi_type)
 
 
-    def show_ROI_select(self):
-        self.ui.ROIselect.setVisible(self.ui.ROIselect_pb.isChecked())
+    def crosshairChanged(self,indx=None,indy=None):
+        if self.image is None or self._x_axis is None or self._y_axis is None:
+            return
 
-    def selected_region_changed(self):
-        if self.ui.ROIselect_pb.isChecked():
-            pos=self.ui.ROIselect.pos()
-            size=self.ui.ROIselect.size()
-            self.ROI_select_signal.emit(QRectF(pos[0],pos[1],size[0],size[1]))
+        image = self.image
+        if indx is None or indy is None:
+            (posx,posy)=self.ui.crosshair.get_positions()
+            indx=utils.find_index(self._x_axis,posx)[0][0]
+            indy=utils.find_index(self._y_axis,posy)[0][0]
+        try:
+
+            if self.isdata["blue"]:
+                self.ui.crosshair_H_blue.setData(y=image["blue"][indy,:], x=self.x_axis_scaled)
+            if self.isdata["green"]:
+                self.ui.crosshair_H_green.setData(y=image["green"][indy,:], x=self.x_axis_scaled)
+            if self.isdata["red"]:
+                self.ui.crosshair_H_red.setData(y=image["red"][indy,:], x=self.x_axis_scaled)
+
+            if self.isdata["blue"]:
+                self.ui.crosshair_V_blue.setData(y=self.y_axis_scaled, x=image["blue"][:,indx])
+            if self.isdata["green"]:
+                self.ui.crosshair_V_green.setData(y=self.y_axis_scaled, x=image["green"][:,indx])
+            if self.isdata["red"]:
+                self.ui.crosshair_V_red.setData(y=self.y_axis_scaled, x=image["red"][:,indx])
+
+        except Exception as e:
+            raise e
+
+    def crosshairClicked(self):
+        if self.ui.crosshair_pb.isChecked():
+            self.ui.crosshair.setVisible(True)
+            self.ui.x_label.setVisible(True)
+            self.ui.y_label.setVisible(True)
+            range=self.ui.view.viewRange()
+            self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])),np.mean(np.array(range[0])))
+
+            if self.isdata["blue"]:
+                self.ui.z_label_blue.setVisible(True)
+                self.ui.crosshair_H_blue.setVisible(True)
+                self.ui.crosshair_V_blue.setVisible(True)
+            if self.isdata["green"]:
+                self.ui.z_label_green.setVisible(True)
+                self.ui.crosshair_H_green.setVisible(True)
+                self.ui.crosshair_V_green.setVisible(True)
+            if self.isdata["red"]:
+                self.ui.z_label_red.setVisible(True)
+                self.ui.crosshair_H_red.setVisible(True)
+                self.ui.crosshair_V_red.setVisible(True)
+            self.update_crosshair_data(*self.ui.crosshair.get_positions())
+            ##self.crosshairChanged()
+        else:
+            self.ui.crosshair.setVisible(False)
+            self.ui.x_label.setVisible(False)
+            self.ui.y_label.setVisible(False)
+
+            self.ui.z_label_blue.setVisible(False)
+            self.ui.z_label_green.setVisible(False)
+            self.ui.z_label_red.setVisible(False)
+            self.ui.crosshair_H_blue.setVisible(False)
+            self.ui.crosshair_H_green.setVisible(False)
+            self.ui.crosshair_H_red.setVisible(False)
+            self.ui.crosshair_V_blue.setVisible(False)
+            self.ui.crosshair_V_green.setVisible(False)
+            self.ui.crosshair_V_red.setVisible(False)
+        QtWidgets.QApplication.processEvents()
+        self.show_lineouts()
+        #self.show_lineouts()
 
     @pyqtSlot(float,float)
     def double_clicked(self,posx,posy):
@@ -363,41 +430,9 @@ class Viewer2D(QtWidgets.QWidget):
         self.update_crosshair_data(posx,posy)
         self.sig_double_clicked.emit(posx,posy)
 
-    def set_autolevels(self):
-        self.autolevels=self.ui.auto_levels_pb.isChecked()
-        if not self.ui.auto_levels_pb.isChecked():
-            self.ui.histogram_red.regionChanged()
-            self.ui.histogram_green.regionChanged()
-            self.ui.histogram_blue.regionChanged()
-
-        self.ui.histogram_red.region.setVisible(not self.autolevels)
-        self.ui.histogram_green.region.setVisible(not self.autolevels)
-        self.ui.histogram_blue.region.setVisible(not self.autolevels)
-
-    def setup_Roi_widget(self):
-        widgetROIS=QtWidgets.QWidget()
-        self.ui.verticalLayout_settings=QtWidgets.QVBoxLayout()
-        horlayout0=QtWidgets.QHBoxLayout()
-        self.ui.label=QtWidgets.QLabel('Use image:')
-        self.ui.choose_trace_ROI_cb=QtWidgets.QComboBox()
-        self.ui.choose_trace_ROI_cb.addItems(['red','green','blue'])
-        horlayout0.addWidget(self.ui.label)
-        horlayout0.addWidget(self.ui.choose_trace_ROI_cb)
-
-        horlayout=QtWidgets.QHBoxLayout()
-        self.ui.save_ROI_pb=QtWidgets.QPushButton('Save ROIs')
-        self.ui.load_ROI_pb=QtWidgets.QPushButton('Load ROIs')
-        horlayout.addWidget(self.ui.save_ROI_pb)
-        horlayout.addWidget(self.ui.load_ROI_pb)
-        self.ui.verticalLayout_settings.addLayout(horlayout0)
-        self.ui.verticalLayout_settings.addLayout(horlayout)
-
-
-        self.ui.ROI_Tree= ParameterTree()
-        self.ui.verticalLayout_settings.addWidget(self.ui.ROI_Tree)
-        widgetROIS.setLayout(self.ui.verticalLayout_settings)
-        widgetROIS.setMaximumWidth(300)
-        return widgetROIS
+    def ini_plot(self):
+        for k in self.data_integrated_plot.keys():
+            self.data_integrated_plot[k]=np.zeros((2,1))
 
     def load_ROI(self):
         try:
@@ -417,6 +452,24 @@ class Viewer2D(QtWidgets.QWidget):
         except Exception as e:
             pass
 
+    def lock_aspect_ratio(self):
+        if self.ui.aspect_ratio_pb.isChecked():
+            self.ui.plotitem.vb.setAspectLocked(lock=True, ratio=1)
+        else:
+            self.ui.plotitem.vb.setAspectLocked(lock=False)
+
+    @pyqtSlot(int, int)
+    def move_left_splitter(self,pos,index):
+        self.ui.splitter_VLeft.blockSignals(True)
+        self.ui.splitter_VLeft.moveSplitter(pos,index)
+        self.ui.splitter_VLeft.blockSignals(False)
+
+    @pyqtSlot(int, int)
+    def move_right_splitter(self,pos,index):
+        self.ui.splitter_VRight.blockSignals(True)
+        self.ui.splitter_VRight.moveSplitter(pos,index)
+        self.ui.splitter_VRight.blockSignals(False)
+
     def restore_state(self,data_tree):
         self.roi_settings.restoreState(data_tree)
         QtWidgets.QApplication.processEvents()
@@ -432,33 +485,71 @@ class Viewer2D(QtWidgets.QWidget):
             self.update_roi(index,'dy',param.child(*('size','dy')).value())
             self.ui.ROIs[index].sigRegionChangeFinished.connect(self.ui.ROIs[index].emit_index_signal)
 
-    def save_ROI(self):
 
+    def roiChanged(self):
+        #self.data_to_export=edict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
         try:
-            data=self.roi_settings.saveState()
-            path=self.select_file()
-            if path is not None:
-                with open(path, 'wb') as f:
-                    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+            if self.image is None:
+                return
+            axes = (0, 1)
+            image = self.image
+            color=self.ui.choose_trace_ROI_cb.currentText()
+            if color=="red":
+                data_flag=self.ui.red_cb.isChecked()
+                img_source=self.ui.img_red
+            elif color=="green":
+                data_flag=self.ui.green_cb.isChecked()
+                img_source=self.ui.img_green
+            elif color=="blue":
+                data_flag=self.ui.blue_cb.isChecked()
+                img_source=self.ui.img_blue
+            else: data_flag=None
+
+            if data_flag is None:
+                return
+
+            self.data_to_export['data0D']=OrderedDict([])
+            self.data_to_export['data1D']=OrderedDict([])
+
+            for k in self.ui.ROIs.keys():
+                data, coords = self.ui.ROIs[k].getArrayRegion(image[color], img_source, axes, returnMappedCoords=True)
+
+                if data is not None:
+                    xvals=np.linspace(np.min(np.min(coords[1,:,:])),np.max(np.max(coords[1,:,:])),data.shape[1])
+                    yvals=np.linspace(np.min(np.min(coords[0,:,:])),np.max(np.max(coords[0,:,:])),data.shape[0])
+                    x_axis,y_axis=self.scale_axis(xvals,yvals)
+
+                    self.data_integrated_plot[k]=np.append(self.data_integrated_plot[k],np.array([[self.data_integrated_plot[k][0,-1]],[0]])+np.array([[1],[np.sum(data)]]),axis=1)
+                    self.ui.RoiCurve_H[k].setData(y=np.mean(data,axis=0), x=xvals)
+                    self.ui.RoiCurve_V[k].setData(y=yvals, x=np.mean(data,axis=1))
+                    self.ui.RoiCurve_integrated[k].setData(y=self.data_integrated_plot[k][1,:], x=self.data_integrated_plot[k][0,:])
+                    self.data_to_export['data2D'][self.title+'_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,y_axis=y_axis,data=data)
+
+                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,data=np.mean(data,axis=0))
+                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(k)]=OrderedDict(x_axis=y_axis,data=np.mean(data,axis=1))
+                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(k)]=np.sum(data)
+            self.data_to_export_signal.emit(self.data_to_export)
+            self.ROI_changed.emit()
         except Exception as e:
             pass
 
-    def select_file(self,start_path=None,save=True):
-        try:
-            if save:
-                fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .roi2D file name',start_path,"roi2D file (*.roi2D)")
-            else:
-                fname=QtWidgets.QFileDialog.getOpenFileName(None, 'Select a .roi2D file name',start_path,"roi2D file (*.roi2D)")
-            fname=fname[0]
-            if not( not(fname)): #execute if the user didn't cancel the file selection
-                (head,filename)=os.path.split(fname)
-                (filename,ext)=os.path.splitext(fname)
-                fname=os.path.join(head,filename+".roi2D")
-            return fname
+    def roiClicked(self):
+        roistate=self.ui.roiBtn.isChecked()
+        #self.setvisible_roilayout(roistate)
+        self.ui.ROIs_widget.setVisible(roistate)
+        for k,roi in self.ui.ROIs.items():
+            roi.setVisible(roistate)
+            self.ui.RoiCurve_H[k].setVisible(roistate)
+            self.ui.RoiCurve_V[k].setVisible(roistate)
+            self.ui.RoiCurve_integrated[k].setVisible(roistate)
 
-        except Exception as e:
-            pass
+        if self.ui.roiBtn.isChecked():
+            self.roiChanged()
 
+        self.show_lineouts()
+
+        if len(self.ui.ROIs)==0 and roistate:
+            self.roi_settings.child(("ROIs")).addNew('RectROI')
 
     def roi_tree_changed(self,param,changes):
 
@@ -526,58 +617,56 @@ class Viewer2D(QtWidgets.QWidget):
                 self.ui.Lineout_integrated.removeItem(self.ui.RoiCurve_integrated[param.name()])
                 self.ui.RoiCurve_integrated.pop(param.name())
 
-    def update_roi(self,index_roi,param_name,param_value):
+    def save_ROI(self):
 
-        if param_name == 'Color':
-            self.ui.ROIs[index_roi].setPen(param_value)
-            self.ui.RoiCurve_H[index_roi].setPen(param_value)
-            self.ui.RoiCurve_V[index_roi].setPen(param_value)
-            self.ui.RoiCurve_integrated[index_roi].setPen(param_value)
-        elif param_name == 'x':
-            pos=self.ui.ROIs[index_roi].pos()
-            self.ui.ROIs[index_roi].setPos((param_value,pos[1]))
-        elif param_name == 'y':
-            pos=self.ui.ROIs[index_roi].pos()
-            self.ui.ROIs[index_roi].setPos((pos[0],param_value))
-        elif param_name == 'angle':
-            self.ui.ROIs[index_roi].setAngle(param_value)
-        elif param_name == 'dx':
-            size=self.ui.ROIs[index_roi].size()
-            self.ui.ROIs[index_roi].setSize((param_value,size[1]))
-        elif param_name == 'dy':
-            size=self.ui.ROIs[index_roi].size()
-            self.ui.ROIs[index_roi].setSize((size[0],param_value))
-
-    @pyqtSlot(int)
-    def update_roi_tree(self,index):
-        roi=self.ui.ROIs['ROI_%02.0d'%index]
-        pos=roi.pos()
-        size=roi.size()
-        angle=roi.angle()
-        par=self.roi_settings.child(*('ROIs','ROI_%02.0d'%index))
         try:
-            self.roi_settings.sigTreeStateChanged.disconnect()
-        except:
+            data=self.roi_settings.saveState()
+            path=self.select_file()
+            if path is not None:
+                with open(path, 'wb') as f:
+                    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        except Exception as e:
             pass
-        par.child(*('position','x')).setValue(pos[0])
-        par.child(*('position','y')).setValue(pos[1])
-        par.child(*('size','dx')).setValue(size[0])
-        par.child(*('size','dy')).setValue(size[1])
-        par.child(('angle')).setValue(angle)
 
-        self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
-    def add_ROI(self,roi_type='RectROI'):
-        """
-        Add a new ROI selector on the plot
+    def scale_axis(self,xaxis,yaxis):
+        return xaxis*self.scaling_options.scaled_xaxis.scaling+self.scaling_options.scaled_xaxis.offset,yaxis*self.scaling_options.scaled_yaxis.scaling+self.scaling_options.scaled_yaxis.offset
 
-        =======================      =========================================================
-        **Arguments:**
-        roi_type (str)               The type of ROI to instantiate: either 'RectROI' (default) or 'EllipseROI'
-        """
+    def select_file(self,start_path=None,save=True):
+        try:
+            if save:
+                fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .roi2D file name',start_path,"roi2D file (*.roi2D)")
+            else:
+                fname=QtWidgets.QFileDialog.getOpenFileName(None, 'Select a .roi2D file name',start_path,"roi2D file (*.roi2D)")
+            fname=fname[0]
+            if not( not(fname)): #execute if the user didn't cancel the file selection
+                (head,filename)=os.path.split(fname)
+                (filename,ext)=os.path.splitext(fname)
+                fname=os.path.join(head,filename+".roi2D")
+            return fname
 
-        self.roi_settings.child(("ROIs")).addNew(roi_type)
+        except Exception as e:
+            pass
 
+
+
+    def selected_region_changed(self):
+        if self.ui.ROIselect_pb.isChecked():
+            pos=self.ui.ROIselect.pos()
+            size=self.ui.ROIselect.size()
+            self.ROI_select_signal.emit(QRectF(pos[0],pos[1],size[0],size[1]))
+
+
+    def set_autolevels(self):
+        self.autolevels=self.ui.auto_levels_pb.isChecked()
+        if not self.ui.auto_levels_pb.isChecked():
+            self.ui.histogram_red.regionChanged()
+            self.ui.histogram_green.regionChanged()
+            self.ui.histogram_blue.regionChanged()
+
+        self.ui.histogram_red.region.setVisible(not self.autolevels)
+        self.ui.histogram_green.region.setVisible(not self.autolevels)
+        self.ui.histogram_blue.region.setVisible(not self.autolevels)
 
     def set_scaling_axes(self,scaling_options=None):
         """
@@ -596,98 +685,6 @@ class Viewer2D(QtWidgets.QWidget):
         self.scaled_xaxis.linkedViewChanged(self.ui.view)
         self.scaled_yaxis.linkedViewChanged(self.ui.view)
 
-    def update_selection_area_visibility(self):
-        bluestate=self.ui.blue_cb.isChecked()
-        self.ui.img_blue.setVisible(bluestate)
-        #self.ui.histogram_blue.setVisible(bluestate)
-
-        greenstate=self.ui.green_cb.isChecked()
-        self.ui.img_green.setVisible(greenstate)
-        #self.ui.histogram_green.setVisible(greenstate)
-
-        redstate=self.ui.red_cb.isChecked()
-        self.ui.img_red.setVisible(redstate)
-        #self.ui.histogram_red.setVisible(redstate)
-
-
-
-    def setObjectName(self,txt):
-        self.parent.setObjectName(txt)
-
-
-    def setvisible_roilayout(self,state):
-        self.ui.ROIs_widget.setVisible(roistate)
-
-    def roiClicked(self):
-        roistate=self.ui.roiBtn.isChecked()
-        #self.setvisible_roilayout(roistate)
-        self.ui.ROIs_widget.setVisible(roistate)
-        for k,roi in self.ui.ROIs.items():
-            roi.setVisible(roistate)
-            self.ui.RoiCurve_H[k].setVisible(roistate)
-            self.ui.RoiCurve_V[k].setVisible(roistate)
-            self.ui.RoiCurve_integrated[k].setVisible(roistate)
-
-        if self.ui.roiBtn.isChecked():
-            self.roiChanged()
-
-        self.show_lineouts()
-
-        if len(self.ui.ROIs)==0 and roistate:
-            self.roi_settings.child(("ROIs")).addNew('RectROI')
-
-    @pyqtSlot(int, int)
-    def move_right_splitter(self,pos,index):
-        self.ui.splitter_VRight.blockSignals(True)
-        self.ui.splitter_VRight.moveSplitter(pos,index)
-        self.ui.splitter_VRight.blockSignals(False)
-
-    @pyqtSlot(int, int)
-    def move_left_splitter(self,pos,index):
-        self.ui.splitter_VLeft.blockSignals(True)
-        self.ui.splitter_VLeft.moveSplitter(pos,index)
-        self.ui.splitter_VLeft.blockSignals(False)
-
-    def ini_plot(self):
-        for k in self.data_integrated_plot.keys():
-            self.data_integrated_plot[k]=np.zeros((2,1))
-
-    def setImageTemp(self,data_red=None,data_green=None,data_blue=None):
-        """
-        to plot temporary data, for instance when all pixels are not yet populated...
-        """
-
-        if data_red is not None:
-            if len(data_red.shape)>2:
-                data_red=np.mean(data_red,axis=0)
-            if self.ui.FlipUD_pb.isChecked():
-                data_red=np.flipud(data_red)
-            if self.ui.FlipLR_pb.isChecked():
-                data_red=np.fliplr(data_red)
-        if data_green is not None:
-            if len(data_green.shape)>2:
-                data_green=np.mean(data_green,axis=0)
-            if self.ui.FlipUD_pb.isChecked():
-                data_green=np.flipud(data_green)
-            if self.ui.FlipLR_pb.isChecked():
-                data_green=np.fliplr(data_green)
-        if data_blue is not None:
-            if len(data_blue.shape)>2:
-                data_blue=np.mean(data_blue,axis=0)
-            if self.ui.FlipUD_pb.isChecked():
-                data_blue=np.flipud(data_blue)
-            if self.ui.FlipLR_pb.isChecked():
-                data_blue=np.fliplr(data_blue)
-
-
-        if data_red is not None:
-            self.ui.img_red.setImage(data_red,autoLevels = self.autolevels)
-        if data_green is not None:
-            self.ui.img_green.setImage(data_green,autoLevels = self.autolevels)
-        if data_blue is not None:
-            self.ui.img_blue.setImage(data_blue,autoLevels = self.autolevels)
-
-
     def setImage(self,data_red=None,data_green=None,data_blue=None):
         try:
             if data_red is not None:
@@ -697,6 +694,8 @@ class Viewer2D(QtWidgets.QWidget):
                     data_red=np.flipud(data_red)
                 if self.ui.FlipLR_pb.isChecked():
                     data_red=np.fliplr(data_red)
+                if self.ui.rotate_pb.isChecked():
+                    data_red = np.transpose(data_red)
 
             if data_green is not None:
                 if len(data_green.shape)>2:
@@ -705,6 +704,8 @@ class Viewer2D(QtWidgets.QWidget):
                     data_green=np.flipud(data_green)
                 if self.ui.FlipLR_pb.isChecked():
                     data_green=np.fliplr(data_green)
+                if self.ui.rotate_pb.isChecked():
+                    data_green = np.transpose(data_green)
 
             if data_blue is not None:
                 if len(data_blue.shape)>2:
@@ -713,6 +714,8 @@ class Viewer2D(QtWidgets.QWidget):
                     data_blue=np.flipud(data_blue)
                 if self.ui.FlipLR_pb.isChecked():
                     data_blue=np.fliplr(data_blue)
+                if self.ui.rotate_pb.isChecked():
+                    data_blue = np.transpose(data_blue)
 
             red_flag= data_red is not None
             self.isdata["red"]=red_flag
@@ -792,171 +795,102 @@ class Viewer2D(QtWidgets.QWidget):
         except Exception as e:
             print(e)
 
-    @property
-    def x_axis(self):
-        return self.x_axis_scaled
+    def setImageTemp(self,data_red=None,data_green=None,data_blue=None):
+        """
+        to plot temporary data, for instance when all pixels are not yet populated...
+        """
 
-    @property
-    def y_axis(self):
-        return self.y_axis_scaled
+        if data_red is not None:
+            if len(data_red.shape)>2:
+                data_red=np.mean(data_red,axis=0)
+            if self.ui.FlipUD_pb.isChecked():
+                data_red=np.flipud(data_red)
+            if self.ui.FlipLR_pb.isChecked():
+                data_red=np.fliplr(data_red)
+            if self.ui.rotate_pb.isChecked():
+                data_red=np.transpose(data_red)
+        if data_green is not None:
+            if len(data_green.shape)>2:
+                data_green=np.mean(data_green,axis=0)
+            if self.ui.FlipUD_pb.isChecked():
+                data_green=np.flipud(data_green)
+            if self.ui.FlipLR_pb.isChecked():
+                data_green=np.fliplr(data_green)
+            if self.ui.rotate_pb.isChecked():
+                data_green = np.transpose(data_green)
+        if data_blue is not None:
+            if len(data_blue.shape)>2:
+                data_blue=np.mean(data_blue,axis=0)
+            if self.ui.FlipUD_pb.isChecked():
+                data_blue=np.flipud(data_blue)
+            if self.ui.FlipLR_pb.isChecked():
+                data_blue=np.fliplr(data_blue)
+            if self.ui.rotate_pb.isChecked():
+                data_blue = np.transpose(data_blue)
 
 
-    @x_axis.setter
-    def x_axis(self, x_axis):
-        label = ''
-        units = ''
-        if type(x_axis) == dict:
-            if 'data' in x_axis:
-                xdata=x_axis['data']
-            if 'label' in x_axis:
-                label=x_axis['label']
-            if 'units' in x_axis:
-                units= x_axis['units']
+        if data_red is not None:
+            self.ui.img_red.setImage(data_red,autoLevels = self.autolevels)
+        if data_green is not None:
+            self.ui.img_green.setImage(data_green,autoLevels = self.autolevels)
+        if data_blue is not None:
+            self.ui.img_blue.setImage(data_blue,autoLevels = self.autolevels)
+
+    def setObjectName(self,txt):
+        self.parent.setObjectName(txt)
+
+    def setup_Roi_widget(self):
+        widgetROIS=QtWidgets.QWidget()
+        self.ui.verticalLayout_settings=QtWidgets.QVBoxLayout()
+        horlayout0=QtWidgets.QHBoxLayout()
+        self.ui.label=QtWidgets.QLabel('Use image:')
+        self.ui.choose_trace_ROI_cb=QtWidgets.QComboBox()
+        self.ui.choose_trace_ROI_cb.addItems(['red','green','blue'])
+        horlayout0.addWidget(self.ui.label)
+        horlayout0.addWidget(self.ui.choose_trace_ROI_cb)
+
+        horlayout=QtWidgets.QHBoxLayout()
+        self.ui.save_ROI_pb=QtWidgets.QPushButton('Save ROIs')
+        self.ui.load_ROI_pb=QtWidgets.QPushButton('Load ROIs')
+        horlayout.addWidget(self.ui.save_ROI_pb)
+        horlayout.addWidget(self.ui.load_ROI_pb)
+        self.ui.verticalLayout_settings.addLayout(horlayout0)
+        self.ui.verticalLayout_settings.addLayout(horlayout)
+
+
+        self.ui.ROI_Tree= ParameterTree()
+        self.ui.verticalLayout_settings.addWidget(self.ui.ROI_Tree)
+        widgetROIS.setLayout(self.ui.verticalLayout_settings)
+        widgetROIS.setMaximumWidth(300)
+        return widgetROIS
+
+
+    def setvisible_roilayout(self,state):
+        self.ui.ROIs_widget.setVisible(roistate)
+
+    def show_hide_histogram(self):
+        if self.isdata["blue"] and self.ui.blue_cb.isChecked():
+            self.ui.histogram_blue.setVisible(self.ui.Show_histogram.isChecked())
+            self.ui.histogram_blue.setLevels(self.image.blue.min(), self.image.blue.max())
+        if self.isdata["green"] and self.ui.green_cb.isChecked():
+            self.ui.histogram_green.setVisible(self.ui.Show_histogram.isChecked())
+            self.ui.histogram_green.setLevels(self.image.green.min(), self.image.green.max())
+        if self.isdata["red"] and self.ui.red_cb.isChecked():
+            self.ui.histogram_red.setVisible(self.ui.Show_histogram.isChecked())
+            self.ui.histogram_red.setLevels(self.image.red.min(), self.image.red.max())
+
+    def show_hide_iso(self):
+        if self.ui.isocurve_pb.isChecked():
+            self.ui.iso.show()
+            self.ui.isoLine.show()
+            self.ui.Show_histogram.setChecked(True)
+            self.show_hide_histogram()
+            if self.ui.isocurve_pb.isChecked() and self.image.red is not None:
+                self.ui.iso.setData(pg.gaussianFilter(self.image.red, (2, 2)))
         else:
-            xdata=x_axis
+            self.ui.iso.hide()
+            self.ui.isoLine.hide()
 
-        x_offset = np.min(xdata)
-        x_scaling = xdata[1] - xdata[0]
-        self.scaling_options['scaled_xaxis'].update(edict(offset=x_offset, scaling=x_scaling, label=label, units=units))
-        self.set_scaling_axes(self.scaling_options)
-
-    @y_axis.setter
-    def y_axis(self, y_axis):
-        label = ''
-        units = ''
-        if type(y_axis) == dict:
-            if 'data' in y_axis:
-                ydata=y_axis['data']
-            if 'label' in y_axis:
-                label=y_axis['label']
-            if 'units' in y_axis:
-                units= y_axis['units']
-        else:
-            ydata=y_axis
-        y_offset = np.min(ydata)
-        y_scaling = ydata[1] - ydata[0]
-        self.scaling_options['scaled_yaxis'].update(edict(offset=y_offset, scaling=y_scaling, label=label, units=units))
-        self.set_scaling_axes(self.scaling_options)
-
-
-    def scale_axis(self,xaxis,yaxis):
-        return xaxis*self.scaling_options.scaled_xaxis.scaling+self.scaling_options.scaled_xaxis.offset,yaxis*self.scaling_options.scaled_yaxis.scaling+self.scaling_options.scaled_yaxis.offset
-
-    def roiChanged(self):
-        #self.data_to_export=edict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
-        try:
-            if self.image is None:
-                return
-            axes = (0, 1)
-            image = self.image
-            color=self.ui.choose_trace_ROI_cb.currentText()
-            if color=="red":
-                data_flag=self.ui.red_cb.isChecked()
-                img_source=self.ui.img_red
-            elif color=="green":
-                data_flag=self.ui.green_cb.isChecked()
-                img_source=self.ui.img_green
-            elif color=="blue":
-                data_flag=self.ui.blue_cb.isChecked()
-                img_source=self.ui.img_blue
-            else: data_flag=None
-
-            if data_flag is None:
-                return
-
-            self.data_to_export['data0D']=OrderedDict([])
-            self.data_to_export['data1D']=OrderedDict([])
-
-            for k in self.ui.ROIs.keys():
-                data, coords = self.ui.ROIs[k].getArrayRegion(image[color], img_source, axes, returnMappedCoords=True)
-
-                if data is not None:
-                    xvals=np.linspace(np.min(np.min(coords[1,:,:])),np.max(np.max(coords[1,:,:])),data.shape[1])
-                    yvals=np.linspace(np.min(np.min(coords[0,:,:])),np.max(np.max(coords[0,:,:])),data.shape[0])
-                    x_axis,y_axis=self.scale_axis(xvals,yvals)
-
-                    self.data_integrated_plot[k]=np.append(self.data_integrated_plot[k],np.array([[self.data_integrated_plot[k][0,-1]],[0]])+np.array([[1],[np.sum(data)]]),axis=1)
-                    self.ui.RoiCurve_H[k].setData(y=np.mean(data,axis=0), x=xvals)
-                    self.ui.RoiCurve_V[k].setData(y=yvals, x=np.mean(data,axis=1))
-                    self.ui.RoiCurve_integrated[k].setData(y=self.data_integrated_plot[k][1,:], x=self.data_integrated_plot[k][0,:])
-                    self.data_to_export['data2D'][self.title+'_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,y_axis=y_axis,data=data)
-
-                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,data=np.mean(data,axis=0))
-                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(k)]=OrderedDict(x_axis=y_axis,data=np.mean(data,axis=1))
-                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(k)]=np.sum(data)
-            self.data_to_export_signal.emit(self.data_to_export)
-            self.ROI_changed.emit()
-        except Exception as e:
-            pass
-
-
-
-    def crosshairClicked(self):
-        if self.ui.crosshair_pb.isChecked():
-            self.ui.crosshair.setVisible(True)
-            self.ui.x_label.setVisible(True)
-            self.ui.y_label.setVisible(True)
-            range=self.ui.view.viewRange()
-            self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])),np.mean(np.array(range[0])))
-
-            if self.isdata["blue"]:
-                self.ui.z_label_blue.setVisible(True)
-                self.ui.crosshair_H_blue.setVisible(True)
-                self.ui.crosshair_V_blue.setVisible(True)
-            if self.isdata["green"]:
-                self.ui.z_label_green.setVisible(True)
-                self.ui.crosshair_H_green.setVisible(True)
-                self.ui.crosshair_V_green.setVisible(True)
-            if self.isdata["red"]:
-                self.ui.z_label_red.setVisible(True)
-                self.ui.crosshair_H_red.setVisible(True)
-                self.ui.crosshair_V_red.setVisible(True)
-            self.update_crosshair_data(*self.ui.crosshair.get_positions())
-            ##self.crosshairChanged()
-        else:
-            self.ui.crosshair.setVisible(False)
-            self.ui.x_label.setVisible(False)
-            self.ui.y_label.setVisible(False)
-
-            self.ui.z_label_blue.setVisible(False)
-            self.ui.z_label_green.setVisible(False)
-            self.ui.z_label_red.setVisible(False)
-            self.ui.crosshair_H_blue.setVisible(False)
-            self.ui.crosshair_H_green.setVisible(False)
-            self.ui.crosshair_H_red.setVisible(False)
-            self.ui.crosshair_V_blue.setVisible(False)
-            self.ui.crosshair_V_green.setVisible(False)
-            self.ui.crosshair_V_red.setVisible(False)
-        QtWidgets.QApplication.processEvents()
-        self.show_lineouts()
-        #self.show_lineouts()
-
-    def update_crosshair_data(self,posx,posy,name=""):
-        try:
-            (posx_scaled,posy_scaled)=self.scale_axis(posx,posy)
-            self.crosshair_dragged.emit(posx_scaled,posy_scaled)
-            x_axis_scaled,y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
-            indx=utils.find_index(self._x_axis,posx)[0][0]
-            indy=utils.find_index(self._y_axis,posy)[0][0]
-
-            self.crosshairChanged(indx,indy)
-
-            if self.isdata["blue"]:
-                z_blue=self.image["blue"][indy,indx]
-                self.ui.z_label_blue.setText("{:.6e}".format(z_blue))
-            if self.isdata["green"]:
-                z_green=self.image["green"][indy,indx]
-                self.ui.z_label_green.setText("{:.6e}".format(z_green))
-            if self.isdata["red"]:
-                z_red=self.image["red"][indy,indx]
-                self.ui.z_label_red.setText("{:.6e}".format(z_red))
-
-
-            self.ui.x_label.setText("x={:.6e} ".format(posx_scaled))
-            self.ui.y_label.setText("y={:.6e} ".format(posy_scaled))
-
-        except Exception as e:
-            pass
 
     def show_lineouts(self):
         state=self.ui.roiBtn.isChecked() or self.ui.crosshair_pb.isChecked()
@@ -999,65 +933,146 @@ class Viewer2D(QtWidgets.QWidget):
         QtGui.QGuiApplication.processEvents()
 
 
-    def crosshairChanged(self,indx=None,indy=None):
-        if self.image is None or self._x_axis is None or self._y_axis is None:
-            return
+    def show_ROI_select(self):
+        self.ui.ROIselect.setVisible(self.ui.ROIselect_pb.isChecked())
 
-        image = self.image
-        if indx is None or indy is None:
-            (posx,posy)=self.ui.crosshair.get_positions()
+
+
+    def update_image_flip(self):
+        self.setImageTemp(self.ui.img_red.image,self.ui.img_green.image,self.ui.img_blue.image)
+
+    def update_roi(self,index_roi,param_name,param_value):
+
+        if param_name == 'Color':
+            self.ui.ROIs[index_roi].setPen(param_value)
+            self.ui.RoiCurve_H[index_roi].setPen(param_value)
+            self.ui.RoiCurve_V[index_roi].setPen(param_value)
+            self.ui.RoiCurve_integrated[index_roi].setPen(param_value)
+        elif param_name == 'x':
+            pos=self.ui.ROIs[index_roi].pos()
+            self.ui.ROIs[index_roi].setPos((param_value,pos[1]))
+        elif param_name == 'y':
+            pos=self.ui.ROIs[index_roi].pos()
+            self.ui.ROIs[index_roi].setPos((pos[0],param_value))
+        elif param_name == 'angle':
+            self.ui.ROIs[index_roi].setAngle(param_value)
+        elif param_name == 'dx':
+            size=self.ui.ROIs[index_roi].size()
+            self.ui.ROIs[index_roi].setSize((param_value,size[1]))
+        elif param_name == 'dy':
+            size=self.ui.ROIs[index_roi].size()
+            self.ui.ROIs[index_roi].setSize((size[0],param_value))
+
+    @pyqtSlot(int)
+    def update_roi_tree(self,index):
+        roi=self.ui.ROIs['ROI_%02.0d'%index]
+        pos=roi.pos()
+        size=roi.size()
+        angle=roi.angle()
+        par=self.roi_settings.child(*('ROIs','ROI_%02.0d'%index))
+        try:
+            self.roi_settings.sigTreeStateChanged.disconnect()
+        except:
+            pass
+        par.child(*('position','x')).setValue(pos[0])
+        par.child(*('position','y')).setValue(pos[1])
+        par.child(*('size','dx')).setValue(size[0])
+        par.child(*('size','dy')).setValue(size[1])
+        par.child(('angle')).setValue(angle)
+
+        self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+
+
+
+
+    def update_selection_area_visibility(self):
+        bluestate=self.ui.blue_cb.isChecked()
+        self.ui.img_blue.setVisible(bluestate)
+        #self.ui.histogram_blue.setVisible(bluestate)
+
+        greenstate=self.ui.green_cb.isChecked()
+        self.ui.img_green.setVisible(greenstate)
+        #self.ui.histogram_green.setVisible(greenstate)
+
+        redstate=self.ui.red_cb.isChecked()
+        self.ui.img_red.setVisible(redstate)
+        #self.ui.histogram_red.setVisible(redstate)
+
+    def update_crosshair_data(self,posx,posy,name=""):
+        try:
+            (posx_scaled,posy_scaled)=self.scale_axis(posx,posy)
+            self.crosshair_dragged.emit(posx_scaled,posy_scaled)
+            x_axis_scaled,y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
             indx=utils.find_index(self._x_axis,posx)[0][0]
             indy=utils.find_index(self._y_axis,posy)[0][0]
-        try:
+
+            self.crosshairChanged(indx,indy)
 
             if self.isdata["blue"]:
-                self.ui.crosshair_H_blue.setData(y=image["blue"][indy,:], x=self.x_axis_scaled)
+                z_blue=self.image["blue"][indy,indx]
+                self.ui.z_label_blue.setText("{:.6e}".format(z_blue))
             if self.isdata["green"]:
-                self.ui.crosshair_H_green.setData(y=image["green"][indy,:], x=self.x_axis_scaled)
+                z_green=self.image["green"][indy,indx]
+                self.ui.z_label_green.setText("{:.6e}".format(z_green))
             if self.isdata["red"]:
-                self.ui.crosshair_H_red.setData(y=image["red"][indy,:], x=self.x_axis_scaled)
+                z_red=self.image["red"][indy,indx]
+                self.ui.z_label_red.setText("{:.6e}".format(z_red))
 
-            if self.isdata["blue"]:
-                self.ui.crosshair_V_blue.setData(y=self.y_axis_scaled, x=image["blue"][:,indx])
-            if self.isdata["green"]:
-                self.ui.crosshair_V_green.setData(y=self.y_axis_scaled, x=image["green"][:,indx])
-            if self.isdata["red"]:
-                self.ui.crosshair_V_red.setData(y=self.y_axis_scaled, x=image["red"][:,indx])
+
+            self.ui.x_label.setText("x={:.6e} ".format(posx_scaled))
+            self.ui.y_label.setText("y={:.6e} ".format(posy_scaled))
 
         except Exception as e:
-            raise e
-           
-    def lock_aspect_ratio(self):
-        if self.ui.aspect_ratio_pb.isChecked():
-            self.ui.plotitem.vb.setAspectLocked(lock=True, ratio=1)
-        else:
-            self.ui.plotitem.vb.setAspectLocked(lock=False)  
-    
-    def show_hide_iso(self):
-        if self.ui.isocurve_pb.isChecked():
-            self.ui.iso.show()
-            self.ui.isoLine.show()
-            self.ui.Show_histogram.setChecked(True)
-            self.show_hide_histogram()
-            if self.ui.isocurve_pb.isChecked() and self.image.red is not None:
-                self.ui.iso.setData(pg.gaussianFilter(self.image.red, (2, 2)))
-        else:
-            self.ui.iso.hide()
-            self.ui.isoLine.hide()
+            pass
 
     def updateIsocurve(self):
         self.ui.iso.setLevel(self.ui.isoLine.value())
 
-    def show_hide_histogram(self):
-        if self.isdata["blue"] and self.ui.blue_cb.isChecked():
-            self.ui.histogram_blue.setVisible(self.ui.Show_histogram.isChecked())
-            self.ui.histogram_blue.setLevels(self.image.blue.min(), self.image.blue.max())
-        if self.isdata["green"] and self.ui.green_cb.isChecked():
-            self.ui.histogram_green.setVisible(self.ui.Show_histogram.isChecked()) 
-            self.ui.histogram_green.setLevels(self.image.green.min(), self.image.green.max())
-        if self.isdata["red"] and self.ui.red_cb.isChecked():
-            self.ui.histogram_red.setVisible(self.ui.Show_histogram.isChecked()) 
-            self.ui.histogram_red.setLevels(self.image.red.min(), self.image.red.max())
+    @property
+    def x_axis(self):
+        return self.x_axis_scaled
+
+    @x_axis.setter
+    def x_axis(self, x_axis):
+        label = ''
+        units = ''
+        if type(x_axis) == dict:
+            if 'data' in x_axis:
+                xdata=x_axis['data']
+            if 'label' in x_axis:
+                label=x_axis['label']
+            if 'units' in x_axis:
+                units= x_axis['units']
+        else:
+            xdata=x_axis
+
+        x_offset = np.min(xdata)
+        x_scaling = xdata[1] - xdata[0]
+        self.scaling_options['scaled_xaxis'].update(edict(offset=x_offset, scaling=x_scaling, label=label, units=units))
+        self.set_scaling_axes(self.scaling_options)
+
+    @property
+    def y_axis(self):
+        return self.y_axis_scaled
+
+    @y_axis.setter
+    def y_axis(self, y_axis):
+        label = ''
+        units = ''
+        if type(y_axis) == dict:
+            if 'data' in y_axis:
+                ydata=y_axis['data']
+            if 'label' in y_axis:
+                label=y_axis['label']
+            if 'units' in y_axis:
+                units= y_axis['units']
+        else:
+            ydata=y_axis
+        y_offset = np.min(ydata)
+        y_scaling = ydata[1] - ydata[0]
+        self.scaling_options['scaled_yaxis'].update(edict(offset=y_offset, scaling=y_scaling, label=label, units=units))
+        self.set_scaling_axes(self.scaling_options)
+
 
 class ROIScalableGroup(pTypes.GroupParameter):
     def __init__(self, **opts):

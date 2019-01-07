@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'image_view_multicolor_GUI.ui'
+# Form implementation generated from reading ui file 'viewer2D_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -104,6 +104,14 @@ class Ui_Form(object):
         self.FlipLR_pb.setCheckable(True)
         self.FlipLR_pb.setObjectName("FlipLR_pb")
         self.horizontalLayout_2.addWidget(self.FlipLR_pb)
+        self.rotate_pb = QtWidgets.QPushButton(Form)
+        self.rotate_pb.setText("")
+        icon10 = QtGui.QIcon()
+        icon10.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/rotation2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.rotate_pb.setIcon(icon10)
+        self.rotate_pb.setCheckable(True)
+        self.rotate_pb.setObjectName("rotate_pb")
+        self.horizontalLayout_2.addWidget(self.rotate_pb)
         self.x_label = QtWidgets.QLabel(Form)
         self.x_label.setObjectName("x_label")
         self.horizontalLayout_2.addWidget(self.x_label)
@@ -111,23 +119,23 @@ class Ui_Form(object):
         self.y_label.setObjectName("y_label")
         self.horizontalLayout_2.addWidget(self.y_label)
         self.z_label_red = QtWidgets.QPushButton(Form)
-        icon10 = QtGui.QIcon()
-        icon10.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/r_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.z_label_red.setIcon(icon10)
+        icon11 = QtGui.QIcon()
+        icon11.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/r_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.z_label_red.setIcon(icon11)
         self.z_label_red.setFlat(True)
         self.z_label_red.setObjectName("z_label_red")
         self.horizontalLayout_2.addWidget(self.z_label_red)
         self.z_label_green = QtWidgets.QPushButton(Form)
-        icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/g_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.z_label_green.setIcon(icon11)
+        icon12 = QtGui.QIcon()
+        icon12.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/g_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.z_label_green.setIcon(icon12)
         self.z_label_green.setFlat(True)
         self.z_label_green.setObjectName("z_label_green")
         self.horizontalLayout_2.addWidget(self.z_label_green)
         self.z_label_blue = QtWidgets.QPushButton(Form)
-        icon12 = QtGui.QIcon()
-        icon12.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/b_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.z_label_blue.setIcon(icon12)
+        icon13 = QtGui.QIcon()
+        icon13.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/b_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.z_label_blue.setIcon(icon13)
         self.z_label_blue.setFlat(True)
         self.z_label_blue.setObjectName("z_label_blue")
         self.horizontalLayout_2.addWidget(self.z_label_blue)
@@ -203,6 +211,7 @@ class Ui_Form(object):
         self.ROIselect_pb.setToolTip(_translate("Form", "Show/hide ROI scan area selection"))
         self.FlipUD_pb.setToolTip(_translate("Form", "Flip image up->down"))
         self.FlipLR_pb.setToolTip(_translate("Form", "Flip image left->right"))
+        self.rotate_pb.setToolTip(_translate("Form", "Rotate image by 90°"))
         self.x_label.setText(_translate("Form", "x:"))
         self.y_label.setText(_translate("Form", "y:"))
         self.z_label_red.setText(_translate("Form", "z_red"))
@@ -213,7 +222,7 @@ class Ui_Form(object):
         self.blue_cb.setText(_translate("Form", "Blue"))
 
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget
-import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys
