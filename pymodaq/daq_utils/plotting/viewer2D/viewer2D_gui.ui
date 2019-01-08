@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>819</width>
+    <height>487</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <item>
+        <widget class="QPushButton" name="Show_histogram">
+         <property name="toolTip">
+          <string>Histogram</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normalon>:/Labview_icons/Icon_Library/Histogram.png</normalon>
+          </iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="roiBtn">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>1</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>50</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>ROI</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normalon>:/Labview_icons/Icon_Library/Region.png</normalon>
+          </iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="isocurve_pb">
+         <property name="toolTip">
+          <string>Show iso-curve</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/meshPlot.png</normaloff>:/Labview_icons/Icon_Library/meshPlot.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="Ini_plot_pb">
+         <property name="toolTip">
+          <string>Ini Plot</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normalon>:/Labview_icons/Icon_Library/Refresh.png</normalon>
+          </iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="aspect_ratio_pb">
+         <property name="toolTip">
+          <string>set aspect ratio to 1</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normalon>:/Labview_icons/Icon_Library/Zoom_1_1.png</normalon>
+          </iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="auto_levels_pb">
+         <property name="toolTip">
+          <string>Turn on/off the intensity autolevel</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/autoscale.png</normaloff>:/Labview_icons/Icon_Library/autoscale.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="crosshair_pb">
+         <property name="toolTip">
+          <string>Show/hide crosshair</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset>
+           <normalon>:/Labview_icons/Icon_Library/reset.png</normalon>
+          </iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="ROIselect_pb">
+         <property name="toolTip">
+          <string>Show/hide ROI scan area selection</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/Select_24.png</normaloff>:/Labview_icons/Icon_Library/Select_24.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="FlipUD_pb">
+         <property name="toolTip">
+          <string>Flip image up-&gt;down</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/scale_vertically.png</normaloff>:/Labview_icons/Icon_Library/scale_vertically.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="FlipLR_pb">
+         <property name="toolTip">
+          <string>Flip image left-&gt;right</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/scale_horizontally.png</normaloff>:/Labview_icons/Icon_Library/scale_horizontally.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="rotate_pb">
+         <property name="toolTip">
+          <string>Rotate image by 90°</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/rotation2.png</normaloff>:/Labview_icons/Icon_Library/rotation2.png</iconset>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="x_label">
+         <property name="text">
+          <string>x:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="y_label">
+         <property name="text">
+          <string>y:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="z_label_red">
+         <property name="text">
+          <string>z_red</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/r_icon.png</normaloff>:/Labview_icons/Icon_Library/r_icon.png</iconset>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="z_label_green">
+         <property name="text">
+          <string>z_green</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/g_icon.png</normaloff>:/Labview_icons/Icon_Library/g_icon.png</iconset>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="z_label_blue">
+         <property name="text">
+          <string>z_blue</string>
+         </property>
+         <property name="icon">
+          <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+           <normaloff>:/Labview_icons/Icon_Library/b_icon.png</normaloff>:/Labview_icons/Icon_Library/b_icon.png</iconset>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="red_cb">
+         <property name="text">
+          <string>Red</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="green_cb">
+         <property name="text">
+          <string>Green</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="blue_cb">
+         <property name="text">
+          <string>Blue</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QSplitter" name="splitter">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <widget class="QSplitter" name="splitter_VLeft">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <widget class="GraphicsLayoutWidget" name="graphicsView">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>100</horstretch>
+             <verstretch>100</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>50</height>
+            </size>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="Lineout_H">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>50</height>
+            </size>
+           </property>
+          </widget>
+         </widget>
+         <widget class="QSplitter" name="splitter_VRight">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="handleWidth">
+           <number>5</number>
+          </property>
+          <widget class="PlotWidget" name="Lineout_V">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>50</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="Lineout_integrated"/>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>GraphicsLayoutWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
+ </resources>
+ <connections/>
+</ui>

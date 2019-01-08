@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>713</width>
+    <height>485</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout_4">
+   <item row="0" column="0">
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QWidget" name="horizontalLayoutWidget">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <layout class="QVBoxLayout" name="settings_layout">
+         <item>
+          <layout class="QGridLayout" name="gridLayout_3">
+           <item row="2" column="1">
+            <widget class="QPushButton" name="set_ini_positions_pb">
+             <property name="text">
+              <string>Set Ini Positions</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="quit_pb">
+             <property name="toolTip">
+              <string>Stop Scan</string>
+             </property>
+             <property name="text">
+              <string>Quit</string>
+             </property>
+             <property name="icon">
+              <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+               <normaloff>:/Labview_icons/Icon_Library/close2.png</normaloff>:/Labview_icons/Icon_Library/close2.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="Line" name="line">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QPushButton" name="set_scan_pb">
+             <property name="text">
+              <string>Set Scan</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QPushButton" name="start_scan_pb">
+             <property name="toolTip">
+              <string>Start Scan</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+               <normaloff>:/Labview_icons/Icon_Library/run2.png</normaloff>:/Labview_icons/Icon_Library/run2.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QPushButton" name="stop_scan_pb">
+             <property name="toolTip">
+              <string>Stop Scan</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+               <normaloff>:/Labview_icons/Icon_Library/stop.png</normaloff>:/Labview_icons/Icon_Library/stop.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2" rowspan="4">
+            <spacer name="horizontalSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="tab_plot1D">
+       <attribute name="title">
+        <string>1D plot</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <layout class="QVBoxLayout" name="scan1D_layout"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_plot2D">
+       <attribute name="title">
+        <string>2D plot</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item row="0" column="0">
+         <layout class="QVBoxLayout" name="scan2D_layout"/>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="StatusBarLayout"/>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
