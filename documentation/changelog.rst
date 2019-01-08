@@ -18,6 +18,6 @@ Changelog
   But the link to working python is missing with pip install (python.exe and pythonw.exe) must be on the ``PATH``
 * :bug:`0` Some wrong path to save/get preset modes
 * :release:`1.0.0 <2018-12-10>`
-* :feature:`0` Renamed all modules with lowercase. Renamed imageviewer_multicolor as viewer2D
+* :feature:`0` Renamed all modules with lowercase. Renamed image viewer_multicolor as viewer2D
 
 
