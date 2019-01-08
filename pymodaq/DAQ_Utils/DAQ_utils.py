@@ -13,6 +13,9 @@ import os
 import re
 import importlib
 
+
+plot_colors=['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+
 def get_set_local_dir():
     if 'win' in sys.platform:
         local_path = os.path.join(os.environ['HOMEDRIVE'] + os.environ['HOMEPATH'], 'pymodaq_local')

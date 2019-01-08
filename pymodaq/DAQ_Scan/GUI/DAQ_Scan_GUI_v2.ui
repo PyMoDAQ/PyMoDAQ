@@ -112,7 +112,7 @@
      </widget>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab_plot1D">
        <attribute name="title">
@@ -132,15 +132,7 @@
          <number>0</number>
         </property>
         <item row="0" column="0">
-         <layout class="QVBoxLayout" name="scan1D_layout">
-          <item>
-           <layout class="QGridLayout" name="scan1D_settings_layout">
-            <item row="0" column="0">
-             <widget class="PlotWidget" name="scan1D_graph"/>
-            </item>
-           </layout>
-          </item>
-         </layout>
+         <layout class="QVBoxLayout" name="scan1D_layout"/>
         </item>
        </layout>
       </widget>
@@ -174,13 +166,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>PlotWidget</class>
-   <extends>QGraphicsView</extends>
-   <header location="global">pyqtgraph</header>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
  </resources>

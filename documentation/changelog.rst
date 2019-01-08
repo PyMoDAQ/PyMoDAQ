@@ -4,6 +4,8 @@
 Changelog
 =========
 
+* :release:`1.1.2 <2018-12-18>`
+* :feature:`0` DAQ_Scan updated with averging possibility. Opens up a new dock showing the curent scan average. All scan in the average are saved
 * :bug:`0` Corrected the background substraction in DAQ_Viewer
 * :release:`1.1.1 <2018-12-18>`
 * :bug:`0` Some wrong call to plugins in preset_manager

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'daq_scan_gui_v2.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -20,6 +20,7 @@ class Ui_Form(object):
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.settings_layout = QtWidgets.QVBoxLayout()
         self.settings_layout.setObjectName("settings_layout")
@@ -72,12 +73,6 @@ class Ui_Form(object):
         self.gridLayout.setObjectName("gridLayout")
         self.scan1D_layout = QtWidgets.QVBoxLayout()
         self.scan1D_layout.setObjectName("scan1D_layout")
-        self.scan1D_settings_layout = QtWidgets.QGridLayout()
-        self.scan1D_settings_layout.setObjectName("scan1D_settings_layout")
-        self.scan1D_graph = PlotWidget(self.tab_plot1D)
-        self.scan1D_graph.setObjectName("scan1D_graph")
-        self.scan1D_settings_layout.addWidget(self.scan1D_graph, 0, 0, 1, 1)
-        self.scan1D_layout.addLayout(self.scan1D_settings_layout)
         self.gridLayout.addLayout(self.scan1D_layout, 0, 0, 1, 1)
         self.tabWidget.addTab(self.tab_plot1D, "")
         self.tab_plot2D = QtWidgets.QWidget()
@@ -95,23 +90,22 @@ class Ui_Form(object):
         self.gridLayout_4.addLayout(self.StatusBarLayout, 1, 0, 1, 1)
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
         self.set_ini_positions_pb.setText(_translate("Form", "Set Ini Positions"))
-        self.quit_pb.setToolTip(_translate("Form", "stop Scan"))
+        self.quit_pb.setToolTip(_translate("Form", "Stop Scan"))
         self.quit_pb.setText(_translate("Form", "Quit"))
         self.set_scan_pb.setText(_translate("Form", "Set Scan"))
         self.start_scan_pb.setToolTip(_translate("Form", "Start Scan"))
-        self.stop_scan_pb.setToolTip(_translate("Form", "stop Scan"))
+        self.stop_scan_pb.setToolTip(_translate("Form", "Stop Scan"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot1D), _translate("Form", "1D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
 
-from pyqtgraph import PlotWidget
-import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

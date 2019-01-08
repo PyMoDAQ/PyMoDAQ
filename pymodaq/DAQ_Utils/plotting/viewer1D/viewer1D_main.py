@@ -99,7 +99,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.crosshairClicked()
 
         self.plot_channels=None
-        self.plot_colors=['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+        self.plot_colors=utils.plot_colors
         self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
         self.linear_regions=[]
         self.lo_items=[]
