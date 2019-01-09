@@ -584,6 +584,23 @@ def set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     return Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions
 
 
+def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2):
+    Nsteps, axis_1_indexes, axis_2_indexes, axis_1_unique, axis_2_unique, axis_1, axis_2, positions = set_scan_linear(
+        start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
+
+    positions_shuffled=positions[:]
+    np.random.shuffle(positions_shuffled)
+    axis_1_indexes=[]
+    axis_2_indexes=[]
+
+    for pos in positions_shuffled:
+        axis_1_indexes.append(np.where(axis_1_unique==pos[0])[0][0])
+        axis_2_indexes.append(np.where(axis_2_unique==pos[1])[0][0])
+
+
+    Nsteps = len(positions)
+    return Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions_shuffled
+
 def find_part_in_path_and_subpath(base_dir,part='',create=False):
     """
         Find path from part time.
