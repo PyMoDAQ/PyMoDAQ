@@ -78,32 +78,51 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
 
     params_list=param.children()
     for param in params_list:
+        opts=dict([])
         param_type=str(param.type())
+        opts.update(dict(type=param_type))
         title=param.opts['title']
         if title is None:
             title=param.name()
+        opts.update(dict(title=title))
+
         if param.opts['visible']:
             visible='1'
         else:
             visible='0'
+        opts.update(dict(visible=visible))
+
         if param.opts['removable']:
             removable='1'
         else:
             removable='0'
+        opts.update(dict(removable=removable))
+
         if param.opts['readonly']:
             readonly='1'
         else:
             readonly='0'
+        opts.update(dict(readonly=readonly))
+
+        if 'detlist' in param.opts:
+            detlist=str(param.opts['detlist'])
+            opts.update(dict(detlist=detlist))
+
+        if 'movelist' in param.opts:
+            movelist=str(param.opts['movelist'])
+            opts.update(dict(movelist=movelist))
 
         if 'show_pb' in param.opts:
             if param.opts['show_pb']:
                 show_pb='1'
             else:
                 show_pb = '0'
-            elt = ET.Element(param.name(), title=title, type=param_type, visible=visible, removable=removable,
-                             readonly=readonly,show_pb=show_pb)
-        else:
-            elt=ET.Element(param.name(),title=title,type=param_type,visible=visible,removable=removable,readonly=readonly)
+            opts.update(dict(show_pb=show_pb))
+        #     elt = ET.Element(param.name(), title=title, type=param_type, visible=visible, removable=removable,
+        #                      readonly=readonly,show_pb=show_pb,detlist=detlist)
+        # else:
+        #     elt=ET.Element(param.name(),title=title,type=param_type,visible=visible,removable=removable,readonly=readonly)
+        elt = ET.Element(param.name(), **opts)
 
         if 'group' not in param_type: #covers 'group', custom 'groupmove'...
             if param_type=='bool':
@@ -233,27 +252,48 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
         raise TypeError('not valid XML element')
 
     for el in list(XML_elt):
+        param = dict([])
+
+        # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
+        #              visible=visible, removable=removable, readonly=readonly, show_pb=show_pb)
+        param.update(dict(name=el.tag))
         param_type=el.get('type')
+        param.update(dict(type=param_type))
+
         title=el.get('title')
         if title=='None':
             title=el.tag
+        param.update(dict(title=title))
+
         if 'visible' not in el.attrib.keys():
             visible=True
         else:
             visible=bool(int(el.get('visible')))
+        param.update(dict(visible=visible))
+
         if 'removable' not in el.attrib.keys():
             removable=False
         else:
             removable=bool(int(el.get('removable')))
+        param.update(dict(removable=removable))
+
         if 'readonly' not in el.attrib.keys():
             readonly=False
         else:
             readonly=bool(int(el.get('readonly')))
+        param.update(dict(readonly=readonly))
+
         if 'show_pb' in el.attrib.keys():
             show_pb = bool(int(el.get('show_pb')))
         else:
             show_pb = False
-
+        param.update(dict(show_pb=show_pb))
+        if 'detlist' in el.attrib.keys():
+            detlist=eval(el.get('detlist'))
+            param.update(dict(detlist=detlist))
+        if 'movelist' in el.attrib.keys():
+            movelist=eval(el.get('movelist'))
+            param.update(dict(movelist=movelist))
 
         if 'group' not in param_type: #covers 'group', custom 'groupmove'...
             val_text=el.text
@@ -281,15 +321,15 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
                 param_value=QtGui.QColor(*eval(val_text))
             else:
                 param_value=val_text
+            param.update(dict(value=param_value))
 
             if param_type=='list':
-                param=dict(name=el.tag,title=title,type=param_type,value=param_value,values=[param_value],visible=visible,removable=removable,readonly=readonly,show_pb=show_pb)
-            else:
-                param=dict(name=el.tag,title=title,type=param_type,value=param_value,visible=visible,removable=removable,readonly=readonly)
+                param.update(dict(values=[param_value]))
         else:
             subparams=[]
+            param.update(dict(children=walk_xml_to_parameter(subparams,el)))
 
-            param=dict(name=el.tag,title=title,type=param_type, visible=visible,removable=removable,readonly=readonly, children=walk_xml_to_parameter(subparams,el))
+            param.update(dict(name=el.tag))
 
         params.append(param)
     return params

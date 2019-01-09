@@ -184,34 +184,6 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
             print(str(e))
 registerParameterType('groupdet', PresetScalableGroupDet, override=True)
 
-def set_param_from_param(param_old,param_new):
-    """
-        Walk through parameters children and set values using new parameter values.
-    """
-    for child_old in param_old.children():
-        try:
-            path=param_old.childPath(child_old)
-            child_new=param_new.child(*path)
-            param_type=child_old.type()
-
-            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
-                try:
-                    if 'list' in param_type:#check if the value is in the limits of the old params (limits are usually set at initialization)
-                        if child_new.value() not in child_old.opts['limits']:
-                            child_old.opts['limits'].append(child_new.value())
-
-                        child_old.setValue(child_new.value())
-                    elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
-                        if child_new.value()!="":#to make sure one doesnt overwrite something
-                            child_old.setValue(child_new.value())
-                    else:
-                        child_old.setValue(child_new.value())
-                except Exception as e:
-                    print(str(e))
-            else:
-                set_param_from_param(child_old,child_new)
-        except Exception as e:
-            print(str(e))
 
 #check if preset_mode directory exists on the drive
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
@@ -239,7 +211,7 @@ class PresetManager():
                 self.set_new_preset()
 
             elif msgBox.clickedButton() == modify_button:
-                path = select_file(preset_path=preset_path,save=False, ext='xml')
+                path = select_file(start_path=preset_path,save=False, ext='xml')
                 if path != '':
                     self.set_file_preset(str(path))
             else: #cancel

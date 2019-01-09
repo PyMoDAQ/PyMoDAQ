@@ -23,6 +23,7 @@ import numpy as np
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.manage_preset import PresetManager
+from pymodaq.daq_utils.overshoot_manager import OvershootManager
 
 import matplotlib.image as mpimg
 from pymodaq.daq_move.daq_move_main import DAQ_Move
@@ -47,35 +48,6 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
         self.setMaximum(100000)
         self.setReadOnly(True)
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-
-def set_param_from_param(param_old,param_new):
-    """
-        Walk through parameters children and set values using new parameter values.
-    """
-    for child_old in param_old.children():
-        try:
-            path=param_old.childPath(child_old)
-            child_new=param_new.child(*path)
-            param_type=child_old.type()
-
-            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
-                try:
-                    if 'list' in param_type:#check if the value is in the limits of the old params (limits are usually set at initialization)
-                        if child_new.value() not in child_old.opts['limits']:
-                            child_old.opts['limits'].append(child_new.value())
-
-                        child_old.setValue(child_new.value())
-                    elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
-                        if child_new.value()!="":#to make sure one doesnt overwrite something
-                            child_old.setValue(child_new.value())
-                    else:
-                        child_old.setValue(child_new.value())
-                except Exception as e:
-                    print(str(e))
-            else:
-                set_param_from_param(child_old,child_new)
-        except Exception as e:
-            print(str(e))
 
 
 class DAQ_Scan(QtWidgets.QWidget,QObject):
@@ -327,20 +299,31 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         action_modify_preset.triggered.connect(self.modify_preset)
         preset_menu.addSeparator()
         load_preset=preset_menu.addMenu('Load presets')
-        #load_mock=load_preset.addAction('Mock preset')
-        #load_STEM=load_preset.addAction('STEM preset')
-        #load_canon=load_preset.addAction('Canon Preset')
-        #load_mock.triggered.connect(lambda: self.set_preset_mode('mock'))
-        #load_STEM.triggered.connect(lambda: self.set_preset_mode('STEM'))
-        #load_canon.triggered.connect(lambda: self.set_preset_mode('canon'))
 
         slots=dict([])
-        #start,end=os.path.split(os.path.realpath(__file__))
         for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'preset_modes'))):
             if file.endswith(".xml"):
                 (filesplited, ext)=os.path.splitext(file)
                 slots[filesplited]=load_preset.addAction(filesplited)
                 slots[filesplited].triggered.connect(self.create_menu_slot(os.path.join(local_path,'preset_modes',file)))
+
+        overshoot_menu=menubar.addMenu('Overshoot Modes')
+        action_new_overshoot=overshoot_menu.addAction('New Overshoot')
+        #action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
+        action_new_overshoot.triggered.connect(self.create_overshoot)
+        action_modify_overshoot=overshoot_menu.addAction('Modify Overshoot')
+        action_modify_overshoot.triggered.connect(self.modify_overshoot)
+        overshoot_menu.addSeparator()
+        load_overshoot=overshoot_menu.addMenu('Load Overshoots')
+
+        slots_over=dict([])
+        for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'overshoot_configurations'))):
+            if file.endswith(".xml"):
+                (filesplited, ext)=os.path.splitext(file)
+                slots_over[filesplited]=load_overshoot.addAction(filesplited)
+                slots_over[filesplited].triggered.connect(self.create_menu_slot_over(os.path.join(local_path,'overshoot_configurations',file)))
+
+
 
 
 
@@ -356,7 +339,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     def create_menu_slot(self,filename):
         return lambda: self.set_preset_mode(filename)
 
+    def create_menu_slot_over(self,filename):
+        return lambda: self.set_overshoot_configuration(filename)
 
+    def create_overshoot(self):
+        try:
+            self.overshoot_manager.set_new_overshoot()
+            self.create_menu(self.menubar)
+        except Exception as e:
+            self.update_status(str(e),log_type='log')
 
     def create_preset(self):
         try:
@@ -397,6 +388,17 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     dockstate = pickle.load(f)
                     self.dockarea.restoreState(dockstate)
         except: pass
+
+    def modify_overshoot(self):
+        try:
+            path = utils.select_file(start_path=os.path.join(local_path,'overshoot_configurations'), save=False, ext='xml')
+            if path != '':
+                self.overshoot_manager.set_file_overshoot(str(path))
+
+            else:  # cancel
+                pass
+        except Exception as e:
+            self.update_status(str(e),log_type='log')
 
     def modify_preset(self):
         try:
@@ -800,7 +802,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         mov_mod_tmp.ui.Quit_pb.setEnabled(False)
                         QtWidgets.QApplication.processEvents()
 
-                        set_param_from_param(mov_mod_tmp.settings,plug_settings)
+                        utils.set_param_from_param(mov_mod_tmp.settings,plug_settings)
                         QtWidgets.QApplication.processEvents()
 
                         mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
@@ -849,7 +851,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         detector_modules.append(det_mod_tmp)
                         detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
                         detector_modules[-1].ui.Quit_pb.setEnabled(False)
-                        set_param_from_param(det_mod_tmp.settings,plug_settings)
+                        utils.set_param_from_param(det_mod_tmp.settings,plug_settings)
                         QtWidgets.QApplication.processEvents()
 
 
@@ -922,6 +924,32 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         #self.save_parameters.h5_file._f_setattr('author','Sebastien Weber')
 
+    def set_overshoot_configuration(self,filename):
+        try:
+            if os.path.splitext(filename)[1]=='.xml':
+                self.overshoot_manager.set_file_overshoot(filename,show=False)
+
+                det_titles=[det.title for det in self.detector_modules]
+                move_titles=[move.title for move in self.move_modules]
+
+                for det_param in self.overshoot_manager.overshoot_params.child(('Detectors')).children():
+                    if det_param.child(('trig_overshoot')).value():
+                        det_index = det_titles.index(det_param.opts['title'])
+                        det_module = self.detector_modules[det_index]
+                        det_module.settings.child('main_settings','overshoot','stop_overshoot').setValue(True)
+                        det_module.settings.child('main_settings','overshoot','overshoot_value').setValue(det_param.child(('overshoot_value')).value())
+                        for move_param in det_param.child(('params')).children():
+                            if move_param.child(('move_overshoot')).value():
+                                move_index = move_titles.index(move_param.opts['title'])
+                                move_module = self.move_modules[move_index]
+                                det_module.overshoot_signal.connect(self.create_overshoot_fun(move_module,move_param.child(('position')).value()))
+
+        except Exception as e:
+            self.update_status(str(e),self.wait_time,log_type='log')
+
+    def create_overshoot_fun(self,move_module,position):
+        return lambda: move_module.move_Abs(position)
+
     def set_preset_mode(self,filename):
         """
             | Set the preset mode from the given filename.
@@ -962,6 +990,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             self.move_modules=move_modules
             self.detector_modules=detector_modules
+
+            self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
 
             #connecting to logger
             for mov in move_modules:
@@ -1328,6 +1358,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
         self.preset_manager=PresetManager()
+        self.overshoot_manager = OvershootManager(det_modules=[],move_modules=[])
 
         self.dataset_attributes=Parameter.create(name='Attributes', type='group', children=params_dataset)
         self.scan_attributes=Parameter.create(name='Attributes', type='group', children=params_scan)

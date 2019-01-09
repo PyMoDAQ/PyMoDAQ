@@ -601,6 +601,35 @@ def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     Nsteps = len(positions)
     return Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions_shuffled
 
+def set_param_from_param(param_old,param_new):
+    """
+        Walk through parameters children and set values using new parameter values.
+    """
+    for child_old in param_old.children():
+        try:
+            path=param_old.childPath(child_old)
+            child_new=param_new.child(*path)
+            param_type=child_old.type()
+
+            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
+                try:
+                    if 'list' in param_type:#check if the value is in the limits of the old params (limits are usually set at initialization)
+                        if child_new.value() not in child_old.opts['limits']:
+                            child_old.opts['limits'].append(child_new.value())
+
+                        child_old.setValue(child_new.value())
+                    elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
+                        if child_new.value()!="":#to make sure one doesnt overwrite something
+                            child_old.setValue(child_new.value())
+                    else:
+                        child_old.setValue(child_new.value())
+                except Exception as e:
+                    print(str(e))
+            else:
+                set_param_from_param(child_old,child_new)
+        except Exception as e:
+            print(str(e))
+
 def find_part_in_path_and_subpath(base_dir,part='',create=False):
     """
         Find path from part time.

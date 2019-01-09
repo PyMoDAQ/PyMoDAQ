@@ -6,6 +6,7 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="plugins" />
     <orderEntry type="module" module-name="pymodaq_plugins" />
+    <orderEntry type="module" module-name="gestion_benevoles" />
   </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="pytest" />
