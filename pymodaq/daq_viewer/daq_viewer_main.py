@@ -792,7 +792,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
     def save_current(self):
         """
-            Save the current opened file from the select_file obtained pathname into a h5 file structure.
+
 
             See Also
             --------
@@ -940,7 +940,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         """
         self.do_save_data=True
         self.save_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
-        self.snapshot(pathname=self.save_file_pathname)
+        self.snapshot(pathname=self.save_file_pathname,dosave=True)
 
 
     def save_settings(self,path=None):
@@ -1247,7 +1247,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 else:
                     self.ui.viewers[ind].show_data_temp(data['data'][0])
 
-    def snapshot(self, pathname=None):
+    def snapshot(self, pathname=None, dosave=False):
         """
             Do one single grab and save the data in pathname.
 
@@ -1261,7 +1261,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             grab, update_status
         """
         try:
-            self.do_save_data=True
+            self.do_save_data=dosave
             if pathname is None:
                 raise (Exception("filepathanme has not been defined in snapshot"))
             self.save_file_pathname=pathname

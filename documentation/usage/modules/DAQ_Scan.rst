@@ -204,7 +204,7 @@ type of live data:
 
 So at maximum, 2D dimensionality can be represented. In order to see live data from 2D detectors, one
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
-to perform using the ROI features of the data viewers (see :ref:`Data Viewers`)
+to perform using the ROI features of the data viewers (see :ref:`data_viewers`)
 
 
 Preset manager

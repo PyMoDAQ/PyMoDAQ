@@ -682,12 +682,14 @@ def find_part_in_path_and_subpath(base_dir,part='',create=False):
             if create:
                 found_path=base_dir.joinpath(part)
                 found_path.mkdir()
+            else:
+                found_path = base_dir
         else:
             ind_path=subfolders_year_name.index(part)
             found_path=subfolders_found_path[ind_path]
     return found_path
 
-def set_current_scan_path(base_dir,base_name='Scan',update_h5=False):
+def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_index=0,create_scan_folder = False):
     """
         Set the path of the current scan and create associated directory tree.
         As default :
@@ -756,14 +758,16 @@ def set_current_scan_path(base_dir,base_name='Scan',update_h5=False):
     dataset_path=find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=True)
 
     scan_paths=sorted([path for path in dataset_path.glob(base_name+'*') if path.is_dir()])
-    if scan_paths==[]:
-        ind_scan=0
-    else:
-        if list(scan_paths[-1].iterdir())==[]:
-            ind_scan=int(scan_paths[-1].name.partition(base_name)[2])
-        else:
-            ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
-    scan_path=find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=True)
+    # if scan_paths==[]:
+    #     ind_scan=0
+    # else:
+    #     if list(scan_paths[-1].iterdir())==[]:
+    #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])
+    #     else:
+    #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
+    ind_scan = next_scan_index
+
+    scan_path=find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
     return scan_path,base_name+'{:03d}'.format(ind_scan),dataset_path
 
 

@@ -3,9 +3,16 @@
 =========
 Changelog
 =========
-
+* :release:`1.2.0 <2019-01-11>`
+* :feature:`0` DAQ_Scan: Huge modification related to the scanning. Now you can select an area in one of the opened 2DViewers
+  This viewer could for instance be a calibrated camera referring to the x and y positions of a XY stage. The Plot2D scan 2D viewer
+  can also be used. Say that you just did a 2D scan and now you want to scan a cross-section within!!
+  This area can be a 2D one (rectangle, 2D scan type) or a PolyLines (linked segments, 1D scan type). Random modes and
+  others are still available in this mode
+* :feature:`0` DAQ_Scan: possibility to save all datas in independent files or not (default is not)
+* :feature:`0` DAQ_Scan: Overshoot configuration is now available: set DAQ_Move actions depending on detected values
 * :release:`1.1.2 <2018-12-18>`
-* :feature:`0` DAQ_Scan updated with averging possibility. Opens up a new dock showing the curent scan average. All scan in the average are saved
+* :feature:`0` DAQ_Scan updated with averaging possibility. Opens up a new dock showing the current scan average. All scan in the average are saved
 * :bug:`0` Corrected the background substraction in DAQ_Viewer
 * :release:`1.1.1 <2018-12-18>`
 * :bug:`0` Some wrong call to plugins in preset_manager

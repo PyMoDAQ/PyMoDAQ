@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(819, 487)
+        Form.resize(956, 487)
         self.gridLayout = QtWidgets.QGridLayout(Form)
         self.gridLayout.setObjectName("gridLayout")
         self.verticalLayout = QtWidgets.QVBoxLayout()
@@ -208,7 +208,7 @@ class Ui_Form(object):
         self.aspect_ratio_pb.setToolTip(_translate("Form", "set aspect ratio to 1"))
         self.auto_levels_pb.setToolTip(_translate("Form", "Turn on/off the intensity autolevel"))
         self.crosshair_pb.setToolTip(_translate("Form", "Show/hide crosshair"))
-        self.ROIselect_pb.setToolTip(_translate("Form", "Show/hide ROI scan area selection"))
+        self.ROIselect_pb.setToolTip(_translate("Form", "Show/hide ROI area selection"))
         self.FlipUD_pb.setToolTip(_translate("Form", "Flip image up->down"))
         self.FlipLR_pb.setToolTip(_translate("Form", "Flip image left->right"))
         self.rotate_pb.setToolTip(_translate("Form", "Rotate image by 90°"))

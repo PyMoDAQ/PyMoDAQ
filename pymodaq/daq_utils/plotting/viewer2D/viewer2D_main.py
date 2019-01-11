@@ -3,6 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, 
 import sys
 from collections import OrderedDict
 import pyqtgraph as pg
+from pyqtgraph.Point import Point
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 Gradients.update(OrderedDict([
             ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
@@ -112,6 +113,7 @@ class RectROI(pg.ROI):
         return QPointF(self.pos().x()+self.size().x()/2,self.pos().y()+self.size().y()/2)
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
+
 
 class AxisItem_Scaled(pg.AxisItem):
     """
@@ -343,6 +345,7 @@ class Viewer2D(QtWidgets.QWidget):
             self.ui.splitter_VRight.splitterMoved[int,int].connect(self.move_left_splitter)
         except:
             pass
+
 
     def add_ROI(self,roi_type='RectROI'):
         """
@@ -937,7 +940,6 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.ROIselect.setVisible(self.ui.ROIselect_pb.isChecked())
 
 
-
     def update_image_flip(self):
         self.setImageTemp(self.ui.img_red.image,self.ui.img_green.image,self.ui.img_blue.image)
 
@@ -1027,6 +1029,7 @@ class Viewer2D(QtWidgets.QWidget):
 
     def updateIsocurve(self):
         self.ui.iso.setLevel(self.ui.isoLine.value())
+
 
     @property
     def x_axis(self):

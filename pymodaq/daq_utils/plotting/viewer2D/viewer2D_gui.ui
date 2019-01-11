@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>819</width>
+    <width>956</width>
     <height>487</height>
    </rect>
   </property>
@@ -160,7 +160,7 @@
        <item>
         <widget class="QPushButton" name="ROIselect_pb">
          <property name="toolTip">
-          <string>Show/hide ROI scan area selection</string>
+          <string>Show/hide ROI area selection</string>
          </property>
          <property name="text">
           <string/>

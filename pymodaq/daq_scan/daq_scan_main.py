@@ -3,6 +3,7 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTi
 
 import sys
 import os
+import itertools
 #sys.path.append(os.path.split(os.path.split(os.path.split(__file__)[0])[0])[0])
 
 import logging
@@ -39,6 +40,24 @@ import pickle
 import os
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
 local_path = get_set_local_dir()
+
+class PolyLineROI_custom(pg.PolyLineROI):
+    def __init__(self,*args,**kwargs):
+        super(PolyLineROI_custom,self).__init__(*args,**kwargs)
+
+    def getArrayIndexes(self, img, spacing=1, **kwds):
+        imgPts = [self.mapToItem(img, h['item'].pos()) for h in self.handles]
+        positions=[]
+        for i in range(len(imgPts) - 1):
+            d = pg.Point(imgPts[i + 1] - imgPts[i])
+            o = pg.Point(imgPts[i])
+            vect=pg.Point(d.norm())
+            Npts=0
+            while Npts*spacing < d.length():
+                Npts+=1
+                positions.append(((o+Npts*spacing*vect).x(),(o+Npts*spacing*vect).y()))
+
+        return positions
 
 
 
@@ -146,6 +165,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         self.det_modules_scan = []
         self.move_modules_scan = []
+
+        self.overshoot = False
 
         self.setupUI()
 
@@ -707,7 +728,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     if data=='Scan1D':
                         self.daqscan_settings.child('scan_options','scan1D_settings').show()
                         self.daqscan_settings.child('scan_options','scan2D_settings').hide()
-                    else:
+                    elif data == 'Scan2D':
                         self.daqscan_settings.child('scan_options','scan1D_settings').hide()
                         self.daqscan_settings.child('scan_options','scan2D_settings').show()
 
@@ -721,6 +742,48 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 elif param.name() == 'scan_average':
                     self.ui.average_dock.setVisible(param.value() > 1)
                     self.ui.indice_average_sb.setVisible(param.value() > 1)
+
+
+
+
+
+                elif param.name() =='scan1D_roi_module' or param.name() == 'scan2D_roi_module' or param.name() =='scan1D_selection' or param.name() == 'scan2D_selection':
+                    try:
+                        self.ui.scan_area_item.removeItem(self.ui.scan_area)
+                    except:
+                        pass
+                    if param.name() == 'scan1D_roi_module' or param.name() == 'scan2D_roi_module':
+                        if param.value() == '2DScanPlot':
+                            self.ui.scan_area_item=self.ui.scan2D_graph.ui.plotitem
+                        elif param.value() is not None:
+                            modtitles=[mod.title for mod in self.detector_modules]
+                            self.ui.scan_area_item =self.detector_modules[modtitles.index(param.value())].ui.viewers[0].ui.plotitem
+                    if param.name() == 'scan1D_roi_module':
+                        self.update_scan_area_type(scan_area_type='PolyLines')
+                    elif param.name() =='scan2D_roi_module':
+                        self.update_scan_area_type(scan_area_type='Rect')
+                    if param.name() == 'scan1D_selection':
+                        if param.value() == 'Manual':
+                            self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').hide()
+                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').show()
+                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').show()
+                        else:
+                            self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').show()
+                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').hide()
+                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').hide()
+                    if param.name() == 'scan2D_selection':
+                        if param.value() == 'Manual':
+                            self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').hide()
+                        else:
+                            self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').show()
+                        self.update_scan_type(self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_type'))
+                    self.show_scan_area()
+
+                elif param.name() == 'save_independent':
+                    self.daqscan_settings.child('saving_options','current_scan_path').show(param.value())
+
+
+
             elif change == 'parent':pass
 
 
@@ -927,6 +990,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     def set_overshoot_configuration(self,filename):
         try:
             if os.path.splitext(filename)[1]=='.xml':
+                self.update_status('Overshoot configuration ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
                 self.overshoot_manager.set_file_overshoot(filename,show=False)
 
                 det_titles=[det.title for det in self.detector_modules]
@@ -987,11 +1051,22 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             QtWidgets.QApplication.processEvents()
 
             move_modules,detector_modules= self.set_file_preset(filename)
-
+            self.update_status('Preset mode ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
             self.move_modules=move_modules
             self.detector_modules=detector_modules
 
             self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
+
+            mods1D=[]
+            mods2D=[]
+            mods1D.extend([mod.title for mod in self.detector_modules if mod.DAQ_type == 'DAQ2D'])
+            mods2D.extend([mod.title for mod in self.detector_modules if mod.DAQ_type == 'DAQ2D'])
+            mods1D.append('2DScanPlot')
+            mods2D.append('2DScanPlot')
+
+            self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').setOpts(limits=mods1D)
+            self.daqscan_settings.child('scan_options','scan2D_settings','scan2D_roi_module').setOpts(limits=mods2D)
+
 
             #connecting to logger
             for mov in move_modules:
@@ -1016,14 +1091,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if preset_items_det!=[]:
                 self.daqscan_settings.child('scan_options','plot_from').setValue(preset_items_det[0])
 
-
             self.splash_sc.close()
             #self.mainwindow.setVisible(True)
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(True)
         except Exception as e:
             self.update_status(str(e),self.wait_time,log_type='log')
-
 
     def set_scan(self):
         """
@@ -1033,14 +1106,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.update_file_paths()
             scan_path=Path(self.daqscan_settings.child('saving_options','current_scan_path').value())
             current_filename=self.daqscan_settings.child('saving_options','current_scanname').value()
-
-
             # set the moves positions according to data from user
-            if "1D" in self.daqscan_settings.child('scan_options','scan_type').value():
-                move_names_scan=[self.daqscan_settings.child('Move_Detectors','Moves').value()['selected'][0]] #selected move modules names
-            else:
-                move_names_scan=self.daqscan_settings.child('Move_Detectors','Moves').value()['selected'][0:2]
-
+            move_names_scan=self.daqscan_settings.child('Move_Detectors','Moves').value()['selected'] #selected move modules names
             move_names=[mod.title for mod in self.move_modules] # names of all move modules initialized
             self.move_modules_scan=[] #list of move modules used for this scan
             for name in move_names_scan:
@@ -1053,44 +1120,81 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.det_modules_scan.append(self.detector_modules[det_names.index(name)])
 
             self.scan_saves=[]
-
             if self.daqscan_settings.child('scan_options','scan_type').value() == "Scan1D":
-                move_module_name=move_names_scan[0]
+
                 start=self.daqscan_settings.child('scan_options','scan1D_settings','start_1D').value()
                 stop=self.daqscan_settings.child('scan_options','scan1D_settings','stop_1D').value()
                 step=self.daqscan_settings.child('scan_options','scan1D_settings','step_1D').value()
-                if self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=="Linear":
-                    self.scan_parameters.axis_1D=utils.linspace_step(start,stop,step)
-                elif self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
-                    steps=[]
-                    for step in utils.linspace_step(start,stop,step):
-                        steps.extend([step,start])
-                    self.scan_parameters.axis_1D=np.array(steps)
-                elif self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()== 'Random':
-                    self.scan_parameters.axis_1D=utils.linspace_step(start,stop,step)
-                    np.random.shuffle(self.scan_parameters.axis_1D)
 
-                self.scan_parameters.Nsteps=np.size(self.scan_parameters.axis_1D)
+                if self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_selection').value() == 'Manual':
+                    Nmove_module = 1
+                    steps_x = utils.linspace_step(start,stop,step)
+                    steps_y = np.array([])
+                else:  # from ROI
+                    Nmove_module = 2
+                    param = self.daqscan_settings.child('scan_options', 'scan1D_settings', 'scan1D_roi_module')
+                    if param.value() == '2DScanPlot':
+                        viewer = self.ui.scan2D_graph
+                    elif param.value() is not None:
+                        modtitles = [mod.title for mod in self.detector_modules]
+                        viewer = self.detector_modules[modtitles.index(param.value())].ui.viewers[0]
+
+                    positions=self.ui.scan_area.getArrayIndexes( viewer.ui.img_red, spacing=step)
+
+                    steps_x, steps_y=zip(*positions)
+                    steps_x, steps_y =viewer.scale_axis(np.array(steps_x),np.array(steps_y))
+
+
+                if len(move_names_scan) < Nmove_module:
+                    msgBox=QtWidgets.QMessageBox(parent=None)
+                    msgBox.setWindowTitle("Error")
+                    msgBox.setText("There are not enough selected move modules")
+                    ret=msgBox.exec()
+                    return
+
+                if self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=="Linear":
+                    self.scan_parameters.axis_2D_1 = steps_x
+                    self.scan_parameters.axis_2D_2 = steps_y
+
+
+                elif self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
+                    stepss_x=[]
+                    stepss_y=[]
+                    for stepx in steps_x:
+                        stepss_x.extend([stepx,start])
+                    for stepy in steps_y:
+                        stepss_y.extend([stepy,start])
+                    self.scan_parameters.axis_2D_1=np.array(stepss_x)
+                    self.scan_parameters.axis_2D_2 = np.array(stepss_y)
+                elif self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()== 'Random':
+                    positions=list(zip(steps_x,steps_y))
+                    np.random.shuffle(positions)
+                    x, y = zip(*positions)
+                    self.scan_parameters.axis_2D_1=list(x)
+                    self.scan_parameters.axis_2D_2=list(y)
+
+                positions = list(itertools.zip_longest(self.scan_parameters.axis_2D_1,self.scan_parameters.axis_2D_2,fillvalue=None))
+
+                self.scan_parameters.Nsteps=len(positions)
                 self.ui.N_scan_steps_sb.setValue(self.scan_parameters.Nsteps)
 
-                self.scan_moves=[[[move_module_name,pos]] for pos in self.scan_parameters.axis_1D]
+                self.scan_moves=[[[move_names_scan[ind_pos],pos[ind_pos]] for ind_pos in range(Nmove_module)] for pos in positions]
 
+                ###############################
+                #old stuff when all data where saved in separated files but still needed to perform the scan (only the paths are not)
                 for ind,pos in enumerate(self.scan_moves):
-                    self.scan_saves.append([OrderedDict(det_name=det_name,file_path=str(scan_path.joinpath(current_filename+"_"+det_name+'_{:03d}.dat'.format(ind))),indexes=OrderedDict(indx=ind)) for det_name in det_names_scan])
+                    self.scan_saves.append([OrderedDict(det_name=det_name,file_path=str(scan_path.joinpath(current_filename+"_"+det_name+'_{:03d}.h5'.format(ind))),indexes=OrderedDict(indx=ind)) for det_name in det_names_scan])
 
 
             elif self.daqscan_settings.child('scan_options','scan_type').value() == "Scan2D":
-                if len(move_names_scan)!=2:
-
+                Nmove_module = 2
+                if len(move_names_scan) < Nmove_module:
                     msgBox=QtWidgets.QMessageBox(parent=None)
                     msgBox.setWindowTitle("Error")
                     msgBox.setText("There are not enough selected move modules")
                     ret=msgBox.exec();
                     return
 
-
-                move_module_name1=move_names_scan[0]
-                move_module_name2=move_names_scan[1]
 
                 start_axis1=self.daqscan_settings.child('scan_options','scan2D_settings','start_2d_axis1').value()
                 start_axis2=self.daqscan_settings.child('scan_options','scan2D_settings','start_2d_axis2').value()
@@ -1125,12 +1229,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.scan_parameters.axis_2D_2_indexes=axis_2_indexes
                 self.scan_parameters.Nsteps=Nsteps
                 self.ui.N_scan_steps_sb.setValue(self.scan_parameters.Nsteps)
-                self.scan_moves=[[[move_module_name1,pos1],[move_module_name2,pos2]] for pos1,pos2 in positions]
+                self.scan_moves=[[[move_names_scan[0],pos1],[move_names_scan[1],pos2]] for pos1,pos2 in positions]
 
                 for ind,pos in enumerate(self.scan_moves):
                     ind1=axis_1_indexes[ind]
                     ind2=axis_2_indexes[ind]
-                    self.scan_saves.append([OrderedDict(det_name=det_name,file_path=str(scan_path.joinpath(current_filename+"_"+det_name+'_{:03d}_{:03d}.dat'.format(ind1,ind2))),indexes=OrderedDict(indx=ind1,indy=ind2)) for det_name in det_names_scan])
+                    self.scan_saves.append([OrderedDict(det_name=det_name,file_path=str(scan_path.joinpath(current_filename+"_"+det_name+'_{:03d}_{:03d}.h5'.format(ind1,ind2))),indexes=OrderedDict(indx=ind1,indy=ind2)) for det_name in det_names_scan])
 
 
             #check if the modules are initialized
@@ -1222,6 +1326,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         icon2.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Region.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ui.ROIselect_pb.setIcon(icon2)
 
+
+        #Scan area
+        self.ui.scan_area_item=self.ui.scan2D_graph.ui.plotitem
+        self.ui.scan_area=pg.RectROI([0,0],[10,10])
+
+
+
+
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.ROIselect_pb)
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.overlay2D_pb)
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.move_to_crosshair_cb)
@@ -1292,12 +1404,16 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Plot from:','name': 'plot_from', 'type': 'list'},
             {'title': 'Scan1D settings','name': 'scan1D_settings', 'type': 'group', 'children': [
                     {'title': 'Scan type:','name': 'scan1D_type', 'type': 'list', 'values': ['Linear','Linear back to start','Random'],'value': 'Linear'},
+                    {'title': 'Selection:', 'name': 'scan1D_selection', 'type': 'list', 'values': ['Manual','FromROI PolyLines']},
+                    {'title': 'From module:', 'name': 'scan1D_roi_module', 'type': 'list', 'values': ['2DScanPlot'], 'visible': False},
                     {'title': 'Start:','name': 'start_1D', 'type': 'float', 'value': 0.},
                     {'title': 'stop:','name': 'stop_1D', 'type': 'float', 'value': 10.},
                     {'title': 'Step:','name': 'step_1D', 'type': 'float', 'value': 1.}
                     ]},
             {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group','visible': False, 'children': [
                     {'title': 'Scan type:','name': 'scan2D_type', 'type': 'list', 'values': ['Spiral','Linear', 'back&forth','Random'],'value': 'Spiral'},
+                    {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list','values': ['Manual', 'FromROI']},
+                    {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': ['2DScanPlot'], 'visible': False},
                     {'title': 'Start Ax1:','name': 'start_2d_axis1', 'type': 'float', 'value': 0., 'visible':True},
                     {'title': 'Start Ax2:','name': 'start_2d_axis2', 'type': 'float', 'value': 10., 'visible':True},
                     {'title': 'stop Ax1:','name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible':False},
@@ -1307,12 +1423,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     {'title': 'Rstep:','name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible':True},
                     {'title': 'Rmax:','name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible':True}
                     ]},
+
             ]},
         {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
             {'title': 'Save 2D datas:','name': 'save_2D', 'type': 'bool', 'value': True},
+            {'title': 'Save in independent files:', 'name': 'save_independent', 'type': 'bool', 'value': False},
             {'title': 'Base path:','name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False},
             {'title': 'Base name:','name': 'base_name', 'type': 'str', 'value': 'Scan','readonly': True},
-            {'title': 'Current path:','name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data','readonly': True},
+            {'title': 'Current path:','name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data','readonly': True, 'visible': False},
             {'title': 'Current scan name:','name': 'current_scanname', 'type': 'list', 'value': ''},
             {'title': 'Comments:','name': 'add_comments', 'type': 'text_pb', 'value': ''},
             {'title': 'h5file:','name': 'current_h5_file', 'type': 'text_pb', 'value': '','readonly': True},
@@ -1380,6 +1498,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
 
         self.mainwindow.setVisible(True)
+
 
     def show_about(self):
         self.splash_sc.setVisible(True)
@@ -1467,6 +1586,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         else:
             self.scan_tree.setVisible(False)
 
+    def show_scan_area(self):
+
+        self.ui.scan_area.setVisible(self.daqscan_settings.child('scan_options', 'scan1D_settings','scan1D_selection').value() == 'FromROI PolyLines' or\
+        self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_selection').value() == 'FromROI')
+
     def start_scan(self):
         """
             Start an acquisition calling the set_scan function.
@@ -1476,21 +1600,27 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             set_scan
         """
+        self.ui.log_message.setText('Starting acquisition')
+        self.overshoot = False
         self.plot_2D_ini=False
         self.plot_1D_ini = False
         self.set_scan()
         self.ui.scan_done_LED.set_as_false()
-        self.ui.log_message.setText('Starting acquisition')
+
         self.command_DAQ_signal.emit(["start_acquisition"])
 
-    def stop_moves(self):
+        self.ui.log_message.setText('Running acquisition')
+
+    pyqtSlot(bool)
+    def stop_moves(self,overshoot):
         """
-            Foreach module of the move module object liost, stop motion.
+            Foreach module of the move module object list, stop motion.
 
             See Also
             --------
             stop_scan,  DAQ_Move_main.daq_move.stop_Motion
         """
+        self.overshoot = overshoot
         self.stop_scan()
         for mod in self.move_modules:
             mod.stop_Motion()
@@ -1504,8 +1634,17 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             set_ini_positions
         """
+        self.ui.log_message.setText('Stoping acquisition')
         self.command_DAQ_signal.emit(["stop_acquisition"])
-        self.set_ini_positions()
+
+        if not self.overshoot:
+            self.set_ini_positions() #do not set ini position again in case overshoot fired
+            status = 'Data Acquisition has been stopped by user'
+        else:
+            status = 'Data Acquisition has been stopped due to overshoot'
+
+        self.update_status(status, log_type='log')
+        self.ui.log_message.setText('')
 
     @pyqtSlot(list)
     def thread_status(self,status): # general function to get datas/infos from all threads back to the main
@@ -1539,7 +1678,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         elif status[0]=="Scan_done":
             self.ui.scan_done_LED.set_as_true()
             self.save_scan()
-            self.set_ini_positions()
+            if not self.overshoot:
+                self.set_ini_positions()
         elif status[0]=="Timeout":
             self.ui.log_message.setText('Timeout occurred')
 
@@ -1578,8 +1718,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='bottom', label=self.scan_moves[0][0][0], units=''))
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left', label=self.daqscan_settings.child('scan_options','plot_from').value(), units=''))
 
-            self.scan_x_axis[self.ind_scan]=self.scan_positions[0][1]
-
+            if self.daqscan_settings.child('scan_options','scan1D_settings', 'scan1D_selection').value() == 'Manual':
+                self.scan_x_axis[self.ind_scan]=self.scan_positions[0][1]
+            else: #in case of PolyLines scans, impossible to plot linearly so just use the scan index
+                self.scan_x_axis[self.ind_scan] = self.ind_scan
             #to test random mode:
             #self.scan_data_1D[self.ind_scan, :] =np.random.rand((1))* np.array([np.exp(-(self.scan_x_axis[self.ind_scan]-50)**2/20**2),np.exp(-(self.scan_x_axis[self.ind_scan]-50)**6/10**6)]) # np.array(list(datas.values()))
             self.scan_data_1D[self.ind_scan, :] =  np.array(list(datas.values()))
@@ -1660,9 +1802,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
                         self.scan_y_axis=np.array([])
                         if self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
-                            self.scan_x_axis=self.scan_parameters.axis_1D[0::2]
+                            self.scan_x_axis=self.scan_parameters.axis_2D_1[0::2]
                         else:
-                            self.scan_x_axis=self.scan_parameters.axis_1D
+                            self.scan_x_axis=self.scan_parameters.axis_2D_1
 
                         Nx=len(self.scan_x_axis)
 
@@ -1787,9 +1929,24 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             # set the filename and path
             base_path=self.daqscan_settings.child('saving_options','base_path').value()
             base_name=self.daqscan_settings.child('saving_options','base_name').value()
-
-
-            scan_path,current_filename,dataset_path=utils.set_current_scan_path(base_path, base_name, update_h5)
+            current_scan=self.daqscan_settings.child('saving_options','current_scanname').value()
+            if current_scan == '' or update_h5:
+                next_scan_index = 0
+                update_h5 = True #just started the main program so one should create a new h5
+            else:
+                try:
+                    flag=False
+                    for child in list(self.save_parameters.current_group._v_children):
+                        if 'scan' in child:
+                            flag=True
+                    if not flag: #means data has been saved in this group
+                        next_scan_index=int(current_scan[-3:])
+                    else:#otherwise (if data present) you create a new group
+                        next_scan_index = int(current_scan[-3:])+1
+                except Exception as e:
+                    next_scan_index = int(current_scan[-3:])
+            scan_path,current_filename,dataset_path=utils.set_current_scan_path(base_path, base_name, update_h5,
+                                next_scan_index,create_scan_folder=self.daqscan_settings.child('saving_options','save_independent').value())
             self.daqscan_settings.child('saving_options','current_scan_path').setValue(str(scan_path))
 
 
@@ -1813,6 +1970,49 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         items=param.value()['selected']
         self.daqscan_settings.child('scan_options','plot_from').setOpts(limits=items)
+
+    pyqtSlot(str)
+    def update_scan_area_type(self,scan_area_type):
+        if self.ui.scan_area_item is not None:
+            try:
+                self.ui.scan_area_item.removeItem(self.ui.scan_area)
+            except:
+                pass
+
+            if scan_area_type == 'Rect':
+                self.ui.scan_area = pg.RectROI([0,0],[10,10])
+                self.ui.scan_area.sigRegionChangeFinished.connect(self.update_scan_2D_positions)
+            elif scan_area_type == 'PolyLines':
+                self.ui.scan_area = PolyLineROI_custom([(0, 0), [10, 10]])
+
+            self.ui.scan_area_item.addItem(self.ui.scan_area)
+            self.show_scan_area()
+
+    def update_scan_2D_positions(self):
+        try:
+            param=self.daqscan_settings.child('scan_options','scan2D_settings','scan2D_roi_module')
+            if param.value() == '2DScanPlot':
+                viewer = self.ui.scan2D_graph
+            elif param.value() is not None:
+                modtitles = [mod.title for mod in self.detector_modules]
+                viewer = self.detector_modules[modtitles.index(param.value())].ui.viewers[0]
+            pos_dl = self.ui.scan_area.pos()
+            pos_ur = self.ui.scan_area.pos()+self.ui.scan_area.size()
+            pos_dl_scaled = viewer.scale_axis(pos_dl[0],pos_dl[1])
+            pos_ur_scaled= viewer.scale_axis(pos_ur[0],pos_ur[1])
+
+            if self.daqscan_settings.child('scan_options','scan2D_settings', 'scan2D_type').value() == 'Spiral':
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(np.mean((pos_dl_scaled[0],pos_ur_scaled[0])))
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(np.mean((pos_dl_scaled[1],pos_ur_scaled[1])))
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'Rmax_2d').setValue(np.min((np.abs((pos_ur_scaled[0]-pos_dl_scaled[0])/2),(pos_ur_scaled[1]-pos_dl_scaled[1])/2)))
+
+            else:
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(pos_dl_scaled[0])
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(pos_dl_scaled[1])
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
+                self.daqscan_settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(pos_ur_scaled[1])
+        except Exception as e:
+            self.update_status(str(e),self.wait_time,log_type='log')
 
     @pyqtSlot(OrderedDict)
     def update_scan_GUI(self,datas):
@@ -2297,22 +2497,28 @@ class DAQ_Scan_Acquisition(QObject):
             self.check_array_in_h5('scan_x_axis',self.h5_file_current_group,self.scan_x_axis)
             self.check_array_in_h5('scan_x_axis_unique',self.h5_file_current_group,self.scan_x_axis_unique)
 
-            if Naxis==1: #"means scan 1D"
+            if self.settings.child('scan_options','scan_type').value() == 'Scan1D': #"means scan 1D"
                 if self.settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
                     self.scan_shape=[len(self.scan_x_axis)]
 
                 else:
                     self.scan_shape=[len(self.scan_x_axis_unique)]
+                if Naxis == 2: #means 1D scan along a line in a 2D plane
+                    self.scan_y_axis = np.array([pos[1][1] for pos in self.scan_moves])
+                    self.scan_y_axis_unique = np.unique(self.scan_y_axis)
+                    self.check_array_in_h5('scan_y_axis', self.h5_file_current_group, self.scan_y_axis)
+                    self.check_array_in_h5('scan_y_axis_unique', self.h5_file_current_group, self.scan_y_axis_unique)
+
             else:
                 self.scan_shape=[len(self.scan_x_axis_unique)]
 
-            if Naxis==2:#"means scan 2D"
+            if self.settings.child('scan_options','scan_type').value() == 'Scan2D':#"means scan 2D"
                 self.scan_y_axis=np.array([pos[1][1] for pos in self.scan_moves])
                 self.scan_y_axis_unique=np.unique(self.scan_y_axis)
                 self.check_array_in_h5('scan_y_axis',self.h5_file_current_group,self.scan_y_axis)
                 self.check_array_in_h5('scan_y_axis_unique',self.h5_file_current_group,self.scan_y_axis_unique)
                 self.scan_shape.append(len(self.scan_y_axis_unique))
-            elif Naxis>2:#"means scan 3D" not really implemented yet
+            elif Naxis>2:#"means scan 3D" not implemented yet
                 self.scan_z_axis=np.array([pos[2][1] for pos in self.scan_moves])
                 self.scan_z_axis_unique=np.unique(self.scan_z_axis)
                 self.check_array_in_h5('scan_z_axis',self.h5_file_current_group,self.scan_z_axis)
@@ -2330,9 +2536,7 @@ class DAQ_Scan_Acquisition(QObject):
                     self.ind_scan=ind_scan
                     self.status_sig.emit(["Update_scan_index",[ind_scan,ind_average]])
                     if self.stop_scan_flag or  self.timeout_scan_flag:
-                        if self.stop_scan_flag:
-                            status='Data Acquisition has been stopped by user'
-                            self.status_sig.emit(["Update_Status",status,'log'])
+
                         break
                     self.move_done_positions=OrderedDict()
                     self.move_done_flag=False
@@ -2354,7 +2558,7 @@ class DAQ_Scan_Acquisition(QObject):
                     for ind_det, path in enumerate(paths): #path on the form edict(det_name=...,file_path=...,indexes=...)
                         if path['det_name']!=self.detector_modules[ind_det].title: # check the module correspond to the name assigned in path
                             raise Exception('wrong det module assignment')
-                        self.detector_modules[ind_det].snapshot(str(path['file_path']))
+                        self.detector_modules[ind_det].snapshot(str(path['file_path']),dosave=self.settings.child('saving_options','save_independent').value()) #do not save each grabs in independant files
 
                     self.wait_for_det_done()
 

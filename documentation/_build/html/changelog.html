@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Changelog &mdash; PyMoDAQ 1.1.1 documentation</title>
+  <title>Changelog &mdash; PyMoDAQ 1.1.2 documentation</title>
   
 
   
@@ -160,8 +160,20 @@
             
   <div class="section" id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="Next bugfix release">
-<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next bugfix release</a></h2><ul class="simple">
+<div class="section" id="1.2.0">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.2.0">1.2.0</a> <span style="font-size: 75%;">2019-01-11</span></h2><ul class="simple">
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Scan updated with averaging possibility. Opens up a new dock showing the current scan average. All scan in the average are saved</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Scan: Overshoot configuration is now available: set DAQ_Move actions depending on detected values</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Scan: possibility to save all datas in independent files or not (default is not)</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Scan: Huge modification related to the scanning. Now you can select an area in one of the opened 2DViewers
+This viewer could for instance be a calibrated camera referring to the x and y positions of a XY stage. The Plot2D scan 2D viewer
+can also be used. Say that you just did a 2D scan and now you want to scan a cross-section within!!
+This area can be a 2D one (rectangle, 2D scan type) or a PolyLines (linked segments, 1D scan type). Random modes and
+others are still available in this mode</li>
+</ul>
+</div>
+<div class="section" id="1.1.2">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.1.2">1.1.2</a> <span style="font-size: 75%;">2018-12-18</span></h2><ul class="simple">
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> Corrected the background substraction in DAQ_Viewer</li>
 </ul>
 </div>
@@ -186,7 +198,7 @@ But the link to working python is missing with pip install (python.exe and pytho
 </div>
 <div class="section" id="1.0.0">
 <h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.0.0">1.0.0</a> <span style="font-size: 75%;">2018-12-10</span></h2><ul class="simple">
-<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Renamed all modules with lowercase. Renamed imageviewer_multicolor as viewer2D</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Renamed all modules with lowercase. Renamed image viewer_multicolor as viewer2D</li>
 </ul>
 </div>
 </div>
@@ -202,7 +214,7 @@ But the link to working python is missing with pip install (python.exe and pytho
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Weber Sébastien
+        &copy; Copyright 2019, Weber Sébastien
 
     </p>
   </div>
