@@ -1039,7 +1039,7 @@ class Viewer2D(QtWidgets.QWidget):
     def x_axis(self, x_axis):
         label = ''
         units = ''
-        if type(x_axis) == dict:
+        if isinstance(x_axis, dict):
             if 'data' in x_axis:
                 xdata=x_axis['data']
             if 'label' in x_axis:
@@ -1062,7 +1062,7 @@ class Viewer2D(QtWidgets.QWidget):
     def y_axis(self, y_axis):
         label = ''
         units = ''
-        if type(y_axis) == dict:
+        if isinstance(y_axis, dict):
             if 'data' in y_axis:
                 ydata=y_axis['data']
             if 'label' in y_axis:

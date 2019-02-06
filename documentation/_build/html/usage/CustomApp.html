@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Library &mdash; PyMoDAQ 1.0.1 documentation</title>
+  <title>Custom Application &mdash; PyMoDAQ 1.2 documentation</title>
   
 
   
@@ -30,7 +30,9 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Class Diagram" href="classDiagram.html" />
+    <link rel="prev" title="Utility Modules" href="modules/Utility_Modules.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -62,7 +64,7 @@
             
             
               <div class="version">
-                1.0
+                1.2
               </div>
             
           
@@ -87,11 +89,14 @@
             
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Description.html">Description</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Custom Application</a><ul class="simple">
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="classDiagram.html">Class Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="APIdoc.html">Library Reference</a></li>
 </ul>
@@ -139,13 +144,13 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>Utility Library</li>
+      <li>Custom Application</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/usage/Utility_Library.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/usage/CustomApp.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -158,13 +163,18 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="utility-library">
-<h1>Utility Library<a class="headerlink" href="#utility-library" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="custom-application">
+<span id="custom-app"></span><h1>Custom Application<a class="headerlink" href="#custom-application" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<div class="section" id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
-<p>Utility library is a package of low levels functions used in the differents modules.</p>
+<p>PyMoDAQ’s set of modules is a very efficient way to build a completely custom application (related to data acquisition
+or actuators displacement) without having to do it from scratch. <a class="reference internal" href="#custom-app-fig"><span class="std std-numref">Fig. 26</span></a> is an example of such an
+interface build using only PyMoDAQ’s building blocks. The corresponding script template is within the example folder.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id1">
+<span id="custom-app-fig"></span><img alt="dashboard" src="../_images/custom_app.png" />
+<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">A custom application build using PyMoDAQ’s modules.</span></p>
 </div>
 </div>
 
@@ -174,12 +184,21 @@
           </div>
           <footer>
   
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="classDiagram.html" class="btn btn-neutral float-right" title="Class Diagram" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="modules/Utility_Modules.html" class="btn btn-neutral" title="Utility Modules" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2018, Weber Sébastien
+        &copy; Copyright 2019, Weber Sébastien
 
     </p>
   </div>

@@ -24,6 +24,14 @@ All plugins are located in the **pymodaq_plugins** repository on github. This co
 installed together with PyMoDAQ (or manually install it if you don't want the up to date version). PyMoDAQ will therefore
 call the plugins from the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
 
+List of plugins
+---------------
+
+.. csv-table:: Plugins list
+   :header-rows: 1
+   :file: PyMoDAQ_plugins.csv
+
+See up-to-date database: https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg
 
 Naming convention:
 ------------------

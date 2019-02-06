@@ -138,12 +138,20 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
                     text=str(None)
             elif param_type=='color':
                 text=str([param.value().red(),param.value().green(),param.value().blue(),param.value().alpha()])
-
+            elif param_type == 'list':
+                if isinstance(param.value(), str):
+                    text = "str('{}')".format(param.value())
+                elif isinstance(param.value(), int):
+                    text = 'int({})'.format(param.value())
+                elif isinstance(param.value(), float):
+                    text = 'float({})'.format(param.value())
+                else:
+                    str(param.value())
             else:
-                text=str(param.value())
-            elt.text=text
+                text = str(param.value())
+            elt.text = text
         else:
-            walk_parameters_to_xml(elt,param)
+            walk_parameters_to_xml(elt, param)
 
         parent_elt.append(elt)
     return parent_elt
@@ -248,90 +256,98 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
         --------
         walk_parameters_to_xml          
     """
-    if type(XML_elt) is not ET.Element:
-        raise TypeError('not valid XML element')
+    try:
+        if type(XML_elt) is not ET.Element:
+            raise TypeError('not valid XML element')
 
-    for el in list(XML_elt):
-        param = dict([])
+        for el in list(XML_elt):
+            param = dict([])
 
-        # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
-        #              visible=visible, removable=removable, readonly=readonly, show_pb=show_pb)
-        param.update(dict(name=el.tag))
-        param_type=el.get('type')
-        param.update(dict(type=param_type))
-
-        title=el.get('title')
-        if title=='None':
-            title=el.tag
-        param.update(dict(title=title))
-
-        if 'visible' not in el.attrib.keys():
-            visible=True
-        else:
-            visible=bool(int(el.get('visible')))
-        param.update(dict(visible=visible))
-
-        if 'removable' not in el.attrib.keys():
-            removable=False
-        else:
-            removable=bool(int(el.get('removable')))
-        param.update(dict(removable=removable))
-
-        if 'readonly' not in el.attrib.keys():
-            readonly=False
-        else:
-            readonly=bool(int(el.get('readonly')))
-        param.update(dict(readonly=readonly))
-
-        if 'show_pb' in el.attrib.keys():
-            show_pb = bool(int(el.get('show_pb')))
-        else:
-            show_pb = False
-        param.update(dict(show_pb=show_pb))
-        if 'detlist' in el.attrib.keys():
-            detlist=eval(el.get('detlist'))
-            param.update(dict(detlist=detlist))
-        if 'movelist' in el.attrib.keys():
-            movelist=eval(el.get('movelist'))
-            param.update(dict(movelist=movelist))
-
-        if 'group' not in param_type: #covers 'group', custom 'groupmove'...
-            val_text=el.text
-
-            if param_type=='float':
-                param_value=float(val_text)
-            elif param_type=='int':
-                param_value=int(val_text)
-            elif param_type=='slide':
-                param_value=float(val_text)
-            elif param_type=='itemselect':
-                if val_text=='None':
-                    param_value=dict(all_items=[],selected=[])
-                else:
-                    param_value=dict(all_items=eval(el.get('all_items',val_text)),selected=eval(val_text))
-            elif param_type=='bool':
-                param_value=bool(int(val_text))
-            elif param_type=='led':
-                param_value=bool(val_text)
-            elif param_type=='date_time':
-                param_value=eval(val_text)
-            elif param_type=='table':
-                param_value=eval(val_text)
-            elif param_type=='color':
-                param_value=QtGui.QColor(*eval(val_text))
-            else:
-                param_value=val_text
-            param.update(dict(value=param_value))
-
-            if param_type=='list':
-                param.update(dict(values=[param_value]))
-        else:
-            subparams=[]
-            param.update(dict(children=walk_xml_to_parameter(subparams,el)))
-
+            # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
+            #              visible=visible, removable=removable, readonly=readonly, show_pb=show_pb)
             param.update(dict(name=el.tag))
+            param_type=el.get('type')
+            param.update(dict(type=param_type))
 
-        params.append(param)
+            title=el.get('title')
+            if title=='None':
+                title=el.tag
+            param.update(dict(title=title))
+
+            if 'visible' not in el.attrib.keys():
+                visible=True
+            else:
+                visible=bool(int(el.get('visible')))
+            param.update(dict(visible=visible))
+
+            if 'removable' not in el.attrib.keys():
+                removable=False
+            else:
+                removable=bool(int(el.get('removable')))
+            param.update(dict(removable=removable))
+
+            if 'readonly' not in el.attrib.keys():
+                readonly=False
+            else:
+                readonly=bool(int(el.get('readonly')))
+            param.update(dict(readonly=readonly))
+
+            if 'show_pb' in el.attrib.keys():
+                show_pb = bool(int(el.get('show_pb')))
+            else:
+                show_pb = False
+            param.update(dict(show_pb=show_pb))
+            if 'detlist' in el.attrib.keys():
+                detlist=eval(el.get('detlist'))
+                param.update(dict(detlist=detlist))
+            if 'movelist' in el.attrib.keys():
+                movelist=eval(el.get('movelist'))
+                param.update(dict(movelist=movelist))
+
+            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
+                val_text=el.text
+
+                if param_type=='float':
+                    param_value=float(val_text)
+                elif param_type=='int':
+                    param_value=int(val_text)
+                elif param_type=='slide':
+                    param_value=float(val_text)
+                elif param_type=='itemselect':
+                    if val_text=='None':
+                        param_value=dict(all_items=[],selected=[])
+                    else:
+                        param_value=dict(all_items=eval(el.get('all_items',val_text)),selected=eval(val_text))
+                elif param_type=='bool':
+                    param_value=bool(int(val_text))
+                elif param_type=='led':
+                    param_value=bool(val_text)
+                elif param_type=='date_time':
+                    param_value=eval(val_text)
+                elif param_type=='table':
+                    param_value=eval(val_text)
+                elif param_type=='color':
+                    param_value=QtGui.QColor(*eval(val_text))
+                elif param_type == 'list':
+                    try:
+                        param_value = eval(val_text)
+                    except:
+                        param_value = val_text #for back compatibility
+                else:
+                    param_value=val_text
+                param.update(dict(value=param_value))
+
+                if param_type=='list':
+                    param.update(dict(values=[param_value]))
+            else:
+                subparams=[]
+                param.update(dict(children=walk_xml_to_parameter(subparams,el)))
+
+                param.update(dict(name=el.tag))
+
+            params.append(param)
+    except Exception as e: #to be able to debug when there's an issue
+        raise e
     return params
 
 def XML_file_to_parameter(file_name):
@@ -457,13 +473,25 @@ def iter_children(param,childlist=[]):
     """
     for child in param.children():
         childlist.append(child.name())
-        if child.type()=='group':
+        if 'group' in child.type():
             childlist.extend(iter_children(child,[]))
     return childlist
 
+def get_param_path(param):
+    path = [param.name()]
+    while param.parent() is not None:
+        path.append(param.parent().name())
+        param = param.parent()
+    return path[::-1]
 
-
-
+def get_param_from_name(parent,name):
+    for child in parent.children():
+        if child.name() == name:
+            return child
+        if 'group' in child.type():
+            ch = get_param_from_name(child, name)
+            if ch is not None:
+                return ch
 
 class GroupParameterItemCustom(pTypes.GroupParameterItem):
     """
@@ -539,6 +567,9 @@ class SpinBoxCustom(SpinBox.SpinBox):
                 self.setVisible(opts[k])
             elif k == 'readonly':
                 self.setReadOnly(opts[k])
+            elif k == 'enabled':
+                self.setEnabled(opts[k])
+
             elif k in self.opts:
                 self.opts[k] = opts[k]
             else:
@@ -1091,6 +1122,8 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
 
         if 'show_pb' in opts:
             self.widget.add_pb.setVisible(opts['show_pb'])
+        if 'enabled' in opts:
+            self.widget.setEnabled(opts['enabled'])
 
 
 class ListParameter_custom(pTypes.ListParameter):

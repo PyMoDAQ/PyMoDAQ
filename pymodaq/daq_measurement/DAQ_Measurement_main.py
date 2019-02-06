@@ -10,51 +10,53 @@ import numpy as np
 from enum import Enum
 
 class Measurement_type(Enum):
-    Cursor_Integration=0
-    Max=1
-    Min=2
-    Gaussian_Fit=3
-    Lorentzian_Fit=4
-    Exponential_Decay_Fit=5
-    
-    def names(self):
-        names=Measurement_type.__members__.items()
-        return [name for name, member in names]
+    Cursor_Integration = 0
+    Max = 1
+    Min = 2
+    Gaussian_Fit = 3
+    Lorentzian_Fit = 4
+    Exponential_Decay_Fit = 5
 
-    def update_measurement_subtype(self,mtype):
-        measurement_gaussian_subitems= ["amp","dx","x0","offset"]
-        measurement_laurentzian_subitems= ["alpha","gamma","x0","offset"]
-        measurement_decay_subitems= ["N0","gamma","offset"]
-        measurement_cursor_subitems=["sum","mean","std"]
-        variables=", "
-        formula=""
-        subitems=[]
-        if mtype==self.names(self)[0]:#"Cursor integration":
-            subitems=measurement_cursor_subitems
+    @classmethod
+    def names(cls):
+        return [name for name, member in cls.__members__.items()]
 
-        if mtype==self.names(self)[3]:#"Gaussian Fit":
-            subitems=measurement_gaussian_subitems
-            formula="amp*np.exp(-2*np.log(2)*(x-x0)**2/dx**2)+offset"
-            variables=variables.join(measurement_gaussian_subitems)
-                
-        elif mtype==self.names(self)[4]:#"Lorentzian Fit":
-            subitems=measurement_laurentzian_subitems
-            variables=variables.join(measurement_laurentzian_subitems)
-            formula="alpha/np.pi*gamma/2/((x-x0)**2+(gamma/2)**2)+offset"
-        elif mtype==self.names(self)[5]:#"Exponential Decay Fit":
-            subitems=measurement_decay_subitems
-            variables=variables.join(measurement_decay_subitems)
-            formula="N0*np.exp(-gamma*x)+offset"
-        return [variables,formula,subitems]
+    @classmethod
+    def update_measurement_subtype(cls, mtype):
+        measurement_gaussian_subitems = ["amp", "dx", "x0", "offset"]
+        measurement_laurentzian_subitems = ["alpha", "gamma", "x0", "offset"]
+        measurement_decay_subitems = ["N0", "gamma", 'x0', "offset"]
+        measurement_cursor_subitems = ["sum", "mean", "std"]
+        variables = ", "
+        formula = ""
+        subitems = []
+        if mtype == 'Cursor_Integration':  # "Cursor integration":
+            subitems = measurement_cursor_subitems
 
-    def gaussian_func(self,x,amp,dx,x0,offset):
-        return amp * np.exp(-2*np.log(2)*(x-x0)**2/dx**2) + offset
+        if mtype == 'Gaussian_Fit':  # "Gaussian Fit":
+            subitems = measurement_gaussian_subitems
+            formula = "amp*np.exp(-2*np.log(2)*(x-x0)**2/dx**2)+offset"
+            variables = variables.join(measurement_gaussian_subitems)
 
-    def laurentzian_func(self,x,alpha,gamma,x0,offset):
-        return alpha/np.pi * 1/2*gamma /((x-x0)**2+(1/2*gamma)**2) + offset
+        elif mtype == 'Lorentzian_Fit':  # "Lorentzian Fit":
+            subitems = measurement_laurentzian_subitems
+            variables = variables.join(measurement_laurentzian_subitems)
+            formula = "alpha/np.pi*gamma/2/((x-x0)**2+(gamma/2)**2)+offset"
 
-    def decaying_func(self,x,N0,gamma,offset):
-        return N0 * np.exp(-gamma*x)+offset
+        elif mtype == 'Exponential_Decay_Fit':  # "Exponential Decay Fit":
+            subitems = measurement_decay_subitems
+            variables = variables.join(measurement_decay_subitems)
+            formula = "N0*np.exp(-(x-x0)/gamma)+offset"
+        return [variables, formula, subitems]
+
+    def gaussian_func(self, x, amp, dx, x0, offset):
+        return amp * np.exp(-2 * np.log(2) * (x - x0) ** 2 / dx ** 2) + offset
+
+    def laurentzian_func(self, x, alpha, gamma, x0, offset):
+        return alpha / np.pi * 1 / 2 * gamma / ((x - x0) ** 2 + (1 / 2 * gamma) ** 2) + offset
+
+    def decaying_func(self, x, N0, gamma, x0, offset):
+        return N0 * np.exp(-(x-x0) / gamma) + offset
 
 class DAQ_Measurement(Ui_Form,QObject):
     """
@@ -96,7 +98,7 @@ class DAQ_Measurement(Ui_Form,QObject):
         self.xdata=None
         self.ydata=None
 
-        self.measurement_types=Measurement_type.names(Measurement_type)
+        self.measurement_types=Measurement_type.names()
         self.measurement_type=Measurement_type(0)
         self.ui.measurement_type_combo.clear()
         self.ui.measurement_type_combo.addItems(self.measurement_types)
@@ -166,7 +168,7 @@ class DAQ_Measurement(Ui_Form,QObject):
 
         """
         self.measurement_type=Measurement_type[mtype]
-        [variables,self.formula,self.subitems]=Measurement_type.update_measurement_subtype(Measurement_type,mtype)
+        [variables,self.formula,self.subitems]=Measurement_type.update_measurement_subtype(mtype)
 
         try:
             self.ui.measure_subtype_combo.clear()
@@ -221,13 +223,13 @@ class DAQ_Measurement(Ui_Form,QObject):
             boundaries = find_index(xaxis, [xmin, xmax])
             sub_xaxis = xaxis[boundaries[0][0]:boundaries[1][0]]
             sub_data = data1D[boundaries[0][0]:boundaries[1][0]]
-            mtypes = Measurement_type.names(Measurement_type)
+            mtypes = Measurement_type.names()
             if msubtype in self.subitems:
                 msub_ind = self.subitems.index(msubtype)
 
             measurement_results=dict(status=None, value = 0, xaxis= np.array([]), datafit =np.array([]))
 
-            if mtype == mtypes[0]:  # "Cursor Intensity Integration":
+            if mtype == 'Cursor_Integration':  # "Cursor Intensity Integration":
                 if msubtype == "sum":
                     result_measurement = np.sum(sub_data)
                 elif msubtype == "mean":
@@ -237,13 +239,13 @@ class DAQ_Measurement(Ui_Form,QObject):
                 else:
                     result_measurement = 0
 
-            elif mtype == mtypes[1]:  # "Max":
+            elif mtype == 'Max':  # "Max":
                 result_measurement = np.max(sub_data)
 
-            elif mtype == mtypes[2]:  # "Min":
+            elif mtype == 'Min':  # "Min":
                 result_measurement = np.min(sub_data)
 
-            elif mtype == mtypes[3]:  # "Gaussian Fit":
+            elif mtype == 'Gaussian_Fit':  # "Gaussian Fit":
                 measurement_results['xaxis'] = sub_xaxis
                 offset = np.min(sub_data)
                 amp = np.max(sub_data) - np.min(sub_data)
@@ -252,7 +254,8 @@ class DAQ_Measurement(Ui_Form,QObject):
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
                 measurement_results['datafit']=self.eval_func(sub_xaxis, *popt)
                 result_measurement = popt[msub_ind]
-            elif mtype == mtypes[4]:  # "Lorentzian Fit":
+
+            elif mtype == 'Lorentzian_Fit':  # "Lorentzian Fit":
                 measurement_results['xaxis'] = sub_xaxis
                 offset = np.min(sub_data)
                 amp = np.max(sub_data) - np.min(sub_data)
@@ -264,15 +267,22 @@ class DAQ_Measurement(Ui_Form,QObject):
                     result_measurement = popt[0] * 2 / (np.pi * popt[1])  # 2*alpha/(pi*gamma)
                 else:
                     result_measurement = popt[msub_ind]
-            elif mtype == mtypes[5]:  # "Exponential Decay Fit":
-                measurement_results['xaxis'] = sub_xaxis
+
+            elif mtype == 'Exponential_Decay_Fit':  # "Exponential Decay Fit":
+                ind_x0 = find_index(sub_data, np.max(sub_data))[0][0]
+                x0 = sub_xaxis[ind_x0]
+                sub_xaxis = sub_xaxis[ind_x0:]
+                sub_data = sub_data[ind_x0:]
                 offset = min([sub_data[0], sub_data[-1]])
+                measurement_results['xaxis'] = sub_xaxis
                 N0 = np.max(sub_data) - offset
-                polynome = np.polyfit(sub_xaxis, -np.log((sub_data - 0.99 * offset) / N0), 1)
-                p0 = [N0, polynome[0], offset]
+                t37 = sub_xaxis[find_index(sub_data-offset,0.37*N0)[0][0]]-x0
+                #polynome = np.polyfit(sub_xaxis, -np.log((sub_data - 0.99 * offset) / N0), 1)
+                p0 = [N0, t37, x0, offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
                 measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
                 result_measurement = popt[msub_ind]
+
             # elif mtype=="Custom Formula":
             #    #offset=np.min(sub_data)
             #    #amp=np.max(sub_data)-np.min(sub_data)
@@ -323,6 +333,17 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     from pymodaq.daq_utils.daq_utils import gauss1D
-    prog = DAQ_Measurement(Form);xdata=np.linspace(0,100,101);x0=50;dx=20;ydata=10*gauss1D(xdata,x0,dx)+np.random.rand(len(xdata));prog.update_data(xdata,ydata)
+    prog = DAQ_Measurement(Form)
+    xdata=np.linspace(0,400,401)
+    x0=50
+    dx=20
+    tau = 27
+    tau2=100
+    ydata_gauss=10*gauss1D(xdata,x0,dx)+np.random.rand(len(xdata))
+    ydata_expodec = np.zeros((len(xdata)))
+    ydata_expodec[:50] = 10*gauss1D(xdata[:50],x0,dx,2)
+    ydata_expodec[50:] = 10*np.exp(-(xdata[50:]-x0)/tau)#+10*np.exp(-(xdata[50:]-x0)/tau2)
+    ydata_expodec += 2*np.random.rand(len(xdata))
+    prog.update_data(xdata,ydata_expodec)
     Form.show()
     sys.exit(app.exec_())

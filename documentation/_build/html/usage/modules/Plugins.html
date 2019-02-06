@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ 1.1.2 documentation</title>
+  <title>Plugins &mdash; PyMoDAQ 1.2 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                1.1
+                1.2
               </div>
             
           
@@ -99,6 +99,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Plugins</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#list-of-plugins">List of plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#naming-convention">Naming convention:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#hardware-settings">Hardware Settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#daq-move-plugin-template">DAQ Move plugin template</a></li>
@@ -201,6 +202,192 @@ but comparison with existing ones will be beneficial.</p>
 installed together with PyMoDAQ (or manually install it if you don’t want the up to date version). PyMoDAQ will therefore
 call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>site_packages</em> location in python distribution.</p>
 </div>
+<div class="section" id="list-of-plugins">
+<h2>List of plugins<a class="headerlink" href="#list-of-plugins" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils" id="id9">
+<caption><span class="caption-number">Table 1 </span><span class="caption-text">Plugins list</span><a class="headerlink" href="#id9" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name :</th>
+<th class="head">Type :</th>
+<th class="head">Manufacturer :</th>
+<th class="head">Tested Models :</th>
+<th class="head">Rqs:</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Mock</td>
+<td>DAQ_Move</td>
+<td>Simulation purpose</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>Conex</td>
+<td>DAQ_Move</td>
+<td>Newport</td>
+<td>CONEX-AGAP controller</td>
+<td>using the .Net ConexAGAPCmdLib library</td>
+</tr>
+<tr class="row-even"><td>Holoeye</td>
+<td>DAQ_Move</td>
+<td>Holoeye</td>
+<td>LC2012</td>
+<td>using slmdisplaysdk python package</td>
+</tr>
+<tr class="row-odd"><td>Kinesis</td>
+<td>DAQ_Move</td>
+<td>Thorlabs</td>
+<td>K10RC1 Stepper Motor Rotation Mount</td>
+<td>using the .Net Kinesis software</td>
+</tr>
+<tr class="row-even"><td>Kinesis_Flipper</td>
+<td>DAQ_Move</td>
+<td>Thorlabs</td>
+<td>MFF101 Motorized Filter Flip Mounts</td>
+<td>using the .Net Kinesis software</td>
+</tr>
+<tr class="row-odd"><td>PI</td>
+<td>DAQ_Move</td>
+<td>Physik Instrumente</td>
+<td>E816, Mercury stepper, C-863</td>
+<td>using the pipython package</td>
+</tr>
+<tr class="row-even"><td>PI_MMC</td>
+<td>DAQ_Move</td>
+<td>Physik Instrumente</td>
+<td>C-862</td>
+<td>using the MMC.dll library</td>
+</tr>
+<tr class="row-odd"><td>PiezoConcept</td>
+<td>DAQ_Move</td>
+<td>PiezoConcept</td>
+<td>Bio200</td>
+<td>pyvisa, piezoconcept wrapper</td>
+</tr>
+<tr class="row-even"><td>Spectro270M</td>
+<td>DAQ_Move</td>
+<td>JobinYvon</td>
+<td>&#160;</td>
+<td>not working yet</td>
+</tr>
+<tr class="row-odd"><td>OrsaySTEM</td>
+<td>DAQ_Move</td>
+<td>Orsay LPS lab</td>
+<td>OUDS2</td>
+<td>used to do Scanning Transmission Electron Microscopy using the custom OUDS electronics. Move the electronic beam</td>
+</tr>
+<tr class="row-even"><td>Mock</td>
+<td>DAQ_0DViewer</td>
+<td>Simulation purpose</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>NIDAQmx</td>
+<td>DAQ_0DViewer</td>
+<td>National Instruments</td>
+<td>various not too old data acquisition cards</td>
+<td>using the daqmx package (need the daqmx dll), counting and Analog in average to produce 0D data</td>
+</tr>
+<tr class="row-even"><td>Keithley_Pico</td>
+<td>DAQ_0DViewer</td>
+<td>Keithley</td>
+<td>648X, 6430, 6514</td>
+<td>using pyvisa protocol</td>
+</tr>
+<tr class="row-odd"><td>Lockin7270</td>
+<td>DAQ_0DViewer</td>
+<td>Ametek Signal Recovery</td>
+<td>7270 DSP</td>
+<td>using pyvisa protocol</td>
+</tr>
+<tr class="row-even"><td>Mock</td>
+<td>DAQ_1DViewer</td>
+<td>Simulation purpose</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td>NIDAQmx</td>
+<td>DAQ_1DViewer</td>
+<td>National Instruments</td>
+<td>various not too old data acquisition cards</td>
+<td>using the daqmx package (need the daqmx dll), Analog in</td>
+</tr>
+<tr class="row-even"><td>OceanOptics</td>
+<td>DAQ_1DViewer</td>
+<td>OceanOptics</td>
+<td>USB2000, USB2000+, USB4000…</td>
+<td>using the .Net NETOmniDriver-NET40</td>
+</tr>
+<tr class="row-odd"><td>Picoscope</td>
+<td>DAQ_1DViewer</td>
+<td>PicoTechnology</td>
+<td>picoscope 5000A</td>
+<td>custom wrapper from the dll (not nicely written but working)</td>
+</tr>
+<tr class="row-even"><td>Shamrock</td>
+<td>DAQ_1DViewer</td>
+<td>Andor</td>
+<td>all shamrock spectrometers</td>
+<td>using a custom wrapper of the dll</td>
+</tr>
+<tr class="row-odd"><td>Tektronix</td>
+<td>DAQ_1DViewer</td>
+<td>Tektronix</td>
+<td>MDO30xx</td>
+<td>using pyvisa, light plugin to only get channels from screen</td>
+</tr>
+<tr class="row-even"><td>TH260</td>
+<td>DAQ_1DViewer</td>
+<td>Picoquant</td>
+<td>Timeharp260P</td>
+<td>using a custom wrapper of the dll</td>
+</tr>
+<tr class="row-odd"><td>Mock</td>
+<td>DAQ_2DViewer</td>
+<td>Simulation purpose</td>
+<td>&#160;</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td>AndorCCD</td>
+<td>DAQ_2DViewer</td>
+<td>Andor</td>
+<td>CCD Idus (should work with all CCDs)</td>
+<td>custom wrapper of the sdk2 dll</td>
+</tr>
+<tr class="row-odd"><td>OpenCVCam</td>
+<td>DAQ_2DViewer</td>
+<td>webcams</td>
+<td>&#160;</td>
+<td>using windows universal driver and builtin functionalities from opencv-python</td>
+</tr>
+<tr class="row-even"><td>OrsayCamera</td>
+<td>DAQ_2DViewer</td>
+<td>Princeton/Ropers</td>
+<td>PIXIS256</td>
+<td>custom wrapper from Orsay LPS lab to interface cameras using 64 bit PICAM library</td>
+</tr>
+<tr class="row-odd"><td>OrsayStem</td>
+<td>DAQ_2DViewer</td>
+<td>&#160;</td>
+<td>&#160;</td>
+<td>used to do Scanning Transmission Electron Microscopy using the custom OUDS electronics. acquire STEM images and SPIM data cubes</td>
+</tr>
+<tr class="row-even"><td>TCP_GRABBER</td>
+<td>DAQ_2DViewer</td>
+<td>/</td>
+<td>/</td>
+<td>TCP/IP server protocol to communicate with non local hardware.</td>
+</tr>
+</tbody>
+</table>
+<p>See up-to-date database: <a class="reference external" href="https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg">https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg</a></p>
+</div>
 <div class="section" id="naming-convention">
 <h2>Naming convention:<a class="headerlink" href="#naming-convention" title="Permalink to this headline">¶</a></h2>
 <p>For the plugin to be properly recognised by PyMoDAQ, its location and name must follow these rules:</p>
@@ -221,7 +408,7 @@ On the module side, they will be instantiated as a list of dictionaries and late
 This object inherits from on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id9">
+<div class="figure" id="id10">
 <span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
 <p class="caption"><span class="caption-number">Fig. 23 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
 </div>

@@ -6,9 +6,14 @@
 Welcome to PyMoDAQ's documentation!
 ===================================
 
-PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to perform automated measurements.
+PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
+It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.
 
-It is made for the scientist who need to perform various acquisitions without having to write a user/interface for each new experiment. PyMoDAQ interface is fixed, and any new hardware can be added as a small plugin. Preset modes of a given set of actuators and detectors can be written for easy experiment inititialization.
+It has two purposes:
+
+* First, to provide a complete interface to perform automated measurements without having to write a user/interface for each
+  new experiment, this is under the :ref:`DAQ_Scan_module` environment.
+* Second, to provide various tools (modules) to easily build a :ref:`custom_app`
 
 It is divided in three main modules:
 
@@ -16,10 +21,13 @@ It is divided in three main modules:
 * :ref:`DAQ_Move_module` : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.
 * :ref:`DAQ_Viewer_module` : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.
 
+and many others to simplify any application development.
 
 GitHub repo: https://github.com/CEMES-CNRS
 
 Documentation: http://pymodaq.cnrs.fr/
+
+List of available plugins: https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg
 
 Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola.
 
@@ -38,6 +46,7 @@ Please see :doc:`the changelog </changelog>`.
    usage/Installation
    usage/How_to_start
    usage/Description
+   usage/CustomApp
    usage/classDiagram
    usage/APIdoc
 

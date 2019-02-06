@@ -90,7 +90,7 @@ setup(
         'easydict',
         #'pyqt5',
         'tables',
-        'pymodaq_plugins>=1.0.0',
+        'pymodaq_plugins>=1.0.2',
         ],
     include_package_data=True,
     **setupOpts

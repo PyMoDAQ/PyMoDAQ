@@ -15,6 +15,7 @@ from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
+from pymodaq.daq_utils.plotting.lcd import LCD
 import pymodaq.daq_utils.daq_utils as daq_utils
 from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum
 
@@ -106,7 +107,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
             {'title': 'Live averaging:', 'name': 'live_averaging', 'type': 'bool', 'default': False, 'value': False},
             {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
-            {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 100, 'value': 100, 'min': 0},
+            {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
             {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False, 'value': False},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': True, 'expanded': False,'children':[
                     {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
@@ -148,13 +149,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             ]}
         ]
 
-    def __init__(self,parent,dock_settings=None,dock_viewer=None,title="Testing",DAQ_type="DAQ0D",preset=None,init=False,controller_ID=-1):
+    def __init__(self,parent,dock_settings=None,dock_viewer=None,title="Testing",DAQ_type="DAQ0D",
+                 preset=None,init=False,controller_ID=-1, parent_scan=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Viewer,self).__init__()
 
         splash=QtGui.QPixmap('..//Documentation//splash.png')
         self.splash_sc = QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
 
+
+        self.lcd = None
+        self.parent_scan =parent_scan #to use if one need the DAQ_Scan object
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
@@ -204,7 +209,6 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         else:
             self.ui.viewer_docks.append(Dock(title+"_Viewer", size=(500,300), closable=False))
             self.dockarea.addDock(self.ui.viewer_docks[-1],'right',self.ui.settings_dock)
-
 
 
 
@@ -471,7 +475,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                                     scaling=self.settings.child('main_settings','axes','yaxis','yscaling').value()))
         return scaling_options
 
-    def grab_data(self, grab_state=False):
+    def grab_data(self, grab_state=False, savepath=None):
         """
             Do a grab session using 2 profile :
                 * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
@@ -484,7 +488,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         if not(grab_state):
 
-            self.command_detector.emit(ThreadCommand("single",[self.settings.child('main_settings','Naverage').value()]))
+            self.command_detector.emit(ThreadCommand("single",[self.settings.child('main_settings','Naverage').value(), savepath]))
         else:
             if not(self.ui.grab_pb.isChecked()):
 
@@ -543,7 +547,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 detector.status_sig[ThreadCommand].connect(self.thread_status)
                 self.update_settings_signal[edict].connect(detector.update_settings)
 
-                self.detector_thread.detector=detector
+                self.detector_thread.detector = detector
                 self.detector_thread.start()
 
                 self.command_detector.emit(ThreadCommand("ini_detector",attributes=[self.settings.child(('detector_settings')).saveState(),self.controller]))
@@ -674,7 +678,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             else:
                 childName = param.name()
             if change == 'childAdded':
-                pass
+                self.update_settings_signal.emit(edict(path=path, param=data[0], change=change))
 
             elif change == 'value':
                 if param.name()=='DAQ_type':
@@ -725,12 +729,13 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                         try:
                             self.file_continuous_save.close()
                         except: pass
+                self.update_settings_signal.emit(edict(path=path, param=param, change=change))
 
-                self.update_settings_signal.emit(edict(path=path,param=param))
 
 
             elif change == 'parent':
-                pass
+                self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
+
 
 
     def process_overshoot(self,datas):
@@ -756,6 +761,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             try:
                 self.ui.settings_dock.close() #close the settings widget
             except: pass
+            if self.lcd is not None:
+                try:
+                    self.lcd.parent.close()
+                except:
+                    pass
             try:
                 for dock in self.ui.viewer_docks:
                     dock.close() #the dock viewers
@@ -1096,8 +1106,30 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         except Exception as e:
             self.update_status(str(e), wait_time=self.wait_time)
 
+
+    def init_show_data(self, datas):
+        self.data_to_save_export = OrderedDict(Ndatas=0, name=self.title, data0D=None, data1D=None,
+                                               data2D=None)  # to be populated from the results in the viewers
+        Npannels = len(datas)
+        self.process_overshoot(datas)
+        data_types = [data['type'] for data in datas]
+        if data_types != self.viewer_types:
+            self.update_viewer_pannels(data_types)
+        if self.ui.take_bkg_cb.isChecked():
+            self.ui.take_bkg_cb.setChecked(False)
+            self.bkg = datas
+        # process bkg if needed
+        if self.ui.do_bkg_cb.isChecked() and self.bkg is not None:
+            try:
+                for ind_channels, channels in enumerate(datas):
+                    for ind_channel, channel in enumerate(channels['data']):
+                        datas[ind_channels]['data'][ind_channel] = datas[ind_channels]['data'][ind_channel] - \
+                                                                   self.bkg[ind_channels]['data'][ind_channel]
+            except Exception as e:
+                self.update_status(str(e), self.wait_time, 'log')
+
     @pyqtSlot(list)
-    def show_data(self,datas):
+    def show_data(self, datas):
         """
             | l.
             |
@@ -1116,31 +1148,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             update_status
         """
         try:
-            self.data_to_save_export=OrderedDict(Ndatas=0,name=self.title,data0D=None,data1D=None,data2D=None) #to be populated from the results in the viewers
-            Npannels=len(datas)
-            self.process_overshoot(datas)
 
-            data_types=[data['type'] for data in datas]
-
-
-            if data_types!=self.viewer_types:
-                self.update_viewer_pannels(data_types)
-
-
-
-            if  self.ui.take_bkg_cb.isChecked():
-                self.ui.take_bkg_cb.setChecked(False)
-                self.bkg=datas
-
-            #process bkg if needed
-            if self.ui.do_bkg_cb.isChecked() and self.bkg is not None:
-                try:
-                    for ind_channels,channels in enumerate(datas):
-                        for ind_channel,channel in enumerate(channels['data']):
-                            datas[ind_channels]['data'][ind_channel]=datas[ind_channels]['data'][ind_channel]-self.bkg[ind_channels]['data'][ind_channel]
-                except Exception as e:
-                    self.update_status(str(e),self.wait_time,'log')
-
+            self.init_show_data(datas)
 
             if self.settings.child('main_settings','live_averaging').value():
                 self.settings.child('main_settings','N_live_averaging').setValue(self.ind_continuous_grab)
@@ -1153,30 +1162,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     except Exception as e:
                         self.update_status(str(e),self.wait_time,log_type='log')
 
-            for ind,data in enumerate(datas):
-                self.ui.viewers[ind].title=data['name']
-                if data['name']!='':
-                    self.ui.viewer_docks[ind].setTitle(self.title+' '+data['name'])
-                if data['type']=='Data0D':
-                    self.ui.viewers[ind].show_data(data['data'])
-                elif data['type']=='Data1D':
-                    if 'x_axis' in data.keys():
-                        self.ui.viewers[ind].x_axis=data['x_axis']
-                    self.ui.viewers[ind].show_data(data['data'])
-
-                elif data['type']=='Data2D':
-                    if 'x_axis' in data.keys():
-                        self.ui.viewers[ind].x_axis = data['x_axis']
-                    if 'y_axis' in data.keys():
-                        self.ui.viewers[ind].y_axis = data['y_axis']
-                    self.ui.viewers[ind].setImage(*data['data'])
-
-
-                else:
-                    if 'nav_axes' in data.keys():
-                        self.ui.viewers[ind].show_data(data['data'][0],nav_axes=data['nav_axes'])
-                    else:
-                        self.ui.viewers[ind].show_data(data['data'][0])
+            self.set_datas_to_viewers(datas)
 
             self.current_datas=datas
 
@@ -1210,42 +1196,51 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             =============== ====================== ========================
 
         """
-        data_types=[data['type'] for data in datas]
-        if data_types!=self.viewer_types:
-            self.update_viewer_pannels(data_types)
-            QtWidgets.QApplication.processEvents()
+        self.init_show_data(datas)
+        self.set_datas_to_viewers(datas,temp=True)
 
-        for ind,data in enumerate(datas):
-            self.ui.viewers[ind].title=data['name']
-            if data['name']!='':
-                self.ui.viewer_docks[ind].setTitle(self.title+' '+data['name'])
-            if data['type']=='Data0D':
-                self.ui.viewers[ind].show_data_temp(data['data'])
-            elif  data['type']=='Data1D':
-                self.ui.viewers[ind].show_data_temp(data['data'])
+
+    def set_datas_to_viewers(self, datas, temp=False):
+        for ind, data in enumerate(datas):
+            self.ui.viewers[ind].title = data['name']
+            if data['name'] != '':
+                self.ui.viewer_docks[ind].setTitle(self.title + ' ' + data['name'])
+            if data['type'] == 'Data0D':
+                if 'labels' in data.keys():
+                    self.ui.viewers[ind].labels = data['labels']
+                if temp:
+                    self.ui.viewers[ind].show_data_temp(data['data'])
+                else:
+                    self.ui.viewers[ind].show_data(data['data'])
+
+            elif data['type'] == 'Data1D':
                 if 'x_axis' in data.keys():
-                    self.ui.viewers[ind].x_axis=data['x_axis']
-            elif data['type']=='Data2D':
-                self.ui.viewers[ind].setImageTemp(*data['data'])
-                # if 'x_axis' in data.keys():
-                #     x_offset=np.min(data['x_axis'])
-                #     x_scaling=data['x_axis'][1]-data['x_axis'][0]
-                # else:
-                #     x_offset=0
-                #     x_scaling=1
-                # if 'y_axis' in data.keys():
-                #     y_offset=np.min(data['y_axis'])
-                #     y_scaling=data['y_axis'][1]-data['y_axis'][0]
-                # else:
-                #     y_offset=0
-                #     y_scaling=1
-                # self.ui.viewers[ind].set_scaling_axes(scaling_options=edict(scaled_xaxis=edict(label="",units=None,offset=x_offset,scaling=x_scaling),
-                #                                                             scaled_yaxis=edict(label="",units=None,offset=y_offset,scaling=y_scaling)))
+                    self.ui.viewers[ind].x_axis = data['x_axis']
+                if 'labels' in data.keys():
+                    self.ui.viewers[ind].labels = data['labels']
+                if temp:
+                    self.ui.viewers[ind].show_data_temp(data['data'])
+                else:
+                    self.ui.viewers[ind].show_data(data['data'])
+
+            elif data['type'] == 'Data2D':
+                if 'x_axis' in data.keys():
+                    self.ui.viewers[ind].x_axis = data['x_axis']
+                if 'y_axis' in data.keys():
+                    self.ui.viewers[ind].y_axis = data['y_axis']
+                if temp:
+                    self.ui.viewers[ind].setImageTemp(*data['data'])
+                else:
+                    self.ui.viewers[ind].setImage(*data['data'])
             else:
                 if 'nav_axes' in data.keys():
-                    self.ui.viewers[ind].show_data_temp(data['data'][0],nav_axes=data['nav_axes'])
+                    nav_axes = data['nav_axes']
                 else:
-                    self.ui.viewers[ind].show_data_temp(data['data'][0])
+                    nav_axes = None
+                if temp:
+                    self.ui.viewers[ind].show_data_temp(data['data'][0],nav_axes=nav_axes)
+                else:
+                    self.ui.viewers[ind].show_data(data['data'][0],nav_axes=nav_axes)
 
     def snapshot(self, pathname=None, dosave=False):
         """
@@ -1266,7 +1261,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 raise (Exception("filepathanme has not been defined in snapshot"))
             self.save_file_pathname=pathname
 
-            self.grab_data(False)
+            self.grab_data(False, pathname)
         except Exception as e:
             self.update_status(str(e),self.wait_time,'log')
 
@@ -1356,30 +1351,30 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             self.Initialized_state=False
 
-        elif status.command=="grab":
+        elif status.command == "grab":
             pass
 
-        elif status.command=="x_axis":
+        elif status.command == "x_axis":
             try:
-                x_axis=status.attributes[0]
-                if type(x_axis)==list:
-                    if len(x_axis)==len(self.ui.viewers):
-                        for ind,viewer in enumerate(self.ui.viewers):
-                            viewer.x_axis=x_axis[ind]
+                x_axis = status.attributes[0]
+                if isinstance(x_axis, list):
+                    if len(x_axis) == len(self.ui.viewers):
+                        for ind, viewer in enumerate(self.ui.viewers):
+                            viewer.x_axis = x_axis[ind]
                 else:
                     for viewer in self.ui.viewers:
-                        viewer.x_axis=x_axis
+                        viewer.x_axis = x_axis
             except Exception as e:
                 self.update_status(str(e), self.wait_time, 'log')
 
 
-        elif status.command=="y_axis":
+        elif status.command == "y_axis":
             try:
-                y_axis=status.attributes[0]
-                if type(y_axis)==list:
-                    if len(y_axis)==len(self.ui.viewers):
-                        for ind,viewer in enumerate(self.ui.viewers):
-                            viewer.y_axis=y_axis[ind]
+                y_axis = status.attributes[0]
+                if isinstance(y_axis, list):
+                    if len(y_axis) == len(self.ui.viewers):
+                        for ind, viewer in enumerate(self.ui.viewers):
+                            viewer.y_axis = y_axis[ind]
                 else:
                     for viewer in self.ui.viewers:
                         viewer.y_axis=y_axis
@@ -1399,15 +1394,15 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             except: pass
             try:
                 if status.attributes[2] == 'value':
-                    self.settings.child('detector_settings',*status.attributes[0]).setValue(status.attributes[1])
+                    self.settings.child('detector_settings', *status.attributes[0]).setValue(status.attributes[1])
                 elif status.attributes[2] == 'limits':
-                    self.settings.child('detector_settings',*status.attributes[0]).setLimits(status.attributes[1])
+                    self.settings.child('detector_settings', *status.attributes[0]).setLimits(status.attributes[1])
                 elif status.attributes[2] == 'options':
-                    self.settings.child('detector_settings',*status.attributes[0]).setOpts(**status.attributes[1])
+                    self.settings.child('detector_settings', *status.attributes[0]).setOpts(**status.attributes[1])
                 elif status.attributes[2] == 'childAdded':
-                    self.settings.child('detector_settings',*status.attributes[0]).addChild(status.attributes[1][0])
+                    self.settings.child('detector_settings', *status.attributes[0]).addChild(status.attributes[1][0])
             except Exception as e:
-                self.update_status(str(e),self.wait_time,'log')
+                self.update_status(str(e),self.wait_time, 'log')
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         elif status.command=='raise_timeout':
@@ -1422,6 +1417,20 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         elif status.command == 'close_splash':
             self.splash_sc.close()
             self.ui.settings_tree.setEnabled(True)
+
+        elif status.command == 'init_lcd':
+            if self.lcd is not None:
+                try:
+                    self.lcd.parent.close()
+                except:
+                    pass
+            # lcd module
+            lcd = QtWidgets.QWidget()
+            self.lcd = LCD(lcd, **status.attributes[0])
+            lcd.setVisible(True)
+
+        elif status.command == 'lcd':
+            self.lcd.setvalues(status.attributes[0])
 
     def update_com(self):
         pass
@@ -1582,6 +1591,7 @@ class DAQ_Detector(QObject):
 
         path=settings_parameter_dict['path']
         param=settings_parameter_dict['param']
+        change=settings_parameter_dict['change']
         if path[0]=='main_settings':
             if hasattr(self,path[-1]):
                 setattr(self,path[-1],param.value())
@@ -1591,7 +1601,7 @@ class DAQ_Detector(QObject):
 
 
     @pyqtSlot(ThreadCommand)
-    def queue_command(self,command=ThreadCommand()):
+    def queue_command(self, command=ThreadCommand()):
         """
             Treat the given command parameter from his name :
               * **ini_detector** : Send the corresponding Thread command via a status signal.
@@ -1724,41 +1734,39 @@ class DAQ_Detector(QObject):
             daq_utils.ThreadCommand
         """
         if not(self.hardware_averaging): #to execute if the averaging has to be done software wise
-            self.ind_average+=1
-            if self.ind_average==1:
-                self.datas=datas
+            self.ind_average += 1
+            if self.ind_average == 1:
+                self.datas = datas
             else:
                 try:
                     for indpannel, dic in enumerate(datas):
-                        self.datas[indpannel]['data']=[((self.ind_average-1)*self.datas[indpannel]['data'][ind]+datas[indpannel]['data'][ind])/self.ind_average for ind in range(len(datas[indpannel]['data']))]
+                        self.datas[indpannel]['data'] = [((self.ind_average-1)*self.datas[indpannel]['data'][ind]+datas[indpannel]['data'][ind])/self.ind_average for ind in range(len(datas[indpannel]['data']))]
 
                     #self.datas=[((self.ind_average-1)*self.datas[indbis][data][ind]+datas[indbis][data][ind])/self.ind_average for ind in range(len(datas))]
                     if self.show_averaging:
                         self.emit_temp_data(self.datas)
                 except Exception as e:
-                    self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
+                    self.status_sig.emit(ThreadCommand("Update_Status", [str(e), 'log']))
 
-            if self.ind_average==self.Naverage:
-                self.average_done=True
+            if self.ind_average == self.Naverage:
+                self.average_done = True
                 self.data_detector_sig.emit(self.datas)
-                self.ind_average=0
-
-
-
+                self.ind_average = 0
         else:
             self.data_detector_sig.emit(datas)
-        self.waiting_for_data=False
-        if self.grab_state==False:
+        self.waiting_for_data = False
+        if self.grab_state == False:
             #self.status_sig.emit(["Update_Status","Grabing braked"])
             self.detector.stop()
 
-    def single(self, Naverage=1):
+    def single(self, Naverage=1,savepath=None):
         """
             Call the grab method with Naverage parameter as an attribute.
 
             =============== =========== ==================
             **Parameters**    **Type**    **Description**
             *Naverage*        int
+            *savepath*           str        eventual savepath
             =============== =========== ==================
 
             See Also
@@ -1766,7 +1774,7 @@ class DAQ_Detector(QObject):
             daq_utils.ThreadCommand, grab
         """
         try:
-            self.grab_data(Naverage, live=False)
+            self.grab_data(Naverage, live=False, savepath=savepath)
             #self.ind_average=0
             #self.Naverage=Naverage
             #self.status_sig.emit(["Update_Status","Start grabing"])
@@ -1777,7 +1785,7 @@ class DAQ_Detector(QObject):
 
             self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
 
-    def grab_data(self, Naverage=1, live=True):
+    def grab_data(self, Naverage=1, live=True,savepath=None):
         """
             | Update status with 'Start Grabing' Update_status sub command of the Thread command.
             | Process events and grab naverage is needed.
@@ -1808,7 +1816,7 @@ class DAQ_Detector(QObject):
                     if not(self.waiting_for_data):
                         self.waiting_for_data=True
                         QThread.msleep(self.wait_time)
-                        self.detector.grab_data(Naverage, live=live)
+                        self.detector.grab_data(Naverage, live=live, savepath=savepath)
                     QtWidgets.QApplication.processEvents()
                     if self.single_grab:
                         if self.hardware_averaging:

@@ -27,7 +27,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     """
 
     data_to_export_signal=pyqtSignal(OrderedDict) #self.data_to_export=edict(data0D=None,data1D=None,data2D=None)
-    math_signal=pyqtSignal(edict) #edict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
+    math_signal=pyqtSignal(OrderedDict) #OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
     ROI_changed=pyqtSignal()
     ROI_changed_finished=pyqtSignal()
 
@@ -42,6 +42,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.ui.setupUi(parent)
 
         self.viewer_type='Data1D'
+        self.legend = None
         #creating the settings widget of the viewer (ROI...)
 
         self.ui.settings_layout=QtWidgets.QVBoxLayout()
@@ -98,6 +99,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.ui.crosshair_pb.clicked.connect(self.crosshairClicked)
         self.crosshairClicked()
 
+        self._labels = []
         self.plot_channels=None
         self.plot_colors=utils.plot_colors
         self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
@@ -110,9 +112,9 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
         self.datas=[] #datas on each channel. list of 1D arrays
         self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
-        self.measurement_dict=edict(x_axis=None,data=None,ROI_bounds=None,operation=None)
-        #edict to be send to the daq_measurement module
-        self.measure_data_dict=edict()
+        self.measurement_dict=OrderedDict(x_axis=None,data=None,ROI_bounds=None,operation=None)
+        #OrderedDict to be send to the daq_measurement module
+        self.measure_data_dict=OrderedDict()
         #dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
         #and value is the result of a given lineout or measurement
 
@@ -130,7 +132,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         params = [
         {'title': 'Math Settings', 'name': 'math_settings', 'type': 'group', 'children': [
             {'title': 'Do math on CH:', 'name': 'channel_combo', 'type': 'list'},
-            {'title': 'Math type:','name':'math_function','type': 'list', 'values':['Sum','Mean'],'value':'Sum'},
+            {'title': 'Math type:','name':'math_function','type': 'list', 'values':['Sum','Mean','half-life'],'value':'Sum'},
             {'title': 'N Lineouts:', 'name': 'Nlineouts_sb', 'type': 'int', 'value':0 ,'default':0,'min':0},
             {'title':'Spread ROI','name': 'spreadROI_pb', 'type': 'action'},
             {'title':'Clear Lineouts','name': 'clear_lo_pb', 'type': 'action'}
@@ -144,10 +146,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         #connecting from tree
         self.roi_settings.child('math_settings', 'spreadROI_pb').sigActivated.connect(self.spread_lineouts)
         self.roi_settings.child('math_settings', 'clear_lo_pb').sigActivated.connect(self.clear_lo)
-        self.roi_settings.child('math_settings', 'Nlineouts_sb').sigValueChanged.connect(self.update_N_lineouts)
-        self.roi_settings.child('math_settings','channel_combo').sigValueChanged.connect(self.change_lo_source)
-        self.roi_settings.child('math_settings','math_function').sigValueChanged.connect(self.update_measurement_type)
-        self.roi_settings.child('ROIs').sigValueChanged.connect(self.update_roi)
+
 
         self.ui.settings_tree.setParameters(self.roi_settings, showTop=False)
         self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
@@ -193,6 +192,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             if  type(ind) is pTypes.ListParameter:
                 ind=ind.value()
             self.measurement_dict['data']=self.datas[ind]
+            self.math_signal.emit(self.measurement_dict)  # OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
             if self.ui.do_measurements_pb.isChecked():
                 self.update_measurement_module()
             self.math_signal.emit(self.measurement_dict)
@@ -236,7 +236,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                     #self.math_thread=QThread()
                     #math_object.moveToThread(self.math_thread)
 
-                    self.math_signal[edict].connect(self.math_object.get_data)
+                    self.math_signal[OrderedDict].connect(self.math_object.get_data)
                     self.math_object.math_sig[list].connect(self.show_math)
 
 
@@ -287,18 +287,42 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         except Exception as e:
             self.update_status(str(e),self.wait_time)
 
-    def ini_data_plots(self,Nplots):
+    def ini_data_plots(self, Nplots):
         self.plot_channels=[]
-        self.legend=self.ui.Graph1D.plotItem.addLegend()
-        channels=[]
+        self.legend = self.ui.Graph1D.plotItem.addLegend()
+        channels = []
         for ind in range(Nplots):
             channel=self.ui.Graph1D.plot()
             channel.setPen(self.plot_colors[ind])
-            self.legend.addItem(channel,"CH{}".format(ind))
+            self.legend.addItem(channel, self._labels[ind])
             channels.append(ind)
             self.plot_channels.append(channel)
-        self.roi_settings.child('math_settings','channel_combo').setOpts(limits=channels)
-        self.roi_settings.child('math_settings','channel_combo').setValue(channels[0])
+        if Nplots > 0:
+            self.roi_settings.child('math_settings','channel_combo').setOpts(limits=channels)
+            self.roi_settings.child('math_settings','channel_combo').setValue(channels[0])
+
+    def update_labels(self, labels):
+        try:
+            items = [item[1].text for item in self.legend.items]
+            for item in items:
+                self.legend.removeItem(item)
+
+            if len(labels) == len(self.plot_channels):
+                for ind, channel in enumerate(self.plot_channels):
+                    self.legend.addItem(channel, self._labels[ind])
+        except:
+            self.update_status('plot channels not yet declared', wait_time=self.wait_time)
+
+    @property
+    def labels(self):
+        return self._labels
+
+    @labels.setter
+    def labels(self, labels):
+        self._labels = labels
+        self.update_labels(labels)
+
+
 
     def load_ROI(self):
         try:
@@ -343,7 +367,9 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         if self.plot_channels is not None:
             for channel in self.plot_channels:
                 self.ui.Graph1D.removeItem(channel)
-            self.plot_channels=None
+            self.plot_channels = None
+        if self.legend is not None:
+            self.ui.Graph1D.removeItem(self.legend)
 
     def restore_state(self,data_tree):
         self.roi_settings.restoreState(data_tree)
@@ -360,6 +386,16 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
                 if param.name() == 'Color' or param.name() == 'x1' or param.name() == 'x2' :
                     self.update_roi(param.parent(),param)
+                elif param.name() == 'Nlineouts_sb':
+                    self.update_N_lineouts(param.value())
+                elif param.name() == 'channel_combo':
+                    self.change_lo_source(param.value())
+                elif param.name() == 'math_function':
+                    self.update_measurement_type(param.value())
+                # elif param.name() == 'ROIs':
+                #     self.update_roi()
+
+
 
     def save_ROI(self):
 
@@ -394,20 +430,21 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
 
     @pyqtSlot(list)
-    def show_data(self,datas):
+    def show_data(self, datas):
         try:
-            self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
+            if self.labels == [] or len(self.labels) != len(datas):
+                self._labels = ["CH{}".format(ind) for ind in range(len(datas))]
+
+            self.data_to_export=OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
             for ind,data in enumerate(datas):
-                self.data_to_export['data1D']['CH{:03d}'.format(ind)]=OrderedDict()
+                self.data_to_export['data1D']['CH{:03d}'.format(ind)] = OrderedDict()
 
             self.datas=datas
-            if self.plot_channels==None: #initialize data and plots
+            if self.plot_channels == None: #initialize data and plots
                 self.ini_data_plots(len(datas))
-            elif len(self.plot_channels)!=len(datas):
+            elif len(self.plot_channels) != len(datas):
                 self.remove_plots()
                 self.ini_data_plots(len(datas))
-
-
 
             self.update_Graph1D(datas)
             if self.ui.do_measurements_pb.isChecked():
@@ -421,18 +458,26 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         """f
         to plot temporary data, for instance when all pixels are not yet populated...
         """
+        if self.labels == [] or len(self.labels) != len(datas):
+            self._labels = ["CH{}".format(ind) for ind in range(len(datas))]
         self.datas=datas
         if self.plot_channels==None: #initialize data and plots
             self.ini_data_plots(len(datas))
         elif len(self.plot_channels)!=len(datas):
             self.remove_plots()
             self.ini_data_plots(len(datas))
+
         for ind_plot,data in enumerate(datas):
-            self.plot_channels[ind_plot].setData(y=data)
+            if self._x_axis is None:
+                self._x_axis=np.linspace(0,len(data),len(data),endpoint=False)
+            elif len(self._x_axis)!=len(data):
+                self._x_axis=np.linspace(0,len(data),len(data),endpoint=False)
+
+            self.plot_channels[ind_plot].setData(x=self._x_axis,y=data)
 
     @pyqtSlot(list)
     def show_math(self,data_lo):
-        #self.data_to_export=edict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+        #self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
 
         for ind,res in enumerate(data_lo):
             self.measure_data_dict["Lineout{}:".format(ind)]=res
@@ -478,7 +523,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             pass
 
     def update_Graph1D(self,datas):
-        #self.data_to_export=edict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
+        #self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
         try:
 
             for ind_plot,data in enumerate(datas):
@@ -511,7 +556,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             child.child(('x2')).setValue(self.ROI_bounds[ind][1])
         self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
         self.measurement_dict['ROI_bounds']=self.ROI_bounds
-        self.math_signal.emit(self.measurement_dict) #edict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
+        self.math_signal.emit(self.measurement_dict) #OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
         self.ROI_changed.emit()
 
 
@@ -524,8 +569,8 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.measurement_module.update_data(xdata=xdata,ydata=ydata)
 
     def update_measurement_type(self,operation):
-        self.measurement_dict['operation']=operation.value()
-        self.math_signal.emit(self.measurement_dict) #edict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
+        self.measurement_dict['operation']=operation
+        self.math_signal.emit(self.measurement_dict) #OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
 
     def update_N_lineouts(self,Nlineouts):
         if type(Nlineouts) is customparameter.SimpleParameterCustom: #case when the parameter signal was launched
@@ -570,13 +615,13 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     def x_axis(self, x_axis):
         label = 'Pxls'
         units = ''
-        if type(x_axis) == dict:
+        if isinstance(x_axis, dict):
             if 'data' in x_axis:
-                xdata=x_axis['data']
+                xdata = x_axis['data']
             if 'label' in x_axis:
-                label=x_axis['label']
+                label = x_axis['label']
             if 'units' in x_axis:
-                units= x_axis['units']
+                units = x_axis['units']
         else:
             xdata=x_axis
         self._x_axis=xdata
@@ -600,7 +645,7 @@ class Viewer1D_math(QObject):
         self._x_axis=None
         self.operation=None
     
-    @pyqtSlot(edict) #edict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
+    @pyqtSlot(OrderedDict) #OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
     def get_data(self,measurement_dict):
         self.data=measurement_dict['data']
         self.ROI_bounds=measurement_dict['ROI_bounds']
@@ -615,21 +660,45 @@ class Viewer1D_math(QObject):
             indexes=utils.find_index(self._x_axis,bounds)
             ind1=indexes[0][0]
             ind2=indexes[1][0]
+            sub_data = self.data[ind1:ind2]
+            sub_xaxis = self._x_axis[ind1:ind2]
+
             if self.operation=="Mean":
-                data_lo.append(np.mean(self.data[ind1:ind2]))
+                data_lo.append(np.mean(sub_data))
             elif self.operation=="Sum":
-                data_lo.append(np.sum(self.data[ind1:ind2]))
+                data_lo.append(np.sum(sub_data))
+            elif self.operation == 'half-life':
+                ind_x0 = utils.find_index(sub_data, np.max(sub_data))[0][0]
+                x0 = sub_xaxis[ind_x0]
+                sub_xaxis = sub_xaxis[ind_x0:]
+                sub_data = sub_data[ind_x0:]
+                offset = sub_data[-1]
+                N0 = np.max(sub_data) - offset
+                thalf = sub_xaxis[utils.find_index(sub_data - offset, 0.5 * N0)[0][0]]-x0
+                data_lo.append(thalf)
 
         self.math_sig.emit(data_lo)
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    Form=QtWidgets.QWidget();prog = Viewer1D(Form)
+    Form=QtWidgets.QWidget()
+    prog = Viewer1D(Form)
     from pymodaq.daq_utils.daq_utils import gauss1D
-    x=np.linspace(0,200,201);y1=gauss1D(x,75,25);
-    x2=np.linspace(0,300,301);y2=gauss1D(x,120,50,2)
-    prog.show_data([y1,y2]);Form.show()
+    x=np.linspace(0,200,201)
+    y1=gauss1D(x,75,25)
+    y2=gauss1D(x,120,50,2)
+    tau_half = 27
+    tau2=100
+    x0=50
+    dx=20
+    ydata_expodec = np.zeros((len(x)))
+    ydata_expodec[:50] = 1*gauss1D(x[:50],x0,dx,2)
+    ydata_expodec[50:] = 1*np.exp(-(x[50:]-x0)/(tau_half/np.log(2)))#+1*np.exp(-(x[50:]-x0)/tau2)
+    ydata_expodec += 0.1*np.random.rand(len(x))
+
+    prog.show_data([y1, y2, ydata_expodec])
+    Form.show()
     prog.x_axis
     sys.exit(app.exec_())
 

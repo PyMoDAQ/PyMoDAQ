@@ -11,7 +11,8 @@ import os
 import sys
 import numpy as np
 
-comon_parameters=[  {'name': 'epsilon', 'type': 'float', 'value': 0.01},
+comon_parameters=[{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
+                  {'name': 'epsilon', 'type': 'float', 'value': 0.01},
                   {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
 
                     {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children':[
@@ -65,10 +66,11 @@ class DAQ_Move_base(QObject):
     Move_Done_signal=pyqtSignal(float)
     is_multiaxes=False
     params= []
+    _controller_units = ''
 
     def __init__(self,parent=None,params_state=None):
         super(DAQ_Move_base,self).__init__()
-
+        self.move_is_done = False
         self.parent=parent
         self.controller=None
         self.stage=None
@@ -78,10 +80,20 @@ class DAQ_Move_base(QObject):
         self.settings=Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             self.settings.restoreState(params_state)
-
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
+        self.controller_units = self._controller_units
+
+    @property
+    def controller_units(self):
+        return self._controller_units
+
+    @controller_units.setter
+    def controller_units(self, units: str = ''):
+        self._controller_units = units
+        self.settings.child(('units')).setValue(units)
 
     def check_bound(self,position):
+        self.move_is_done = False
         if self.settings.child('bounds','is_bounds').value():
             if position>self.settings.child('bounds','max_bound').value():
                 position=self.settings.child('bounds','max_bound').value()
@@ -151,6 +163,7 @@ class DAQ_Move_base(QObject):
         """
         position=self.check_position()
         self.Move_Done_signal.emit(position)
+        self.move_is_done = True
 
     def poll_moving(self):
         """
@@ -163,14 +176,18 @@ class DAQ_Move_base(QObject):
         sleep_ms=50
         ind=0
         while np.abs(self.check_position()-self.target_position)>self.settings.child(('epsilon')).value():
+            if self.move_is_done:
+                self.emit_status(ThreadCommand('Move has been stopped'))
+                break
             QThread.msleep(sleep_ms)
 
             ind+=1
 
-            if ind*sleep_ms>=self.settings.child(('timeout')).value():
+            if ind*sleep_ms >= self.settings.child(('timeout')).value():
 
                 self.emit_status(ThreadCommand('raise_timeout'))
                 break
+
             self.current_position=self.check_position()
             QtWidgets.QApplication.processEvents()
         self.move_done()

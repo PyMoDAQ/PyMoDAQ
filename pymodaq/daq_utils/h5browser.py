@@ -53,8 +53,9 @@ class H5Browser(QtWidgets.QWidget,QObject):
         H_splitter=QtWidgets.QSplitter(Qt.Horizontal)
 
         Form = QtWidgets.QWidget()
-        self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
-        self.ui.h5file_tree.ui.Tree.setMinimumWidth(250)
+        #self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
+        self.ui.h5file_tree = Tree_layout(Form, col_counts=1, labels=["Node"])
+        self.ui.h5file_tree.ui.Tree.setMinimumWidth(300)
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
         V_splitter.addWidget(Form)
@@ -162,12 +163,12 @@ class H5Browser(QtWidgets.QWidget,QObject):
             node=self.h5file.get_node(item.text(2))
             self.data_node_signal.emit(node._v_pathname)
             if 'ARRAY' in node._v_attrs['CLASS']:
-                data=node.read()
+                data = node.read()
 
-                if type(data)==np.ndarray:
+                if isinstance(data, np.ndarray):
                     self.hyperviewer.show_data(node.read())
-                elif type(data)==list:
-                    if type(data[0])==str:
+                elif isinstance(data, list):
+                    if isinstance(data[0], str):
                         self.ui.text_list.clear()
                         for txt in node.read():
                             self.ui.text_list.addItem(txt)

@@ -68,7 +68,8 @@ extensions = [
     'sphinx.ext.napoleon',
     #'autoapi.sphinx',
     'sphinx.ext.autosummary',
-    'releases'
+    'releases',
+    'crate.sphinx.csv'
 ]
 numfig=True
 

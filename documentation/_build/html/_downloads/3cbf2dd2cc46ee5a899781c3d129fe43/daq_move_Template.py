@@ -10,6 +10,10 @@ class DAQ_Move_Template(DAQ_Move_base):
      Template to be used in order to write your own Move modules
 
     """
+
+    _controller_units = 'mm'  # dependent on the stage type so to be updated accordingly when/if needed
+    #  using self.controller_units = new_unit
+
     #define here the default values you need for the hardware settings
     #exemaple: find available COM ports
     import serial.tools.list_ports

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.1.2 documentation</title>
+  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.2 documentation</title>
   
 
   
@@ -63,7 +63,7 @@
             
             
               <div class="version">
-                1.1
+                1.2
               </div>
             
           
@@ -93,6 +93,7 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/classDiagram.html">Class Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a></li>
 </ul>
@@ -161,16 +162,24 @@
             
   <div class="section" id="welcome-to-pymodaq-s-documentation">
 <h1>Welcome to PyMoDAQ’s documentation!<a class="headerlink" href="#welcome-to-pymodaq-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>PyMoDAQ, Modular Data Acquisition with Python, is a set of <strong>python</strong> modules used to perform automated measurements.</p>
-<p>It is made for the scientist who need to perform various acquisitions without having to write a user/interface for each new experiment. PyMoDAQ interface is fixed, and any new hardware can be added as a small plugin. Preset modes of a given set of actuators and detectors can be written for easy experiment inititialization.</p>
+<p>PyMoDAQ, Modular Data Acquisition with Python, is a set of <strong>python</strong> modules used to interface any kind of experiments.
+It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.</p>
+<p>It has two purposes:</p>
+<ul class="simple">
+<li>First, to provide a complete interface to perform automated measurements without having to write a user/interface for each
+new experiment, this is under the <a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> environment.</li>
+<li>Second, to provide various tools (modules) to easily build a <a class="reference internal" href="usage/CustomApp.html#custom-app"><span class="std std-ref">Custom Application</span></a></li>
+</ul>
 <p>It is divided in three main modules:</p>
 <ul class="simple">
 <li><a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> : This is the module that will initialize all preset actuators and detectors. Then will automate the data acquisition.</li>
 <li><a class="reference internal" href="usage/modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.</li>
 <li><a class="reference internal" href="usage/modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.</li>
 </ul>
+<p>and many others to simplify any application development.</p>
 <p>GitHub repo: <a class="reference external" href="https://github.com/CEMES-CNRS">https://github.com/CEMES-CNRS</a></p>
 <p>Documentation: <a class="reference external" href="http://pymodaq.cnrs.fr/">http://pymodaq.cnrs.fr/</a></p>
+<p>List of available plugins: <a class="reference external" href="https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg">https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg</a></p>
 <p>Based on the <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code> library : <a class="reference external" href="http://www.pyqtgraph.org">http://www.pyqtgraph.org</a> by Luke Campagnola.</p>
 <p>PyMoDAQ is written by Sébastien Weber: <a class="reference external" href="mailto:sebastien&#46;weber&#37;&#52;&#48;cemes&#46;fr">sebastien<span>&#46;</span>weber<span>&#64;</span>cemes<span>&#46;</span>fr</a> under a MIT licence.</p>
 </div>
@@ -258,6 +267,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html">Plugins</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#installation">Installation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#list-of-plugins">List of plugins</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#naming-convention">Naming convention:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
@@ -281,6 +291,9 @@
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#daq-measurement">DAQ_Measurement</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a><ul class="simple">
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage/classDiagram.html">Class Diagram</a></li>

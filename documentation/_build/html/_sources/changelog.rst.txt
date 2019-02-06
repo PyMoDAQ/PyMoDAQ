@@ -3,6 +3,7 @@
 =========
 Changelog
 =========
+* :feature:`0` DAQ_Move_plugins: added the _controller_units parameter. Holds the native units used with the Move instance
 * :release:`1.2.0 <2019-01-11>`
 * :feature:`0` DAQ_Scan: Huge modification related to the scanning. Now you can select an area in one of the opened 2DViewers
   This viewer could for instance be a calibrated camera referring to the x and y positions of a XY stage. The Plot2D scan 2D viewer

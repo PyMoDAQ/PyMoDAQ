@@ -6,8 +6,7 @@ import os
 import itertools
 #sys.path.append(os.path.split(os.path.split(os.path.split(__file__)[0])[0])[0])
 
-import logging
-logging.basicConfig(filename=os.path.join(os.path.split(__file__)[0],'daq_scan.log'),level=logging.DEBUG)
+
 
 
 from  pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
@@ -25,7 +24,7 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.manage_preset import PresetManager
 from pymodaq.daq_utils.overshoot_manager import OvershootManager
-
+from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import matplotlib.image as mpimg
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -40,6 +39,15 @@ import pickle
 import os
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
 local_path = get_set_local_dir()
+
+import logging
+now=datetime.datetime.now()
+log_path=os.path.join(local_path,'logging')
+
+if not os.path.isdir(log_path):
+    os.makedirs(log_path)
+
+logging.basicConfig(filename=os.path.join(log_path,'daq_scan_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))),level=logging.DEBUG)
 
 class PolyLineROI_custom(pg.PolyLineROI):
     def __init__(self,*args,**kwargs):
@@ -725,9 +733,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             elif change == 'value':
                 if param.name()=='scan_type':
+                    self.scan_selector.settings.child('scan_options', 'scan_type').setValue(data)
                     if data=='Scan1D':
                         self.daqscan_settings.child('scan_options','scan1D_settings').show()
                         self.daqscan_settings.child('scan_options','scan2D_settings').hide()
+
                     elif data == 'Scan2D':
                         self.daqscan_settings.child('scan_options','scan1D_settings').hide()
                         self.daqscan_settings.child('scan_options','scan2D_settings').show()
@@ -745,39 +755,30 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
 
+                elif param.name() == 'scan1D_roi_module' or param.name() == 'scan2D_roi_module':
+                    self.scan_selector.settings.child('scan_options', 'sources').setValue(param.value())
 
+                elif param.name() == 'scan1D_selection':
+                    if param.value() == 'Manual':
+                        self.scan_selector.hide()
+                        self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').hide()
+                        self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').show()
+                        self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').show()
+                    else:
+                        self.scan_selector.show()
+                        self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').show()
+                        self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').hide()
+                        self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').hide()
+                elif param.name() == 'scan2D_selection':
+                    if param.value() == 'Manual':
+                        self.scan_selector.hide()
+                        self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').hide()
+                    else:
+                        self.scan_selector.show()
+                        self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').show()
 
-                elif param.name() =='scan1D_roi_module' or param.name() == 'scan2D_roi_module' or param.name() =='scan1D_selection' or param.name() == 'scan2D_selection':
-                    try:
-                        self.ui.scan_area_item.removeItem(self.ui.scan_area)
-                    except:
-                        pass
-                    if param.name() == 'scan1D_roi_module' or param.name() == 'scan2D_roi_module':
-                        if param.value() == '2DScanPlot':
-                            self.ui.scan_area_item=self.ui.scan2D_graph.ui.plotitem
-                        elif param.value() is not None:
-                            modtitles=[mod.title for mod in self.detector_modules]
-                            self.ui.scan_area_item =self.detector_modules[modtitles.index(param.value())].ui.viewers[0].ui.plotitem
-                    if param.name() == 'scan1D_roi_module':
-                        self.update_scan_area_type(scan_area_type='PolyLines')
-                    elif param.name() =='scan2D_roi_module':
-                        self.update_scan_area_type(scan_area_type='Rect')
-                    if param.name() == 'scan1D_selection':
-                        if param.value() == 'Manual':
-                            self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').hide()
-                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').show()
-                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').show()
-                        else:
-                            self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').show()
-                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').hide()
-                            self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').hide()
-                    if param.name() == 'scan2D_selection':
-                        if param.value() == 'Manual':
-                            self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').hide()
-                        else:
-                            self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').show()
-                        self.update_scan_type(self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_type'))
-                    self.show_scan_area()
+                    self.update_scan_type(self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_type'))
+
 
                 elif param.name() == 'save_independent':
                     self.daqscan_settings.child('saving_options','current_scan_path').show(param.value())
@@ -910,7 +911,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         self.dockarea.addDock(self.det_docks_viewer[-1],'right',self.det_docks_settings[-1])
 
                         det_mod_tmp=DAQ_Viewer(self.dockarea,dock_settings=self.det_docks_settings[-1],
-                                                            dock_viewer=self.det_docks_viewer[-1],title=plug_name,DAQ_type=plug_type)
+                                                            dock_viewer=self.det_docks_viewer[-1],title=plug_name,
+                                               DAQ_type=plug_type, parent_scan=self)
                         detector_modules.append(det_mod_tmp)
                         detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
                         detector_modules[-1].ui.Quit_pb.setEnabled(False)
@@ -1050,23 +1052,28 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.clear_move_det_controllers()
             QtWidgets.QApplication.processEvents()
 
-            move_modules,detector_modules= self.set_file_preset(filename)
+            move_modules, detector_modules= self.set_file_preset(filename)
             self.update_status('Preset mode ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
-            self.move_modules=move_modules
-            self.detector_modules=detector_modules
+            self.move_modules = move_modules
+            self.detector_modules = detector_modules
+
+            items = OrderedDict()
+            for det in self.detector_modules:
+                if len([view for view in det.ui.viewers if view.viewer_type=='Data2D']) != 0:
+                    items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
+                                        names=[view.title for view in det.ui.viewers if view.viewer_type == 'Data2D'],)
+            items["DAQ_Scan"] = dict(viewers=[self.ui.scan2D_graph],
+                                    names=["DAQ_Scan"])
+            self.scan_selector = ScanSelector(items, 'Scan1D')
+            self.scan_selector.settings.child('scan_options', 'scan_type').hide()
+            self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
+            self.scan_selector.hide()
+            self.scan_selector.show_scan_selector(visible=False)
+
+            self.daqscan_settings.child('scan_options', 'scan1D_settings','scan1D_roi_module').setOpts(limits=self.scan_selector.sources_names)
+            self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_roi_module').setOpts(limits=self.scan_selector.sources_names)
 
             self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
-
-            mods1D=[]
-            mods2D=[]
-            mods1D.extend([mod.title for mod in self.detector_modules if mod.DAQ_type == 'DAQ2D'])
-            mods2D.extend([mod.title for mod in self.detector_modules if mod.DAQ_type == 'DAQ2D'])
-            mods1D.append('2DScanPlot')
-            mods2D.append('2DScanPlot')
-
-            self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').setOpts(limits=mods1D)
-            self.daqscan_settings.child('scan_options','scan2D_settings','scan2D_roi_module').setOpts(limits=mods2D)
-
 
             #connecting to logger
             for mov in move_modules:
@@ -1132,14 +1139,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     steps_y = np.array([])
                 else:  # from ROI
                     Nmove_module = 2
-                    param = self.daqscan_settings.child('scan_options', 'scan1D_settings', 'scan1D_roi_module')
-                    if param.value() == '2DScanPlot':
-                        viewer = self.ui.scan2D_graph
-                    elif param.value() is not None:
-                        modtitles = [mod.title for mod in self.detector_modules]
-                        viewer = self.detector_modules[modtitles.index(param.value())].ui.viewers[0]
-
-                    positions=self.ui.scan_area.getArrayIndexes( viewer.ui.img_red, spacing=step)
+                    viewer = self.scan_selector.scan_selector_source
+                    positions=self.scan_selector.scan_selector.getArrayIndexes( viewer.ui.img_red, spacing=step)
 
                     steps_x, steps_y=zip(*positions)
                     steps_x, steps_y =viewer.scale_axis(np.array(steps_x),np.array(steps_y))
@@ -1283,6 +1284,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.scan_dock.addWidget(widgetsettings)
         self.dockarea.addDock(self.ui.scan_dock,'left')
 
+        self.scan_selector = None  #is initialized after loading presets
 
         #%% create logger dock
         self.ui.logger_dock=Dock("Logger")
@@ -1325,13 +1327,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Region.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ui.ROIselect_pb.setIcon(icon2)
-
-
-        #Scan area
-        self.ui.scan_area_item=self.ui.scan2D_graph.ui.plotitem
-        self.ui.scan_area=pg.RectROI([0,0],[10,10])
-
-
 
 
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.ROIselect_pb)
@@ -1405,7 +1400,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Scan1D settings','name': 'scan1D_settings', 'type': 'group', 'children': [
                     {'title': 'Scan type:','name': 'scan1D_type', 'type': 'list', 'values': ['Linear','Linear back to start','Random'],'value': 'Linear'},
                     {'title': 'Selection:', 'name': 'scan1D_selection', 'type': 'list', 'values': ['Manual','FromROI PolyLines']},
-                    {'title': 'From module:', 'name': 'scan1D_roi_module', 'type': 'list', 'values': ['2DScanPlot'], 'visible': False},
+                    {'title': 'From module:', 'name': 'scan1D_roi_module', 'type': 'list', 'values': [], 'visible': False},
                     {'title': 'Start:','name': 'start_1D', 'type': 'float', 'value': 0.},
                     {'title': 'stop:','name': 'stop_1D', 'type': 'float', 'value': 10.},
                     {'title': 'Step:','name': 'step_1D', 'type': 'float', 'value': 1.}
@@ -1413,7 +1408,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group','visible': False, 'children': [
                     {'title': 'Scan type:','name': 'scan2D_type', 'type': 'list', 'values': ['Spiral','Linear', 'back&forth','Random'],'value': 'Spiral'},
                     {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list','values': ['Manual', 'FromROI']},
-                    {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': ['2DScanPlot'], 'visible': False},
+                    {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
                     {'title': 'Start Ax1:','name': 'start_2d_axis1', 'type': 'float', 'value': 0., 'visible':True},
                     {'title': 'Start Ax2:','name': 'start_2d_axis2', 'type': 'float', 'value': 10., 'visible':True},
                     {'title': 'stop Ax1:','name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible':False},
@@ -1586,10 +1581,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         else:
             self.scan_tree.setVisible(False)
 
-    def show_scan_area(self):
-
-        self.ui.scan_area.setVisible(self.daqscan_settings.child('scan_options', 'scan1D_settings','scan1D_selection').value() == 'FromROI PolyLines' or\
-        self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_selection').value() == 'FromROI')
 
     def start_scan(self):
         """
@@ -1971,33 +1962,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         items=param.value()['selected']
         self.daqscan_settings.child('scan_options','plot_from').setOpts(limits=items)
 
-    pyqtSlot(str)
-    def update_scan_area_type(self,scan_area_type):
-        if self.ui.scan_area_item is not None:
-            try:
-                self.ui.scan_area_item.removeItem(self.ui.scan_area)
-            except:
-                pass
-
-            if scan_area_type == 'Rect':
-                self.ui.scan_area = pg.RectROI([0,0],[10,10])
-                self.ui.scan_area.sigRegionChangeFinished.connect(self.update_scan_2D_positions)
-            elif scan_area_type == 'PolyLines':
-                self.ui.scan_area = PolyLineROI_custom([(0, 0), [10, 10]])
-
-            self.ui.scan_area_item.addItem(self.ui.scan_area)
-            self.show_scan_area()
 
     def update_scan_2D_positions(self):
         try:
-            param=self.daqscan_settings.child('scan_options','scan2D_settings','scan2D_roi_module')
-            if param.value() == '2DScanPlot':
-                viewer = self.ui.scan2D_graph
-            elif param.value() is not None:
-                modtitles = [mod.title for mod in self.detector_modules]
-                viewer = self.detector_modules[modtitles.index(param.value())].ui.viewers[0]
-            pos_dl = self.ui.scan_area.pos()
-            pos_ur = self.ui.scan_area.pos()+self.ui.scan_area.size()
+            viewer = self.scan_selector.scan_selector_source
+            pos_dl = self.scan_selector.scan_selector.pos()
+            pos_ur = self.scan_selector.scan_selector.pos()+self.scan_selector.scan_selector.size()
             pos_dl_scaled = viewer.scale_axis(pos_dl[0],pos_dl[1])
             pos_ur_scaled= viewer.scale_axis(pos_ur[0],pos_ur[1])
 
@@ -2015,7 +1985,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.update_status(str(e),self.wait_time,log_type='log')
 
     @pyqtSlot(OrderedDict)
-    def update_scan_GUI(self,datas):
+    def update_scan_GUI(self, datas):
         """
             Update the graph in the Graphic Interface from the given datas switching 0D/1D/2D consequently.
 

@@ -41,7 +41,8 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         
 
         self.ui.xaxis_item=self.ui.Graph1D.plotItem.getAxis('bottom')
-        
+
+        self._labels = []
         self.viewer_type='Data0D'
         self.wait_time=1000
 
@@ -64,22 +65,6 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         self.show_data_list(False)
 
 
-    def show_data_list(self,state=None):
-        if state is None:
-            state=self.ui.show_datalist_pb.isChecked()
-        self.ui.values_list.setVisible(state)
-
-    def update_x_axis(self,Nhistory):
-        self.Nsamples=Nhistory
-        self.x_axis=np.linspace(0,self.Nsamples-1,self.Nsamples)
-
-    def update_channels(self):
-        if self.plot_channels!=None:
-            for ind,item in enumerate(self.plot_channels):
-                self.legend.removeItem(item.name())
-                self.ui.Graph1D.removeItem(item)
-            self.plot_channels=None
-
     def clear_data(self):
         N=len(self.datas)
         self.datas=[]
@@ -89,25 +74,25 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         for ind_plot,data in enumerate(self.datas):
             self.plot_channels[ind_plot].setData(x=self.x_axis,y=data)
 
-    def update_status(self,txt,wait_time=0):
-        self.ui.statusbar.showMessage(txt,wait_time)
+    @pyqtSlot(list)
+    def show_data(self, datas):
+        """
 
-    @pyqtSlot(list)
-    def show_data_temp(self,datas):
+        Parameters
+        ----------
+        datas: list of list of one float
+
         """
-        to plot temporary data, for instance when all pixels are not yet populated...
-        """
-        pass
-        
-    @pyqtSlot(list)
-    def show_data(self,datas):
-         try:
-            self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=None,data2D=None)
-            if self.plot_channels==None or len(self.plot_channels)!=len(datas):
+        try:
+            self.data_to_export = OrderedDict(data0D=OrderedDict(),data1D=None,data2D=None)
+            if self.plot_channels==None or len(self.plot_channels) != len(datas):
                 if self.plot_channels!=None:
-                    if len(self.plot_channels)!=len(datas):
+                    if len(self.plot_channels) != len(datas):
                         for channel in self.plot_channels:
                             self.ui.Graph1D.removeItem(channel)
+
+                if self.labels == [] or len(self.labels) != len(datas):
+                    self._labels = ["CH{}".format(ind) for ind in range(len(datas))]
 
                 self.plot_channels=[]
                 self.datas=[]
@@ -117,17 +102,36 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 for ind in range(len(datas)):
                     self.datas.append(np.array([]))
                     #channel=self.ui.Graph1D.plot(np.array([]))
-                    channel=self.ui.Graph1D.plot(y=np.array([]),name="CH{}".format(ind))
+                    channel=self.ui.Graph1D.plot(y=np.array([]), name=self._labels[ind])
                     channel.setPen(self.plot_colors[ind])
                     #self.legend.addItem(channel,"CH{}".format(ind))
                     self.plot_channels.append(channel)
 
-            for ind,data in enumerate(datas):
+            for ind, data in enumerate(datas):
                 self.list_items[ind].setText('{:.06e}'.format(data[0]))
-       
+
             self.update_Graph1D(datas)
-         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time)
+        except Exception as e:
+            self.update_status(str(e), wait_time=self.wait_time)
+
+    def show_data_list(self,state=None):
+        if state is None:
+            state = self.ui.show_datalist_pb.isChecked()
+        self.ui.values_list.setVisible(state)
+
+    @pyqtSlot(list)
+    def show_data_temp(self,datas):
+        """
+        to plot temporary data, for instance when all pixels are not yet populated...
+        """
+        pass
+
+    def update_channels(self):
+        if self.plot_channels!=None:
+            for ind,item in enumerate(self.plot_channels):
+                self.legend.removeItem(item.name())
+                self.ui.Graph1D.removeItem(item)
+            self.plot_channels=None
 
     def update_Graph1D(self,datas):
         try:
@@ -140,32 +144,63 @@ class Viewer0D(QtWidgets.QWidget,QObject):
             for ind_plot,data in enumerate(datas):
                 data_tmp=self.datas[ind_plot]
                 data_tmp=np.append(data_tmp,data)
-                
+
                 if len(data_tmp)>self.Nsamples:
                     data_tmp=data_tmp[L-self.Nsamples:]
-                   
+
                 data_tot.append(data_tmp)
-                
+
                 self.plot_channels[ind_plot].setData(x=self.x_axis,y=data_tmp)
                 self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)]=data[0]
-            self.datas=data_tot  
-                                 
+            self.datas=data_tot
+
              #
             self.data_to_export_signal.emit(self.data_to_export)
 
 
         except Exception as e:
             self.update_status(str(e),self.wait_time)
+        
+    def update_labels(self, labels):
+        try:
+             if len(labels) == len(self.plot_channels):
+                for ind, channel in enumerate(self.plot_channels):
+                    channel.opts['name'] = labels[ind]
+        except:
+            self.update_status('plot channels not yet declared', wait_time=self.wait_time)
+
+    def update_status(self,txt,wait_time=0):
+        self.ui.statusbar.showMessage(txt,wait_time)
+
+    def update_x_axis(self,Nhistory):
+        self.Nsamples=Nhistory
+        self.x_axis=np.linspace(0,self.Nsamples-1,self.Nsamples)
+
+    @property
+    def labels(self):
+        return self._labels
+
+
+
+    @labels.setter
+    def labels(self, labels):
+        self._labels = labels
+        self.update_labels(labels)
 
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    Form=QtWidgets.QWidget();
+    Form=QtWidgets.QWidget()
     prog = Viewer0D(Form)
     from pymodaq.daq_utils.daq_utils import gauss1D
-    x=np.linspace(0,200,201);y1=gauss1D(x,75,25);y2=gauss1D(x,120,50,2);Form.show()
-    for ind,data in enumerate(y1):prog.show_data([data,y2[ind]]);QtWidgets.QApplication.processEvents()
+    x=np.linspace(0,200,201)
+    y1=gauss1D(x,75,25)
+    y2=gauss1D(x,120,50,2)
+    Form.show()
+    for ind,data in enumerate(y1):
+        prog.show_data([[data], [y2[ind]]])
+        QtWidgets.QApplication.processEvents()
 
     sys.exit(app.exec_())
 

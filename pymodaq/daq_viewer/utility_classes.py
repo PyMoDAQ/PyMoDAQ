@@ -79,12 +79,22 @@ class DAQ_Viewer_base(QObject):
         """
             # settings_parameter_dict=edict(path=path,param=param)
         try:
-            path=settings_parameter_dict.path
-            param=settings_parameter_dict.param
+            path = settings_parameter_dict['path']
+            param = settings_parameter_dict['param']
+            change = settings_parameter_dict['change']
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
             except: pass
-            self.settings.child(*path[1:]).setValue(param.value())
+            if change == 'value':
+                self.settings.child(*path[1:]).setValue(param.value())
+            elif change == 'childAdded':
+                self.settings.child(*path[1:]).addNew(param.opts['title'])
+            elif change == 'parent':
+                children = custom_tree.get_param_from_name(self.settings, param.name())
+
+                if children is not None:
+                    path = custom_tree.get_param_path(children)
+                    self.settings.child(*path[1:-1]).removeChild(children)
 
             self.settings.sigTreeStateChanged.connect(self.send_param_status)
 
@@ -124,10 +134,10 @@ class DAQ_Viewer_base(QObject):
             else:
                 childName = param.name()
             if change == 'childAdded':
-                self.emit_status(ThreadCommand('update_settings',[self.parent_parameters_path+path,data,change])) #send parameters values/limits back to the GUI
+                self.emit_status(ThreadCommand('update_settings',[self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
 
-            elif change == 'value' or change == 'limits' or change=='options':
-                self.emit_status(ThreadCommand('update_settings',[self.parent_parameters_path+path,data,change])) #send parameters values/limits back to the GUI
+            elif change == 'value' or change == 'limits' or change == 'options':
+                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
 

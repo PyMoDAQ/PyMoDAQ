@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 1.1.2 documentation</title>
+  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 1.2 documentation</title>
   
 
   
@@ -62,7 +62,7 @@
             
             
               <div class="version">
-                1.1
+                1.2
               </div>
             
           
@@ -92,6 +92,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage/CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/classDiagram.html">Class Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/APIdoc.html">Library Reference</a></li>
 </ul>
@@ -170,7 +171,8 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-<span class="n">comon_parameters</span><span class="o">=</span><span class="p">[</span>  <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;epsilon&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">},</span>
+<span class="n">comon_parameters</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Units:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span> <span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+                  <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;epsilon&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">},</span>
                   <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Timeout (ms):&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;timeout&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">},</span>
 
                     <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Bounds:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;bounds&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:[</span>
@@ -224,10 +226,11 @@
     <span class="n">Move_Done_signal</span><span class="o">=</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
     <span class="n">is_multiaxes</span><span class="o">=</span><span class="kc">False</span>
     <span class="n">params</span><span class="o">=</span> <span class="p">[]</span>
+    <span class="n">_controller_units</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">params_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">DAQ_Move_base</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-
+        <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">controller</span><span class="o">=</span><span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stage</span><span class="o">=</span><span class="kc">None</span>
@@ -237,10 +240,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">=</span><span class="n">Parameter</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Settings&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">params_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">restoreState</span><span class="p">(</span><span class="n">params_state</span><span class="p">)</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">sigTreeStateChanged</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">send_param_status</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">controller_units</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_controller_units</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">controller_units</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_controller_units</span>
+
+    <span class="nd">@controller_units</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">controller_units</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">units</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_controller_units</span> <span class="o">=</span> <span class="n">units</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;units&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">units</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">check_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">position</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;is_bounds&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">position</span><span class="o">&gt;</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;max_bound&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
                 <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;max_bound&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
@@ -309,7 +322,8 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">check_position</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">Move_Done_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">position</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Move_Done_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 <div class="viewcode-block" id="DAQ_Move_base.poll_moving"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.poll_moving">[docs]</a>    <span class="k">def</span> <span class="nf">poll_moving</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -322,14 +336,18 @@
         <span class="n">sleep_ms</span><span class="o">=</span><span class="mi">50</span>
         <span class="n">ind</span><span class="o">=</span><span class="mi">0</span>
         <span class="k">while</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">check_position</span><span class="p">()</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">target_position</span><span class="p">)</span><span class="o">&gt;</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;epsilon&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">emit_status</span><span class="p">(</span><span class="n">ThreadCommand</span><span class="p">(</span><span class="s1">&#39;Move has been stopped&#39;</span><span class="p">))</span>
+                <span class="k">break</span>
             <span class="n">QThread</span><span class="o">.</span><span class="n">msleep</span><span class="p">(</span><span class="n">sleep_ms</span><span class="p">)</span>
 
             <span class="n">ind</span><span class="o">+=</span><span class="mi">1</span>
 
-            <span class="k">if</span> <span class="n">ind</span><span class="o">*</span><span class="n">sleep_ms</span><span class="o">&gt;=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;timeout&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">ind</span><span class="o">*</span><span class="n">sleep_ms</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;timeout&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
 
                 <span class="bp">self</span><span class="o">.</span><span class="n">emit_status</span><span class="p">(</span><span class="n">ThreadCommand</span><span class="p">(</span><span class="s1">&#39;raise_timeout&#39;</span><span class="p">))</span>
                 <span class="k">break</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">current_position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">check_position</span><span class="p">()</span>
             <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">move_done</span><span class="p">()</span></div>

@@ -460,9 +460,9 @@ class ViewerND(QtWidgets.QWidget, QObject):
         """
         self.data_buffer=[]
         try:
-            if self.data_axes!=None:
-                if datas.ndim!=len(self.data_axes) or self.axes_nav!=nav_axes:
-                    self.set_nav_axes(datas.ndim,nav_axes) #init the list of axes and set the preset to nav_axes
+            if self.data_axes is not None:
+                if datas.ndim != len(self.data_axes) or self.axes_nav != nav_axes:
+                    self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the preset to nav_axes
             else:
                 self.set_nav_axes(datas.ndim,nav_axes) #init the list of axes and set the preset to nav_axes
 
@@ -485,7 +485,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
         layout=QtWidgets.QVBoxLayout()
         self.signal_axes_widget .setLayout(layout)
         layout.addWidget(self.ui.settings_tree)
-        self.signal_axes_widget .show()
+        self.signal_axes_widget.adjustSize()
+        self.signal_axes_widget.show()
 
     def update_data(self):
         self.update_data_signal()

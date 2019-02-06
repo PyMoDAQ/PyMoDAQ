@@ -6,6 +6,7 @@ from collections import OrderedDict
 import numpy as np
 import datetime
 from pathlib import Path
+from ctypes import CFUNCTYPE, WINFUNCTYPE
 
 
 import enum
@@ -14,7 +15,77 @@ import re
 import importlib
 
 
-plot_colors=['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+
+
+def zeros_aligned(n, align, dtype=np.uint32):
+    """
+    Get aligned memory array wih alignment align.
+    Parameters
+    ----------
+    n: (int) length in dtype bytes of memory
+    align: (int) memory alignment
+    dtype: (numpy.dtype) type of the stored memory elements
+
+    Returns
+    -------
+
+    """
+    """
+    
+    """
+
+    a = np.zeros(n + (align - 1), dtype=dtype)
+    data_align = a.ctypes.data % align
+    offset = 0 if data_align == 0 else (align - data_align)
+    return a[offset: offset + n]
+
+def cfunc(name, dll, result, *args):
+    """build and apply a ctypes prototype complete with parameter flags
+
+    Parameters
+    ----------
+    name: (str) function name in the dll
+    dll: (ctypes.windll) dll object
+    result : result is the type of the result (c_int,..., python function handle,...)
+    args: list of tuples with 3 or 4 elements each like (argname, argtype, in/out, default) where argname is the
+    name of the argument, argtype is the type, in/out is 1 for input and 2 for output, and default is an optional
+    default value.
+
+    Returns
+    -------
+    python function
+    """
+    atypes = []
+    aflags = []
+    for arg in args:
+        atypes.append(arg[1])
+        aflags.append((arg[2], arg[0]) + arg[3:])
+    return CFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
+
+
+def winfunc(name, dll, result, *args):
+    """build and apply a ctypes prototype complete with parameter flags
+    Parameters
+    ----------
+    name:(str) function name in the dll
+    dll: (ctypes.windll) dll object
+    result: result is the type of the result (c_int,..., python function handle,...)
+    args: list of tuples with 3 or 4 elements each like (argname, argtype, in/out, default) where argname is the
+    name of the argument, argtype is the type, in/out is 1 for input and 2 for output, and default is an optional
+    default value.
+
+    Returns
+    -------
+    python function
+    """
+    atypes = []
+    aflags = []
+    for arg in args:
+        atypes.append(arg[1])
+        aflags.append((arg[2], arg[0]) + arg[3:])
+    return WINFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
+
 
 def get_set_local_dir():
     if 'win' in sys.platform:
