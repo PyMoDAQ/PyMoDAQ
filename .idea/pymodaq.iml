@@ -7,6 +7,7 @@
     <orderEntry type="module" module-name="plugins" />
     <orderEntry type="module" module-name="pymodaq_plugins" />
     <orderEntry type="module" module-name="gestion_benevoles" />
+    <orderEntry type="module" module-name="pyicic" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="" />

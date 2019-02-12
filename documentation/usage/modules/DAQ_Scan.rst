@@ -213,6 +213,13 @@ Preset manager
 The *Preset modes* menu is used to create, modify and load preset. A preset is a set of
 actuators and detectors represented in a tree like structure, see :ref:`preset_manager`.
 
+Overshoot manager
+-----------------
+
+The *Overshoot* menu is used to configure actions (for instance the absolute positionning of one or more
+actuators, such as a beam block to stop a laser eam) when a detected value (from a running detector module) gets
+out of range with respect to some predefined bounds. For details, see :ref:`overshoot_manager`.
+
 
 .. _multiple_hardware:
 

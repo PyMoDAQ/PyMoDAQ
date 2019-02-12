@@ -17,6 +17,7 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 from pymodaq.daq_utils.plotting.lcd import LCD
 import pymodaq.daq_utils.daq_utils as daq_utils
+from pymodaq.daq_utils.h5browser import browse_data
 from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum
 
 from pymodaq_plugins.daq_viewer_plugins import plugins_0D
@@ -42,7 +43,8 @@ from pyqtgraph.dockarea import DockArea, Dock
 import pickle
 import datetime
 import tables
-
+from pymodaq.daq_utils.daq_utils import get_set_local_dir
+local_path = get_set_local_dir()
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
@@ -96,6 +98,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
     update_settings_signal=pyqtSignal(edict)
     overshoot_signal=pyqtSignal(bool)
     log_signal=pyqtSignal(str)
+
+    #look for eventual calibration files
+    calibs = ['None']
+    try:
+        for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'camera_calibrations'))):
+            if file.endswith(".xml"):
+                (filesplited, ext) = os.path.splitext(file)
+            calibs.append(filesplited)
+    except:
+        pass
+
     params = [
         {'title': 'Main Settings:','name': 'main_settings','type': 'group','children':[
             {'title': 'DAQ type:','name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D','DAQ1D','DAQ2D'], 'readonly': True},
@@ -113,6 +126,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
                     {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
             {'title': 'Axis options:','name':'axes','type':'group', 'visible': False, 'expanded': False, 'children':[
+                    {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'values': calibs},
                     {'title': 'X axis:','name':'xaxis','type':'group','children':[
                         {'title': 'Label:', 'name': 'xlabel', 'type': 'str', 'value': "x axis"},
                         {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "pxls"},
@@ -561,48 +575,16 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
     def load_data(self):
 
         """
-            Load a .h5 file content from th select_file obtained pathname.
-            In case of :
-            * **DAQ0D type** : do nothing.
-            * **DAQ1D type** : get x_axis and update the data viewer.
-            * **DAQ2D type** : get x_axis, y_axis and update the data viewer.
 
-            Once done show data on screen.
-
-            See Also
-            --------
-            daq_utils.select_file, show_data, update_status
         """
         try:
-            self.load_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=False, ext=['h5','dat','txt']) #see daq_utils
-            ext=self.load_file_pathname.suffix[1:]
-            if ext=='h5':
-
-                h5file=tables.open_file(str(self.load_file_pathname),mode='r')
-                h5root=h5file.root
-
-                children=[child._v_name for child in h5root._f_list_nodes()]
-                for data_type in children:
-                    channels=h5root._f_get_child(data_type)._f_list_nodes()
-                    x_axis=channels[0]._f_get_child('x_axis').read()
-                    datas=[OrderedDict(data=[channel._f_get_child('Data').read() for channel in channels],name=channels[0]._v_attrs['Channel_name'],type=data_type,x_axis=x_axis)]
-
-            else:
-                data_tot=np.loadtxt(str(self.load_file_pathname))
-                if self.DAQ_type=='DAQ0D':
-                    pass
-
-                elif self.DAQ_type=='DAQ1D':
-                    x_axis=data_tot[:,0]
-                    for viewer in self.ui.viewers:
-                        viewer.x_axis=x_axis
-                    datas=[data_tot[:,ind+1] for ind in range(data_tot[:,1:].shape[1])]
-
-
-                elif self.DAQ_type=='DAQ2D':
-                    pass
-
+            data = browse_data()
+            datas = [OrderedDict(name='loaded data', data=[data], type='Data2D')]
             self.show_data(datas)
+
+
+
+
         except Exception as e:
             self.update_status(str(e),self.wait_time,'log')
 
@@ -703,9 +685,16 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     else:
                         self.settings.child('main_settings', 'N_live_averaging').hide()
                 elif param.name() in custom_tree.iter_children(self.settings.child('main_settings','axes'),[]):
-                    if self.DAQ_type=="DAQ2D":
-                        for viewer in self.ui.viewers:
-                            viewer.set_scaling_axes(self.get_scaling_options())
+                    if self.DAQ_type == "DAQ2D":
+                        if param.name() == 'use_calib':
+                            if param.value() != 'None':
+                                params = custom_tree.XML_file_to_parameter(os.path.join(local_path, 'camera_calibrations', param.value()+'.xml'))
+                                param_obj = Parameter.create(name='calib', type='group', children=params)
+                                self.settings.child('main_settings', 'axes').restoreState(param_obj.child(('axes')).saveState(), addChildren=False, removeChildren=False)
+                                self.settings.child('main_settings', 'axes').show()
+                        else:
+                            for viewer in self.ui.viewers:
+                                viewer.set_scaling_axes(self.get_scaling_options())
                 elif param.name() in custom_tree.iter_children(self.settings.child('detector_settings','ROIselect'),[]):
                     if self.DAQ_type=="DAQ2D":
                         try:
@@ -729,6 +718,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                         try:
                             self.file_continuous_save.close()
                         except: pass
+
+
+
+
                 self.update_settings_signal.emit(edict(path=path, param=param, change=change))
 
 
@@ -1860,7 +1853,7 @@ if __name__ == '__main__':
     win.setCentralWidget(area)
     win.resize(1000,500)
     win.setWindowTitle('pymodaq main')
-    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ1D'].name)
+    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ2D'].name)
     win.show()
     sys.exit(app.exec_())
 

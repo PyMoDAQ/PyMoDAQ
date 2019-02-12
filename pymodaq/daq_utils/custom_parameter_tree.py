@@ -572,6 +572,10 @@ class SpinBoxCustom(SpinBox.SpinBox):
 
             elif k in self.opts:
                 self.opts[k] = opts[k]
+
+            elif k == 'show_pb':
+                pass
+
             else:
                 raise TypeError("Invalid keyword argument '%s'." % k)
         if 'value' in opts:

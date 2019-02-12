@@ -133,9 +133,6 @@
             </item>
            </layout>
           </item>
-          <item>
-           <widget class="PlotWidget" name="Graph1D"/>
-          </item>
          </layout>
         </item>
        </layout>

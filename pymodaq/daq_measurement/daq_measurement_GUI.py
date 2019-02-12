@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'DAQ_Measurement_GUI.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -23,6 +23,7 @@ class Ui_Form(object):
         self.gridLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
         self.gridLayout = QtWidgets.QGridLayout(self.gridLayoutWidget)
+        self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
         self.formula_edit = QtWidgets.QPlainTextEdit(self.gridLayoutWidget)
         self.formula_edit.setMaximumSize(QtCore.QSize(16777215, 50))
@@ -92,14 +93,13 @@ class Ui_Form(object):
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.result_lcd = QtWidgets.QLCDNumber(self.horizontalLayoutWidget)
         self.result_lcd.setSmallDecimalPoint(True)
         self.result_lcd.setDigitCount(10)
         self.result_lcd.setObjectName("result_lcd")
         self.horizontalLayout.addWidget(self.result_lcd)
-        self.graph1D = PlotWidget(self.splitter_2)
-        self.graph1D.setObjectName("graph1D")
         self.gridLayout_2.addWidget(self.splitter_2, 0, 0, 1, 1)
         self.StatusBarLayout = QtWidgets.QHBoxLayout()
         self.StatusBarLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
@@ -120,7 +120,7 @@ class Ui_Form(object):
         self.measurement_type_combo.setItemText(4, _translate("Form", "Lorentzian Fit"))
         self.measurement_type_combo.setItemText(5, _translate("Form", "Exponential Decay Fit"))
         self.label_11.setText(_translate("Form", "Measurement SubType: "))
-        self.label.setText(_translate("Form", "PyMoDAQ Measurement"))
+        self.label.setText(_translate("Form", "DAQ Measurement"))
         self.measure_subtype_combo.setItemText(0, _translate("Form", "dx"))
         self.measure_subtype_combo.setItemText(1, _translate("Form", "amplitude"))
         self.measure_subtype_combo.setItemText(2, _translate("Form", "x0"))
@@ -129,8 +129,7 @@ class Ui_Form(object):
 "(the variable is \"x\"):"))
         self.label_4.setText(_translate("Form", "Result:"))
 
-from pyqtgraph import PlotWidget
-import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

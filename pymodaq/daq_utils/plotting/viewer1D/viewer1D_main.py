@@ -6,7 +6,8 @@ import pymodaq
 
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_GUI_dock import Ui_Form
 
-from pymodaq.daq_measurement.DAQ_Measurement_main import DAQ_Measurement
+from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
+
 from collections import OrderedDict
 
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
@@ -16,6 +17,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as customparameter
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 import os
 from easydict import EasyDict as edict
 import pickle
@@ -40,7 +42,8 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.parent=parent
         self.ui=Ui_Form()
         self.ui.setupUi(parent)
-
+        if DAQ_Measurement is None:
+            self.ui.do_measurements_pb.setVisible(False)
         self.viewer_type='Data1D'
         self.legend = None
         #creating the settings widget of the viewer (ROI...)
@@ -53,15 +56,12 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         horlayout.addWidget(self.ui.load_ROI_pb)
         self.ui.settings_layout.addLayout(horlayout)
         self.ui.ROIs_widget.setLayout(self.ui.settings_layout)
-
-        ##self.ui.horizontalLayout_settings.addWidget(self.ui.ROIs_widget)
-
-        ##self.ui.ROIs_widget = Dock("1DViewer_ROIs", size=(1, 1))     ## give this dock the minimum possible size
-        ##self.ui.ROIs_widget.addWidget(settings_widget)
-
-        ##self.dockarea.addDock(self.ui.ROIs_widget,'right',self.ui.viewer_dock)
         self.ui.ROIs_widget.setVisible(False)
 
+        widg = QtWidgets.QWidget()
+        self.viewer = Viewer1DBasic(widg)
+        self.ui.verticalLayout.addWidget(widg)
+        self.ui.Graph1D = self.viewer #for backcompatibility
 
         self.ui.statusbar=QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(15)
@@ -87,14 +87,14 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         #self.dockarea.addDock(self.ui.zoom_widget)
         self.ui.zoom_widget.setVisible(False)
 
-        self.ui.xaxis_item=self.ui.Graph1D.plotItem.getAxis('bottom')
+        self.ui.xaxis_item=self.viewer.plotwidget.plotItem.getAxis('bottom')
         self.ui.Graph_Lineouts.hide()
         self.wait_time=3000
         self.measurement_module=None
 
 
         ##crosshair
-        self.ui.crosshair = Crosshair(self.ui.Graph1D.plotItem,orientation='vertical')
+        self.ui.crosshair = Crosshair(self.viewer.plotwidget.plotItem,orientation='vertical')
         self.ui.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
         self.ui.crosshair_pb.clicked.connect(self.crosshairClicked)
         self.crosshairClicked()
@@ -163,14 +163,14 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
     def add_lineout(self):
         ind=len(self.linear_regions)+1
-        xbounds=self.ui.Graph1D.plotItem.vb.viewRange()[0]
+        xbounds=self.viewer.plotwidget.plotItem.vb.viewRange()[0]
         roi_bounds=np.linspace(xbounds[0],xbounds[1],4*ind+1)
         item=pg.LinearRegionItem([roi_bounds[4*ind-1],roi_bounds[4*ind]])
         item.setZValue(-10)
         item.setBrush(QtGui.QColor(*self.color_list[ind-1]))
         item.setOpacity(0.2)
         self.linear_regions.append(item)
-        self.ui.Graph1D.plotItem.addItem(item)
+        self.viewer.plotwidget.plotItem.addItem(item)
         item.sigRegionChanged.connect(self.update_lineouts)
         item.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
 
@@ -210,7 +210,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.ui.crosshair.setVisible(True)
             self.ui.x_label.setVisible(True)
             self.ui.y_label.setVisible(True)
-            range=self.ui.Graph1D.plotItem.vb.viewRange()
+            range=self.viewer.plotwidget.plotItem.vb.viewRange()
             self.ui.crosshair.set_crosshair_position(xpos=np.mean(np.array(range[0])))
         else:
             self.ui.crosshair.setVisible(False)
@@ -262,7 +262,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
     def do_zoom(self):
         bounds=self.ui.zoom_region.getRegion()
-        self.ui.Graph1D.setXRange(bounds[0],bounds[1])
+        self.viewer.plotwidget.setXRange(bounds[0],bounds[1])
 
     def enable_zoom(self):
         try:
@@ -289,10 +289,10 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
     def ini_data_plots(self, Nplots):
         self.plot_channels=[]
-        self.legend = self.ui.Graph1D.plotItem.addLegend()
+        self.legend = self.viewer.plotwidget.plotItem.addLegend()
         channels = []
         for ind in range(Nplots):
-            channel=self.ui.Graph1D.plot()
+            channel=self.viewer.plotwidget.plot()
             channel.setPen(self.plot_colors[ind])
             self.legend.addItem(channel, self._labels[ind])
             channels.append(ind)
@@ -357,7 +357,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
     def remove_lineout(self):
         item=self.linear_regions.pop()
-        self.ui.Graph1D.plotItem.removeItem(item)
+        self.viewer.plotwidget.plotItem.removeItem(item)
         item=self.lo_items.pop()
         self.ui.Graph_Lineouts.removeItem(item)
         self.roi_settings.child('ROIs').children()[-1].remove()
@@ -366,10 +366,10 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     def remove_plots(self):
         if self.plot_channels is not None:
             for channel in self.plot_channels:
-                self.ui.Graph1D.removeItem(channel)
+                self.viewer.plotwidget.removeItem(channel)
             self.plot_channels = None
         if self.legend is not None:
-            self.ui.Graph1D.removeItem(self.legend)
+            self.viewer.plotwidget.removeItem(self.legend)
 
     def restore_state(self,data_tree):
         self.roi_settings.restoreState(data_tree)
@@ -426,7 +426,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
 
     def set_axis_label(self,axis_settings=dict(orientation='bottom',label='x axis',units='pxls')):
-        axis=self.ui.Graph1D.plotItem.getAxis(axis_settings['orientation'])
+        axis=self.viewer.plotwidget.plotItem.getAxis(axis_settings['orientation'])
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
 
     @pyqtSlot(list)
@@ -502,7 +502,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.data_to_export_signal.emit(self.data_to_export)
 
     def spread_lineouts(self):
-        xbounds=self.ui.Graph1D.plotItem.vb.viewRange()[0]
+        xbounds=self.viewer.plotwidget.plotItem.vb.viewRange()[0]
         roi_bounds=np.linspace(xbounds[0],xbounds[1],4*len(self.linear_regions))
         for ind,item in enumerate(self.linear_regions):
             item.setRegion([roi_bounds[4*ind],roi_bounds[4*ind+1]])
@@ -625,7 +625,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         else:
             xdata=x_axis
         self._x_axis=xdata
-
+        self.show_data_temp(self.datas)
         self.set_axis_label(dict(orientation='bottom',label=label,units=units))
 
 class Viewer1D_math(QObject):
@@ -680,10 +680,12 @@ class Viewer1D_math(QObject):
         self.math_sig.emit(data_lo)
 
 
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form=QtWidgets.QWidget()
     prog = Viewer1D(Form)
+
     from pymodaq.daq_utils.daq_utils import gauss1D
     x=np.linspace(0,200,201)
     y1=gauss1D(x,75,25)

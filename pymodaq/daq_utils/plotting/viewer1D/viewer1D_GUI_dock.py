@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'viewer1D_GUI_dock.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.11.3
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -23,6 +23,7 @@ class Ui_Form(object):
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
         self.horizontalLayout_settings = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout_settings.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_settings.setObjectName("horizontalLayout_settings")
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setSpacing(0)
@@ -71,9 +72,6 @@ class Ui_Form(object):
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
         self.verticalLayout.addLayout(self.horizontalLayout)
-        self.Graph1D = PlotWidget(self.horizontalLayoutWidget)
-        self.Graph1D.setObjectName("Graph1D")
-        self.verticalLayout.addWidget(self.Graph1D)
         self.horizontalLayout_settings.addLayout(self.verticalLayout)
         self.Graph_Lineouts = PlotWidget(self.splitter)
         self.Graph_Lineouts.setObjectName("Graph_Lineouts")
@@ -99,7 +97,7 @@ class Ui_Form(object):
         self.y_label.setText(_translate("Form", "y:"))
 
 from pyqtgraph import PlotWidget
-import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

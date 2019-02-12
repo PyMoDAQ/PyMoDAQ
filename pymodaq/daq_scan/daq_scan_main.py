@@ -524,7 +524,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             filters = tables.Filters(complevel=self.daqscan_settings.child('saving_options','compression_options', 'h5comp_level').value(),
                               complib=self.daqscan_settings.child('saving_options','compression_options','h5comp_library').value())
 
-            if self.scan_data_1D.shape!=():
+            if self.scan_data_1D.size != 0:
                 scan_1D_group=self.save_parameters.h5_file.create_group(self.save_parameters.current_group,'scan_1D')
                 if self.scan_x_axis.shape!=():
                     xarray=self.save_parameters.h5_file.create_carray(scan_1D_group,'scan_x_axis',obj=self.scan_x_axis, title='data',filters=filters)
@@ -539,14 +539,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     array.attrs['data_type']='1D'
 
 
-            if self.scan_data_2D!=[]:
+            if self.scan_data_2D != []:
                 scan_2D_group=self.save_parameters.h5_file.create_group(self.save_parameters.current_group,'scan_2D')
-                if self.scan_x_axis.shape!=():
+                if self.scan_x_axis.size != 0:
                     xarray=self.save_parameters.h5_file.create_carray(scan_2D_group,'scan_x_axis',obj=self.scan_x_axis, title='data',filters=filters)
                     xarray.set_attr('shape',xarray.shape)
                     xarray.attrs['type']='data'
                     xarray.attrs['data_type']='1D'
-                if not(self.scan_y_axis.shape==() or self.scan_y_axis.shape==(0,)):
+                if self.scan_y_axis.size != 0:
                     yarray=self.save_parameters.h5_file.create_carray(scan_2D_group,'scan_y_axis',obj=self.scan_y_axis, title='data',filters=filters)
                     yarray.set_attr('shape',yarray.shape)
                     yarray.attrs['type']='data'
@@ -558,40 +558,37 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     array.attrs['type']='data'
                     array.attrs['data_type']='2D'
 
+            if self.scan_data_1D.size != 0:
+                item=self.ui.scan1D_graph.viewer.plotwidget.plotItem
+                png = QtGui.QImage(int(item.size().width()), int(item.size().height()), QtGui.QImage.Format_ARGB32)
+                painter = QtGui.QPainter(png)
+                painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing)
+                item.scene().render(painter, QtCore.QRectF(), item.mapRectToScene(item.boundingRect()))
+                painter.end()
 
+                buffer = QtCore.QBuffer()
+                buffer.open(QtCore.QIODevice.WriteOnly)
+                png=png.scaled(100,100,QtCore.Qt.KeepAspectRatio)
+                png.save(buffer,"png")
 
-            item=self.ui.scan1D_graph.ui.Graph1D.plotItem
-            png = QtGui.QImage(int(item.size().width()), int(item.size().height()), QtGui.QImage.Format_ARGB32)
-            painter = QtGui.QPainter(png)
-            painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing)
-            item.scene().render(painter, QtCore.QRectF(), item.mapRectToScene(item.boundingRect()))
-            painter.end()
+                string=buffer.data().data()
+                self.save_parameters.current_group._v_attrs['pixmap1D']=string
 
-            buffer = QtCore.QBuffer()
-            buffer.open(QtCore.QIODevice.WriteOnly)
-            png=png.scaled(100,100,QtCore.Qt.KeepAspectRatio)
-            png.save(buffer,"png")
+            if self.scan_data_2D != []:
+                item=self.ui.scan2D_graph.ui.plotitem
+                png = QtGui.QImage(int(item.size().width()), int(item.size().height()), QtGui.QImage.Format_ARGB32)
+                painter = QtGui.QPainter(png)
+                painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing)
+                item.scene().render(painter, QtCore.QRectF(), item.mapRectToScene(item.boundingRect()))
+                painter.end()
 
-            string=buffer.data().data()
-            self.save_parameters.current_group._v_attrs['pixmap1D']=string
+                buffer = QtCore.QBuffer()
+                buffer.open(QtCore.QIODevice.WriteOnly)
+                png=png.scaled(100,100,QtCore.Qt.KeepAspectRatio)
+                png.save(buffer,"png")
 
-
-
-
-            item=self.ui.scan2D_graph.ui.plotitem
-            png = QtGui.QImage(int(item.size().width()), int(item.size().height()), QtGui.QImage.Format_ARGB32)
-            painter = QtGui.QPainter(png)
-            painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing)
-            item.scene().render(painter, QtCore.QRectF(), item.mapRectToScene(item.boundingRect()))
-            painter.end()
-
-            buffer = QtCore.QBuffer()
-            buffer.open(QtCore.QIODevice.WriteOnly)
-            png=png.scaled(100,100,QtCore.Qt.KeepAspectRatio)
-            png.save(buffer,"png")
-
-            string=buffer.data().data()
-            self.save_parameters.current_group._v_attrs['pixmap2D']=string
+                string=buffer.data().data()
+                self.save_parameters.current_group._v_attrs['pixmap2D']=string
 
             if self.ui.overlay2D_pb.isChecked():
                 #display list of actual saved 2Dscans
@@ -761,20 +758,24 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 elif param.name() == 'scan1D_selection':
                     if param.value() == 'Manual':
                         self.scan_selector.hide()
+                        self.scan_selector.show_scan_selector(visible=False)
                         self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').hide()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').show()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').show()
                     else:
                         self.scan_selector.show()
+                        self.scan_selector.show_scan_selector(visible=True)
                         self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').show()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').hide()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').hide()
                 elif param.name() == 'scan2D_selection':
                     if param.value() == 'Manual':
                         self.scan_selector.hide()
+                        self.scan_selector.show_scan_selector(visible=False)
                         self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').hide()
                     else:
                         self.scan_selector.show()
+                        self.scan_selector.show_scan_selector(visible=True)
                         self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').show()
 
                     self.update_scan_type(self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_type'))
@@ -1067,11 +1068,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.scan_selector = ScanSelector(items, 'Scan1D')
             self.scan_selector.settings.child('scan_options', 'scan_type').hide()
             self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
-            self.scan_selector.hide()
-            self.scan_selector.show_scan_selector(visible=False)
 
             self.daqscan_settings.child('scan_options', 'scan1D_settings','scan1D_roi_module').setOpts(limits=self.scan_selector.sources_names)
             self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_roi_module').setOpts(limits=self.scan_selector.sources_names)
+
+            self.scan_selector.hide()
+            self.scan_selector.show_scan_selector(visible=False)
 
             self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
 

@@ -160,6 +160,56 @@ class AxisItem_Scaled(pg.AxisItem):
             else:
                 self.setRange(*newRange)
 
+class ImageItem(pg.ImageItem):
+    def __init__(self, image=None, **kargs):
+        super(ImageItem, self).__init__(image, **kargs)
+
+    def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+        """Returns x and y arrays containing the histogram values for the current image.
+        For an explanation of the return format, see numpy.histogram().
+
+        The *step* argument causes pixels to be skipped when computing the histogram to save time.
+        If *step* is 'auto', then a step is chosen such that the analyzed data has
+        dimensions roughly *targetImageSize* for each axis.
+
+        The *bins* argument and any extra keyword arguments are passed to
+        np.histogram(). If *bins* is 'auto', then a bin number is automatically
+        chosen based on the image characteristics:
+
+        * Integer images will have approximately *targetHistogramSize* bins,
+          with each bin having an integer width.
+        * All other types will have *targetHistogramSize* bins.
+
+        This method is also used when automatically computing levels.
+        """
+        if self.image is None:
+            return None, None
+        if step == 'auto':
+            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
+                    int(np.ceil(self.image.shape[1] / targetImageSize)))
+        if np.isscalar(step):
+            step = (step, step)
+        stepData = self.image[::step[0], ::step[1]]
+
+        if bins == 'auto':
+            try:
+                if stepData.dtype.kind in "ui":
+                    mn = stepData.min()
+                    mx = stepData.max()
+                    step = np.ceil((mx - mn) / 500.)
+                    bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
+                    if len(bins) == 0:
+                        bins = [mn, mx]
+            except:
+                bins = 500
+            else:
+                bins = 500
+
+        kwds['bins'] = bins
+        stepData = stepData[np.isfinite(stepData)]
+        hist = np.histogram(stepData, **kwds)
+
+        return hist[1][:-1], hist[0]
 
 class Viewer2D(QtWidgets.QWidget):
     data_to_export_signal=pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
@@ -207,9 +257,9 @@ class Viewer2D(QtWidgets.QWidget):
         self.scaled_yaxis.linkToView(self.ui.view)
         self.set_scaling_axes(self.scaling_options)
         self.ui.plotitem.vb.setAspectLocked(lock=True, ratio=1)
-        self.ui.img_red = pg.ImageItem()
-        self.ui.img_green = pg.ImageItem()
-        self.ui.img_blue = pg.ImageItem()
+        self.ui.img_red = ImageItem()
+        self.ui.img_green = ImageItem()
+        self.ui.img_blue = ImageItem()
         #self.ui.img_red.sig_double_clicked.connect(self.double_clicked)
         self.ui.img_red.setCompositionMode( QtGui.QPainter.CompositionMode_Plus  )
         self.ui.img_green.setCompositionMode( QtGui.QPainter.CompositionMode_Plus  )

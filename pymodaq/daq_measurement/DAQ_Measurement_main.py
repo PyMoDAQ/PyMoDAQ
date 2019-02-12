@@ -2,9 +2,11 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSize
 
 import sys
-from pymodaq.daq_measurement.gui.daq_measurement_GUI import Ui_Form
-from pymodaq.daq_utils.daq_utils import find_index, my_moment
+from pymodaq.daq_measurement.daq_measurement_GUI import Ui_Form
+from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.fourier_filterer import FourierFilterer
 from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 import pyqtgraph as pg
 import numpy as np
 from enum import Enum
@@ -16,6 +18,7 @@ class Measurement_type(Enum):
     Gaussian_Fit = 3
     Lorentzian_Fit = 4
     Exponential_Decay_Fit = 5
+    Sinus = 6
 
     @classmethod
     def names(cls):
@@ -27,6 +30,7 @@ class Measurement_type(Enum):
         measurement_laurentzian_subitems = ["alpha", "gamma", "x0", "offset"]
         measurement_decay_subitems = ["N0", "gamma", 'x0', "offset"]
         measurement_cursor_subitems = ["sum", "mean", "std"]
+        measurement_sinus_subtitems = ['A', 'dx', 'phi', 'offset']
         variables = ", "
         formula = ""
         subitems = []
@@ -47,8 +51,13 @@ class Measurement_type(Enum):
             subitems = measurement_decay_subitems
             variables = variables.join(measurement_decay_subitems)
             formula = "N0*np.exp(-(x-x0)/gamma)+offset"
-        return [variables, formula, subitems]
 
+        elif mtype == 'Sinus':
+            subitems = measurement_sinus_subtitems
+            variables = variables.join(measurement_sinus_subtitems)
+            formula = "A*np.sin(2*np.pi*x/dx-phi)+offset"
+
+        return [variables, formula, subitems]
     def gaussian_func(self, x, amp, dx, x0, offset):
         return amp * np.exp(-2 * np.log(2) * (x - x0) ** 2 / dx ** 2) + offset
 
@@ -57,6 +66,9 @@ class Measurement_type(Enum):
 
     def decaying_func(self, x, N0, gamma, x0, offset):
         return N0 * np.exp(-(x-x0) / gamma) + offset
+
+    def sinus_func(self, x, A, dx, phi, offset):
+        return A*np.sin(2*np.pi*x/dx-phi)+offset
 
 class DAQ_Measurement(Ui_Form,QObject):
     """
@@ -85,10 +97,16 @@ class DAQ_Measurement(Ui_Form,QObject):
     measurement_signal=pyqtSignal(list)
     def __init__(self,parent):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Ui_Form,self).__init__()
-
-        self.ui=Ui_Form()
+        super(Ui_Form, self).__init__()
+        self.ui = Ui_Form()
         self.ui.setupUi(parent)
+
+        self.widg = QtWidgets.QWidget()
+        self.fourierfilt = FourierFilterer(self.widg)
+        self.ui.splitter_2.addWidget(self.widg)
+        self.ui.graph1D = self.fourierfilt.viewer1D.plotwidget
+        QtWidgets.QApplication.processEvents()
+
         self.ui.splitter.setSizes([200, 400])
         self.ui.statusbar=QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(15)
@@ -103,18 +121,16 @@ class DAQ_Measurement(Ui_Form,QObject):
         self.ui.measurement_type_combo.clear()
         self.ui.measurement_type_combo.addItems(self.measurement_types)
 
-        self.ui.data_curve=self.ui.graph1D.plot()
-        self.ui.data_curve.setPen("w")
-        self.ui.fit_curve=self.ui.graph1D.plot()
+        self.ui.fit_curve = self.fourierfilt.viewer1D.plotwidget.plot()
         self.ui.fit_curve.setPen("y")
         self.ui.fit_curve.setVisible(False)
 
-        self.ui.selected_region=pg.LinearRegionItem([0 ,100])
+        self.ui.selected_region = self.fourierfilt.viewer1D.ROI
         self.ui.selected_region.setZValue(-10)
         self.ui.selected_region.setBrush('b')
         self.ui.selected_region.setOpacity(0.2)
         self.ui.selected_region.setVisible(True)
-        self.ui.graph1D.addItem(self.ui.selected_region)
+        self.fourierfilt.viewer1D.plotwidget.addItem(self.ui.selected_region)
 
 
         ##Connecting buttons:
@@ -124,6 +140,12 @@ class DAQ_Measurement(Ui_Form,QObject):
         self.update_measurement_subtype(self.ui.measurement_type_combo.currentText(),update=False)
         self.ui.selected_region.sigRegionChanged.connect(self.update_measurement)
         self.ui.result_sb.valueChanged.connect(self.ui.result_lcd.display)
+
+    @pyqtSlot(dict)
+    def update_fft_filter(self,d):
+        self.frequency = d['frequency']
+        self.phase = d['phase']
+        self.update_measurement()
 
     def Quit_fun(self):
         """
@@ -198,6 +220,17 @@ class DAQ_Measurement(Ui_Form,QObject):
             xlimits=self.ui.selected_region.getRegion()
             mtype = self.ui.measurement_type_combo.currentText()
             msubtype=self.ui.measure_subtype_combo.currentText()
+            if mtype == 'Sinus':
+
+                # boundaries = utils.find_index(self.xdata, [xlimits[0], xlimits[1]])
+                # sub_xaxis = self.xdata[boundaries[0][0]:boundaries[1][0]]
+                # sub_data = self.ydata[boundaries[0][0]:boundaries[1][0]]
+                #self.fourierfilt.parent.setVisible(True)
+                self.fourierfilt.show_data(dict(data=self.ydata, xaxis=self.xdata))
+            else:
+                #self.fourierfilt.parent.setVisible(False)
+                pass
+
             measurement_results=self.do_measurement(xlimits[0],xlimits[1],self.xdata,self.ydata,mtype,msubtype)
             if measurement_results['status'] is not None:
                 self.update_status(measurement_results['status'],wait_time=self.wait_time)
@@ -220,7 +253,7 @@ class DAQ_Measurement(Ui_Form,QObject):
 
     def do_measurement(self, xmin, xmax, xaxis, data1D, mtype, msubtype):
         try:
-            boundaries = find_index(xaxis, [xmin, xmax])
+            boundaries = utils.find_index(xaxis, [xmin, xmax])
             sub_xaxis = xaxis[boundaries[0][0]:boundaries[1][0]]
             sub_data = data1D[boundaries[0][0]:boundaries[1][0]]
             mtypes = Measurement_type.names()
@@ -249,7 +282,7 @@ class DAQ_Measurement(Ui_Form,QObject):
                 measurement_results['xaxis'] = sub_xaxis
                 offset = np.min(sub_data)
                 amp = np.max(sub_data) - np.min(sub_data)
-                m = my_moment(sub_xaxis, sub_data)
+                m = utils.my_moment(sub_xaxis, sub_data)
                 p0 = [amp, m[1], m[0], offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
                 measurement_results['datafit']=self.eval_func(sub_xaxis, *popt)
@@ -259,7 +292,7 @@ class DAQ_Measurement(Ui_Form,QObject):
                 measurement_results['xaxis'] = sub_xaxis
                 offset = np.min(sub_data)
                 amp = np.max(sub_data) - np.min(sub_data)
-                m = my_moment(sub_xaxis, sub_data)
+                m = utils.my_moment(sub_xaxis, sub_data)
                 p0 = [amp, m[1], m[0], offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
                 measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
@@ -269,16 +302,27 @@ class DAQ_Measurement(Ui_Form,QObject):
                     result_measurement = popt[msub_ind]
 
             elif mtype == 'Exponential_Decay_Fit':  # "Exponential Decay Fit":
-                ind_x0 = find_index(sub_data, np.max(sub_data))[0][0]
+                ind_x0 = utils.find_index(sub_data, np.max(sub_data))[0][0]
                 x0 = sub_xaxis[ind_x0]
                 sub_xaxis = sub_xaxis[ind_x0:]
                 sub_data = sub_data[ind_x0:]
                 offset = min([sub_data[0], sub_data[-1]])
                 measurement_results['xaxis'] = sub_xaxis
                 N0 = np.max(sub_data) - offset
-                t37 = sub_xaxis[find_index(sub_data-offset,0.37*N0)[0][0]]-x0
+                t37 = sub_xaxis[utils.find_index(sub_data-offset,0.37*N0)[0][0]]-x0
                 #polynome = np.polyfit(sub_xaxis, -np.log((sub_data - 0.99 * offset) / N0), 1)
                 p0 = [N0, t37, x0, offset]
+                popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
+                measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
+                result_measurement = popt[msub_ind]
+
+            elif mtype == 'Sinus':  #
+                offset = np.mean(sub_data)
+                A = (np.max(sub_data)-np.min(sub_data))/2
+                phi=self.fourierfilt.phase
+                dx=1/self.fourierfilt.frequency
+                measurement_results['xaxis'] = sub_xaxis
+                p0 = [A, dx, phi, offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
                 measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
                 result_measurement = popt[msub_ind]
@@ -286,7 +330,7 @@ class DAQ_Measurement(Ui_Form,QObject):
             # elif mtype=="Custom Formula":
             #    #offset=np.min(sub_data)
             #    #amp=np.max(sub_data)-np.min(sub_data)
-            #    #m=my_moment(sub_xaxis,sub_data)
+            #    #m=utils.my_moment(sub_xaxis,sub_data)
             #    #p0=[amp,m[1],m[0],offset]
             #    popt, pcov = curve_fit(self.custom_func, sub_xaxis, sub_data,p0=[140,750,50,15])
             #    self.curve_fitting_sig.emit([sub_xaxis,self.gaussian_func(sub_xaxis,*popt)])
@@ -326,7 +370,7 @@ class DAQ_Measurement(Ui_Form,QObject):
         else:
             self.xdata=xdata
         self.ydata=ydata
-        self.ui.data_curve.setData(self.xdata,self.ydata)
+        self.fourierfilt.show_data(dict(data=self.ydata,xaxis=self.xdata))
         self.update_measurement()
 
 if __name__ == '__main__':
@@ -344,6 +388,8 @@ if __name__ == '__main__':
     ydata_expodec[:50] = 10*gauss1D(xdata[:50],x0,dx,2)
     ydata_expodec[50:] = 10*np.exp(-(xdata[50:]-x0)/tau)#+10*np.exp(-(xdata[50:]-x0)/tau2)
     ydata_expodec += 2*np.random.rand(len(xdata))
-    prog.update_data(xdata,ydata_expodec)
+    ydata_sin =10+2*np.sin(2*np.pi*xdata/21-np.deg2rad(55))+2*np.random.rand(len(xdata))
+    prog.update_data(xdata,ydata_sin)
     Form.show()
+
     sys.exit(app.exec_())

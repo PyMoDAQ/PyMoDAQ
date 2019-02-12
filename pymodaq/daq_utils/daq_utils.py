@@ -1052,9 +1052,87 @@ def ft(x,dim=0):
     
 def ift(x,dim=0):
     out=np.fft.fftshift(np.fft.ifft(np.fft.fftshift(x,axes=dim),axis=dim),axes=dim)
-    return out   
+    return out
 
 
+def ftAxis(Npts, omega_max):
+    """
+    Given two numbers Npts,omega_max, return two vectors spanning the temporal
+    and spectral range. They are related by Fourier Transform
+
+    Parameters
+    ----------
+    Npts : number
+      A number of points defining the length of both grids
+    omega_max : number
+      The maximum circular frequency in the spectral domain. its unit defines
+      the temporal units. ex: omega_max in rad/fs implies time_grid in fs
+
+    Returns
+    -------
+    omega_grid : vector
+      The spectral axis of the FFT
+
+    time_grid : vector
+      The temporal axis of the FFT
+
+    Example
+    -------
+    >>> (omega_grid, time_grid)=ftAxis(Npts,omega_max)
+    ...
+    """
+    dT = 2 * np.pi / (2 * omega_max)
+    omega_grid = np.linspace(-omega_max, omega_max, Npts)
+    time_grid = dT * np.linspace(-(Npts - 1) / 2, (Npts - 1) / 2, Npts)
+    return omega_grid, time_grid
+
+
+def ftAxis_time(Npts, time_max):
+    """
+    Given two numbers Npts,omega_max, return two vectors spanning the temporal
+    and spectral range. They are related by Fourier Transform
+
+    Parameters
+    ----------
+    Npts : number
+      A number of points defining the length of both grids
+    omega_max : number
+      The maximum circular frequency in the spectral domain. its unit defines
+      the temporal units. ex: omega_max in rad/fs implies time_grid in fs
+
+    Returns
+    -------
+    omega_grid : vector
+      The spectral axis of the FFT
+
+    time_grid : vector
+      The temporal axis of the FFT
+
+    Example
+    -------
+    >>> (omega_grid, time_grid)=ftAxis(Npts,omega_max)
+    ...
+    """
+    dT = time_max / Npts
+    omega_max = (Npts - 1) / 2 * 2 * np.pi / time_max
+    omega_grid = np.linspace(-omega_max, omega_max, Npts)
+    time_grid = dT * np.linspace(-(Npts - 1) / 2, (Npts - 1) / 2, Npts)
+    return omega_grid, time_grid
+
+
+def ft(x, dim=0):
+    out = np.fft.fftshift(np.fft.fft(np.fft.fftshift(x, axes=dim), axis=dim), axes=dim)
+    return out
+
+
+def ft2(x, dim=None):
+    out = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(x, axes=dim)), axes=dim)
+    return out
+
+
+def ift2(x, dim=0):
+    out = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(x, axes=dim)), axes=dim)
+    return out
 
 class ThreadCommand(object):
     """ | Micro class managing the thread commands.

@@ -223,7 +223,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
 
 
-def browse_data(fname=None):
+def browse_data(fname=None, ret_all = False):
     """
         | Browse data present in any h5 file, when user has selected the one,
         |
@@ -257,6 +257,7 @@ def browse_data(fname=None):
 
     with tables.open_file(fname) as h5file:
         dialog=QtWidgets.QDialog()
+        dialog.setWindowTitle('Select a data node in the tree')
         vlayout=QtWidgets.QVBoxLayout()
         form= QtWidgets.QWidget()
         browser=H5Browser(form,h5file)
@@ -280,12 +281,15 @@ def browse_data(fname=None):
         res=dialog.exec()
 
         if res==dialog.Accepted:
-            path=browser.current_node_path
-            data=h5file.get_node(path).read()#save preset parameters in a xml file
+            node_path=browser.current_node_path
+            data=h5file.get_node(node_path).read()#save preset parameters in a xml file
         else:
             data=None
-
-    return data
+            node_path = None
+    if ret_all:
+        return data, fname, node_path
+    else:
+        return data
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv);

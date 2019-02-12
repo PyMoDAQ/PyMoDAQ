@@ -62,13 +62,14 @@ class ViewerND(QtWidgets.QWidget, QObject):
     def __init__(self,parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(ViewerND, self).__init__()
-        if parent is None:
-            raise Exception('no valid parent container, expected dockarea')
+        # if parent is None:
+        #     raise Exception('no valid parent container, expected dockarea')
             # parent=DockArea()
             # exit(0)
 
         if parent is None:
             parent=QtWidgets.QWidget()
+            parent.show()
         self.parent=parent
 
         self.wait_time=2000
@@ -289,7 +290,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
             else:
                 raise Exception('No valid Navigator shape')
 
-
+            if len(self.axes_nav)==1:
+                self.update_viewer_data(self.ui.navigator1D.ui.crosshair.get_positions())
             if len(self.axes_nav)==1:
                 self.update_viewer_data(self.ui.navigator1D.ui.crosshair.get_positions())
             elif len(self.axes_nav)==2:
@@ -645,7 +647,7 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     form = QtWidgets.QWidget();
 
-    prog = ViewerND(form)
+    prog = ViewerND()
     prog.settings.child(('set_data_4D')).show(True)
     prog.settings.child(('set_data_3D')).show(True)
     prog.settings.child(('set_data_2D')).show(True)

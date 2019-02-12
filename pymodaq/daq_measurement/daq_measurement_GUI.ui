@@ -213,7 +213,6 @@
        </layout>
       </widget>
      </widget>
-     <widget class="PlotWidget" name="graph1D"/>
     </widget>
    </item>
    <item row="1" column="0">
@@ -225,13 +224,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>PlotWidget</class>
-   <extends>QGraphicsView</extends>
-   <header>pyqtgraph</header>
-  </customwidget>
- </customwidgets>
  <resources>
   <include location="../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
  </resources>
