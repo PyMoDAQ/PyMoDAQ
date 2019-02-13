@@ -164,9 +164,42 @@ class H5Browser(QtWidgets.QWidget,QObject):
             self.data_node_signal.emit(node._v_pathname)
             if 'ARRAY' in node._v_attrs['CLASS']:
                 data = node.read()
-
+                nav_axes = []
+                axes = dict([])
+                x_axis = None
+                y_axis = None
+                nav_x_axis = None
+                nav_y_axis = None
                 if isinstance(data, np.ndarray):
-                    self.hyperviewer.show_data(node.read())
+                    if 'data' in node._v_attrs['type'] or 'channel' in node._v_attrs['type'].lower():
+                        parent_path = node._v_parent._v_pathname
+                        children = list(node._v_parent._v_children)
+
+                        if node._v_attrs['data_type'] == '1D' or node._v_attrs['data_type'] == '2D':
+                            if 'x_axis' in children:
+                                axes['x_axis'] = self.h5file.get_node(parent_path+'/x_axis').read()
+
+                        if node._v_attrs['data_type'] == '2D':
+                            if 'y_axis' in children:
+                                axes['y_axis'] = self.h5file.get_node(parent_path+'/y_axis').read()
+
+
+                        if 'scan_type' in node._v_attrs:
+                            if node._v_attrs['scan_type'] == 'Scan1D' or node._v_attrs['scan_type'] == 'Scan2D':
+                                scan_path = node._v_parent._v_parent._v_parent._v_parent._v_pathname
+                                children = list(node._v_parent._v_parent._v_parent._v_parent._v_children)
+
+                                if node._v_attrs['scan_type'] == 'Scan1D' or node._v_attrs['scan_type'] == 'Scan2D':
+                                    nav_axes = [0]
+                                    if 'scan_x_axis_unique' in children:
+                                        axes['nav_x_axis'] = self.h5file.get_node(scan_path + '/scan_x_axis_unique').read()
+                                if node._v_attrs['scan_type'] == 'Scan2D':
+                                    nav_axes = [0, 1]
+                                    if 'scan_y_axis_unique' in children:
+                                        axes['nav_y_axis'] = self.h5file.get_node(scan_path + '/scan_y_axis_unique').read()
+
+
+                    self.hyperviewer.show_data(data, nav_axes = nav_axes, **axes)
                 elif isinstance(data, list):
                     if isinstance(data[0], str):
                         self.ui.text_list.clear()

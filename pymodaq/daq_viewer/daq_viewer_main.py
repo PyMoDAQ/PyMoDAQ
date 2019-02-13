@@ -866,6 +866,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                                 x_axis=channel['x_axis']
                                 xarray=h5file.create_array(channel_group,"x_axis",obj=x_axis, title=key)
                                 xarray.attrs['shape']=xarray.shape
+                                xarray.attrs['type']='signal_axis'
+                                xarray.attrs['data_type'] = '1D'
                             array=h5file.create_carray(channel_group,'Data',obj=channel['data'], title='data',filters=self.filters)
                             array.attrs['type']='data'
                             array.attrs['data_type']='1D'
@@ -889,10 +891,14 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                                 x_axis=channel['x_axis']
                                 xarray=h5file.create_array(channel_group,"x_axis",obj=x_axis, title=key)
                                 xarray.attrs['shape']=xarray.shape
+                                xarray.attrs['type'] = 'signal_axis'
+                                xarray.attrs['data_type'] = '1D'
                             if 'y_axis' in channel.keys():
                                 y_axis=channel['y_axis']
                                 yarray=h5file.create_array(channel_group,"y_axis",obj=y_axis, title=key)
                                 yarray.attrs['shape']=yarray.shape
+                                yarray.attrs['type'] = 'signal_axis'
+                                yarray.attrs['data_type'] = '1D'
                             array=h5file.create_carray(channel_group,'Data',obj=channel['data'], title='data',filters=self.filters)
                             array.attrs['type']='data'
                             array.attrs['data_type']='2D'

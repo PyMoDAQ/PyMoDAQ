@@ -529,7 +529,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 if self.scan_x_axis.shape!=():
                     xarray=self.save_parameters.h5_file.create_carray(scan_1D_group,'scan_x_axis',obj=self.scan_x_axis, title='data',filters=filters)
                     xarray.set_attr('shape',xarray.shape)
-                    xarray.attrs['type']='data'
+                    xarray.attrs['type']='navigation_axis'
                     xarray.attrs['data_type']='1D'
 
                 for ind in range(self.scan_data_1D.shape[1]):
@@ -544,12 +544,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 if self.scan_x_axis.size != 0:
                     xarray=self.save_parameters.h5_file.create_carray(scan_2D_group,'scan_x_axis',obj=self.scan_x_axis, title='data',filters=filters)
                     xarray.set_attr('shape',xarray.shape)
-                    xarray.attrs['type']='data'
+                    xarray.attrs['type']='navigation_axis'
                     xarray.attrs['data_type']='1D'
                 if self.scan_y_axis.size != 0:
                     yarray=self.save_parameters.h5_file.create_carray(scan_2D_group,'scan_y_axis',obj=self.scan_y_axis, title='data',filters=filters)
                     yarray.set_attr('shape',yarray.shape)
-                    yarray.attrs['type']='data'
+                    yarray.attrs['type']='navigation_axis'
                     yarray.attrs['data_type']='1D'
 
                 for ind,data2D in enumerate(self.scan_data_2D):
