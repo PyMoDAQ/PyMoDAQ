@@ -228,7 +228,21 @@ class PresetManager():
 
 
     def set_new_preset(self):
-        param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'}]
+        param = [
+                {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'},
+                {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
+                    {'title': 'Save 2D datas:', 'name': 'save_2D', 'type': 'bool', 'value': True},
+                    {'title': 'Save independent files:', 'name': 'save_independent', 'type': 'bool', 'value': False},
+                    {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False, 'readonly': True},
+                    {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
+                    {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
+                        {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
+                         'values': ['zlib', 'lzo', 'bzip2', 'blosc']},
+                        {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0,
+                         'max': 9},
+                        ]},
+                    ]}
+                ]
         params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors',
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
@@ -267,6 +281,18 @@ class PresetManager():
             custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(preset_path,
                                                                                self.preset_params.child(
                                                                                    ('filename')).value()))
+            #check if overshoot configuration and layout configuration with same name exists => delete them if yes
+            overshoot_path = os.path.join(local_path, 'overshoot_configurations')
+            file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+            file = os.path.join(overshoot_path, file + '.xml')
+            if os.path.isfile(file):
+                os.remove(file)
+
+            layout_path = os.path.join(local_path, 'layout')
+            file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+            file = os.path.join(layout_path, file +'.dock')
+            if os.path.isfile(file):
+                os.remove(file)
 
 
 if __name__ == '__main__':

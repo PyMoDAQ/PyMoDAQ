@@ -61,6 +61,21 @@ Each added module load on the fly its settings so that one can set them to our n
 port selection, channel activation, exposure time... Every time a preset is created, it is them *loadable*.
 The *init?* boolean specifies if DAQ_Scan should try to initialize the hardware while charging the modules.
 
+.. _overshoot_manager:
+
+Overshoot manager
+-----------------
+
+The *Overshoot* manager is used to configure actions (for instance the absolute positionning of one or more
+actuators, such as a beam block to stop a laser eam) when a detected value (from a running detector module) gets
+out of range with respect to some predefined bounds. It is valid in the framework of the DAQ_Scan module,
+when actuators and detectors have been activated.
+
+.. figure:: /image/DAQ_Scan/overshoot_fig.png
+   :alt: overshoot_fig
+
+   An example of an overshoot creation named *overshoot_default* (and corresponding xml file)
+   containing one listening detector and 2 actuators to be activated.
 
 DAQ_Measurement
 ---------------

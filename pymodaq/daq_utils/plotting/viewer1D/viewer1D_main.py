@@ -33,9 +33,9 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     ROI_changed=pyqtSignal()
     ROI_changed_finished=pyqtSignal()
 
-    def __init__(self,parent=None):
+    def __init__(self, parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Viewer1D,self).__init__()
+        super(Viewer1D, self).__init__()
 
         if parent is None:
             parent=QtWidgets.QWidget()
@@ -100,48 +100,49 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.crosshairClicked()
 
         self._labels = []
-        self.plot_channels=None
-        self.plot_colors=utils.plot_colors
-        self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
-        self.linear_regions=[]
-        self.lo_items=[]
-        self.lo_data=[]
-        self.ROI_bounds=[]
+        self.plot_channels = None
+        self.plot_colors = utils.plot_colors
+        self.color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
+        self.linear_regions = []
+        self.lo_items = []
+        self.lo_data = []
+        self.ROI_bounds = []
 
-        self._x_axis=None
+        self._x_axis = None
 
-        self.datas=[] #datas on each channel. list of 1D arrays
-        self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
-        self.measurement_dict=OrderedDict(x_axis=None,data=None,ROI_bounds=None,operation=None)
-        #OrderedDict to be send to the daq_measurement module
-        self.measure_data_dict=OrderedDict()
-        #dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
-        #and value is the result of a given lineout or measurement
+        self.datas = []  # datas on each channel. list of 1D arrays
+        self.data_to_export = OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
+        self.measurement_dict = OrderedDict(x_axis=None, data=None, ROI_bounds=None, operation=None)
+        # OrderedDict to be send to the daq_measurement module
+        self.measure_data_dict = OrderedDict()
+        # dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
+        # and value is the result of a given lineout or measurement
 
-        #self.ui.Measurement_widget=Dock("Measurement Module", size=(300, 100), closable=True)
-        #self.dockarea.addDock(self.ui.Measurement_widget)
-        self.ui.Measurement_widget=QtWidgets.QWidget()
+        # self.ui.Measurement_widget=Dock("Measurement Module", size=(300, 100), closable=True)
+        # self.dockarea.addDock(self.ui.Measurement_widget)
+        self.ui.Measurement_widget = QtWidgets.QWidget()
         self.ui.Measurement_widget.setVisible(False)
 
-        #create viewer parameter tree
+        # create viewer parameter tree
 
         self.ui.settings_tree = ParameterTree()
 
         self.ui.settings_layout.addWidget(self.ui.settings_tree)
         self.ui.settings_tree.setMinimumWidth(250)
         params = [
-        {'title': 'Math Settings', 'name': 'math_settings', 'type': 'group', 'children': [
-            {'title': 'Do math on CH:', 'name': 'channel_combo', 'type': 'list'},
-            {'title': 'Math type:','name':'math_function','type': 'list', 'values':['Sum','Mean','half-life'],'value':'Sum'},
-            {'title': 'N Lineouts:', 'name': 'Nlineouts_sb', 'type': 'int', 'value':0 ,'default':0,'min':0},
-            {'title':'Spread ROI','name': 'spreadROI_pb', 'type': 'action'},
-            {'title':'Clear Lineouts','name': 'clear_lo_pb', 'type': 'action'}
+            {'title': 'Math Settings', 'name': 'math_settings', 'type': 'group', 'children': [
+                {'title': 'Do math on CH:', 'name': 'channel_combo', 'type': 'list'},
+                {'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'values': ['Sum', 'Mean', 'half-life', 'expotime'],
+                 'value': 'Sum'},
+                {'title': 'N Lineouts:', 'name': 'Nlineouts_sb', 'type': 'int', 'value': 0, 'default': 0, 'min': 0},
+                {'title': 'Spread ROI', 'name': 'spreadROI_pb', 'type': 'action'},
+                {'title': 'Clear Lineouts', 'name': 'clear_lo_pb', 'type': 'action'}
             ]},
-        {'name': 'Measurements', 'type': 'table', 'value':OrderedDict([]),'Ncol':2,'header':["LO","Value"]},
-        {'name': 'ROIs', 'type': 'group'}
+            {'name': 'Measurements', 'type': 'table', 'value': OrderedDict([]), 'Ncol': 2, 'header': ["LO", "Value"]},
+            {'name': 'ROIs', 'type': 'group'}
         ]
 
-        self.roi_settings=Parameter.create(title='Viewer Settings',name='Viewer1D_Settings', type='group', children=params)
+        self.roi_settings = Parameter.create(title='Viewer Settings',name='Viewer1D_Settings', type='group', children=params)
 
         #connecting from tree
         self.roi_settings.child('math_settings', 'spreadROI_pb').sigActivated.connect(self.spread_lineouts)
@@ -454,7 +455,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
 
     @pyqtSlot(list)
-    def show_data_temp(self,datas):
+    def show_data_temp(self, datas):
         """f
         to plot temporary data, for instance when all pixels are not yet populated...
         """
@@ -467,13 +468,16 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.remove_plots()
             self.ini_data_plots(len(datas))
 
-        for ind_plot,data in enumerate(datas):
+        for ind_plot, data in enumerate(datas):
             if self._x_axis is None:
-                self._x_axis=np.linspace(0,len(data),len(data),endpoint=False)
-            elif len(self._x_axis)!=len(data):
-                self._x_axis=np.linspace(0,len(data),len(data),endpoint=False)
+                self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
+                x_axis = self._x_axis
+            elif len(self._x_axis) != len(data):
+                x_axis = np.linspace(0, len(data), len(data), endpoint=False)
+            else:
+                x_axis = self._x_axis
 
-            self.plot_channels[ind_plot].setData(x=self._x_axis,y=data)
+            self.plot_channels[ind_plot].setData(x=x_axis, y=data)
 
     @pyqtSlot(list)
     def show_math(self,data_lo):
@@ -624,9 +628,9 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                 units = x_axis['units']
         else:
             xdata=x_axis
-        self._x_axis=xdata
+        self._x_axis = xdata
         self.show_data_temp(self.datas)
-        self.set_axis_label(dict(orientation='bottom',label=label,units=units))
+        self.set_axis_label(dict(orientation='bottom', label=label, units=units))
 
 class Viewer1D_math(QObject):
     status_sig = pyqtSignal(list)
@@ -667,15 +671,18 @@ class Viewer1D_math(QObject):
                 data_lo.append(np.mean(sub_data))
             elif self.operation=="Sum":
                 data_lo.append(np.sum(sub_data))
-            elif self.operation == 'half-life':
+            elif self.operation == 'half-life' or self.operation == 'expotime':
                 ind_x0 = utils.find_index(sub_data, np.max(sub_data))[0][0]
                 x0 = sub_xaxis[ind_x0]
                 sub_xaxis = sub_xaxis[ind_x0:]
                 sub_data = sub_data[ind_x0:]
                 offset = sub_data[-1]
                 N0 = np.max(sub_data) - offset
-                thalf = sub_xaxis[utils.find_index(sub_data - offset, 0.5 * N0)[0][0]]-x0
-                data_lo.append(thalf)
+                if self.operation == 'half-life':
+                    time = sub_xaxis[utils.find_index(sub_data - offset, 0.5 * N0)[0][0]]-x0
+                elif self.operation == 'expotime':
+                    time = sub_xaxis[utils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
+                data_lo.append(time)
 
         self.math_sig.emit(data_lo)
 

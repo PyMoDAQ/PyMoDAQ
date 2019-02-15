@@ -3,6 +3,10 @@
 =========
 Changelog
 =========
+* :release:`1.3.0 <2019-02-15>`
+* :feature:`0` DAQ_Scan: added the navigator option. It is a 2D area-like object where to define scans. All 2D scans in the current h5file
+  are plotted in this area and at their corresponding position. Each scan plotability can be set.
+* :bug:`0` DAQ_Scan: there was an error during the saving steps at the end of a scan preventing the h5file to flush properly
 * :feature:`0` DAQ_Move_plugins: added the _controller_units parameter. Holds the native units used with the Move instance
 * :release:`1.2.0 <2019-01-11>`
 * :feature:`0` DAQ_Scan: Huge modification related to the scanning. Now you can select an area in one of the opened 2DViewers

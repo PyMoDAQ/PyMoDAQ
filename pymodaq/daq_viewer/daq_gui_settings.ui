@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>451</width>
-    <height>518</height>
+    <width>636</width>
+    <height>590</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,299 +34,346 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
-        <layout class="QGridLayout" name="gridLayout_3">
-         <property name="spacing">
-          <number>6</number>
+        <widget class="QLabel" name="title_label">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
          </property>
-         <item row="2" column="0" rowspan="3">
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Detector:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="13" column="0" colspan="2">
-          <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string/>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="font">
+          <font>
+           <family>Tahoma</family>
+           <pointsize>14</pointsize>
+           <weight>75</weight>
+           <italic>true</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>DAQ Title</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="command_widget" native="true">
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>30</height>
+          </size>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <property name="spacing">
+             <number>0</number>
+            </property>
             <item>
-             <widget class="QCheckBox" name="do_bkg_cb">
+             <widget class="QPushButton" name="grab_pb">
+              <property name="toolTip">
+               <string>Grab</string>
+              </property>
               <property name="text">
-               <string>Do Bkg sub.</string>
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/run2.png</normaloff>:/Labview_icons/Icon_Library/run2.png</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
             <item>
+             <widget class="QPushButton" name="single_pb">
+              <property name="toolTip">
+               <string>Single Grab</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/snap.png</normaloff>:/Labview_icons/Icon_Library/snap.png</iconset>
+              </property>
+              <property name="checkable">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="stop_pb">
+              <property name="toolTip">
+               <string>Single Grab</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/stop.png</normaloff>:/Labview_icons/Icon_Library/stop.png</iconset>
+              </property>
+              <property name="checkable">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="save_current_pb">
+              <property name="toolTip">
+               <string>Save Current Data</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/SaveAs.png</normaloff>:/Labview_icons/Icon_Library/SaveAs.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="save_new_pb">
+              <property name="toolTip">
+               <string>Save New Data</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/Snap&amp;Save.png</normaloff>:/Labview_icons/Icon_Library/Snap&amp;Save.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="load_data_pb">
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/Open.png</normaloff>:/Labview_icons/Icon_Library/Open.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="settings_pb">
+              <property name="toolTip">
+               <string>Open Settings</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/HLM.ico</normaloff>:/Labview_icons/Icon_Library/HLM.ico</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="update_com_pb">
+              <property name="toolTip">
+               <string>Refresh Hardware</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/Refresh2.png</normaloff>:/Labview_icons/Icon_Library/Refresh2.png</iconset>
+              </property>
+              <property name="checkable">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="settings_widget" native="true">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <layout class="QGridLayout" name="gridLayout_3">
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <item row="1" column="0" colspan="3">
+             <widget class="QLabel" name="label_3">
+              <property name="text">
+               <string>Detector:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3" colspan="3">
+             <widget class="QComboBox" name="DAQ_type_combo">
+              <property name="toolTip">
+               <string>Detector Type</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>DAQ0D</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>DAQ1D</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>DAQ2D</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="2" column="4" colspan="2">
+             <widget class="QLED" name="Ini_state_LED">
+              <property name="text">
+               <string>TextLabel</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="0" colspan="3">
+             <widget class="QLabel" name="label_4">
+              <property name="text">
+               <string>DAQ type:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0" colspan="2">
+             <widget class="QPushButton" name="Quit_pb">
+              <property name="toolTip">
+               <string>quit and close the viewer</string>
+              </property>
+              <property name="text">
+               <string>Quit</string>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/close2.png</normaloff>:/Labview_icons/Icon_Library/close2.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2" colspan="2">
+             <widget class="QPushButton" name="IniDet_pb">
+              <property name="toolTip">
+               <string>To initialize the detector</string>
+              </property>
+              <property name="text">
+               <string>Ini. Det.</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="3" colspan="3">
+             <widget class="QComboBox" name="Detector_type_combo">
+              <property name="toolTip">
+               <string>Stage Type</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0" rowspan="3" colspan="3">
+             <widget class="QPushButton" name="load_settings_pb">
+              <property name="toolTip">
+               <string>Load settings</string>
+              </property>
+              <property name="text">
+               <string>Sett.</string>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/Open.png</normaloff>:/Labview_icons/Icon_Library/Open.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="3" rowspan="3" colspan="3">
+             <widget class="QPushButton" name="save_settings_pb">
+              <property name="toolTip">
+               <string>save settings</string>
+              </property>
+              <property name="text">
+               <string>Sett.</string>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/SaveAs.png</normaloff>:/Labview_icons/Icon_Library/SaveAs.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="3" rowspan="2" colspan="3">
              <widget class="QCheckBox" name="take_bkg_cb">
               <property name="text">
                <string>Take Bkg</string>
               </property>
              </widget>
             </item>
+            <item row="3" column="0" rowspan="2" colspan="3">
+             <widget class="QCheckBox" name="do_bkg_cb">
+              <property name="text">
+               <string>Do Bkg sub.</string>
+              </property>
+             </widget>
+            </item>
            </layout>
-          </widget>
-         </item>
-         <item row="0" column="0" colspan="2">
-          <widget class="QLabel" name="title_label">
-           <property name="font">
-            <font>
-             <family>Tahoma</family>
-             <pointsize>14</pointsize>
-             <weight>75</weight>
-             <italic>true</italic>
-             <bold>true</bold>
-            </font>
-           </property>
-           <property name="text">
-            <string>DAQ Title</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1" rowspan="3">
-          <widget class="QLED" name="Ini_state_LED">
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="0" rowspan="3" colspan="2">
-          <widget class="QPushButton" name="Quit_pb">
-           <property name="text">
-            <string>Quit</string>
-           </property>
-           <property name="icon">
-            <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-             <normaloff>:/Labview_icons/Icon_Library/close2.png</normaloff>:/Labview_icons/Icon_Library/close2.png</iconset>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0" rowspan="3">
-          <widget class="QPushButton" name="IniDet_pb">
-           <property name="text">
-            <string>Ini. Det.</string>
-           </property>
-           <property name="checkable">
-            <bool>true</bool>
-           </property>
-           <property name="checked">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1" rowspan="3">
-          <widget class="QComboBox" name="Detector_type_combo">
-           <property name="toolTip">
-            <string>Stage Type</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="2" rowspan="17">
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="11" column="0" rowspan="2" colspan="2">
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QPushButton" name="grab_pb">
-             <property name="toolTip">
-              <string>Grab</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/run2.png</normaloff>:/Labview_icons/Icon_Library/run2.png</iconset>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="single_pb">
-             <property name="toolTip">
-              <string>Single Grab</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/snap.png</normaloff>:/Labview_icons/Icon_Library/snap.png</iconset>
-             </property>
-             <property name="checkable">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="stop_pb">
-             <property name="toolTip">
-              <string>Single Grab</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/stop.png</normaloff>:/Labview_icons/Icon_Library/stop.png</iconset>
-             </property>
-             <property name="checkable">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="save_current_pb">
-             <property name="toolTip">
-              <string>Save Current Data</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/SaveAs.png</normaloff>:/Labview_icons/Icon_Library/SaveAs.png</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="save_new_pb">
-             <property name="toolTip">
-              <string>Save New Data</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/Snap&amp;Save.png</normaloff>:/Labview_icons/Icon_Library/Snap&amp;Save.png</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="load_data_pb">
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/Open.png</normaloff>:/Labview_icons/Icon_Library/Open.png</iconset>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="settings_pb">
-             <property name="toolTip">
-              <string>Open Settings</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/HLM.ico</normaloff>:/Labview_icons/Icon_Library/HLM.ico</iconset>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="update_com_pb">
-             <property name="toolTip">
-              <string>Refresh Hardware</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-               <normaloff>:/Labview_icons/Icon_Library/Refresh2.png</normaloff>:/Labview_icons/Icon_Library/Refresh2.png</iconset>
-             </property>
-             <property name="checkable">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item row="14" column="1" rowspan="3">
-          <widget class="QPushButton" name="save_settings_pb">
-           <property name="text">
-            <string>Sett.</string>
-           </property>
-           <property name="icon">
-            <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-             <normaloff>:/Labview_icons/Icon_Library/SaveAs.png</normaloff>:/Labview_icons/Icon_Library/SaveAs.png</iconset>
-           </property>
-          </widget>
-         </item>
-         <item row="14" column="0" rowspan="3">
-          <widget class="QPushButton" name="load_settings_pb">
-           <property name="text">
-            <string>Sett.</string>
-           </property>
-           <property name="icon">
-            <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-             <normaloff>:/Labview_icons/Icon_Library/Open.png</normaloff>:/Labview_icons/Icon_Library/Open.png</iconset>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="label_4">
-           <property name="text">
-            <string>DAQ type:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QComboBox" name="DAQ_type_combo">
-           <property name="toolTip">
-            <string>Stage Type</string>
-           </property>
-           <item>
-            <property name="text">
-             <string>DAQ0D</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>DAQ1D</string>
-            </property>
-           </item>
-           <item>
-            <property name="text">
-             <string>DAQ2D</string>
-            </property>
-           </item>
-          </widget>
-         </item>
-        </layout>
+          </item>
+         </layout>
+        </widget>
        </item>
       </layout>
      </item>
@@ -338,7 +385,7 @@
   <customwidget>
    <class>QLED</class>
    <extends>QLabel</extends>
-   <header>PyMoDAQ</header>
+   <header>pymodaq</header>
   </customwidget>
  </customwidgets>
  <resources>

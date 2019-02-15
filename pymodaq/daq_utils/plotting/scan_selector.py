@@ -69,7 +69,7 @@ class ScanSelector(QObject):
                         in case of 'Scan2D', should be a sequence of 4 floats (x, y , w, h)
         """
         super(ScanSelector, self).__init__()
-        self.viewers_items = viewer_items
+        self._viewers_items = viewer_items
         self.sources_names = list(viewer_items.keys())
         self.scan_selector_source = viewer_items[self.sources_names[0]]['viewers'][0]
         self.scan_selector = None
@@ -86,6 +86,19 @@ class ScanSelector(QObject):
         elif scan_type == 'Scan2D' and positions != []:
             self.scan_selector.setPos(positions[:2])
             self.scan_selector.setSize(positions[3:])
+
+    @property
+    def viewers_items(self):
+        return self._viewers_items
+
+    @viewers_items.setter
+    def viewers_items(self,items):
+        self._viewers_items = items
+        self.sources_names = list(items.keys())
+        self.scan_selector_source = items[self.sources_names[0]]['viewers'][0]
+        self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
+        viewer_names = self._viewers_items[self.sources_names[0]]['names']
+        self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
 
     def show(self, visible=True):
         self.show_scan_selector(visible)
@@ -108,7 +121,7 @@ class ScanSelector(QObject):
         self.settings_tree.setParameters(self.settings, showTop=False)
 
         self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
-        viewer_names = self.viewers_items[self.sources_names[0]]['names']
+        viewer_names = self._viewers_items[self.sources_names[0]]['names']
         self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
 
         self.settings.sigTreeStateChanged.connect(self.source_changed)
@@ -129,13 +142,13 @@ class ScanSelector(QObject):
 
             elif change == 'value':
                 if param.name() == 'sources' and param.value() is not None:
-                    viewer_names= self.viewers_items[param.value()]['names']
+                    viewer_names= self._viewers_items[param.value()]['names']
                     self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
                     if len(viewer_names) == 1:
                         self.settings.child('scan_options', 'viewers').hide()
 
                     self.remove_scan_selector()
-                    self.scan_selector_source = self.viewers_items[param.value()]['viewers'][0]
+                    self.scan_selector_source = self._viewers_items[param.value()]['viewers'][0]
                     self.update_scan_area_type()
 
                 if param.name() == 'scan_type':
@@ -180,7 +193,7 @@ class ScanSelector(QObject):
             self.scan_selector = PolyLineROI_custom([(0, 0), [10, 10]])
 
         self.scan_selector.sigRegionChangeFinished.connect(self.update_scan)
-        self.scan_selector_source.ui.plotitem.addItem(self.scan_selector)
+        self.scan_selector_source.image_widget.plotitem.addItem(self.scan_selector)
         self.show_scan_selector()
 
         self.scan_selector.sigRegionChangeFinished.emit(self.scan_selector)

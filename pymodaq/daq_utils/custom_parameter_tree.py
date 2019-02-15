@@ -22,7 +22,7 @@ import xml.etree.ElementTree as ET
 
 from pathlib import Path
 import numpy as np
-
+import os
 
 
 
@@ -1260,15 +1260,15 @@ class Table_custom(QtWidgets.QTableWidget):
             data : ordered dictionnary
                 The getted values dictionnary.
         """
-        data=OrderedDict([])
+        data = OrderedDict([])
         for ind in range(self.rowCount()):
-            item0=self.item(ind,0)
-            item1=self.item(ind,1)
+            item0 = self.item(ind,0)
+            item1 = self.item(ind,1)
             if item0 is not None and item1 is not None:
                 try:
-                    data[item0.text()]=float(item1.text())
+                    data[item0.text()] = float(item1.text())
                 except:
-                    data[item0.text()]=item1.text()
+                    data[item0.text()] = item1.text()
         return data
 
 
@@ -1284,14 +1284,18 @@ class Table_custom(QtWidgets.QTableWidget):
         try:
             self.setRowCount(len(data_dict))
             self.setColumnCount(2)
-            for ind,(key, value) in enumerate(data_dict.items()):
-                item0=QtWidgets.QTableWidgetItem(key)
+            for ind, (key, value) in enumerate(data_dict.items()):
+                item0 = QtWidgets.QTableWidgetItem(key)
                 item0.setFlags(item0.flags() ^ Qt.ItemIsEditable)
-                item1=QtWidgets.QTableWidgetItem(str(value))
+                if isinstance(value,float):
+                    item1 = QtWidgets.QTableWidgetItem('{:.6e}'.format(value))
+                else:
+                    item1 = QtWidgets.QTableWidgetItem(str(value))
                 item1.setFlags(item1.flags() ^ Qt.ItemIsEditable)
-                self.setItem(ind,0,item0)
-                self.setItem(ind,1,item1)
+                self.setItem(ind, 0, item0)
+                self.setItem(ind, 1, item1)
             #self.valuechanged.emit(data_dict)
+
         except Exception as e:
             pass
 
@@ -1348,7 +1352,7 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
         opts = self.param.opts
         w = ItemSelect_pb()
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        w.itemselect.setMaximumHeight(100)
+        w.itemselect.setMaximumHeight(70)
         #w.setReadOnly(self.param.opts.get('readonly', False))
         if 'show_pb' in opts:
             w.add_pb.setVisible(opts['show_pb'])
@@ -1524,7 +1528,7 @@ class file_browserParameterItem(pTypes.WidgetParameterItem):
 
         self.w = file_browser(self.param.value(),file_type=self.filetype)
         #self.file_browser.setMaximumHeight(100)
-        self.w.base_path_edit.setReadOnly(self.param.opts.get('readonly', False))
+        self.w.base_path_edit.setReadOnly(self.param.opts['readonly'])
         self.w.value = self.w.get_value
         self.w.setValue = self.w.set_path
         self.w.sigChanged = self.w.value_changed
@@ -1604,7 +1608,6 @@ class file_browser(QtWidgets.QWidget):
         self.hor_layout=QtWidgets.QHBoxLayout()
         self.base_path_edit=QtWidgets.QPlainTextEdit(self.path)
         self.base_path_edit.setMaximumHeight(50)
-        self.base_path_edit.setReadOnly(True)
         self.base_path_browse_pb=QtWidgets.QPushButton()
         self.base_path_browse_pb.setText("")
         icon3 = QtGui.QIcon()
@@ -1617,8 +1620,9 @@ class file_browser(QtWidgets.QWidget):
         verlayout.addStretch()
         self.hor_layout.addLayout(verlayout)
         self.hor_layout.setSpacing(0)
-
         self.setLayout(self.hor_layout)
+
+
 
 class file_browserParameter(Parameter):
     """

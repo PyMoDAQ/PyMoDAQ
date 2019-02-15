@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Installation &mdash; PyMoDAQ 1.2 documentation</title>
+  <title>Installation &mdash; PyMoDAQ 1.3 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                1.2
+                1.3
               </div>
             
           
@@ -94,8 +94,8 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#windows">Windows</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#step-by-step-manual-instructions">Step by Step manual instructions:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#using-pip">Using Pip:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-by-step-manual-instructions">Step by Step manual instructions:</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#macos">MacOS</a></li>
@@ -104,6 +104,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="classDiagram.html">Class Diagram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="APIdoc.html">Library Reference</a></li>
 </ul>
@@ -176,10 +177,10 @@
 <span id="section-installation"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#overview" id="id12">Overview</a></li>
-<li><a class="reference internal" href="#windows" id="id13">Windows</a></li>
-<li><a class="reference internal" href="#macos" id="id14">MacOS</a></li>
-<li><a class="reference internal" href="#linux" id="id15">Linux</a></li>
+<li><a class="reference internal" href="#overview" id="id11">Overview</a></li>
+<li><a class="reference internal" href="#windows" id="id12">Windows</a></li>
+<li><a class="reference internal" href="#macos" id="id13">MacOS</a></li>
+<li><a class="reference internal" href="#linux" id="id14">Linux</a></li>
 </ul>
 </div>
 <div class="section" id="overview">
@@ -192,6 +193,16 @@ for its user interface. For PyMoDAQ to run smoothly, you need a Python distribut
 <p>The advised distribution is <a class="reference external" href="https://winpython.github.io/">WinPython</a> (WinPython64-3.7.1.0 tested to be working) that comes with a full set of python
 packages for a versatile use of python. For best practice, install it on the C drive, for instance: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710</span></code> Once
 the distribution installed, you can install PyMoDAQ from the folder downloaded on <a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ">github</a> or from <a class="reference external" href="https://pypi.org/project/pymodaq/1.0.1/#files">Pypi</a>.</p>
+<div class="section" id="using-pip">
+<h3>Using Pip:<a class="headerlink" href="#using-pip" title="Permalink to this headline">¶</a></h3>
+<p>Pymodaq can be downloaded and installed automatically using the command line tool: <code class="docutils literal notranslate"><span class="pre">pip</span></code></p>
+<ul class="simple">
+<li>get winpython and install it (choose a destination folder on <code class="docutils literal notranslate"><span class="pre">C:\</span></code> directly, for instance <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710</span></code></li>
+<li>open Winpython command line tool <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\WinPython</span> <span class="pre">Command</span> <span class="pre">Prompt.exe</span></code></li>
+<li>write the command: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pip</span> <span class="pre">install</span> <span class="pre">pymodaq</span></code></li>
+</ul>
+<p>All the modules will then be installed within the <code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python. Look at <a class="reference internal" href="How_to_start.html#section-how-to-start"><span class="std std-ref">How to Start</span></a> for detailed ways of how to start pymodaq modules.</p>
+</div>
 <div class="section" id="step-by-step-manual-instructions">
 <h3>Step by Step manual instructions:<a class="headerlink" href="#step-by-step-manual-instructions" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -210,24 +221,6 @@ in the directory: <code class="docutils literal notranslate"><span class="pre">C
 <li>pymodaq_viewer.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> module</li>
 <li>pymodaq_h5browser.exe : will start a standalone <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a> module (to explore h5 files saved from DAQ_Scan or DAQ_Viewer modules)</li>
 </ul>
-<p>and even create a shortcut on the desktop (see <a class="reference internal" href="#fig-create-shortcut"><span class="std std-numref">Fig. 2</span></a>)</p>
-<blockquote>
-<div></div></blockquote>
-<div class="figure" id="id11">
-<span id="fig-create-shortcut"></span><a class="reference internal image-reference" href="../_images/create_shortcut.png"><img alt="create shortcut" src="../_images/create_shortcut.png" style="width: 861.0px; height: 642.0px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 2 </span><span class="caption-text">Creating a shortcut from an .exe file</span></p>
-</div>
-</div>
-<div class="section" id="using-pip">
-<h3>Using Pip:<a class="headerlink" href="#using-pip" title="Permalink to this headline">¶</a></h3>
-<p>Pymodaq can be downloaded and installed automatically using the command line tool: <code class="docutils literal notranslate"><span class="pre">pip</span></code></p>
-<ul class="simple">
-<li>get winpython and install it (choose a destination folder on <code class="docutils literal notranslate"><span class="pre">C:\</span></code> directly, for instance <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710</span></code></li>
-<li>open Winpython command line tool <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\WinPython</span> <span class="pre">Command</span> <span class="pre">Prompt.exe</span></code></li>
-<li>write the command: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pip</span> <span class="pre">install</span> <span class="pre">pymodaq</span></code></li>
-</ul>
-<p>All the modules will then be installed within the <code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python. However the <code class="docutils literal notranslate"><span class="pre">.exe</span></code> files will not be executable
-so look at <a class="reference internal" href="How_to_start.html#section-how-to-start"><span class="std std-ref">How to Start</span></a> for detailed ways of how to start pymodaq modules.</p>
 </div>
 </div>
 <div class="section" id="macos">

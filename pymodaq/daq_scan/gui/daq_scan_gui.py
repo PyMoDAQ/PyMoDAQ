@@ -84,13 +84,23 @@ class Ui_Form(object):
         self.scan2D_layout.setObjectName("scan2D_layout")
         self.gridLayout_2.addLayout(self.scan2D_layout, 0, 0, 1, 1)
         self.tabWidget.addTab(self.tab_plot2D, "")
+        self.tab_navigator = QtWidgets.QWidget()
+        self.tab_navigator.setObjectName("tab_navigator")
+        self.gridLayout_5 = QtWidgets.QGridLayout(self.tab_navigator)
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.gridLayout_5.setSpacing(0)
+        self.gridLayout_5.setObjectName("gridLayout_5")
+        self.navigator_layout = QtWidgets.QVBoxLayout()
+        self.navigator_layout.setObjectName("navigator_layout")
+        self.gridLayout_5.addLayout(self.navigator_layout, 0, 0, 1, 1)
+        self.tabWidget.addTab(self.tab_navigator, "")
         self.gridLayout_4.addWidget(self.splitter, 0, 0, 1, 1)
         self.StatusBarLayout = QtWidgets.QHBoxLayout()
         self.StatusBarLayout.setObjectName("StatusBarLayout")
         self.gridLayout_4.addLayout(self.StatusBarLayout, 1, 0, 1, 1)
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(2)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -104,6 +114,7 @@ class Ui_Form(object):
         self.stop_scan_pb.setToolTip(_translate("Form", "Stop Scan"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot1D), _translate("Form", "1D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_navigator), _translate("Form", "Navigator"))
 
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 

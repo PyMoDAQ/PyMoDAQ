@@ -5,7 +5,8 @@ Created on Wed Jan 10 16:54:14 2018
 @author: Weber Sébastien
 """
 
-from PyQt5 import QtGui, QtWidgets
+from PyQt5 import QtGui, QtWidgets, QtCore
+
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 
 import sys
@@ -110,7 +111,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         pass
 
     params = [
-        {'title': 'Main Settings:','name': 'main_settings','type': 'group','children':[
+        {'title': 'Main Settings:','name': 'main_settings', 'expanded': False, 'type': 'group','children':[
             {'title': 'DAQ type:','name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D','DAQ1D','DAQ2D'], 'readonly': True},
             {'title': 'Detector type:','name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:','name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
@@ -201,7 +202,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         #create main parameter tree
         self.ui.settings_tree = ParameterTree()
         self.ui.settings_layout.addWidget(self.ui.settings_tree,10)
-        self.ui.settings_tree.setMinimumWidth(300)
+        self.ui.settings_tree.setMinimumWidth(200)
         self.settings=Parameter.create(name='Settings', type='group', children=self.params)
         self.settings.child('main_settings','DAQ_type').setValue(self.DAQ_type)
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
@@ -301,6 +302,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         #initialize the controller if init=True
         if init:
             self.ui.IniDet_pb.click()
+
+        self.show_settings()
 
     def change_viewer(self):
         """
@@ -905,6 +908,18 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                             array.attrs['data_name']=key
                             array.attrs['shape']=channel['data'].shape
 
+                            try:
+                                ind_viewer = self.viewer_types.index('Data2D')
+                                png = self.ui.viewers[ind_viewer].parent.grab().toImage()
+                                png = png.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
+                                buffer = QtCore.QBuffer()
+                                buffer.open(QtCore.QIODevice.WriteOnly)
+                                png.save(buffer, "png")
+                                string = buffer.data().data()
+                                array._v_attrs['pixmap2D'] = string
+                            except Exception as e:
+                                self.update_status(str(e),self.wait_time,'log')
+
                         except Exception as e:
                             self.update_status(str(e),self.wait_time,'log')
             try:
@@ -1180,9 +1195,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         """
 
         if self.ui.settings_pb.isChecked():
-            self.ui.settings_tree.setVisible(True)
+            self.ui.settings_widget.setVisible(True)
         else:
-            self.ui.settings_tree.setVisible(False)
+            self.ui.settings_widget.setVisible(False)
 
     @pyqtSlot(list)
     def show_temp_data(self,datas):
@@ -1319,21 +1334,21 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             update_status, set_enabled_grab_buttons, raise_timeout
         """
         if status.command=="Update_Status":
-            if len(status.attributes)>2:
-                self.update_status(status.attributes[0],wait_time=self.wait_time,log_type=status.attributes[1])
+            if len(status.attributes) > 2:
+                self.update_status(status.attributes[0], wait_time=self.wait_time, log_type=status.attributes[1])
             else:
-                self.update_status(status.attributes[0],wait_time=self.wait_time)
+                self.update_status(status.attributes[0], wait_time=self.wait_time)
 
         elif status.command=="ini_detector":
-            self.update_status("detector initialized: "+str(status.attributes[0]['initialized']),wait_time=self.wait_time)
+            self.update_status("detector initialized: "+str(status.attributes[0]['initialized']), wait_time=self.wait_time)
 
             if status.attributes[0]['initialized']:
                 self.controller=status.attributes[0]['controller']
                 self.set_enabled_grab_buttons(enable=True)
                 self.ui.Ini_state_LED.set_as_true()
-                self.Initialized_state=True
+                self.Initialized_state = True
             else:
-                self.Initialized_state=False
+                self.Initialized_state = False
 
         elif status.command=="close":
             try:
@@ -1344,9 +1359,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 if finished:
                     delattr(self,'detector_thread')
                 else:
-                    self.update_status('thread is locked?!',self.wait_time,'log')
+                    self.update_status('thread is locked?!', self.wait_time, 'log')
             except Exception as e:
-                self.update_status(str(e),self.wait_time,'log')
+                self.update_status(str(e), self.wait_time, 'log')
 
             self.Initialized_state=False
 

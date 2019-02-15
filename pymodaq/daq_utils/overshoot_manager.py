@@ -103,9 +103,9 @@ registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
 #check if overshoot_configurations directory exists on the drive
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
 local_path = get_set_local_dir()
-preset_path= os.path.join(local_path, 'overshoot_configurations')
-if not os.path.isdir(preset_path):
-    os.makedirs(preset_path)
+overshoot_path= os.path.join(local_path, 'overshoot_configurations')
+if not os.path.isdir(overshoot_path):
+    os.makedirs(overshoot_path)
 
 
 class OvershootManager():
@@ -129,7 +129,7 @@ class OvershootManager():
                 self.set_new_overshoot()
 
             elif msgBox.clickedButton() == modify_button:
-                path = select_file(start_path=preset_path,save=False, ext='xml')
+                path = select_file(start_path=overshoot_path,save=False, ext='xml')
                 if path != '':
                     self.set_file_overshoot(str(path))
             else: #cancel
@@ -145,8 +145,10 @@ class OvershootManager():
             self.show_overshoot()
 
 
-    def set_new_overshoot(self):
-        param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'overshoot_default'}]
+    def set_new_overshoot(self, file = None):
+        if file is None:
+            file = 'overshoot_default'
+        param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors','type': 'groupdetover', 'detlist': self.det_modules, 'movelist': self.move_modules}]  # [PresetScalableGroupDet(name="Detectors")]
         self.overshoot_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_det)
 
@@ -180,7 +182,7 @@ class OvershootManager():
             # save preset parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.overshoot_params, os.path.join(preset_path,
+            custom_tree.parameter_to_xml_file(self.overshoot_params, os.path.join(overshoot_path,
                                                                                self.overshoot_params.child(
                                                                                    ('filename')).value()))
 

@@ -15,13 +15,15 @@ from pymodaq.version import get_version
 from collections import OrderedDict
 import pymodaq.daq_utils.daq_utils as utils
 import pyqtgraph as pg
-from pyqtgraph.dockarea import Dock, DockArea
+from pyqtgraph.dockarea import Dock
+from pymodaq.daq_utils.daq_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 import numpy as np
 
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.manage_preset import PresetManager
 from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
@@ -43,9 +45,16 @@ local_path = get_set_local_dir()
 import logging
 now=datetime.datetime.now()
 log_path=os.path.join(local_path,'logging')
-
 if not os.path.isdir(log_path):
     os.makedirs(log_path)
+
+layout_path = os.path.join(local_path,'layout')
+if not os.path.isdir(layout_path):
+    os.makedirs(layout_path)
+
+overshoot_path= os.path.join(local_path, 'overshoot_configurations')
+if not os.path.isdir(overshoot_path):
+    os.makedirs(overshoot_path)
 
 logging.basicConfig(filename=os.path.join(log_path,'daq_scan_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))),level=logging.DEBUG)
 
@@ -119,6 +128,70 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     command_DAQ_signal=pyqtSignal(list)
     log_signal=pyqtSignal(str)
 
+    params = [
+        {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
+            {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': ''},
+            {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': ''},
+            {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': ''},
+        ]},
+        {'title': 'Moves/Detectors', 'name': 'Move_Detectors', 'type': 'group', 'children': [
+            {'name': 'Detectors', 'type': 'itemselect'},
+            {'name': 'Moves', 'type': 'itemselect'}
+        ]},
+        {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
+            {'title': 'Wait time (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0},
+            {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
+        ]},
+        {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
+            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D'],
+             'value': 'Scan1D'},
+            {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
+            {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},
+            {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
+                {'title': 'Scan type:', 'name': 'scan1D_type', 'type': 'list',
+                 'values': ['Linear', 'Linear back to start', 'Random'], 'value': 'Linear'},
+                {'title': 'Selection:', 'name': 'scan1D_selection', 'type': 'list',
+                 'values': ['Manual', 'FromROI PolyLines']},
+                {'title': 'From module:', 'name': 'scan1D_roi_module', 'type': 'list', 'values': [], 'visible': False},
+                {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': 0.},
+                {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': 10.},
+                {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': 1.}
+            ]},
+            {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
+                {'title': 'Scan type:', 'name': 'scan2D_type', 'type': 'list',
+                 'values': ['Spiral', 'Linear', 'back&forth', 'Random'], 'value': 'Spiral'},
+                {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list', 'values': ['Manual', 'FromROI']},
+                {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
+                {'title': 'Start Ax1:', 'name': 'start_2d_axis1', 'type': 'float', 'value': 0., 'visible': True},
+                {'title': 'Start Ax2:', 'name': 'start_2d_axis2', 'type': 'float', 'value': 10., 'visible': True},
+                {'title': 'stop Ax1:', 'name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible': False},
+                {'title': 'stop Ax2:', 'name': 'stop_2d_axis2', 'type': 'float', 'value': 40., 'visible': False},
+                {'title': 'Step Ax1:', 'name': 'step_2d_axis1', 'type': 'float', 'value': 1., 'visible': False},
+                {'title': 'Step Ax2:', 'name': 'step_2d_axis2', 'type': 'float', 'value': 5., 'visible': False},
+                {'title': 'Rstep:', 'name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible': True},
+                {'title': 'Rmax:', 'name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible': True}
+            ]},
+
+        ]},
+        {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
+            {'title': 'Save 2D datas:', 'name': 'save_2D', 'type': 'bool', 'value': True},
+            {'title': 'Save independent files:', 'name': 'save_independent', 'type': 'bool', 'value': False},
+            {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False, 'readonly': True,},
+            {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
+            {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data',
+             'readonly': True, 'visible': False},
+            {'title': 'Current scan name:', 'name': 'current_scanname', 'type': 'list', 'value': ''},
+            {'title': 'Comments:', 'name': 'add_comments', 'type': 'text_pb', 'value': ''},
+            {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
+            {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
+                {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
+                 'values': ['zlib', 'lzo', 'bzip2', 'blosc']},
+                {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0, 'max': 9},
+            ]},
+        ]}
+
+    ]
+
     def __init__(self,parent,move_modules=None,detector_modules=None):
         """
             | daq_scan(parent,fname="",move_modules=None,detector_modules=None) is a user interface that will enable scanning of motors controlled by the module daq_move and acquisition of signals using DAQ_0DViewer,DAQ_1DViewer or DAQ_2DViewer.
@@ -143,14 +216,17 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Scan,self).__init__()
         self.title='daq_scan'
-        splash=QtGui.QPixmap('splash.png')
+        splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
+        splash = QtGui.QPixmap(splash_path)
         self.splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
         self.init_prog=True
         self.dockarea=parent
+        self.dockarea.dock_signal.connect(self.save_layout_state_auto)
         self.mainwindow=parent.parent()
 
+        self.preset_file = None
         self.wait_time=1000
-
+        self.navigator = None
         self.scan_x_axis = None
         self.scan_y_axis = None
         self.scan_data_1D = np.array([])
@@ -291,24 +367,26 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         menubar.clear()
 
         #%% create Settings menu
-        file_menu=menubar.addMenu('File')
-        load_action=file_menu.addAction('Load file')
+        self.file_menu=menubar.addMenu('File')
+        load_action=self.file_menu.addAction('Load file')
         load_action.triggered.connect(self.load_file)
-        save_action=file_menu.addAction('Save file')
+        save_action=self.file_menu.addAction('Save file')
         save_action.triggered.connect(self.save_file)
-        show_action=file_menu.addAction('Show file content')
+        show_action=self.file_menu.addAction('Show file content')
         show_action.triggered.connect(self.show_file_content)
 
-        file_menu.addSeparator()
-        quit_action=file_menu.addAction('Quit')
+        self.file_menu.addSeparator()
+        quit_action=self.file_menu.addAction('Quit')
         quit_action.triggered.connect(self.quit_fun)
 
-        settings_menu=menubar.addMenu('Settings')
-        docked_menu=settings_menu.addMenu('Docked windows')
+        self.settings_menu=menubar.addMenu('Settings')
+        action_navigator = self.settings_menu.addAction('Show Navigator')
+        docked_menu=self.settings_menu.addMenu('Docked windows')
         action_load=docked_menu.addAction('Load Layout')
         action_save=docked_menu.addAction('Save Layout')
-        action_clear=settings_menu.addAction('Clear moves/Detectors')
+        action_clear=self.settings_menu.addAction('Clear moves/Detectors')
         action_clear.triggered.connect(self.clear_move_det_controllers)
+        action_navigator.triggered.connect(self.show_navigator)
 
         action_load.triggered.connect(self.load_layout_state)
         action_save.triggered.connect(self.save_layout_state)
@@ -320,14 +398,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
 
-        preset_menu=menubar.addMenu('Preset Modes')
-        action_new_preset=preset_menu.addAction('New preset')
+        self.preset_menu=menubar.addMenu('Preset Modes')
+        action_new_preset=self.preset_menu.addAction('New preset')
         #action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
         action_new_preset.triggered.connect(self.create_preset)
-        action_modify_preset=preset_menu.addAction('Modify preset')
+        action_modify_preset=self.preset_menu.addAction('Modify preset')
         action_modify_preset.triggered.connect(self.modify_preset)
-        preset_menu.addSeparator()
-        load_preset=preset_menu.addMenu('Load presets')
+        self.preset_menu.addSeparator()
+        load_preset=self.preset_menu.addMenu('Load presets')
 
         slots=dict([])
         for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'preset_modes'))):
@@ -336,14 +414,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 slots[filesplited]=load_preset.addAction(filesplited)
                 slots[filesplited].triggered.connect(self.create_menu_slot(os.path.join(local_path,'preset_modes',file)))
 
-        overshoot_menu=menubar.addMenu('Overshoot Modes')
-        action_new_overshoot=overshoot_menu.addAction('New Overshoot')
+        self.overshoot_menu=menubar.addMenu('Overshoot Modes')
+        action_new_overshoot=self.overshoot_menu.addAction('New Overshoot')
         #action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
         action_new_overshoot.triggered.connect(self.create_overshoot)
-        action_modify_overshoot=overshoot_menu.addAction('Modify Overshoot')
+        action_modify_overshoot=self.overshoot_menu.addAction('Modify Overshoot')
         action_modify_overshoot.triggered.connect(self.modify_overshoot)
-        overshoot_menu.addSeparator()
-        load_overshoot=overshoot_menu.addMenu('Load Overshoots')
+        self.overshoot_menu.addSeparator()
+        load_overshoot=self.overshoot_menu.addMenu('Load Overshoots')
 
         slots_over=dict([])
         for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'overshoot_configurations'))):
@@ -373,7 +451,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
     def create_overshoot(self):
         try:
-            self.overshoot_manager.set_new_overshoot()
+            if self.preset_file is not None:
+                file = os.path.split(self.preset_file)[1]
+                file = os.path.splitext(file)[0]
+            self.overshoot_manager.set_new_overshoot(file)
             self.create_menu(self.menubar)
         except Exception as e:
             self.update_status(str(e),log_type='log')
@@ -402,7 +483,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.save_parameters.h5_file_path=file
         self.update_file_settings()
 
-    def load_layout_state(self):
+    def load_layout_state(self, file=None):
         """
             Load and restore a layout state from the select_file obtained pathname file.
 
@@ -411,11 +492,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             utils.select_file
         """
         try:
-            fname=utils.select_file(save=False, ext='dock')
-            if fname is not None:
-                with open(str(fname), 'rb') as f:
+            if file is None:
+                file=utils.select_file(save=False, ext='dock')
+            if file is not None:
+                with open(str(file), 'rb') as f:
                     dockstate = pickle.load(f)
                     self.dockarea.restoreState(dockstate)
+            file = os.path.split(file)[1]
+            self.daqscan_settings.child('loaded_files', 'layout_file').setValue(file)
         except: pass
 
     def modify_overshoot(self):
@@ -505,6 +589,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 QtWidgets.QApplication.processEvents()
 
 
+            #save scan settings related to the current preset
+            if self.preset_file is not None:
+                file = os.path.split(self.preset_file)[1]
+                path = os.path.join(scan_conf_path, file)
+                custom_tree.parameter_to_xml_file(self.daqscan_settings, path)
+
             if hasattr(self,'mainwindow'):
                 self.mainwindow.close()
 
@@ -546,6 +636,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     xarray.set_attr('shape',xarray.shape)
                     xarray.attrs['type']='navigation_axis'
                     xarray.attrs['data_type']='1D'
+
                 if self.scan_y_axis.size != 0:
                     yarray=self.save_parameters.h5_file.create_carray(scan_2D_group,'scan_y_axis',obj=self.scan_y_axis, title='data',filters=filters)
                     yarray.set_attr('shape',yarray.shape)
@@ -575,7 +666,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.save_parameters.current_group._v_attrs['pixmap1D']=string
 
             if self.scan_data_2D != []:
-                item=self.ui.scan2D_graph.ui.plotitem
+                item=self.ui.scan2D_graph.image_widget.plotitem
                 png = QtGui.QImage(int(item.size().width()), int(item.size().height()), QtGui.QImage.Format_ARGB32)
                 painter = QtGui.QPainter(png)
                 painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing)
@@ -590,11 +681,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 string=buffer.data().data()
                 self.save_parameters.current_group._v_attrs['pixmap2D']=string
 
-            if self.ui.overlay2D_pb.isChecked():
-                #display list of actual saved 2Dscans
-                self.list_2Dscans()
-
             self.save_parameters.h5_file.flush()
+
+            if self.navigator is not None:
+                self.navigator.update_2Dscans()
 
         except Exception as e:
             self.update_status(str(e),wait_time=self.wait_time,log_type='log')
@@ -605,7 +695,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         filename=utils.select_file(self.daqscan_settings.child('saving_options', 'base_path').value(), save=True, ext='h5')
         self.save_parameters.h5_file.copy_file(str(filename))
 
-    def save_layout_state(self):
+    def save_layout_state(self, file = None):
         """
             Save the current layout state in the select_file obtained pathname file.
             Once done dump the pickle.
@@ -616,11 +706,19 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         try:
             dockstate = self.dockarea.saveState()
-            fname=utils.select_file(start_path=None, save=True, ext='dock')
-            if fname is not None:
-                with open(str(fname), 'wb') as f:
+            if file is None:
+                file=utils.select_file(start_path=None, save=True, ext='dock')
+            if file is not None:
+                with open(str(file), 'wb') as f:
                     pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
         except: pass
+
+    def save_layout_state_auto(self):
+        if self.preset_file is not None:
+            file = os.path.split(self.preset_file)[1]
+            file = os.path.splitext(file)[0]
+            path = os.path.join(layout_path, file+'.dock')
+            self.save_layout_state(path)
 
     def save_metadata(self,node,type_info='dataset_info'):
         """
@@ -662,52 +760,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         if type_info=='scan_info':
             attr.scan_settings=custom_tree.parameter_to_xml_string(self.daqscan_settings)
 
-
-
-    def scan_list_changed(self,param,changes):
-        """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, update the DAQscan_settings tree consequently.
-
-            =============== ============================================ ==============================
-            **Parameters**    **Type**                                     **Description**
-            *param*           instance of pyqtgraph parameter              the parameter to be checked
-            *changes*         (parameter,change,information) tuple list    the current changes state
-            =============== ============================================ ==============================
-        """
-        for param, change, data in changes:
-            path = self.scan_list.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
-            if change == 'childAdded':pass
-
-            elif change == 'value':
-                if data['checked']:
-                    #check if 2D scan of 0D datas are presents:
-                    scan_group=self.save_parameters.h5_file.get_node(data['path'])
-                    for node in self.save_parameters.h5_file.walk_nodes(data['path']):
-                        if 'data_type' in node._v_attrs and 'scan_type' in node._v_attrs:
-                            if node._v_attrs['data_type']=='0D' and node._v_attrs['scan_type']=='Scan2D':
-                                im=pg.ImageItem()
-                                im.setOpacity(0.25)
-                                im.setOpts(axisOrder='row-major')
-                                self.ui.scan2D_graph.ui.plotitem.addItem(im)
-                                im.setImage(node.read())
-                                x_axis=self.save_parameters.h5_file.get_node(data['path']+'/scan_x_axis_unique').read()
-                                y_axis=self.save_parameters.h5_file.get_node(data['path']+'/scan_y_axis_unique').read()
-                                im.setRect(QtCore.QRectF(np.min(x_axis),np.min(y_axis),np.max(x_axis)-np.min(x_axis),np.max(y_axis)-np.min(y_axis)))
-
-                                self.overlays.append(dict(name=param.name(),image=im))
-                                break #means it plots only the first 0D channel
-                else:
-                    for ind, im in enumerate(self.overlays):
-                        if im['name']==param.name():
-                            self.ui.scan2D_graph.ui.plotitem.removeItem(im['image'])
-                            self.overlays.pop(ind)
-
-            elif change == 'parent':pass
 
     def scan_settings_changed(self, param, changes):
         """
@@ -757,24 +809,20 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
                 elif param.name() == 'scan1D_selection':
                     if param.value() == 'Manual':
-                        self.scan_selector.hide()
                         self.scan_selector.show_scan_selector(visible=False)
                         self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').hide()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').show()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').show()
                     else:
-                        self.scan_selector.show()
                         self.scan_selector.show_scan_selector(visible=True)
                         self.daqscan_settings.child('scan_options','scan1D_settings','scan1D_roi_module').show()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'start_1D').hide()
                         self.daqscan_settings.child('scan_options', 'scan1D_settings', 'stop_1D').hide()
                 elif param.name() == 'scan2D_selection':
                     if param.value() == 'Manual':
-                        self.scan_selector.hide()
                         self.scan_selector.show_scan_selector(visible=False)
                         self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').hide()
                     else:
-                        self.scan_selector.show()
                         self.scan_selector.show_scan_selector(visible=True)
                         self.daqscan_settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').show()
 
@@ -808,8 +856,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
         """
-
         if os.path.splitext(filename)[1]=='.xml':
+            self.preset_file = filename
             self.preset_manager.set_file_preset(filename,show=False)
             self.move_docks=[]
             self.det_docks_settings=[]
@@ -818,6 +866,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             move_modules=[]
             detector_modules=[]
             move_types=[]
+
+
+            ### set daq scan settings set in preset
+            for child in self.preset_manager.preset_params.child(('saving_options')).children():
+                try:
+                    self.daqscan_settings.child('saving_options', child.name()).setValue(child.value())
+                except Exception as e:
+                    self.update_status(str(e), 'log')
+
 
             #################################################################
             ###### sort plugins by IDs and within the same IDs by Master and Slave status
@@ -859,7 +916,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         if ind_move==0:
                             self.dockarea.addDock(self.move_docks[-1], 'right',self.ui.logger_dock)
                         else:
-                            self.dockarea.addDock(self.move_docks[-1], 'right',self.move_docks[-2])
+                            self.dockarea.addDock(self.move_docks[-1], 'above',self.move_docks[-2])
                         move_forms.append(QtWidgets.QWidget())
                         mov_mod_tmp=DAQ_Move(move_forms[-1],plug_name)
 
@@ -946,7 +1003,13 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         detector_modules[-1].settings.child('main_settings','overshoot').show()
                         detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
 
-
+            QtWidgets.QApplication.processEvents()
+            #restore dock state if saved
+            file = os.path.split(self.preset_file)[1]
+            file = os.path.splitext(file)[0]
+            path = os.path.join(layout_path, file + '.dock')
+            if os.path.isfile(path):
+                self.load_layout_state(path)
 
 
 
@@ -993,6 +1056,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     def set_overshoot_configuration(self,filename):
         try:
             if os.path.splitext(filename)[1]=='.xml':
+                file = os.path.split(filename)[1]
+                self.daqscan_settings.child('loaded_files', 'overshoot_file').setValue(file)
                 self.update_status('Overshoot configuration ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
                 self.overshoot_manager.set_file_overshoot(filename,show=False)
 
@@ -1041,9 +1106,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status
         """
         try:
-            #self.mainwindow.setVisible(False)
-            # for area in self.dockarea.tempAreas:
-            #     area.window().setVisible(False)
+            self.mainwindow.setVisible(False)
+            for area in self.dockarea.tempAreas:
+                area.window().setVisible(False)
 
             self.splash_sc.show()
             QtWidgets.QApplication.processEvents()
@@ -1053,29 +1118,43 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.clear_move_det_controllers()
             QtWidgets.QApplication.processEvents()
 
+
             move_modules, detector_modules= self.set_file_preset(filename)
             self.update_status('Preset mode ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
+            self.daqscan_settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
             self.move_modules = move_modules
             self.detector_modules = detector_modules
 
+            ######################################################################
+            #set scan selector
             items = OrderedDict()
+            if self.navigator is not None:
+                items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
             for det in self.detector_modules:
                 if len([view for view in det.ui.viewers if view.viewer_type=='Data2D']) != 0:
                     items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
                                         names=[view.title for view in det.ui.viewers if view.viewer_type == 'Data2D'],)
-            items["DAQ_Scan"] = dict(viewers=[self.ui.scan2D_graph],
-                                    names=["DAQ_Scan"])
-            self.scan_selector = ScanSelector(items, 'Scan1D')
+            items["DAQ_Scan"] = dict(viewers=[self.ui.scan2D_graph], names=["DAQ_Scan"])
+
+            self.scan_selector = ScanSelector(items, 'Scan2D')
+            self.scan_selector.widget.setVisible(False)
             self.scan_selector.settings.child('scan_options', 'scan_type').hide()
             self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
 
             self.daqscan_settings.child('scan_options', 'scan1D_settings','scan1D_roi_module').setOpts(limits=self.scan_selector.sources_names)
             self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_roi_module').setOpts(limits=self.scan_selector.sources_names)
 
-            self.scan_selector.hide()
+            self.scan_selector.widget.setVisible(False)
             self.scan_selector.show_scan_selector(visible=False)
 
+            #####################################################
             self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
+            #load overshoot if present
+            file = os.path.split(self.preset_file)[1]
+            path = os.path.join(overshoot_path, file)
+            if os.path.isfile(path):
+                self.set_overshoot_configuration(path)
+
 
             #connecting to logger
             for mov in move_modules:
@@ -1101,9 +1180,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.daqscan_settings.child('scan_options','plot_from').setValue(preset_items_det[0])
 
             self.splash_sc.close()
-            #self.mainwindow.setVisible(True)
+            self.mainwindow.setVisible(True)
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(True)
+
+            self.ui.scan_dock.setEnabled(True)
+            self.file_menu.setEnabled(True)
+            self.settings_menu.setEnabled(True)
+            self.overshoot_menu.setEnabled(True)
+
         except Exception as e:
             self.update_status(str(e),self.wait_time,log_type='log')
 
@@ -1311,33 +1396,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.scan2D_graph.ui.histogram_green.setVisible(False)
         self.ui.scan2D_graph.ui.histogram_red.setVisible(False)
         self.ui.move_to_crosshair_cb=QtWidgets.QCheckBox("Move at doubleClicked")
-        self.ui.ROIselect=pg.RectROI([0,0],[10,10])
-        self.ui.scan2D_graph.ui.plotitem.addItem(self.ui.ROIselect)
-        self.ui.ROIselect.setVisible(False)
-        self.overlays=[]#%list of imageItem items displaying 2D scans info
 
-        self.ui.overlay2D_pb=QtWidgets.QPushButton("")
-        self.ui.overlay2D_pb.setCheckable(True)
-        self.ui.overlay2D_pb.setToolTip('Show/hide previsous 2D scans')
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/overlay.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.overlay2D_pb.setIcon(icon)
-
-        self.ui.ROIselect_pb=QtWidgets.QPushButton("")
-        self.ui.ROIselect_pb.setCheckable(True)
-        self.ui.ROIselect_pb.setToolTip('Show/hide ROI scan area selection')
-        icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Region.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.ROIselect_pb.setIcon(icon2)
-
-
-        self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.ROIselect_pb)
-        self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.overlay2D_pb)
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.move_to_crosshair_cb)
 
-        self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
-        self.ui.overlay2D_pb.clicked.connect(self.show_overlay)
-        self.ui.ROIselect_pb.clicked.connect(self.show_ROIselect)
         #%% init and set the status bar
         self.ui.statusbar=QtWidgets.QStatusBar(self.dockarea)
         self.ui.statusbar.setMaximumHeight(25)
@@ -1368,78 +1429,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.start_scan_pb.setEnabled(False)
         self.ui.stop_scan_pb.setEnabled(False)
 
-
-        #displaying the scan list tree
-        self.scan_tree = ParameterTree()
-        self.scan_tree.setMaximumWidth(300)
-        self.scan_tree.setMinimumWidth(300)
-        self.ui.verticalLayout.addWidget(self.scan_tree)
-        self.scan_tree.setVisible(False)
-        params_scan = [{'title': 'Scans', 'name': 'scans', 'type': 'group', 'children': []}]
-        self.scan_list=Parameter.create(name='Scan_List', type='group', children=params_scan)
-        self.scan_tree.setParameters(self.scan_list, showTop=False)
-        self.scan_list.sigTreeStateChanged.connect(self.scan_list_changed)
-
-
         #displaying the settings Tree
 
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumWidth(300)
         self.ui.settings_layout.addWidget(self.settings_tree)
-        params = [
-        {'title': 'Moves/Detectors', 'name': 'Move_Detectors', 'type': 'group', 'children': [
-            {'name': 'Detectors', 'type': 'itemselect'},
-            {'name': 'Moves', 'type': 'itemselect'}
-            ]},
-        {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'children': [
-            {'title': 'Wait time (ms)','name': 'wait_time', 'type': 'int', 'value': 0},
-            {'title': 'Timeout (ms)','name': 'timeout', 'type': 'int', 'value': 10000},
-            ]},
-        {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
-            {'title': 'Scan type:','name': 'scan_type', 'type': 'list', 'values': ['Scan1D','Scan2D'],'value': 'Scan1D'},
-            {'title': 'Naverage:','name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Plot from:','name': 'plot_from', 'type': 'list'},
-            {'title': 'Scan1D settings','name': 'scan1D_settings', 'type': 'group', 'children': [
-                    {'title': 'Scan type:','name': 'scan1D_type', 'type': 'list', 'values': ['Linear','Linear back to start','Random'],'value': 'Linear'},
-                    {'title': 'Selection:', 'name': 'scan1D_selection', 'type': 'list', 'values': ['Manual','FromROI PolyLines']},
-                    {'title': 'From module:', 'name': 'scan1D_roi_module', 'type': 'list', 'values': [], 'visible': False},
-                    {'title': 'Start:','name': 'start_1D', 'type': 'float', 'value': 0.},
-                    {'title': 'stop:','name': 'stop_1D', 'type': 'float', 'value': 10.},
-                    {'title': 'Step:','name': 'step_1D', 'type': 'float', 'value': 1.}
-                    ]},
-            {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group','visible': False, 'children': [
-                    {'title': 'Scan type:','name': 'scan2D_type', 'type': 'list', 'values': ['Spiral','Linear', 'back&forth','Random'],'value': 'Spiral'},
-                    {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list','values': ['Manual', 'FromROI']},
-                    {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
-                    {'title': 'Start Ax1:','name': 'start_2d_axis1', 'type': 'float', 'value': 0., 'visible':True},
-                    {'title': 'Start Ax2:','name': 'start_2d_axis2', 'type': 'float', 'value': 10., 'visible':True},
-                    {'title': 'stop Ax1:','name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible':False},
-                    {'title': 'stop Ax2:','name': 'stop_2d_axis2', 'type': 'float', 'value': 40., 'visible':False},
-                    {'title': 'Step Ax1:','name': 'step_2d_axis1', 'type': 'float', 'value': 1., 'visible':False},
-                    {'title': 'Step Ax2:','name': 'step_2d_axis2', 'type': 'float', 'value': 5., 'visible':False},
-                    {'title': 'Rstep:','name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible':True},
-                    {'title': 'Rmax:','name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible':True}
-                    ]},
 
-            ]},
-        {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
-            {'title': 'Save 2D datas:','name': 'save_2D', 'type': 'bool', 'value': True},
-            {'title': 'Save in independent files:', 'name': 'save_independent', 'type': 'bool', 'value': False},
-            {'title': 'Base path:','name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False},
-            {'title': 'Base name:','name': 'base_name', 'type': 'str', 'value': 'Scan','readonly': True},
-            {'title': 'Current path:','name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data','readonly': True, 'visible': False},
-            {'title': 'Current scan name:','name': 'current_scanname', 'type': 'list', 'value': ''},
-            {'title': 'Comments:','name': 'add_comments', 'type': 'text_pb', 'value': ''},
-            {'title': 'h5file:','name': 'current_h5_file', 'type': 'text_pb', 'value': '','readonly': True},
-            {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
-                {'title': 'Compression library:','name': 'h5comp_library', 'type': 'list', 'value': 'zlib', 'values': ['zlib', 'lzo', 'bzip2', 'blosc']},
-                {'title': 'Compression level:','name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0 , 'max': 9},
-                ]},
-            ]}
 
-        ]
-
-        self.daqscan_settings=Parameter.create(name='Settings', type='group', children=params)
+        self.daqscan_settings=Parameter.create(name='Settings', type='group', children=self.params)
         try:
             if not os.path.isdir(self.daqscan_settings.child('saving_options', 'base_path').value()):
                 os.mkdir(self.daqscan_settings.child('saving_options', 'base_path').value())
@@ -1494,6 +1491,13 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.stop_scan_pb.clicked.connect(self.stop_scan)
         self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
 
+        self.ui.tabWidget.removeTab(2)
+
+        self.ui.scan_dock.setEnabled(False)
+        self.file_menu.setEnabled(False)
+        self.settings_menu.setEnabled(False)
+        self.overshoot_menu.setEnabled(False)
+        self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)
 
 
@@ -1570,19 +1574,28 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     def show_help(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
-    def show_ROIselect(self):
-        if self.ui.ROIselect_pb.isChecked():
-            self.ui.ROIselect.setVisible(False)
-        else:
-            self.ui.ROIselect.setVisible(True)
+    def show_navigator(self):
+        if self.navigator is None:
+            #loading navigator
 
-    def show_overlay(self):
-        if self.ui.overlay2D_pb.isChecked():
-            self.scan_tree.setVisible(True)
-            self.list_2Dscans()
-        else:
-            self.scan_tree.setVisible(False)
+            widgnav = QtWidgets.QWidget()
+            self.navigator = Navigator(widgnav)
 
+            self.navigator.log_signal[str].connect(self.add_log)
+            self.navigator.settings.child('settings', 'Load h5').hide()
+            self.navigator.loadaction.setVisible(False)
+
+            self.ui.navigator_layout.addWidget(widgnav)
+            self.navigator.sig_double_clicked.connect(self.move_to_crosshair)
+
+            self.scan_selector.remove_scan_selector()
+            items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
+            items.update(self.scan_selector.viewers_items)
+            self.scan_selector.viewers_items = items
+            self.daqscan_settings.child('scan_options', 'scan1D_settings','scan1D_roi_module').setOpts(limits=self.scan_selector.sources_names)
+            self.daqscan_settings.child('scan_options', 'scan2D_settings','scan2D_roi_module').setOpts(limits=self.scan_selector.sources_names)
+
+            self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.addTab(self.ui.tab_navigator, 'Navigator'))
 
     def start_scan(self):
         """
@@ -1852,10 +1865,14 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             if self.save_parameters.h5_file_path.exists():
                 self.save_parameters.h5_file = tables.open_file(str(self.save_parameters.h5_file_path), mode = "a")
+
             else:
                 self.save_parameters.h5_file = tables.open_file(str(self.save_parameters.h5_file_path), mode = "w")
                 self.set_metadata_about_dataset()
 
+            if self.navigator is not None:
+                self.navigator.update_h5file(self.save_parameters.h5_file)
+                self.navigator.settings.child('settings', 'filepath').setValue(self.save_parameters.h5_file.filename)
 
             if not 'Raw_datas' in list(self.save_parameters.h5_file.root._v_children.keys()):
                 raw_data_group = self.save_parameters.h5_file.create_group("/", 'Raw_datas', 'Data from daq_scan and detector modules')
@@ -1884,11 +1901,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.save_parameters.logger_array._v_attrs['type']='list'
             else:
                 self.save_parameters.logger_array=self.save_parameters.h5_file.get_node(raw_data_group, name=logger)
-
-
-            #display list of actual saved 2Dscans
-            if self.ui.overlay2D_pb.isChecked():
-                self.list_2Dscans()
 
             #set attributes to the current group, such as scan_type....
             self.scan_attributes.child('scan_info','scan_type').setValue(self.daqscan_settings.child('scan_options','scan_type').value())
@@ -2580,9 +2592,11 @@ class DAQ_Scan_Acquisition(QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-
-    splash=QtGui.QPixmap('splash.png')
-    splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+    splash_path = os.path.join(os.path.split(__file__)[0],'splash.png')
+    splash = QtGui.QPixmap(splash_path)
+    if splash is None:
+        print('no splash')
+    splash_sc=QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
 
     splash_sc.show()
     QtWidgets.QApplication.processEvents()

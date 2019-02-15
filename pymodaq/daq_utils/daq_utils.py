@@ -1,4 +1,5 @@
 from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSignal, QObject
 import sys
 import tables
 from collections import OrderedDict
@@ -7,7 +8,7 @@ import numpy as np
 import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE, WINFUNCTYPE
-
+from pyqtgraph import dockarea
 
 import enum
 import os
@@ -17,6 +18,22 @@ import importlib
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
 
+
+class DockArea(dockarea.DockArea, QObject):
+    dock_signal = pyqtSignal()
+
+    def __init__(self, temporary=False, home=None):
+        super(DockArea, self).__init__(temporary, home)
+
+    def moveDock(self, dock, position, neighbor):
+        """
+        Move an existing Dock to a new location.
+        """
+        ## Moving to the edge of a tabbed dock causes a drop outside the tab box
+        if position in ['left', 'right', 'top', 'bottom'] and neighbor is not None and neighbor.container() is not None and neighbor.container().type() == 'tab':
+            neighbor = neighbor.container()
+        self.addDock(dock, position, neighbor)
+        self.dock_signal.emit()
 
 def zeros_aligned(n, align, dtype=np.uint32):
     """
@@ -370,13 +387,11 @@ def h5tree_to_QTree(h5file,base_node,base_tree_elt=None,pixmap_items=[]):
 
     return base_tree_elt,pixmap_items
 
-def get_h5file_scans(h5file):
+def get_h5file_scans(h5file,path='/'):
     scan_list=[]
-    for node in h5file.walk_groups('/'):
-        if 'type' in node._v_attrs:
-            if node._v_attrs['type']=='scan':
-                if 'pixmap2D' in node._v_attrs:
-                    scan_list.append(dict(scan_name=node._v_name,path=node._v_pathname, data=node._v_attrs['pixmap2D']))
+    for node in h5file.walk_nodes(path):
+        if 'pixmap2D' in node._v_attrs:
+            scan_list.append(dict(scan_name=node._v_name,path=node._v_pathname, data=node._v_attrs['pixmap2D']))
 
     return scan_list
 

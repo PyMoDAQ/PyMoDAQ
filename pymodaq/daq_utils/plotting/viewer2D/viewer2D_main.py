@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF, QLocale
 import sys
 from collections import OrderedDict
 import pyqtgraph as pg
@@ -22,6 +22,7 @@ from easydict import EasyDict as edict
 import pickle
 import os
 from pyqtgraph.dockarea import DockArea, Dock
+
 import  pymodaq.daq_utils.daq_utils as utils 
 
 
@@ -211,6 +212,25 @@ class ImageItem(pg.ImageItem):
 
         return hist[1][:-1], hist[0]
 
+class ImageWidget(pg.GraphicsLayoutWidget):
+    """this gives a layout to add imageitems.
+    """
+    def __init__(self):
+        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        super(ImageWidget, self).__init__()
+        self.setupUI()
+
+    def setupUI(self):
+        layout = QtWidgets.QGridLayout()
+        #set viewer area
+        self.scene_obj = self.scene()
+        self.view = View_cust()
+        self.plotitem = pg.PlotItem(viewBox=self.view)
+        self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
+        self.setCentralItem(self.plotitem)
+
+
+
 class Viewer2D(QtWidgets.QWidget):
     data_to_export_signal=pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
     crosshair_dragged=pyqtSignal(float, float) #signal used to pass crosshair position to other modules in scaled axes units
@@ -240,23 +260,24 @@ class Viewer2D(QtWidgets.QWidget):
         self.isdata=edict(blue=False,green=False,red=False)
         self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
 
-        self.ui.scene = self.ui.graphicsView.scene()
+        self.image_widget = ImageWidget()
+        self.ui.plotitem = self.image_widget.plotitem # for backward compatibility
+        self.ui.splitter_VLeft.replaceWidget(0, self.ui.graphicsView)
+
 
         self.autolevels=False
         self.ui.auto_levels_pb.clicked.connect(self.set_autolevels)
 
         self.scaled_yaxis=AxisItem_Scaled('right')
         self.scaled_xaxis=AxisItem_Scaled('top')
-        self.ui.view=View_cust()
-        self.ui.plotitem=pg.PlotItem(viewBox=self.ui.view)
-        #self.ui.view = self.ui.plotitem.getViewBox()
-        self.ui.view.sig_double_clicked.connect(self.double_clicked)
-        self.ui.plotitem.layout.addItem(self.scaled_xaxis, *(1,1))
-        self.ui.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))
-        self.scaled_xaxis.linkToView(self.ui.view)
-        self.scaled_yaxis.linkToView(self.ui.view)
+
+        self.image_widget.view.sig_double_clicked.connect(self.double_clicked)
+        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1,1))
+        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))
+        self.scaled_xaxis.linkToView(self.image_widget.view)
+        self.scaled_yaxis.linkToView(self.image_widget.view)
         self.set_scaling_axes(self.scaling_options)
-        self.ui.plotitem.vb.setAspectLocked(lock=True, ratio=1)
+        self.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         self.ui.img_red = ImageItem()
         self.ui.img_green = ImageItem()
         self.ui.img_blue = ImageItem()
@@ -280,28 +301,30 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.red_cb.clicked.connect(self.update_selection_area_visibility)
         self.ui.red_cb.setChecked(True)
 
-        self.ui.plotitem.addItem(self.ui.img_red)
-        self.ui.plotitem.addItem(self.ui.img_green)
-        self.ui.plotitem.addItem(self.ui.img_blue)
-        self.ui.graphicsView.setCentralItem(self.ui.plotitem)
+        self.image_widget.plotitem.addItem(self.ui.img_red)
+        self.image_widget.plotitem.addItem(self.ui.img_green)
+        self.image_widget.plotitem.addItem(self.ui.img_blue)
+        self.ui.graphicsView.setCentralItem(self.image_widget.plotitem)
 
-        ##self.ui.graphicsView.setCentralItem(self.ui.plotitem)
-        #axis=pg.AxisItem('right',linkView=self.ui.view)
+        ##self.ui.graphicsView.setCentralItem(self.image_widget.plotitem)
+        #axis=pg.AxisItem('right',linkView=self.image_widget.view)
         #self.ui.graphicsView.addItem(axis)
 
         self.ui.aspect_ratio_pb.clicked.connect(self.lock_aspect_ratio)
         self.ui.aspect_ratio_pb.setChecked(True)
 
         #histograms
+        histo_layout = QtWidgets.QHBoxLayout()
+        self.ui.widget_histo.setLayout(histo_layout)
         self.ui.histogram_red=pg.HistogramLUTWidget()
         self.ui.histogram_red.setImageItem(self.ui.img_red)
         self.ui.histogram_green=pg.HistogramLUTWidget()
         self.ui.histogram_green.setImageItem(self.ui.img_green)
         self.ui.histogram_blue=pg.HistogramLUTWidget()
         self.ui.histogram_blue.setImageItem(self.ui.img_blue)
-        self.ui.horizontalLayout.addWidget(self.ui.histogram_red)
-        self.ui.horizontalLayout.addWidget(self.ui.histogram_green)
-        self.ui.horizontalLayout.addWidget(self.ui.histogram_blue)
+        histo_layout.addWidget(self.ui.histogram_red)
+        histo_layout.addWidget(self.ui.histogram_green)
+        histo_layout.addWidget(self.ui.histogram_blue)
 
         Ntick=3
         colors_red =[(int(r),0,0) for r in pg.np.linspace(0,255,Ntick)]
@@ -321,7 +344,7 @@ class Viewer2D(QtWidgets.QWidget):
 
         #ROI selects an area and export its bounds as a signal
         self.ui.ROIselect=pg.RectROI([0,0],[10,10],centered=True,sideScalers=True)
-        self.ui.plotitem.addItem(self.ui.ROIselect)
+        self.image_widget.plotitem.addItem(self.ui.ROIselect)
         self.ui.ROIselect.setVisible(False)
         self.ui.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
         self.ui.ROIselect_pb.clicked.connect(self.show_ROI_select)
@@ -344,7 +367,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.isoLine.sigDragged.connect(self.updateIsocurve)
 
         ##crosshair
-        self.ui.crosshair=Crosshair(self.ui.plotitem)
+        self.ui.crosshair=Crosshair(self.image_widget.plotitem)
         self.ui.crosshair_H_blue = self.ui.Lineout_H.plot(pen="b")
         self.ui.crosshair_H_green = self.ui.Lineout_H.plot(pen="g")
         self.ui.crosshair_H_red = self.ui.Lineout_H.plot(pen="r")
@@ -442,7 +465,7 @@ class Viewer2D(QtWidgets.QWidget):
             self.ui.crosshair.setVisible(True)
             self.ui.x_label.setVisible(True)
             self.ui.y_label.setVisible(True)
-            range=self.ui.view.viewRange()
+            range=self.image_widget.view.viewRange()
             self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])),np.mean(np.array(range[0])))
 
             if self.isdata["blue"]:
@@ -491,7 +514,7 @@ class Viewer2D(QtWidgets.QWidget):
         try:
             for roi in self.ui.ROIs.values():
                 index=roi.index
-                self.ui.plotitem.removeItem(roi)
+                self.image_widget.plotitem.removeItem(roi)
                 self.roi_settings.sigTreeStateChanged.disconnect()
                 self.roi_settings.child(*('ROIs','ROI_%02.0d'%index)).remove()
                 self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
@@ -507,9 +530,9 @@ class Viewer2D(QtWidgets.QWidget):
 
     def lock_aspect_ratio(self):
         if self.ui.aspect_ratio_pb.isChecked():
-            self.ui.plotitem.vb.setAspectLocked(lock=True, ratio=1)
+            self.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         else:
-            self.ui.plotitem.vb.setAspectLocked(lock=False)
+            self.image_widget.plotitem.vb.setAspectLocked(lock=False)
 
     @pyqtSlot(int, int)
     def move_left_splitter(self,pos,index):
@@ -638,7 +661,7 @@ class Viewer2D(QtWidgets.QWidget):
                     pass
                 par.child(('Color')).setValue(QtGui.QColor(*self.color_list[newindex]))
                 self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
-                self.ui.plotitem.addItem(newroi)
+                self.image_widget.plotitem.addItem(newroi)
 
                 newroi.pos
 
@@ -661,7 +684,7 @@ class Viewer2D(QtWidgets.QWidget):
 
 
             elif change == 'parent':
-                self.ui.plotitem.removeItem(self.ui.ROIs[param.name()])
+                self.image_widget.plotitem.removeItem(self.ui.ROIs[param.name()])
                 self.ui.ROIs.pop(param.name())
                 self.ui.Lineout_H.removeItem(self.ui.RoiCurve_H[param.name()])
                 self.ui.RoiCurve_H.pop(param.name())
@@ -735,8 +758,8 @@ class Viewer2D(QtWidgets.QWidget):
         self.scaled_yaxis.offset=self.scaling_options.scaled_yaxis.offset
         self.scaled_yaxis.setLabel(text=self.scaling_options.scaled_yaxis.label,units=self.scaling_options.scaled_yaxis.units)
 
-        self.scaled_xaxis.linkedViewChanged(self.ui.view)
-        self.scaled_yaxis.linkedViewChanged(self.ui.view)
+        self.scaled_xaxis.linkedViewChanged(self.image_widget.view)
+        self.scaled_yaxis.linkedViewChanged(self.image_widget.view)
 
     def setImage(self,data_red=None,data_green=None,data_blue=None):
         try:

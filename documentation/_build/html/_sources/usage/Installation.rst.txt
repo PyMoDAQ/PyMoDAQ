@@ -30,6 +30,18 @@ __ https://winpython.github.io/
 __ https://github.com/CEMES-CNRS/PyMoDAQ
 __ https://pypi.org/project/pymodaq/1.0.1/#files
 
+Using Pip:
+**********
+
+Pymodaq can be downloaded and installed automatically using the command line tool: ``pip``
+
+* get winpython and install it (choose a destination folder on ``C:\`` directly, for instance ``C:\WPy-3710``
+* open Winpython command line tool ``C:\WPy-3710\WinPython Command Prompt.exe``
+* write the command: ``C:\WPy-3710\scripts\pip install pymodaq``
+
+All the modules will then be installed within the ``site-packages`` folder of python. Look at :ref:`section_how_to_start` for detailed ways of how to start pymodaq modules.
+
+
 Step by Step manual instructions:
 *********************************
 
@@ -51,28 +63,6 @@ in the directory: ``C:\WPy-3710\python-3.7.1.amd64\Scripts`` so that you can run
 * pymodaq_move.exe : will start a standalone :ref:`DAQ_Move_module` module
 * pymodaq_viewer.exe : will start a standalone :ref:`DAQ_Viewer_module` module
 * pymodaq_h5browser.exe : will start a standalone :ref:`H5Browser_module` module (to explore h5 files saved from DAQ_Scan or DAQ_Viewer modules)
-
-and even create a shortcut on the desktop (see :numref:`fig_create_shortcut`)
-
-   .. _fig_create_shortcut:
-
-.. figure:: /image/create_shortcut.png
-   :alt: create shortcut
-   :scale: 100%
-
-   Creating a shortcut from an .exe file
-
-Using Pip:
-**********
-
-Pymodaq can be downloaded and installed automatically using the command line tool: ``pip``
-
-* get winpython and install it (choose a destination folder on ``C:\`` directly, for instance ``C:\WPy-3710``
-* open Winpython command line tool ``C:\WPy-3710\WinPython Command Prompt.exe``
-* write the command: ``C:\WPy-3710\scripts\pip install pymodaq``
-
-All the modules will then be installed within the ``site-packages`` folder of python. However the ``.exe`` files will not be executable
-so look at :ref:`section_how_to_start` for detailed ways of how to start pymodaq modules.
 
 MacOS
 -----
