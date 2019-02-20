@@ -53,7 +53,7 @@
           <entry key="in" value="4" />
           <entry key="md" value="1" />
           <entry key="png" value="2" />
-          <entry key="py" value="546" />
+          <entry key="py" value="547" />
           <entry key="rst" value="101" />
         </counts>
       </usages-collector>
@@ -62,7 +62,7 @@
           <entry key="Image" value="12" />
           <entry key="Markdown" value="1" />
           <entry key="PLAIN_TEXT" value="11" />
-          <entry key="Python" value="546" />
+          <entry key="Python" value="547" />
           <entry key="ReST" value="101" />
         </counts>
       </usages-collector>
@@ -75,7 +75,7 @@
           <entry key="gitignore" value="8" />
           <entry key="in" value="85" />
           <entry key="md" value="45" />
-          <entry key="py" value="60649" />
+          <entry key="py" value="60650" />
           <entry key="rst" value="38540" />
         </counts>
       </usages-collector>
@@ -83,7 +83,7 @@
         <counts>
           <entry key="Markdown" value="45" />
           <entry key="PLAIN_TEXT" value="603" />
-          <entry key="Python" value="66468" />
+          <entry key="Python" value="66469" />
           <entry key="ReST" value="38540" />
         </counts>
       </usages-collector>
@@ -91,15 +91,6 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="68">
-              <caret line="7" selection-start-line="7" selection-end-line="7" selection-end-column="51" />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pymodaq/examples/custom_app.py">
           <provider selected="true" editor-type-id="text-editor">
@@ -137,9 +128,18 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/documentation/changelog.rst">
           <provider selected="true" editor-type-id="restructured-text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pymodaq/version.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="153">
+              <caret line="10" column="15" selection-start-line="10" selection-start-column="15" selection-end-line="10" selection-end-column="15" />
+            </state>
+          </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
@@ -287,7 +287,6 @@
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer2D/viewer2D_gui.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_0D/daq_0Dviewer_Mock_bis.py" />
         <option value="$PROJECT_DIR$/pymodaq/examples/custom_app.py" />
-        <option value="$PROJECT_DIR$/pymodaq/version.py" />
         <option value="$PROJECT_DIR$/MANIFEST.in" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/plotting/scan_selector.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/overshoot_manager.py" />
@@ -335,6 +334,7 @@
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/h5browser.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewerND/viewerND_main.py" />
         <option value="$PROJECT_DIR$/documentation/changelog.rst" />
+        <option value="$PROJECT_DIR$/pymodaq/version.py" />
       </list>
     </option>
   </component>
@@ -722,13 +722,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/version.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="476">
-          <caret line="29" column="4" selection-start-line="29" selection-start-column="4" selection-end-line="29" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/navigator.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="612">
@@ -1084,6 +1077,13 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/documentation/changelog.rst">
       <provider selected="true" editor-type-id="restructured-text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/version.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="153">
+          <caret line="10" column="15" selection-start-line="10" selection-start-column="15" selection-end-line="10" selection-end-column="15" />
+        </state>
+      </provider>
     </entry>
   </component>
 </project>
