@@ -11,7 +11,7 @@ from pymodaq.daq_move import utility_classes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree
-from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum
+from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum, getLineInfo
 from easydict import EasyDict as edict
 
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
@@ -217,7 +217,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time,log_type="log")
+            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type="log")
 
             self.set_enabled_move_buttons(enable=False)
 
@@ -323,7 +323,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time,log_type="log")
+            self.update_status(getLineInfo()+ str(e), wait_time=self.wait_time,log_type="log")
 
     def show_fine_tuning(self):
         """
@@ -439,7 +439,7 @@ class DAQ_Move(Ui_Form,QObject):
                 else:
                     self.update_status('thread is locked?!',self.wait_time,'log')
             except Exception as e:
-                self.update_status(str(e),log_type="log")
+                self.update_status(getLineInfo()+ str(e),log_type="log")
             self.Initialized_state=False
 
         elif status.command=="check_position":
@@ -503,7 +503,7 @@ class DAQ_Move(Ui_Form,QObject):
         try:
             self.ui.statusbar.showMessage(txt,wait_time)
             if log_type is not None:
-                self.log_signal.emit(self.title+': '+txt)
+                self.log_signal.emit(txt)
         except Exception as e:
             pass
 
@@ -535,7 +535,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),log_type="log")
+            self.update_status(getLineInfo()+ str(e),log_type="log")
 
     ##def check_out_bounds(self,position):
     ##    """
@@ -580,7 +580,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),log_type="log")
+            self.update_status(getLineInfo()+ str(e),log_type="log")
 
     def move_Home(self):
         """
@@ -599,7 +599,7 @@ class DAQ_Move(Ui_Form,QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),log_type="log")
+            self.update_status(getLineInfo()+ str(e),log_type="log")
 
     def get_position(self):
         """
@@ -613,7 +613,7 @@ class DAQ_Move(Ui_Form,QObject):
             self.command_stage.emit(ThreadCommand(command="check_position"))
 
         except Exception as e:
-            self.update_status(str(e),log_type="log")
+            self.update_status(getLineInfo()+ str(e),log_type="log")
 
     def stop_Motion(self):
         """
@@ -626,7 +626,7 @@ class DAQ_Move(Ui_Form,QObject):
         try:
             self.command_stage.emit(ThreadCommand(command="stop_Motion"))
         except Exception as e:
-            self.update_status(str(e),log_type="log")
+            self.update_status(getLineInfo()+ str(e),log_type="log")
 
     @pyqtSlot()
     def raise_timeout(self):

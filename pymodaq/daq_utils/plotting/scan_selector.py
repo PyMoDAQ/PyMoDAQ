@@ -55,7 +55,7 @@ class ScanSelector(QObject):
             ]},
         ]
 
-    def __init__(self, viewer_items, scan_type='Scan2D', positions=[]):
+    def __init__(self, viewer_items =[], scan_type='Scan2D', positions=[]):
         """
 
         Parameters
@@ -71,13 +71,19 @@ class ScanSelector(QObject):
         super(ScanSelector, self).__init__()
         self._viewers_items = viewer_items
         self.sources_names = list(viewer_items.keys())
-        self.scan_selector_source = viewer_items[self.sources_names[0]]['viewers'][0]
+        if len(viewer_items) != 0:
+            self.scan_selector_source = viewer_items[self.sources_names[0]]['viewers'][0]
+        else:
+            self.scan_selector_source = None
         self.scan_selector = None
         self.setupUI()
         self.settings.child('scan_options', 'scan_type').setValue(scan_type)
 
         self.remove_scan_selector()
-        if len(viewer_items[self.sources_names[0]]['viewers']) == 1:
+        if self.scan_selector_source is not None:
+            if len(viewer_items[self.sources_names[0]]['viewers']) == 1:
+                self.settings.child('scan_options', 'viewers').hide()
+        else:
             self.settings.child('scan_options', 'viewers').hide()
         self.update_scan_area_type()
 
@@ -92,7 +98,7 @@ class ScanSelector(QObject):
         return self._viewers_items
 
     @viewers_items.setter
-    def viewers_items(self,items):
+    def viewers_items(self, items):
         self._viewers_items = items
         self.sources_names = list(items.keys())
         self.scan_selector_source = items[self.sources_names[0]]['viewers'][0]
@@ -121,7 +127,10 @@ class ScanSelector(QObject):
         self.settings_tree.setParameters(self.settings, showTop=False)
 
         self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
-        viewer_names = self._viewers_items[self.sources_names[0]]['names']
+        if len(self.viewers_items):
+            viewer_names = self._viewers_items[self.sources_names[0]]['names']
+        else:
+            viewer_names = []
         self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
 
         self.settings.sigTreeStateChanged.connect(self.source_changed)
@@ -179,6 +188,7 @@ class ScanSelector(QObject):
 
     pyqtSlot(str)
     def update_scan_area_type(self):
+
         if self.settings.child('scan_options', 'scan_type').value() == 'Scan1D':
             scan_area_type = 'PolyLines'
         else:
@@ -191,28 +201,30 @@ class ScanSelector(QObject):
 
         elif scan_area_type == 'PolyLines':
             self.scan_selector = PolyLineROI_custom([(0, 0), [10, 10]])
+        if self.scan_selector_source is not None:
+            self.scan_selector.sigRegionChangeFinished.connect(self.update_scan)
+            self.scan_selector_source.image_widget.plotitem.addItem(self.scan_selector)
+            self.show_scan_selector()
 
-        self.scan_selector.sigRegionChangeFinished.connect(self.update_scan)
-        self.scan_selector_source.image_widget.plotitem.addItem(self.scan_selector)
-        self.show_scan_selector()
+            self.scan_selector.sigRegionChangeFinished.emit(self.scan_selector)
 
-        self.scan_selector.sigRegionChangeFinished.emit(self.scan_selector)
 
     def show_scan_selector(self,visible=True):
         self.scan_selector.setVisible(visible)
 
     def update_scan(self, roi):
-        if isinstance(roi, RectROI):
-            self.settings.child('scan_area', 'ROIselect', 'x0').setValue(roi.pos().x())
-            self.settings.child('scan_area', 'ROIselect', 'y0').setValue(roi.pos().y())
-            self.settings.child('scan_area', 'ROIselect', 'width').setValue(roi.size().x())
-            self.settings.child('scan_area', 'ROIselect', 'height').setValue(roi.size().y())
-        elif isinstance(roi, PolyLineROI_custom):
-            self.settings.child('scan_area', 'coordinates').setValue(dict(all_items=['({:.03f} , {:.03f})'.format(pt.x(),
-                            pt.y()) for pt in roi.get_vertex(self.scan_selector_source.ui.img_red)],selected=[]))
+        if self.scan_selector_source is not None:
+            if isinstance(roi, RectROI):
+                self.settings.child('scan_area', 'ROIselect', 'x0').setValue(roi.pos().x())
+                self.settings.child('scan_area', 'ROIselect', 'y0').setValue(roi.pos().y())
+                self.settings.child('scan_area', 'ROIselect', 'width').setValue(roi.size().x())
+                self.settings.child('scan_area', 'ROIselect', 'height').setValue(roi.size().y())
+            elif isinstance(roi, PolyLineROI_custom):
+                self.settings.child('scan_area', 'coordinates').setValue(dict(all_items=['({:.03f} , {:.03f})'.format(pt.x(),
+                                pt.y()) for pt in roi.get_vertex(self.scan_selector_source.ui.img_red)],selected=[]))
 
 
-        self.scan_select_signal.emit(roi)
+            self.scan_select_signal.emit(roi)
 
 if __name__ == '__main__':
     class UI():

@@ -14,9 +14,25 @@ import enum
 import os
 import re
 import importlib
+import inspect
 
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+
+def getLineInfo():
+    return "in {:s}, method: {:s}, line: {:d}: ".format(os.path.split(inspect.stack()[1][1])[1], inspect.stack()[1][3], inspect.stack()[1][2])
+
+class ScanParameters(object):
+    def __init__(self, Nsteps=None,axis_1_indexes=None,axis_2_indexes=None,axis_1_unique=None,axis_2_unique=None,
+                 positions=None):
+        super(ScanParameters, self).__init__()
+        self.positions = positions
+        self.axis_2D_1 = axis_1_unique
+        self.axis_2D_2 = axis_2_unique
+        self.axis_2D_1_indexes = axis_1_indexes
+        self.axis_2D_2_indexes = axis_2_indexes
+        self.Nsteps = Nsteps
+
 
 
 class DockArea(dockarea.DockArea, QObject):
@@ -465,7 +481,7 @@ def set_scan_spiral(start_axis1,start_axis2,rmax,rstep):
         Examples
         --------
 
-            >>> import DAQ_utils as Du
+            >>> import daq_utils as Du
             >>> start_axis1,start_axis2=1,1
             >>> rmax=2
             >>> rstep=1
@@ -538,7 +554,7 @@ def set_scan_spiral(start_axis1,start_axis2,rmax,rstep):
 
 
     Nsteps=len(positions)
-    return Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions
+    return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,positions)
 
 def linspace_step(start,stop,step):
     """
@@ -667,25 +683,25 @@ def set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
 
 
     Nsteps=len(positions)
-    return Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions
+    return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,positions)
 
 
 def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2):
-    Nsteps, axis_1_indexes, axis_2_indexes, axis_1_unique, axis_2_unique, axis_1, axis_2, positions = set_scan_linear(
-        start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
+    scan_parameters = set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
 
-    positions_shuffled=positions[:]
+    positions_shuffled=scan_parameters.positions[:]
     np.random.shuffle(positions_shuffled)
     axis_1_indexes=[]
     axis_2_indexes=[]
 
     for pos in positions_shuffled:
-        axis_1_indexes.append(np.where(axis_1_unique==pos[0])[0][0])
-        axis_2_indexes.append(np.where(axis_2_unique==pos[1])[0][0])
+        axis_1_indexes.append(np.where(scan_parameters.axis_2D_1==pos[0])[0][0])
+        axis_2_indexes.append(np.where(scan_parameters.axis_2D_2==pos[1])[0][0])
 
 
-    Nsteps = len(positions)
-    return Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,axis_1,axis_2,positions_shuffled
+    Nsteps = len(scan_parameters.positions)
+    return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,scan_parameters.axis_2D_1,scan_parameters.axis_2D_2,
+                          positions_shuffled)
 
 def set_param_from_param(param_old,param_new):
     """
@@ -905,7 +921,7 @@ def select_file(start_path=None,save=True, ext=None):
         fname=QtWidgets.QFileDialog.getOpenFileName(None, 'Select a file name',start_path,filter)
 
     fname=fname[0]
-    if fname == '': #execute if the user didn't cancel the file selection
+    if fname != '': #execute if the user didn't cancel the file selection
         fname=Path(fname)
         if save:
             parent=fname.parent

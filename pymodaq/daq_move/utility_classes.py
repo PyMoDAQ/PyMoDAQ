@@ -223,7 +223,7 @@ class DAQ_Move_base(QObject):
             elif change == 'parent':
                 pass
 
-    def set_position_with_scaling(self,pos):
+    def set_position_with_scaling(self, pos):
         """
             Set the current position from the parameter and hardware with scaling conversion.
 
@@ -237,8 +237,16 @@ class DAQ_Move_base(QObject):
             float
                 the computed position.
         """
-        if self.settings.child('scaling','use_scaling').value():
-            pos=pos/self.settings.child('scaling','scaling').value()+self.settings.child('scaling','offset').value()
+        if self.settings.child('scaling', 'use_scaling').value():
+            pos=pos/self.settings.child('scaling', 'scaling').value()+self.settings.child('scaling', 'offset').value()
+        return pos
+
+    def set_position_relative_with_scaling(self, pos):
+        """
+            Set the scaled positions in case of relative moves
+        """
+        if self.settings.child('scaling', 'use_scaling').value():
+            pos = pos/self.settings.child('scaling', 'scaling').value()
         return pos
 
     @pyqtSlot(edict)

@@ -123,6 +123,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
         self.detector.settings.child('main_settings', 'wait_time').setValue(100)
         QtWidgets.QApplication.processEvents()
         QThread.msleep(1000)
+        self.detector.grab_done_signal.connect(self.data_done)
 
         #############################
         #create a dock for a DAQ_Move
@@ -148,6 +149,11 @@ class CustomApp(QtWidgets.QWidget, QObject):
         self.toolbar = QtWidgets.QToolBar()
         self.create_toolbar()
         self.mainwindow.addToolBar(self.toolbar)
+
+    @pyqtSlot(OrderedDict)
+    def data_done(self,data):
+        print(data)
+
 
     @pyqtSlot(QRectF)
     def update_weighted_settings(self, rect):

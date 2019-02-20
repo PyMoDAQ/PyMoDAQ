@@ -5,7 +5,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file
+from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo
 
 import sys
 import tables
@@ -44,6 +44,22 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
         self.ui.h5file_tree.ui.Open_Tree.click()
 
+    def export_data(self):
+        try:
+            item = self.ui.h5file_tree.ui.Tree.currentItem()
+            self.current_node_path = item.text(2)
+            node = self.h5file.get_node(item.text(2))
+            if 'ARRAY' in node._v_attrs['CLASS']:
+                data = node.read()
+                if isinstance(data, np.ndarray):
+                    file = select_file(save=True, ext='txt')
+                    if file != '':
+                        np.savetxt(file, data, '%.6e', '\t')
+
+
+
+        except Exception as e:
+            self.status_signal.emit(getLineInfo() + str(e))
     def set_GUI(self):
 
         layout=QtWidgets.QGridLayout()
@@ -58,6 +74,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.ui.h5file_tree.ui.Tree.setMinimumWidth(300)
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
+
+        self.export_action = QtWidgets.QAction("Export data as *.txt file")
+        self.export_action.triggered.connect(self.export_data)
+        self.ui.h5file_tree.ui.Tree.addAction(self.export_action)
+
         V_splitter.addWidget(Form)
         self.ui.attributes_table=custom_tree.Table_custom()
         V_splitter.addWidget(self.ui.attributes_table)
@@ -126,7 +147,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
                 self.show_pixmaps(pixmaps)
 
         except Exception as e:
-            self.status_signal.emit(str(e))
+            self.status_signal.emit(getLineInfo()+str(e))
 
     def show_pixmaps(self,pixmaps=[]):
         if self.pixmap_widget.layout() is None:
@@ -208,7 +229,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
             
 
         except Exception as e:
-            self.status_signal.emit(str(e))
+            self.status_signal.emit(getLineInfo()+str(e))
 
     def populate_tree(self):
         """
@@ -228,7 +249,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
                 
         except Exception as e:
-            self.status_signal.emit(str(e))
+            self.status_signal.emit(getLineInfo()+str(e))
 
     def add_widget_totree(self,pixmap_items):
         

@@ -110,7 +110,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     dimension+=str(ax)+')'
             return dimension
         except Exception as e:
-            self.update_status(str(e), self.wait_time)
+            self.update_status(utils.getLineInfo()+str(e), self.wait_time)
             return ""
 
 
@@ -153,7 +153,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),self.wait_time,'log')
+            self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
 
     def set_axis(self,Npts):
         """
@@ -178,6 +178,25 @@ class ViewerND(QtWidgets.QWidget, QObject):
         """
         """
         try:
+
+            if len(self.axes_nav)==1:#1D Navigator
+                if 'nav_x_axis' in kwargs:
+                    self.nav_x_axis = kwargs['nav_x_axis']
+                else:
+                    self.nav_x_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
+
+                self.nav_y_axis=[0]
+            elif len(self.axes_nav)==2:#2D Navigator:
+                if 'nav_x_axis' in kwargs:
+                    self.nav_x_axis = kwargs['nav_x_axis']
+                else:
+                    self.nav_x_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
+                if 'nav_y_axis' in kwargs:
+                    self.nav_y_axis = kwargs['nav_y_axis']
+                else:
+                    self.nav_y_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[1])
+
+
             ##########################################################################
             #display the correct signal viewer
             if len(datas_transposed.axes_manager.signal_shape)==0: #signal data are 0D
@@ -243,12 +262,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.ui.navigator1D.parent.setVisible(True)
                 self.ui.navigator2D.parent.setVisible(False)
                 self.navigator_label.setVisible(True)
-                if 'nav_x_axis' in kwargs:
-                    self.nav_x_axis = kwargs['nav_x_axis']
-                else:
-                    self.nav_x_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
-
-                self.nav_y_axis=[0]
                 self.ui.navigator1D.remove_plots()
                 self.ui.navigator1D.x_axis=self.nav_x_axis
 
@@ -280,15 +293,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.ui.navigator1D.parent.setVisible(False)
                 self.ui.navigator2D.parent.setVisible(True)
                 self.navigator_label.setVisible(True)
-                if 'nav_x_axis' in kwargs:
-                    self.nav_x_axis = kwargs['nav_x_axis']
-                else:
-                    self.nav_x_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
-                if 'nav_y_axis' in kwargs:
-                    self.nav_y_axis = kwargs['nav_y_axis']
-                else:
-                    self.nav_y_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[1])
-
                 self.ui.navigator2D.x_axis = self.nav_x_axis
                 self.ui.navigator2D.y_axis = self.nav_y_axis
 
@@ -322,7 +326,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),self.wait_time,'log')
+            self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
 
     def set_data_test(self,data_shape='3D'):
 
@@ -506,7 +510,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             self.set_data(self.datas,temp_data=temp_data,**kwargs)
 
         except Exception as e:
-            self.update_status(str(e),self.wait_time,'log')
+            self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
 
 
     def signal_axes_selection(self):
@@ -535,7 +539,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 
         except Exception as e:
-            self.update_status(str(e),self.wait_time,'log')
+            self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
 
     def update_Navigator(self):
         ##self.update_data_signal()
@@ -605,7 +609,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.ui.viewer2D.y_axis = self.y_axis
                 self.ui.viewer2D.setImage(data)
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time)
+            self.update_status(utils.getLineInfo()+str(e),wait_time=self.wait_time)
 
 
 
