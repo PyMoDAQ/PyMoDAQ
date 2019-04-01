@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Changelog &mdash; PyMoDAQ 1.3 documentation</title>
+  <title>Changelog &mdash; PyMoDAQ 1.4 documentation</title>
   
 
   
@@ -62,7 +62,7 @@
             
             
               <div class="version">
-                1.3
+                1.4
               </div>
             
           
@@ -161,6 +161,18 @@
             
   <div class="section" id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="Next feature release">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next feature release</a></h2><ul class="simple">
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> module scanner (daq_utils.scanner) has been created. Deals with lines or area selections within any viewer2D modules. Used for DAQ_Scan
+and some others plugins (for area selection if needed). Most of the scan type settings (of daq_scan) have been moved to scanner
+that is now a subobject of daq_scan</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> h5_browser: a right click on tree items shows a context menu. so far possibility to export current item (data)
+in ascii text file (%.6e precision format).</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> all modules: debug info contains now name of package, method and script line where the error has been generated</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Move_plugins: added the method <em>set_position_relative_with_scaling</em> to have correct steps in relative motion
+when scaling options are set</li>
+</ul>
+</div>
 <div class="section" id="Next bugfix release">
 <h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next bugfix release</a></h2><ul class="simple">
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> DAQ_Scan: there was an error during the saving steps at the end of a scan preventing the h5file to flush properly</li>

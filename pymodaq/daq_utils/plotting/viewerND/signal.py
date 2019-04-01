@@ -10,6 +10,7 @@ import collections
 import copy
 
 import math
+from pymodaq.daq_utils import daq_utils as utils
 #%%
 def generate_axis(offset, scale, size, offset_index=0):
     """Creates an axis given the offset, scale and number of channels
@@ -802,6 +803,36 @@ class Signal(FancySlicing):
             axis = self.axes_manager.navigation_axes
         return self._apply_function_on_data_and_remove_axis(np.sum, axis,
                                                             out=out)
+
+    def halflife(self, axis=None, out=None):
+        if axis is None:
+            axis = self.axes_manager.navigation_axes
+        return self._apply_function_on_data_and_remove_axis(self._halflife_fun, axis,
+                                                            out=out)
+
+    def _halflife_fun(self, sub_data, axis=None):
+        try:
+
+            indexes = [s for s in range(len(sub_data.shape)) if s not in [axis]]
+            out_shape = tuple(np.array((sub_data.shape))[indexes])
+            time = np.zeros((np.prod(out_shape)))
+            data_reshaped = sub_data.reshape((np.prod(out_shape), sub_data.shape[axis]))
+            for ind_dat in range(np.prod(out_shape)):
+                dat = data_reshaped[ind_dat, :]
+                ind_x0 = utils.find_index(dat, np.max(dat))[0][0]
+                sub_xaxis = np.linspace(0, len(dat), len(dat), endpoint=False)
+                x0 = sub_xaxis[ind_x0]
+                sub_xaxis = sub_xaxis[ind_x0:]
+
+                dat_clipped = dat[ind_x0:]
+                offset = dat_clipped[-1]
+                N0 = np.max(dat_clipped) - offset
+                thalf = sub_xaxis[utils.find_index(dat - offset, 0.5 * N0)[0][0]] - x0
+                time[ind_dat] = thalf
+            return time.reshape(out_shape)
+        except Exception as e:
+            return time.reshape(out_shape)
+
 
     def max(self, axis=None, out=None):
         """Returns a signal with the maximum of the signal along at least one

@@ -15,16 +15,62 @@ import os
 import re
 import importlib
 import inspect
-
+from numba import jit
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+
+
+def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny = 1, Ntime = 512, ind_line_offset = 0,
+                                    channel = 0):
+    """
+    Extract histograms from photon tags and attributes them in the given pixel of the FLIM
+    The marker is used to check where a new line within the image starts
+    Parameters
+    ----------
+    nanotimes: (ndarray of uint16) photon arrival times (in timeharp units)
+    markers: (ndarray of uint8) markers: 0 means the corresponding nanotime is a photon on detector 0,
+                                         1 means the corresponding nanotime is a photon on detector 1,
+                                         65 => Marker 1 event
+                                         66 => Marker 2 event
+                                         ...
+                                         79 => Marker 15 event
+                                         127 =>overflow
+    marker: (int) the marker value corresponding to a new Y line within the image (for instance 65)
+    Nx: (int) the number of pixels along the xaxis
+    Ny: (int) the number of pixels along the yaxis
+    Ntime: (int) the number of pixels alond the time axis
+    ind_line_offset: (int) the offset of previously read lines
+    channel: (int) marker of the specific channel (0 or 1) for channel 1 or 2
+
+    Returns
+    -------
+    ndarray: FLIM hypertemporal image in the order (X, Y, time)
+    """
+    bins = np.linspace(0, Ntime, Ntime + 1, dtype=np.uint32)
+    nanotimes = nanotimes[np.logical_or(markers == marker, markers == channel)]
+    markers = markers[np.logical_or(markers == marker, markers == channel)]
+    indexes_new_line = np.squeeze(np.argwhere(markers == marker)).astype(np.uint64)
+    datas = np.zeros((Nx, Ny, Ntime), dtype=np.int64)
+
+    if indexes_new_line.size == 0:
+        indexes_new_line = np.array([0, nanotimes.size], dtype=np.uint64)
+    # print(indexes_new_line)
+    for ind_line in range(indexes_new_line.size - 1):
+        # print(ind_line)
+        data_line_tmp = nanotimes[int(indexes_new_line[ind_line] + 1):indexes_new_line[ind_line + 1]]
+        ix = np.int((ind_line + ind_line_offset) % Nx)
+        iy = np.int(((ind_line + ind_line_offset) // Nx) % Ny)
+        datas[ix, iy, :] += np.histogram(data_line_tmp, bins, range=None)[0]
+
+    return datas
+
 
 def getLineInfo():
     return "in {:s}, method: {:s}, line: {:d}: ".format(os.path.split(inspect.stack()[1][1])[1], inspect.stack()[1][3], inspect.stack()[1][2])
 
 class ScanParameters(object):
-    def __init__(self, Nsteps=None,axis_1_indexes=None,axis_2_indexes=None,axis_1_unique=None,axis_2_unique=None,
-                 positions=None):
+    def __init__(self, Nsteps=0,axis_1_indexes=[],axis_2_indexes=[],axis_1_unique=[],axis_2_unique=[],
+                 positions=[]):
         super(ScanParameters, self).__init__()
         self.positions = positions
         self.axis_2D_1 = axis_1_unique
@@ -33,7 +79,8 @@ class ScanParameters(object):
         self.axis_2D_2_indexes = axis_2_indexes
         self.Nsteps = Nsteps
 
-
+    def __repr__(self):
+        return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1), len(self.axis_2D_2))
 
 class DockArea(dockarea.DockArea, QObject):
     dock_signal = pyqtSignal()

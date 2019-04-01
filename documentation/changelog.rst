@@ -3,6 +3,7 @@
 =========
 Changelog
 =========
+
 * :feature:`0` DAQ_Move_plugins: added the method *set_position_relative_with_scaling* to have correct steps in relative motion
   when scaling options are set
 * :feature:`0` all modules: debug info contains now name of package, method and script line where the error has been generated

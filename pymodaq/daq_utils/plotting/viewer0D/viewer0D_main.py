@@ -86,10 +86,11 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         try:
             self.data_to_export = OrderedDict(data0D=OrderedDict(),data1D=None,data2D=None)
             if self.plot_channels==None or len(self.plot_channels) != len(datas):
-                if self.plot_channels!=None:
-                    if len(self.plot_channels) != len(datas):
-                        for channel in self.plot_channels:
-                            self.ui.Graph1D.removeItem(channel)
+                # if self.plot_channels!=None:
+                #     if len(self.plot_channels) != len(datas):
+                #         for channel in self.plot_channels:
+                #             self.ui.Graph1D.removeItem(channel)
+                self.update_channels()
 
                 if self.labels == [] or len(self.labels) != len(datas):
                     self._labels = ["CH{}".format(ind) for ind in range(len(datas))]
@@ -102,10 +103,12 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 for ind in range(len(datas)):
                     self.datas.append(np.array([]))
                     #channel=self.ui.Graph1D.plot(np.array([]))
-                    channel=self.ui.Graph1D.plot(y=np.array([]), name=self._labels[ind])
+                    #channel=self.ui.Graph1D.plot(y=np.array([]), name=self._labels[ind])
+                    channel = self.ui.Graph1D.plot(y=np.array([]))
                     channel.setPen(self.plot_colors[ind])
                     #self.legend.addItem(channel,"CH{}".format(ind))
                     self.plot_channels.append(channel)
+                self.update_labels(self._labels)
 
             for ind, data in enumerate(datas):
                 self.list_items[ind].setText('{:.06e}'.format(data[0]))
@@ -125,13 +128,6 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         to plot temporary data, for instance when all pixels are not yet populated...
         """
         pass
-
-    def update_channels(self):
-        if self.plot_channels!=None:
-            for ind,item in enumerate(self.plot_channels):
-                self.legend.removeItem(item.name())
-                self.ui.Graph1D.removeItem(item)
-            self.plot_channels=None
 
     def update_Graph1D(self,datas):
         try:
@@ -160,14 +156,26 @@ class Viewer0D(QtWidgets.QWidget,QObject):
 
         except Exception as e:
             self.update_status(str(e),self.wait_time)
-        
+
+    def update_channels(self):
+        if self.plot_channels!=None:
+            for ind,item in enumerate(self.plot_channels):
+                self.legend.removeItem(item.name())
+                self.ui.Graph1D.removeItem(item)
+            self.plot_channels=None
+
     def update_labels(self, labels):
         try:
-             if len(labels) == len(self.plot_channels):
+            items = [item[1].text for item in self.legend.items]
+            for item in items:
+                self.legend.removeItem(item)
+
+            if len(labels) == len(self.plot_channels):
                 for ind, channel in enumerate(self.plot_channels):
-                    channel.opts['name'] = labels[ind]
+                    self.legend.addItem(channel, self._labels[ind])
         except:
             self.update_status('plot channels not yet declared', wait_time=self.wait_time)
+
 
     def update_status(self,txt,wait_time=0):
         self.ui.statusbar.showMessage(txt,wait_time)

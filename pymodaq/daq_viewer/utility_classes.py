@@ -11,7 +11,7 @@ import socket, select
 import numpy as np
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
 from collections import OrderedDict
-from pymodaq.daq_utils.daq_utils import ThreadCommand
+from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters
 
 comon_parameters=[{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
 
@@ -36,16 +36,20 @@ class DAQ_Viewer_base(QObject):
     data_grabed_signal=pyqtSignal(list)
     data_grabed_signal_temp=pyqtSignal(list)
 
-    params= []
+    params = []
     def __init__(self,parent=None,params_state=None): 
-        super(DAQ_Viewer_base,self).__init__()
-        self.parent_parameters_path=[] #this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
-        self.settings=Parameter.create(name='Settings', type='group', children=self.params) 
+        super(DAQ_Viewer_base, self).__init__()
+        self.parent_parameters_path = [] #this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
-            self.settings.restoreState(params_state) 
+            if isinstance(params_state, dict):
+                self.settings.restoreState(params_state)
+            elif isinstance(params_state, Parameter):
+                self.settings.restoreState(params_state.saveState())
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
-        self.parent=parent
-        self.status=edict(info="",controller=None,initialized=False)
+        self.parent = parent
+        self.status = edict(info="",controller=None,initialized=False)
+        self.scan_parameters = None
 
     def emit_status(self,status):
         """
@@ -62,8 +66,12 @@ class DAQ_Viewer_base(QObject):
         else:
             print(*status)
 
+    @pyqtSlot(ScanParameters)
+    def update_scanner(self, scan_parameters):
+        self.scan_parameters = scan_parameters
+
     @pyqtSlot(edict)
-    def update_settings(self,settings_parameter_dict):
+    def update_settings(self, settings_parameter_dict):
         """
             Update the settings tree from settings_parameter_dict.
             Finally do a commit to activate changes.
@@ -526,7 +534,7 @@ class DAQ_TCP_server(DAQ_Viewer_base):
                     data=self.data_mock
 
                 if command_sock is None:
-                    self.data_grabed_signal.emit([data]) #to be directly send to a viewer
+                    self.data_grabed_signal.emit([OrderedDict(data=[data],name='TCP GRABBER', type='Data2D')]) #to be directly send to a viewer
                     #print(data)
                 else:
                     self.send_data(command_sock,data) #to be send to a client

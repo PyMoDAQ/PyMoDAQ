@@ -12,8 +12,14 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph import HistogramLUTWidget
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.h5browser import browse_data
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D, ImageItem, ImageWidget
+from pymodaq.daq_utils.plotting.viewer2D.viewer2d_basic import Viewer2DBasic, ImageItem
 from pymodaq.daq_utils import daq_utils as utils
+
+from pymodaq.daq_utils.daq_utils import get_set_local_dir
+local_path = get_set_local_dir()
+navigator_path= os.path.join(local_path, 'navigator_temp_files')
+if not os.path.isdir(navigator_path):
+    os.makedirs(navigator_path)
 
 Ntick = 128
 colors_red =np.array([(int(r),0,0) for r in np.linspace(0,255,Ntick)])
@@ -34,7 +40,8 @@ class Navigator(QObject):
         self.status_time = 1000
         self.x_range = []
         self.y_range = []
-
+        self.filters = tables.Filters(complevel=5)
+        self.next_scan_index = 0
         self.viewer = None
         self.overlays=[]#%list of imageItem items displaying 2D scans info
         self.h5file_path = None
@@ -73,10 +80,44 @@ class Navigator(QObject):
         self.moveat_action.setCheckable(True)
         self.toolbar.addAction(self.moveat_action)
 
-    @pyqtSlot(float,float)
-    def double_clicked(self,posx,posy):
-        if self.moveat_action.isChecked():
-            self.sig_double_clicked.emit(posx,posy)
+        icon_sel_all = QtGui.QIcon()
+        icon_sel_all.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/select_all2.png"), QtGui.QIcon.Normal,
+                           QtGui.QIcon.Off)
+        self.sel_all_action = QtWidgets.QAction(icon_sel_all, "Select (show) all 2D scans on the viewer", None)
+        self.toolbar.addAction(self.sel_all_action)
+        self.sel_all_action.triggered.connect(self.show_all)
+
+        icon_sel_none = QtGui.QIcon()
+        icon_sel_none.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/select_none.png"), QtGui.QIcon.Normal,
+                           QtGui.QIcon.Off)
+        self.sel_none_action = QtWidgets.QAction(icon_sel_none, "Unselect (hide) all 2D scans on the viewer", None)
+        self.toolbar.addAction(self.sel_none_action)
+        self.sel_none_action.triggered.connect(self.show_none)
+
+        icon_histo = QtGui.QIcon()
+        icon_histo.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Histogram.png"), QtGui.QIcon.Normal,
+                           QtGui.QIcon.Off)
+        self.histo_action = QtWidgets.QAction(icon_histo, "Show (hide) histograms", None)
+        self.toolbar.addAction(self.histo_action)
+        self.histo_action.setCheckable(True)
+        self.histo_action.triggered.connect(self.show_histo)
+
+    def show_histo(self):
+        show_state = self.histo_action.isChecked()
+        self.viewer.histo_widget.setVisible(show_state)
+
+    def show_all(self):
+        self.show_scans()
+
+    def show_none(self):
+        self.show_scans(False)
+
+    def show_scans(self, show=True):
+        for child in self.settings.child('scans'):
+            val = child.value()
+            val['checked'] = show
+            child.setValue(val)
+            child.sigValueChanged.emit(child, val)
 
 
     def list_2Dscans(self):
@@ -98,14 +139,16 @@ class Navigator(QObject):
                 child.sigValueChanged.emit(child, child.value())
 
         except Exception as e:
-            self.update_status(str(e),status_time=self.status_time,log_type='log')
+            self.update_status(utils.getLineInfo()+str(e),status_time=self.status_time,log_type='log')
 
     def load_image(self):
-        image_filepath = str(utils.select_file(start_path=None, save=False, ext='h5'))
-        if image_filepath != '.':
-            self.h5file_image = tables.open_file(image_filepath)
-            pixmaps = utils.get_h5file_scans(self.h5file_image)
-            self.settings.child('settings', 'imagepath').setValue(image_filepath)
+        #image_filepath = str(utils.select_file(start_path=None, save=False, ext='h5'))
+        data, fname, node_path = browse_data(ret_all=True)
+        if data is not None:
+            self.h5file_image = tables.open_file(fname)
+            node = self.h5file_image.get_node(node_path)
+            pixmaps = utils.get_h5file_scans(self.h5file_image, node._v_parent)
+            self.settings.child('settings', 'imagepath').setValue(fname)
             other_child = [child for child in self.settings.child(('scans')).children() if 'Scan' not in child.name()]
             if len(other_child) >= 1:
                 for child in other_child:
@@ -163,10 +206,13 @@ class Navigator(QObject):
                         try:
                             if 'Scan' in param.name():
                                 h5file = self.h5file
+                                nodes = list(h5file.walk_nodes(data['path']))
                             else:
                                 h5file = self.h5file_image
+                                nodes = [h5file.get_node(data['path'])]
                             ind = 0
-                            for node in h5file.walk_nodes(data['path']):
+
+                            for node in nodes:
                                 if 'Scan' in param.name():
                                     if 'data_type' in node._v_attrs and 'scan_type' in node._v_attrs:
                                         flag = node._v_attrs['data_type'] == '0D' and node._v_attrs['scan_type'] == 'Scan2D'
@@ -180,7 +226,10 @@ class Navigator(QObject):
                                     #im.setOpts(axisOrder='row-major')
                                     self.viewer.image_widget.plotitem.addItem(im)
                                     im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-                                    im.setImage(node.read())
+                                    if 'Scan' in param.name():
+                                        im.setImage(node.read())
+                                    else:
+                                        im.setImage(node.read().T)
                                     if 'Scan' in param.name():
                                         x_axis = h5file.get_node(data['path']+'/scan_x_axis_unique').read()
                                         y_axis = h5file.get_node(data['path']+'/scan_y_axis_unique').read()
@@ -194,38 +243,38 @@ class Navigator(QObject):
                                     im.setRect(QtCore.QRectF(np.min(x_axis),np.min(y_axis),np.max(x_axis)-np.min(x_axis)+dx,np.max(y_axis)-np.min(y_axis)+dy))
                                     if ind == 0:
                                         #im.setLookupTable(colors_red)
-                                        self.viewer.ui.histogram_red.setImageItem(im)
-                                        if not self.viewer.ui.histogram_red.isVisible():
-                                            self.viewer.ui.histogram_red.setVisible(True)
+                                        self.viewer.histogram_red.setImageItem(im)
+                                        if not self.viewer.histogram_red.isVisible():
+                                            self.viewer.histogram_red.setVisible(True)
                                     elif ind == 1:
                                         #im.setLookupTable(colors_green)
-                                        self.viewer.ui.histogram_green.setImageItem(im)
-                                        if not self.viewer.ui.histogram_green.isVisible():
-                                            self.viewer.ui.histogram_green.setVisible(True)
+                                        self.viewer.histogram_green.setImageItem(im)
+                                        if not self.viewer.histogram_green.isVisible():
+                                            self.viewer.histogram_green.setVisible(True)
                                     else:
                                         #im.setLookupTable(colors_blue)
-                                        self.viewer.ui.histogram_blue.setImageItem(im)
-                                        if not self.viewer.ui.histogram_blue.isVisible():
-                                            self.viewer.ui.histogram_blue.setVisible(True)
+                                        self.viewer.histogram_blue.setImageItem(im)
+                                        if not self.viewer.histogram_blue.isVisible():
+                                            self.viewer.histogram_blue.setVisible(True)
 
                                     self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(),ind),image=im))
 
                                     ind += 1
                             self.viewer.image_widget.view.autoRange()
                         except  Exception as e:
-                            self.update_status(str(e),status_time=self.status_time,log_type='log')
+                            self.update_status(utils.getLineInfo()+str(e),status_time=self.status_time,log_type='log')
 
                     else:
-                        for im in self.overlays[:]:
-                            if param.name() in im['name']:
-                                ind = self.overlays.index(im)
-                                self.viewer.image_widget.plotitem.removeItem(im['image'])
+                        for overlay in self.overlays[:]:
+                            if param.name() in overlay['name']:
+                                ind = self.overlays.index(overlay)
+                                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
                                 self.overlays.pop(ind)
 
             elif change == 'parent':
                 for overlay in self.overlays[:]:
                     if param.name() in overlay['name']:
-                        ind = self.overlays.index(im)
+                        ind = self.overlays.index(overlay)
                         self.viewer.image_widget.plotitem.removeItem(overlay['image'])
                         self.overlays.pop(ind)
 
@@ -233,8 +282,11 @@ class Navigator(QObject):
     def setupUI(self):
         self.ui = QObject()
         layout =QtWidgets.QVBoxLayout()
-        self.parent.setLayout(layout)
 
+        self.parent.setLayout(layout)
+        sett_widget = QtWidgets.QWidget()
+        self.sett_layout = QtWidgets.QHBoxLayout()
+        sett_widget.setLayout(self.sett_layout)
         # creating a toolbar
         self.toolbar = QtWidgets.QToolBar()
         self.create_toolbar()
@@ -247,10 +299,13 @@ class Navigator(QObject):
 
         #set viewer area
         widg = QtWidgets.QWidget()
-        self.viewer = Viewer2D(widg)
-        self.viewer.ui.widget.setVisible(False)
-        self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=False, ratio=1)
-        self.viewer.ui.widget_histo.setVisible(True)
+        #self.viewer = Viewer2D(widg)
+        self.viewer = Viewer2DBasic(widg)
+        self.viewer.histogram_red.setVisible(False)
+        self.viewer.histogram_green.setVisible(False)
+        self.viewer.histogram_blue.setVisible(False)
+        self.sig_double_clicked = self.viewer.sig_double_clicked
+
         #displaying the scan list tree
         self.settings_tree = ParameterTree()
         #self.settings_tree.setMaximumWidth(300)
@@ -278,12 +333,63 @@ class Navigator(QObject):
         self.ui.log_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.log_message)
 
+        self.sett_layout.addWidget(self.settings_tree)
+        splitter.addWidget(sett_widget)
+        splitter.addWidget(self.viewer.parent)
+
+    def show_image(self,data):
+        """
+
+        Parameters
+        ----------
+        data: (dict) with keys 'names', 'data', 'x_axis', 'y_axis', 'pixmap2D'
+        """
+
+        if self.h5file is None:
+            scan_path, current_filename, dataset_path = utils.set_current_scan_path(navigator_path, base_name='Scan', update_h5=True, next_scan_index=self.next_scan_index,
+                                  create_scan_folder=False)
+            self.h5file = tables.open_file(str(dataset_path.joinpath(dataset_path.name+".h5")),'w')
+            h5group = self.h5file.root
+            data2D_group = self.h5file.create_group(h5group, 'Data2D')
+            data2D_group._v_attrs.type = 'data2D'
+        else:
+            scan_path, current_filename, dataset_path = utils.set_current_scan_path(navigator_path, base_name='Scan',
+                                                                                    update_h5=False, next_scan_index=self.next_scan_index,
+                                                                                    create_scan_folder=False)
+            if not self.h5file.isopen:
+                self.h5file = tables.open_file(str(dataset_path.joinpath(dataset_path.name+".h5")), 'a')
+        self.next_scan_index += 1
+        curr_group = self.h5file.create_group('/Data2D', current_filename)
+        curr_group._v_attrs['pixmap2D'] = data['pixmap2D']
+
+        xarray = self.h5file.create_array(curr_group, "scan_x_axis_unique", obj=data['x_axis'], title=current_filename)
+        xarray.attrs['shape'] = xarray.shape
+        xarray.attrs['type'] = 'signal_axis'
+        xarray.attrs['data_type'] = '1D'
+
+        yarray = self.h5file.create_array(curr_group, "scan_y_axis_unique", obj=data['y_axis'], title=current_filename)
+        yarray.attrs['shape'] = yarray.shape
+        yarray.attrs['type'] = 'signal_axis'
+        yarray.attrs['data_type'] = '1D'
 
 
-        splitter.addWidget(self.settings_tree)
-        splitter.addWidget(widg)
+        for ind_channel, name in enumerate(data['names']):
+            try:
+                channel_group = self.h5file.create_group(curr_group, name)
+                channel_group._v_attrs.Channel_name = name
+                array = self.h5file.create_carray(channel_group, current_filename + '_' + name,
+                                                  obj=data['data'][ind_channel],
+                                                  title='data',
+                                                  filters=self.filters)
+                array.attrs['type'] = 'data'
+                array.attrs['data_type'] = '0D'
+                array.attrs['data_name'] = name
+                array.attrs['shape'] = data['data'][ind_channel].shape
+                array.attrs['scan_type'] = 'Scan2D'
+            except Exception as e:
+                self.update_status(utils.getLineInfo()+str(e), status_time=self.status_time, log_type='log')
 
-
+        self.update_2Dscans()
 
     def update_2Dscans(self):
         try:
@@ -304,11 +410,11 @@ class Navigator(QObject):
                     child.sigValueChanged.emit(child, child.value())
 
         except Exception as e:
-            self.update_status(str(e),status_time=self.status_time,log_type='log')
+            self.update_status(utils.getLineInfo()+str(e),status_time=self.status_time,log_type='log')
 
     def update_h5file(self, h5file):
         self.h5file = h5file
-        self.list_2Dscans()
+        self.update_2Dscans()
 
     def update_status(self,txt,status_time=0,log_type=None):
         """
@@ -327,6 +433,9 @@ class Navigator(QObject):
                 self.log_signal.emit(self.title+': '+txt)
         except Exception as e:
             pass
+
+
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)

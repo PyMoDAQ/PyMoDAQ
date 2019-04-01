@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="Labview_icons">
+    <file>Icon_Library/select_all2.png</file>
+    <file>Icon_Library/select_none.png</file>
     <file>Icon_Library/pad.png</file>
     <file>Icon_Library/scale_vertically.png</file>
     <file>Icon_Library/scale_horizontally.png</file>

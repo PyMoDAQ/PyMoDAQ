@@ -4,8 +4,8 @@ import sys
 import numpy as np
 from collections import OrderedDict
 from pyqtgraph import gaussianFilter, ROI, RectROI, PolyLineROI, Point
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+
+
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree
@@ -16,11 +16,11 @@ class PolyLineROI_custom(PolyLineROI):
     def __init__(self,*args,**kwargs):
         super(PolyLineROI_custom,self).__init__(*args,**kwargs)
 
-    def get_vertex(self, img):
-        return [self.mapToItem(img, h['item'].pos()) for h in self.handles]
+    def get_vertex(self):
+        return [h['item'].pos() for h in self.handles]
 
-    def getArrayIndexes(self, img, spacing=1, **kwds):
-        imgPts = self.get_vertex(img)
+    def getArrayIndexes(self, spacing=1, **kwds):
+        imgPts = self.get_vertex()
         positions=[]
         for i in range(len(imgPts) - 1):
             d = Point(imgPts[i + 1] - imgPts[i])
@@ -28,8 +28,9 @@ class PolyLineROI_custom(PolyLineROI):
             vect=Point(d.norm())
             Npts=0
             while Npts*spacing < d.length():
-                Npts+=1
+
                 positions.append(((o+Npts*spacing*vect).x(),(o+Npts*spacing*vect).y()))
+                Npts+=1
 
         return positions
 
@@ -51,7 +52,7 @@ class ScanSelector(QObject):
                 {'title': 'width:', 'name': 'width', 'type': 'int', 'value': 10, 'min': 1},
                 {'title': 'height:', 'name': 'height', 'type': 'int', 'value': 10, 'min': 1},
             ]},
-            {'title': 'Coordinates:', 'name': 'coordinates', 'type': 'itemselect', 'visible': False},
+            {'title': 'Coordinates:', 'name': 'coordinates', 'type': 'itemselect', 'visible': True},
             ]},
         ]
 
@@ -182,7 +183,7 @@ class ScanSelector(QObject):
     def remove_scan_selector(self):
         if self.scan_selector_source is not None:
             try:
-                self.scan_selector_source.ui.plotitem.removeItem(self.scan_selector)
+                self.scan_selector_source.image_widget.plotitem.removeItem(self.scan_selector)
             except:
                 pass
 
@@ -195,7 +196,7 @@ class ScanSelector(QObject):
             scan_area_type = 'Rect'
 
 
-
+        self.remove_scan_selector()
         if scan_area_type == 'Rect':
             self.scan_selector = RectROI([0,0],[10,10])
 
@@ -221,8 +222,7 @@ class ScanSelector(QObject):
                 self.settings.child('scan_area', 'ROIselect', 'height').setValue(roi.size().y())
             elif isinstance(roi, PolyLineROI_custom):
                 self.settings.child('scan_area', 'coordinates').setValue(dict(all_items=['({:.03f} , {:.03f})'.format(pt.x(),
-                                pt.y()) for pt in roi.get_vertex(self.scan_selector_source.ui.img_red)],selected=[]))
-
+                            pt.y()) for pt in roi.get_vertex()],selected=[]))
 
             self.scan_select_signal.emit(roi)
 
@@ -232,6 +232,7 @@ if __name__ == '__main__':
             pass
 
 
+    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
     class FakeDaqScan():
 
         def __init__(self, area):
@@ -246,7 +247,7 @@ if __name__ == '__main__':
             self.area.addDock(self.dock)
 
     from pymodaq.daq_utils.daq_enums import DAQ_type
-
+    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
 
     app = QtWidgets.QApplication(sys.argv)

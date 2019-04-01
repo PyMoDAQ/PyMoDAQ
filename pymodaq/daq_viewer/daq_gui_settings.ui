@@ -211,6 +211,20 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="navigator_pb">
+              <property name="toolTip">
+               <string>Send current data to navigator</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/Labview_icons/Icon_Library/Select_24.png</normaloff>:/Labview_icons/Icon_Library/Select_24.png</iconset>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -218,7 +232,7 @@
        </item>
        <item>
         <widget class="QWidget" name="settings_widget" native="true">
-         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <layout class="QVBoxLayout" name="settings_layout_2">
           <property name="spacing">
            <number>0</number>
           </property>

@@ -69,30 +69,31 @@ class ViewerND(QtWidgets.QWidget, QObject):
             # exit(0)
 
         if parent is None:
-            parent=QtWidgets.QWidget()
+            parent = QtWidgets.QWidget()
             parent.show()
-        self.parent=parent
+        self.parent = parent
 
-        self.wait_time=2000
-        self.viewer_type='DataND' #☺by default but coul dbe used for 3D visualization
+        self.wait_time = 2000
+        self.viewer_type = 'DataND'  # ☺by default but coul dbe used for 3D visualization
 
-        self.x_axis=None
-        self.y_axis=None
+        self.x_axis = None
+        self.y_axis = None
 
-        self.data_buffer=[] #convenience list to store 0D data to be displayed
-        self.datas=None
-        #set default data shape case
-        self.axes_nav=None
-        self.data_axes=None
-        #self.set_nav_axes(3)
-        self.ui=QObject() #the user interface
+        self.data_buffer = []  # convenience list to store 0D data to be displayed
+        self.datas = None
+        self.datas_settings = None
+        # set default data shape case
+        self.axes_nav = None
+        self.data_axes = None
+        # self.set_nav_axes(3)
+        self.ui = QObject()  # the user interface
         self.set_GUI()
 
 
 
 
     @pyqtSlot(OrderedDict)
-    def export_data(self,datas):
+    def export_data(self, datas):
         self.data_to_export_signal.emit(datas)
 
     def get_data_dimension(self):
@@ -265,14 +266,26 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.ui.navigator1D.remove_plots()
                 self.ui.navigator1D.x_axis=self.nav_x_axis
 
-                if len(datas_transposed.axes_manager.signal_shape)==0: #signal data are 0D
+                if len(datas_transposed.axes_manager.signal_shape) == 0: #signal data are 0D
                     navigator_data=[datas_transposed.data]
 
-                elif len(datas_transposed.axes_manager.signal_shape)==1:#signal data are 1D
+                elif len(datas_transposed.axes_manager.signal_shape) == 1:#signal data are 1D
                     if ROI_bounds_1D!=[]:
-                        navigator_data=[datas_transposed.isig[pt.x():pt.y()+1].sum((-1)).data for pt in ROI_bounds_1D]
+                        if self.ui.combomath.currentText() == 'Sum':
+                            navigator_data=[datas_transposed.isig[pt.x():pt.y()+1].sum((-1)).data for pt in ROI_bounds_1D]
+                        elif self.ui.combomath.currentText() == 'Mean':
+                            navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].mean((-1)).data for pt in
+                                              ROI_bounds_1D]
+                        elif self.ui.combomath.currentText() == 'Half-life':
+                            navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].halflife((-1)).data for pt in
+                                              ROI_bounds_1D]
                     else:
-                        navigator_data=[datas_transposed.isig[:].sum((-1)).data]
+                        if self.ui.combomath.currentText() == 'Sum':
+                            navigator_data=[datas_transposed.isig[:].sum((-1)).data]
+                        elif self.ui.combomath.currentText() == 'Mean':
+                            navigator_data = [datas_transposed.isig[:].mean((-1)).data]
+                        elif self.ui.combomath.currentText() == 'Half-life':
+                            navigator_data = [datas_transposed.isig[:].halflife((-1)).data]
 
                 elif len(datas_transposed.axes_manager.signal_shape)==2:#signal data is 2D
                     if ROI_bounds_2D!=[]:
@@ -301,9 +314,21 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
                 elif len(datas_transposed.axes_manager.signal_shape)==1: #signal data is 1D
                     if ROI_bounds_1D!=[]:
-                        navigator_data=[datas_transposed.isig[pt.x():pt.y()+1].sum(-1).data for pt in ROI_bounds_1D]
+                        if self.ui.combomath.currentText() == 'Sum':
+                            navigator_data=[datas_transposed.isig[pt.x():pt.y()+1].sum((-1)).data for pt in ROI_bounds_1D]
+                        elif self.ui.combomath.currentText() == 'Mean':
+                            navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].mean((-1)).data for pt in
+                                              ROI_bounds_1D]
+                        elif self.ui.combomath.currentText() == 'Half-life':
+                            navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].halflife((-1)).data for pt in
+                                              ROI_bounds_1D]
                     else:
-                        navigator_data=[datas_transposed.sum(-1).data]
+                        if self.ui.combomath.currentText() == 'Sum':
+                            navigator_data=[datas_transposed.isig[:].sum((-1)).data]
+                        elif self.ui.combomath.currentText() == 'Mean':
+                            navigator_data = [datas_transposed.isig[:].mean((-1)).data]
+                        elif self.ui.combomath.currentText() == 'Half-life':
+                            navigator_data = [datas_transposed.isig[:].halflife((-1)).data]
 
                 elif len(datas_transposed.axes_manager.signal_shape)==2: #signal data is 2D
                     if ROI_bounds_2D!=[]:
@@ -412,7 +437,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.viewer1D=Viewer1D(viewer1D_widget)
         self.ROI1D = LinearRegionItem()
         self.ui.viewer1D.viewer.plotwidget.plotItem.addItem(self.ROI1D)
-
+        self.ui.combomath = QtWidgets.QComboBox()
+        self.ui.combomath.addItems(['Sum', 'Mean', 'Half-life'])
+        self.ui.viewer1D.ui.horizontalLayout.insertWidget(4, self.ui.combomath)
+        self.ui.combomath.currentIndexChanged.connect(self.update_Navigator)
 
         self.ROI1D.sigRegionChangeFinished.connect(self.update_Navigator)
         #% 2D viewer Dock
@@ -484,30 +512,31 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.viewer2D.parent.setVisible(True)
 
 
-    def show_data_temp(self,datas,nav_axes=None):
+    def show_data_temp(self,datas,nav_axes=None, **kwargs):
         """
         """
-        self.show_data(datas,temp_data=True,nav_axes=nav_axes)
+        self.show_data(datas,temp_data=True,nav_axes=nav_axes, **kwargs)
 
 
     def show_data(self,datas,temp_data=False,nav_axes=None, **kwargs):
         """Display datas as a hyperspaced dataset
         only one numpy ndarray should be used
         """
-        self.data_buffer=[]
+        self.data_buffer = []
         try:
             if self.data_axes is not None:
                 if datas.ndim != len(self.data_axes) or self.axes_nav != nav_axes:
                     self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the preset to nav_axes
             else:
-                self.set_nav_axes(datas.ndim,nav_axes) #init the list of axes and set the preset to nav_axes
+                self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the preset to nav_axes
 
             #self.datas=hs.signals.BaseSignal(datas)
-            self.datas=Signal(datas)
+            self.datas = Signal(datas)
+            self.datas_settings = kwargs
             self.update_data_signal()
 
             self.settings.child('data_shape_settings', 'data_shape').setValue(self.get_data_dimension())
-            self.set_data(self.datas,temp_data=temp_data,**kwargs)
+            self.set_data(self.datas, temp_data=temp_data, **kwargs)
 
         except Exception as e:
             self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
@@ -543,7 +572,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     def update_Navigator(self):
         ##self.update_data_signal()
-        self.set_data(self.datas)
+        self.set_data(self.datas, **self.datas_settings)
 
 
     def update_status(self,txt,wait_time=1000,log=''):

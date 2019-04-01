@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ Scan &mdash; PyMoDAQ 1.3 documentation</title>
+  <title>DAQ Scan &mdash; PyMoDAQ 1.4 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                1.3
+                1.4
               </div>
             
           
@@ -100,6 +100,8 @@
 <li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Scan</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#main-control-window">Main Control Window</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#scan-selector">Scan Selector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#navigator">Navigator</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#preset-manager">Preset manager</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#overshoot-manager">Overshoot manager</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#multiple-hardware-from-one-controller">Multiple hardware from one controller</a></li>
@@ -212,7 +214,7 @@ of each actuator, checking their impact on live data from the detectors. Once al
 an automated scan using the main control window.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id1">
+<div class="figure" id="id3">
 <span id="daq-scan-dashboard"></span><img alt="dashboard" src="../../_images/dashboard.png" />
 <p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">DAQ_Scan dashboard containing all declared modules and log.</span></p>
 </div>
@@ -223,7 +225,7 @@ an automated scan using the main control window.</p>
 dispay live data taken during the scan.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id2">
+<div class="figure" id="id4">
 <span id="daq-scan-main"></span><img alt="daq_scan_main" src="../../_images/main_ui.png" />
 <p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Main DAQ_Scan user interface.</span></p>
 </div>
@@ -245,7 +247,7 @@ of steps for the currently set scan.</li>
 save data and plot live information.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id3">
+<div class="figure" id="id5">
 <span id="list-modules"></span><img alt="list_modules" src="../../_images/list_modules.png" />
 <p class="caption"><span class="caption-number">Fig. 10 </span><span class="caption-text">List of declared modules from a preset</span></p>
 </div>
@@ -264,25 +266,8 @@ rough cadencing if needed</li>
 </ul>
 </li>
 <li><strong>Scan options</strong>:<ul>
-<li><strong>Scan type</strong>: set the type of scan, 1D for a scan as a fucntion of only one actuator, 2D for a
-scan as a function of two actuators. Ohter options to come: <em>batch scan</em> (list of single scans to perform in a row)
-<em>point scan</em> (list of positions to scan from)</li>
+<li><strong>N average</strong>: Select how many set scans to perform. Save all individual scans and its average</li>
 <li><strong>Plot From</strong>: select the detector from which data will be taken in order to plot live data</li>
-<li><strong>Scan 1D settings</strong><ul>
-<li><strong>scan type</strong>: either <em>linear</em> (usual scan) or <em>back to start</em> (the actuator comes back to the initial position
-after each linear step, for a reference measurement for instance). More to come if needed</li>
-<li><strong>Start</strong>: Initial position of the selected actuator (in selected actuator controller unit)</li>
-<li><strong>Stop</strong>: Last position of the scan (in selected actuator controller unit)</li>
-<li><strong>Step</strong>: Step size of the step (in selected actuator controller unit)</li>
-</ul>
-</li>
-<li><strong>Scan 2D settings</strong><ul>
-<li><strong>Scan type</strong>: either <em>linear</em> (scan line by line), <em>linear back and forth</em> (scan line by line
-but in reverse direction each 2 lines) or <em>spiral</em> (start from the center and scan as a spiral)</li>
-<li><strong>Start, Stop, Step</strong>: for each axes (each actuators)</li>
-<li><strong>Rmax, Rstep</strong>: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.</li>
-</ul>
-</li>
 </ul>
 </li>
 <li><strong>Saving options</strong><ul>
@@ -305,6 +290,27 @@ file can be selected here in order to add to it <em>comments</em></li>
 </li>
 </ul>
 </li>
+<li><strong>Scanner Settings</strong>:<ul>
+<li><strong>Scan type</strong>: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
+scan as a function of two actuators. Ohter options to come: <em>batch scan</em> (list of single scans to perform in a row)
+<em>point scan</em> (list of positions to scan from)</li>
+<li><strong>Scan 1D settings</strong><ul>
+<li><strong>scan type</strong>: either <em>linear</em> (usual scan) or <em>back to start</em> (the actuator comes back to the initial position
+after each linear step, for a reference measurement for instance). More to come if needed</li>
+<li><strong>Start</strong>: Initial position of the selected actuator (in selected actuator controller unit)</li>
+<li><strong>Stop</strong>: Last position of the scan (in selected actuator controller unit)</li>
+<li><strong>Step</strong>: Step size of the step (in selected actuator controller unit)</li>
+</ul>
+</li>
+<li><strong>Scan 2D settings</strong><ul>
+<li><strong>Scan type</strong>: either <em>linear</em> (scan line by line), <em>linear back and forth</em> (scan line by line
+but in reverse direction each 2 lines) or <em>spiral</em> (start from the center and scan as a spiral)</li>
+<li><strong>Start, Stop, Step</strong>: for each axes (each actuators)</li>
+<li><strong>Rmax, Rstep</strong>: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.</li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 <div class="section" id="live-data">
@@ -316,7 +322,7 @@ by the setting <strong>plot from</strong> (defining which DAQ_Viewer module expo
 (1 for scan1D and 2 for Scan2D) should not exceed 2.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id4">
+<div class="figure" id="id6">
 <span id="det1d"></span><img alt="1Ddetector" src="../../_images/1Ddetector.png" />
 <p class="caption"><span class="caption-number">Fig. 11 </span><span class="caption-text">An example of a 1D detector having 2 channels. 0D data are generated as well from the integration of channel CH0
 within the red region of interest.</span></p>
@@ -335,13 +341,13 @@ actuator <em>position</em>, see <a class="reference internal" href="#scan1d-1d">
 <div></div></blockquote>
 </li>
 </ul>
-<div class="figure" id="id5">
+<div class="figure" id="id7">
 <span id="scan1d-0d"></span><img alt="scan1D_0D" src="../../_images/scan1D_0D.png" />
 <p class="caption"><span class="caption-number">Fig. 12 </span><span class="caption-text">An example of a detector exporting 0D live data plotted as a function of the actuator <em>position</em></span></p>
 <div class="legend">
 </div>
 </div>
-<div class="figure" id="id6">
+<div class="figure" id="id8">
 <span id="scan1d-1d"></span><img alt="scan1D_1D" src="../../_images/scan1D_1D.png" />
 <p class="caption"><span class="caption-number">Fig. 13 </span><span class="caption-text">An example of a detector exporting 1D live data plotted as a function of the actuator <em>position</em>. Channel
 CH0 is plotted in red while channel CH1 is plotted in green.</span></p>
@@ -357,7 +363,7 @@ values, see <a class="reference internal" href="#scan2d-0d"><span class="std std
 <div></div></blockquote>
 </li>
 </ul>
-<div class="figure" id="id7">
+<div class="figure" id="id9">
 <span id="scan2d-0d"></span><img alt="scan2D_0D" src="../../_images/scan2D_0D.png" />
 <p class="caption"><span class="caption-number">Fig. 14 </span><span class="caption-text">An example of a detector exporting 0D live data plotted as a function of the 2 actuators’s
 <em>position</em>. Integrated region of channel CH0 is plotted in red.</span></p>
@@ -365,6 +371,46 @@ values, see <a class="reference internal" href="#scan2d-0d"><span class="std std
 <p>So at maximum, 2D dimensionality can be represented. In order to see live data from 2D detectors, one
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
 to perform using the ROI features of the data viewers (see <a class="reference internal" href="data_viewers.html#data-viewers"><span class="std std-ref">Data Viewers</span></a>)</p>
+</div>
+</div>
+<div class="section" id="scan-selector">
+<h2>Scan Selector<a class="headerlink" href="#scan-selector" title="Permalink to this headline">¶</a></h2>
+<p>Scans can be specified manually using the <em>Scanner Settings</em> (explained above). However, in the case of a scan using 2
+<em>DAQ_Move</em> modules, it could be more convenient to select an area using a rectangular ROI within a 2D viewer. Various
+such viewers can be used. For instance, the viewer of a camera (if one think of a camera in a microscope to select an
+area to cartography) or even the <em>DAQ_Scan</em> 2D viewer. Sometimes it could also be interesting to do linear sections within
+a 2D phase space (let’s say defined by the ranges of 2 <em>DAQ_Moves</em>). This defines complex 1D scans within a 2D area,
+difficult to set manually. <a class="reference internal" href="#id1"><span class="std std-numref">Fig. 15</span></a> displays such sections within the DAQ_Scan viewer where a previous
+2D scan has been recorded. The user just have to choose the correct <em>selection</em> mode in the
+<em>scanner settings</em>, see <a class="reference internal" href="#scan-selector-settings"><span class="std std-numref">Fig. 16</span></a>, and select on which 2D viewer to display the ROI (<em>From Module</em> option).</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id10">
+<span id="id1"></span><img alt="scan_selector" src="../../_images/scan_selector.png" />
+<p class="caption"><span class="caption-number">Fig. 15 </span><span class="caption-text">An example of 1D complex sections selected within a 2D area</span></p>
+<div class="legend">
+</div>
+</div>
+<div class="figure" id="id11">
+<span id="scan-selector-settings"></span><img alt="scan_selector" src="../../_images/scan_selector_settings.png" />
+<p class="caption"><span class="caption-number">Fig. 16 </span><span class="caption-text">In the scanner settings, the selection entry gives the choice between <em>Manual</em> selection of from <em>PolyLines</em>
+(in the case of 1D scans) or <em>From ROI</em> in the case of 2D scans.</span></p>
+</div>
+</div>
+<div class="section" id="navigator">
+<h2>Navigator<a class="headerlink" href="#navigator" title="Permalink to this headline">¶</a></h2>
+<p>From version 1.4.0, a new module has been added: the Navigator (daq_utils.plotting.navigator). It is most useful when
+dealing with 2D scans such as XY
+cartography. As such, it is not displayed by default. It consists of a tree like structure displaying all
+currently saved 2D scans (in the current dataset) and a viewer where selected scans can be displayed at their respective
+locations. It can be set using the <em>Settings</em> menu, <em>Show Navigator</em> option. <a class="reference internal" href="#id2"><span class="std std-numref">Fig. 17</span></a> shows the DAQ_scan module
+with activated Navigator and a few scans. This navigator can also be used as a <em>ScanSelector</em> viewer to quickly explore
+a 2D area.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id12">
+<span id="id2"></span><img alt="navigator" src="../../_images/navigator.png" />
+<p class="caption"><span class="caption-number">Fig. 17 </span><span class="caption-text">An example of dataset displaying several 2D scans at their respective locations (up and right axis)</span></p>
 </div>
 </div>
 <div class="section" id="preset-manager">

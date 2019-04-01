@@ -2,33 +2,38 @@ import sys
 import os
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QThread
-from pyqtgraph.dockarea import DockArea
+from pymodaq.daq_utils.daq_utils import DockArea
 
 
 def scan():
+    app = QtWidgets.QApplication(sys.argv)
     from pymodaq.daq_scan.daq_scan_main import DAQ_Scan
 
-    app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow()
-    fname = ""
-    win.setVisible(False)
-    splash = QtGui.QPixmap(os.path.join('documentation','splash.png'))
-    splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
+
+    splash_path = os.path.join(os.path.split(__file__)[0],'daq_scan', 'splash.png')
+    splash = QtGui.QPixmap(splash_path)
+    if splash is None:
+        print('no splash')
+    splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+
     splash_sc.show()
+    QtWidgets.QApplication.processEvents()
     splash_sc.raise_()
     splash_sc.showMessage('Loading Main components', color=Qt.white)
     QtWidgets.QApplication.processEvents()
 
+    win = QtWidgets.QMainWindow()
+    win.setVisible(False)
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('pymodaq Scan')
-    win.setVisible(False)
-    prog = DAQ_Scan(area, fname)
-    QThread.sleep(2)
-    splash_sc.finish(win)
-    win.setVisible(True)
 
+    # win.setVisible(False)
+    prog = DAQ_Scan(area)
+    QThread.sleep(0)
+    win.show()
+    splash_sc.finish(win)
     sys.exit(app.exec_())
 
 
@@ -65,3 +70,7 @@ def h5browser():
     prog = H5Browser(win)
     win.show()
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    viewer()

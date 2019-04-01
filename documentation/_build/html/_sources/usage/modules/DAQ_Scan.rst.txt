@@ -107,23 +107,8 @@ save data and plot live information.
 
 * **Scan options**:
 
-  * **Scan type**: set the type of scan, 1D for a scan as a fucntion of only one actuator, 2D for a
-    scan as a function of two actuators. Ohter options to come: *batch scan* (list of single scans to perform in a row)
-    *point scan* (list of positions to scan from)
+  * **N average**: Select how many set scans to perform. Save all individual scans and its average
   * **Plot From**: select the detector from which data will be taken in order to plot live data
-  * **Scan 1D settings**
-
-    * **scan type**: either *linear* (usual scan) or *back to start* (the actuator comes back to the initial position
-      after each linear step, for a reference measurement for instance). More to come if needed
-    * **Start**: Initial position of the selected actuator (in selected actuator controller unit)
-    * **Stop**: Last position of the scan (in selected actuator controller unit)
-    * **Step**: Step size of the step (in selected actuator controller unit)
-  * **Scan 2D settings**
-
-    * **Scan type**: either *linear* (scan line by line), *linear back and forth* (scan line by line
-      but in reverse direction each 2 lines) or *spiral* (start from the center and scan as a spiral)
-    * **Start, Stop, Step**: for each axes (each actuators)
-    * **Rmax, Rstep**: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.
 
 * **Saving options**
 
@@ -142,6 +127,26 @@ save data and plot live information.
 
       * **compression library**: see *pytables* package or *HDF5* documentation for details
       * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
+
+* **Scanner Settings**:
+
+  * **Scan type**: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
+    scan as a function of two actuators. Ohter options to come: *batch scan* (list of single scans to perform in a row)
+    *point scan* (list of positions to scan from)
+
+  * **Scan 1D settings**
+
+    * **scan type**: either *linear* (usual scan) or *back to start* (the actuator comes back to the initial position
+      after each linear step, for a reference measurement for instance). More to come if needed
+    * **Start**: Initial position of the selected actuator (in selected actuator controller unit)
+    * **Stop**: Last position of the scan (in selected actuator controller unit)
+    * **Step**: Step size of the step (in selected actuator controller unit)
+  * **Scan 2D settings**
+
+    * **Scan type**: either *linear* (scan line by line), *linear back and forth* (scan line by line
+      but in reverse direction each 2 lines) or *spiral* (start from the center and scan as a spiral)
+    * **Start, Stop, Step**: for each axes (each actuators)
+    * **Rmax, Rstep**: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.
 
 Live data
 *********
@@ -206,6 +211,56 @@ So at maximum, 2D dimensionality can be represented. In order to see live data f
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
 to perform using the ROI features of the data viewers (see :ref:`data_viewers`)
 
+Scan Selector
+-------------
+
+Scans can be specified manually using the *Scanner Settings* (explained above). However, in the case of a scan using 2
+*DAQ_Move* modules, it could be more convenient to select an area using a rectangular ROI within a 2D viewer. Various
+such viewers can be used. For instance, the viewer of a camera (if one think of a camera in a microscope to select an
+area to cartography) or even the *DAQ_Scan* 2D viewer. Sometimes it could also be interesting to do linear sections within
+a 2D phase space (let's say defined by the ranges of 2 *DAQ_Moves*). This defines complex 1D scans within a 2D area,
+difficult to set manually. :numref:`scan_selector` displays such sections within the DAQ_Scan viewer where a previous
+2D scan has been recorded. The user just have to choose the correct *selection* mode in the
+*scanner settings*, see :numref:`scan_selector_settings`, and select on which 2D viewer to display the ROI (*From Module* option).
+
+
+   .. _scan_selector:
+
+.. figure:: /image/DAQ_Scan/scan_selector.png
+   :alt: scan_selector
+
+   An example of 1D complex sections selected within a 2D area
+
+
+
+   .. _scan_selector_settings:
+
+.. figure:: /image/DAQ_Scan/scan_selector_settings.png
+   :alt: scan_selector
+
+   In the scanner settings, the selection entry gives the choice between *Manual* selection of from *PolyLines*
+   (in the case of 1D scans) or *From ROI* in the case of 2D scans.
+
+
+
+
+Navigator
+---------
+
+From version 1.4.0, a new module has been added: the Navigator (daq_utils.plotting.navigator). It is most useful when
+dealing with 2D scans such as XY
+cartography. As such, it is not displayed by default. It consists of a tree like structure displaying all
+currently saved 2D scans (in the current dataset) and a viewer where selected scans can be displayed at their respective
+locations. It can be set using the *Settings* menu, *Show Navigator* option. :numref:`navigator` shows the DAQ_scan module
+with activated Navigator and a few scans. This navigator can also be used as a *ScanSelector* viewer to quickly explore
+a 2D area.
+
+   .. _navigator:
+
+.. figure:: /image/DAQ_Scan/navigator.png
+   :alt: navigator
+
+   An example of dataset displaying several 2D scans at their respective locations (up and right axis)
 
 Preset manager
 --------------

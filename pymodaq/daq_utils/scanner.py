@@ -13,10 +13,13 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed afte
 
 
 class Scanner(QObject):
+    scan_params_signal = pyqtSignal(utils.ScanParameters)
 
     params = [{'title': 'Scanner settings', 'name': 'scan_options', 'type': 'group', 'children': [
+                {'title': 'Calculate positions:', 'name': 'Calculate positions', 'type': 'action'},
+                {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
                 {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D'],
-                 'value': 'Scan1D'},
+                         'value': 'Scan1D'},
                 {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
                     {'title': 'Scan type:', 'name': 'scan1D_type', 'type': 'list',
                      'values': ['Linear', 'Linear back to start', 'Random'], 'value': 'Linear'},
@@ -41,10 +44,11 @@ class Scanner(QObject):
                     {'title': 'Rstep:', 'name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible': True},
                     {'title': 'Rmax:', 'name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible': True}
                 ]},
+
                 ]},
                 ]
 
-    def __init__(self, scanner_items=OrderedDict([])):
+    def __init__(self, scanner_items=OrderedDict([]), scan_type = 'Scan1D'):
         """
 
         Parameters
@@ -59,9 +63,9 @@ class Scanner(QObject):
         self.settings_tree = None
         self.setupUI()
 
-        self.scan_selector = ScanSelector(scanner_items, 'Scan1D')
-        self.scan_selector.widget.setVisible(False)
-        self.scan_selector.settings.child('scan_options', 'scan_type').hide()
+        self.scan_selector = ScanSelector(scanner_items, scan_type)
+        self.settings.child('scan_options', 'scan1D_settings').setValue(scan_type)
+        #self.scan_selector.settings.child('scan_options', 'scan_type').hide()
         self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
 
         self.settings.child('scan_options', 'scan1D_settings', 'scan1D_roi_module').setOpts(
@@ -71,6 +75,7 @@ class Scanner(QObject):
 
         self.scan_selector.widget.setVisible(False)
         self.scan_selector.show_scan_selector(visible=False)
+        self.set_scan()
 
     @property
     def viewers_items(self):
@@ -78,6 +83,7 @@ class Scanner(QObject):
 
     @viewers_items.setter
     def viewers_items(self, items):
+        self.scan_selector.remove_scan_selector()
         self.scan_selector.viewers_items = items
         self.settings.child('scan_options', 'scan1D_settings', 'scan1D_roi_module').setOpts(
             limits=self.scan_selector.sources_names)
@@ -146,6 +152,12 @@ class Scanner(QObject):
                 elif param.name() == 'scan2D_type':
                     self.update_scan_type(self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type'))
 
+                else:
+                    try:
+                        self.set_scan()
+                    except:
+                        pass
+
             elif change == 'parent':
                 pass
 
@@ -156,9 +168,9 @@ class Scanner(QObject):
         self.settings_tree = ParameterTree()
         self.settings = Parameter.create(name='Scanner_Settings', title='Scanner Settings', type='group', children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
-        self.settings_tree.setMaximumHeight(250)
+        self.settings_tree.setMaximumHeight(300)
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
+        self.settings.child('scan_options', 'Calculate positions').sigActivated.connect(self.set_scan)
         #layout.addWidget(self.settings_tree)
 
     def set_scan(self):
@@ -175,7 +187,7 @@ class Scanner(QObject):
                 steps_y = np.array([])
             else:  # from ROI
                 viewer = self.scan_selector.scan_selector_source
-                positions = self.scan_selector.scan_selector.getArrayIndexes(viewer.ui.img_red, spacing=step)
+                positions = self.scan_selector.scan_selector.getArrayIndexes(spacing=step)
     
                 steps_x, steps_y = zip(*positions)
                 steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
@@ -234,27 +246,32 @@ class Scanner(QObject):
                 elif self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Random':
                     scan_parameters = utils.set_scan_random(start_axis1, start_axis2,
                                                                 stop_axis1, stop_axis2, step_axis1, step_axis2)
-    
+
+
+        self.settings.child('scan_options', 'Nsteps').setValue(scan_parameters.Nsteps)
+        self.scan_params_signal.emit(scan_parameters)
         return scan_parameters
 
     def update_scan_2D_positions(self):
+        try:
+            viewer = self.scan_selector.scan_selector_source
+            pos_dl = self.scan_selector.scan_selector.pos()
+            pos_ur = self.scan_selector.scan_selector.pos()+self.scan_selector.scan_selector.size()
+            pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
+            pos_ur_scaled= viewer.scale_axis(pos_ur[0], pos_ur[1])
 
-        viewer = self.scan_selector.scan_selector_source
-        pos_dl = self.scan_selector.scan_selector.pos()
-        pos_ur = self.scan_selector.scan_selector.pos()+self.scan_selector.scan_selector.size()
-        pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
-        pos_ur_scaled= viewer.scale_axis(pos_ur[0], pos_ur[1])
+            if self.settings.child('scan_options','scan2D_settings', 'scan2D_type').value() == 'Spiral':
+                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(np.mean((pos_dl_scaled[0],pos_ur_scaled[0])))
+                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(np.mean((pos_dl_scaled[1],pos_ur_scaled[1])))
+                self.settings.child('scan_options', 'scan2D_settings', 'Rmax_2d').setValue(np.min((np.abs((pos_ur_scaled[0]-pos_dl_scaled[0])/2),(pos_ur_scaled[1]-pos_dl_scaled[1])/2)))
 
-        if self.settings.child('scan_options','scan2D_settings', 'scan2D_type').value() == 'Spiral':
-            self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(np.mean((pos_dl_scaled[0],pos_ur_scaled[0])))
-            self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(np.mean((pos_dl_scaled[1],pos_ur_scaled[1])))
-            self.settings.child('scan_options', 'scan2D_settings', 'Rmax_2d').setValue(np.min((np.abs((pos_ur_scaled[0]-pos_dl_scaled[0])/2),(pos_ur_scaled[1]-pos_dl_scaled[1])/2)))
-
-        else:
-            self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(pos_dl_scaled[0])
-            self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(pos_dl_scaled[1])
-            self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
+            else:
+                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(pos_dl_scaled[0])
+                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(pos_dl_scaled[1])
+                self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
             self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(pos_ur_scaled[1])
+        except Exception as e:
+            print(e)
 
     def update_scan_type(self, param):
         """
@@ -286,6 +303,7 @@ if __name__ == '__main__':
     from pymodaq.daq_utils.daq_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+    from pymodaq.daq_utils.plotting.navigator import Navigator
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
     class UI():
         def __init__(self):
@@ -318,8 +336,12 @@ if __name__ == '__main__':
     prog.ui.IniDet_pb.click()
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
-    prog2 = DAQ_Viewer(area, title="Testing2", DAQ_type='DAQ2D', parent_scan=fake)
-    prog2.ui.IniDet_pb.click()
+    prog2 = Navigator()
+    widgnav = QtWidgets.QWidget()
+    prog2 = Navigator(widgnav)
+    nav_dock = Dock('Navigator')
+    nav_dock.addWidget(widgnav)
+    area.addDock(nav_dock)
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
 
@@ -329,14 +351,14 @@ if __name__ == '__main__':
     items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
                            names=[view.title for view in prog.ui.viewers],
                            )
-    items[prog2.title] = dict(viewers=[view for view in prog2.ui.viewers],
-                             names=[view.title for view in prog2.ui.viewers])
+    items['Navigator'] = dict(viewers=[prog2.viewer],
+                             names=['Navigator'])
     items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
                              names=["DaqScan"])
 
 
 
-    prog = Scanner( items)
+    prog = Scanner(items)
     prog.settings_tree.show()
     win.show()
     sys.exit(app.exec_())

@@ -12,6 +12,7 @@ Gradients.update(OrderedDict([
 
 #import pymodaq
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_gui import Ui_Form
+from pymodaq.daq_utils.plotting.viewer2D.viewer2d_basic import ImageWidget, ImageItem, AxisItem_Scaled
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -116,118 +117,7 @@ class RectROI(pg.ROI):
         self.index_signal.emit(self.index)
 
 
-class AxisItem_Scaled(pg.AxisItem):
-    """
-    Subclass of pg.AxisItem enabling scaling of the tick values with respect to the linked viewbox
-    """
-    
-    def __init__(self, orientation, scaling=1,offset=0, pen=None, linkView=None, parent=None, maxTickLength=-5, showValues=True):
-        """
-        ==============  ===============================================================
-        **Arguments:**
-        orientation     one of 'left', 'right', 'top', or 'bottom'
-        scaling         multiplicative coeff applied to the ticks
-        offset          offset applied to the ticks after scaling
-        maxTickLength   (px) maximum length of ticks to draw. Negative values draw
-                        into the plot, positive values draw outward.
-        linkView        (ViewBox) causes the range of values displayed in the axis
-                        to be linked to the visible range of a ViewBox.
-        showValues      (bool) Whether to display values adjacent to ticks 
-        pen             (QPen) Pen used when drawing ticks.
-        ==============  ===============================================================
-        """
-        pg.AxisItem.__init__(self, orientation, pen, linkView, parent, maxTickLength, showValues)
-        self.scaling=scaling
-        self.offset=offset
-        
-    def linkedViewChanged(self, view, newRange=None):
-        if self.orientation in ['right', 'left']:
-            if newRange is None:
-                newRange = [pos*self.scaling+self.offset for pos in view.viewRange()[1]]
-            else:
-                newRange =[pos*self.scaling+self.offset for pos in newRange]
 
-            if view.yInverted():
-                self.setRange(*newRange[::-1])
-            else:
-                self.setRange(*newRange)
-        else:
-            if newRange is None:
-                newRange = [pos*self.scaling+self.offset for pos in view.viewRange()[0]]
-            else:
-                newRange =[pos*self.scaling+self.offset for pos in newRange]
-            if view.xInverted():
-                self.setRange(*newRange[::-1])
-            else:
-                self.setRange(*newRange)
-
-class ImageItem(pg.ImageItem):
-    def __init__(self, image=None, **kargs):
-        super(ImageItem, self).__init__(image, **kargs)
-
-    def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
-        """Returns x and y arrays containing the histogram values for the current image.
-        For an explanation of the return format, see numpy.histogram().
-
-        The *step* argument causes pixels to be skipped when computing the histogram to save time.
-        If *step* is 'auto', then a step is chosen such that the analyzed data has
-        dimensions roughly *targetImageSize* for each axis.
-
-        The *bins* argument and any extra keyword arguments are passed to
-        np.histogram(). If *bins* is 'auto', then a bin number is automatically
-        chosen based on the image characteristics:
-
-        * Integer images will have approximately *targetHistogramSize* bins,
-          with each bin having an integer width.
-        * All other types will have *targetHistogramSize* bins.
-
-        This method is also used when automatically computing levels.
-        """
-        if self.image is None:
-            return None, None
-        if step == 'auto':
-            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
-                    int(np.ceil(self.image.shape[1] / targetImageSize)))
-        if np.isscalar(step):
-            step = (step, step)
-        stepData = self.image[::step[0], ::step[1]]
-
-        if bins == 'auto':
-            try:
-                if stepData.dtype.kind in "ui":
-                    mn = stepData.min()
-                    mx = stepData.max()
-                    step = np.ceil((mx - mn) / 500.)
-                    bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
-                    if len(bins) == 0:
-                        bins = [mn, mx]
-            except:
-                bins = 500
-            else:
-                bins = 500
-
-        kwds['bins'] = bins
-        stepData = stepData[np.isfinite(stepData)]
-        hist = np.histogram(stepData, **kwds)
-
-        return hist[1][:-1], hist[0]
-
-class ImageWidget(pg.GraphicsLayoutWidget):
-    """this gives a layout to add imageitems.
-    """
-    def __init__(self):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(ImageWidget, self).__init__()
-        self.setupUI()
-
-    def setupUI(self):
-        layout = QtWidgets.QGridLayout()
-        #set viewer area
-        self.scene_obj = self.scene()
-        self.view = View_cust()
-        self.plotitem = pg.PlotItem(viewBox=self.view)
-        self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
-        self.setCentralItem(self.plotitem)
 
 
 
@@ -611,7 +501,7 @@ class Viewer2D(QtWidgets.QWidget):
 
     def roiClicked(self):
         roistate=self.ui.roiBtn.isChecked()
-        #self.setvisible_roilayout(roistate)
+
         self.ui.ROIs_widget.setVisible(roistate)
         for k,roi in self.ui.ROIs.items():
             roi.setVisible(roistate)
@@ -941,8 +831,6 @@ class Viewer2D(QtWidgets.QWidget):
         return widgetROIS
 
 
-    def setvisible_roilayout(self,state):
-        self.ui.ROIs_widget.setVisible(roistate)
 
     def show_hide_histogram(self):
         if self.isdata["blue"] and self.ui.blue_cb.isChecked():
@@ -954,6 +842,8 @@ class Viewer2D(QtWidgets.QWidget):
         if self.isdata["red"] and self.ui.red_cb.isChecked():
             self.ui.histogram_red.setVisible(self.ui.Show_histogram.isChecked())
             self.ui.histogram_red.setLevels(self.image.red.min(), self.image.red.max())
+
+        QtWidgets.QApplication.processEvents()
 
     def show_hide_iso(self):
         if self.ui.isocurve_pb.isChecked():
@@ -1183,22 +1073,6 @@ class ROIScalableGroup(pTypes.GroupParameter):
 
 
 
-
-class View_cust(pg.ViewBox):
-    """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
-
-    """
-    sig_double_clicked=pyqtSignal(float,float)
-    def __init__(self, parent=None, border=None, lockAspect=False, enableMouse=True, invertY=False, enableMenu=True, name=None, invertX=False):
-        super(View_cust,self).__init__(parent, border, lockAspect, enableMouse, invertY, enableMenu, name, invertX)
-
-    def mouseClickEvent(self, ev):
-        if ev.button() == QtCore.Qt.RightButton and self.menuEnabled():
-            ev.accept()
-            self.raiseContextMenu(ev)
-        if ev.double():
-            pos=self.mapToView(ev.pos())
-            self.sig_double_clicked.emit(pos.x(),pos.y())
 
 
 

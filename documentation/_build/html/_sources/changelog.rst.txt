@@ -3,6 +3,14 @@
 =========
 Changelog
 =========
+* :feature:`0` DAQ_Move_plugins: added the method *set_position_relative_with_scaling* to have correct steps in relative motion
+  when scaling options are set
+* :feature:`0` all modules: debug info contains now name of package, method and script line where the error has been generated
+* :feature:`0` h5_browser: a right click on tree items shows a context menu. so far possibility to export current item (data)
+  in ascii text file (%.6e precision format).
+* :feature:`0` module scanner (daq_utils.scanner) has been created. Deals with lines or area selections within any viewer2D modules. Used for DAQ_Scan
+  and some others plugins (for area selection if needed). Most of the scan type settings (of daq_scan) have been moved to scanner
+  that is now a subobject of daq_scan
 * :release:`1.3.0 <2019-02-15>`
 * :feature:`0` DAQ_Scan: added the navigator option. It is a 2D area-like object where to define scans. All 2D scans in the current h5file
   are plotted in this area and at their corresponding position. Each scan plotability can be set.

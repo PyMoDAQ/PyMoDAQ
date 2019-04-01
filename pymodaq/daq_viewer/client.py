@@ -4,7 +4,7 @@
 
 import socket  
 import numpy as np
-from PyMoDAQ.DAQ_Viewer.utility_classes import DAQ_TCP_server
+from pymodaq.daq_viewer.utility_classes import DAQ_TCP_server
 
 def send_command(sock,command="Send Data 0D"):
     """ send one of the message contained in self.message_list toward a socket with identity socket_type

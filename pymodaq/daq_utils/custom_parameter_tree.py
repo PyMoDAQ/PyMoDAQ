@@ -322,8 +322,10 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
                     param_value=bool(int(val_text))
                 elif param_type=='led':
                     param_value=bool(val_text)
-                elif param_type=='date_time':
-                    param_value=eval(val_text)
+                elif param_type == 'date_time':
+                    param_value = eval(val_text)
+                elif param_type == 'date':
+                    param_value = eval(val_text)
                 elif param_type=='table':
                     param_value=eval(val_text)
                 elif param_type=='color':

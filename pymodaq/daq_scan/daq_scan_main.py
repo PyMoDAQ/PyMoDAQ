@@ -59,25 +59,6 @@ if not os.path.isdir(overshoot_path):
 
 logging.basicConfig(filename=os.path.join(log_path,'daq_scan_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))),level=logging.DEBUG)
 
-class PolyLineROI_custom(pg.PolyLineROI):
-    def __init__(self,*args,**kwargs):
-        super(PolyLineROI_custom,self).__init__(*args,**kwargs)
-
-    def getArrayIndexes(self, img, spacing=1, **kwds):
-        imgPts = [self.mapToItem(img, h['item'].pos()) for h in self.handles]
-        positions=[]
-        for i in range(len(imgPts) - 1):
-            d = pg.Point(imgPts[i + 1] - imgPts[i])
-            o = pg.Point(imgPts[i])
-            vect=pg.Point(d.norm())
-            Npts=0
-            while Npts*spacing < d.length():
-                Npts+=1
-                positions.append(((o+Npts*spacing*vect).x(),(o+Npts*spacing*vect).y()))
-
-        return positions
-
-
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -527,7 +508,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),log_type='log')
 
-    @pyqtSlot(float,float)
+    @pyqtSlot(float, float)
     def move_to_crosshair(self,posx=None,posy=None):
         """
             Compute the scaled position from the given x/y position and send the command_DAQ signal with computed values as attributes.
@@ -543,7 +524,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             update_status
         """
-        if self.ui.move_to_crosshair_cb.isChecked():
+        if self.ui.move_to_crosshair_cb.isChecked() or self.navigator.moveat_action.isChecked():
             if "2D" in self.scanner.settings.child('scan_options','scan_type').value():
                 if len(self.move_modules_scan)==2 and posx is not None and posy is not None:
                     posx_real=posx*self.ui.scan2D_graph.scaled_xaxis.scaling+self.ui.scan2D_graph.scaled_xaxis.offset
@@ -595,8 +576,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             #save scan settings related to the current preset
             if self.preset_file is not None:
                 file = os.path.split(self.preset_file)[1]
-                path = os.path.join(scan_conf_path, file)
-                custom_tree.parameter_to_xml_file(self.daqscan_settings, path)
+                # path = os.path.join(scan_conf_path, file)
+                # custom_tree.parameter_to_xml_file(self.daqscan_settings, path)
 
             if hasattr(self,'mainwindow'):
                 self.mainwindow.close()
@@ -1320,9 +1301,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.scan2D_graph.ui.histogram_blue.setVisible(False)
         self.ui.scan2D_graph.ui.histogram_green.setVisible(False)
         self.ui.scan2D_graph.ui.histogram_red.setVisible(False)
-        self.ui.move_to_crosshair_cb=QtWidgets.QCheckBox("Move at doubleClicked")
+        self.ui.move_to_crosshair_cb = QtWidgets.QCheckBox("Move at doubleClicked")
 
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.move_to_crosshair_cb)
+        self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
 
         #%% init and set the status bar
         self.ui.statusbar=QtWidgets.QStatusBar(self.dockarea)
@@ -1795,6 +1777,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             else:
                 self.save_parameters.h5_file = tables.open_file(str(self.save_parameters.h5_file_path), mode = "w")
+                self.save_parameters.h5_file.root._v_attrs['format_name'] = 'pymodaq_scan'
                 self.set_metadata_about_dataset()
 
             if self.navigator is not None:
@@ -1802,6 +1785,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 self.navigator.settings.child('settings', 'filepath').setValue(self.save_parameters.h5_file.filename)
 
             if not 'Raw_datas' in list(self.save_parameters.h5_file.root._v_children.keys()):
+
                 raw_data_group = self.save_parameters.h5_file.create_group("/", 'Raw_datas', 'Data from daq_scan and detector modules')
                 self.save_metadata(raw_data_group,'dataset_info')
                 #selected_data_group = self.save_parameters.h5_file.create_group("/", 'Selected_datas', 'Data currently selected')
