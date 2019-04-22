@@ -55,7 +55,7 @@
           <entry key="in" value="4" />
           <entry key="md" value="1" />
           <entry key="png" value="3" />
-          <entry key="py" value="715" />
+          <entry key="py" value="716" />
           <entry key="pyx" value="1" />
           <entry key="rst" value="108" />
         </counts>
@@ -65,20 +65,20 @@
           <entry key="Image" value="13" />
           <entry key="Markdown" value="1" />
           <entry key="PLAIN_TEXT" value="13" />
-          <entry key="Python" value="715" />
+          <entry key="Python" value="716" />
           <entry key="ReST" value="108" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="LICENSE" value="15" />
-          <entry key="Python Console" value="6773" />
+          <entry key="Python Console" value="6800" />
           <entry key="bat" value="1" />
           <entry key="dummy" value="535" />
           <entry key="gitignore" value="8" />
           <entry key="in" value="85" />
           <entry key="md" value="45" />
-          <entry key="py" value="72403" />
+          <entry key="py" value="72434" />
           <entry key="pyx" value="6" />
           <entry key="rst" value="41487" />
         </counts>
@@ -87,7 +87,7 @@
         <counts>
           <entry key="Markdown" value="45" />
           <entry key="PLAIN_TEXT" value="650" />
-          <entry key="Python" value="79176" />
+          <entry key="Python" value="79234" />
           <entry key="ReST" value="41487" />
         </counts>
       </usages-collector>
@@ -95,18 +95,6 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pymodaq/daq_viewer/daq_viewer_main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1190">
-              <caret line="91" column="37" selection-start-line="91" selection-start-column="37" selection-end-line="91" selection-end-column="37" />
-              <folding>
-                <element signature="e#95#137#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_Mock.py">
           <provider selected="true" editor-type-id="text-editor">
@@ -126,11 +114,23 @@
           <provider selected="true" editor-type-id="restructured-text-editor" />
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pymodaq/version.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="153">
+            <state relative-caret-position="-825">
               <caret line="10" column="18" selection-start-line="10" selection-start-column="18" selection-end-line="10" selection-end-column="18" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="170">
+              <caret line="10" selection-start-line="10" selection-end-line="10" />
+              <folding>
+                <element signature="e#0#34#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -198,7 +198,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>scan_selector_source.ui.plotitem</find>
       <find>sett_layout</find>
       <find>DAQ_2DViewer_Mock_nav</find>
       <find>self.nav_x_axis</find>
@@ -228,6 +227,7 @@
       <find>def data</find>
       <find>self.data_to_export</find>
       <find>show_fine_tuning</find>
+      <find>platform</find>
     </findStrings>
     <replaceStrings>
       <replace>devices</replace>
@@ -289,7 +289,6 @@
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_Mock.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/h5browser.py" />
-        <option value="$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/STEM/orsayscan.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_OpenCVCam.py" />
         <option value="$PROJECT_DIR$/../../Git_others/phconvert/phconvert/pqreader.py" />
@@ -319,6 +318,7 @@
         <option value="$PROJECT_DIR$/documentation/usage/modules/daq_NDviewer_Template.py" />
         <option value="$PROJECT_DIR$/documentation/changelog.rst" />
         <option value="$PROJECT_DIR$/pymodaq/version.py" />
+        <option value="$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py" />
       </list>
     </option>
   </component>
@@ -351,6 +351,12 @@
               <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
               <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
               <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_utils" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
@@ -623,10 +629,10 @@
     <editor active="true" />
     <layout>
       <window_info id="Favorites" order="0" side_tool="true" />
-      <window_info active="true" content_ui="combo" id="Project" order="1" sideWeight="0.49919224" visible="true" weight="0.1641791" />
+      <window_info content_ui="combo" id="Project" order="1" sideWeight="0.49919224" visible="true" weight="0.1641791" />
       <window_info anchor="bottom" id="Terminal" order="0" weight="0.32981783" />
       <window_info anchor="bottom" id="Event Log" order="1" sideWeight="0.5012854" side_tool="true" weight="0.36204576" />
-      <window_info anchor="bottom" id="Python Console" order="2" sideWeight="0.4989339" weight="0.41706616" />
+      <window_info active="true" anchor="bottom" id="Python Console" order="2" sideWeight="0.4989339" visible="true" weight="0.2892741" />
       <window_info anchor="bottom" id="Message" order="3" />
       <window_info anchor="bottom" id="Find" order="4" weight="0.5560882" />
       <window_info anchor="bottom" id="Version Control" order="5" show_stripe_button="false" />
@@ -745,13 +751,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="251">
           <caret line="240" selection-start-line="240" selection-end-line="240" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="193">
-          <caret line="1292" selection-start-line="1292" selection-end-line="1292" />
         </state>
       </provider>
     </entry>
@@ -1045,8 +1044,18 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/pymodaq/version.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="153">
+        <state relative-caret-position="-825">
           <caret line="10" column="18" selection-start-line="10" selection-start-column="18" selection-end-line="10" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="170">
+          <caret line="10" selection-start-line="10" selection-end-line="10" />
+          <folding>
+            <element signature="e#0#34#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

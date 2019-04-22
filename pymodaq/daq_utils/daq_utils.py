@@ -8,8 +8,7 @@ import numpy as np
 import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE
-import platform
-if 'Win' in platform.system():
+if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 
 from pyqtgraph import dockarea
@@ -203,7 +202,7 @@ def winfunc(name, dll, result, *args):
 
 
 def get_set_local_dir():
-    if 'win' in sys.platform:
+    if 'win32' in sys.platform:
         local_path = os.path.join(os.environ['HOMEDRIVE'] + os.environ['HOMEPATH'], 'pymodaq_local')
     else:
         local_path = os.path.join(os.environ['PATH'], 'pymodaq_local')
