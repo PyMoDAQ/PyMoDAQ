@@ -2,8 +2,6 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QRectF, QPointF
 
 import sys
-import pymodaq
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 
@@ -12,16 +10,12 @@ from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 import pymodaq.daq_utils.daq_utils as utils
-import os
-from easydict import EasyDict as edict
-from pyqtgraph.dockarea import DockArea, Dock
+
 from pyqtgraph import LinearRegionItem
-import tables
+
 from pymodaq.daq_utils.plotting.viewerND.signal import Signal
-#import hyperspy.api as hs
+import time
 
 
 class ViewerND(QtWidgets.QWidget, QObject):
@@ -94,6 +88,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     @pyqtSlot(OrderedDict)
     def export_data(self, datas):
+        datas['acq_time_s'] = time.perf_counter()
         self.data_to_export_signal.emit(datas)
 
     def get_data_dimension(self):

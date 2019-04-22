@@ -55,6 +55,20 @@ class H5Browser(QtWidgets.QWidget,QObject):
                     file = select_file(save=True, ext='txt')
                     if file != '':
                         np.savetxt(file, data, '%.6e', '\t')
+            elif 'GROUP' in node._v_attrs['CLASS']:
+                children_names = list(node._v_children)
+                data = []
+                header = []
+                for subnode_name in node._v_children:
+                    subnode = node._f_get_child(subnode_name)
+                    if 'ARRAY' in subnode._v_attrs['CLASS']:
+                        if len(subnode.shape) == 1:
+                            data.append(subnode.read())
+                            header.append(subnode_name)
+
+                file = select_file(save=True, ext='txt')
+                if file != '':
+                    np.savetxt(file, np.array(data).T, '%.6e', '\t', header='\t'.join(header))
 
 
 
@@ -214,6 +228,12 @@ class H5Browser(QtWidgets.QWidget,QObject):
                                     nav_axes = [0]
                                     if 'scan_x_axis_unique' in children:
                                         axes['nav_x_axis'] = self.h5file.get_node(scan_path + '/scan_x_axis_unique').read()
+                                        if axes['nav_x_axis'].shape[0] != data.shape[0]:  #could happen in case of linear back to start type of scan
+                                            x=[]
+                                            for ix in axes['nav_x_axis']:
+                                                x.extend([ix, ix])
+                                                axes['nav_x_axis']=np.array(x)
+
                                 if node._v_attrs['scan_type'] == 'Scan2D':
                                     nav_axes = [0, 1]
                                     if 'scan_y_axis_unique' in children:

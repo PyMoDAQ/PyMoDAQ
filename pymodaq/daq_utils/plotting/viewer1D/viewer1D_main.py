@@ -1,15 +1,9 @@
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
-
 import sys
-import pymodaq
-
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_GUI_dock import Ui_Form
-
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
-
 from collections import OrderedDict
-
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
@@ -19,9 +13,8 @@ import pymodaq.daq_utils.custom_parameter_tree as customparameter
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 import os
-from easydict import EasyDict as edict
 import pickle
-from pyqtgraph.dockarea import DockArea, Dock
+import time
 
 class Viewer1D(QtWidgets.QWidget,QObject):
     """this plots 1D data on a plotwidget. Math and measurement can be done on it. Datas and measurements are then exported with the signal
@@ -489,6 +482,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.roi_settings.child('Measurements').setValue(self.measure_data_dict)
 
         if not(self.ui.do_measurements_pb.isChecked()): #otherwise you export data from measurement
+            self.data_to_export['acq_time_s'] = time.perf_counter()
             self.data_to_export_signal.emit(self.data_to_export)
 
         [xelt.append(yelt) for xelt,yelt in zip(self.lo_data,data_lo)]
@@ -502,7 +496,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.measure_data_dict["Meas.{}:".format(ind)]=res
             self.data_to_export['data0D']['Measure_{:03d}'.format(ind+ind_offset)]=res
         self.roi_settings.child('Measurements').setValue(self.measure_data_dict)
-
+        self.data_to_export['acq_time_s'] = time.perf_counter()
         self.data_to_export_signal.emit(self.data_to_export)
 
     def spread_lineouts(self):
@@ -544,6 +538,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                 self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)]['x_axis']=self._x_axis
             self.measurement_dict['data']=datas[self.roi_settings.child('math_settings','channel_combo').value()] # to be used in the measurement module
             if not self.ui.Do_math_pb.isChecked(): #otherwise math is done and then data is exported
+                self.data_to_export['acq_time_s'] = time.perf_counter()
                 self.data_to_export_signal.emit(self.data_to_export)
             else:
                 self.math_signal.emit(self.measurement_dict)

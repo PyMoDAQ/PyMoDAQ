@@ -24,7 +24,8 @@ import pickle
 import os
 from pyqtgraph.dockarea import DockArea, Dock
 
-import  pymodaq.daq_utils.daq_utils as utils 
+import  pymodaq.daq_utils.daq_utils as utils
+import time
 
 
 class EllipseROI(pg.ROI):
@@ -494,6 +495,7 @@ class Viewer2D(QtWidgets.QWidget):
                     self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(k)]=OrderedDict(x_axis=x_axis,data=np.mean(data,axis=0))
                     self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(k)]=OrderedDict(x_axis=y_axis,data=np.mean(data,axis=1))
                     self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(k)]=np.sum(data)
+            self.data_to_export['acq_time_s'] = time.perf_counter()
             self.data_to_export_signal.emit(self.data_to_export)
             self.ROI_changed.emit()
         except Exception as e:
@@ -752,7 +754,7 @@ class Viewer2D(QtWidgets.QWidget):
             if self.ui.roiBtn.isChecked():
                 self.roiChanged()
             else:
-
+                self.data_to_export['acq_time_s'] = time.perf_counter()
                 self.data_to_export_signal.emit(self.data_to_export)
 
             if self.ui.isocurve_pb.isChecked() and red_flag:

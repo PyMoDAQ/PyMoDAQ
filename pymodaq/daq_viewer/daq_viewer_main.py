@@ -470,7 +470,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
         self.data_to_save_export['Ndatas']+=1
         for key in datas:
-            if key!='name':
+            if not(key == 'name' or key == 'acq_time_s'):
                 if datas[key] is not None:
                     if self.data_to_save_export[key] is None:
                        self.data_to_save_export[key] = OrderedDict([])
@@ -524,10 +524,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 #    except: pass
                 self.command_detector.emit(ThreadCommand("stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
-                self.ui.settings_tree.setEnabled(True)
+                #self.ui.settings_tree.setEnabled(True)
             else:
 
-                self.ui.settings_tree.setEnabled(False)
+                #self.ui.settings_tree.setEnabled(False)
                 self.thread_status(ThreadCommand("update_channels"))
                 self.set_enabled_Ini_buttons(enable=False)
                 self.command_detector.emit(ThreadCommand("grab",[self.settings.child('main_settings','Naverage').value()]))
@@ -1213,7 +1213,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.update_status(getLineInfo()+ str(e), wait_time=self.wait_time)
 
     def init_show_data(self, datas):
-        self.data_to_save_export = OrderedDict(Ndatas=0, name=self.title, data0D=None, data1D=None,
+        self.data_to_save_export = OrderedDict(Ndatas=0, acq_time_s=0, name=self.title, data0D=None, data1D=None,
                                                data2D=None)  # to be populated from the results in the viewers
         Npannels = len(datas)
         self.process_overshoot(datas)

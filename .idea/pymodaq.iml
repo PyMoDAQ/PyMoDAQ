@@ -8,6 +8,7 @@
     <orderEntry type="module" module-name="pymodaq_plugins" />
     <orderEntry type="module" module-name="gestion_benevoles" />
     <orderEntry type="module" module-name="pyicic" />
+    <orderEntry type="module" module-name="phconvert" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="" />

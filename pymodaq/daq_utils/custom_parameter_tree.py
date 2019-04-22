@@ -14,6 +14,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
 from pyqtgraph.parametertree.Parameter import registerParameterType
 #from PyMoDAQ.daq_utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
+from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 from collections import OrderedDict
 from decimal import Decimal as D
 
@@ -577,7 +578,8 @@ class SpinBoxCustom(SpinBox.SpinBox):
 
             elif k == 'show_pb':
                 pass
-
+            elif k == 'subtype':
+                pass
             else:
                 raise TypeError("Invalid keyword argument '%s'." % k)
         if 'value' in opts:
@@ -677,14 +679,91 @@ class QTimeCustom(QtWidgets.QTimeEdit):
     @pyqtSlot(QTime)
     def updateTime(self,time):
         self.setTime(time)
-        
 
+
+class SliderParameterItem(pTypes.WidgetParameterItem):
+
+    def __init__(self, param, depth):
+        pTypes.WidgetParameterItem.__init__(self, param, depth)
+        self.hideWidget = False
+        self.subItem = QtWidgets.QTreeWidgetItem()
+        self.addChild(self.subItem)
+
+    def treeWidgetChanged(self):
+        ## TODO: fix so that superclass method can be called
+        ## (WidgetParameter should just natively support this style)
+        # WidgetParameterItem.treeWidgetChanged(self)
+        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
+        self.treeWidget().setItemWidget(self.subItem, 0, self.w)
+
+        # for now, these are copied from ParameterItem.treeWidgetChanged
+        self.setHidden(not self.param.opts.get('visible', True))
+        self.setExpanded(self.param.opts.get('expanded', True))
+
+    def limitsChanged(self, param, limits):
+        """Called when the parameter's limits have changed"""
+        ParameterItem.limitsChanged(self, param, limits)
+        t = self.param.opts['type']
+        self.w.setOpts(bounds=limits)
+
+    def makeWidget(self):
+        """
+            Make an initialized file_browser object with parameter options dictionnary ('readonly' key)0
+
+            Returns
+            -------
+            w : filebrowser
+                The initialized file browser.
+
+            See Also
+            --------
+            file_browser
+        """
+        opts = self.param.opts
+
+        defs = {
+            'value': 0, 'min': 0., 'max': 1000.,
+            'step': 1.0, 'dec': False,
+            'siPrefix': False, 'suffix': '', 'decimals': 12,
+        }
+
+        for k in defs:
+            if k in opts:
+                defs[k] = opts[k]
+        if 'limits' in opts:
+            defs['bounds'] = opts['limits']
+        if 'subtype' not in opts:
+            opts['subtype'] = 'linear'
+        self.w = SliderSpinBox(bounds=(0., 1000.), subtype=opts['subtype'])
+        self.w.setOpts(**defs)
+
+        self.w.sigChanged = self.w.spinbox.sigValueChanged
+        self.w.sigChanging = self.w.spinbox.sigValueChanging
+
+        return self.w
+
+
+class SliderParameter(Parameter):
+    """
+        Editable string; displayed as large text box in the tree.
+
+        See Also
+        --------
+        file_browserParameterItem
+    """
+    itemClass = SliderParameterItem
+
+
+
+
+registerParameterType('slide', SliderParameter, override=True)
 
 class SliderSpinBox(QtWidgets.QWidget):
 
     def __init__(self,*args,**kwargs):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(SliderSpinBox,self).__init__()
+        self.subtype = kwargs['subtype']
         self.initUI(*args,**kwargs)
         
     @property
@@ -705,12 +784,12 @@ class SliderSpinBox(QtWidgets.QWidget):
         """
             Init the User Interface.
         """
-        self.hor_layout=QtWidgets.QHBoxLayout()
+        self.hor_layout=QtWidgets.QVBoxLayout()
         self.slider=QtWidgets.QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
 
-        self.spinbox=SpinBoxCustom(parent=None, value=0.0, **kwargs)
+        self.spinbox=SpinBoxCustom(parent=None, value=1, **kwargs)
 
         self.hor_layout.addWidget(self.slider)
         self.hor_layout.addWidget(self.spinbox)
@@ -726,24 +805,38 @@ class SliderSpinBox(QtWidgets.QWidget):
         """
         val is a percentage [0-100] used in order to set the spinbox value between its min and max
         """
-        min=float(self.opts['bounds'][0])
-        max=float(self.opts['bounds'][1])
-        self.spinbox.setValue(val*(max-min)/100+min)
+        min_val=float(self.opts['bounds'][0])
+        max_val=float(self.opts['bounds'][1])
+        if self.subtype == 'log':
+            val_out = scroll_log(val, min_val, max_val)
+        else:
+            val_out = scroll_linear(val, min_val, max_val)
+        try:
+            self.slider.valueChanged.disconnect(self.update_spinbox)
+            self.spinbox.valueChanged.disconnect(self.update_slide)
+        except:
+            pass
+        self.spinbox.setValue(val_out)
 
+        self.slider.valueChanged.connect(self.update_spinbox)
+        self.spinbox.valueChanged.connect(self.update_slide)
 
     def update_slide(self,val):
         """
         val is the spinbox value between its min and max
         """
-        min=float(self.opts['bounds'][0])
-        max=float(self.opts['bounds'][1])
+        min_val=float(self.opts['bounds'][0])
+        max_val=float(self.opts['bounds'][1])
+
 
         try:
             self.slider.valueChanged.disconnect(self.update_spinbox)
+            self.spinbox.valueChanged.disconnect(self.update_slide)
         except:
             pass
-        self.slider.setValue(int((val-min)/(max-min)*100))
+        self.slider.setValue(int((val-min_val)/(max_val-min_val)*100))
         self.slider.valueChanged.connect(self.update_spinbox)
+        self.spinbox.valueChanged.connect(self.update_slide)
 
     def setValue(self,val):
         self.spinbox.setValue(val)
@@ -879,23 +972,25 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.sigChanged=w.checkbox.toggled
             w.value = w.value
             w.setValue= w.setValue
-        elif t=='slide':
-
-            defs = {
-                'value': 0, 'min': 0., 'max': 1000.,
-                'step': 1.0, 'dec': False,
-                'siPrefix': False, 'suffix': '', 'decimals': 12,
-            }
-            for k in defs:
-                if k in opts:
-                    defs[k] = opts[k]
-            if 'limits' in opts:
-                defs['bounds'] = opts['limits']
-
-            w = SliderSpinBox(bounds=(0.,1000.))
-            w.setOpts(**defs)
-            w.sigChanged = w.spinbox.sigValueChanged
-            w.sigChanging = w.spinbox.sigValueChanging
+        # elif t=='slide':
+        #
+        #     defs = {
+        #         'value': 0, 'min': 0., 'max': 1000.,
+        #         'step': 1.0, 'dec': False,
+        #         'siPrefix': False, 'suffix': '', 'decimals': 12,
+        #     }
+        #     for k in defs:
+        #         if k in opts:
+        #             defs[k] = opts[k]
+        #     if 'limits' in opts:
+        #         defs['bounds'] = opts['limits']
+        #     if 'subtype' not in opts:
+        #         opts['subtype'] = 'linear'
+        #     w = SliderSpinBox(bounds=(0.,1000.), subtype=opts['subtype'])
+        #     w.setOpts(**defs)
+        #
+        #     w.sigChanged = w.spinbox.sigValueChanged
+        #     w.sigChanging = w.spinbox.sigValueChanging
 
         else:
             raise Exception("Unknown type '%s'" % str(t))
@@ -1007,7 +1102,7 @@ registerParameterType('time', SimpleParameterCustom , override=True)
 registerParameterType('led', SimpleParameterCustom , override=True)
 registerParameterType('pixmap', SimpleParameterCustom , override=True)
 registerParameterType('pixmap_check', SimpleParameterCustom , override=True)
-registerParameterType('slide', SimpleParameterCustom , override=True)
+# registerParameterType('slide', SimpleParameterCustom , override=True)
 
 class ListParameterItem_custom(pTypes.ListParameterItem):
     """
@@ -1773,7 +1868,6 @@ class Plain_text_pbParameter(Parameter):
         self.sigActivated.emit(self)
         self.emitStateChanged('activated', None)
 registerParameterType('text_pb', Plain_text_pbParameter, override=True)
-
 
 
 

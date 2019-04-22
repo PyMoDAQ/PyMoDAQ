@@ -7,9 +7,12 @@ from collections import OrderedDict
 import numpy as np
 import datetime
 from pathlib import Path
-from ctypes import CFUNCTYPE, WINFUNCTYPE
-from pyqtgraph import dockarea
+from ctypes import CFUNCTYPE
+import platform
+if 'Win' in platform.system():
+    from ctypes import WINFUNCTYPE
 
+from pyqtgraph import dockarea
 import enum
 import os
 import re
@@ -19,6 +22,38 @@ from numba import jit
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
 
+
+def scroll_log(scroll_val, min_val , max_val):
+    """
+    Convert a scroll value [0-100] to a log scale between min_val and max_val
+    Parameters
+    ----------
+    scroll
+    min_val
+    max_val
+    Returns
+    -------
+
+    """
+    scr = scroll_val
+    value = scr * (np.log10(max_val)-np.log10(min_val))/100+ np.log10(min_val)
+    return 10**value
+
+def scroll_linear(scroll_val, min_val , max_val):
+    """
+    Convert a scroll value [0-100] to a linear scale between min_val and max_val
+    Parameters
+    ----------
+    scroll
+    min_val
+    max_val
+    Returns
+    -------
+
+    """
+    scr = scroll_val
+    value = scr * (max_val-min_val)/100+ min_val
+    return value
 
 def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny = 1, Ntime = 512, ind_line_offset = 0,
                                     channel = 0):

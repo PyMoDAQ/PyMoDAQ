@@ -5,8 +5,8 @@ import sys
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
 
 import numpy as np
-from easydict import EasyDict as edict
 from collections import OrderedDict
+import time
 
 class Viewer0D(QtWidgets.QWidget,QObject):
     data_to_export_signal=pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
@@ -150,7 +150,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)]=data[0]
             self.datas=data_tot
 
-             #
+            self.data_to_export['acq_time_s'] = time.perf_counter()
             self.data_to_export_signal.emit(self.data_to_export)
 
 

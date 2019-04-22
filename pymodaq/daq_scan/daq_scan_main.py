@@ -785,6 +785,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 elif param.name() == 'scan_average':
                     self.ui.average_dock.setVisible(param.value() > 1)
                     self.ui.indice_average_sb.setVisible(param.value() > 1)
+                    if param.value() > 1:
+                        self.ui.average_dock.setStretch(100,100)
 
 
                 elif param.name() == 'save_independent':
