@@ -48,12 +48,8 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
 
     #custom signal used to trigger data emission when recording is done
     callback_signal = QtCore.pyqtSignal()
-
-
-
     hardware_averaging = False #will use the accumulate acquisition mode if averaging is True else averaging is done software
                                # wise by the viewer module
-
     params= comon_parameters+[
         # comon_parameters as defined in utility_class. it has to be present in all plugins
 
@@ -84,7 +80,6 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             {'title': 'Exposure (ms):', 'name': 'exposure', 'type': 'float', 'value': 0.01 , 'default':0.01, 'min': 0},
             ]},
         ]
-
 
     def __init__(self,parent=None,params_state=None):
         #the super will call parent class initialization where , for instance, self.settings is created
@@ -133,7 +128,6 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status',[str(e),'log']))
 
-
     def emit_data(self):
         """
         Function used to emit data when data ready. optional see Plugins documentation
@@ -154,8 +148,6 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status',[str(e),'log']))
-
-
 
     def ini_detector(self, controller=None):
         """
@@ -203,7 +195,6 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             self.status.initialized=False
             self.emit_status(ThreadCommand('close_splash'))
             return self.status
-
 
     ########################## to adapt below if a timer has been set#####################
     #################################################################
@@ -280,7 +271,6 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
         else: raise(Exception('Camera not defined'))
         return self.y_axis
 
-
     def grab(self, Naverage=1, **kwargs):
         """
 
@@ -290,7 +280,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             #################################################################
             #the content here will depend on the way your are finally getting the data see Plugins documentation
             self.controller.StartAcquisition()
-            self.callback_signal.emit()  #will trigger the waitfor acquisition
+            self.callback_signal.emit()  #will trigger the waitfor acquisition in the separated class
             ###############################################
             #################################################################
 
@@ -311,13 +301,13 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
         except: pass
         return ""
 
-class AndorCallback(QtCore.QObject):
+class DetectorCallback(QtCore.QObject):
     """
 
     """
     data_sig=QtCore.pyqtSignal()
     def __init__(self,wait_fn):
-        super(AndorCallback, self).__init__()
+        super(DetectorCallback, self).__init__()
         self.wait_fn = wait_fn
 
     def wait_for_acquisition(self):

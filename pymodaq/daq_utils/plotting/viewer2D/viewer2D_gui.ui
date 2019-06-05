@@ -52,7 +52,7 @@
             </property>
             <property name="icon">
              <iconset>
-              <normalon>:/Labview_icons/Icon_Library/Histogram.png</normalon>
+              <normalon>:/icons/Icon_Library/Histogram.png</normalon>
              </iconset>
             </property>
             <property name="checkable">
@@ -88,7 +88,7 @@
             </property>
             <property name="icon">
              <iconset>
-              <normalon>:/Labview_icons/Icon_Library/Region.png</normalon>
+              <normalon>:/icons/Icon_Library/Region.png</normalon>
              </iconset>
             </property>
             <property name="checkable">
@@ -105,8 +105,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/meshPlot.png</normaloff>:/Labview_icons/Icon_Library/meshPlot.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/meshPlot.png</normaloff>
+              <normalon>:/icons/Icon_Library/meshPlot.png</normalon>:/Labview_icons/Icon_Library/meshPlot.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -123,7 +124,7 @@
             </property>
             <property name="icon">
              <iconset>
-              <normalon>:/Labview_icons/Icon_Library/Refresh.png</normalon>
+              <normalon>:/icons/Icon_Library/Refresh.png</normalon>
              </iconset>
             </property>
            </widget>
@@ -137,8 +138,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/Zoom_1_1.png</normaloff>:/Labview_icons/Icon_Library/Zoom_1_1.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/Zoom_1_1.png</normaloff>
+              <normalon>:/icons/Icon_Library/Zoom_1_1.png</normalon>:/Labview_icons/Icon_Library/Zoom_1_1.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -154,8 +156,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/autoscale.png</normaloff>:/Labview_icons/Icon_Library/autoscale.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/autoscale.png</normaloff>
+              <normalon>:/icons/Icon_Library/autoscale.png</normalon>:/Labview_icons/Icon_Library/autoscale.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -172,7 +175,7 @@
             </property>
             <property name="icon">
              <iconset>
-              <normalon>:/Labview_icons/Icon_Library/reset.png</normalon>
+              <normalon>:/icons/Icon_Library/reset.png</normalon>
              </iconset>
             </property>
             <property name="checkable">
@@ -189,8 +192,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/Select_24.png</normaloff>:/Labview_icons/Icon_Library/Select_24.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/Select_24.png</normaloff>
+              <normalon>:/icons/Icon_Library/Select_24.png</normalon>:/Labview_icons/Icon_Library/Select_24.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -206,8 +210,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/scale_vertically.png</normaloff>:/Labview_icons/Icon_Library/scale_vertically.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/scale_vertically.png</normaloff>
+              <normalon>:/icons/Icon_Library/scale_vertically.png</normalon>:/Labview_icons/Icon_Library/scale_vertically.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -223,8 +228,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/scale_horizontally.png</normaloff>:/Labview_icons/Icon_Library/scale_horizontally.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/scale_horizontally.png</normaloff>
+              <normalon>:/icons/Icon_Library/scale_horizontally.png</normalon>:/Labview_icons/Icon_Library/scale_horizontally.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -240,8 +246,9 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/rotation2.png</normaloff>:/Labview_icons/Icon_Library/rotation2.png</iconset>
+             <iconset>
+              <normaloff>:/Labview_icons/Icon_Library/rotation2.png</normaloff>
+              <normalon>:/icons/Icon_Library/rotation2.png</normalon>:/Labview_icons/Icon_Library/rotation2.png</iconset>
             </property>
             <property name="checkable">
              <bool>true</bool>
@@ -269,7 +276,7 @@
             </property>
             <property name="icon">
              <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/r_icon.png</normaloff>:/Labview_icons/Icon_Library/r_icon.png</iconset>
+              <normaloff>:/icons/Icon_Library/r_icon.png</normaloff>:/icons/Icon_Library/r_icon.png</iconset>
             </property>
             <property name="flat">
              <bool>true</bool>
@@ -283,7 +290,7 @@
             </property>
             <property name="icon">
              <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/g_icon.png</normaloff>:/Labview_icons/Icon_Library/g_icon.png</iconset>
+              <normaloff>:/icons/Icon_Library/g_icon.png</normaloff>:/icons/Icon_Library/g_icon.png</iconset>
             </property>
             <property name="flat">
              <bool>true</bool>
@@ -297,7 +304,7 @@
             </property>
             <property name="icon">
              <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/Labview_icons/Icon_Library/b_icon.png</normaloff>:/Labview_icons/Icon_Library/b_icon.png</iconset>
+              <normaloff>:/icons/Icon_Library/b_icon.png</normaloff>:/icons/Icon_Library/b_icon.png</iconset>
             </property>
             <property name="flat">
              <bool>true</bool>

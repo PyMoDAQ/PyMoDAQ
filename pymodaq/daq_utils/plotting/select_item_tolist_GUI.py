@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'select_item_tolist_GUI.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -19,14 +19,14 @@ class Ui_Form(object):
         self.add_item_pb = QtWidgets.QPushButton(Form)
         self.add_item_pb.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.add_item_pb.setIcon(icon)
         self.add_item_pb.setObjectName("add_item_pb")
         self.verticalLayout.addWidget(self.add_item_pb)
         self.remove_item_pb = QtWidgets.QPushButton(Form)
         self.remove_item_pb.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/remove.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/remove.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.remove_item_pb.setIcon(icon1)
         self.remove_item_pb.setObjectName("remove_item_pb")
         self.verticalLayout.addWidget(self.remove_item_pb)

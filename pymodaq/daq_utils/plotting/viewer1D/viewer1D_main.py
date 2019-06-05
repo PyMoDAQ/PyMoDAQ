@@ -85,6 +85,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.wait_time=3000
         self.measurement_module=None
 
+        self.ui.aspect_ratio_pb.clicked.connect(self.lock_aspect_ratio)
 
         ##crosshair
         self.ui.crosshair = Crosshair(self.viewer.plotwidget.plotItem,orientation='vertical')
@@ -329,6 +330,12 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
         except Exception as e:
             pass
+
+    def lock_aspect_ratio(self):
+        if self.ui.aspect_ratio_pb.isChecked():
+            self.viewer.plotwidget.plotItem.vb.setAspectLocked(lock=True, ratio=1)
+        else:
+            self.viewer.plotwidget.plotItem.vb.setAspectLocked(lock=False)
 
     def open_measurement_module(self):
         if not(self.ui.Do_math_pb.isChecked()):
@@ -701,8 +708,13 @@ if __name__ == '__main__':
     ydata_expodec[50:] = 1*np.exp(-(x[50:]-x0)/(tau_half/np.log(2)))#+1*np.exp(-(x[50:]-x0)/tau2)
     ydata_expodec += 0.1*np.random.rand(len(x))
 
-    prog.show_data([y1, y2, ydata_expodec])
+    x = np.sin(np.linspace(0,6*np.pi,201))
+    y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
+
+    #prog.show_data([y1, y2, ydata_expodec])
+
     Form.show()
-    prog.x_axis
+    prog.x_axis = x
+    prog.show_data([y])
     sys.exit(app.exec_())
 

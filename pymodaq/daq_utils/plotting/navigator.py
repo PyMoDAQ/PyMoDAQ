@@ -55,47 +55,47 @@ class Navigator(QObject):
 
     def create_toolbar(self):
         iconload = QtGui.QIcon()
-        iconload.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/OpenLayers.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        iconload.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/OpenLayers.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.loadaction = QtWidgets.QAction(iconload, "Load scan file (.h5)", None)
         self.toolbar.addAction(self.loadaction)
         self.loadaction.triggered.connect(self.load_data)
 
         iconloadim = QtGui.QIcon()
-        iconloadim.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Open_File_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        iconloadim.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Open_File_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.loadactionim = QtWidgets.QAction(iconloadim, "Load image file (.h5)", None)
         self.toolbar.addAction(self.loadactionim)
         self.loadactionim.triggered.connect(self.load_image)
 
         icon_ratio = QtGui.QIcon()
-        icon_ratio.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Zoom_1_1.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon_ratio.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Zoom_1_1.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.action_ratio = QtWidgets.QAction(icon_ratio, "Set viewbox aspect ratio to 1", None)
         self.action_ratio.setCheckable(True)
         self.toolbar.addAction(self.action_ratio)
         self.action_ratio.triggered.connect(self.set_aspect_ratio)
 
         icon_moveat = QtGui.QIcon()
-        icon_moveat.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/move_contour.png"), QtGui.QIcon.Normal,
+        icon_moveat.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/move_contour.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.moveat_action = QtWidgets.QAction(icon_moveat, "When selected, double clicking on viewbox will move DAQ_Move modules", None)
         self.moveat_action.setCheckable(True)
         self.toolbar.addAction(self.moveat_action)
 
         icon_sel_all = QtGui.QIcon()
-        icon_sel_all.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/select_all2.png"), QtGui.QIcon.Normal,
+        icon_sel_all.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/select_all2.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.sel_all_action = QtWidgets.QAction(icon_sel_all, "Select (show) all 2D scans on the viewer", None)
         self.toolbar.addAction(self.sel_all_action)
         self.sel_all_action.triggered.connect(self.show_all)
 
         icon_sel_none = QtGui.QIcon()
-        icon_sel_none.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/select_none.png"), QtGui.QIcon.Normal,
+        icon_sel_none.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/select_none.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.sel_none_action = QtWidgets.QAction(icon_sel_none, "Unselect (hide) all 2D scans on the viewer", None)
         self.toolbar.addAction(self.sel_none_action)
         self.sel_none_action.triggered.connect(self.show_none)
 
         icon_histo = QtGui.QIcon()
-        icon_histo.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Histogram.png"), QtGui.QIcon.Normal,
+        icon_histo.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Histogram.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.histo_action = QtWidgets.QAction(icon_histo, "Show (hide) histograms", None)
         self.toolbar.addAction(self.histo_action)

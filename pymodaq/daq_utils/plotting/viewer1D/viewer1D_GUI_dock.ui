@@ -45,7 +45,7 @@
               </property>
               <property name="icon">
                <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                <normaloff>:/Labview_icons/Icon_Library/Zoom_to_Selection.png</normaloff>:/Labview_icons/Icon_Library/Zoom_to_Selection.png</iconset>
+                <normaloff>:/icons/Icon_Library/Zoom_to_Selection.png</normaloff>:/icons/Icon_Library/Zoom_to_Selection.png</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -62,7 +62,7 @@
               </property>
               <property name="icon">
                <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                <normaloff>:/Labview_icons/Icon_Library/Calculator.png</normaloff>:/Labview_icons/Icon_Library/Calculator.png</iconset>
+                <normaloff>:/icons/Icon_Library/Calculator.png</normaloff>:/icons/Icon_Library/Calculator.png</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -79,7 +79,7 @@
               </property>
               <property name="icon">
                <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                <normaloff>:/Labview_icons/Icon_Library/MeasurementStudio_32.png</normaloff>:/Labview_icons/Icon_Library/MeasurementStudio_32.png</iconset>
+                <normaloff>:/icons/Icon_Library/MeasurementStudio_32.png</normaloff>:/icons/Icon_Library/MeasurementStudio_32.png</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>
@@ -95,9 +95,25 @@
                <string/>
               </property>
               <property name="icon">
-               <iconset>
-                <normalon>:/Labview_icons/Icon_Library/reset.png</normalon>
-               </iconset>
+               <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/icons/Icon_Library/reset.png</normaloff>:/icons/Icon_Library/reset.png</iconset>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="aspect_ratio_pb">
+              <property name="toolTip">
+               <string>Show/hide crosshair</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/icons/Icon_Library/zoomReset.png</normaloff>:/icons/Icon_Library/zoomReset.png</iconset>
               </property>
               <property name="checkable">
                <bool>true</bool>

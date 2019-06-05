@@ -1201,7 +1201,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     msgBox = QtWidgets.QMessageBox(parent=None)
                     msgBox.setWindowTitle("Error")
                     msgBox.setText("There are not enough selected move modules")
-                    ret = msgBox.exec();
+                    ret = msgBox.exec()
                     return
 
                 self.scan_moves = [[[move_names_scan[ind_pos], pos[ind_pos]] for ind_pos in range(Nmove_module)] for
@@ -1911,15 +1911,21 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 if 'data0D' in datas['datas'].keys():
                     if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
                         self.update_2D_graph(datas['datas']['data0D'])
+                    else:
+                        self.scan_data_2D = []
                 #if 'data1D' in datas['datas'].keys():
                 #    self.update_3D_graph(data['datas']['data1D'])
             else:
                 if 'data0D' in datas['datas'].keys():
                     if not( datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
                         self.update_1D_graph(datas['datas']['data0D'])
+                    else:
+                        self.scan_data_1D = []
                 if 'data1D' in datas['datas'].keys():
                     if not( datas['datas']['data1D'] is None or datas['datas']['data1D'] == OrderedDict()):
                         self.update_2D_graph(datas['datas']['data1D'])
+                    else:
+                        self.scan_data_2D = []
 
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')

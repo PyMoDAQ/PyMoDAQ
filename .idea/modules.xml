@@ -2,11 +2,14 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../../Various_Scripts/.idea/Various_Scripts.iml" filepath="$PROJECT_DIR$/../../Various_Scripts/.idea/Various_Scripts.iml" />
       <module fileurl="file://$PROJECT_DIR$/../../user_interface/gevt/.idea/gestion_benevoles.iml" filepath="$PROJECT_DIR$/../../user_interface/gevt/.idea/gestion_benevoles.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../../user_interface/holography/.idea/holography.iml" filepath="$PROJECT_DIR$/../../user_interface/holography/.idea/holography.iml" />
       <module fileurl="file://$PROJECT_DIR$/../../Git_others/phconvert/.idea/phconvert.iml" filepath="$PROJECT_DIR$/../../Git_others/phconvert/.idea/phconvert.iml" />
       <module fileurl="file://$USER_HOME$/pymodaq/plugins/.idea/plugins.iml" filepath="$USER_HOME$/pymodaq/plugins/.idea/plugins.iml" />
       <module fileurl="file://$PROJECT_DIR$/../../Git_others/py-ic-imaging-control/pyicic/.idea/pyicic.iml" filepath="$PROJECT_DIR$/../../Git_others/py-ic-imaging-control/pyicic/.idea/pyicic.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/pymodaq.iml" filepath="$PROJECT_DIR$/.idea/pymodaq.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../pymodaq_pid_models/.idea/pymodaq_pid_models.iml" filepath="$PROJECT_DIR$/../pymodaq_pid_models/.idea/pymodaq_pid_models.iml" />
       <module fileurl="file://$PROJECT_DIR$/../pymodaq_plugins/.idea/pymodaq_plugins.iml" filepath="$PROJECT_DIR$/../pymodaq_plugins/.idea/pymodaq_plugins.iml" />
     </modules>
   </component>

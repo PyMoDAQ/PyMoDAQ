@@ -13,8 +13,10 @@ from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq_plugins import daq_move_plugins as movehardware
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq_plugins.daq_viewer_plugins import plugins_2D, plugins_1D, plugins_0D
+from pymodaq.daq_utils.daq_utils import get_set_pid_path
 
 from pymodaq.daq_utils.daq_utils import select_file
+import importlib
 
 from pymodaq.daq_utils.daq_utils import make_enum
 DAQ_Move_Stage_type=make_enum('daq_move')
@@ -188,6 +190,9 @@ registerParameterType('groupdet', PresetScalableGroupDet, override=True)
 #check if preset_mode directory exists on the drive
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
 local_path = get_set_local_dir()
+
+pid_path = get_set_pid_path()
+
 preset_path= os.path.join(local_path, 'preset_modes')
 if not os.path.isdir(preset_path):
     os.makedirs(preset_path)
@@ -197,6 +202,7 @@ class PresetManager():
     def __init__(self,msgbox=False):
 
         self.preset_params=None
+        self.pid_type = False
         if msgbox:
             msgBox=QtWidgets.QMessageBox()
             msgBox.setText("Preset Manager?");
@@ -221,13 +227,49 @@ class PresetManager():
         """
 
         """
+        self.pid_type = False
         children = custom_tree.XML_file_to_parameter(filename)
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
         if show:
             self.show_preset()
 
 
+    def set_PID_preset(self, pid_model):
+        self.pid_type = True
+        model_mod = importlib.import_module('pymodaq_pid_models')
+        model = importlib.import_module('.' + pid_model, model_mod.__name__ + '.models')
+        model_class = getattr(model, pid_model)
+        actuators = model_class.actuators
+        actuators_name = model_class.actuators_name
+        detectors_type = model_class.detectors_type
+        detectors_name = model_class.detectors_name
+        detectors = model_class.detectors
+
+        param = [
+                {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': pid_model, 'readonly': True},
+                    ]
+
+        params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
+        params_det = [{'title': 'Detectors:', 'name': 'Detectors',
+                       'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
+        self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+
+        QtWidgets.QApplication.processEvents()
+        for ind_act, act in enumerate(actuators):
+            self.preset_params.child(('Moves')).addNew(act)
+            self.preset_params.child('Moves', 'move{:02.0f}'.format(ind_act), 'name').setValue(
+                actuators_name[ind_act])
+            QtWidgets.QApplication.processEvents()
+
+        for ind_det, det in enumerate(detectors):
+            self.preset_params.child(('Detectors')).addNew(detectors_type[ind_det]+'/'+det)
+            self.preset_params.child('Detectors','det{:02.0f}'.format(ind_det), 'name').setValue(detectors_name[ind_det])
+            QtWidgets.QApplication.processEvents()
+
+        self.show_preset()
+
     def set_new_preset(self):
+        self.pid_type = False
         param = [
                 {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'},
                 {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
@@ -247,6 +289,7 @@ class PresetManager():
         params_det = [{'title': 'Detectors:', 'name': 'Detectors',
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
         self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+
 
         self.show_preset()
 
@@ -274,29 +317,39 @@ class PresetManager():
         dialog.setWindowTitle('Fill in information about this preset')
         res = dialog.exec()
 
+        if self.pid_type:
+            path = pid_path
+        else:
+            path = preset_path
+
         if res == dialog.Accepted:
             # save preset parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(preset_path,
+            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(path,
                                                                                self.preset_params.child(
                                                                                    ('filename')).value()))
-            #check if overshoot configuration and layout configuration with same name exists => delete them if yes
-            overshoot_path = os.path.join(local_path, 'overshoot_configurations')
-            file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
-            file = os.path.join(overshoot_path, file + '.xml')
-            if os.path.isfile(file):
-                os.remove(file)
 
-            layout_path = os.path.join(local_path, 'layout')
-            file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
-            file = os.path.join(layout_path, file +'.dock')
-            if os.path.isfile(file):
-                os.remove(file)
+            if not self.pid_type:
+                #check if overshoot configuration and layout configuration with same name exists => delete them if yes
+                overshoot_path = os.path.join(local_path, 'overshoot_configurations')
+                file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+                file = os.path.join(overshoot_path, file + '.xml')
+                if os.path.isfile(file):
+                    os.remove(file)
+
+                layout_path = os.path.join(local_path, 'layout')
+                file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+                file = os.path.join(layout_path, file +'.dock')
+                if os.path.isfile(file):
+                    os.remove(file)
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    prog = PresetManager(True)
+    #prog = PresetManager(True)
+
+    prog = PresetManager(False)
+    prog.set_PID_preset('PIDModelTest')
 
     sys.exit(app.exec_())

@@ -37,7 +37,7 @@ class DAQ_Viewer_base(QObject):
     data_grabed_signal_temp=pyqtSignal(list)
 
     params = []
-    def __init__(self,parent=None,params_state=None): 
+    def __init__(self,parent=None,params_state=None):
         super(DAQ_Viewer_base, self).__init__()
         self.parent_parameters_path = [] #this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
@@ -46,7 +46,10 @@ class DAQ_Viewer_base(QObject):
                 self.settings.restoreState(params_state)
             elif isinstance(params_state, Parameter):
                 self.settings.restoreState(params_state.saveState())
+
+
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
+
         self.parent = parent
         self.status = edict(info="",controller=None,initialized=False)
         self.scan_parameters = None
@@ -58,7 +61,7 @@ class DAQ_Viewer_base(QObject):
             =============== ============ =====================================
             **Parameters**    **Type**     **Description**
             *status*                       the status information to transmit
-            =============== ============ =====================================      
+            =============== ============ =====================================
         """
         if self.parent is not None:
             self.parent.status_sig.emit(status)
@@ -69,6 +72,15 @@ class DAQ_Viewer_base(QObject):
     @pyqtSlot(ScanParameters)
     def update_scanner(self, scan_parameters):
         self.scan_parameters = scan_parameters
+
+    def update_com(self):
+        """
+        If some communications settings have to be reinit
+        Returns
+        -------
+
+        """
+        pass
 
     @pyqtSlot(edict)
     def update_settings(self, settings_parameter_dict):
@@ -94,9 +106,13 @@ class DAQ_Viewer_base(QObject):
                 self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
             except: pass
             if change == 'value':
-                self.settings.child(*path[1:]).setValue(param.value())
+                self.settings.child(*path[1:]).setValue(param.value()) #blocks signal back to main UI
             elif change == 'childAdded':
-                self.settings.child(*path[1:]).addNew(param.opts['title'])
+                child = Parameter.create(name = 'tmp')
+                child.restoreState(param)
+                self.settings.child(*path[1:]).addChild(child) #blocks signal back to main UI
+
+
             elif change == 'parent':
                 children = custom_tree.get_param_from_name(self.settings, param.name())
 
@@ -119,6 +135,7 @@ class DAQ_Viewer_base(QObject):
     def stop(self):
         pass
 
+
     def send_param_status(self,param,changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.
@@ -134,20 +151,18 @@ class DAQ_Viewer_base(QObject):
             --------
             daq_utils.ThreadCommand
         """
-       
         for param, change, data in changes:
             path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
             if change == 'childAdded':
-                self.emit_status(ThreadCommand('update_settings',[self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
+                #first create a "copy" of the actual parameter and send this "copy", to be restored in the main UI
+                self.emit_status(ThreadCommand('update_settings',[self.parent_parameters_path+path, [data[0].saveState(), data[1]], change])) #send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
 
             elif change == 'value' or change == 'limits' or change == 'options':
                 self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
+
+            pass
 
     def emit_x_axis(self):
         """

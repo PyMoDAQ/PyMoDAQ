@@ -235,7 +235,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     def create_toolbar(self):
         iconquit = QtGui.QIcon()
-        iconquit.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/close2.png"), QtGui.QIcon.Normal,
+        iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.quit_action = QtWidgets.QAction(iconquit, "Quit program", None)
         self.toolbar.addAction(self.quit_action)
@@ -243,7 +243,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
 
         icon_detector = QtGui.QIcon()
-        icon_detector.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/camera.png"), QtGui.QIcon.Normal,
+        icon_detector.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/camera.png"), QtGui.QIcon.Normal,
                                   QtGui.QIcon.Off)
         self.detector_action = QtWidgets.QAction(icon_detector, "Grab from camera", None)
         self.detector_action.setCheckable(True)
@@ -251,14 +251,14 @@ class CustomApp(QtWidgets.QWidget, QObject):
         self.detector_action.triggered.connect(lambda: self.run_detector())
 
         iconload = QtGui.QIcon()
-        iconload.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Open.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        iconload.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Open.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.loadaction = QtWidgets.QAction(iconload, "Load target file (.h5, .png, .jpg) or data from camera", None)
         self.toolbar.addAction(self.loadaction)
         self.loadaction.triggered.connect(self.load_file)
 
 
         iconsave = QtGui.QIcon()
-        iconsave.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/SaveAs.png"), QtGui.QIcon.Normal,
+        iconsave.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/SaveAs.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.saveaction = QtWidgets.QAction(iconsave, "Save current data", None)
         self.toolbar.addAction(self.saveaction)

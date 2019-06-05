@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'viewer1D_GUI_dock.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -34,7 +34,7 @@ class Ui_Form(object):
         self.zoom_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.zoom_pb.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Zoom_to_Selection.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Zoom_to_Selection.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.zoom_pb.setIcon(icon)
         self.zoom_pb.setCheckable(True)
         self.zoom_pb.setObjectName("zoom_pb")
@@ -42,7 +42,7 @@ class Ui_Form(object):
         self.Do_math_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.Do_math_pb.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Calculator.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Calculator.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.Do_math_pb.setIcon(icon1)
         self.Do_math_pb.setCheckable(True)
         self.Do_math_pb.setObjectName("Do_math_pb")
@@ -50,7 +50,7 @@ class Ui_Form(object):
         self.do_measurements_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.do_measurements_pb.setText("")
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/MeasurementStudio_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/MeasurementStudio_32.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.do_measurements_pb.setIcon(icon2)
         self.do_measurements_pb.setCheckable(True)
         self.do_measurements_pb.setObjectName("do_measurements_pb")
@@ -58,11 +58,19 @@ class Ui_Form(object):
         self.crosshair_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.crosshair_pb.setText("")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/reset.png"), QtGui.QIcon.Normal, QtGui.QIcon.On)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/reset.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.crosshair_pb.setIcon(icon3)
         self.crosshair_pb.setCheckable(True)
         self.crosshair_pb.setObjectName("crosshair_pb")
         self.horizontalLayout.addWidget(self.crosshair_pb)
+        self.aspect_ratio_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.aspect_ratio_pb.setText("")
+        icon4 = QtGui.QIcon()
+        icon4.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/zoomReset.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.aspect_ratio_pb.setIcon(icon4)
+        self.aspect_ratio_pb.setCheckable(True)
+        self.aspect_ratio_pb.setObjectName("aspect_ratio_pb")
+        self.horizontalLayout.addWidget(self.aspect_ratio_pb)
         self.x_label = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.x_label.setObjectName("x_label")
         self.horizontalLayout.addWidget(self.x_label)
@@ -93,6 +101,7 @@ class Ui_Form(object):
         self.Do_math_pb.setToolTip(_translate("Form", "Do Math"))
         self.do_measurements_pb.setToolTip(_translate("Form", "Do advanced measurrments"))
         self.crosshair_pb.setToolTip(_translate("Form", "Show/hide crosshair"))
+        self.aspect_ratio_pb.setToolTip(_translate("Form", "Show/hide crosshair"))
         self.x_label.setText(_translate("Form", "x:"))
         self.y_label.setText(_translate("Form", "y:"))
 

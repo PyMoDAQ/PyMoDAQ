@@ -3,8 +3,14 @@
 =========
 Changelog
 =========
-* :feature:`0` DAQ_Move_plugins: added the method *set_position_relative_with_scaling* to have correct steps in relative motion
-  when scaling options are set
+* :bug:`0` DAQ_Scan: when no live plot is possible (too high dimensionality) no more scan datas are saved
+* :release:`1.4.2 <2019-04-22>`
+* :bug:`0` issue with ctypes imports in daq_utils on macos Now ok
+* :feature:`0` added a field 'acq_time_s' in the exported data from each viewer. To be used to track at what time a
+  given dataset has been recorded
+* :release:`1.4.1 <2019-02-16>`
+* :bug:`0` cleaning up of a few bugs
+* :release:`1.4.0 <2019-02-15>`
 * :feature:`0` all modules: debug info contains now name of package, method and script line where the error has been generated
 * :feature:`0` h5_browser: a right click on tree items shows a context menu. so far possibility to export current item (data)
   in ascii text file (%.6e precision format).

@@ -3,6 +3,7 @@
 =========
 Changelog
 =========
+* :bug:`0` DAQ_Scan: when no live plot is possible (too high dimensionality) no more scan datas are saved
 * :release:`1.4.2 <2019-04-22>`
 * :bug:`0` issue with ctypes imports in daq_utils on macos Now ok
 * :feature:`0` added a field 'acq_time_s' in the exported data from each viewer. To be used to track at what time a

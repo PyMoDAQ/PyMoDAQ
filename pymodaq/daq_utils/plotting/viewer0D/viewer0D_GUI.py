@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'viewer0D_GUI.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -20,6 +20,7 @@ class Ui_Form(object):
         self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setSpacing(0)
@@ -35,7 +36,7 @@ class Ui_Form(object):
         self.clear_pb = QtWidgets.QPushButton(self.verticalLayoutWidget)
         self.clear_pb.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/clear2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/clear2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.clear_pb.setIcon(icon)
         self.clear_pb.setCheckable(False)
         self.clear_pb.setObjectName("clear_pb")
@@ -43,7 +44,7 @@ class Ui_Form(object):
         self.show_datalist_pb = QtWidgets.QPushButton(self.verticalLayoutWidget)
         self.show_datalist_pb.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/ChnNum.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/ChnNum.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.show_datalist_pb.setIcon(icon1)
         self.show_datalist_pb.setCheckable(True)
         self.show_datalist_pb.setObjectName("show_datalist_pb")
@@ -75,7 +76,7 @@ class Ui_Form(object):
         self.show_datalist_pb.setToolTip(_translate("Form", "Show current data in a list"))
 
 from pyqtgraph import PlotWidget
-import pymodaq.QtDesigner_Ressources.QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys

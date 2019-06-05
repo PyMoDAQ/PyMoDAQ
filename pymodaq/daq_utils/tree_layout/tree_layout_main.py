@@ -42,19 +42,19 @@ class Tree_layout(QObject):
         vlayout.addWidget(self.ui.Tree)
 
         iconopen = QtGui.QIcon()
-        iconopen.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/tree.png"), QtGui.QIcon.Normal,
+        iconopen.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/tree.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.ui.Open_Tree = QtWidgets.QPushButton('Open Tree')
         self.ui.Open_Tree.setIcon(iconopen)
 
         iconopensel = QtGui.QIcon()
-        iconopensel.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/tree.png"), QtGui.QIcon.Normal,
+        iconopensel.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/tree.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.ui.Open_Tree_Selected = QtWidgets.QPushButton('Open Selected')
         self.ui.Open_Tree_Selected.setIcon(iconopensel)
 
         iconclose = QtGui.QIcon()
-        iconclose.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/CollapseAll.png"), QtGui.QIcon.Normal,
+        iconclose.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/CollapseAll.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.ui.Close_Tree = QtWidgets.QPushButton('Close Tree')
         self.ui.Close_Tree.setIcon(iconclose)

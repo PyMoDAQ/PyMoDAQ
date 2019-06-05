@@ -143,6 +143,8 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.setupUi(parent)#it's a widget here
         self.ui.horizontalLayout.addWidget(self.ui.ROIs_widget)
         self.ui.ROIs_widget.setVisible(False)
+
+        self.max_size_integrated = 200
         self.scaling_options=scaling_options
         self.viewer_type='Data2D' #☺by default
         self.title=""
@@ -401,7 +403,7 @@ class Viewer2D(QtWidgets.QWidget):
         for k in self.data_integrated_plot.keys():
             self.data_integrated_plot[k]=np.zeros((2,1))
 
-    def load_ROI(self):
+    def load_ROI(self, path = None):
         try:
             for roi in self.ui.ROIs.values():
                 index=roi.index
@@ -411,7 +413,8 @@ class Viewer2D(QtWidgets.QWidget):
                 self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
                 self.ui.ROIs.pop('ROI_%02.0d'%index)
 
-            path=self.select_file(save=False)
+            if path is None:
+                path=self.select_file(save=False)
             with open(path, 'rb') as f:
                 data_tree = pickle.load(f)
                 self.restore_state(data_tree)
@@ -487,6 +490,8 @@ class Viewer2D(QtWidgets.QWidget):
                     x_axis,y_axis=self.scale_axis(xvals,yvals)
 
                     self.data_integrated_plot[k]=np.append(self.data_integrated_plot[k],np.array([[self.data_integrated_plot[k][0,-1]],[0]])+np.array([[1],[np.sum(data)]]),axis=1)
+                    if self.data_integrated_plot[k].shape[1] > self.max_size_integrated:
+                        self.data_integrated_plot[k] = self.data_integrated_plot[k][:,self.data_integrated_plot[k].shape[1]-200:]
                     self.ui.RoiCurve_H[k].setData(y=np.mean(data,axis=0), x=xvals)
                     self.ui.RoiCurve_V[k].setData(y=yvals, x=np.mean(data,axis=1))
                     self.ui.RoiCurve_integrated[k].setData(y=self.data_integrated_plot[k][1,:], x=self.data_integrated_plot[k][0,:])

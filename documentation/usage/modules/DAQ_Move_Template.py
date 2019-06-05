@@ -185,7 +185,7 @@ class DAQ_Move_Template(DAQ_Move_base):
 
 
         #set absolute motion, for instance (fake method):
-        self.controller.set_absolute_position_actuator()
+        self.controller.set_absolute_position_actuator(position)
 
         #start polling the position until the actuator reach the target position within epsilon (defined as a parameter field (comon_parameters)
         self.poll_moving()
@@ -199,10 +199,10 @@ class DAQ_Move_Template(DAQ_Move_base):
         position=self.check_bound(self.current_position+position)-self.current_position
         self.target_position=position+self.current_position
         # convert the user set position to the controller position if scaling has been activated by user
-        position=self.set_position_with_scaling(position)
+        position=self.set_position_relative_with_scaling(position)
 
         #set relative motion position, for instance (fake method):
-        self.controller.set_relative_position_actuator()
+        self.controller.set_relative_position_actuator(position)
 
         self.poll_moving()
 

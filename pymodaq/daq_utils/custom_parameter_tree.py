@@ -480,6 +480,16 @@ def iter_children(param,childlist=[]):
             childlist.extend(iter_children(child,[]))
     return childlist
 
+def iter_children_params(param,childlist=[]):
+    """
+
+    """
+    for child in param.children():
+        childlist.append(child)
+        if 'group' in child.type():
+            childlist.extend(iter_children_params(child,[]))
+    return childlist
+
 def get_param_path(param):
     path = [param.name()]
     while param.parent() is not None:
@@ -851,6 +861,9 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
 
+        if 'enabled' in self.param.opts:
+            self.displayLabel.setEnabled(self.param.opts['enabled'])
+
     def makeWidget(self):
         """
             | Return a single widget that should be placed in the second tree column.
@@ -1051,6 +1064,8 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 opts['suffix'] = opts['units']
             self.widget.setOpts(**opts)
             self.updateDisplayLabel()
+
+
 
     def valueChanged(self, param, val, force=False):
         ## called when the parameter's value has changed
@@ -1276,7 +1291,7 @@ class Combo_pb(QtWidgets.QWidget):
         self.add_pb=QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.add_pb.setIcon(icon3)
         self.hor_layout.addWidget(self.combo)
         self.hor_layout.addWidget(self.add_pb)
@@ -1508,7 +1523,7 @@ class ItemSelect_pb(QtWidgets.QWidget):
         self.add_pb=QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.add_pb.setIcon(icon3)
         self.hor_layout.addWidget(self.itemselect)
         self.hor_layout.addWidget(self.add_pb)
@@ -1558,6 +1573,7 @@ class ItemSelect(QtWidgets.QListWidget):
         if allitems !=values['all_items']:
             self.clear()
             self.addItems(values['all_items'])
+            QtWidgets.QApplication.processEvents()
         for item in self.all_items():
             if item.text() in values['selected']:
                 item.setSelected(True)
@@ -1663,12 +1679,12 @@ class file_browser(QtWidgets.QWidget):
             set_path
         """
         if self.filetype is True:
-            folder_name = QtWidgets.QFileDialog.getOpenFileName(None,'Choose File',self.path)[0]
+            folder_name = QtWidgets.QFileDialog.getOpenFileName(None,'Choose File',os.path.split(self.path)[0])[0]
         elif self.filetype is False:
             folder_name = QtWidgets.QFileDialog.getExistingDirectory(None,'Choose Folder',self.path)
 
         elif self.filetype == "save":
-            folder_name = QtWidgets.QFileDialog.getSaveFileName(None,'Enter a Filename', self.path)[0]
+            folder_name = QtWidgets.QFileDialog.getSaveFileName(None,'Enter a Filename', os.path.split(self.path)[0])[0]
 
         if not( not(folder_name)): #execute if the user didn't cancel the file selection
              self.set_path(folder_name)
@@ -1684,6 +1700,7 @@ class file_browser(QtWidgets.QWidget):
             =============== =========== ===========================
         """
         self.base_path_edit.setPlainText(path_file)
+        self.path = path_file
 
     def get_value(self):
         """
@@ -1708,7 +1725,7 @@ class file_browser(QtWidgets.QWidget):
         self.base_path_browse_pb=QtWidgets.QPushButton()
         self.base_path_browse_pb.setText("")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Browse_Dir_Path.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Browse_Dir_Path.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.base_path_browse_pb.setIcon(icon3)
         self.hor_layout.addWidget(self.base_path_edit)
 
@@ -1845,7 +1862,7 @@ class Plain_text_pb(QtWidgets.QWidget):
         self.add_pb=QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.add_pb.setIcon(icon3)
         self.hor_layout.addWidget(self.text_edit)
 

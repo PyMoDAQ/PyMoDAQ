@@ -22,6 +22,44 @@ from numba import jit
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
 
 
+class ListPicker(QObject):
+
+    def __init__(self,list_str):
+        super(ListPicker,self).__init__()
+        self.list = list_str
+
+    def pick_dialog(self):
+        self.dialog = QtWidgets.QDialog()
+        self.dialog.setMinimumWidth(500)
+        vlayout = QtWidgets.QVBoxLayout()
+
+
+        self.list_widget = QtWidgets.QListWidget()
+        self.list_widget.addItems(self.list)
+
+        vlayout.addWidget(self.list_widget, 10)
+        self.dialog.setLayout(vlayout)
+
+        buttonBox = QtWidgets.QDialogButtonBox();
+        buttonBox.addButton('Apply', buttonBox.AcceptRole)
+        buttonBox.accepted.connect(self.dialog.accept)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
+        buttonBox.rejected.connect(self.dialog.reject)
+
+        vlayout.addWidget(buttonBox)
+        self.dialog.setWindowTitle('Select an entry in the list')
+
+        res = self.dialog.show()
+
+        pass
+        if res == self.dialog.Accepted:
+            # save preset parameters in a xml file
+            return  [self.list_widget.currentIndex(), self.list_widget.currentItem().text()]
+        else:
+            return [-1, ""]
+
+
+
 def scroll_log(scroll_val, min_val , max_val):
     """
     Convert a scroll value [0-100] to a log scale between min_val and max_val
@@ -131,6 +169,297 @@ class DockArea(dockarea.DockArea, QObject):
             neighbor = neighbor.container()
         self.addDock(dock, position, neighbor)
         self.dock_signal.emit()
+
+class ThreadCommand(object):
+    """ | Micro class managing the thread commands.
+        |
+        | A thread command is composed of a string name defining the command to execute and an attribute list splitable making arguments of the called function.
+
+        =============== =============
+        **Attributes**  **Type**
+        *command*       string
+        *attributes*    generic list
+        =============== =============
+
+    """
+    def __init__(self,command="",attributes=[]):
+        self.command=command
+        self.attributes=attributes
+
+def elt_as_first_element(elt_list,match_word='Mock'):
+    if elt_list!=[]:
+        ind_elt=0
+        for ind,elt in enumerate(elt_list):
+            if 'Mock' in elt:
+                ind_elt=ind
+                break
+        plugin_mock=elt_list[ind_elt]
+        elt_list.remove(plugin_mock)
+        plugins=[plugin_mock]
+        plugins.extend(elt_list)
+    else: plugins=[]
+    return plugins
+
+def find_in_path(path, mode):
+    """
+        Find the .py files in the given path directory
+
+        =============== =========== ====================================
+        **Parameters**    **Type**   **Description**
+        *path*            string     The path to the directory to check
+        =============== =========== ====================================
+
+        Returns
+        -------
+        String list
+            The list containing all the .py files in the directory.
+    """
+    plugins = []
+    paths = os.listdir(path)
+    for entry in paths:
+        if mode in entry:
+            if (mode == 'daq_move'):
+                plugins.append(entry[9:-3])
+            else:
+                plugins.append(entry[13:-3])
+
+    return plugins
+
+def get_names_simple(mode):
+    import pymodaq_plugins
+    base_path = os.path.split(pymodaq_plugins.__file__)[0]
+
+    if (mode == 'daq_move'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_move_plugins'), mode)
+        plugins_import = elt_as_first_element(plugin_list, match_word='Mock')
+
+    elif (mode == 'daq_0Dviewer'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_0D'), mode)
+        plugins_import = elt_as_first_element(plugin_list, match_word='Mock')
+
+    elif (mode == 'daq_1Dviewer'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_1D'), mode)
+        plugins_import = elt_as_first_element(plugin_list, match_word='Mock')
+
+    elif (mode == 'daq_2Dviewer'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_2D'), mode)
+        plugins_import = elt_as_first_element(plugin_list, match_word='Mock')
+
+    return plugins_import
+
+def get_names(mode):
+    """
+        Get plugins names list from os dir command on plugins folder.
+        The mode arguments specify the directory to list between DAQ_Move
+        and DAQ_Viewer_XD
+
+        =============== =========== ====================================================================
+        **Parameters**    **Type**   **Description**
+        *mode*            *string    The plugins directory to check between :
+                                        * *DAQ_Move* : Check for DAQ_Move controllers plugins
+                                        * *DAQ_Viewer_0D* : Chack for DAQ_Viewer\0D controllers plugins
+                                        * *DAQ_Viewer_1D* : Chack for DAQ_Viewer\1D controllers plugins
+                                        * *DAQ_Viewer_2D* : Chack for DAQ_Viewer\2D controllers plugins
+        =============== =========== ====================================================================
+
+        Returns
+        -------
+        String list
+            The list containing all the present plugins names.
+
+        See Also
+        --------
+        find_in_path
+    """
+    # liste=[]
+    import pymodaq_plugins
+    base_path = os.path.split(pymodaq_plugins.__file__)[0]
+    # base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
+    if (mode == 'daq_move'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_move_plugins'), mode)
+        plugins = elt_as_first_element(plugin_list, match_word='Mock')
+        # check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.daq_move_' + mod, 'pymodaq_plugins.daq_move_plugins')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
+    elif (mode == 'daq_0Dviewer'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_0D'), mode)
+        plugins = elt_as_first_element(plugin_list, match_word='Mock')
+        # check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.daq_0Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_0D')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
+    elif (mode == 'daq_1Dviewer'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_1D'), mode)
+        plugins = elt_as_first_element(plugin_list, match_word='Mock')
+        # check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.daq_1Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_1D')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
+    elif (mode == 'daq_2Dviewer'):
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_2D'), mode)
+        plugins = elt_as_first_element(plugin_list, match_word='Mock')
+        # check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.daq_2Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_2D')
+                plugins_import.append(mod)
+            except:
+                pass
+
+        return plugins_import
+
+
+# class EnumMeta (EnumMeta):
+
+def make_enum(mode):
+    """
+        Custom class generator.
+        Create a dynamic enum containing the plugins folder file names.
+
+        Returns
+        -------
+        Instance of Enum
+            The enum object representing loaded plugins
+    """
+    names=get_names(mode)
+    values={}
+    for i in range(0,len(names)):
+        values.update({names[i]:i+1})
+    meta=type(enum.Enum)
+    bases=(enum.Enum,)
+    dict=meta.__prepare__(names,bases)
+    dict.update({'names': get_names})
+    for key,value in values.items():
+        dict[key]=value
+    if(mode=='daq_move'):
+        return meta(mode+'_Stage_type',bases,dict)
+    else :
+        return meta(mode+'_Type',bases,dict)
+
+
+
+
+
+def check_modules(detectors, detectors_type, actuators):
+    for ind_det, det in enumerate(detectors):
+        if detectors_type[ind_det] == 'DAQ0D':
+            if det not in get_names_simple('daq_0Dviewer'):
+                raise Exception('Invalid actuator plugin')
+        elif detectors_type[ind_det] == 'DAQ1D':
+            if det not in get_names_simple('daq_1Dviewer'):
+                raise Exception('Invalid actuator plugin')
+        elif detectors_type[ind_det] == 'DAQ2D':
+            if det not in get_names_simple('daq_2Dviewer'):
+                raise Exception('Invalid actuator plugin')
+
+    for act in actuators:
+        if act not in get_names_simple('daq_move'):
+            raise Exception('Invalid actuator plugin')
+
+class PIDModelGeneric():
+    params = []
+
+    status_sig = pyqtSignal(ThreadCommand)
+    actuators = []
+    actuators_name = []
+    detectors_type = [] # with entries either 'DAQ0D', 'DAQ1D' or 'DAQ2D'
+    detectors = []
+    detectors_name = []
+
+
+
+
+
+    def __init__(self, pid_controller):
+        self.pid_controller = pid_controller #instance of the pid_controller using this model
+        self.settings = self.pid_controller.settings.child('models', 'model_params') #set of parameters
+        self.data_names = None
+        self.curr_output = None
+        self.curr_input = None
+
+    def update_detector_names(self):
+        names = self.pid_controller.settings.child('main_settings', 'detector_modules').value()['selected']
+        self.data_names = []
+        for name in names:
+            name = name.split('//')
+            self.data_names.append(name)
+
+
+    def update_settings(self, param):
+        """
+        Get a parameter instance whose value has been modified by a user on the UI
+        To be overwritten in child class
+        """
+        if param.name() == '':
+            pass
+
+    def ini_model(self):
+        pass
+
+    def convert_input(self, measurements):
+        """
+        Convert the measurements in the units to be fed to the PID (same dimensionality as the setpoint)
+        Parameters
+        ----------
+        measurements: (Ordereddict) Ordereded dict of object from which the model extract a value of the same units as the setpoint
+
+        Returns
+        -------
+        float: the converted input
+
+        """
+        return 0
+
+    def convert_output(self, output, dt):
+        """
+        Convert the output of the PID in units to be fed into the actuator
+        Parameters
+        ----------
+        output: (float) output value from the PID from which the model extract a value of the same units as the actuator
+        dt: (float) ellapsed time in seconds since last call
+        Returns
+        -------
+        list: the converted output as a list (in case there are a few actuators)
+
+        """
+        #print('output converted')
+
+        return [output]
+
+def get_set_log_path():
+    local_path = get_set_local_dir()
+    log_path = os.path.join(local_path, 'logging')
+    if not os.path.isdir(log_path):
+        os.makedirs(log_path)
+    return log_path
+
+def get_set_pid_path():
+    local_path = get_set_local_dir()
+    pid_path = os.path.join(local_path, 'config_pid')
+    if not os.path.isdir(pid_path):
+        os.makedirs(pid_path)
+    return pid_path
+
 
 def zeros_aligned(n, align, dtype=np.uint32):
     """
@@ -288,152 +617,19 @@ def find_file(string,extension):
         ret[i]=re.search(regex,ret[i]).group(0)
     return ret[:-1]
 
-def find_in_path(path,mode):
-    """
-        Find the .py files in the given path directory
 
-        =============== =========== ====================================
-        **Parameters**    **Type**   **Description**
-        *path*            string     The path to the directory to check
-        =============== =========== ====================================
-
-        Returns
-        -------
-        String list
-            The list containing all the .py files in the directory.
-    """
-    plugins=[]
-    paths=os.listdir(path)
-    for entry in paths:
-        if mode in entry:
-            if(mode=='daq_move'):
-                plugins.append(entry[9:-3])
-            else:
-                plugins.append(entry[13:-3])
-    
-    return plugins
-
-def elt_as_first_element(elt_list,match_word='Mock'):
-    if elt_list!=[]:
-        ind_elt=0
-        for ind,elt in enumerate(elt_list):
-            if 'Mock' in elt:
-                ind_elt=ind
-                break
-        plugin_mock=elt_list[ind_elt]
-        elt_list.remove(plugin_mock)
-        plugins=[plugin_mock]
-        plugins.extend(elt_list)
-    else: plugins=[]
-    return plugins
-
-def get_names(mode):
-    """
-        Get plugins names list from os dir command on plugins folder.
-        The mode arguments specify the directory to list between DAQ_Move
-        and DAQ_Viewer_XD
-
-        =============== =========== ====================================================================
-        **Parameters**    **Type**   **Description**
-        *mode*            *string    The plugins directory to check between :
-                                        * *DAQ_Move* : Check for DAQ_Move controllers plugins
-                                        * *DAQ_Viewer_0D* : Chack for DAQ_Viewer\0D controllers plugins
-                                        * *DAQ_Viewer_1D* : Chack for DAQ_Viewer\1D controllers plugins
-                                        * *DAQ_Viewer_2D* : Chack for DAQ_Viewer\2D controllers plugins
-        =============== =========== ====================================================================
-        
-        Returns
-        -------
-        String list
-            The list containing all the present plugins names.
-
-        See Also
-        --------
-        find_in_path
-    """
-    # liste=[]
-    import pymodaq_plugins
-    base_path=os.path.split(pymodaq_plugins.__file__)[0]
-    #base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
-    if(mode=='daq_move'):
-        plugin_list=find_in_path(os.path.join(base_path,'daq_move_plugins'),mode)
-        plugins = elt_as_first_element(plugin_list,match_word='Mock')
-        #check if modules are importable
-        plugins_import = []
-        for mod in plugins:
-            try:
-                importlib.import_module('.daq_move_' + mod, 'pymodaq_plugins.daq_move_plugins')
-                plugins_import.append(mod)
-            except:
-                pass
+def recursive_find_files_extension(ini_path, ext, paths=[]):
+    with os.scandir(ini_path) as it:
+        for entry in it:
+            if os.path.splitext(entry.name)[1][1:] == ext and entry.is_file():
+                paths.append(entry.path)
+            elif entry.is_dir():
+                recursive_find_files_extension(entry.path, ext, paths)
+    return paths
 
 
-        return plugins_import
-    elif(mode=='daq_0Dviewer'):
-        plugin_list=find_in_path(os.path.join(base_path,'daq_viewer_plugins','plugins_0D'),mode)
-        plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        #check if modules are importable
-        plugins_import = []
-        for mod in plugins:
-            try:
-                importlib.import_module('.daq_0Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_0D')
-                plugins_import.append(mod)
-            except:
-                pass
 
-        return plugins_import
-    elif(mode=='daq_1Dviewer'):
-        plugin_list=find_in_path(os.path.join(base_path,'daq_viewer_plugins','plugins_1D'),mode)
-        plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        #check if modules are importable
-        plugins_import = []
-        for mod in plugins:
-            try:
-                importlib.import_module('.daq_1Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_1D')
-                plugins_import.append(mod)
-            except:
-                pass
 
-        return plugins_import
-    elif(mode=='daq_2Dviewer'):
-        plugin_list=find_in_path(os.path.join(base_path,'daq_viewer_plugins','plugins_2D'),mode)
-        plugins=elt_as_first_element(plugin_list,match_word='Mock')
-        #check if modules are importable
-        plugins_import = []
-        for mod in plugins:
-            try:
-                importlib.import_module('.daq_2Dviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_2D')
-                plugins_import.append(mod)
-            except:
-                pass
-
-        return plugins_import
-
-# class EnumMeta (EnumMeta):
-def make_enum(mode):
-    """
-        Custom class generator.
-        Create a dynamic enum containing the plugins folder file names.
-
-        Returns
-        -------
-        Instance of Enum
-            The enum object representing loaded plugins
-    """
-    names=get_names(mode) 
-    values={}
-    for i in range(0,len(names)):
-        values.update({names[i]:i+1})  
-    meta=type(enum.Enum)
-    bases=(enum.Enum,)
-    dict=meta.__prepare__(names,bases)
-    dict.update({'names': get_names})
-    for key,value in values.items():
-        dict[key]=value
-    if(mode=='daq_move'):
-        return meta(mode+'_Stage_type',bases,dict)
-    else :
-        return meta(mode+'_Type',bases,dict)
 
 
 def nparray2Qpixmap(arr):
@@ -1246,50 +1442,6 @@ def ift2(x, dim=0):
     out = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(x, axes=dim)), axes=dim)
     return out
 
-class ThreadCommand(object):
-    """ | Micro class managing the thread commands.
-        | 
-        | A thread command is composed of a string name defining the command to execute and an attribute list splitable making arguments of the called function.
-
-        =============== =============
-        **Attributes**  **Type**
-        *command*       string
-        *attributes*    generic list
-        =============== =============
-
-        Examples
-        --------
-        ..doctest::
-
-            >>> import DAQ_utils as Du
-            >>> thread_command_ex=Du.ThreadCommand("The command name",
-            ... ["differents","attributes","here"])
-            >>>   #The thread command memory location
-            >>> print(thread_command_ex)
-            <DAQ_utils.ThreadCommand object at 0x000000000A390B38>
-            >>>   #A command name
-            >>> print(thread_command_ex.command)
-            The command name
-            >>>   #the attributes treated as parameter once the command treated
-            >>> print(thread_command_ex.attributes)
-            ['differents', 'attributes', 'here']
-            >>>   #Attributes type is generic
-            >>> thread_command_ex=Du.ThreadCommand("The command name",
-            ... [10,20,30,40,50])
-            >>>   #A different memory location
-            >>> print(thread_command_ex)
-            <DAQ_utils.ThreadCommand object at 0x0000000005372198>
-            >>>   #A command name
-            >>> print(thread_command_ex.command)
-            The command name
-            >>>   #With new attributes
-            >>> print(thread_command_ex.attributes)
-            [10, 20, 30, 40, 50]
-
-    """
-    def __init__(self,command="",attributes=[]):
-        self.command=command
-        self.attributes=attributes
 
 
 

@@ -3,7 +3,7 @@ import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtCore import QObject, pyqtSignal
-from PyMoDAQ.DAQ_Utils.GUI_utils import  clickable
+from pymodaq.daq_utils.gui_utils import clickable
 
 
 class QLED(QLabel):
@@ -11,8 +11,8 @@ class QLED(QLabel):
     def __init__(self,parent=None):
         QLabel.__init__(self,parent)
         #self.setText("")
-        self.red_icon=QtGui.QPixmap(":/Labview_icons/Icon_Library/red_light.png")
-        self.green_icon=QtGui.QPixmap(":/Labview_icons/Icon_Library/greenLight2.png")
+        self.red_icon=QtGui.QPixmap(":/icons/Icon_Library/red_light.png")
+        self.green_icon=QtGui.QPixmap(":/icons/Icon_Library/greenLight2.png")
         self.setPixmap(self.red_icon)
         self.state=False;
         self.clickable=True   #set the possibility to click and control the state of the LED otherwise it behaves as an indicator 

@@ -169,10 +169,10 @@
                  <number>6</number>
                 </property>
                 <property name="minimum">
-                 <double>-1000000.000000000000000</double>
+                 <double>-10000000.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>1000000.000000000000000</double>
+                 <double>10000000.000000000000000</double>
                 </property>
                </widget>
               </item>
@@ -209,7 +209,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/close2.png</normaloff>:/Labview_icons/Icon_Library/close2.png</iconset>
+                  <normaloff>:/icons/Icon_Library/close2.png</normaloff>:/icons/Icon_Library/close2.png</iconset>
                 </property>
                </widget>
               </item>
@@ -233,8 +233,11 @@
                   <property name="decimals">
                    <number>6</number>
                   </property>
+                  <property name="minimum">
+                   <double>-100000000.000000000000000</double>
+                  </property>
                   <property name="maximum">
-                   <double>1000000.000000000000000</double>
+                   <double>100000000.000000000000000</double>
                   </property>
                  </widget>
                 </item>
@@ -248,7 +251,7 @@
                   </property>
                   <property name="icon">
                    <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                    <normaloff>:/Labview_icons/Icon_Library/go_to_1.png</normaloff>:/Labview_icons/Icon_Library/go_to_1.png</iconset>
+                    <normaloff>:/icons/Icon_Library/go_to_1.png</normaloff>:/icons/Icon_Library/go_to_1.png</iconset>
                   </property>
                  </widget>
                 </item>
@@ -262,7 +265,7 @@
                   </property>
                   <property name="icon">
                    <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                    <normaloff>:/Labview_icons/Icon_Library/go_to_2.png</normaloff>:/Labview_icons/Icon_Library/go_to_2.png</iconset>
+                    <normaloff>:/icons/Icon_Library/go_to_2.png</normaloff>:/icons/Icon_Library/go_to_2.png</iconset>
                   </property>
                  </widget>
                 </item>
@@ -276,7 +279,7 @@
                   </property>
                   <property name="icon">
                    <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                    <normaloff>:/Labview_icons/Icon_Library/Add_Step.png</normaloff>:/Labview_icons/Icon_Library/Add_Step.png</iconset>
+                    <normaloff>:/icons/Icon_Library/Add_Step.png</normaloff>:/icons/Icon_Library/Add_Step.png</iconset>
                   </property>
                   <property name="checkable">
                    <bool>true</bool>
@@ -293,7 +296,7 @@
                   </property>
                   <property name="icon">
                    <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                    <normaloff>:/Labview_icons/Icon_Library/Settings.png</normaloff>:/Labview_icons/Icon_Library/Settings.png</iconset>
+                    <normaloff>:/icons/Icon_Library/Settings.png</normaloff>:/icons/Icon_Library/Settings.png</iconset>
                   </property>
                   <property name="checkable">
                    <bool>true</bool>
@@ -357,7 +360,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/Move.png</normaloff>:/Labview_icons/Icon_Library/Move.png</iconset>
+                  <normaloff>:/icons/Icon_Library/Move.png</normaloff>:/icons/Icon_Library/Move.png</iconset>
                 </property>
                </widget>
               </item>
@@ -375,7 +378,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/MoveDown.png</normaloff>:/Labview_icons/Icon_Library/MoveDown.png</iconset>
+                  <normaloff>:/icons/Icon_Library/MoveDown.png</normaloff>:/icons/Icon_Library/MoveDown.png</iconset>
                 </property>
                </widget>
               </item>
@@ -386,7 +389,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/MoveUp.png</normaloff>:/Labview_icons/Icon_Library/MoveUp.png</iconset>
+                  <normaloff>:/icons/Icon_Library/MoveUp.png</normaloff>:/icons/Icon_Library/MoveUp.png</iconset>
                 </property>
                </widget>
               </item>
@@ -397,7 +400,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/status_cancelled.png</normaloff>:/Labview_icons/Icon_Library/status_cancelled.png</iconset>
+                  <normaloff>:/icons/Icon_Library/stop.png</normaloff>:/icons/Icon_Library/stop.png</iconset>
                 </property>
                </widget>
               </item>
@@ -410,10 +413,10 @@
                  <number>6</number>
                 </property>
                 <property name="minimum">
-                 <double>-1000000.000000000000000</double>
+                 <double>-100000000.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>1000000.000000000000000</double>
+                 <double>100000000.000000000000000</double>
                 </property>
                </widget>
               </item>
@@ -426,7 +429,7 @@
                  <number>6</number>
                 </property>
                 <property name="minimum">
-                 <double>-1000000.000000000000000</double>
+                 <double>-10000000.000000000000000</double>
                 </property>
                 <property name="maximum">
                  <double>1000000.000000000000000</double>
@@ -440,7 +443,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/home2_32.png</normaloff>:/Labview_icons/Icon_Library/home2_32.png</iconset>
+                  <normaloff>:/icons/Icon_Library/Help_32.png</normaloff>:/icons/Icon_Library/Help_32.png</iconset>
                 </property>
                </widget>
               </item>
@@ -451,7 +454,7 @@
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-                  <normaloff>:/Labview_icons/Icon_Library/home2_32.png</normaloff>:/Labview_icons/Icon_Library/home2_32.png</iconset>
+                  <normaloff>:/icons/Icon_Library/home2.png</normaloff>:/icons/Icon_Library/home2.png</iconset>
                 </property>
                </widget>
               </item>

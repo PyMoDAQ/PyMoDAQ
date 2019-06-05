@@ -44,9 +44,11 @@ class DAQ_type(Enum):
     DAQ0D=0
     DAQ1D=1
     DAQ2D=2
-    def names(self):
-        names=self.__members__.items()
-        return [name for name, member in self.__members__.items()]
+
+    @classmethod
+    def names(cls):
+        names=cls.__members__.items()
+        return [name for name, member in cls.__members__.items()]
 
 
 

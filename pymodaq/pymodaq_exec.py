@@ -73,4 +73,4 @@ def h5browser():
 
 
 if __name__ == '__main__':
-    viewer()
+    scan()

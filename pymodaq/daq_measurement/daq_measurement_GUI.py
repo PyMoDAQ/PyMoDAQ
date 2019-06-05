@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'DAQ_Measurement_GUI.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -33,7 +33,7 @@ class Ui_Form(object):
         self.gridLayout.addWidget(self.formula_edit, 4, 1, 1, 1)
         self.Quit_pb = QtWidgets.QPushButton(self.gridLayoutWidget)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.Quit_pb.setIcon(icon)
         self.Quit_pb.setObjectName("Quit_pb")
         self.gridLayout.addWidget(self.Quit_pb, 1, 0, 1, 2)

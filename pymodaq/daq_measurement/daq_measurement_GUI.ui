@@ -47,8 +47,8 @@
            <string>Quit</string>
           </property>
           <property name="icon">
-           <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-            <normaloff>:/Labview_icons/Icon_Library/close2.png</normaloff>:/Labview_icons/Icon_Library/close2.png</iconset>
+           <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+            <normaloff>:/icons/Icon_Library/close2.png</normaloff>:/icons/Icon_Library/close2.png</iconset>
           </property>
          </widget>
         </item>
@@ -225,7 +225,8 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
+  <include location="../QtDesigner_Ressources/QtDesigner_ressources.qrc"/>
+  <include location="../QtDesigner_Ressources/QtDesigner_ressourcesbis.qrc"/>
  </resources>
  <connections/>
 </ui>

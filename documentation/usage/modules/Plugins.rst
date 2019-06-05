@@ -56,6 +56,7 @@ These settings will appear on the UI as a tree of parameters with a title and di
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object ``self.settings``.
 This object inherits from on the ``Parameter`` object defined in `pyqtgraph`__.
 
+
 __ http://www.pyqtgraph.org/documentation/parametertree/index.html
 
    .. _figure_settings:
@@ -96,6 +97,8 @@ The list of available types of parameters :module:`custom_parameter_tree` (defin
 * ``itemselect`` : an object to easily select one or more items among a few
 * ``browsepath``: a text area and a pushbutton to select a given path or file
 * ``text`` : a text area (for comments for instance)
+
+**Important**: the *name* key in the dictionnaries must **not** contain any space, please use underscore if necessary!
 
 Once the module is initialized, any modification on the UI hardware settings will be send to the plugin through
 the ``commit_settings`` method of the plugin class and illustrated below (still from the ``daq_2Dviewer_AndorCCD`` plugin).
@@ -348,7 +351,7 @@ How to contribute?
 If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
 to do so!!), you will have to follow the rules as
 stated above. However, the best practice would be to *fork* pymodaq_plugins repository. On windows, you can use
-`Github Desktop`__. Then you can manually install the forked package (typically using ``pip -e install .`` from
+`Github Desktop`__. Then you can manually install the forked package (typically using ``pip install -e .`` from
 winpython command line where you *cd* within the forked package. This command will kind of install the package but
 any change you apply on the local folderwill be applied on the package. Once you're ready with a working plugin, you can then
 *push* your branch that will be merged with the main branch after validation.

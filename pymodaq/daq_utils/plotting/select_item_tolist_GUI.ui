@@ -26,7 +26,7 @@
        </property>
        <property name="icon">
         <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-         <normaloff>:/Labview_icons/Icon_Library/Add2.png</normaloff>:/Labview_icons/Icon_Library/Add2.png</iconset>
+         <normaloff>:/icons/Icon_Library/Add2.png</normaloff>:/icons/Icon_Library/Add2.png</iconset>
        </property>
       </widget>
      </item>
@@ -40,7 +40,7 @@
        </property>
        <property name="icon">
         <iconset resource="../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-         <normaloff>:/Labview_icons/Icon_Library/remove.png</normaloff>:/Labview_icons/Icon_Library/remove.png</iconset>
+         <normaloff>:/icons/Icon_Library/remove.png</normaloff>:/icons/Icon_Library/remove.png</iconset>
        </property>
       </widget>
      </item>

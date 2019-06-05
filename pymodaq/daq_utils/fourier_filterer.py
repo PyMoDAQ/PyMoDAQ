@@ -55,7 +55,7 @@ class FourierFilterer(QObject):
         self.fftbutton1D = QtWidgets.QPushButton()
         self.fftbutton1D.setText("")
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/FFT.png"), QtGui.QIcon.Normal,
+        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/FFT.png"), QtGui.QIcon.Normal,
                        QtGui.QIcon.Off)
         self.fftbutton1D.setIcon(icon)
         self.fftbutton1D.setCheckable(True)

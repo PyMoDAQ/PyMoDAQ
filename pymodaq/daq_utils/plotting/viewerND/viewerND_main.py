@@ -488,7 +488,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/cartesian.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/cartesian.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ui.set_signals_pb_1D=QtWidgets.QPushButton('')
         self.ui.set_signals_pb_1D.setIcon(icon)
         self.ui.set_signals_pb_2D=QtWidgets.QPushButton('')

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ 1.4 documentation</title>
+  <title>Plugins &mdash; PyMoDAQ 1.4.2 documentation</title>
   
 
   
@@ -307,83 +307,107 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 <td>7270 DSP</td>
 <td>using pyvisa protocol</td>
 </tr>
-<tr class="row-even"><td>Mock</td>
+<tr class="row-even"><td>LockinSR830</td>
+<td>DAQ_0DViewer</td>
+<td>Stanford Reasearch Systems</td>
+<td>SR830 DSP Lockin amplifier</td>
+<td>using pyvisa protocol</td>
+</tr>
+<tr class="row-odd"><td>Mock</td>
 <td>DAQ_1DViewer</td>
 <td>Simulation purpose</td>
 <td>&#160;</td>
 <td>&#160;</td>
 </tr>
-<tr class="row-odd"><td>NIDAQmx</td>
+<tr class="row-even"><td>NIDAQmx</td>
 <td>DAQ_1DViewer</td>
 <td>National Instruments</td>
 <td>various not too old data acquisition cards</td>
 <td>using the daqmx package (need the daqmx dll), Analog in</td>
 </tr>
-<tr class="row-even"><td>OceanOptics</td>
+<tr class="row-odd"><td>OceanOptics</td>
 <td>DAQ_1DViewer</td>
 <td>OceanOptics</td>
 <td>USB2000, USB2000+, USB4000…</td>
 <td>using the .Net NETOmniDriver-NET40</td>
 </tr>
-<tr class="row-odd"><td>Picoscope</td>
+<tr class="row-even"><td>Picoscope</td>
 <td>DAQ_1DViewer</td>
 <td>PicoTechnology</td>
 <td>picoscope 5000A</td>
 <td>custom wrapper from the dll (not nicely written but working)</td>
 </tr>
-<tr class="row-even"><td>Shamrock</td>
+<tr class="row-odd"><td>Shamrock</td>
 <td>DAQ_1DViewer</td>
 <td>Andor</td>
 <td>all shamrock spectrometers</td>
 <td>using a custom wrapper of the dll</td>
 </tr>
-<tr class="row-odd"><td>Tektronix</td>
+<tr class="row-even"><td>Tektronix</td>
 <td>DAQ_1DViewer</td>
 <td>Tektronix</td>
 <td>MDO30xx</td>
 <td>using pyvisa, light plugin to only get channels from screen</td>
 </tr>
-<tr class="row-even"><td>TH260</td>
+<tr class="row-odd"><td>TH260</td>
 <td>DAQ_1DViewer</td>
 <td>Picoquant</td>
 <td>Timeharp260P</td>
 <td>using a custom wrapper of the dll</td>
 </tr>
-<tr class="row-odd"><td>Mock</td>
+<tr class="row-even"><td>Mock</td>
 <td>DAQ_2DViewer</td>
 <td>Simulation purpose</td>
 <td>&#160;</td>
 <td>&#160;</td>
 </tr>
-<tr class="row-even"><td>AndorCCD</td>
+<tr class="row-odd"><td>AndorCCD</td>
 <td>DAQ_2DViewer</td>
 <td>Andor</td>
 <td>CCD Idus (should work with all CCDs)</td>
 <td>custom wrapper of the sdk2 dll</td>
 </tr>
-<tr class="row-odd"><td>OpenCVCam</td>
+<tr class="row-even"><td>OpenCVCam</td>
 <td>DAQ_2DViewer</td>
 <td>webcams</td>
 <td>&#160;</td>
 <td>using windows universal driver and builtin functionalities from opencv-python</td>
 </tr>
-<tr class="row-even"><td>OrsayCamera</td>
+<tr class="row-odd"><td>OrsayCamera</td>
 <td>DAQ_2DViewer</td>
 <td>Princeton/Ropers</td>
 <td>PIXIS256</td>
 <td>custom wrapper from Orsay LPS lab to interface cameras using 64 bit PICAM library</td>
 </tr>
-<tr class="row-odd"><td>OrsayStem</td>
+<tr class="row-even"><td>OrsayStem</td>
 <td>DAQ_2DViewer</td>
 <td>&#160;</td>
 <td>&#160;</td>
 <td>used to do Scanning Transmission Electron Microscopy using the custom OUDS electronics. acquire STEM images and SPIM data cubes</td>
 </tr>
-<tr class="row-even"><td>TCP_GRABBER</td>
+<tr class="row-odd"><td>TCP_GRABBER</td>
 <td>DAQ_2DViewer</td>
 <td>/</td>
 <td>/</td>
 <td>TCP/IP server protocol to communicate with non local hardware.</td>
+</tr>
+<tr class="row-even"><td>FLIM</td>
+<td>DAQ_2DViewer</td>
+<td>Picoquant/piezoconcept</td>
+<td>Timeharp260P + Bio200</td>
+<td>Plugins for Fluorescence lifetime imaging microscopy: cartography (2D using the Bio200) of fluorescence lifetime</td>
+</tr>
+<tr class="row-odd"><td>GenICam</td>
+<td>DAQ_2DViewer</td>
+<td>Generic protocol using GenTL producers</td>
+<td>Sentech STC-MBS500U</td>
+<td>Using the GenICam protocol many complient industrial cameras can be used without any use of their own libraries. Matrix Vision GenTL producer should be installed (see plugin doc)</td>
+</tr>
+<tr class="row-even"><td>TIS</td>
+<td>DAQ_2DViewer</td>
+<td>The Imaging Source</td>
+<td>various USB models</td>
+<td>The plugin uses the tisgrabber.dll with the pyicic python wrapper package</td>
 </tr>
 </tbody>
 </table>
@@ -443,6 +467,7 @@ This object inherits from on the <code class="docutils literal notranslate"><spa
 <li><code class="docutils literal notranslate"><span class="pre">browsepath</span></code>: a text area and a pushbutton to select a given path or file</li>
 <li><code class="docutils literal notranslate"><span class="pre">text</span></code> : a text area (for comments for instance)</li>
 </ul>
+<p><strong>Important</strong>: the <em>name</em> key in the dictionnaries must <strong>not</strong> contain any space, please use underscore if necessary!</p>
 <p>Once the module is initialized, any modification on the UI hardware settings will be send to the plugin through
 the <code class="docutils literal notranslate"><span class="pre">commit_settings</span></code> method of the plugin class and illustrated below (still from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin).
 The <code class="docutils literal notranslate"><span class="pre">param</span></code> method argument is of the type <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> (from <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code>):</p>
@@ -657,7 +682,7 @@ if you have specific need and/or propositions.</p>
 <p>If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
 to do so!!), you will have to follow the rules as
 stated above. However, the best practice would be to <em>fork</em> pymodaq_plugins repository. On windows, you can use
-<a class="reference external" href="https://desktop.github.com/">Github Desktop</a>. Then you can manually install the forked package (typically using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">-e</span> <span class="pre">install</span> <span class="pre">.</span></code> from
+<a class="reference external" href="https://desktop.github.com/">Github Desktop</a>. Then you can manually install the forked package (typically using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> from
 winpython command line where you <em>cd</em> within the forked package. This command will kind of install the package but
 any change you apply on the local folderwill be applied on the package. Once you’re ready with a working plugin, you can then
 <em>push</em> your branch that will be merged with the main branch after validation.</p>

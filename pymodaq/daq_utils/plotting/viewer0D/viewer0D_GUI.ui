@@ -58,7 +58,7 @@
            </property>
            <property name="icon">
             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-             <normaloff>:/Labview_icons/Icon_Library/clear2.png</normaloff>:/Labview_icons/Icon_Library/clear2.png</iconset>
+             <normaloff>:/icons/Icon_Library/clear2.png</normaloff>:/icons/Icon_Library/clear2.png</iconset>
            </property>
            <property name="checkable">
             <bool>false</bool>
@@ -75,7 +75,7 @@
            </property>
            <property name="icon">
             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-             <normaloff>:/Labview_icons/Icon_Library/ChnNum.png</normaloff>:/Labview_icons/Icon_Library/ChnNum.png</iconset>
+             <normaloff>:/icons/Icon_Library/ChnNum.png</normaloff>:/icons/Icon_Library/ChnNum.png</iconset>
            </property>
            <property name="checkable">
             <bool>true</bool>

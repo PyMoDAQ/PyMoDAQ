@@ -21,6 +21,7 @@ import pymodaq_plugins.daq_move_plugins as plugins
 
 DAQ_Move_Stage_type=make_enum('daq_move')
 
+
 class DAQ_Move(Ui_Form,QObject):
     """
         | DAQ_Move object is a module used to control one motor from a specified list.
@@ -106,7 +107,7 @@ class DAQ_Move(Ui_Form,QObject):
         self.ui.Move_Done_LED.set_as_false()
         self.Initialized_state=False
         self.ui.Current_position_sb.setReadOnly(False)
-        self.Move_done=False
+        self.move_done_bool=False
 
         ############IMPORTANT############################
         self.controller=None #the hardware controller/set after initialization and to be used by other modules
@@ -255,7 +256,7 @@ class DAQ_Move(Ui_Form,QObject):
         try:
             if not(position==self.current_position and self.stage_name=="Thorlabs_Flipper"):
                 self.ui.Move_Done_LED.set_as_false()
-                self.Move_done=False
+                self.move_done_bool=False
                 self.target_position=position
                 self.update_status("Moving",wait_time=self.wait_time)
                 #self.check_out_bounds(position)
@@ -276,7 +277,7 @@ class DAQ_Move(Ui_Form,QObject):
         """
         try:
             self.ui.Move_Done_LED.set_as_false()
-            self.Move_done=False
+            self.move_done_bool=False
             self.update_status("Moving",wait_time=self.wait_time)
             self.command_stage.emit(ThreadCommand(command="Reset_Stop_Motion"))
             self.command_stage.emit(ThreadCommand(command="move_Home"))
@@ -303,7 +304,7 @@ class DAQ_Move(Ui_Form,QObject):
         """
         try:
             self.ui.Move_Done_LED.set_as_false()
-            self.Move_done=False
+            self.move_done_bool=False
             self.target_position=self.current_position+rel_position
             self.update_status("Moving",wait_time=self.wait_time)
             #self.check_out_bounds(self.target_position)
@@ -582,14 +583,14 @@ class DAQ_Move(Ui_Form,QObject):
         elif status.command=="move_done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
-            self.Move_done=True
+            self.move_done_bool=True
             self.ui.Move_Done_LED.set_as_true()
             self.move_done_signal.emit(self.title,status.attributes[0])
 
         elif status.command=="Move_Not_Done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
-            self.Move_done=False
+            self.move_done_bool=False
             self.ui.Move_Done_LED.set_as_false()
             self.command_stage.emit(ThreadCommand(command="move_Abs",attributes=[self.target_position]))
         elif status.command=='update_settings':

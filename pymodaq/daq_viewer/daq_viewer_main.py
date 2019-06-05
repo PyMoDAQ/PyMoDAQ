@@ -6,9 +6,7 @@ Created on Wed Jan 10 16:54:14 2018
 """
 
 from PyQt5 import QtGui, QtWidgets, QtCore
-
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
-
 import sys
 from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
 
@@ -42,8 +40,8 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 import os
 from easydict import EasyDict as edict
 
-
-from pyqtgraph.dockarea import DockArea, Dock
+from pymodaq.daq_utils.daq_utils import DockArea
+from pyqtgraph.dockarea import Dock
 import pickle
 import datetime
 import tables
@@ -179,6 +177,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         widgetsettings=QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
 
+        self.grab_done = False
         self.navigator = None
         self.scanner = None
         self.ui.navigator_pb.setVisible(False)
@@ -478,6 +477,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                         self.data_to_save_export[key][k] = datas[key][k]
 
         if self.data_to_save_export['Ndatas'] == len(self.ui.viewers):
+            self.grab_done = True
             self.grab_done_signal.emit(self.data_to_save_export)
 
     def get_scaling_options(self):
@@ -511,7 +511,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             --------
             daq_utils.ThreadCommand, set_enabled_Ini_buttons
         """
-
+        self.grab_done = False
         if not(grab_state):
 
             self.command_detector.emit(ThreadCommand("single",[self.settings.child('main_settings','Naverage').value(), savepath]))
@@ -672,7 +672,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             else:
                 childName = param.name()
             if change == 'childAdded':
-                self.update_settings_signal.emit(edict(path=path, param=data[0], change=change))
+                if 'main_settings' not in path:
+                    self.update_settings_signal.emit(edict(path=path, param=data[0].saveState(), change=change))
 
             elif change == 'value':
                 if param.name()=='DAQ_type':
@@ -731,15 +732,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                             self.file_continuous_save.close()
                         except: pass
 
+                elif param.name() == 'wait_time':
+                    self.command_detector.emit(ThreadCommand('update_wait_time', [param.value()]))
 
-
-
-                self.update_settings_signal.emit(edict(path=path, param=param, change=change))
-
+                if 'main_settings' not in path:
+                    self.update_settings_signal.emit(edict(path=path, param=param, change=change))
 
 
             elif change == 'parent':
-                self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
+                if path is not None:
+                    if 'main_settings' not in path:
+                        self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
 
 
 
@@ -787,7 +790,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 except: pass
         except Exception as e:
             icon = QtGui.QIcon()
-            icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
             msgBox=QtWidgets.QMessageBox(parent=None)
             msgBox.addButton(QtWidgets.QMessageBox.Yes)
             msgBox.addButton(QtWidgets.QMessageBox.No)
@@ -1516,7 +1519,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 elif status.attributes[2] == 'options':
                     self.settings.child('detector_settings', *status.attributes[0]).setOpts(**status.attributes[1])
                 elif status.attributes[2] == 'childAdded':
+                    child = Parameter.create(name='tmp')
+                    child.restoreState(status.attributes[1][0])
                     self.settings.child('detector_settings', *status.attributes[0]).addChild(status.attributes[1][0])
+
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e),self.wait_time, 'log')
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
@@ -1558,7 +1564,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             QtWidgets.QApplication.processEvents()
 
     def update_com(self):
-        pass
+        self.command_detector.emit(ThreadCommand('update_com', []))
 
     @pyqtSlot(daq_utils.ScanParameters)
     def update_from_scanner(self, scan_parameters):
@@ -1781,6 +1787,12 @@ class DAQ_Detector(QObject):
         elif command.command == 'move_at_navigator':
             self.detector.move_at_navigator(*command.attributes)
 
+        elif command.command == 'update_com':
+            self.detector.update_com()
+
+        elif command.command =='update_wait_time':
+            self.wait_time = command.attributes[0]
+
 
     def ini_detector(self, params_state=None, controller=None):
         """
@@ -1989,7 +2001,7 @@ class DAQ_Detector(QObject):
 
 if __name__ == '__main__':
     from pymodaq.daq_utils.daq_enums import DAQ_type
-    app = QtWidgets.QApplication(sys.argv);
+    app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
