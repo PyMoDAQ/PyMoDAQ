@@ -47,6 +47,7 @@ class Navigator(QObject):
         self.h5file_path = None
         self.h5file = h5file
         if h5file is not None:
+            self.h5file_path = h5file.filename
             self.settings.child('settings', 'filepath').setValue(h5file.filename)
             self.settings.child('settings', 'Load h5').hide()
             self.show_overlay()
@@ -80,6 +81,7 @@ class Navigator(QObject):
         self.moveat_action.setCheckable(True)
         self.toolbar.addAction(self.moveat_action)
 
+
         icon_sel_all = QtGui.QIcon()
         icon_sel_all.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/select_all2.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
@@ -101,6 +103,11 @@ class Navigator(QObject):
         self.toolbar.addAction(self.histo_action)
         self.histo_action.setCheckable(True)
         self.histo_action.triggered.connect(self.show_histo)
+
+    @pyqtSlot(float, float)
+    def move_at(self, posx, posy):
+        if self.moveat_action.isChecked():
+            self.sig_double_clicked.emit(posx, posy)
 
     def show_histo(self):
         show_state = self.histo_action.isChecked()
@@ -144,7 +151,7 @@ class Navigator(QObject):
     def load_image(self):
         #image_filepath = str(utils.select_file(start_path=None, save=False, ext='h5'))
         data, fname, node_path = browse_data(ret_all=True)
-        if data is not None:
+        if data is not None and fname != '':
             self.h5file_image = tables.open_file(fname)
             node = self.h5file_image.get_node(node_path)
             pixmaps = utils.get_h5file_scans(self.h5file_image, node._v_parent)
@@ -167,11 +174,11 @@ class Navigator(QObject):
 
     def load_data(self):
         self.h5file_path = str(utils.select_file(start_path=None,save=False, ext='h5'))
-        if self.h5file_path != '.':
+        if self.h5file_path != '':
             self.settings.child('settings', 'filepath').setValue(self.h5file_path)
             if self.h5file is not None:
                 self.h5file.close()
-            self.h5file = tables.open_file(self.h5file_path)
+            self.h5file = tables.open_file(self.h5file_path, 'a')
             self.list_2Dscans()
 
     def set_aspect_ratio(self):
@@ -211,31 +218,29 @@ class Navigator(QObject):
                                 h5file = self.h5file_image
                                 nodes = [h5file.get_node(data['path'])]
                             ind = 0
-
                             for node in nodes:
-                                if 'Scan' in param.name():
-                                    if 'data_type' in node._v_attrs and 'scan_type' in node._v_attrs:
-                                        flag = node._v_attrs['data_type'] == '0D' and node._v_attrs['scan_type'] == 'Scan2D'
-                                    else:
-                                        flag = False
-                                else:
-                                    flag = 'pixmap2D' in node._v_attrs
+                                flag = False
+                                if 'type' in node._v_attrs and 'data_dimension' in node._v_attrs:
+                                    if 'scan_type' in node._v_attrs:
+                                        if node._v_attrs['scan_type'] == 'scan2D' and node._v_attrs['data_dimension'] == '0D': #2d scan of 0D data
+                                            flag = True
+                                        elif node._v_attrs['scan_type'] == '' and node._v_attrs['data_dimension'] == '2D': #image data (2D) with no scan
+                                            flag = True
+
                                 if flag:
                                     im=ImageItem()
                                     im.setOpacity(1)
                                     #im.setOpts(axisOrder='row-major')
                                     self.viewer.image_widget.plotitem.addItem(im)
                                     im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+                                    im.setImage(node.read().T)
+
                                     if 'Scan' in param.name():
-                                        im.setImage(node.read())
+                                        x_axis = np.unique(h5file.get_node(data['path'])._v_parent._f_get_child(utils.capitalize('scan_x_axis')).read())
+                                        y_axis = np.unique(h5file.get_node(data['path'])._v_parent._f_get_child(utils.capitalize('scan_y_axis')).read())
                                     else:
-                                        im.setImage(node.read().T)
-                                    if 'Scan' in param.name():
-                                        x_axis = h5file.get_node(data['path']+'/scan_x_axis_unique').read()
-                                        y_axis = h5file.get_node(data['path']+'/scan_y_axis_unique').read()
-                                    else:
-                                        x_axis = h5file.get_node(data['path'])._v_parent._f_get_child('x_axis')
-                                        y_axis = h5file.get_node(data['path'])._v_parent._f_get_child('y_axis')
+                                        x_axis = np.unique(h5file.get_node(data['path'])._v_parent._f_get_child(utils.capitalize('x_axis')).read())
+                                        y_axis = np.unique(h5file.get_node(data['path'])._v_parent._f_get_child(utils.capitalize('y_axis')).read())
 
 
                                     dx = x_axis[1]-x_axis[0]
@@ -304,7 +309,8 @@ class Navigator(QObject):
         self.viewer.histogram_red.setVisible(False)
         self.viewer.histogram_green.setVisible(False)
         self.viewer.histogram_blue.setVisible(False)
-        self.sig_double_clicked = self.viewer.sig_double_clicked
+        self.viewer.sig_double_clicked.connect(self.move_at)
+
 
         #displaying the scan list tree
         self.settings_tree = ParameterTree()
@@ -393,6 +399,8 @@ class Navigator(QObject):
 
     def update_2Dscans(self):
         try:
+            if not self.h5file.isopen:
+                self.h5file = tables.open_file(self.h5file.filename, 'a')
             scans=utils.get_h5file_scans(self.h5file)
             #settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
             params=[]

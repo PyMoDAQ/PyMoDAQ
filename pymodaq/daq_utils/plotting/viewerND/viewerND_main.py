@@ -13,9 +13,10 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.daq_utils as utils
 
 from pyqtgraph import LinearRegionItem
+import copy
 
 from pymodaq.daq_utils.plotting.viewerND.signal import Signal
-import time
+import datetime
 
 
 class ViewerND(QtWidgets.QWidget, QObject):
@@ -70,8 +71,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.wait_time = 2000
         self.viewer_type = 'DataND'  # ☺by default but coul dbe used for 3D visualization
 
-        self.x_axis = None
-        self.y_axis = None
+        self.x_axis = dict(data=None, label='', units='')
+        self.y_axis = dict(data=None, label='', units='')
 
         self.data_buffer = []  # convenience list to store 0D data to be displayed
         self.datas = None
@@ -88,7 +89,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     @pyqtSlot(OrderedDict)
     def export_data(self, datas):
-        datas['acq_time_s'] = time.perf_counter()
+        datas['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(datas)
 
     def get_data_dimension(self):
@@ -174,23 +175,27 @@ class ViewerND(QtWidgets.QWidget, QObject):
         """
         """
         try:
-
-            if len(self.axes_nav)==1:#1D Navigator
+            self.nav_x_axis = dict(data=None, label='', units='')
+            self.nav_y_axis = dict(data=None, label='', units='')
+            if len(self.axes_nav)==1 or len(self.axes_nav)==2:#1D Navigator
+                self.nav_y_axis['data'] = [0]
                 if 'nav_x_axis' in kwargs:
-                    self.nav_x_axis = kwargs['nav_x_axis']
+                    if not isinstance(kwargs['nav_x_axis'], dict):
+                        self.nav_x_axis['data'] = kwargs['nav_x_axis'][:]
+                    else:
+                        self.nav_x_axis = copy.deepcopy(kwargs['nav_x_axis'])
                 else:
-                    self.nav_x_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
+                    self.nav_x_axis['data']=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
 
-                self.nav_y_axis=[0]
-            elif len(self.axes_nav)==2:#2D Navigator:
-                if 'nav_x_axis' in kwargs:
-                    self.nav_x_axis = kwargs['nav_x_axis']
-                else:
-                    self.nav_x_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
+
+            if len(self.axes_nav)==2:#2D Navigator:
                 if 'nav_y_axis' in kwargs:
-                    self.nav_y_axis = kwargs['nav_y_axis']
+                    if not isinstance(kwargs['nav_y_axis'], dict):
+                        self.nav_y_axis['data'] = kwargs['nav_y_axis'][:]
+                    else:
+                        self.nav_y_axis = copy.deepcopy(kwargs['nav_y_axis'])
                 else:
-                    self.nav_y_axis=self.set_axis(datas_transposed.axes_manager.navigation_shape[1])
+                    self.nav_y_axis['data']=self.set_axis(datas_transposed.axes_manager.navigation_shape[1])
 
 
             ##########################################################################
@@ -204,18 +209,27 @@ class ViewerND(QtWidgets.QWidget, QObject):
             elif len(datas_transposed.axes_manager.signal_shape)==2: #signal data are 2D
                 self.ui.viewer1D.parent.setVisible(False)
                 self.ui.viewer2D.parent.setVisible(True)
-
+            self.x_axis = dict(data=None, label='', units='')
+            self.y_axis = dict(data=None, label='', units='')
             if len(datas_transposed.axes_manager.signal_shape)==1 or len(datas_transposed.axes_manager.signal_shape)==2:#signal data are 1D
                 if 'x_axis' in kwargs:
-                    self.x_axis = kwargs['x_axis']
+                    if not isinstance(kwargs['x_axis'], dict):
+                        self.x_axis['data'] = kwargs['x_axis'][:]
+                        self.x_axis = kwargs['x_axis']
+                    else:
+                        self.x_axis = copy.deepcopy(kwargs['x_axis'])
                 else:
-                    self.x_axis=self.set_axis(datas_transposed.axes_manager.signal_shape[0])
+                    self.x_axis['data']=self.set_axis(datas_transposed.axes_manager.signal_shape[0])
 
             if len(datas_transposed.axes_manager.signal_shape)==2:#signal data is 2D
                 if 'y_axis' in kwargs:
-                    self.y_axis = kwargs['y_axis']
+                    if not isinstance(kwargs['y_axis'], dict):
+                        self.y_axis['data'] = kwargs['y_axis'][:]
+                        self.y_axis = kwargs['y_axis']
+                    else:
+                        self.y_axis = copy.deepcopy(kwargs['y_axis'])
                 else:
-                    self.y_axis=self.set_axis(datas_transposed.axes_manager.signal_shape[1])
+                    self.y_axis['data']=self.set_axis(datas_transposed.axes_manager.signal_shape[1])
 
             if len(self.axes_nav)==0 or len(self.axes_nav)==1:
                 self.update_viewer_data(*self.ui.navigator1D.ui.crosshair.get_positions())
@@ -490,17 +504,29 @@ class ViewerND(QtWidgets.QWidget, QObject):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/cartesian.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ui.set_signals_pb_1D=QtWidgets.QPushButton('')
+        self.ui.set_signals_pb_1D.setToolTip('Change navigation/signal axes')
+        self.ui.set_signals_pb_1D_bis = QtWidgets.QPushButton('')
+        self.ui.set_signals_pb_1D_bis.setToolTip('Change navigation/signal axes')
         self.ui.set_signals_pb_1D.setIcon(icon)
+        self.ui.set_signals_pb_1D_bis.setIcon(icon)
         self.ui.set_signals_pb_2D=QtWidgets.QPushButton('')
+        self.ui.set_signals_pb_2D.setToolTip('Change navigation/signal axes')
         self.ui.set_signals_pb_2D.setIcon(icon)
+        self.ui.set_signals_pb_2D_bis = QtWidgets.QPushButton('')
+        self.ui.set_signals_pb_2D_bis.setToolTip('Change navigation/signal axes')
+        self.ui.set_signals_pb_2D_bis.setIcon(icon)
 
         self.ui.navigator1D.ui.horizontalLayout.insertWidget(0,self.ui.set_signals_pb_1D)
         self.ui.navigator2D.ui.horizontalLayout_2.insertWidget(0,self.ui.set_signals_pb_2D)
+        self.ui.viewer1D.ui.horizontalLayout.insertWidget(0, self.ui.set_signals_pb_1D_bis)
+        self.ui.viewer2D.ui.horizontalLayout_2.insertWidget(0, self.ui.set_signals_pb_2D_bis)
 
         main_layout.addWidget(Vsplitter)
 
         self.ui.set_signals_pb_1D.clicked.connect(self.signal_axes_selection)
         self.ui.set_signals_pb_2D.clicked.connect(self.signal_axes_selection)
+        self.ui.set_signals_pb_1D_bis.clicked.connect(self.signal_axes_selection)
+        self.ui.set_signals_pb_2D_bis.clicked.connect(self.signal_axes_selection)
 
         #to start: display as default a 2D navigator and a 1D viewer
         self.ui.navigator1D.parent.setVisible(False)
@@ -612,11 +638,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 data=self.datas.data
 
             elif len(self.axes_nav)==1:
-                ind_x=utils.find_index(self.nav_x_axis,posx)[0][0]
+                ind_x=utils.find_index(self.nav_x_axis['data'],posx)[0][0]
                 data=self.datas.inav[ind_x].data
             elif len(self.axes_nav)==2:
-                ind_x=utils.find_index(self.nav_x_axis,posx)[0][0]
-                ind_y=utils.find_index(self.nav_y_axis,posy)[0][0]
+                ind_x=utils.find_index(self.nav_x_axis['data'],posx)[0][0]
+                ind_y=utils.find_index(self.nav_y_axis['data'],posy)[0][0]
                 data=self.datas.inav[ind_x,ind_y].data
 
             if len(self.datas.axes_manager.signal_shape)==0:#means 0D data, plot on 1D viewer
@@ -637,72 +663,9 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 
 
-
-class BaseSignal(object):
-
-
-    def __init__(self, data, **kwds):
-        """Create a Signal from a numpy array.
-
-        Parameters
-        ----------
-        data : numpy array
-           The signal data. It can be an array of any dimensions.
-        axes : dictionary (optional)
-            Dictionary to define the axes (see the
-            documentation of the AxesManager class for more details).
-        """
-
-        self.data = data
-        self.nav_axes=[ind for ind in range(len(data.shape))]
-        self.sig_axes=[]
-
-
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        from dask.array import Array
-        if isinstance(value, Array):
-            if not value.ndim:
-                value = value.reshape((1,))
-            self._data = value
-        else:
-            self._data = np.atleast_1d(np.asanyarray(value))
-
-
-    def __repr__(self):
-        unfolded = ""
-        string = '<'
-        string += ", %sdimensions: %s" % (
-            self.nav_axes,
-            self.axes_manager._get_dimension_str())
-
-        string += '>'
-
-        return string
-
-    def _get_dimension_str(self):
-        string = "("
-        for axis in self.data[self.nav_axes]:
-            string += str(axis.size) + ", "
-        string = string.rstrip(", ")
-        string += "|"
-        for axis in self.data[self.sig_axes]:
-            string += str(axis.size) + ", "
-        string = string.rstrip(", ")
-        string += ")"
-        return string
-
-def iterable_not_string(thing):
-    return isinstance(thing, collections.Iterable) and \
-        not isinstance(thing, str)
-
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    form = QtWidgets.QWidget();
+    form = QtWidgets.QWidget()
 
     prog = ViewerND()
     prog.settings.child(('set_data_4D')).show(True)

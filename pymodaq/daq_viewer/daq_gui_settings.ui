@@ -288,13 +288,6 @@
               </item>
              </widget>
             </item>
-            <item row="2" column="4" colspan="2">
-             <widget class="QLED" name="Ini_state_LED">
-              <property name="text">
-               <string>TextLabel</string>
-              </property>
-             </widget>
-            </item>
             <item row="0" column="0" colspan="3">
              <widget class="QLabel" name="label_4">
               <property name="text">
@@ -305,7 +298,7 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="0" colspan="2">
+            <item row="4" column="0" colspan="2">
              <widget class="QPushButton" name="Quit_pb">
               <property name="toolTip">
                <string>quit and close the viewer</string>
@@ -319,22 +312,6 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="2" colspan="2">
-             <widget class="QPushButton" name="IniDet_pb">
-              <property name="toolTip">
-               <string>To initialize the detector</string>
-              </property>
-              <property name="text">
-               <string>Ini. Det.</string>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="3" colspan="3">
              <widget class="QComboBox" name="Detector_type_combo">
               <property name="toolTip">
@@ -342,7 +319,7 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="0" rowspan="3" colspan="3">
+            <item row="7" column="0" rowspan="3" colspan="3">
              <widget class="QPushButton" name="load_settings_pb">
               <property name="toolTip">
                <string>Load settings</string>
@@ -356,7 +333,7 @@
               </property>
              </widget>
             </item>
-            <item row="5" column="3" rowspan="3" colspan="3">
+            <item row="7" column="3" rowspan="3" colspan="3">
              <widget class="QPushButton" name="save_settings_pb">
               <property name="toolTip">
                <string>save settings</string>
@@ -370,17 +347,53 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="3" rowspan="2" colspan="3">
+            <item row="5" column="3" rowspan="2" colspan="3">
              <widget class="QCheckBox" name="take_bkg_cb">
               <property name="text">
                <string>Take Bkg</string>
               </property>
              </widget>
             </item>
-            <item row="3" column="0" rowspan="2" colspan="3">
+            <item row="5" column="0" rowspan="2" colspan="3">
              <widget class="QCheckBox" name="do_bkg_cb">
               <property name="text">
                <string>Do Bkg sub.</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="4">
+             <widget class="QLED" name="Ini_state_LED">
+              <property name="toolTip">
+               <string>Green when controller is initialized</string>
+              </property>
+              <property name="text">
+               <string>TextLabel</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="5">
+             <widget class="QLED" name="data_ready_led">
+              <property name="toolTip">
+               <string>Green when data ready</string>
+              </property>
+              <property name="text">
+               <string>TextLabel</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="2" colspan="2">
+             <widget class="QPushButton" name="IniDet_pb">
+              <property name="toolTip">
+               <string>To initialize the detector</string>
+              </property>
+              <property name="text">
+               <string>Ini. Det.</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+              <property name="checked">
+               <bool>false</bool>
               </property>
              </widget>
             </item>

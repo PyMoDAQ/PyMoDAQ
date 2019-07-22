@@ -1,5 +1,4 @@
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import QThread
+from PyQt5 import QtWidgets
 import sys
 import os
 import random
@@ -13,12 +12,11 @@ from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq_plugins import daq_move_plugins as movehardware
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq_plugins.daq_viewer_plugins import plugins_2D, plugins_1D, plugins_0D
-from pymodaq.daq_utils.daq_utils import get_set_pid_path
-
-from pymodaq.daq_utils.daq_utils import select_file
+from pymodaq.daq_utils.daq_utils import get_set_pid_path, select_file, make_enum
+from pymodaq.daq_utils.h5saver import H5Saver
 import importlib
+from pymodaq.daq_utils.pid.pid_params import params as pid_params
 
-from pymodaq.daq_utils.daq_utils import make_enum
 DAQ_Move_Stage_type=make_enum('daq_move')
 DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
 DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
@@ -236,62 +234,103 @@ class PresetManager():
 
     def set_PID_preset(self, pid_model):
         self.pid_type = True
-        model_mod = importlib.import_module('pymodaq_pid_models')
-        model = importlib.import_module('.' + pid_model, model_mod.__name__ + '.models')
-        model_class = getattr(model, pid_model)
-        actuators = model_class.actuators
-        actuators_name = model_class.actuators_name
-        detectors_type = model_class.detectors_type
-        detectors_name = model_class.detectors_name
-        detectors = model_class.detectors
+        filename = os.path.join(get_set_pid_path(), pid_model + '.xml')
+        if os.path.isfile(filename):
+            children = custom_tree.XML_file_to_parameter(filename)
+            self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
 
-        param = [
-                {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': pid_model, 'readonly': True},
-                    ]
+        else:
+            model_mod = importlib.import_module('pymodaq_pid_models')
+            model = importlib.import_module('.' + pid_model, model_mod.__name__ + '.models')
+            model_class = getattr(model, pid_model)
+            actuators = model_class.actuators
+            actuators_name = model_class.actuators_name
+            detectors_type = model_class.detectors_type
+            detectors_name = model_class.detectors_name
+            detectors = model_class.detectors
 
-        params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
-        params_det = [{'title': 'Detectors:', 'name': 'Detectors',
-                       'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
-        self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+            param = [
+                    {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': pid_model, 'readonly': True},
+                        ]
 
-        QtWidgets.QApplication.processEvents()
-        for ind_act, act in enumerate(actuators):
-            self.preset_params.child(('Moves')).addNew(act)
-            self.preset_params.child('Moves', 'move{:02.0f}'.format(ind_act), 'name').setValue(
-                actuators_name[ind_act])
+            params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
+            params_det = [{'title': 'Detectors:', 'name': 'Detectors',
+                           'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
+            self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+
             QtWidgets.QApplication.processEvents()
+            for ind_act, act in enumerate(actuators):
+                self.preset_params.child(('Moves')).addNew(act)
+                self.preset_params.child('Moves', 'move{:02.0f}'.format(ind_act), 'name').setValue(
+                    actuators_name[ind_act])
+                QtWidgets.QApplication.processEvents()
 
-        for ind_det, det in enumerate(detectors):
-            self.preset_params.child(('Detectors')).addNew(detectors_type[ind_det]+'/'+det)
-            self.preset_params.child('Detectors','det{:02.0f}'.format(ind_det), 'name').setValue(detectors_name[ind_det])
-            QtWidgets.QApplication.processEvents()
+            for ind_det, det in enumerate(detectors):
+                self.preset_params.child(('Detectors')).addNew(detectors_type[ind_det]+'/'+det)
+                self.preset_params.child('Detectors','det{:02.0f}'.format(ind_det), 'name').setValue(detectors_name[ind_det])
+                QtWidgets.QApplication.processEvents()
 
         self.show_preset()
+
+    def get_set_pid_model_params(self, model_file):
+        model_mod = importlib.import_module('pymodaq_pid_models')
+        self.preset_params.child('pid_settings', 'models', 'model_params').clearChildren()
+        model = importlib.import_module('.' + model_file, model_mod.__name__+'.models')
+        model_class = getattr(model, model_file)
+        params = getattr(model_class, 'params')
+        self.preset_params.child('pid_settings', 'models', 'model_params').addChildren(params)
 
     def set_new_preset(self):
         self.pid_type = False
         param = [
                 {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'},
-                {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': [
-                    {'title': 'Save 2D datas:', 'name': 'save_2D', 'type': 'bool', 'value': True},
-                    {'title': 'Save independent files:', 'name': 'save_independent', 'type': 'bool', 'value': False},
-                    {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False, 'readonly': True},
-                    {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
-                    {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
-                        {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
-                         'values': ['zlib', 'lzo', 'bzip2', 'blosc']},
-                        {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0,
-                         'max': 9},
-                        ]},
-                    ]}
+                {'title': 'Use PID as actuator:', 'name': 'use_pid', 'type': 'bool', 'value': False},
+                {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
+                {'title': 'PID Settings:', 'name': 'pid_settings', 'type': 'group', 'visible': False, 'children': pid_params},
                 ]
         params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors',
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
         self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+        self.preset_params.child('saving_options', 'save_type').hide()
+        self.preset_params.child('saving_options', 'save_2D').hide()
+        self.preset_params.child('saving_options', 'do_save').hide()
+        self.preset_params.child('saving_options', 'N_saved').hide()
+        self.preset_params.child('saving_options', 'custom_name').hide()
+        self.preset_params.child('saving_options', 'show_file').hide()
+        self.preset_params.child('saving_options', 'current_scan_name').hide()
+        self.preset_params.child('saving_options', 'current_scan_path').hide()
+        self.preset_params.child('saving_options', 'current_h5_file').hide()
 
+
+
+        self.preset_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         self.show_preset()
+
+    def parameter_tree_changed(self, param, changes):
+        """
+            Check for changes in the given (parameter,change,information) tuple list.
+            In case of value changed, update the DAQscan_settings tree consequently.
+
+            =============== ============================================ ==============================
+            **Parameters**    **Type**                                     **Description**
+            *param*           instance of pyqtgraph parameter              the parameter to be checked
+            *changes*         (parameter,change,information) tuple list    the current changes state
+            =============== ============================================ ==============================
+        """
+        for param, change, data in changes:
+            path = self.preset_params.childPath(param)
+            if change == 'childAdded':pass
+
+            elif change == 'value':
+
+                if param.name() == 'use_pid':
+                    self.preset_params.child(('pid_settings')).show(param.value())
+                if param.name() == 'model_class':
+                    self.get_set_pid_model_params(param.value())
+
+            elif change == 'parent':pass
 
     def show_preset(self):
         """
@@ -350,6 +389,6 @@ if __name__ == '__main__':
     #prog = PresetManager(True)
 
     prog = PresetManager(False)
-    prog.set_PID_preset('PIDModelTest')
-
+    #prog.set_PID_preset('PIDModelMock')
+    prog.set_new_preset()
     sys.exit(app.exec_())

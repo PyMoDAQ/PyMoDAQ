@@ -126,7 +126,7 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         elt = ET.Element(param.name(), **opts)
 
         if 'group' not in param_type: #covers 'group', custom 'groupmove'...
-            if param_type=='bool':
+            if param_type=='bool' or param_type == 'bool_push':
                 if param.value():
                     text='1'
                 else:
@@ -321,6 +321,8 @@ def walk_xml_to_parameter(params=[],XML_elt=None):
                         param_value=dict(all_items=eval(el.get('all_items',val_text)),selected=eval(val_text))
                 elif param_type=='bool':
                     param_value=bool(int(val_text))
+                elif param_type == 'bool_push':
+                    param_value = bool(int(val_text))
                 elif param_type=='led':
                     param_value=bool(val_text)
                 elif param_type == 'date_time':
@@ -651,16 +653,19 @@ class Pixmap_check(QtWidgets.QWidget):
         self.setLayout(self.ver_layout)
 
     def setValue(self,dic):
-        self.data=QByteArray(dic['data'])
-        im=QtGui.QImage.fromData(self.data)
-        a=QtGui.QPixmap.fromImage(im)
+        if 'data' in dic:
+            self.data=QByteArray(dic['data'])
+            im=QtGui.QImage.fromData(self.data)
+            a=QtGui.QPixmap.fromImage(im)
+        else:
+            a = dic['pixmap']
         self.label.setPixmap(a)
         self.checkbox.setChecked(dic['checked'])
         self.path=dic['path']
         #self.valuechanged.emit(dic)
 
     def value(self):
-        return dict(pixmap=self.label.pixmap,checked=self.checkbox.isChecked(),path=self.path)
+        return dict(pixmap=self.label.pixmap(),checked=self.checkbox.isChecked(),path=self.path)
 
 class QTimeCustom(QtWidgets.QTimeEdit):
     def __init__(self,*args,**kwargs):
@@ -1873,6 +1878,7 @@ class Plain_text_pb(QtWidgets.QWidget):
         self.hor_layout.addLayout(verlayout)
         self.hor_layout.setSpacing(0)
         self.setLayout(self.hor_layout)
+
 class Plain_text_pbParameter(Parameter):
     """Editable string; displayed as large text box in the tree."""
     itemClass = Plain_text_pbParameterItem
@@ -1887,7 +1893,18 @@ class Plain_text_pbParameter(Parameter):
 registerParameterType('text_pb', Plain_text_pbParameter, override=True)
 
 
+class TextParameterItemCustom(pTypes.TextParameterItem):
+    def __init__(self, param, depth):
+        super(TextParameterItemCustom, self).__init__(param, depth)
 
+        self.textBox.setMaximumHeight(50)
+
+
+
+class TextParameter(Parameter):
+    """Editable string; displayed as large text box in the tree."""
+    itemClass = TextParameterItemCustom
+registerParameterType('text', TextParameter, override=True)
 
 
 

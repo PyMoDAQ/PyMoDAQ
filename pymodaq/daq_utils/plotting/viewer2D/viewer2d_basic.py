@@ -134,6 +134,7 @@ class ImageWidget(pg.GraphicsLayoutWidget):
         self.scene_obj = self.scene()
         self.view = View_cust()
         self.plotitem = pg.PlotItem(viewBox=self.view)
+        self.plotItem = self.plotitem #for backcompatibility
         self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         self.setCentralItem(self.plotitem)
 

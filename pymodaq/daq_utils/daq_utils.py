@@ -21,6 +21,22 @@ from numba import jit
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
 
+def capitalize(string):
+    """
+    Returns same string but with first letter capitalized
+    Parameters
+    ----------
+    string: (str)
+
+    Returns
+    -------
+    str
+    """
+    return string.capitalize()[0]+string[1:]
+
+def uncapitalize(string):
+    return string.lower()[0] + string[1:]
+
 
 class ListPicker(QObject):
 
@@ -58,7 +74,18 @@ class ListPicker(QObject):
         else:
             return [-1, ""]
 
+def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
+    dimension = len(arr.shape)
+    if dimension == 1:
+        if arr.size == 1:
+            dimension = 0
+    if remove_scan_dimension:
+        if scan_type.lower() == 'scan1d':
+            dimension -= 1
+        elif scan_type.lower() == 'scan2d':
+            dimension -= 2
 
+    return arr.shape, '{:d}D'.format(dimension), arr.size
 
 def scroll_log(scroll_val, min_val , max_val):
     """
@@ -684,7 +711,7 @@ def get_h5file_scans(h5file,path='/'):
     scan_list=[]
     for node in h5file.walk_nodes(path):
         if 'pixmap2D' in node._v_attrs:
-            scan_list.append(dict(scan_name=node._v_name,path=node._v_pathname, data=node._v_attrs['pixmap2D']))
+            scan_list.append(dict(scan_name='{:s}_{:s}'.format(node._v_parent._v_name,node._v_name),path=node._v_pathname, data=node._v_attrs['pixmap2D']))
 
     return scan_list
 
@@ -1068,7 +1095,7 @@ def find_part_in_path_and_subpath(base_dir,part='',create=False):
             found_path=subfolders_found_path[ind_path]
     return found_path
 
-def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_index=0,create_scan_folder = False):
+def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_index=0,create_scan_folder = False, create_dataset_folder=True):
     """
         Set the path of the current scan and create associated directory tree.
         As default :
@@ -1134,7 +1161,7 @@ def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_in
             ind_dataset=int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])+1
         else:
             ind_dataset=int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])
-    dataset_path=find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=True)
+    dataset_path=find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=create_dataset_folder)
 
     scan_paths=sorted([path for path in dataset_path.glob(base_name+'*') if path.is_dir()])
     # if scan_paths==[]:
@@ -1190,7 +1217,7 @@ def select_file(start_path=None,save=True, ext=None):
             filter+='*.'+ext_tmp+" "
         filter+=")"
     if start_path is not None:
-        if type(start_path) is not str:
+        if not isinstance(start_path, str):
             start_path=str(start_path)
     if save:
         fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .'+ext+' file name',start_path,ext+" file (*."+ext+")")

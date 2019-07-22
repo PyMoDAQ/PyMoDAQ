@@ -10,24 +10,18 @@ class DAQ_Move_Template(DAQ_Move_base):
      Template to be used in order to write your own Move modules
 
     """
-
     _controller_units = 'mm'  # dependent on the stage type so to be updated accordingly when/if needed
     #  using self.controller_units = new_unit
-
     #define here the default values you need for the hardware settings
     #exemaple: find available COM ports
     import serial.tools.list_ports
     ports =[str(port)[0:4] for port in list(serial.tools.list_ports.comports())]
-
     #example of path to the controller dll or whatever is needed to talk with the controller
     actuator_path='C:\\path_to_actuator_dll'
-
     #To be set to True (default is false in base class) if your controller controls multiple axis and then must be initialized only once (see Preset Mode documentation)
     is_multiaxes=True
     stage_names=['X','Y'] #any names that are relevant with you controller axes
-
     #list of dictionnaries defining the hardware parameters one want available in the UI
-
     params= [#custom list below is just an example
              {'title': 'controller library:', 'name': 'conex_lib', 'type': 'browsepath', 'value': actuator_path},
              {'title': 'group parameter:', 'name': 'group_parameter', 'type': 'group', 'children':[
@@ -45,8 +39,6 @@ class DAQ_Move_Template(DAQ_Move_base):
                         
                         ]}]+comon_parameters
              ##########################################################
-
-
     def __init__(self,parent=None,params_state=None):
         #modify the name here as your plugin name
         super(DAQ_Move_Template,self).__init__(parent,params_state)
@@ -69,7 +61,6 @@ class DAQ_Move_Template(DAQ_Move_base):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status",[str(e)]))
             raise Exception(str(e))
-
 
     def check_position(self):
         """
@@ -190,7 +181,6 @@ class DAQ_Move_Template(DAQ_Move_base):
         #start polling the position until the actuator reach the target position within epsilon (defined as a parameter field (comon_parameters)
         self.poll_moving()
 
-
     def move_Rel(self,position):
         """
         Move to a relative position
@@ -205,7 +195,6 @@ class DAQ_Move_Template(DAQ_Move_base):
         self.controller.set_relative_position_actuator(position)
 
         self.poll_moving()
-
 
     def move_Home(self):
         """

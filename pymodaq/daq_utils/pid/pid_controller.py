@@ -20,7 +20,7 @@ from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 import numpy as np
 from collections import OrderedDict
-
+from pymodaq.daq_utils.pid.pid_params import params
 local_path = get_set_local_dir()
 log_path = get_set_log_path()
 
@@ -31,6 +31,9 @@ class DAQ_PID(QObject):
     log_signal = pyqtSignal(str)
     #look for eventual model files
     command_pid = pyqtSignal(ThreadCommand)
+    command_stage = pyqtSignal(ThreadCommand)
+    move_done_signal = pyqtSignal(str, float)
+
     models = []
     try:
         model_mod = importlib.import_module('pymodaq_pid_models')
@@ -55,62 +58,30 @@ class DAQ_PID(QObject):
     if len(models) == 0:
         raise Exception('No valid installed models')
 
-    params = [
-        {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True, 'children': [
-            {'title': 'Models class:', 'name': 'model_class', 'type': 'str', 'value': models[0]},
-            {'title': 'Preset module settings:', 'name': 'module_settings', 'type': 'bool', 'value': False},
-            {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
-        ]},
-        {'title': 'Main Settings:','name': 'main_settings', 'expanded': True, 'type': 'group','children':[
-            {'title': 'Update modules:', 'name': 'update_modules', 'type': 'bool', 'value': False},
-            {'title': 'Measurement modules:', 'name': 'detector_modules', 'type': 'itemselect'},
-            {'title': 'Actuator modules:', 'name': 'actuator_modules', 'type': 'itemselect'},
-            {'title': 'Acquisition Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000},
-            {'title': 'PID controls:', 'name': 'pid_controls', 'type': 'group','children': [
-                {'title': 'Set Point:', 'name': 'set_point', 'type': 'float', 'value': 0., ',readonly': True},
-                {'title': 'Sample time (ms):', 'name': 'sample_time', 'type': 'int', 'value': 10},
-                {'title': 'Refresh plot time (ms):', 'name': 'refresh_plot_time', 'type': 'int', 'value': 200},
-                {'title': 'Output limits:', 'name': 'output_limits', 'expanded': True, 'type': 'group', 'children': [
-                    {'title': 'Output limit (min):', 'name': 'output_limit_min_enabled', 'type': 'bool','value': False},
-                    {'title': 'Output limit (min):', 'name': 'output_limit_min', 'type': 'float', 'value': 0},
-                    {'title': 'Output limit (max):', 'name': 'output_limit_max_enabled', 'type': 'bool', 'value': False},
-                    {'title': 'Output limit (max:', 'name': 'output_limit_max', 'type': 'float', 'value': 100},
-                    ]},
-                {'title': 'Filter:', 'name': 'filter', 'expanded': True, 'type': 'group', 'children': [
-                    {'title': 'Enable filter:', 'name': 'filter_enable', 'type': 'bool', 'value': False},
-                    {'title': 'Filter step:', 'name': 'filter_step', 'type': 'float', 'value': 0, 'min':0},
-                ]},
-                {'title': 'Auto mode:', 'name': 'auto_mode', 'type': 'bool', 'value': False, 'readonly': True},
-                {'title': 'Prop. on measurement:', 'name': 'proportional_on_measurement', 'type': 'bool', 'value': False},
-                {'title': 'PID constants:', 'name': 'pid_constants', 'type': 'group', 'children': [
-                    {'title': 'Kp:', 'name': 'kp', 'type': 'float', 'value': 2, 'min': 0},
-                    {'title': 'Ki:', 'name': 'ki', 'type': 'float', 'value': 0.1, 'min': 0},
-                    {'title': 'Kd:', 'name': 'kd', 'type': 'float', 'value': 0.01, 'min': 0},
-                    ]},
-
-            ]},
-
-        ]},
-
-
-
-        ]
 
     def __init__(self,area, detector_modules = [], actuator_modules =[]):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_PID,self).__init__()
-        self.settings = Parameter.create(title='PID settings', name='pid_settings', type='group', children=self.params)
 
+        self.settings = Parameter.create(title='PID settings', name='pid_settings', type='group', children=params)
+        self.title = 'PyMoDAQ PID'
+        self.Initialized_state = False
         self.model_class = None
         self.detector_modules = detector_modules
         self.actuator_modules = actuator_modules
         self.dock_area = area
         self.overshoot = None
+        self.check_moving = False
         self.preset_manager = PresetManager()
         self.setupUI()
+        self.command_stage.connect(self.move_Abs) #to be compatible with actuator modules within daq scan
+
         self.enable_controls_pid(False)
 
+
         self.enable_controls_pid_run(False)
+
+
 
     def ini_PID(self):
 
@@ -121,45 +92,14 @@ class DAQ_PID(QObject):
             if self.settings.child('main_settings', 'pid_controls', 'output_limits', 'output_limit_max_enabled').value():
                 output_limits[1] = self.settings.child('main_settings', 'pid_controls', 'output_limits', 'output_limit_max').value()
 
-            used_actuators =[]
-            selected_actuators = self.settings.child('main_settings', 'actuator_modules').value()['selected']
-            if not isinstance(selected_actuators, list):
-                selected_actuators = [selected_actuators]
-
-
-            actuators_names = [mod.title for mod in self.actuator_modules]
-            for mod in selected_actuators:
-                used_actuators.append(self.actuator_modules[actuators_names.index(mod)])
-
-
-            if len(used_actuators) == 0:
-                msgBox = QtWidgets.QMessageBox(parent=None)
-                msgBox.setWindowTitle("Error")
-                msgBox.setText('No actuators selected')
-                ret = msgBox.exec()
-                return
-
-            used_dets =[]
-            selected_dets = self.settings.child('main_settings', 'detector_modules').value()['selected']
-            if not isinstance(selected_dets, list):
-                selected_dets = [selected_dets]
-            det_names = [mod.split('//')[0] for mod in selected_dets]
-            det_titles = [mod.title for mod in self.detector_modules]
-            for mod in det_names:
-                used_dets.append(self.detector_modules[det_titles.index(mod)])
-            used_dets = list(set(used_dets))  #get single instance of a given detector
-
-            if len(used_dets) == 0:
-                msgBox = QtWidgets.QMessageBox(parent=None)
-                msgBox.setWindowTitle("Error")
-                msgBox.setText('No detectors selected')
-                ret = msgBox.exec()
-                return
-
 
             self.PIDThread = QThread()
-            pid_runner = PIDRunner(self.model_class, selected_dets, used_actuators, used_dets,
-                       dict(Kp=self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'kp').value(),
+            pid_runner = PIDRunner(self.model_class,
+                            [mod.move_done_signal for mod in self.actuator_modules],
+                            [mod.grab_done_signal for mod in self.detector_modules],
+                           [mod.command_stage for mod in self.actuator_modules],
+                           [mod.command_detector for mod in self.detector_modules],
+                            dict(Kp=self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'kp').value(),
                             Ki=self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'ki').value(),
                             Kd=self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'kd').value(),
                             setpoint=self.settings.child('main_settings', 'pid_controls', 'set_point').value(),
@@ -167,17 +107,16 @@ class DAQ_PID(QObject):
                             output_limits=output_limits,
                             auto_mode=False),
                             filter=dict(enable=self.settings.child('main_settings', 'pid_controls', 'filter', 'filter_enable').value(),
-                                         value=self.settings.child('main_settings', 'pid_controls', 'filter', 'filter_step').value()))
-
-            # for det_sig in det_grab_done:
-            #     det_sig.connect(pid_runner.update_input)
-
+                                         value=self.settings.child('main_settings', 'pid_controls', 'filter', 'filter_step').value()),
+                            det_averaging=[mod.settings.child('main_settings', 'Naverage').value() for mod in self.detector_modules],
+                                   )
 
             self.PIDThread.pid_runner = pid_runner
             pid_runner.pid_output_signal.connect(self.process_output)
             pid_runner.status_sig.connect(self.thread_status)
             self.command_pid.connect(pid_runner.queue_command)
-            #pid_runner.moveToThread(self.PIDThread)
+
+            pid_runner.moveToThread(self.PIDThread)
 
             self.PIDThread.start()
             self.pid_led.set_as_true()
@@ -195,10 +134,32 @@ class DAQ_PID(QObject):
             self.pid_led.set_as_false()
             self.enable_controls_pid_run(False)
 
+        self.Initialized_state = True
+
     pyqtSlot(dict)
     def process_output(self, datas):
         self.output_viewer.show_data([[dat] for dat in datas['output']])
         self.input_viewer.show_data([[dat] for dat in datas['input']])
+        self.currpoint_sb.setValue(np.mean(datas['input']))
+
+        if self.check_moving:
+            if np.abs(np.mean(datas['input'])-self.settings.child('main_settings', 'pid_controls', 'set_point').value()) < \
+                    self.settings.child('main_settings', 'epsilon').value():
+                self.move_done_signal.emit(self.title, np.mean(datas['input']))
+                self.check_moving = False
+                print('Move from {:s} is done: {:f}'.format('PID', np.mean(datas['input'])))
+
+
+    @pyqtSlot(ThreadCommand)
+    def move_Abs(self, command=ThreadCommand()):
+        """
+        """
+        if command.command == "move_Abs":
+            self.check_moving = True
+            self.setpoint_sb.setValue(command.attributes[0])
+            QtWidgets.QApplication.processEvents()
+
+
 
     def enable_controls_pid(self,enable = False):
         self.ini_PID_action.setEnabled(enable)
@@ -211,8 +172,8 @@ class DAQ_PID(QObject):
 
     def setupUI(self):
 
-        self.dock_pid = Dock('PID controller', area)
-        area.addDock(self.dock_pid)
+        self.dock_pid = Dock('PID controller', self.dock_area)
+        self.dock_area.addDock(self.dock_pid)
 
         #%% create logger dock
         self.logger_dock=Dock("Logger")
@@ -241,14 +202,6 @@ class DAQ_PID(QObject):
         self.quit_action.setToolTip('Quit the application')
         toolbar_layout.addWidget(self.quit_action,0,0,1,2)
         self.quit_action.clicked.connect(self.quit_fun)
-
-        model_label = QtWidgets.QLabel('Models:')
-        self.models_combo = QtWidgets.QComboBox()
-        self.models_combo.addItems(self.models)
-        self.models_combo.currentTextChanged.connect(self.model_changed)
-        toolbar_layout.addWidget(model_label, 1, 0)
-        toolbar_layout.addWidget(self.models_combo, 1,1,1,3)
-
 
         iconini = QtGui.QIcon()
         iconini.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/ini.png"), QtGui.QIcon.Normal,
@@ -294,8 +247,27 @@ class DAQ_PID(QObject):
         toolbar_layout.addWidget(lab, 3,0,1,2)
 
         self.setpoint_sb = custom_tree.SpinBoxCustom()
+        self.setpoint_sb.setMinimumHeight(40)
+        font = self.setpoint_sb.font()
+        font.setPointSizeF(20)
+        self.setpoint_sb.setFont(font)
+        self.setpoint_sb.setDecimals(6)
         toolbar_layout.addWidget(self.setpoint_sb,3,2,1,2)
         self.setpoint_sb.valueChanged.connect(self.settings.child('main_settings', 'pid_controls', 'set_point').setValue)
+
+        lab1 = QtWidgets.QLabel('Current Point:')
+        toolbar_layout.addWidget(lab1, 4,0,1,2)
+
+        self.currpoint_sb = custom_tree.SpinBoxCustom()
+        self.currpoint_sb.setMinimumHeight(40)
+        self.currpoint_sb.setReadOnly(True)
+        self.currpoint_sb.setDecimals(6)
+        self.currpoint_sb.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        font = self.currpoint_sb.font()
+        font.setPointSizeF(20)
+        self.currpoint_sb.setFont(font)
+        toolbar_layout.addWidget(self.currpoint_sb,4,2,1,2)
+
 
         #create main parameter tree
         self.settings_tree = ParameterTree()
@@ -320,8 +292,6 @@ class DAQ_PID(QObject):
         if len(self.models) != 0:
             self.get_set_model_params(self.models[0])
 
-
-        self.get_set_measurement_datas()
 
         #connecting from tree
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
@@ -574,7 +544,6 @@ class DAQ_PID(QObject):
             stop_scan,  DAQ_Move_main.daq_move.stop_Motion
         """
         self.overshoot = overshoot
-        self.stop_scan()
         for mod in self.actuator_modules:
             mod.stop_Motion()
 
@@ -627,7 +596,7 @@ class DAQ_PID(QObject):
             #try to get corresponding preset file
             filename = os.path.join(get_set_pid_path(), model_name + '.xml')
             if os.path.isfile(filename):
-                self. actuator_modules,  self.detector_modules = self.set_file_preset(model_name)
+                self.actuator_modules,  self.detector_modules = self.set_file_preset(model_name)
             else:
                 self.actuator_modules, self.detector_modules = self.set_default_preset()
 
@@ -640,8 +609,6 @@ class DAQ_PID(QObject):
 
             self.model_class.ini_model()
 
-            self.get_set_measurement_datas()
-
             self.enable_controls_pid(True)
             self.model_led.set_as_true()
             self.ini_model_action.setEnabled(False)
@@ -649,7 +616,7 @@ class DAQ_PID(QObject):
 
 
         except Exception as e:
-            self.update_status(str(e), log_type='log')
+            self.update_status(getLineInfo() + str(e), log_type='log')
 
     def quit_fun(self):
         """
@@ -693,32 +660,6 @@ class DAQ_PID(QObject):
             print(e)
 
 
-
-    def get_set_measurement_datas(self):
-        items_det = []
-        preset_items_det = []
-        for det in self.detector_modules:
-            for key in det.data_to_save_export:
-                if isinstance(det.data_to_save_export[key],dict):
-                    for k in det.data_to_save_export[key]:
-                        items_det.append(det.data_to_save_export['name']+'//'+key+'//'+k)
-        if len(items_det) != 0:
-            preset_items_det = [items_det[0]]
-        self.settings.child('main_settings', 'detector_modules').setValue(dict(all_items=items_det, selected=preset_items_det))
-
-        items_act=[]
-        preset_items_act = []
-        for act in self.actuator_modules:
-            items_act.append(act.title)
-        if len(items_act) != 0:
-            preset_items_act = [items_act[0]]
-        self.settings.child('main_settings', 'actuator_modules').setValue(dict(all_items=items_act, selected=preset_items_act))
-
-    def model_changed(self, model):
-        self.get_set_model_params(model)
-        self.settings.child('models', 'model_class').setValue(model)
-
-
     def parameter_tree_changed(self,param,changes):
         """
             Foreach value changed, update :
@@ -742,23 +683,19 @@ class DAQ_PID(QObject):
 
         for param, change, data in changes:
             path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
             if change == 'childAdded':
                 pass
 
             elif change == 'value':
-                if param.name() == 'module_settings':
-                    self.preset_manager.set_PID_preset(self.settings.child('models','model_class').value())
+                if param.name() == 'model_class':
+                    self.get_set_model_params(param.value())
 
-
-                elif param.name() == 'update_modules':
+                elif param.name() == 'module_settings':
                     if param.value():
-                        self.get_set_measurement_datas()
-                        QtWidgets.QApplication.processEvents()
-                    param.setValue(False)
+                        self.settings.sigTreeStateChanged.disconnect( self.parameter_tree_changed)
+                        param.setValue(False)
+                        self.settings.sigTreeStateChanged.connect( self.parameter_tree_changed)
+                        self.preset_manager.set_PID_preset(self.settings.child('models','model_class').value())
 
                 elif param.name() == 'refresh_plot_time' or param.name() == 'timeout':
                     self.command_pid.emit(ThreadCommand('update_timer', [param.name(),param.value()]))
@@ -770,6 +707,7 @@ class DAQ_PID(QObject):
                         output = self.model_class.convert_output(param.value(),0, stab=False)
                         for ind_act, act in enumerate(self.actuator_modules):
                             act.move_Abs(output[ind_act])
+
 
 
                 elif param.name() == 'sample_time':
@@ -823,7 +761,14 @@ class PIDRunner(QObject):
     status_sig = pyqtSignal(list)
     pid_output_signal = pyqtSignal(dict)
 
-    def __init__(self,model_class, selected_dets, used_actuators, used_dets, params, filter):
+    def __init__(self,model_class,
+                 move_done_signals=[],
+                 grab_done_signals=[],
+                 move_modules_commands=[],
+                 detector_modules_commands=[],
+                 params=dict([]), filter=dict([]),
+                 det_averaging = []
+                 ):
         """
         Init the PID instance with params as initial conditions
 
@@ -835,9 +780,12 @@ class PIDRunner(QObject):
         """
         super().__init__()
         self.model_class = model_class
-        self.selected_dets = selected_dets
-        self.used_actuators = used_actuators
-        self.used_dets = used_dets
+        self.move_done_signals = move_done_signals
+        self.grab_done_signals = grab_done_signals
+        self.det_averaging = det_averaging
+        self.move_modules_commands = move_modules_commands
+        self.detector_modules_commands = detector_modules_commands
+
         self.current_time = 0
         self.input = 0
         self.output = None
@@ -858,6 +806,7 @@ class PIDRunner(QObject):
         self.timeout_timer.setInterval(10000)
         self.timeout_scan_flag = False
         self.timeout_timer.timeout.connect(self.timeout)
+
 
     def timerEvent(self, event):
         if self.output_to_actuator is not None:
@@ -919,16 +868,19 @@ class PIDRunner(QObject):
         elif command.command == 'update_filter':
             self.filter = command.attributes[0]
 
+        # elif command.command == "move_Abs":
+        #     self.set_option(dict(setpoint=command.attributes[0]))
+
 
     def update_input(self, measurements):
         self.input =self.model_class.convert_input(measurements)
 
     def start_PID(self, input = None):
         try:
-            for mod in self.used_actuators:
-                mod.move_done_signal.connect(self.move_done)
-            for mod in self.used_dets:
-                mod.grab_done_signal.connect(self.det_done)
+            for sig in self.move_done_signals:
+                sig.connect(self.move_done)
+            for sig in self.grab_done_signals:
+                sig.connect(self.det_done)
 
 
             self.current_time = time.perf_counter()
@@ -939,8 +891,9 @@ class PIDRunner(QObject):
 
                 self.det_done_flag = False
                 self.det_done_datas = OrderedDict()
-                for det in self.used_dets:
-                    det.grab_data()
+                for ind_det, cmd in enumerate(self.detector_modules_commands):
+                    cmd.emit(ThreadCommand("single",
+                                  [self.det_averaging[ind_det],'']))
                     QtWidgets.QApplication.processEvents()
                 self.wait_for_det_done()
 
@@ -974,20 +927,20 @@ class PIDRunner(QObject):
 
                 if not self.paused:
                     self.move_done_positions = OrderedDict()
-                    for ind_mov, mov in enumerate(self.used_actuators):
-                        mov.move_Abs(self.output_to_actuator[ind_mov])
+                    for ind_mov, cmd in enumerate(self.move_modules_commands):
+                        cmd.emit(ThreadCommand('move_Abs',[self.output_to_actuator[ind_mov]]))
                         QtWidgets.QApplication.processEvents()
                     self.wait_for_move_done()
 
                 self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()
-                QThread.msleep(self.pid.sample_time*1000)
+                QThread.msleep(int(self.pid.sample_time*1000))
 
             self.status_sig.emit(["Update_Status", 'PID loop exiting', 'log'])
-            for mod in self.used_actuators:
-                mod.move_done_signal.disconnect(self.move_done)
-            for mod in self.used_dets:
-                mod.grab_done_signal.disconnect(self.det_done)
+            for sig in self.move_done_signals:
+                sig.disconnect(self.move_done)
+            for sig in self.grab_done_signals:
+                sig.disconnect(self.det_done)
         except Exception as e:
             self.status_sig.emit(["Update_Status", str(e), 'log'])
 
@@ -998,7 +951,7 @@ class PIDRunner(QObject):
         try:
             if data['name'] not in list(self.det_done_datas.keys()):
                 self.det_done_datas[data['name']]=data
-            if len(self.det_done_datas.items())==len(self.used_dets):
+            if len(self.det_done_datas.items())==len(self.grab_done_signals):
                 self.det_done_flag=True
         except Exception as e:
             self.status_sig.emit(["Update_Status", str(e), 'log'])
@@ -1020,7 +973,7 @@ class PIDRunner(QObject):
             if name not in list(self.move_done_positions.keys()):
                 self.move_done_positions[name]=position
 
-            if len(self.move_done_positions.items())==len(self.used_actuators):
+            if len(self.move_done_positions.items())==len(self.move_done_signals):
                 self.move_done_flag=True
 
         except Exception as e:
@@ -1038,8 +991,8 @@ class PIDRunner(QObject):
                 self.output = option[key]
                 self.output_to_actuator = self.model_class.convert_output(self.output, dt, stab=False)
 
-                for ind_move, mov in enumerate(self.used_actuators):
-                    mov.move_Abs(self.output_to_actuator[ind_move])
+                for ind_move, cmd in enumerate(self.move_modules_commands):
+                    cmd.emit(ThreadCommand('move_Abs', [self.output_to_actuator[ind_move]]))
                 self.current_time = time.perf_counter()
             if key == 'output_limits':
                 self.output_limits = option[key]

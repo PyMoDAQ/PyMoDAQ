@@ -5,7 +5,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo
+from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize
 
 import sys
 import tables
@@ -30,7 +30,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
         if h5file is None:
             h5file=str(select_file(start_path=None,save=False, ext='h5'))
         if type(h5file)==str:
-            h5file=tables.open_file(h5file)
+            h5file=tables.open_file(h5file, 'a')
         elif type(h5file)==tables.File:
             pass
         else:
@@ -43,6 +43,23 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.populate_tree()
 
         self.ui.h5file_tree.ui.Open_Tree.click()
+
+    def add_comments(self):
+        try:
+            item = self.ui.h5file_tree.ui.Tree.currentItem()
+            self.current_node_path = item.text(2)
+            node = self.h5file.get_node(item.text(2))
+            if 'comments' in node._v_attrs:
+                tmp = node._v_attrs['comments']
+            else:
+                tmp = ''
+            text, res = QtWidgets.QInputDialog.getMultiLineText(None, 'Enter comments', 'Enter comments here:', tmp)
+            if res and text != '':
+                    node._v_attrs['comments'] = text
+            self.h5file.flush()
+
+        except Exception as e:
+            self.status_signal.emit(getLineInfo() + str(e))
 
     def export_data(self):
         try:
@@ -90,14 +107,20 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
 
         self.export_action = QtWidgets.QAction("Export data as *.txt file")
+        self.add_comments_action = QtWidgets.QAction("Add comments to this node")
         self.export_action.triggered.connect(self.export_data)
+        self.add_comments_action.triggered.connect(self.add_comments)
         self.ui.h5file_tree.ui.Tree.addAction(self.export_action)
+        self.ui.h5file_tree.ui.Tree.addAction(self.add_comments_action)
 
         V_splitter.addWidget(Form)
-        self.ui.attributes_table=custom_tree.Table_custom()
-        V_splitter.addWidget(self.ui.attributes_table)
+        self.ui.attributes_tree = ParameterTree()
+        self.ui.attributes_tree.setMinimumWidth(300)
+        V_splitter.addWidget(self.ui.attributes_tree)
 
-        
+        self.settings_raw = Parameter.create(name='Param_raw', type='group')
+        self.ui.attributes_tree.setParameters(self.settings_raw, showTop=False)
+
         H_splitter.addWidget(V_splitter)
         self.pixmap_widget=QtWidgets.QWidget()
         self.pixmap_widget.setMaximumHeight(100)
@@ -139,17 +162,25 @@ class H5Browser(QtWidgets.QWidget,QObject):
             for attr in attrs_names:
                 #if attr!='settings':
                 attr_dict[attr]=attrs[attr]
-            self.ui.attributes_table.set_table_value(attr_dict)
-            
+            for child in self.settings_raw.children():
+                child.remove()
+            params = []
+            for attr in attr_dict:
+                params.append({'title': attr, 'name': attr, 'type': 'str', 'value': attr_dict[attr], 'readonly': True})
+
+            self.settings_raw.addChildren(params)
+
             if 'settings' in attrs:
-                for child in self.settings.children():
-                    child.remove()
-                QtWidgets.QApplication.processEvents() #so that the tree associated with settings updates
-                params=custom_tree.XML_string_to_parameter(attrs.settings.decode())
-                self.settings.addChildren(params)
+                if attrs['settings'] != '':
+                    for child in self.settings.children():
+                        child.remove()
+                    QtWidgets.QApplication.processEvents() #so that the tree associated with settings updates
+                    params=custom_tree.XML_string_to_parameter(attrs.settings.decode())
+                    self.settings.addChildren(params)
             if 'scan_settings' in attrs:
-                params=custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
-                self.settings.addChildren(params)
+                if attrs['scan_settings'] != '':
+                    params=custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
+                    self.settings.addChildren(params)
             pixmaps=[]
             for attr in attrs_names:
                 if 'pixmap' in attr:
@@ -206,39 +237,52 @@ class H5Browser(QtWidgets.QWidget,QObject):
                 nav_x_axis = None
                 nav_y_axis = None
                 if isinstance(data, np.ndarray):
-                    if 'data' in node._v_attrs['type'] or 'channel' in node._v_attrs['type'].lower():
-                        parent_path = node._v_parent._v_pathname
-                        children = list(node._v_parent._v_children)
+                    data = np.squeeze(data)
+                    if 'type' in node._v_attrs: #was the case for older version of pymodaq files
+                        if 'data' in node._v_attrs['type'] or 'channel' in node._v_attrs['type'].lower():
+                            parent_path = node._v_parent._v_pathname
+                            children = list(node._v_parent._v_children)
 
-                        if node._v_attrs['data_type'] == '1D' or node._v_attrs['data_type'] == '2D':
-                            if 'x_axis' in children:
-                                axes['x_axis'] = self.h5file.get_node(parent_path+'/x_axis').read()
+                            if 'data_dimension' not in node._v_attrs: #for backcompatibility
+                                data_dim = node._v_attrs['data_type']
+                            else:
+                                data_dim = node._v_attrs['data_dimension']
 
-                        if node._v_attrs['data_type'] == '2D':
-                            if 'y_axis' in children:
-                                axes['y_axis'] = self.h5file.get_node(parent_path+'/y_axis').read()
+                            tmp_axes = ['x_axis', 'y_axis']
+                            for ax in tmp_axes:
+                                if capitalize(ax) in children:
+                                    axis_node = self.h5file.get_node(parent_path+'/{:s}'.format(capitalize(ax)))
+                                    axes[ax] = dict(data=axis_node.read())
+                                    if 'units' in axis_node._v_attrs:
+                                        axes[ax]['units'] = axis_node._v_attrs['units']
+                                    if 'label' in axis_node._v_attrs:
+                                        axes[ax]['label'] = axis_node._v_attrs['label']
 
 
-                        if 'scan_type' in node._v_attrs:
-                            if node._v_attrs['scan_type'] == 'Scan1D' or node._v_attrs['scan_type'] == 'Scan2D':
-                                scan_path = node._v_parent._v_parent._v_parent._v_parent._v_pathname
-                                children = list(node._v_parent._v_parent._v_parent._v_parent._v_children)
+                            if 'scan_type' in node._v_attrs:
+                                scan_type = node._v_attrs['scan_type'].lower()
+                                if scan_type == 'scan1d' or scan_type == 'scan2d':
+                                    scan_path = node._v_parent._v_parent._v_parent._v_parent._v_pathname
+                                    children = list(node._v_parent._v_parent._v_parent._v_parent._v_children)
 
-                                if node._v_attrs['scan_type'] == 'Scan1D' or node._v_attrs['scan_type'] == 'Scan2D':
-                                    nav_axes = [0]
-                                    if 'scan_x_axis_unique' in children:
-                                        axes['nav_x_axis'] = self.h5file.get_node(scan_path + '/scan_x_axis_unique').read()
-                                        if axes['nav_x_axis'].shape[0] != data.shape[0]:  #could happen in case of linear back to start type of scan
-                                            x=[]
-                                            for ix in axes['nav_x_axis']:
-                                                x.extend([ix, ix])
-                                                axes['nav_x_axis']=np.array(x)
+                                    tmp_nav_axes = ['x_axis', 'y_axis']
+                                    if scan_type == 'scan1d' or scan_type == 'scan2d':
+                                        nav_axes = []
+                                        for ind_ax, ax in enumerate(tmp_nav_axes):
+                                            if 'Scan_{:s}'.format(ax) in children:
+                                                nav_axes.append(ind_ax)
+                                                axis_node = self.h5file.get_node(scan_path + '/Scan_{:s}'.format(ax))
+                                                axes['nav_{:s}'.format(ax)] = dict(data=np.unique(axis_node.read()))
+                                                if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:  #could happen in case of linear back to start type of scan
+                                                    tmp_ax=[]
+                                                    for ix in axes['nav_{:s}'.format(ax)]['data']:
+                                                        tmp_ax.extend([ix, ix])
+                                                        axes['nav_{:s}'.format(ax)]=dict(data=np.array(tmp_ax))
 
-                                if node._v_attrs['scan_type'] == 'Scan2D':
-                                    nav_axes = [0, 1]
-                                    if 'scan_y_axis_unique' in children:
-                                        axes['nav_y_axis'] = self.h5file.get_node(scan_path + '/scan_y_axis_unique').read()
-
+                                                if 'units' in axis_node._v_attrs:
+                                                    axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
+                                                if 'label' in axis_node._v_attrs:
+                                                    axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
 
                     self.hyperviewer.show_data(data, nav_axes = nav_axes, **axes)
                 elif isinstance(data, list):
@@ -324,46 +368,47 @@ def browse_data(fname=None, ret_all = False):
             fname=str(fname)
         except:
             raise Exception('filename in browse data is not valid')
+    if fname != '':
+        (root,ext)=os.path.splitext(fname)
+        if not( 'h5' in ext or 'hdf5' in ext):
+            warnings.warn('This is not a PyMODAQ h5 file, there could be issues',Warning)
 
-    (root,ext)=os.path.splitext(fname)
-    if not( 'h5' in ext or 'hdf5' in ext):
-        warnings.warn('This is not a PyMODAQ h5 file, there could be issues',Warning) 
+        with tables.open_file(fname) as h5file:
+            dialog=QtWidgets.QDialog()
+            dialog.setWindowTitle('Select a data node in the tree')
+            vlayout=QtWidgets.QVBoxLayout()
+            form= QtWidgets.QWidget()
+            browser=H5Browser(form,h5file)
 
-    with tables.open_file(fname) as h5file:
-        dialog=QtWidgets.QDialog()
-        dialog.setWindowTitle('Select a data node in the tree')
-        vlayout=QtWidgets.QVBoxLayout()
-        form= QtWidgets.QWidget()
-        browser=H5Browser(form,h5file)
-
-        vlayout.addWidget(form)
-        dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog);
+            vlayout.addWidget(form)
+            dialog.setLayout(vlayout)
+            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
 
 
-        dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog);
+            dialog.setLayout(vlayout)
+            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-        buttonBox.addButton('OK',buttonBox.AcceptRole)
-        buttonBox.accepted.connect(dialog.accept)
-        buttonBox.addButton('Cancel',buttonBox.RejectRole)
-        buttonBox.rejected.connect(dialog.reject)
+            buttonBox.addButton('OK',buttonBox.AcceptRole)
+            buttonBox.accepted.connect(dialog.accept)
+            buttonBox.addButton('Cancel',buttonBox.RejectRole)
+            buttonBox.rejected.connect(dialog.reject)
 
-        vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Select data to be loaded')
-        res=dialog.exec()
+            vlayout.addWidget(buttonBox)
+            dialog.setWindowTitle('Select data to be loaded')
+            res=dialog.exec()
 
-        if res==dialog.Accepted:
-            node_path=browser.current_node_path
-            data=h5file.get_node(node_path).read()#save preset parameters in a xml file
+            if res==dialog.Accepted:
+                node_path=browser.current_node_path
+                data=h5file.get_node(node_path).read()#save preset parameters in a xml file
+            else:
+                data=None
+                node_path = None
+        if ret_all:
+            return data, fname, node_path
         else:
-            data=None
-            node_path = None
-    if ret_all:
-        return data, fname, node_path
-    else:
-        return data
+            return data
+    return None, '', ''
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv);

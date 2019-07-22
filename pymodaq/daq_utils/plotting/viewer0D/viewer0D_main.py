@@ -6,7 +6,7 @@ from pymodaq.daq_utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
 
 import numpy as np
 from collections import OrderedDict
-import time
+import datetime
 
 class Viewer0D(QtWidgets.QWidget,QObject):
     data_to_export_signal=pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
@@ -147,10 +147,10 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 data_tot.append(data_tmp)
 
                 self.plot_channels[ind_plot].setData(x=self.x_axis,y=data_tmp)
-                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)]=data[0]
+                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)]=OrderedDict(data=data[0], type='raw')
             self.datas=data_tot
 
-            self.data_to_export['acq_time_s'] = time.perf_counter()
+            self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
             self.data_to_export_signal.emit(self.data_to_export)
 
 

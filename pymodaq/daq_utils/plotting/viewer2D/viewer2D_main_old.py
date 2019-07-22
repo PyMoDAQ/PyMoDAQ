@@ -2,7 +2,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF, QLocale
 import sys
 from collections import OrderedDict
-from pymodaq.daq_utils.plotting.roi_manager import ROIManager
 import pyqtgraph as pg
 from pyqtgraph.Point import Point
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
@@ -33,28 +32,27 @@ import datetime
 class EllipseROI(pg.ROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
-
-
+    
+    
     ============== =============================================================
     **Arguments**
     pos            (length-2 sequence) The position of the ROI's origin.
     size           (length-2 sequence) The size of the ROI's bounding rectangle.
     \**args        All extra keyword arguments are passed to ROI()
     ============== =============================================================
-
+    
     """
-    index_signal = pyqtSignal(int)
-
+    index_signal=pyqtSignal(int)
     def __init__(self, index=0, **args):
-        # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
-        pg.ROI.__init__(self, pos=[100, 100], size=[100, 100], **args)
+        #QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
+        pg.ROI.__init__(self, pos=[100,100], size=[100,100], **args)
         self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
-        self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5])
-        self.index = index
+        self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
+        self.index=index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
 
     def center(self):
-        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
+        return QPointF(self.pos().x()+self.size().x()/2,self.pos().y()+self.size().y()/2)
 
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
@@ -67,7 +65,7 @@ class EllipseROI(pg.ROI):
         # Note: we could use the same method as used by PolyLineROI, but this
         # implementation produces a nicer mask.
         if kwds["returnMappedCoords"]:
-            arr, coords = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
+            arr,coords = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
         else:
             arr = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
         if arr is None or arr.shape[axes[0]] == 0 or arr.shape[axes[1]] == 0:
@@ -75,56 +73,54 @@ class EllipseROI(pg.ROI):
         w = arr.shape[axes[0]]
         h = arr.shape[axes[1]]
         ## generate an ellipsoidal mask
-        mask = np.fromfunction(
-            lambda x, y: (((x + 0.5) / (w / 2.) - 1) ** 2 + ((y + 0.5) / (h / 2.) - 1) ** 2) ** 0.5 < 1, (w, h))
+        mask = np.fromfunction(lambda x,y: (((x+0.5)/(w/2.)-1)**2+ ((y+0.5)/(h/2.)-1)**2)**0.5 < 1, (w, h))
 
         # reshape to match array axes
         if axes[0] > axes[1]:
             mask = mask.T
-        shape = [(n if i in axes else 1) for i, n in enumerate(arr.shape)]
+        shape = [(n if i in axes else 1) for i,n in enumerate(arr.shape)]
         mask = mask.reshape(shape)
         if kwds["returnMappedCoords"]:
-            return arr * mask, coords
+            return arr * mask,coords
         else:
             return arr * mask
 
     def height(self):
         return self.size().y()
-
+        
     def paint(self, p, opt, widget):
         r = self.boundingRect()
         p.setRenderHint(QtGui.QPainter.Antialiasing)
         p.setPen(self.currentPen)
 
-        p.scale(r.width(), r.height())  ## workaround for GL bug
-        r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
+        p.scale(r.width(), r.height())## workaround for GL bug
+        r = QtCore.QRectF(r.x()/r.width(), r.y()/r.height(), 1,1)
 
         p.drawEllipse(r)
-
+    
     def shape(self):
         self.path = QtGui.QPainterPath()
         self.path.addEllipse(self.boundingRect())
         return self.path
-
     def width(self):
         return self.size().x()
 
-
 class RectROI(pg.ROI):
-    index_signal = pyqtSignal(int)
-
+    index_signal=pyqtSignal(int)
     def __init__(self, index=0):
-        pg.ROI.__init__(self, pos=[100, 100], size=[100, 100])  # , scaleSnap=True, translateSnap=True)
+        pg.ROI.__init__(self, pos=[100,100], size=[100,100]) #, scaleSnap=True, translateSnap=True)
         self.addScaleHandle([1, 1], [0, 0])
         self.addRotateHandle([0, 0], [0.5, 0.5])
-        self.index = index
+        self.index=index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
     def center(self):
-        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
-
+        return QPointF(self.pos().x()+self.size().x()/2,self.pos().y()+self.size().y()/2)
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
+
+
+
+
 
 
 class Viewer2D(QtWidgets.QWidget):
@@ -139,14 +135,15 @@ class Viewer2D(QtWidgets.QWidget):
         super(Viewer2D,self).__init__()
         #setting the gui
         self.ui=Ui_Form()
+        self.ui.ROIs_widget=self.setup_Roi_widget()
+
 
         if parent is None:
             parent=QtWidgets.QWidget()
 
-
-
         self.ui.setupUi(parent)#it's a widget here
-
+        self.ui.horizontalLayout.addWidget(self.ui.ROIs_widget)
+        self.ui.ROIs_widget.setVisible(False)
 
         self.max_size_integrated = 200
         self.scaling_options = copy.deepcopy(scaling_options)
@@ -288,7 +285,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.RoiCurve_integrated=edict()
         self.data_integrated_plot= edict()
         self.ui.ROIs=OrderedDict([])
-        self.ui.roiBtn.clicked.connect(self.roi_clicked)
+        self.ui.roiBtn.clicked.connect(self.roiClicked)
 
         self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
 
@@ -299,15 +296,16 @@ class Viewer2D(QtWidgets.QWidget):
 
         self.ui.Ini_plot_pb.clicked.connect(self.ini_plot)
 
-        self.roi_manager = ROIManager(self.image_widget, '2D')
-        self.roi_manager.new_ROI_signal.connect(self.add_ROI)
-        self.roi_manager.roi_settings_changed.connect(self.update_roi)
-        #self.roi_manager.ROI_changed_finished.connect(self.update_lineouts)
-        self.ui.horizontalLayout.addWidget(self.roi_manager.roiwidget)
-        self.roi_manager.roiwidget.setVisible(False)
 
+        params = [ROIScalableGroup(name="ROIs")]
+        self.roi_settings=Parameter.create(title='ROIs Settings', name='roissettings', type='group', children=params)
+        self.ui.ROI_Tree.setParameters(self.roi_settings, showTop=False)
+        self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
-        #self.roi_clicked() ## initialize roi plot to correct shape / visibility
+        self.ui.save_ROI_pb.clicked.connect(self.save_ROI)
+        self.ui.load_ROI_pb.clicked.connect(self.load_ROI)
+
+        #self.roiClicked() ## initialize roi plot to correct shape / visibility
         ##splitter
         try:
             self.ui.splitter_VLeft.splitterMoved[int,int].connect(self.move_right_splitter)
@@ -315,22 +313,18 @@ class Viewer2D(QtWidgets.QWidget):
         except:
             pass
 
-    @pyqtSlot(int, str)
-    def add_ROI(self, newindex, roi_type):
-        item = self.roi_manager.ROIs['ROI_{:02d}'.format(newindex)]
-        item.sigRegionChanged.connect(self.roi_changed)
-        item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(newindex))
 
-        color = item_param.child(('Color')).value()
-        self.ui.RoiCurve_H["ROI_%02.0d" % newindex] = self.ui.Lineout_H.plot(
-            pen=color)
-        self.ui.RoiCurve_V["ROI_%02.0d" % newindex] = self.ui.Lineout_V.plot(
-            pen=color)
-        self.ui.RoiCurve_integrated["ROI_%02.0d" % newindex] = self.ui.Lineout_integrated.plot(
-            pen=color)
-        self.data_integrated_plot["ROI_%02.0d" % newindex] = np.zeros((2, 1))
-        # self.data_to_export["%02.0d" % newindex]=None
-        self.roi_changed()
+    def add_ROI(self,roi_type='RectROI'):
+        """
+        Add a new ROI selector on the plot
+
+        =======================      =========================================================
+        **Arguments:**
+        roi_type (str)               The type of ROI to instantiate: either 'RectROI' (default) or 'EllipseROI'
+        """
+
+        self.roi_settings.child(("ROIs")).addNew(roi_type)
+
 
     def crosshairChanged(self,indx=None,indy=None):
         if self.image is None or self._x_axis is None or self._y_axis is None:
@@ -410,6 +404,25 @@ class Viewer2D(QtWidgets.QWidget):
         for k in self.data_integrated_plot.keys():
             self.data_integrated_plot[k]=np.zeros((2,1))
 
+    def load_ROI(self, path = None):
+        try:
+            for roi in self.ui.ROIs.values():
+                index=roi.index
+                self.image_widget.plotitem.removeItem(roi)
+                self.roi_settings.sigTreeStateChanged.disconnect()
+                self.roi_settings.child(*('ROIs','ROI_%02.0d'%index)).remove()
+                self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+                self.ui.ROIs.pop('ROI_%02.0d'%index)
+
+            if path is None:
+                path=self.select_file(save=False)
+            with open(path, 'rb') as f:
+                data_tree = pickle.load(f)
+                self.restore_state(data_tree)
+
+        except Exception as e:
+            pass
+
     def lock_aspect_ratio(self):
         if self.ui.aspect_ratio_pb.isChecked():
             self.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
@@ -444,110 +457,154 @@ class Viewer2D(QtWidgets.QWidget):
             self.ui.ROIs[index].sigRegionChangeFinished.connect(self.ui.ROIs[index].emit_index_signal)
 
 
-    def roi_changed(self):
+    def roiChanged(self):
         #self.data_to_export=edict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
         try:
             if self.image is None:
                 return
             axes = (0, 1)
             image = self.image
-            self.data_to_export['data0D'] = OrderedDict([])
-            self.data_to_export['data1D'] = OrderedDict([])
-            self.measure_data_dict  = OrderedDict([])
-            for indROI, key in enumerate(self.roi_manager.ROIs):
+            color=self.ui.choose_trace_ROI_cb.currentText()
+            if color=="red":
+                data_flag=self.ui.red_cb.isChecked()
+                img_source=self.ui.img_red
+            elif color=="green":
+                data_flag=self.ui.green_cb.isChecked()
+                img_source=self.ui.img_green
+            elif color=="blue":
+                data_flag=self.ui.blue_cb.isChecked()
+                img_source=self.ui.img_blue
+            else: data_flag=None
 
-                color_source = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(indROI),
-                                                               'use_channel').value()
+            if data_flag is None:
+                return
 
+            self.data_to_export['data0D']=OrderedDict([])
+            self.data_to_export['data1D']=OrderedDict([])
 
-
-                if color_source == "red":
-                    data_flag=self.ui.red_cb.isChecked()
-                    img_source=self.ui.img_red
-                elif color_source == "green":
-                    data_flag=self.ui.green_cb.isChecked()
-                    img_source=self.ui.img_green
-                elif color_source == "blue":
-                    data_flag=self.ui.blue_cb.isChecked()
-                    img_source=self.ui.img_blue
-                else: data_flag=None
-
-                if data_flag is None:
-                    return
-
-                data, coords = self.roi_manager.ROIs[key].getArrayRegion(image[color_source], img_source, axes, returnMappedCoords=True)
+            for k in self.ui.ROIs.keys():
+                data, coords = self.ui.ROIs[k].getArrayRegion(image[color], img_source, axes, returnMappedCoords=True)
 
                 if data is not None:
                     xvals=np.linspace(np.min(np.min(coords[1,:,:])),np.max(np.max(coords[1,:,:])),data.shape[1])
                     yvals=np.linspace(np.min(np.min(coords[0,:,:])),np.max(np.max(coords[0,:,:])),data.shape[0])
                     x_axis,y_axis=self.scale_axis(xvals,yvals)
 
-                    self.data_integrated_plot[key]=np.append(self.data_integrated_plot[key],np.array([[self.data_integrated_plot[key][0,-1]],[0]])+np.array([[1],[np.sum(data)]]),axis=1)
-                    if self.data_integrated_plot[key].shape[1] > self.max_size_integrated:
-                        self.data_integrated_plot[key] = self.data_integrated_plot[key][:,self.data_integrated_plot[key].shape[1]-200:]
-                    self.ui.RoiCurve_H[key].setData(y=np.mean(data,axis=0), x=xvals)
-                    self.ui.RoiCurve_V[key].setData(y=yvals, x=np.mean(data,axis=1))
-                    self.ui.RoiCurve_integrated[key].setData(y=self.data_integrated_plot[key][1,:], x=self.data_integrated_plot[key][0,:])
-                    self.data_to_export['data2D'][self.title+'_{:s}'.format(key)]=OrderedDict(data=data, type='roi',
+                    self.data_integrated_plot[k]=np.append(self.data_integrated_plot[k],np.array([[self.data_integrated_plot[k][0,-1]],[0]])+np.array([[1],[np.sum(data)]]),axis=1)
+                    if self.data_integrated_plot[k].shape[1] > self.max_size_integrated:
+                        self.data_integrated_plot[k] = self.data_integrated_plot[k][:,self.data_integrated_plot[k].shape[1]-200:]
+                    self.ui.RoiCurve_H[k].setData(y=np.mean(data,axis=0), x=xvals)
+                    self.ui.RoiCurve_V[k].setData(y=yvals, x=np.mean(data,axis=1))
+                    self.ui.RoiCurve_integrated[k].setData(y=self.data_integrated_plot[k][1,:], x=self.data_integrated_plot[k][0,:])
+                    self.data_to_export['data2D'][self.title+'_{:s}'.format(k)]=OrderedDict(data=data,
                         x_axis=dict(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
 
-                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)]=OrderedDict(data=np.mean(data,axis=0), type='roi',
+                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(k)]=OrderedDict(data=np.mean(data,axis=0),
                         x_axis=dict(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']))
-                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)]=OrderedDict(data=np.mean(data,axis=1), type='roi',
+                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(k)]=OrderedDict(data=np.mean(data,axis=1),
                         x_axis=dict(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
-                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)]=OrderedDict(data=np.sum(data), type='roi')
-
-                    self.measure_data_dict["Lineout {:s}:".format(key)] = np.sum(data)
-
-            self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
-
-
+                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(k)]=OrderedDict(data=np.sum(data))
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
             self.data_to_export_signal.emit(self.data_to_export)
             self.ROI_changed.emit()
         except Exception as e:
             pass
 
-    @pyqtSlot(list)
-    def update_roi(self, changes):
-        for param, change, param_value in changes:
-            if change == 'value':
-                if param.name() == 'Color':
-                    key = param.parent().name()
-                    self.ui.RoiCurve_H[key].setPen(param_value)
-                    self.ui.RoiCurve_V[key].setPen(param_value)
-                    self.ui.RoiCurve_integrated[key].setPen(param_value)
-
-            elif change == 'childAdded':
-                pass
-            elif change == 'parent':
-                key = param.name()
-                self.ui.Lineout_H.removeItem(self.ui.RoiCurve_H.pop(key))
-                self.ui.Lineout_V.removeItem(self.ui.RoiCurve_V.pop(key))
-                self.ui.Lineout_integrated.removeItem(self.ui.RoiCurve_integrated.pop(key))
-
-        self.roi_changed()
-
-
-
-    def roi_clicked(self):
+    def roiClicked(self):
         roistate=self.ui.roiBtn.isChecked()
 
-        self.roi_manager.roiwidget.setVisible(roistate)
-        for k,roi in self.roi_manager.ROIs.items():
+        self.ui.ROIs_widget.setVisible(roistate)
+        for k,roi in self.ui.ROIs.items():
             roi.setVisible(roistate)
             self.ui.RoiCurve_H[k].setVisible(roistate)
             self.ui.RoiCurve_V[k].setVisible(roistate)
             self.ui.RoiCurve_integrated[k].setVisible(roistate)
 
         if self.ui.roiBtn.isChecked():
-            self.roi_changed()
+            self.roiChanged()
 
         self.show_lineouts()
 
         if len(self.ui.ROIs)==0 and roistate:
-            self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
+            self.roi_settings.child(("ROIs")).addNew('RectROI')
+
+    def roi_tree_changed(self,param,changes):
+
+        for param, change, data in changes:
+            path = self.roi_settings.childPath(param)
+            if path is not None:
+                childName = '.'.join(path)
+            else:
+                childName = param.name()
+            if change == 'childAdded':#new roi to create
+                param_name=data[0].name()
+                roi_type=data[0].children()[0].value()
+                color=data[0].child(('Color')).value().rgba()
+                pos=[data[0].child(('position')).child('x').value(),data[0].child(('position')).child('y').value()]
+                size=[data[0].child(('size')).child('dx').value(),data[0].child(('size')).child('dy').value()]
+                angle=data[0].child(('angle')).value()
+
+                par=self.roi_settings.child((childName)).child((param_name))
+
+                newindex=int(param_name[-2:])
+
+                if roi_type == 'RectROI':
+                    newroi=RectROI(index=newindex)
+                else:
+                    newroi=EllipseROI(index=newindex)
+                newroi.sigRegionChanged.connect(self.roiChanged)
+                newroi.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
+                newroi.setPen(self.color_list[newindex])
+                newroi.index_signal[int].connect(self.update_roi_tree)
+                try:
+                    self.roi_settings.sigTreeStateChanged.disconnect()
+                except:
+                    pass
+                par.child(('Color')).setValue(QtGui.QColor(*self.color_list[newindex]))
+                self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+                self.image_widget.plotitem.addItem(newroi)
+
+                newroi.pos
+
+                self.ui.ROIs["ROI_%02.0d" % newindex]=newroi
+                self.ui.RoiCurve_H["ROI_%02.0d" % newindex]=self.ui.Lineout_H.plot(pen=QtGui.QColor(*self.color_list[newindex]))
+                self.ui.RoiCurve_V["ROI_%02.0d" % newindex]=self.ui.Lineout_V.plot(pen=QtGui.QColor(*self.color_list[newindex]))
+                self.ui.RoiCurve_integrated["ROI_%02.0d" % newindex]=self.ui.Lineout_integrated.plot(pen=QtGui.QColor(*self.color_list[newindex]))
+                self.data_integrated_plot["ROI_%02.0d" % newindex]=np.zeros((2,1))
+                #self.data_to_export["%02.0d" % newindex]=None
+                self.roiChanged()
+
+            elif change == 'value':
+
+                if param.name() == 'Color' or param.name() == 'angle' :
+                    parent=param.parent().name()
+                else:
+                    parent=param.parent().parent().name()
+                self.update_roi(parent,param.name(),param.value())
+
+
+
+            elif change == 'parent':
+                self.image_widget.plotitem.removeItem(self.ui.ROIs[param.name()])
+                self.ui.ROIs.pop(param.name())
+                self.ui.Lineout_H.removeItem(self.ui.RoiCurve_H[param.name()])
+                self.ui.RoiCurve_H.pop(param.name())
+                self.ui.Lineout_V.removeItem(self.ui.RoiCurve_V[param.name()])
+                self.ui.RoiCurve_V.pop(param.name())
+                self.ui.Lineout_integrated.removeItem(self.ui.RoiCurve_integrated[param.name()])
+                self.ui.RoiCurve_integrated.pop(param.name())
+
+    def save_ROI(self):
+
+        try:
+            data=self.roi_settings.saveState()
+            path=self.select_file()
+            if path is not None:
+                with open(path, 'wb') as f:
+                    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+        except Exception as e:
+            pass
 
 
     def scale_axis(self,xaxis,yaxis):
@@ -699,25 +756,25 @@ class Viewer2D(QtWidgets.QWidget):
 
             ind = 0
             if red_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_red, type='raw',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_red,
                         x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
                 ind +=1
 
             if green_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_green, type='raw',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_green,
                         x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
             if blue_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_blue, type='raw',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_blue,
                         x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
             if self.ui.roiBtn.isChecked():
-                self.roi_changed()
+                self.roiChanged()
             else:
                 self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
                 self.data_to_export_signal.emit(self.data_to_export)
@@ -774,6 +831,31 @@ class Viewer2D(QtWidgets.QWidget):
 
     def setObjectName(self,txt):
         self.parent.setObjectName(txt)
+
+    def setup_Roi_widget(self):
+        widgetROIS=QtWidgets.QWidget()
+        self.ui.verticalLayout_settings=QtWidgets.QVBoxLayout()
+        horlayout0=QtWidgets.QHBoxLayout()
+        self.ui.label=QtWidgets.QLabel('Use image:')
+        self.ui.choose_trace_ROI_cb=QtWidgets.QComboBox()
+        self.ui.choose_trace_ROI_cb.addItems(['red','green','blue'])
+        horlayout0.addWidget(self.ui.label)
+        horlayout0.addWidget(self.ui.choose_trace_ROI_cb)
+
+        horlayout=QtWidgets.QHBoxLayout()
+        self.ui.save_ROI_pb=QtWidgets.QPushButton('Save ROIs')
+        self.ui.load_ROI_pb=QtWidgets.QPushButton('Load ROIs')
+        horlayout.addWidget(self.ui.save_ROI_pb)
+        horlayout.addWidget(self.ui.load_ROI_pb)
+        self.ui.verticalLayout_settings.addLayout(horlayout0)
+        self.ui.verticalLayout_settings.addLayout(horlayout)
+
+
+        self.ui.ROI_Tree= ParameterTree()
+        self.ui.verticalLayout_settings.addWidget(self.ui.ROI_Tree)
+        widgetROIS.setLayout(self.ui.verticalLayout_settings)
+        widgetROIS.setMaximumWidth(300)
+        return widgetROIS
 
 
 
@@ -850,6 +932,48 @@ class Viewer2D(QtWidgets.QWidget):
 
     def update_image_flip(self):
         self.setImageTemp(self.ui.img_red.image,self.ui.img_green.image,self.ui.img_blue.image)
+
+    def update_roi(self,index_roi,param_name,param_value):
+
+        if param_name == 'Color':
+            self.ui.ROIs[index_roi].setPen(param_value)
+            self.ui.RoiCurve_H[index_roi].setPen(param_value)
+            self.ui.RoiCurve_V[index_roi].setPen(param_value)
+            self.ui.RoiCurve_integrated[index_roi].setPen(param_value)
+        elif param_name == 'x':
+            pos=self.ui.ROIs[index_roi].pos()
+            self.ui.ROIs[index_roi].setPos((param_value,pos[1]))
+        elif param_name == 'y':
+            pos=self.ui.ROIs[index_roi].pos()
+            self.ui.ROIs[index_roi].setPos((pos[0],param_value))
+        elif param_name == 'angle':
+            self.ui.ROIs[index_roi].setAngle(param_value)
+        elif param_name == 'dx':
+            size=self.ui.ROIs[index_roi].size()
+            self.ui.ROIs[index_roi].setSize((param_value,size[1]))
+        elif param_name == 'dy':
+            size=self.ui.ROIs[index_roi].size()
+            self.ui.ROIs[index_roi].setSize((size[0],param_value))
+
+    @pyqtSlot(int)
+    def update_roi_tree(self,index):
+        roi=self.ui.ROIs['ROI_%02.0d'%index]
+        pos=roi.pos()
+        size=roi.size()
+        angle=roi.angle()
+        par=self.roi_settings.child(*('ROIs','ROI_%02.0d'%index))
+        try:
+            self.roi_settings.sigTreeStateChanged.disconnect()
+        except:
+            pass
+        par.child(*('position','x')).setValue(pos[0])
+        par.child(*('position','y')).setValue(pos[1])
+        par.child(*('size','dx')).setValue(size[0])
+        par.child(*('size','dy')).setValue(size[1])
+        par.child(('angle')).setValue(angle)
+
+        self.roi_settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+
 
 
 
@@ -943,6 +1067,41 @@ class Viewer2D(QtWidgets.QWidget):
         self.set_scaling_axes(self.scaling_options)
 
 
+class ROIScalableGroup(pTypes.GroupParameter):
+    def __init__(self, **opts):
+        opts['type'] = 'group'
+        opts['addText'] = "Add"
+        opts['addList'] = ['RectROI', 'EllipseROI']
+        pTypes.GroupParameter.__init__(self, **opts)
+    
+    def addNew(self, typ):
+        indexes=[int(par.name()[-2:]) for par in self.children()]
+        if indexes==[]:
+            newindex=0
+        else:
+            newindex=max(indexes)+1
+        child={'name': 'ROI_%02.0d' % newindex, 'type': 'group', 'children': [
+                {'name': 'Type', 'type': 'str', 'value': typ, 'readonly': True},
+                {'name': 'Color', 'type': 'color', 'value': "FF0"},
+                {'name': 'position', 'type': 'group', 'children': [
+                        {'name': 'x', 'type': 'float', 'value': 0, 'step':1},
+                        {'name': 'y', 'type': 'float', 'value': 0, 'step':1}
+                ]},
+                {'name': 'size', 'type': 'group', 'children': [
+                        {'name': 'dx', 'type': 'float', 'value': 10, 'step':1},
+                        {'name': 'dy', 'type': 'float', 'value': 10, 'step':1}
+                ]},
+                {'name': 'angle', 'type': 'float', 'value': 0, 'step': 1}
+                
+                ],'removable':True, 'renamable':False
+               }
+
+        self.addChild(child)
+
+
+
+
+
 
 
 if __name__ == '__main__':
@@ -967,7 +1126,7 @@ if __name__ == '__main__':
     
     prog.setImage(data_blue=data_blue,data_green=None,data_red=data_red)
     
-    #prog.roi_manager.settings.child(('ROIs')).addNew('ElipseROI')
+    prog.add_ROI('ElipseROI')
     
     #prog.ui.imag_blue.set
 

@@ -85,12 +85,16 @@ setup(
                   },
     install_requires = [
         'numpy',
+        'scipy',
         'pyqtgraph==0.10',
         'bitstring',
         'easydict',
-        #'pyqt5',
+        'pyqt5',
+        'numba',
         'tables',
         'pymodaq_plugins>=1.1.1',
+        'dask',
+		'simple_pid',
         ],
     include_package_data=True,
     **setupOpts

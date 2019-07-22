@@ -16,7 +16,7 @@ class Scanner(QObject):
     scan_params_signal = pyqtSignal(utils.ScanParameters)
 
     params = [{'title': 'Scanner settings', 'name': 'scan_options', 'type': 'group', 'children': [
-                {'title': 'Calculate positions:', 'name': 'Calculate positions', 'type': 'action'},
+                {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
                 {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
                 {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D'],
                          'value': 'Scan1D'},
@@ -170,7 +170,7 @@ class Scanner(QObject):
         self.settings_tree.setParameters(self.settings, showTop=False)
         self.settings_tree.setMaximumHeight(300)
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-        self.settings.child('scan_options', 'Calculate positions').sigActivated.connect(self.set_scan)
+        self.settings.child('scan_options', 'calculate_positions').sigActivated.connect(self.set_scan)
         #layout.addWidget(self.settings_tree)
 
     def set_scan(self):
