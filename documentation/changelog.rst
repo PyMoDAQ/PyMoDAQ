@@ -4,7 +4,7 @@
 Changelog
 =========
 
-* :bug:`0` PID
+* :bug:`3` PID models package installation added to pymodaq setup
 * :release:`1.5.0 <2019-07-22>`
 * :feature:`0` DAQ_Scan module's H5Saver object has now by default the option to **not** save the ROI generated data.
   Only the live plots datas are still saved by default.
