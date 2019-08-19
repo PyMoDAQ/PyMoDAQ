@@ -132,6 +132,7 @@ class ROIManager(QObject):
     ROI_changed = pyqtSignal()
     ROI_changed_finished = pyqtSignal()
     new_ROI_signal = pyqtSignal(int, str)
+    remove_ROI_signal = pyqtSignal(str)
     roi_settings_changed = pyqtSignal(list)
 
 
@@ -240,7 +241,10 @@ class ROIManager(QObject):
 
 
             elif change == 'parent':
-                pass
+                if 'ROI' in param.name():
+                    roi = self.ROIs.pop(param.name())
+                    self.viewer_widget.plotItem.removeItem(roi)
+                    self.remove_ROI_signal.emit(param.name())
 
             if param.name() != 'measurements':
                 self.roi_settings_changed.emit([(param, 'value', param.value())])

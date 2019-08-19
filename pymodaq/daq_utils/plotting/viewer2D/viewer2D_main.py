@@ -30,102 +30,102 @@ import  pymodaq.daq_utils.daq_utils as utils
 import datetime
 
 
-class EllipseROI(pg.ROI):
-    """
-    Elliptical ROI subclass with one scale handle and one rotation handle.
-
-
-    ============== =============================================================
-    **Arguments**
-    pos            (length-2 sequence) The position of the ROI's origin.
-    size           (length-2 sequence) The size of the ROI's bounding rectangle.
-    \**args        All extra keyword arguments are passed to ROI()
-    ============== =============================================================
-
-    """
-    index_signal = pyqtSignal(int)
-
-    def __init__(self, index=0, **args):
-        # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
-        pg.ROI.__init__(self, pos=[100, 100], size=[100, 100], **args)
-        self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
-        self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5])
-        self.index = index
-        self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
-    def center(self):
-        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
-
-    def getArrayRegion(self, arr, img=None, axes=(0, 1), **kwds):
-        """
-        Return the result of ROI.getArrayRegion() masked by the elliptical shape
-        of the ROI. Regions outside the ellipse are set to 0.
-        """
-        # Note: we could use the same method as used by PolyLineROI, but this
-        # implementation produces a nicer mask.
-        if kwds["returnMappedCoords"]:
-            arr, coords = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
-        else:
-            arr = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
-        if arr is None or arr.shape[axes[0]] == 0 or arr.shape[axes[1]] == 0:
-            return arr
-        w = arr.shape[axes[0]]
-        h = arr.shape[axes[1]]
-        ## generate an ellipsoidal mask
-        mask = np.fromfunction(
-            lambda x, y: (((x + 0.5) / (w / 2.) - 1) ** 2 + ((y + 0.5) / (h / 2.) - 1) ** 2) ** 0.5 < 1, (w, h))
-
-        # reshape to match array axes
-        if axes[0] > axes[1]:
-            mask = mask.T
-        shape = [(n if i in axes else 1) for i, n in enumerate(arr.shape)]
-        mask = mask.reshape(shape)
-        if kwds["returnMappedCoords"]:
-            return arr * mask, coords
-        else:
-            return arr * mask
-
-    def height(self):
-        return self.size().y()
-
-    def paint(self, p, opt, widget):
-        r = self.boundingRect()
-        p.setRenderHint(QtGui.QPainter.Antialiasing)
-        p.setPen(self.currentPen)
-
-        p.scale(r.width(), r.height())  ## workaround for GL bug
-        r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
-
-        p.drawEllipse(r)
-
-    def shape(self):
-        self.path = QtGui.QPainterPath()
-        self.path.addEllipse(self.boundingRect())
-        return self.path
-
-    def width(self):
-        return self.size().x()
-
-
-class RectROI(pg.ROI):
-    index_signal = pyqtSignal(int)
-
-    def __init__(self, index=0):
-        pg.ROI.__init__(self, pos=[100, 100], size=[100, 100])  # , scaleSnap=True, translateSnap=True)
-        self.addScaleHandle([1, 1], [0, 0])
-        self.addRotateHandle([0, 0], [0.5, 0.5])
-        self.index = index
-        self.sigRegionChangeFinished.connect(self.emit_index_signal)
-
-    def center(self):
-        return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
-
-    def emit_index_signal(self):
-        self.index_signal.emit(self.index)
-
+# class EllipseROI(pg.ROI):
+#     """
+#     Elliptical ROI subclass with one scale handle and one rotation handle.
+#
+#
+#     ============== =============================================================
+#     **Arguments**
+#     pos            (length-2 sequence) The position of the ROI's origin.
+#     size           (length-2 sequence) The size of the ROI's bounding rectangle.
+#     \**args        All extra keyword arguments are passed to ROI()
+#     ============== =============================================================
+#
+#     """
+#     index_signal = pyqtSignal(int)
+#
+#     def __init__(self, index=0, **args):
+#         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
+#         pg.ROI.__init__(self, pos=[100, 100], size=[100, 100], **args)
+#         self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
+#         self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5])
+#         self.index = index
+#         self.sigRegionChangeFinished.connect(self.emit_index_signal)
+#
+#     def center(self):
+#         return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
+#
+#     def emit_index_signal(self):
+#         self.index_signal.emit(self.index)
+#
+#     def getArrayRegion(self, arr, img=None, axes=(0, 1), **kwds):
+#         """
+#         Return the result of ROI.getArrayRegion() masked by the elliptical shape
+#         of the ROI. Regions outside the ellipse are set to 0.
+#         """
+#         # Note: we could use the same method as used by PolyLineROI, but this
+#         # implementation produces a nicer mask.
+#         if kwds["returnMappedCoords"]:
+#             arr, coords = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
+#         else:
+#             arr = pg.ROI.getArrayRegion(self, arr, img, axes, **kwds)
+#         if arr is None or arr.shape[axes[0]] == 0 or arr.shape[axes[1]] == 0:
+#             return arr
+#         w = arr.shape[axes[0]]
+#         h = arr.shape[axes[1]]
+#         ## generate an ellipsoidal mask
+#         mask = np.fromfunction(
+#             lambda x, y: (((x + 0.5) / (w / 2.) - 1) ** 2 + ((y + 0.5) / (h / 2.) - 1) ** 2) ** 0.5 < 1, (w, h))
+#
+#         # reshape to match array axes
+#         if axes[0] > axes[1]:
+#             mask = mask.T
+#         shape = [(n if i in axes else 1) for i, n in enumerate(arr.shape)]
+#         mask = mask.reshape(shape)
+#         if kwds["returnMappedCoords"]:
+#             return arr * mask, coords
+#         else:
+#             return arr * mask
+#
+#     def height(self):
+#         return self.size().y()
+#
+#     def paint(self, p, opt, widget):
+#         r = self.boundingRect()
+#         p.setRenderHint(QtGui.QPainter.Antialiasing)
+#         p.setPen(self.currentPen)
+#
+#         p.scale(r.width(), r.height())  ## workaround for GL bug
+#         r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
+#
+#         p.drawEllipse(r)
+#
+#     def shape(self):
+#         self.path = QtGui.QPainterPath()
+#         self.path.addEllipse(self.boundingRect())
+#         return self.path
+#
+#     def width(self):
+#         return self.size().x()
+#
+#
+# class RectROI(pg.ROI):
+#     index_signal = pyqtSignal(int)
+#
+#     def __init__(self, index=0):
+#         pg.ROI.__init__(self, pos=[100, 100], size=[100, 100])  # , scaleSnap=True, translateSnap=True)
+#         self.addScaleHandle([1, 1], [0, 0])
+#         self.addRotateHandle([0, 0], [0.5, 0.5])
+#         self.index = index
+#         self.sigRegionChangeFinished.connect(self.emit_index_signal)
+#
+#     def center(self):
+#         return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
+#
+#     def emit_index_signal(self):
+#         self.index_signal.emit(self.index)
+#
 
 class Viewer2D(QtWidgets.QWidget):
     data_to_export_signal=pyqtSignal(OrderedDict) #OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
@@ -301,9 +301,11 @@ class Viewer2D(QtWidgets.QWidget):
 
         self.roi_manager = ROIManager(self.image_widget, '2D')
         self.roi_manager.new_ROI_signal.connect(self.add_ROI)
+        self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
         self.roi_manager.roi_settings_changed.connect(self.update_roi)
         #self.roi_manager.ROI_changed_finished.connect(self.update_lineouts)
-        self.ui.horizontalLayout.addWidget(self.roi_manager.roiwidget)
+        #self.ui.horizontalLayout.addWidget(self.roi_manager.roiwidget)
+        self.ui.splitter.addWidget(self.roi_manager.roiwidget)
         self.roi_manager.roiwidget.setVisible(False)
 
 
@@ -314,6 +316,20 @@ class Viewer2D(QtWidgets.QWidget):
             self.ui.splitter_VRight.splitterMoved[int,int].connect(self.move_left_splitter)
         except:
             pass
+
+    @pyqtSlot(str)
+    def remove_ROI(self, roi_name):
+        item = self.ui.RoiCurve_H.pop(roi_name)
+        self.ui.Lineout_H.plotItem.removeItem(item)
+
+        item = self.ui.RoiCurve_V.pop(roi_name)
+        self.ui.Lineout_V.plotItem.removeItem(item)
+
+        item = self.ui.RoiCurve_integrated.pop(roi_name)
+        self.ui.Lineout_integrated.plotItem.removeItem(item)
+
+        self.roi_changed()
+
 
     @pyqtSlot(int, str)
     def add_ROI(self, newindex, roi_type):
@@ -456,7 +472,7 @@ class Viewer2D(QtWidgets.QWidget):
             self.measure_data_dict  = OrderedDict([])
             for indROI, key in enumerate(self.roi_manager.ROIs):
 
-                color_source = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(indROI),
+                color_source = self.roi_manager.settings.child('ROIs', key,
                                                                'use_channel').value()
 
 

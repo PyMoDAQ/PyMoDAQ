@@ -111,7 +111,7 @@ class DAQ_Viewer_base(QObject):
                 child = Parameter.create(name = 'tmp')
                 child.restoreState(param)
                 self.settings.child(*path[1:]).addChild(child) #blocks signal back to main UI
-
+                param = child
 
             elif change == 'parent':
                 children = custom_tree.get_param_from_name(self.settings, param.name())

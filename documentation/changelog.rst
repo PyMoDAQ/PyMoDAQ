@@ -3,6 +3,9 @@
 =========
 Changelog
 =========
+
+* :bug:`0` PID
+* :release:`1.5.0 <2019-07-22>`
 * :feature:`0` DAQ_Scan module's H5Saver object has now by default the option to **not** save the ROI generated data.
   Only the live plots datas are still saved by default.
 * :feature:`0` Viewer 1D and 2D share now the same object ROIManager to deal with their regions of interest

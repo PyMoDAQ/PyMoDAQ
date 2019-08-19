@@ -25,7 +25,7 @@ except Exception as e:
     print(e)
 
 if len(models) == 0:
-    raise Exception('No valid installed models')
+    print('No valid installed models to run the pid controller')
 
 
 params = [

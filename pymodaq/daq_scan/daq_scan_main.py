@@ -1541,6 +1541,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                              [mod.settings for mod in self.move_modules_scan],
                              [mod.settings for mod in self.det_modules_scan],
                              )
+            scan_acquisition.moveToThread(self.scan_thread)
 
             self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[OrderedDict].connect(self.update_scan_GUI)

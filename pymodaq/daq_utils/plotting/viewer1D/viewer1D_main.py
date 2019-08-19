@@ -39,6 +39,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
         self.roi_manager = ROIManager('1D')
         self.roi_manager.new_ROI_signal.connect(self.add_lineout)
+        self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
         #self.roi_manager.ROI_changed_finished.connect(self.update_lineouts)
 
         self.setupUI()
@@ -56,8 +57,8 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.plot_channels = None
         self.plot_colors = utils.plot_colors
         self.color_list = ROIManager.color_list
-        self.lo_items = []
-        self.lo_data = []
+        self.lo_items = OrderedDict([])
+        self.lo_data = OrderedDict([])
         self.ROI_bounds = []
 
         self._x_axis = None
@@ -135,13 +136,13 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     def update_lineouts(self):
         operations = []
         channels = []
-        for ind in range(len(self.roi_manager.ROIs)):
-            operations.append(self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind), 'math_function').value())
+        for ind, key in enumerate(self.roi_manager.ROIs):
+            operations.append(self.roi_manager.settings.child('ROIs', key, 'math_function').value())
             channels.append(
-                self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind),
+                self.roi_manager.settings.child('ROIs', key,
                                 'use_channel').opts['limits'].index(self.roi_manager.settings.child('ROIs',
-                                        'ROI_{:02d}'.format(ind), 'use_channel').value()))
-            self.lo_items[ind].setPen(self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind),
+                                        key, 'use_channel').value()))
+            self.lo_items[key].setPen(self.roi_manager.settings.child('ROIs', key,
                                 'Color').value())
 
         self.measurement_dict['datas'] = self.datas
@@ -152,6 +153,14 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
         data_lo = self.math_module.update_math(self.measurement_dict)
         self.show_math(data_lo)
+
+    @pyqtSlot(str)
+    def remove_ROI(self, roi_name):
+
+        item = self.lo_items.pop(roi_name)
+        self.ui.Graph_Lineouts.plotItem.removeItem(item)
+        self.measure_data_dict.pop("Lineout_{:s}:".format(roi_name))
+        self.update_lineouts()
 
     @pyqtSlot(int, str)
     def add_lineout(self, index, roi_type=''):
@@ -169,10 +178,10 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
         item_lo=self.ui.Graph_Lineouts.plot()
         item_lo.setPen(item_param.child(('Color')).value())
-        self.lo_items.append(item_lo)
-        self.lo_data = []
+        self.lo_items['ROI_{:02d}'.format(index)] = item_lo
+        self.lo_data = OrderedDict([])
         for k in self.lo_items:
-            self.lo_data.append(np.zeros((1,)))
+            self.lo_data[k] = np.zeros((1,))
         self.update_lineouts()
 
 
@@ -398,15 +407,15 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     def show_math(self,data_lo):
         #self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
         if len(data_lo) != 0:
-            for ind,res in enumerate(data_lo):
-                self.measure_data_dict["Lineout{}:".format(ind)]=res
-                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)]=OrderedDict(data=res, type='roi')
+            for ind, key in enumerate(self.lo_items):
+                self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
+                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = OrderedDict(data=data_lo[ind], type='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
 
-            for ind, data in enumerate(data_lo):
-                self.lo_data[ind] = np.append(self.lo_data[ind],data)
-                self.lo_items[ind].setData(y=self.lo_data[ind])
+            for ind, key in enumerate(self.lo_items):
+                self.lo_data[key] = np.append(self.lo_data[key],data_lo[ind])
+                self.lo_items[key].setData(y=self.lo_data[key])
 
         if not (self.ui.do_measurements_pb.isChecked()):  # otherwise you export data from measurement
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
