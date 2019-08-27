@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Changelog &mdash; PyMoDAQ 1.4.2 documentation</title>
+  <title>Changelog &mdash; PyMoDAQ 1.5.1 documentation</title>
   
 
   
@@ -19,33 +19,44 @@
   
 
   
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'./',
+              VERSION:'1.5.1',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="static/style.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
-
-  
-  <script src="_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -62,7 +73,7 @@
             
             
               <div class="version">
-                1.4
+                1.5
               </div>
             
           
@@ -161,16 +172,35 @@
             
   <div class="section" id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="Next feature release">
-<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next feature release</a></h2><ul class="simple">
-<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> added a field ‘acq_time_s’ in the exported data from each viewer. To be used to track at what time a
-given dataset has been recorded</li>
-</ul>
-</div>
 <div class="section" id="Next bugfix release">
 <h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next bugfix release</a></h2><ul class="simple">
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> issue with ctypes imports in daq_utils on macos Now ok</li>
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> DAQ_Scan: when no live plot is possible (too high dimensionality) no more scan datas are saved</li>
+<li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> Navigator: double click option sends the clicked position to connected slots</li>
+<li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> viewer1D displayed incorrectly the legend, now fixed</li>
+</ul>
+</div>
+<div class="section" id="1.5.0">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.5.0">1.5.0</a> <span style="font-size: 75%;">2019-07-22</span></h2><ul class="simple">
+<li>[<span style="color: #A04040;">Bug</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/3">#3</a><span>:</span> PID models package installation added to pymodaq setup</li>
+</ul>
+</div>
+<div class="section" id="1.5.0">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.5.0">1.5.0</a> <span style="font-size: 75%;">2019-07-22</span></h2><ul class="simple">
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> added a field ‘acq_time_s’ in the exported data from each viewer. To be used to track at what time a
+given dataset has been recorded</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> creation of the H5Saver object: simplifies the data saving from pymodaq modules and adds all mandatory metadata</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Uniformity of the saved h5 files. Axes labels and units are added as metadata and displayed in H5Browser</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Viewers: exported data now contains axis information as a dict containing data (values of the axis),
+label and units and type of data (raw or generated from a ROI)</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> pid_controller module added in daq_utils module: enable a PID loop using pymodaq modules and custom
+written PID models (see documentation)</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> pid_controller module modified to work in a parallel thread</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Scan module has now its acquisition loop within a parallel thread</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> The pid_module can be used as an actuator within DAQ_Scan (using the preset_manager configuration)</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Viewer 1D and 2D share now the same object ROIManager to deal with their regions of interest</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> DAQ_Scan module’s H5Saver object has now by default the option to <strong>not</strong> save the ROI generated data.
+Only the live plots datas are still saved by default.</li>
 </ul>
 </div>
 <div class="section" id="1.4.2">
@@ -271,26 +301,16 @@ But the link to working python is missing with pip install (python.exe and pytho
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script type="text/javascript" src="_static/jquery.js"></script>
-        <script type="text/javascript" src="_static/underscore.js"></script>
-        <script type="text/javascript" src="_static/doctools.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

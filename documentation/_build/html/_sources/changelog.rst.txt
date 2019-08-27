@@ -3,6 +3,23 @@
 =========
 Changelog
 =========
+* :release:`1.5.0 <2019-07-22>`
+* :bug:`3` PID models package installation added to pymodaq setup
+* :release:`1.5.0 <2019-07-22>`
+* :feature:`0` DAQ_Scan module's H5Saver object has now by default the option to **not** save the ROI generated data.
+  Only the live plots datas are still saved by default.
+* :feature:`0` Viewer 1D and 2D share now the same object ROIManager to deal with their regions of interest
+* :feature:`0` The pid_module can be used as an actuator within DAQ_Scan (using the preset_manager configuration)
+* :feature:`0` DAQ_Scan module has now its acquisition loop within a parallel thread
+* :feature:`0` pid_controller module modified to work in a parallel thread
+* :bug:`0` viewer1D displayed incorrectly the legend, now fixed
+* :feature:`0` pid_controller module added in daq_utils module: enable a PID loop using pymodaq modules and custom
+  written PID models (see documentation)
+* :feature:`0` Viewers: exported data now contains axis information as a dict containing data (values of the axis),
+  label and units and type of data (raw or generated from a ROI)
+* :feature:`0` Uniformity of the saved h5 files. Axes labels and units are added as metadata and displayed in H5Browser
+* :feature:`0` creation of the H5Saver object: simplifies the data saving from pymodaq modules and adds all mandatory metadata
+* :bug:`0` Navigator: double click option sends the clicked position to connected slots
 * :bug:`0` DAQ_Scan: when no live plot is possible (too high dimensionality) no more scan datas are saved
 * :release:`1.4.2 <2019-04-22>`
 * :bug:`0` issue with ctypes imports in daq_utils on macos Now ok

@@ -639,8 +639,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
                 settings_viewer=settings['settings_viewer']
-                if hasattr(self.ui.viewers[0],'restore_state'):
-                    self.ui.viewers[0].restore_state(settings_viewer)
+                if self.DAQ_type != 'DAQ0D':
+                    self.ui.viewers[0].roi_manager.settings.restoreState(settings_viewer)
 
 
         except Exception as e:
@@ -851,7 +851,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         settings_str = custom_tree.parameter_to_xml_string(self.settings)
         if self.DAQ_type != 'DAQ0D':
             settings_str = b'<All_settings>' + settings_str
-            settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_settings) + \
+            settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings) + \
                             custom_tree.parameter_to_xml_string(h5saver.settings) + \
                             b'</All_settings>'
 
@@ -863,26 +863,27 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             if h5saver.settings.child(('save_2D')).value():
                 data_types.append('data2D')
             for data_type in data_types:
-                if data_type in datas.keys() and len(datas[data_type]) != 0:
-                    if not h5saver.is_node_in_group(det_group, data_type):
-                        self.channel_arrays[data_type] = OrderedDict([])
+                if datas[data_type] is not None:
+                    if data_type in datas.keys() and len(datas[data_type]) != 0:
+                        if not h5saver.is_node_in_group(det_group, data_type):
+                            self.channel_arrays[data_type] = OrderedDict([])
 
-                        data_group = h5saver.add_data_group(det_group, data_type)
-                        for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
+                            data_group = h5saver.add_data_group(det_group, data_type)
+                            for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
 
-                            channel_group = h5saver.add_CH_group(data_group, title=channel)
-                            self.channel_arrays[data_type]['parent'] = channel_group
-                            self.channel_arrays[data_type][channel] = h5saver.add_data(channel_group, datas[data_type][channel], scan_type='', enlargeable=False)
+                                channel_group = h5saver.add_CH_group(data_group, title=channel)
+                                self.channel_arrays[data_type]['parent'] = channel_group
+                                self.channel_arrays[data_type][channel] = h5saver.add_data(channel_group, datas[data_type][channel], scan_type='', enlargeable=False)
 
-                            if data_type == 'data2D':
-                                ind_viewer = self.viewer_types.index('Data2D')
-                                png = self.ui.viewers[ind_viewer].parent.grab().toImage()
-                                png = png.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
-                                buffer = QtCore.QBuffer()
-                                buffer.open(QtCore.QIODevice.WriteOnly)
-                                png.save(buffer, "png")
-                                string = buffer.data().data()
-                                self.channel_arrays[data_type][channel]._v_attrs['pixmap2D'] = string
+                                if data_type == 'data2D':
+                                    ind_viewer = self.viewer_types.index('Data2D')
+                                    png = self.ui.viewers[ind_viewer].parent.grab().toImage()
+                                    png = png.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
+                                    buffer = QtCore.QBuffer()
+                                    buffer.open(QtCore.QIODevice.WriteOnly)
+                                    png.save(buffer, "png")
+                                    string = buffer.data().data()
+                                    self.channel_arrays[data_type][channel]._v_attrs['pixmap2D'] = string
         except Exception as e:
             self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
@@ -949,8 +950,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 path=daq_utils.select_file(save=True,ext='par')
 
             settings_main=self.settings.saveState()
-            if hasattr(self.ui.viewers[0],'roi_settings'):
-                settings_viewer=self.ui.viewers[0].roi_settings.saveState()
+            if self.DAQ_type != 'DAQ0D':
+                settings_viewer=self.ui.viewers[0].roi_manager.settings.saveState()
             else:
                 settings_viewer=None
 

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ 1.4.2 documentation</title>
+  <title>Plugins &mdash; PyMoDAQ 1.5.1 documentation</title>
   
 
   
@@ -19,13 +19,29 @@
   
 
   
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../../',
+              VERSION:'1.5.1',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../static/style.css" type="text/css" />
@@ -33,21 +49,16 @@
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Utility Modules" href="Utility_Modules.html" />
     <link rel="prev" title="Saving datas" href="../saving.html" /> 
-
-  
-  <script src="../../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -64,7 +75,7 @@
             
             
               <div class="version">
-                1.4
+                1.5
               </div>
             
           
@@ -428,16 +439,16 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 <div class="section" id="hardware-settings">
 <span id="id2"></span><h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
 <p>An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
-These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 25</span></a>.
+These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 26</span></a>.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object <code class="docutils literal notranslate"><span class="pre">self.settings</span></code>.
 This object inherits from on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id10">
 <span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
-<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
+<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
 </div>
-<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 25</span></a>:</p>
+<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 26</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Dll library:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;andor_lib&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;browsepath&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">libpath</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera SN:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_serialnumber&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
@@ -452,11 +463,11 @@ This object inherits from on the <code class="docutils literal notranslate"><spa
 </div>
 <p>The list of available types of parameters <a href="#id4"><span class="problematic" id="id5">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">pymodaq.daq_utils.custom_parameter_tree.py</span></code>) is:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 25</span></a> is of type group</li>
+<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 26</span></a> is of type group</li>
 <li><code class="docutils literal notranslate"><span class="pre">int</span></code> : settable integer (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">float</span></code> : settable float (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">str</span></code> : a QLineEdit object (see Qt5 documentation)</li>
-<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 25</span></a> is a combo box</li>
+<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 26</span></a> is a combo box</li>
 <li><code class="docutils literal notranslate"><span class="pre">bool</span></code> : checkable boolean</li>
 <li><code class="docutils literal notranslate"><span class="pre">led</span></code> : checkable boolean in the form of a green (True) of red (False) led</li>
 <li><code class="docutils literal notranslate"><span class="pre">date_time</span></code> : a QDateTime object (see Qt5 documentation)</li>
@@ -500,7 +511,7 @@ The <code class="docutils literal notranslate"><span class="pre">param</span></c
 <p>An actuator plugin is a python class inheriting from a base class. Let’s say you want to create the <em>template</em> plugin.
 You will first create a <code class="docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\pymodaq_plugins\daq_move_plugins</span></code> folder.
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_Move_Template</span></code>.</p>
-<p>See <a class="reference download internal" download="" href="../../_downloads/3cbf2dd2cc46ee5a899781c3d129fe43/daq_move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed template.</p>
+<p>See <a class="reference download internal" href="../../_downloads/daq_move_Template.py" download=""><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed template.</p>
 </div>
 <div class="section" id="daq-viewer-plugin-template">
 <span id="viewer-plugins"></span><h2>DAQ Viewer plugin template<a class="headerlink" href="#daq-viewer-plugin-template" title="Permalink to this headline">¶</a></h2>
@@ -508,7 +519,7 @@ The plugin class will be called <code class="docutils literal notranslate"><span
 You will first create a <code class="docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\pymodaq_plugins\daq_viewer_plugins\plugins_ND\</span></code>
 folder (with N=0, 1 or 2 depending the data dimensionality of your detector).
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_NDViewer_Template</span></code>.</p>
-<p>See <a class="reference download internal" download="" href="../../_downloads/889d5f246ff977002f43fe7fb2305bdb/daq_NDviewer_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code></a> for a detailed template.</p>
+<p>See <a class="reference download internal" href="../../_downloads/daq_NDviewer_Template.py" download=""><code class="xref download docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code></a> for a detailed template.</p>
 <div class="section" id="emission-of-data">
 <span id="data-emission"></span><h3>Emission of data<a class="headerlink" href="#emission-of-data" title="Permalink to this headline">¶</a></h3>
 <p>When data are ready (see <a class="reference internal" href="#data-ready"><span class="std std-ref">Data ready?</span></a> to know about that), the plugin has to notify the viewer module in order
@@ -700,7 +711,7 @@ any change you apply on the local folderwill be applied on the package. Once you
         <a href="Utility_Modules.html" class="btn btn-neutral float-right" title="Utility Modules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../saving.html" class="btn btn-neutral" title="Saving datas" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../saving.html" class="btn btn-neutral float-left" title="Saving datas" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -726,26 +737,16 @@ any change you apply on the local folderwill be applied on the package. Once you
   
 
 
-  
-
-    
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

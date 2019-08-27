@@ -6,6 +6,15 @@
 Welcome to PyMoDAQ's documentation!
 ===================================
 
+Announcement: Training session in Toulouse, France 21/22/23 October 2019:
+
+   .. _flyer:
+
+.. figure:: /image/Flyer_PyMoDAQ.png
+   :alt: Flyer_femto
+
+   Training session announcement
+
 PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
 It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.
 
@@ -32,6 +41,10 @@ List of available plugins: https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2
 Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola.
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT licence.
+
+
+
+
 
 Changelog
 =========

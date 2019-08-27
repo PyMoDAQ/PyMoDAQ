@@ -121,26 +121,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},]},
     ]
 
-    def __init__(self,parent,move_modules=None,detector_modules=None):
+    def __init__(self,parent):
         """
-            | daq_scan(parent,fname="",move_modules=None,detector_modules=None) is a user interface that will enable scanning of motors controlled by the module daq_move and acquisition of signals using DAQ_0DViewer,DAQ_1DViewer or DAQ_2DViewer.
-            |
-            | Parent is the parent Widget ( a QWidget in general).
-            |
-            | Fname is a path pointing to a png image to be displayed at the beginning in the 2D viewer of the scan module.
-            |
-            | Move_modules is a dict of the type move_modules=dict(polarization=DAQ_Move_polarization) where DAQ_Move_polarization is an instance of the daq_move class.
-            |
-            | Detector_modules is a dict of the type detector_modules=dict(current=DAQ_0D_current) where DAQ_0D_current is an instance of the DAQ_0DViewer class.
-            |
-            | The detector module can be any instance in the list:  DAQ_0DViewer, DAQ_1DViewer, DAQ_2DViewer. These modules have in common a signal: export_data_signal exporting a dict of the type: dict:=[x_axis=...,data=list of vectors...,data_measurements=list of floats] to be connected to main gui
-            |
 
-
-
-            See Also
-            --------
-            move_to_crosshair, parameter_tree_changed, update_plot_det_items, update_scan_type, add_comments, add_log, set_scan, quit_fun, start_scan, stop_scan, set_ini_positions
+        Parameters
+        ----------
+        parent: (dockarea) instance of pyqtgraph Dockarea
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Scan,self).__init__()

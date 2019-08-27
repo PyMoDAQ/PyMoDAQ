@@ -4,6 +4,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 
+
+
 *.py[cod]
 *$py.class
 
@@ -13,6 +15,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+documentation/_*
 build/
 develop-eggs/
 dist/
