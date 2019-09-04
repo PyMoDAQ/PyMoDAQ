@@ -92,7 +92,7 @@ setup(
         'pyqt5',
         'numba',
         'tables',
-        'pymodaq_plugins>=1.1.3',
+        'pymodaq_plugins>=1.2.0',
         'pymodaq_pid_models',
         'dask',
 		'simple_pid',

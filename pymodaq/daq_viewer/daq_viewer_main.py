@@ -16,7 +16,7 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.navigator import Navigator
-
+from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.plotting.lcd import LCD
 import pymodaq.daq_utils.daq_utils as daq_utils
 from pymodaq.daq_utils.h5browser import browse_data
@@ -95,14 +95,15 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         *file_continuous_save*     ???
         ========================= =======================================
     """
-    command_detector=pyqtSignal(ThreadCommand)
-    grab_done_signal=pyqtSignal(OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
-    quit_signal=pyqtSignal()
+    command_detector = pyqtSignal(ThreadCommand)
+    command_tcpip = pyqtSignal(ThreadCommand)
+    grab_done_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+    quit_signal = pyqtSignal()
     #used to trigger a saving of the data (from programatical function
     # snapshot) and to trigger the end of acquisition from main program using this module
-    update_settings_signal=pyqtSignal(edict)
-    overshoot_signal=pyqtSignal(bool)
-    log_signal=pyqtSignal(str)
+    update_settings_signal = pyqtSignal(edict)
+    overshoot_signal = pyqtSignal(bool)
+    log_signal = pyqtSignal(str)
 
     #look for eventual calibration files
     calibs = ['None']
@@ -127,6 +128,12 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
             {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
             {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False, 'value': False},
+            {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
+                 {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+                 {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+                 {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+            ]},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': True, 'expanded': False,'children':[
                     {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
                     {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
@@ -190,6 +197,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.dockarea=parent
         self.bkg=None #buffer to store background
         self.filters = tables.Filters(complevel=5)        #options to save data to h5 file using compression zlib library and level 5 compression
+
+        self.send_to_tcpip = False
+        self.tcpclient_thread = None
+
 
         self.ui.statusbar=QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(25)
@@ -503,7 +514,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                                     scaling=self.settings.child('main_settings','axes','yaxis','yscaling').value()))
         return scaling_options
 
-    def grab_data(self, grab_state=False, savepath=None):
+    def grab_data(self, grab_state=False, savepath=None, send_to_tcpip=False):
         """
             Do a grab session using 2 profile :
                 * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
@@ -513,6 +524,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             --------
             daq_utils.ThreadCommand, set_enabled_Ini_buttons
         """
+        self.send_to_tcpip = send_to_tcpip
         self.grab_done = False
         self.ui.data_ready_led.set_as_false()
         if not(grab_state):
@@ -582,10 +594,27 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.command_detector.emit(ThreadCommand("ini_detector",attributes=[self.settings.child(('detector_settings')).saveState(),self.controller]))
 
 
+
+
         except Exception as e:
             self.update_status(getLineInfo()+ str(e))
             self.set_enabled_grab_buttons(enable=False)
 
+    def connect_tcp_ip(self):
+        if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
+            self.tcpclient_thread = QThread()
+
+            tcpclient = TCPClient(None, self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+                                  self.settings.child('main_settings', 'tcpip', 'port').value(),
+                                  self.settings.child(('detector_settings')))
+            tcpclient.moveToThread(self.tcpclient_thread)
+            self.tcpclient_thread.tcpclient = tcpclient
+            tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
+
+            self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
+
+            self.tcpclient_thread.start()
+            tcpclient.init_connection()
 
     def load_data(self):
 
@@ -711,7 +740,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                         else:
                             for viewer in self.ui.viewers:
                                 viewer.set_scaling_axes(self.get_scaling_options())
-                elif param.name() in custom_tree.iter_children(self.settings.child('detector_settings','ROIselect'),[]):
+                elif param.name() in custom_tree.iter_children(self.settings.child('detector_settings','ROIselect'),[]) and \
+                                    'ROIselect' in param.parent().name(): # to be sure a param named 'y0' for instance will not collide with the y0 from the ROI
                     if self.DAQ_type=="DAQ2D":
                         try:
                             self.ui.viewers[0].ROI_select_signal.disconnect(self.update_ROI)
@@ -733,15 +763,51 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 elif param.name() == 'wait_time':
                     self.command_detector.emit(ThreadCommand('update_wait_time', [param.value()]))
 
+                elif param.name() == 'connect_server':
+                    if param.value():
+                        self.connect_tcp_ip()
+                    else:
+                        self.command_tcpip.emit(ThreadCommand('quit'))
+
+                elif param.name() == 'ip_address' or param.name == 'port':
+                    self.command_tcpip.emit(ThreadCommand('update_connection',
+                                    dict(ipaddress=self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+                                         port = self.settings.child('main_settings', 'tcpip', 'port').value())))
+
+
                 if path is not None:
                     if 'main_settings' not in path:
                         self.update_settings_signal.emit(edict(path=path, param=param, change=change))
+
+                        if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                            self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+
 
 
             elif change == 'parent':
                 if path is not None:
                     if 'main_settings' not in path:
                         self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
+
+    @pyqtSlot(ThreadCommand)
+    def process_tcpip_cmds(self,status):
+        if 'Send Data' in status.command:
+            self.snapshot('', send_to_tcpip=True)
+        elif status.command == 'connected':
+            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
+
+        elif status.command == 'disconnected':
+            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+
+        elif status.command == 'Update_Status':
+            self.thread_status(status)
+
+        elif status.command == 'set_info':
+            param_dict = custom_tree.XML_string_to_parameter(status.attributes[1])[0]
+            param_tmp = Parameter.create(**param_dict)
+            param = self.settings.child('detector_settings', *status.attributes[0][1:])
+
+            param.restoreState(param_tmp.saveState())
 
 
 
@@ -1180,6 +1246,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         """
         try:
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
+               self.command_tcpip.emit(ThreadCommand('data_ready', datas))
+
             self.ui.data_ready_led.set_as_true()
             self.init_show_data(datas)
 
@@ -1319,7 +1388,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.init_show_data(datas)
         self.set_datas_to_viewers(datas,temp=True)
 
-    def snapshot(self, pathname=None, dosave=False):
+    def snapshot(self, pathname=None, dosave=False, send_to_tcpip = False):
         """
             Do one single grab and save the data in pathname.
 
@@ -1338,7 +1407,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 raise (Exception("filepathanme has not been defined in snapshot"))
             self.save_file_pathname=pathname
 
-            self.grab_data(False, pathname)
+            self.grab_data(False, pathname, send_to_tcpip=send_to_tcpip)
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
 

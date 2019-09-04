@@ -10,10 +10,10 @@ from pymodaq.daq_move import utility_classes
 #must be loaded to register proper custom parameter types
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum, getLineInfo
 from easydict import EasyDict as edict
-
+from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
 local_path = get_set_local_dir()
 sys.path.append(local_path)
@@ -61,6 +61,7 @@ class DAQ_Move(Ui_Form,QObject):
         QLocale, QObject, pyqtSignal, QStatusBar, ParameterTree
     """
     command_stage=pyqtSignal(ThreadCommand)
+    command_tcpip = pyqtSignal(ThreadCommand)
     move_done_signal=pyqtSignal(str,float) #to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
     update_settings_signal=pyqtSignal(edict)
     log_signal=pyqtSignal(str)
@@ -69,6 +70,13 @@ class DAQ_Move(Ui_Form,QObject):
         {'title': 'Main Settings:','name': 'main_settings','type': 'group','children':[
             {'title': 'Move type:','name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
+            {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
+             'children': [
+                 {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+                 {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+                 {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+             ]},
             ]},
         {'title': 'Move Settings:', 'name': 'move_settings', 'type': 'group'}
         ]
@@ -96,7 +104,8 @@ class DAQ_Move(Ui_Form,QObject):
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
         self.ui.statusbar.setMaximumHeight(20)
 
-
+        self.send_to_tcpip = False
+        self.tcpclient_thread = None
 
         self.wait_time=1000
         self.ui.Ini_state_LED
@@ -237,7 +246,7 @@ class DAQ_Move(Ui_Form,QObject):
             self.update_status(getLineInfo()+ str(e),log_type="log")
 
 
-    def move_Abs(self, position):
+    def move_Abs(self, position, send_to_tcpip=False):
         """
             | Make the move from an absolute position.
             |
@@ -254,6 +263,7 @@ class DAQ_Move(Ui_Form,QObject):
             update_status, check_out_bounds, DAQ_utils.ThreadCommand
         """
         try:
+            self.send_to_tcpip = send_to_tcpip
             if not(position==self.current_position and self.stage_name=="Thorlabs_Flipper"):
                 self.ui.Move_Done_LED.set_as_false()
                 self.move_done_bool=False
@@ -267,7 +277,7 @@ class DAQ_Move(Ui_Form,QObject):
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),log_type="log")
 
-    def move_Home(self):
+    def move_Home(self, send_to_tcpip=False):
         """
             Send the thread commands "Reset_Stop_Motion" and "move_Home" and update the status.
 
@@ -275,6 +285,7 @@ class DAQ_Move(Ui_Form,QObject):
             --------
             update_status, DAQ_utils.ThreadCommand
         """
+        self.send_to_tcpip = send_to_tcpip
         try:
             self.ui.Move_Done_LED.set_as_false()
             self.move_done_bool=False
@@ -286,7 +297,7 @@ class DAQ_Move(Ui_Form,QObject):
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),log_type="log")
 
-    def move_Rel(self, rel_position):
+    def move_Rel(self, rel_position, send_to_tcpip=False):
         """
             | Make a move from the given relative psition and the current one.
             |
@@ -303,6 +314,7 @@ class DAQ_Move(Ui_Form,QObject):
             update_status, check_out_bounds, DAQ_utils.ThreadCommand
         """
         try:
+            self.send_to_tcpip = send_to_tcpip
             self.ui.Move_Done_LED.set_as_false()
             self.move_done_bool=False
             self.target_position=self.current_position+rel_position
@@ -337,13 +349,80 @@ class DAQ_Move(Ui_Form,QObject):
             else:
                 childName = param.name()
             if change == 'childAdded':
-                pass
+                if 'main_settings' not in path:
+                    self.update_settings_signal.emit(edict(path=path, param=data[0].saveState(), change=change))
 
             elif change == 'value':
-                self.update_settings_signal.emit(edict(path=path,param=param))
+
+                if param.name() == 'connect_server':
+                    if param.value():
+                        self.connect_tcp_ip()
+                    else:
+                        self.command_tcpip.emit(ThreadCommand('quit'))
+
+                elif param.name() == 'ip_address' or param.name == 'port':
+                    self.command_tcpip.emit(ThreadCommand('update_connection',
+                                    dict(ipaddress=self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+                                         port = self.settings.child('main_settings', 'tcpip', 'port').value())))
+
+                if path is not None:
+                    if 'main_settings' not in path:
+                        self.update_settings_signal.emit(edict(path=path,param=param, change=change))
+                        if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                            self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
             elif change == 'parent':
-                pass
+                if path is not None:
+                    if 'main_settings' not in path:
+                        self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
+
+    def connect_tcp_ip(self):
+        if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
+            self.tcpclient_thread = QThread()
+
+            tcpclient = TCPClient(None, self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+                                  self.settings.child('main_settings', 'tcpip', 'port').value(),
+                                  self.settings.child(('move_settings')), client_type="ACTUATOR")
+            tcpclient.moveToThread(self.tcpclient_thread)
+            self.tcpclient_thread.tcpclient = tcpclient
+            tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
+
+            self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
+
+            self.tcpclient_thread.start()
+            tcpclient.init_connection()
+
+    @pyqtSlot(ThreadCommand)
+    def process_tcpip_cmds(self,status):
+        if 'move_abs' in status.command:
+            self.move_Abs(status.attributes[0], send_to_tcpip=True)
+
+        elif 'move_rel' in status.command:
+            self.move_Rel(status.attributes[0], send_to_tcpip=True)
+
+        elif 'move_home' in status.command:
+            self.move_Home(send_to_tcpip=True)
+
+        elif 'check_position' in status.command:
+            self.send_to_tcpip = True
+            self.command_stage.emit(ThreadCommand('check_position'))
+
+        elif status.command == 'connected':
+            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
+
+        elif status.command == 'disconnected':
+            self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+
+        elif status.command == 'Update_Status':
+            self.thread_status(status)
+
+        elif status.command == 'set_info':
+            param_dict = custom_tree.XML_string_to_parameter(status.attributes[1])[0]
+            param_tmp = Parameter.create(**param_dict)
+            param = self.settings.child('move_settings', *status.attributes[0][1:])
+
+            param.restoreState(param_tmp.saveState())
+
 
 
     def quit_fun(self):
@@ -579,6 +658,8 @@ class DAQ_Move(Ui_Form,QObject):
         elif status.command=="check_position":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
+               self.command_tcpip.emit(ThreadCommand('position_is', status.attributes))
 
         elif status.command=="move_done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
@@ -586,6 +667,8 @@ class DAQ_Move(Ui_Form,QObject):
             self.move_done_bool=True
             self.ui.Move_Done_LED.set_as_true()
             self.move_done_signal.emit(self.title,status.attributes[0])
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
+                self.command_tcpip.emit(ThreadCommand('move_done', status.attributes))
 
         elif status.command=="Move_Not_Done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
@@ -593,6 +676,7 @@ class DAQ_Move(Ui_Form,QObject):
             self.move_done_bool=False
             self.ui.Move_Done_LED.set_as_false()
             self.command_stage.emit(ThreadCommand(command="move_Abs",attributes=[self.target_position]))
+
         elif status.command=='update_settings':
             #ThreadCommand(command='update_settings',attributes=[path,data,change]))
             try:
@@ -606,13 +690,15 @@ class DAQ_Move(Ui_Form,QObject):
                 elif status.attributes[2] == 'options':
                     self.settings.child('move_settings',*status.attributes[0]).setOpts(**status.attributes[1])
                 elif status.attributes[2] == 'childAdded':
-                    self.settings.child('move_settings',*status.attributes[0]).addChild(status.attributes[1][0])
+                    child = Parameter.create(name='tmp')
+                    child.restoreState(status.attributes[1][0])
+                    self.settings.child('move_settings', *status.attributes[0]).addChild(status.attributes[1][0])
 
-            except:
-                pass
-
+            except Exception as e:
+                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
+
         elif status.command=='raise_timeout':
             self.raise_timeout()
 

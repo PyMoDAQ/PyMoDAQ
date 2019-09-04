@@ -4,12 +4,17 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QVaria
 from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree
-from pymodaq.daq_utils.daq_utils import ThreadCommand,find_file,find_in_path,get_names,make_enum
-
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, check_received_length, check_sended,\
+    message_to_bytes, send_scalar, send_string, get_scalar, get_int, get_string, send_list
+import socket
+import select
 import os
 import sys
 import numpy as np
+from collections import OrderedDict
+from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+
 
 comon_parameters=[{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
                   {'name': 'epsilon', 'type': 'float', 'value': 0.01},
@@ -24,6 +29,7 @@ comon_parameters=[{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '
                          {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False, 'default': False},
                          {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                          {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+
 
 
 class DAQ_Move_base(QObject):
@@ -69,7 +75,7 @@ class DAQ_Move_base(QObject):
     _controller_units = ''
 
     def __init__(self,parent=None,params_state=None):
-        super(DAQ_Move_base,self).__init__()
+        QObject.__init__(self) #to make sure this is the parent class
         self.move_is_done = False
         self.parent=parent
         self.controller=None
@@ -77,9 +83,14 @@ class DAQ_Move_base(QObject):
         self.status=edict(info="",controller=None,stage=None,initialized=False)
         self.current_position=0
         self.target_position=0
+        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
         self.settings=Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
-            self.settings.restoreState(params_state)
+            if isinstance(params_state, dict):
+                self.settings.restoreState(params_state)
+            elif isinstance(params_state, Parameter):
+                self.settings.restoreState(params_state.saveState())
+
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.controller_units = self._controller_units
 
@@ -90,7 +101,10 @@ class DAQ_Move_base(QObject):
     @controller_units.setter
     def controller_units(self, units: str = ''):
         self._controller_units = units
-        self.settings.child(('units')).setValue(units)
+        try:
+            self.settings.child(('units')).setValue(units)
+        except:
+            pass
 
     def check_bound(self,position):
         self.move_is_done = False
@@ -120,6 +134,7 @@ class DAQ_Move_base(QObject):
         """
         if self.parent is not None:
             self.parent.status_sig.emit(status)
+            QtWidgets.QApplication.processEvents()
         else:
             print(status)
 
@@ -211,15 +226,12 @@ class DAQ_Move_base(QObject):
 
         for param, change, data in changes:
             path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
             if change == 'childAdded':
-                self.emit_status(ThreadCommand('update_settings',[path,data,change])) #send parameters values/limits back to the GUI
-
+                self.emit_status(ThreadCommand('update_settings',
+                                               [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
+                                                change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
             elif change == 'value' or change == 'limits' or change=='options':
-                self.emit_status(ThreadCommand('update_settings',[path,data,change])) #parent is the main detector object and status_sig will be send to the GUI thrad
+                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
 
@@ -263,16 +275,217 @@ class DAQ_Move_base(QObject):
             --------
             send_param_status, commit_settings
         """
-        path=settings_parameter_dict.path
-        param=settings_parameter_dict.param
+        path = settings_parameter_dict['path']
+        param = settings_parameter_dict['param']
+        change = settings_parameter_dict['change']
         try:
             self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-        except: pass
-        self.settings.child(*path[1:]).setValue(param.value())
+        except:
+            pass
+        if change == 'value':
+            self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
+        elif change == 'childAdded':
+            child = Parameter.create(name='tmp')
+            child.restoreState(param)
+            self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
+            param = child
+
+        elif change == 'parent':
+            children = custom_tree.get_param_from_name(self.settings, param.name())
+
+            if children is not None:
+                path = custom_tree.get_param_path(children)
+                self.settings.child(*path[1:-1]).removeChild(children)
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.commit_common_settings(param)
         self.commit_settings(param)
+
+class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
+    """
+        ================= ==============================
+        **Attributes**      **Type**
+        *command_server*    instance of pyqtSignal
+        *x_axis*            1D numpy array
+        *y_axis*            1D numpy array
+        *data*              double precision float array
+        ================= ==============================
+
+        See Also
+        --------
+        utility_classes.DAQ_TCP_server
+    """
+    params_client =[] #parameters of a client grabber
+    command_server=pyqtSignal(list)
+
+    message_list=["Quit", "Status","Done","Server Closed","Info","Infos", "Info_xml", "move_abs",
+                  'move_home', 'move_rel', 'check_position', 'stop_motion', 'position_is', 'move_done']
+    socket_types=["ACTUATOR"]
+    params=comon_parameters +  tcp_parameters
+
+
+    def __init__(self,parent=None,params_state=None):
+        """
+
+        Parameters
+        ----------
+        parent
+        params_state
+        """
+        self.client_type = "ACTUATOR"
+        DAQ_Move_base.__init__(self, parent,params_state) #initialize base class with commom attributes and methods
+        self.settings.child(('bounds')).hide()
+        self.settings.child(('scaling')).hide()
+        self.settings.child(('epsilon')).setValue(1)
+
+
+        TCPServer.__init__(self, self.client_type)
+
+    def command_to_from_client(self,command):
+        sock = self.find_socket_within_connected_clients(self.client_type)
+        if sock is not None:  # if client 'ACTUATOR' is connected then send it the command
+
+            if command == 'position_is':
+                pos = get_scalar(sock)
+
+                pos = self.get_position_with_scaling(pos)
+                self.current_position = pos
+                self.emit_status(ThreadCommand('check_position', [pos]))
+
+            elif command == 'move_done':
+                pos = get_scalar(sock)
+                pos = self.get_position_with_scaling(pos)
+                self.current_position = pos
+                self.emit_status(ThreadCommand('move_done', [pos]))
+
+
+    def commit_settings(self,param):
+
+        if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
+            actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
+            send_string(actuator_socket, 'set_info')
+
+            param_here_index = custom_tree.iter_children(self.settings.child(('infos')), []).index(param.name())
+            param_here = custom_tree.iter_children_params(self.settings.child(('infos')), [])[param_here_index]
+
+            path = self.settings.childPath(param_here) #get the path of this param as a list
+            send_list(actuator_socket, path)
+
+            #send value
+            data = custom_tree.parameter_to_xml_string(param)
+            send_string(actuator_socket, data)
+
+    def ini_stage(self, controller=None):
+        """
+            | Initialisation procedure of the detector updating the status dictionnary.
+            |
+            | Init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+
+            See Also
+            --------
+            utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
+        """
+        self.status.update(edict(initialized=False,info="",x_axis=None,y_axis=None,controller=None))
+        try:
+            self.settings.child(('infos')).addChildren(self.params_client)
+
+            self.init_server()
+
+            self.status.info = 'TCP Server actuator'
+            self.status.initialized=True
+            self.status.controller=self.serversocket
+            return self.status
+
+        except Exception as e:
+            self.status.info=getLineInfo()+ str(e)
+            self.status.initialized=False
+            return self.status
+
+    def close(self):
+        """
+            Should be used to uninitialize hardware.
+
+            See Also
+            --------
+            utility_classes.DAQ_TCP_server.close_server
+        """
+        self.listening=False
+        self.close_server()
+
+    def move_Abs(self,position):
+        """
+
+        """
+        position=self.check_bound(position)
+        self.target_position=position
+
+        position=self.set_position_with_scaling(position)
+
+        sock = self.find_socket_within_connected_clients(self.client_type)
+        if sock is not None:  # if client self.client_type is connected then send it the command
+            send_string(sock, 'move_abs')
+            send_scalar(sock, position)
+
+            #self.poll_moving()
+
+    def move_Rel(self, position):
+        position=self.check_bound(self.current_position+position)-self.current_position
+        self.target_position=position+self.current_position
+
+        position=self.set_position_relative_with_scaling(position)
+        sock = self.find_socket_within_connected_clients(self.client_type)
+        if sock is not None:  # if client self.client_type is connected then send it the command
+            send_string(sock, 'move_rel')
+            send_scalar(sock, position)
+
+            #self.poll_moving()
+
+    def move_Home(self):
+        """
+            Make the absolute move to original position (0).
+
+            See Also
+            --------
+            move_Abs
+        """
+        sock = self.find_socket_within_connected_clients(self.client_type)
+        if sock is not None:  # if client self.client_type is connected then send it the command
+            send_string(sock, 'move_home')
+
+    def check_position(self):
+        """
+            Get the current hardware position with scaling conversion given by get_position_with_scaling.
+
+            See Also
+            --------
+            daq_move_base.get_position_with_scaling, daq_utils.ThreadCommand
+        """
+        sock = self.find_socket_within_connected_clients(self.client_type)
+        if sock is not None:  # if client self.client_type is connected then send it the command
+            self.send_command(sock, 'check_position')
+
+        return self.current_position
+
+    def stop_motion(self):
+        """
+            See Also
+            --------
+            daq_move_base.move_done
+        """
+        sock = self.find_socket_within_connected_clients(self.client_type)
+        if sock is not None:  # if client self.client_type is connected then send it the command
+            self.send_command(sock, 'stop_motion')
+
+
+    def stop(self):
+        """
+            not implemented.
+        """
+        pass
+        return ""
+
+
+
 
 if __name__=='__main__':
     test=DAQ_Move_base()
