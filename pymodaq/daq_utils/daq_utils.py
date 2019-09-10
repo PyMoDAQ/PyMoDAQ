@@ -20,6 +20,67 @@ import inspect
 from numba import jit
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+Cb = 1.602176e-19  # coulomb
+h = 6.626068e-34  # J.s
+c = 2.997924586e8  # m.s-1
+
+def Enm2cmrel(E_nm, ref_wavelength=515):
+    return 1/(ref_wavelength*1e-7)-1/(E_nm*1e-7)
+
+def Ecmrel2Enm(Ecmrel, ref_wavelength=515):
+    Ecm = Ecmrel+1/(ref_wavelength*1e-7)
+    return 1/(Ecm*1e-7)
+
+
+def eV2nm(E_eV):
+    E_J = E_eV * Cb
+    E_freq = E_J / h
+    E_nm = c / E_freq * 1e9
+    return E_nm
+
+
+def nm2eV(E_nm):
+    E_freq = c / E_nm * 1e9;
+    E_J = E_freq * h;
+    E_eV = E_J / Cb;
+    return E_eV
+
+
+def E_J2eV(E_J):
+    E_eV = E_J / Cb;
+    return E_eV
+
+
+def eV2cm(E_eV):
+    E_nm = eV2nm(E_eV)
+    E_cm = 1 / (E_nm * 1e-7);
+    return E_cm
+
+def nm2cm(E_nm):
+    return 1/(E_nm*1e7)
+
+def cm2nm(E_cm):
+    return 1 / (E_cm * 1e-7)
+
+
+def eV2E_J(E_eV):
+    E_J = E_eV * Cb;
+    return E_J
+
+
+def eV2radfs(E_eV):
+    E_J = E_eV * Cb
+    E_freq = E_J / h
+    E_radfs = E_freq * 2 * np.pi / 1e15
+    return E_radfs
+
+
+def l2w(x, speedlight=300):
+    # y=l2w(x,c)
+    # speedlight is the speed of light =300 nm/fs
+    y = 2 * np.pi * speedlight / x
+    return y
+
 
 def capitalize(string):
     """

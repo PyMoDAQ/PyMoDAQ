@@ -3,7 +3,13 @@
 =========
 Changelog
 =========
-* :release:`1.5.0 <2019-07-22>`
+* :release:`1.6.1 <2019-09-10>` patch release
+* :feature:`0` Added sending detector axis from tcp/ip back to tcp server for correct plotting
+* :bug:`0` Error in a tcp/ip communication (wrong signature of send_string method)
+* :release:`1.6.0 <2019-09-04>`
+* :feature:`0` General use of PyMoDAQ Viewer and Move modules can now be done using TCP/IP. A TCP Server plugin is
+  available for each, to be loaded on the main computer. Then **Any Module** on distant computer can be linked to this server
+* :release:`1.5.1 <2019-07-22>`
 * :bug:`3` PID models package installation added to pymodaq setup
 * :release:`1.5.0 <2019-07-22>`
 * :feature:`0` DAQ_Scan module's H5Saver object has now by default the option to **not** save the ROI generated data.

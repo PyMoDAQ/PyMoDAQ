@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Saving datas &mdash; PyMoDAQ 1.5.1 documentation</title>
+  <title>Saving datas &mdash; PyMoDAQ 1.6 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../',
-              VERSION:'1.5.1',
+              VERSION:'1.6',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -75,7 +75,7 @@
             
             
               <div class="version">
-                1.5
+                1.6
               </div>
             
           
@@ -201,9 +201,9 @@ module or a plugin. This gives a unique file containing both datas and metadata.
 <span id="daq-viewer-saving"></span><h2>From DAQ_Viewer<a class="headerlink" href="#from-daq-viewer" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="single-datas">
 <h3>Single Datas<a class="headerlink" href="#single-datas" title="Permalink to this headline">¶</a></h3>
-<p>Datas saved directly from a DAQ_Viewer (for instance the one on <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 12</span></a>) will be recorded in
+<p>Datas saved directly from a DAQ_Viewer (for instance the one on <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 13</span></a>) will be recorded in
 a h5file whose structure will be represented
-like <a class="reference internal" href="#single-data"><span class="std std-numref">Fig. 23</span></a> using PyMoDAQ’s h5 browser (see <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a>). The various type
+like <a class="reference internal" href="#single-data"><span class="std std-numref">Fig. 24</span></a> using PyMoDAQ’s h5 browser (see <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a>). The various type
 of data exported by the viewer are saved in a dedicated entry (<em>Data0D</em>, …) and all channels are recorded
 within as subentries. Metadata from the detector settings, the measurement module and the activated ROIs
 are also recorded.</p>
@@ -211,13 +211,13 @@ are also recorded.</p>
 <div></div></blockquote>
 <div class="figure" id="id2">
 <span id="single-data"></span><img alt="single_data" src="../_images/single_data.png" />
-<p class="caption"><span class="caption-number">Fig. 23 </span><span class="caption-text">h5 file content containing saved data from a DAQ_Viewer detector (see <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 12</span></a>)</span></p>
+<p class="caption"><span class="caption-number">Fig. 24 </span><span class="caption-text">h5 file content containing saved data from a DAQ_Viewer detector (see <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 13</span></a>)</span></p>
 </div>
 </div>
 <div class="section" id="continuous-saving">
 <span id="id1"></span><h3>Continuous Saving<a class="headerlink" href="#continuous-saving" title="Permalink to this headline">¶</a></h3>
 <p>When the <em>continuous saving</em> parameter is set, new parameters are appearing on the <em>DAQ_Viewer</em> panel
-(see <a class="reference internal" href="#figure-continuous"><span class="std std-numref">Fig. 24</span></a>).</p>
+(see <a class="reference internal" href="#figure-continuous"><span class="std std-numref">Fig. 25</span></a>).</p>
 <ul>
 <li><p class="first"><em>Base path</em>: indicates where the data will be saved. If it doesn’t exist the module will try to create it</p>
 </li>
@@ -234,19 +234,19 @@ are also recorded.</p>
 </ul>
 <div class="figure" id="id3">
 <span id="figure-continuous"></span><img alt="continuous" src="../_images/continuous_saving.png" />
-<p class="caption"><span class="caption-number">Fig. 24 </span><span class="caption-text">Continuous Saving options</span></p>
+<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">Continuous Saving options</span></p>
 </div>
 <p>The saved file will follow this general structure:</p>
 <blockquote>
 <div>D:\Data\2018\20181220\Data_20181220_16_58_48.h5</div></blockquote>
 <p>With a base path (<code class="docutils literal notranslate"><span class="pre">D:\Data</span></code> in this case) followed by a subfolder year, a subfolder day and a filename
 formed from a <em>base name</em> followed by the date of the day and the time at which you started to log data.
-<a class="reference internal" href="#figure-continuous-struct"><span class="std std-numref">Fig. 25</span></a> displays the tree structure of such a file, with</p>
+<a class="reference internal" href="#figure-continuous-struct"><span class="std std-numref">Fig. 26</span></a> displays the tree structure of such a file, with</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id4">
 <span id="figure-continuous-struct"></span><img alt="continuous" src="../_images/continuous_data_structure.png" />
-<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">Continuous Saving options</span></p>
+<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">Continuous Saving options</span></p>
 </div>
 </div>
 </div>

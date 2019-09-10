@@ -42,7 +42,7 @@ class DAQ_Move(Ui_Form,QObject):
         *parent*                   QObject
         *title*                    string
         *wait_time*                int
-        *Initialized_state*        boolean
+        *initialized_state*        boolean
         *Move_done*                boolean
         *controller*               instance of the specific controller object
         *stage*                    instance of the stage (axis or wathever) object

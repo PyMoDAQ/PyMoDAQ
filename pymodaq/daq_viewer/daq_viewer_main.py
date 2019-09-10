@@ -84,7 +84,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         *wait_time*                int
         *save_file_pathname*       string
         *ind_continuous_grab*      int
-        *Initialized_state*        boolean
+        *initialized_state*        boolean
         *snapshot_pathname*        string
         *x_axis*                   1D numpy array
         *y_axis*                   1D numpy array
@@ -96,6 +96,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         ========================= =======================================
     """
     command_detector = pyqtSignal(ThreadCommand)
+    init_signal = pyqtSignal(bool)
+    custom_sig = pyqtSignal(ThreadCommand) #particular case where DAQ_Viewer  is used for a custom module
     command_tcpip = pyqtSignal(ThreadCommand)
     grab_done_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
     quit_signal = pyqtSignal()
@@ -268,7 +270,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         self.ui.Ini_state_LED.clickable=False
         self.ui.Ini_state_LED.set_as_false()
-        self.Initialized_state=False
+        self.initialized_state=False
         self.measurement_module=None
         self.snapshot_pathname=None
 
@@ -563,7 +565,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             if not self.ui.IniDet_pb.isChecked():
                 self.set_enabled_grab_buttons(enable=False)
                 self.ui.Ini_state_LED.set_as_false()
-                self.Initialized_state=False
+                self.initialized_state=False
 
                 if hasattr(self,'detector_thread'):
                     self.command_detector.emit(ThreadCommand("close"))
@@ -572,7 +574,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     if hasattr(self,'detector_thread'):
                         self.detector_thread.quit()
 
-                self.Initialized_state=False
+                self.initialized_state=False
 
 
             else:
@@ -615,6 +617,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             self.tcpclient_thread.start()
             tcpclient.init_connection()
+
 
     def load_data(self):
 
@@ -809,6 +812,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             param.restoreState(param_tmp.saveState())
 
+        elif status.command == 'get_axis':
+            self.command_detector.emit(ThreadCommand('get_axis')) #tells the plugin to emit its axes so that the server will receive them
+
 
 
     def process_overshoot(self,datas):
@@ -827,7 +833,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         """
         # insert anything that needs to be closed before leaving
         try:
-            if self.Initialized_state==True: #means  initialzed
+            if self.initialized_state==True: #means  initialzed
                 self.ui.IniDet_pb.click()
                 QtWidgets.QApplication.processEvents()
             self.quit_signal.emit()
@@ -1091,11 +1097,26 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.DAQ_type = daq_type
         self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
 
+    def set_xy_axis(self,data, ind_viewer):
+        if 'x_axis' in data.keys():
+            self.ui.viewers[ind_viewer].x_axis = data['x_axis']
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                self.command_tcpip.emit(ThreadCommand('x_axis', [data['x_axis']]))
+
+        if 'y_axis' in data.keys():
+            self.ui.viewers[ind_viewer].y_axis = data['y_axis']
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                self.command_tcpip.emit(ThreadCommand('y_axis', [data['y_axis']]))
+
+
     def set_datas_to_viewers(self, datas, temp=False):
         for ind, data in enumerate(datas):
             self.ui.viewers[ind].title = data['name']
             if data['name'] != '':
                 self.ui.viewer_docks[ind].setTitle(self.title + ' ' + data['name'])
+
+            self.set_xy_axis(data, ind)
+
             if data['type'] == 'Data0D':
                 if 'labels' in data.keys():
                     self.ui.viewers[ind].labels = data['labels']
@@ -1105,8 +1126,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.ui.viewers[ind].show_data(data['data'])
 
             elif data['type'] == 'Data1D':
-                if 'x_axis' in data.keys():
-                    self.ui.viewers[ind].x_axis = data['x_axis']
+
+
                 if 'labels' in data.keys():
                     self.ui.viewers[ind].labels = data['labels']
                 if temp:
@@ -1115,10 +1136,6 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.ui.viewers[ind].show_data(data['data'])
 
             elif data['type'] == 'Data2D':
-                if 'x_axis' in data.keys():
-                    self.ui.viewers[ind].x_axis = data['x_axis']
-                if 'y_axis' in data.keys():
-                    self.ui.viewers[ind].y_axis = data['y_axis']
                 if temp:
                     self.ui.viewers[ind].setImageTemp(*data['data'])
                 else:
@@ -1277,10 +1294,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 for data in datas:
                     for ind_data, dat in enumerate(data['data']):
                         data_tmp = OrderedDict(data=dat)
-                        if 'x_axis' in data:
-                            data_tmp['x_axis'] = data['x_axis']
-                        if 'y_axis' in data:
-                            data_tmp['y_axis'] = data['y_axis']
+                        self.set_xy_axis(dat, ind_data)
                         if data['type'].lower() == 'data0d':
                             data0D['CH{:03d}'.format(ind_data)] = data_tmp
                         elif data['type'].lower() == 'data1d':
@@ -1478,9 +1492,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.controller=status.attributes[0]['controller']
                 self.set_enabled_grab_buttons(enable=True)
                 self.ui.Ini_state_LED.set_as_true()
-                self.Initialized_state = True
+                self.initialized_state = True
             else:
-                self.Initialized_state = False
+                self.initialized_state = False
+            self.init_signal.emit(self.initialized_state)
 
         elif status.command=="close":
             try:
@@ -1495,7 +1510,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
 
-            self.Initialized_state=False
+            self.initialized_state=False
 
         elif status.command == "grab":
             pass
@@ -1507,9 +1522,14 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     if len(x_axis) == len(self.ui.viewers):
                         for ind, viewer in enumerate(self.ui.viewers):
                             viewer.x_axis = x_axis[ind]
+                    x_axis = x_axis[0]
                 else:
                     for viewer in self.ui.viewers:
                         viewer.x_axis = x_axis
+
+                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                    self.command_tcpip.emit(ThreadCommand('x_axis', [x_axis]))
+
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
 
@@ -1521,9 +1541,14 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     if len(y_axis) == len(self.ui.viewers):
                         for ind, viewer in enumerate(self.ui.viewers):
                             viewer.y_axis = y_axis[ind]
+                    y_axis = y_axis[0]
                 else:
                     for viewer in self.ui.viewers:
                         viewer.y_axis=y_axis
+
+                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
+                    self.command_tcpip.emit(ThreadCommand('y_axis', [y_axis]))
+
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
 
@@ -1589,6 +1614,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         elif status.command == 'show_scanner':
             self.show_scanner()
             QtWidgets.QApplication.processEvents()
+
+        else:
+            self.custom_sig.emit(status)
 
     def update_com(self):
         self.command_detector.emit(ThreadCommand('update_com', []))
@@ -1820,6 +1848,18 @@ class DAQ_Detector(QObject):
         elif command.command =='update_wait_time':
             self.wait_time = command.attributes[0]
 
+        elif command.command == 'set_spectro_wl':
+            self.detector.set_spectro_wl(command.attributes[0])
+
+
+        elif command.command == 'get_axis':
+            self.detector.get_axis()
+
+        else: #custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
+            if hasattr(self.detector, command.command):
+                cmd = getattr(self.detector, command.command)
+                cmd(*command.attributes)
+
 
     def ini_detector(self, params_state=None, controller=None):
         """
@@ -2034,7 +2074,7 @@ if __name__ == '__main__':
     win.setCentralWidget(area)
     win.resize(1000,500)
     win.setWindowTitle('pymodaq main')
-    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ2D'].name)
+    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ1D'].name)
     win.show()
     sys.exit(app.exec_())
 

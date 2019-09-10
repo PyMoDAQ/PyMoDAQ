@@ -10,8 +10,8 @@ import socket
 import select
 import numpy as np
 from bitstring import BitArray
-from pymodaq.daq_utils.daq_utils import check_received_length, check_sended, message_to_bytes, ThreadCommand, \
-    getLineInfo, send_scalar, send_string, send_list, get_scalar, get_int, get_string
+from pymodaq.daq_utils.daq_utils import check_received_length, ThreadCommand, \
+    getLineInfo, send_scalar, send_string, send_list, get_scalar, get_int, get_string, send_array
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
@@ -102,6 +102,31 @@ class TCPClient(QObject):
             send_string(self.socket, 'move_done')
             send_scalar(self.socket, command.attributes[0])
 
+        elif command.command == 'x_axis':
+            send_string(self.socket, 'x_axis')
+            x_axis = dict(label='', units='')
+            if isinstance(command.attributes[0], np.ndarray):
+                x_axis['data'] = command.attributes[0]
+            elif isinstance(command.attributes[0], dict):
+                x_axis.update(command.attributes[0].copy())
+
+            send_array(self.socket, x_axis['data'])
+            send_string(self.socket, x_axis['label'])
+            send_string(self.socket, x_axis['units'])
+
+        elif command.command == 'y_axis':
+            send_string(self.socket, 'y_axis')
+            y_axis = dict(label='', units='')
+            if isinstance(command.attributes[0], np.ndarray):
+                y_axis['data'] = command.attributes[0]
+            elif isinstance(command.attributes[0], dict):
+                y_axis.update(command.attributes[0].copy())
+
+            send_array(self.socket, y_axis['data'])
+            send_string(self.socket, y_axis['label'])
+            send_string(self.socket, y_axis['units'])
+
+
     def init_connection(self):
         # %%
         try:
@@ -113,7 +138,7 @@ class TCPClient(QObject):
             send_string(self.socket, self.client_type)
 
             self.send_infos_xml(custom_tree.parameter_to_xml_string(self.settings))
-
+            self.cmd_signal.emit(ThreadCommand('get_axis'))
             # %%
             while True:
 

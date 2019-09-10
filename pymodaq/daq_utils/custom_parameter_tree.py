@@ -26,6 +26,13 @@ import numpy as np
 import os
 
 
+def get_param_path(param):
+    path = []
+    par_tmp = param
+    while par_tmp.parent() is not None:
+        path.append(par_tmp.name())
+        par_tmp = param.parent()
+    return par_tmp[-1::-1]
 
 #%% with attribute
 def walk_parameters_to_xml(parent_elt=None,param=None):

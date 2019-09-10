@@ -364,11 +364,8 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             send_string(actuator_socket, 'set_info')
+            path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'
 
-            param_here_index = custom_tree.iter_children(self.settings.child(('infos')), []).index(param.name())
-            param_here = custom_tree.iter_children_params(self.settings.child(('infos')), [])[param_here_index]
-
-            path = self.settings.childPath(param_here) #get the path of this param as a list
             send_list(actuator_socket, path)
 
             #send value

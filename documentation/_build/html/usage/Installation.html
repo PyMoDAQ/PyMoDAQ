@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Installation &mdash; PyMoDAQ 1.5.1 documentation</title>
+  <title>Installation &mdash; PyMoDAQ 1.6 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../',
-              VERSION:'1.5.1',
+              VERSION:'1.6',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -75,7 +75,7 @@
             
             
               <div class="version">
-                1.5
+                1.6
               </div>
             
           
@@ -104,13 +104,9 @@
 <li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#windows">Windows</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#using-pip">Using Pip:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#step-by-step-manual-instructions">Step by Step manual instructions:</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#macos">MacOS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#linux">Linux</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#setting-up-a-new-environment">Setting up a new environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-pymodaq">Installing PyMoDAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-shortcuts-on-windows">Creating shortcuts on <strong>Windows</strong></a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="How_to_start.html">How to Start</a></li>
@@ -188,61 +184,75 @@
 <span id="section-installation"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#overview" id="id11">Overview</a></li>
-<li><a class="reference internal" href="#windows" id="id12">Windows</a></li>
-<li><a class="reference internal" href="#macos" id="id13">MacOS</a></li>
-<li><a class="reference internal" href="#linux" id="id14">Linux</a></li>
+<li><a class="reference internal" href="#overview" id="id8">Overview</a></li>
+<li><a class="reference internal" href="#setting-up-a-new-environment" id="id9">Setting up a new environment</a></li>
+<li><a class="reference internal" href="#installing-pymodaq" id="id10">Installing PyMoDAQ</a></li>
+<li><a class="reference internal" href="#creating-shortcuts-on-windows" id="id11">Creating shortcuts on <strong>Windows</strong></a></li>
 </ul>
 </div>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
 <p>PyMoDAQ is written in <a class="reference external" href="https://docs.python-guide.org/">Python</a> and uses Python 3.5+. It uses the <a class="reference external" href="http://doc.qt.io/qt-5/qt5-intro.html">PyQt5</a> library and the excellent <a class="reference external" href="http://www.pyqtgraph.org/">pyqtgraph</a> package
 for its user interface. For PyMoDAQ to run smoothly, you need a Python distribution to be installed. Here are some advices.</p>
+<p>On all platforms <strong>Windows</strong>, <strong>MacOS</strong> or <strong>Linux</strong>, <a class="reference external" href="https://www.anaconda.com/download/">Anaconda</a> or <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">Miniconda</a> is the advised distribution/package
+manager. Environments can be created to deal with different version of packages and isolate the code from other
+programs. Anaconda comes with a full set of installed scientific python packages while <em>Miniconda</em> is a very
+light package manager.</p>
 </div>
-<div class="section" id="windows">
-<h2>Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h2>
-<p>The advised distribution is <a class="reference external" href="https://winpython.github.io/">WinPython</a> (WinPython64-3.7.1.0 tested to be working) that comes with a full set of python
-packages for a versatile use of python. For best practice, install it on the C drive, for instance: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710</span></code> Once
-the distribution installed, you can install PyMoDAQ from the folder downloaded on <a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ">github</a> or from <a class="reference external" href="https://pypi.org/project/pymodaq/1.0.1/#files">Pypi</a>.</p>
-<div class="section" id="using-pip">
-<h3>Using Pip:<a class="headerlink" href="#using-pip" title="Permalink to this headline">¶</a></h3>
-<p>Pymodaq can be downloaded and installed automatically using the command line tool: <code class="docutils literal notranslate"><span class="pre">pip</span></code></p>
+<div class="section" id="setting-up-a-new-environment">
+<h2>Setting up a new environment<a class="headerlink" href="#setting-up-a-new-environment" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>get winpython and install it (choose a destination folder on <code class="docutils literal notranslate"><span class="pre">C:\</span></code> directly, for instance <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710</span></code></li>
-<li>open Winpython command line tool <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\WinPython</span> <span class="pre">Command</span> <span class="pre">Prompt.exe</span></code></li>
-<li>write the command: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pip</span> <span class="pre">install</span> <span class="pre">pymodaq</span></code></li>
-</ul>
-<p>All the modules will then be installed within the <code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python. Look at <a class="reference internal" href="How_to_start.html#section-how-to-start"><span class="std std-ref">How to Start</span></a> for detailed ways of how to start pymodaq modules.</p>
-</div>
-<div class="section" id="step-by-step-manual-instructions">
-<h3>Step by Step manual instructions:<a class="headerlink" href="#step-by-step-manual-instructions" title="Permalink to this headline">¶</a></h3>
-<ul class="simple">
-<li>get winpython and install it (choose a destination folder on <code class="docutils literal notranslate"><span class="pre">C:\</span></code> directly, for instance <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710</span></code></li>
-<li>download the source file from <a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ">github</a> or <a class="reference external" href="https://pypi.org/project/pymodaq/1.0.1/#files">Pypi</a></li>
-<li>Extract the archive (zip or tar file)</li>
-<li>open Winpython command line tool <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\WinPython</span> <span class="pre">Command</span> <span class="pre">Prompt.exe</span></code></li>
-<li>cd to the location of the extracted archive: <code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">C:\...\pymodaq\</span></code></li>
-<li>run: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code></li>
-</ul>
-<p>All the modules will then be installed within the <code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python. <code class="docutils literal notranslate"><span class="pre">.exe</span></code> files will also be installed
-in the directory: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts</span></code> so that you can run directly:</p>
-<ul class="simple">
-<li>pymodaq_scan.exe : will start the <a class="reference internal" href="modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> module</li>
-<li>pymodaq_move.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> module</li>
-<li>pymodaq_viewer.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> module</li>
-<li>pymodaq_h5browser.exe : will start a standalone <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a> module (to explore h5 files saved from DAQ_Scan or DAQ_Viewer modules)</li>
+<li>Download and install Miniconda3.</li>
+<li>Open a console, and cd to the location of the <em>condabin</em> folder, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Miniconda3\condabin</span></code></li>
+<li>Create a new environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">-n</span> <span class="pre">my_env</span></code>, where my_env is your new environment name, could be <em>pymodaq16</em>
+if you plan to install PyMoDAQ version 1.6.0 for instance</li>
+<li>Activate your environment so that only packages installed within this environment will be <em>seen</em> by Python:
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">my_env</span></code></li>
+<li>Install, using conda manager, some mandatory packages: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">pip</span></code> and <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">pyqt</span></code></li>
 </ul>
 </div>
+<div class="section" id="installing-pymodaq">
+<h2>Installing PyMoDAQ<a class="headerlink" href="#installing-pymodaq" title="Permalink to this headline">¶</a></h2>
+<p>Easiest part: in your newly created and activated environment enter: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pymodaq==1.6.0</span></code>. This will install
+PyMoDAQ and all its dependencies (the version 1.6.0 in the example)</p>
+<blockquote>
+<div></div></blockquote>
 </div>
-<div class="section" id="macos">
-<h2>MacOS<a class="headerlink" href="#macos" title="Permalink to this headline">¶</a></h2>
-<p>The advised distribution is <a class="reference external" href="https://www.anaconda.com/download/">Anaconda</a> that comes with a full set of python packages for a versatile use of python.
-Once the distribution installed, you can follow the Windows instructions above (but using anaconda command line).</p>
+<div class="section" id="creating-shortcuts-on-windows">
+<span id="shortcut-section"></span><h2>Creating shortcuts on <strong>Windows</strong><a class="headerlink" href="#creating-shortcuts-on-windows" title="Permalink to this headline">¶</a></h2>
+<p>Python packages can easily be started from the command line (see <a class="reference internal" href="How_to_start.html#section-how-to-start"><span class="std std-ref">How to Start</span></a>). However, Windows users
+will probably prefer using shortcuts on the desktop. Here is how to do it:</p>
+<ul>
+<li><p class="first">First create a shortcut (see <a class="reference internal" href="#shortcut-create"><span class="std std-numref">Fig. 3</span></a>) on your desktop (pointing to any file or program, it doesn’t matter)</p>
+</li>
+<li><p class="first">Right click on it and open its properties (see <a class="reference internal" href="#shortcut-prop"><span class="std std-numref">Fig. 4</span></a>)</p>
+</li>
+<li><p class="first">On the <em>Start in</em> field (“Démarrer dans” in french and in the figure), enter the path to the condabin folder of your miniconda or
+anaconda distribution, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Miniconda3\condabin</span></code></p>
+</li>
+<li><p class="first">On the <em>Target</em> field, (“Cible” in french and in the figure), enter this string:
+<code class="docutils literal notranslate"><span class="pre">C:\Windows\System32\cmd.exe</span> <span class="pre">/k</span> <span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">my_env</span> <span class="pre">&amp;</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_scan.daq_scan_main</span></code>. This means that
+yout shortcut will open the windows’s command line, then execute your environment activation (<em>conda activate my_env</em> bit),
+then finally execute and start <strong>Python</strong>, opening the correct pymodaq file (here <em>daq_scan_main.py</em>,
+starting the DAQ_Scan module, <em>python -m pymodaq.daq_scan.daq_scan_main</em> bit)</p>
+</li>
+<li><p class="first">You’re done!</p>
+</li>
+<li><p class="first">Do it again for each PyMoDAQ’s module you want (to get the correct python file and it’s path, see <a class="reference internal" href="How_to_start.html#run-module"><span class="std std-ref">From command line tool:</span></a>).</p>
+<blockquote>
+<div></div></blockquote>
+</li>
+</ul>
+<div class="figure" id="id6">
+<span id="shortcut-create"></span><img alt="shortcut" src="../_images/shortcut_creation.png" />
+<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Create a shortcut on your desktop</span></p>
+<div class="legend">
 </div>
-<div class="section" id="linux">
-<h2>Linux<a class="headerlink" href="#linux" title="Permalink to this headline">¶</a></h2>
-<p>The advised distribution is <a class="reference external" href="https://www.anaconda.com/download/">Anaconda</a> that comes with a full set of python packages for a versatile use of python.
-Once the distribution installed, you can follow the Windows instructions above (but using anaconda command line).</p>
+</div>
+<div class="figure" id="id7">
+<span id="shortcut-prop"></span><img alt="shortcut properties" src="../_images/shortcut_prop.png" />
+<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Shortcut properties</span></p>
+</div>
 </div>
 </div>
 

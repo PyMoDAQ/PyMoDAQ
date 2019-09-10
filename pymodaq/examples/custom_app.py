@@ -8,7 +8,8 @@ import numpy as np
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QDateTime, QRectF, QDate, QThread
 
-from pyqtgraph.dockarea import Dock, DockArea
+from pyqtgraph.dockarea import Dock
+from pymodaq.daq_utils.daq_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree

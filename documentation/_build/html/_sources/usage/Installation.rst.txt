@@ -19,68 +19,65 @@ __ https://docs.python-guide.org/
 __ http://doc.qt.io/qt-5/qt5-intro.html
 __ http://www.pyqtgraph.org/
 
-Windows
--------
-
-The advised distribution is `WinPython`__ (WinPython64-3.7.1.0 tested to be working) that comes with a full set of python
-packages for a versatile use of python. For best practice, install it on the C drive, for instance: ``C:\WPy-3710`` Once
-the distribution installed, you can install PyMoDAQ from the folder downloaded on `github`__ or from `Pypi`__.
-
-__ https://winpython.github.io/
-__ https://github.com/CEMES-CNRS/PyMoDAQ
-__ https://pypi.org/project/pymodaq/1.0.1/#files
-
-Using Pip:
-**********
-
-Pymodaq can be downloaded and installed automatically using the command line tool: ``pip``
-
-* get winpython and install it (choose a destination folder on ``C:\`` directly, for instance ``C:\WPy-3710``
-* open Winpython command line tool ``C:\WPy-3710\WinPython Command Prompt.exe``
-* write the command: ``C:\WPy-3710\scripts\pip install pymodaq``
-
-All the modules will then be installed within the ``site-packages`` folder of python. Look at :ref:`section_how_to_start` for detailed ways of how to start pymodaq modules.
-
-
-Step by Step manual instructions:
-*********************************
-
-* get winpython and install it (choose a destination folder on ``C:\`` directly, for instance ``C:\WPy-3710``
-* download the source file from `github`__ or `Pypi`__
-* Extract the archive (zip or tar file)
-* open Winpython command line tool ``C:\WPy-3710\WinPython Command Prompt.exe``
-* cd to the location of the extracted archive: ``cd C:\...\pymodaq\``
-* run: ``python setup.py install``
-
-__ https://github.com/CEMES-CNRS/PyMoDAQ
-__ https://pypi.org/project/pymodaq/1.0.1/#files
-
-
-All the modules will then be installed within the ``site-packages`` folder of python. ``.exe`` files will also be installed
-in the directory: ``C:\WPy-3710\python-3.7.1.amd64\Scripts`` so that you can run directly:
-
-* pymodaq_scan.exe : will start the :ref:`DAQ_Scan_module` module
-* pymodaq_move.exe : will start a standalone :ref:`DAQ_Move_module` module
-* pymodaq_viewer.exe : will start a standalone :ref:`DAQ_Viewer_module` module
-* pymodaq_h5browser.exe : will start a standalone :ref:`H5Browser_module` module (to explore h5 files saved from DAQ_Scan or DAQ_Viewer modules)
-
-MacOS
------
-The advised distribution is `Anaconda`__ that comes with a full set of python packages for a versatile use of python.
-Once the distribution installed, you can follow the Windows instructions above (but using anaconda command line).
-
+On all platforms **Windows**, **MacOS** or **Linux**, `Anaconda`__ or `Miniconda`__ is the advised distribution/package
+manager. Environments can be created to deal with different version of packages and isolate the code from other
+programs. Anaconda comes with a full set of installed scientific python packages while *Miniconda* is a very
+light package manager.
 
 __ https://www.anaconda.com/download/
+__ https://docs.conda.io/en/latest/miniconda.html
+
+Setting up a new environment
+----------------------------
+
+* Download and install Miniconda3.
+* Open a console, and cd to the location of the *condabin* folder, for instance: ``C:\Miniconda3\condabin``
+* Create a new environment: ``conda create -n my_env``, where my_env is your new environment name, could be *pymodaq16*
+  if you plan to install PyMoDAQ version 1.6.0 for instance
+* Activate your environment so that only packages installed within this environment will be *seen* by Python:
+  ``conda activate my_env``
+* Install, using conda manager, some mandatory packages: ``conda install pip`` and ``conda install pyqt``
+
+Installing PyMoDAQ
+------------------
+
+Easiest part: in your newly created and activated environment enter: ``pip install pymodaq==1.6.0``. This will install
+PyMoDAQ and all its dependencies (the version 1.6.0 in the example)
+
+  .. _shortcut_section:
+
+Creating shortcuts on **Windows**
+---------------------------------
+
+Python packages can easily be started from the command line (see :ref:`section_how_to_start`). However, Windows users
+will probably prefer using shortcuts on the desktop. Here is how to do it:
+
+* First create a shortcut (see :numref:`shortcut_create`) on your desktop (pointing to any file or program, it doesn't matter)
+* Right click on it and open its properties (see :numref:`shortcut_prop`)
+* On the *Start in* field ("Démarrer dans" in french and in the figure), enter the path to the condabin folder of your miniconda or
+  anaconda distribution, for instance: ``C:\Miniconda3\condabin``
+* On the *Target* field, ("Cible" in french and in the figure), enter this string:
+  ``C:\Windows\System32\cmd.exe /k conda activate my_env & python -m pymodaq.daq_scan.daq_scan_main``. This means that
+  yout shortcut will open the windows's command line, then execute your environment activation (*conda activate my_env* bit),
+  then finally execute and start **Python**, opening the correct pymodaq file (here *daq_scan_main.py*,
+  starting the DAQ_Scan module, *python -m pymodaq.daq_scan.daq_scan_main* bit)
+* You're done!
+* Do it again for each PyMoDAQ's module you want (to get the correct python file and it's path, see :ref:`run_module`).
 
 
 
-Linux
------
-The advised distribution is `Anaconda`__ that comes with a full set of python packages for a versatile use of python.
-Once the distribution installed, you can follow the Windows instructions above (but using anaconda command line).
+   .. _shortcut_create:
 
+.. figure:: /image/installation/shortcut_creation.png
+   :alt: shortcut
 
-__ https://www.anaconda.com/download/
+   Create a shortcut on your desktop
 
+   .. _shortcut_prop:
+
+.. figure:: /image/installation/shortcut_prop.png
+   :alt: shortcut properties
+
+   Shortcut properties
 
 

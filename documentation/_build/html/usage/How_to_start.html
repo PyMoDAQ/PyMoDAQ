@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>How to Start &mdash; PyMoDAQ 1.5.1 documentation</title>
+  <title>How to Start &mdash; PyMoDAQ 1.6 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../',
-              VERSION:'1.5.1',
+              VERSION:'1.6',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -75,7 +75,7 @@
             
             
               <div class="version">
-                1.5
+                1.6
               </div>
             
           
@@ -104,10 +104,8 @@
 <li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">How to Start</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#using-installed-exe-files-as-shortcuts">Using installed .exe files as shortcuts:</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#from-command-line-tool">From command line tool:</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#run-any-module">Run any module:</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#create-a-batch-bash-file-for-quick-use">Create a batch/bash file for quick use:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#create-windows-s-shortcuts">Create windows’s shortcuts:</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="Description.html">Description</a></li>
@@ -185,62 +183,26 @@
 <div class="toctree-wrapper compound">
 </div>
 <p>Various ways are possible in order to start modules from PyMoDAQ. In all cases after installation of the package
-(using <code class="docutils literal notranslate"><span class="pre">pip</span></code> or <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>, see <a class="reference internal" href="Installation.html#section-installation"><span class="std std-ref">Installation</span></a>) all the modules will be installed within the <code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python. <code class="docutils literal notranslate"><span class="pre">.exe</span></code>
-files will also be installed in the directory: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts</span></code> however they will be usable only if:</p>
-<ol class="arabic simple">
-<li>you manually installed PyMoDAQ (using the  <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">setup.py</span> <span class="pre">install</span></code> command)</li>
-<li>you installed with pip <strong>and</strong> the <code class="docutils literal notranslate"><span class="pre">python.exe</span></code> program is in windows <code class="docutils literal notranslate"><span class="pre">PATH</span></code> (add <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64</span></code> in the <code class="docutils literal notranslate"><span class="pre">PATH</span></code> environment variable)</li>
-</ol>
-<div class="section" id="using-installed-exe-files-as-shortcuts">
-<h2>Using installed .exe files as shortcuts:<a class="headerlink" href="#using-installed-exe-files-as-shortcuts" title="Permalink to this headline">¶</a></h2>
-<p>If one of the conditions above is satisfied you can run (from the directory: <code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts</span></code>)</p>
-<ul class="simple">
-<li>pymodaq_scan.exe : will start the <a class="reference internal" href="modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> module</li>
-<li>pymodaq_move.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> module</li>
-<li>pymodaq_viewer.exe : will start a standalone <a class="reference internal" href="modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> module</li>
-<li>pymodaq_h5browser.exe : will start a standalone <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a> module (to explore h5 files saved from DAQ_Scan or DAQ_Viewer modules)</li>
-</ul>
-<p>and you can even even create shortcuts on the desktop (see <a class="reference internal" href="#fig-create-shortcut"><span class="std std-numref">Fig. 3</span></a>)</p>
+(using <code class="docutils literal notranslate"><span class="pre">pip</span></code> or <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>, see <a class="reference internal" href="Installation.html#section-installation"><span class="std std-ref">Installation</span></a>) all the modules will be installed within the
+<code class="docutils literal notranslate"><span class="pre">site-packages</span></code> folder of python.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id1">
-<span id="fig-create-shortcut"></span><a class="reference internal image-reference" href="../_images/create_shortcut.png"><img alt="create shortcut" src="../_images/create_shortcut.png" style="width: 861.0px; height: 642.0px;" /></a>
-<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Creating a shortcut from an .exe file</span></p>
-</div>
-</div>
 <div class="section" id="from-command-line-tool">
-<span id="cmdtool-exec"></span><h2>From command line tool:<a class="headerlink" href="#from-command-line-tool" title="Permalink to this headline">¶</a></h2>
-<p>Run Winpython (or Anaconda) command line tool (<code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\WinPython</span> <span class="pre">Command</span> <span class="pre">Prompt.exe</span></code>) and execute either:</p>
+<span id="run-module"></span><h2>From command line tool:<a class="headerlink" href="#from-command-line-tool" title="Permalink to this headline">¶</a></h2>
+<p>Open a command line and activate your environment (if you’re using anaconda or miniconda) and execute either:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_scan</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_viewer</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_move</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\pymodaq_h5browser</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_scan.daq_scan_main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_viewer.daq_viewer_main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_move.daq_move_main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_utils.h5browser</span></code></li>
 </ul>
+<p>for PyMoDAQ’s main modules. The <em>-m</em> option tels python to look within its <em>site-packages</em> folder (where you’ve just
+installed pymodaq) In fact if one of PyMoDAQ’s file (<em>xxx.py</em>) as an entry point (a <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">__name__='__main__:'</span></code>
+statement at the end of the file), you can run it by calling python over it…</p>
 </div>
-<div class="section" id="run-any-module">
-<h2>Run any module:<a class="headerlink" href="#run-any-module" title="Permalink to this headline">¶</a></h2>
-<p>If one of PyMoDAQ’s module as an entry point (a <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">__name__='__main__:'</span></code> statement at the end of the script), you can run it with:</p>
-<ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_scan.daq_scan_main</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_viewer.daq_viewer_main</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_move.daq_move_main</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\scripts\python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_utils.h5browser</span></code></li>
-</ul>
-<p>etc…</p>
-</div>
-<div class="section" id="create-a-batch-bash-file-for-quick-use">
-<h2>Create a batch/bash file for quick use:<a class="headerlink" href="#create-a-batch-bash-file-for-quick-use" title="Permalink to this headline">¶</a></h2>
-<p>Any command line execution can be written (on windows) in a <code class="docutils literal notranslate"><span class="pre">.bat</span></code> file, so that when you double click it all text lines within will execute.
-For instance, one could write:</p>
-<blockquote>
-<div><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">C:\WPy-3710\python-3.7.1.amd64</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">C:\WPy-3710\python-3.7.1.amd64\Scripts\pymodaq_scan</span></code></div>
-</div>
-</div></blockquote>
-<p>This will simulate the content of <a class="reference internal" href="#cmdtool-exec"><span class="std std-ref">From command line tool:</span></a>, while Python is not registered on windows <code class="docutils literal notranslate"><span class="pre">PATH</span></code>.
-<strong>This is by far the most convenient way for user to start the application</strong> (even if it requires some preparation from the guy installing the package…)</p>
+<div class="section" id="create-windows-s-shortcuts">
+<h2>Create windows’s shortcuts:<a class="headerlink" href="#create-windows-s-shortcuts" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference internal" href="Installation.html#shortcut-section"><span class="std std-ref">Creating shortcuts on Windows</span></a> !</p>
 </div>
 </div>
 

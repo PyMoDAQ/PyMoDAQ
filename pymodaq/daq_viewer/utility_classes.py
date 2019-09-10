@@ -10,7 +10,7 @@ from easydict import EasyDict as edict
 import socket, select
 import numpy as np
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, check_received_length, check_sended, message_to_bytes,\
-    get_int, get_list, send_string, send_list
+    get_int, get_list, send_string, send_list, get_array, get_string
 from collections import OrderedDict
 from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
@@ -55,6 +55,13 @@ class DAQ_Viewer_base(QObject):
         self.parent = parent
         self.status = edict(info="",controller=None,initialized=False)
         self.scan_parameters = None
+
+    def get_axis(self):
+        if '1D' in str(type(self)) or '2D' in str(type(self)):
+            self.emit_x_axis()
+
+        if '2D'  in str(type(self)):
+            self.emit_y_axis()
 
     def emit_status(self,status):
         """
@@ -137,6 +144,19 @@ class DAQ_Viewer_base(QObject):
     def stop(self):
         pass
 
+    def set_spectro_wl(self, spectro_wl):
+        """
+        Particular case if the plugin is a spectrometer
+        Parameters
+        ----------
+        spectro_wl
+
+        Returns
+        -------
+
+        """
+        pass
+
 
     def send_param_status(self,param,changes):
         """
@@ -205,7 +225,8 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     params_GRABBER =[] #parameters of a client grabber
     command_server=pyqtSignal(list)
 
-    message_list=["Quit","Send Data 0D","Send Data 1D","Send Data 2D","Status","Done","Server Closed","Info","Infos", "Info_xml"]
+    message_list=["Quit","Send Data 0D","Send Data 1D","Send Data 2D","Status","Done","Server Closed","Info","Infos",
+                  "Info_xml", 'x_axis', 'y_axis']
     socket_types=["GRABBER"]
     params= comon_parameters+tcp_parameters
 
@@ -232,7 +253,24 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     def command_to_from_client(self,command):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            self.send_command(sock, command)
+
+            if command == 'x_axis':
+                x_axis = dict(data=get_array(sock))
+                x_axis['label'] = get_string(sock)
+                x_axis['units'] = get_string(sock)
+                self.x_axis = x_axis.copy()
+                self.emit_x_axis()
+            elif command == 'y_axis':
+                y_axis = dict(data=get_array(sock))
+                y_axis['label'] = get_string(sock)
+                y_axis['units'] = get_string(sock)
+                self.y_axis = y_axis.copy()
+                self.emit_y_axis()
+
+            else:
+                self.send_command(sock, command)
+
+
 
         else:  # else simulate mock data
             if command == "Send Data 0D":
@@ -339,16 +377,12 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             grabber_socket = [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             send_string(grabber_socket, 'set_info')
 
-            offset_ROIselect = 6
-            param_here_index = custom_tree.iter_children(self.settings.child(('infos')), []).index(param.name(),offset_ROIselect)
-            param_here = custom_tree.iter_children_params(self.settings.child(('infos')), [])[param_here_index]
-
-            path = self.settings.childPath(param_here) #get the path of this param as a list
+            path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'
             send_list(grabber_socket, path)
 
             #send value
             data = custom_tree.parameter_to_xml_string(param)
-            send_string(data)
+            send_string(grabber_socket, data)
 
     def ini_detector(self, controller=None):
         """
