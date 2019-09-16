@@ -49,6 +49,12 @@ class DAQ_Viewer_base(QObject):
             elif isinstance(params_state, Parameter):
                 self.settings.restoreState(params_state.saveState())
 
+        if '0D' in str(self.__class__):
+            self.plugin_type = '0D'
+        elif '1D' in str(self.__class__):
+            self.plugin_type = '1D'
+        else:
+            self.plugin_type = '2D'
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
 
@@ -57,10 +63,10 @@ class DAQ_Viewer_base(QObject):
         self.scan_parameters = None
 
     def get_axis(self):
-        if '1D' in str(type(self)) or '2D' in str(type(self)):
+        if self.plugin_type == '1D' or  self.plugin_type == '2D':
             self.emit_x_axis()
 
-        if '2D'  in str(type(self)):
+        if  self.plugin_type == '2D' :
             self.emit_y_axis()
 
     def emit_status(self,status):
@@ -142,19 +148,6 @@ class DAQ_Viewer_base(QObject):
         pass
 
     def stop(self):
-        pass
-
-    def set_spectro_wl(self, spectro_wl):
-        """
-        Particular case if the plugin is a spectrometer
-        Parameters
-        ----------
-        spectro_wl
-
-        Returns
-        -------
-
-        """
         pass
 
 

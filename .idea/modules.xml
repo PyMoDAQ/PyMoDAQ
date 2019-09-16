@@ -11,6 +11,7 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/pymodaq.iml" filepath="$PROJECT_DIR$/.idea/pymodaq.iml" />
       <module fileurl="file://$PROJECT_DIR$/../pymodaq_pid_models/.idea/pymodaq_pid_models.iml" filepath="$PROJECT_DIR$/../pymodaq_pid_models/.idea/pymodaq_pid_models.iml" />
       <module fileurl="file://$PROJECT_DIR$/../pymodaq_plugins/.idea/pymodaq_plugins.iml" filepath="$PROJECT_DIR$/../pymodaq_plugins/.idea/pymodaq_plugins.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../pymodaq_spectro/.idea/pymodaq_spectro.iml" filepath="$PROJECT_DIR$/../pymodaq_spectro/.idea/pymodaq_spectro.iml" />
     </modules>
   </component>
 </project>

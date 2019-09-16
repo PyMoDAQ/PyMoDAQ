@@ -596,7 +596,7 @@ registerParameterType('group', GroupParameterCustom, override=True)
 
 class SpinBoxCustom(SpinBox.SpinBox):
     def __init__(self, parent=None, value=0.0, **kwargs):
-        SpinBox.SpinBox.__init__(self,parent=None, value=0.0, **kwargs)
+        super().__init__(parent, value, **kwargs)
     def setOpts(self, **opts):
         """
             Overriden class to add the field visible in the options.
@@ -629,7 +629,8 @@ class SpinBoxCustom(SpinBox.SpinBox):
                 self.setReadOnly(opts[k])
             elif k == 'enabled':
                 self.setEnabled(opts[k])
-
+            elif k == 'format':
+                self.opts[k] = opts[k]
             elif k in self.opts:
                 self.opts[k] = opts[k]
 

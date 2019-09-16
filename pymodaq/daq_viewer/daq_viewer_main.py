@@ -1615,8 +1615,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.show_scanner()
             QtWidgets.QApplication.processEvents()
 
-        else:
-            self.custom_sig.emit(status)
+        self.custom_sig.emit(status) #to be used if needed in custom application connected to this module
 
     def update_com(self):
         self.command_detector.emit(ThreadCommand('update_com', []))
@@ -1847,9 +1846,6 @@ class DAQ_Detector(QObject):
 
         elif command.command =='update_wait_time':
             self.wait_time = command.attributes[0]
-
-        elif command.command == 'set_spectro_wl':
-            self.detector.set_spectro_wl(command.attributes[0])
 
 
         elif command.command == 'get_axis':

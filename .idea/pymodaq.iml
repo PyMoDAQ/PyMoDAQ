@@ -12,6 +12,7 @@
     <orderEntry type="module" module-name="Various_Scripts" />
     <orderEntry type="module" module-name="pymodaq_pid_models" />
     <orderEntry type="module" module-name="holography" />
+    <orderEntry type="module" module-name="pymodaq_spectro" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="" />

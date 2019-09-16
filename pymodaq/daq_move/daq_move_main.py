@@ -114,7 +114,7 @@ class DAQ_Move(Ui_Form,QObject):
         self.ui.Ini_state_LED.set_as_false()
         self.ui.Move_Done_LED.clickable=False
         self.ui.Move_Done_LED.set_as_false()
-        self.Initialized_state=False
+        self.initialized_state=False
         self.ui.Current_position_sb.setReadOnly(False)
         self.move_done_bool=False
 
@@ -431,7 +431,7 @@ class DAQ_Move(Ui_Form,QObject):
         """
         # insert anything that needs to be closed before leaving
         try:
-            if self.Initialized_state:
+            if self.initialized_state:
                 self.ui.IniStage_pb.click()
 
             self.parent.close() #close the parent widget
@@ -634,10 +634,10 @@ class DAQ_Move(Ui_Form,QObject):
                 self.controller=status.attributes[0]['controller']
                 self.set_enabled_move_buttons(enable=True)
                 self.ui.Ini_state_LED.set_as_true()
-                self.Initialized_state=True
+                self.initialized_state=True
             else:
-                self.Initialized_state=False
-            if self.Initialized_state:
+                self.initialized_state=False
+            if self.initialized_state:
                 self.get_position()
 
         elif status.command=="close":
@@ -653,7 +653,7 @@ class DAQ_Move(Ui_Form,QObject):
                     self.update_status('thread is locked?!',self.wait_time,'log')
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e),log_type="log")
-            self.Initialized_state=False
+            self.initialized_state=False
 
         elif status.command=="check_position":
             self.ui.Current_position_sb.setValue(status.attributes[0])

@@ -28,7 +28,7 @@ def Enm2cmrel(E_nm, ref_wavelength=515):
     return 1/(ref_wavelength*1e-7)-1/(E_nm*1e-7)
 
 def Ecmrel2Enm(Ecmrel, ref_wavelength=515):
-    Ecm = Ecmrel+1/(ref_wavelength*1e-7)
+    Ecm = 1/(ref_wavelength*1e-7)-Ecmrel
     return 1/(Ecm*1e-7)
 
 

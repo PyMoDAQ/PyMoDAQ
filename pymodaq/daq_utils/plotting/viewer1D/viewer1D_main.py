@@ -351,7 +351,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.axis_settings = axis_settings
 
     @pyqtSlot(list)
-    def show_data(self, datas):
+    def show_data(self, datas, labels=None, x_axis=None ):
         try:
             self.datas=datas
             self.update_labels(self.labels)
@@ -370,6 +370,12 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                 self.ini_data_plots(len(datas))
 
             self.update_graph1D(datas)
+
+            if x_axis is not None:
+                self.x_axis = x_axis
+
+            if labels is not None:
+                self.update_labels(labels)
 
             if self.ui.do_measurements_pb.isChecked():
                 self.update_measurement_module()

@@ -1205,11 +1205,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             #check if the modules are initialized
 
             for module in self.move_modules_scan:
-                if not module.Initialized_state:
+                if not module.initialized_state:
                     raise Exception('module '+module.title+" is not initialized")
 
             for module in self.det_modules_scan:
-                if not module.Initialized_state:
+                if not module.initialized_state:
                     raise Exception('module '+module.title+" is not initialized")
 
             self.ui.start_scan_pb.setEnabled(True)
