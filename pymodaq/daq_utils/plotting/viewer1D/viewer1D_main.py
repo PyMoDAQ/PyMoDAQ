@@ -244,24 +244,27 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.update_status(str(e),self.wait_time)
 
     def ini_data_plots(self, Nplots):
-        self.plot_channels=[]
-        # if self.legend is not None:
-        #     self.viewer.plotwidget.plotItem.removeItem(self.legend)
-        self.legend = self.viewer.plotwidget.plotItem.legend
-        flag = True
-        while flag:
-            items = [item[1].text for item in self.legend.items]
-            if len(items) == 0:
-                flag = False
-            else:
-                self.legend.removeItem(items[0])
-        channels = []
-        for ind in range(Nplots):
-            channel=self.viewer.plotwidget.plot()
-            channel.setPen(self.plot_colors[ind])
-            self.legend.addItem(channel, self._labels[ind])
-            channels.append(ind)
-            self.plot_channels.append(channel)
+        try:
+            self.plot_channels=[]
+            # if self.legend is not None:
+            #     self.viewer.plotwidget.plotItem.removeItem(self.legend)
+            self.legend = self.viewer.plotwidget.plotItem.legend
+            flag = True
+            while flag:
+                items = [item[1].text for item in self.legend.items]
+                if len(items) == 0:
+                    flag = False
+                else:
+                    self.legend.removeItem(items[0])
+            channels = []
+            for ind in range(Nplots):
+                channel=self.viewer.plotwidget.plot()
+                channel.setPen(self.plot_colors[ind])
+                self.legend.addItem(channel, self._labels[ind])
+                channels.append(ind)
+                self.plot_channels.append(channel)
+        except Exception as e:
+            self.update_status(str(e), wait_time=self.wait_time)
 
     def update_labels(self, labels=[]):
         try:
@@ -353,7 +356,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     @pyqtSlot(list)
     def show_data(self, datas, labels=None, x_axis=None ):
         try:
-            self.datas=datas
+            self.datas = datas
             self.update_labels(self.labels)
 
             self.data_to_export=OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
@@ -389,25 +392,28 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         """f
         to plot temporary data, for instance when all pixels are not yet populated...
         """
-        self.update_labels(self.labels)
-        self.datas=datas
+        try:
+            self.update_labels(self.labels)
+            self.datas=datas
 
-        if self.plot_channels==None: #initialize data and plots
-            self.ini_data_plots(len(datas))
-        elif len(self.plot_channels)!=len(datas):
-            self.remove_plots()
-            self.ini_data_plots(len(datas))
+            if self.plot_channels==None: #initialize data and plots
+                self.ini_data_plots(len(datas))
+            elif len(self.plot_channels)!=len(datas):
+                self.remove_plots()
+                self.ini_data_plots(len(datas))
 
-        for ind_plot, data in enumerate(datas):
-            if self.x_axis is None:
-                self.x_axis = np.linspace(0, len(data), len(data), endpoint=False)
-                x_axis = self.x_axis
-            elif len(self.x_axis) != len(data):
-                x_axis = np.linspace(0, len(data), len(data), endpoint=False)
-            else:
-                x_axis = self.x_axis
+            for ind_plot, data in enumerate(datas):
+                if self.x_axis is None:
+                    self.x_axis = np.linspace(0, len(data), len(data), endpoint=False)
+                    x_axis = self.x_axis
+                elif len(self.x_axis) != len(data):
+                    x_axis = np.linspace(0, len(data), len(data), endpoint=False)
+                else:
+                    x_axis = self.x_axis
 
-            self.plot_channels[ind_plot].setData(x=x_axis, y=data)
+                self.plot_channels[ind_plot].setData(x=x_axis, y=data)
+        except Exception as e:
+            self.update_status(str(e), wait_time=self.wait_time)
 
     @pyqtSlot(list)
     def show_math(self,data_lo):

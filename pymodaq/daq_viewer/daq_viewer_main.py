@@ -1511,6 +1511,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
 
             self.initialized_state=False
+            self.init_signal.emit(self.initialized_state)
 
         elif status.command == "grab":
             pass

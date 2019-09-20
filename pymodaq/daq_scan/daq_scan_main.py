@@ -184,7 +184,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             now=datetime.datetime.now()
             new_item=QtWidgets.QListWidgetItem(now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
             self.ui.logger_list.addItem(new_item)
-            #self.h5saver.append(self.h5saver.logger_array, now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
+            if self.h5saver.h5_file.isopen:
+                self.h5saver.append(self.h5saver.logger_array, now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
 
         except:
             pass
@@ -1078,9 +1079,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             #connecting to logger
             for mov in move_modules:
                 mov.log_signal[str].connect(self.add_log)
+                mov.init_signal.connect(self.update_init_tree)
             for det in detector_modules:
                 det.log_signal[str].connect(self.add_log)
-
+                det.init_signal.connect(self.update_init_tree)
             #setting moves and det in tree
             preset_items_det=[]
             preset_items_move=[]
@@ -1110,7 +1112,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.overshoot_menu.setEnabled(True)
 
             self.create_new_file(True)
-
+            self.update_init_tree()
 
         except Exception as e:
 
@@ -1243,7 +1245,17 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.logger_dock=Dock("Logger")
         self.ui.logger_list=QtWidgets.QListWidget()
         self.ui.logger_list.setMinimumWidth(300)
+        self.init_tree = ParameterTree()
+        self.init_tree.setMinimumWidth(300)
+        self.ui.logger_dock.addWidget(self.init_tree)
         self.ui.logger_dock.addWidget(self.ui.logger_list)
+
+        self.init_settings=Parameter.create(name='init_settings', type='group', children=[
+            {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
+            {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
+            ])
+        self.init_tree.setParameters(self.init_settings, showTop=False)
+
         self.dockarea.addDock(self.ui.logger_dock,'top')
         self.ui.logger_dock.setVisible(True)
         self.ui.logger_dock.float()
@@ -1367,6 +1379,20 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.overshoot_menu.setEnabled(False)
         self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)
+
+
+    def update_init_tree(self):
+        for act in self.move_modules:
+            if act.title not in custom_tree.iter_children(self.init_settings.child(('actuators')), []):
+                self.init_settings.child(('actuators')).addChild({'title': act.title, 'name': act.title, 'type': 'led', 'value': False})
+            QtWidgets.QApplication.processEvents()
+            self.init_settings.child('actuators', act.title).setValue(act.initialized_state)
+
+        for act in self.detector_modules:
+            if act.title not in custom_tree.iter_children(self.init_settings.child(('detectors')), []):
+                self.init_settings.child(('detectors')).addChild({'title': act.title, 'name': act.title, 'type': 'led', 'value': False})
+            QtWidgets.QApplication.processEvents()
+            self.init_settings.child('detectors', act.title).setValue(act.initialized_state)
 
 
     def show_about(self):

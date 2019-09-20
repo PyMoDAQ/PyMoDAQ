@@ -60,6 +60,7 @@ class DAQ_Move(Ui_Form,QObject):
         ----------
         QLocale, QObject, pyqtSignal, QStatusBar, ParameterTree
     """
+    init_signal = pyqtSignal(bool)
     command_stage=pyqtSignal(ThreadCommand)
     command_tcpip = pyqtSignal(ThreadCommand)
     move_done_signal=pyqtSignal(str,float) #to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
@@ -639,6 +640,7 @@ class DAQ_Move(Ui_Form,QObject):
                 self.initialized_state=False
             if self.initialized_state:
                 self.get_position()
+            self.init_signal.emit(self.initialized_state)
 
         elif status.command=="close":
             try:
@@ -654,6 +656,7 @@ class DAQ_Move(Ui_Form,QObject):
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e),log_type="log")
             self.initialized_state=False
+            self.init_signal.emit(self.initialized_state)
 
         elif status.command=="check_position":
             self.ui.Current_position_sb.setValue(status.attributes[0])
@@ -760,6 +763,7 @@ class DAQ_Move_stage(QObject):
 
         """
         self.hardware.close()
+
         return "Stage uninitialized"
 
 
