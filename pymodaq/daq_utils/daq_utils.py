@@ -17,7 +17,6 @@ import os
 import re
 import importlib
 import inspect
-from numba import jit
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
 Cb = 1.602176e-19  # coulomb
