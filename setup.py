@@ -90,7 +90,6 @@ setup(
         'bitstring',
         'easydict',
         'pyqt5',
-        'numba',
         'tables',
         'pymodaq_plugins>=1.2.0',
         'pymodaq_pid_models',
