@@ -716,13 +716,7 @@ class Signal(FancySlicing):
 
     @data.setter
     def data(self, value):
-        from dask.array import Array
-        if isinstance(value, Array):
-            if not value.ndim:
-                value = value.reshape((1,))
-            self._data = value
-        else:
-            self._data = np.atleast_1d(np.asanyarray(value))
+        self._data = np.atleast_1d(np.asanyarray(value))
 
 
     def __repr__(self):
