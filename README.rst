@@ -3,6 +3,11 @@ PyMoDAQ
 
 PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to perform automated measurements. 
 
+
+.. figure:: http://pymodaq.cnrs.fr/_static/splash.png
+   :alt: shortcut
+
+
 Description:
 ************
 
