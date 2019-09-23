@@ -87,7 +87,6 @@ setup(
         'numpy',
         'scipy',
         'pyqtgraph==0.10',
-        'bitstring',
         'easydict',
         'pyqt5',
         'tables',
