@@ -30,7 +30,7 @@ setupOpts = dict(
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Human Machine Interfaces",
         "Topic :: Scientific/Engineering :: Visualization",
-        "License :: OSI Approved :: MIT License",
+        "License :: CeCILL-B Free Software License Agreement (CECILL-B)",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Software Development :: User Interfaces",
