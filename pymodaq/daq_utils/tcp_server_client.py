@@ -9,7 +9,6 @@ from PyQt5 import QtWidgets
 import socket
 import select
 import numpy as np
-from bitstring import BitArray
 from pymodaq.daq_utils.daq_utils import check_received_length, ThreadCommand, \
     getLineInfo, send_scalar, send_string, send_list, get_scalar, get_int, get_string, send_array
 from pyqtgraph.parametertree import Parameter, ParameterTree
