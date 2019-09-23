@@ -92,8 +92,7 @@ setup(
         'tables',
         'pymodaq_plugins>=1.2.0',
         'pymodaq_pid_models',
-        'dask',
-		'simple_pid',
+	'simple_pid',
         ],
     include_package_data=True,
     **setupOpts
