@@ -1453,22 +1453,22 @@ def select_file(start_path=None,save=True, ext=None):
 
     """
     if ext is None:
-        ext='*'
+        ext = '*'
     if not save:
-        if type(ext)!=list:
-            ext=[ext]
+        if not isinstance(ext, list):
+            ext = [ext]
         
-        filter="Data files ("
+        filter = "Data files ("
         for ext_tmp in ext:
-            filter+='*.'+ext_tmp+" "
-        filter+=")"
+            filter += '*.'+ext_tmp+" "
+        filter += ")"
     if start_path is not None:
         if not isinstance(start_path, str):
-            start_path=str(start_path)
+            start_path = str(start_path)
     if save:
-        fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .'+ext+' file name',start_path,ext+" file (*."+ext+")")
+        fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .'+ext+' file name', start_path, ext+" file (*."+ext+")")
     else:
-        fname=QtWidgets.QFileDialog.getOpenFileName(None, 'Select a file name',start_path,filter)
+        fname = QtWidgets.QFileDialog.getOpenFileName(None, 'Select a file name', start_path, filter)
 
     fname=fname[0]
     if fname != '': #execute if the user didn't cancel the file selection

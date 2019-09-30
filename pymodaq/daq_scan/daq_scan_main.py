@@ -1,41 +1,43 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""Automated scanning module functionalities for PyMoDAQ
+
+Contains all objects related to the DAQ_Scan module, to do automated scans, saving data...
+"""
+
+import sys
+from collections import OrderedDict
+import numpy as np
+from pathlib import Path
+import datetime
+import pickle
+import os
+import logging
+
+from pyqtgraph.dockarea import Dock
+from pyqtgraph.parametertree import Parameter, ParameterTree
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
-import sys
-#sys.path.append(os.path.split(os.path.split(os.path.split(__file__)[0])[0])[0])
 from pymodaq.daq_utils.daq_utils import getLineInfo
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
-
-from  pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
+from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
 from pymodaq.version import get_version
-from collections import OrderedDict
-from pyqtgraph.dockarea import Dock
-from pymodaq.daq_utils.daq_utils import DockArea
-from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-import numpy as np
-
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.manage_preset import PresetManager
 from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.scanner import Scanner
-
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
-from pathlib import Path
-import datetime
-import pickle
-import os
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
 from pymodaq.daq_utils.h5saver import H5Saver
-local_path = get_set_local_dir()
 
-import logging
+local_path = utils.get_set_local_dir()
 now=datetime.datetime.now()
 log_path=os.path.join(local_path,'logging')
 if not os.path.isdir(log_path):
@@ -62,42 +64,7 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
 
 class DAQ_Scan(QtWidgets.QWidget,QObject):
     """
-              ======================= =====================================
-              **Attributes**          **Type**
-              *title*                 string
-              *splash_sc*             instance of QtWidgets.QSplashScreen
-              *init_prog*             boolean
-              *widgetsettings*        instance of QtWidgets.QWidget
-              *dockarea*              instance of pyqtgraph.DockArea
-              *mainwindow*            instance of pyqtgraph.DockArea
-              *dockarea*              instance of pyqtgraph.DockArea
-              *plot_items*            list
-              *plot_colors*           string list
-              *wait_time*             int
-              *settings_tree*         instance of pyqtgraph.parametertree
-              *DAQscan_settings*      instance of pyqtgraph.parametertree
-              *scan_parameters*       dictionnary
-              *date*                  instance of QDateTime
-              *params_dataset*        dictionnary list
-              *params_scan*           dictionnary list
-              *param*                 dictionnary list
-              *params_move*           dictionnary list
-              *params_det*            dictionnary list
-              *dataset_attributes*    instance of pyqtgraph.parametertree
-              *scan_attributes*       instance of pyqtgraph.parametertree
-              *scan_x_axis*           float array
-              *scan_y_axis*           float array
-              *scan_data_1D*          double precision float array
-              *scan_data_2D*          double precision float array
-              *ind_scan*              int
-              *scan_data_2D_to_save*  double precision float array
-              *scan_data_1D_to_save*  double precision float array
-              *save_parameters*       dictionnary
-              *det_modules_scan*      Object list
-              *move_modules_scan*     Object list
-              *menubar*               instance of QMenuBar
-              *log_signal*            instance of pyqtSignal
-              ======================= =====================================
+    Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
     command_DAQ_signal=pyqtSignal(list)
     log_signal=pyqtSignal(str)
@@ -126,7 +93,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         Parameters
         ----------
-        parent: (dockarea) instance of pyqtgraph Dockarea
+        parent: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Scan,self).__init__()
@@ -2412,7 +2379,7 @@ if __name__ == '__main__':
 
     win = QtWidgets.QMainWindow()
     win.setVisible(False)
-    area = DockArea()
+    area = utils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000,500)
     win.setWindowTitle('pymodaq Scan')

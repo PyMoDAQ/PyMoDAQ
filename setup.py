@@ -88,11 +88,11 @@ setup(
         'scipy',
         'pyqtgraph==0.10',
         'easydict',
-        'pyqt5',
+        #'pyqt5',
         'tables',
         'pymodaq_plugins>=1.2.0',
         'pymodaq_pid_models',
-	'simple_pid',
+	    'simple_pid',
         ],
     include_package_data=True,
     **setupOpts

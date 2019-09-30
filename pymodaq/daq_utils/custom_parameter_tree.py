@@ -1402,8 +1402,6 @@ class TableParameterItem(pTypes.WidgetParameterItem):
         w.sigChanged = w.itemChanged
         return w
 
-
-
 class Table_custom(QtWidgets.QTableWidget):
     """
         ============== ===========================
@@ -1412,6 +1410,7 @@ class Table_custom(QtWidgets.QTableWidget):
         *QtWidgets*      instance of QTableWidget
         ============== ===========================
     """
+
     valuechanged=pyqtSignal(OrderedDict)
     def __init__(self):
         QtWidgets.QTableWidget.__init__(self)
@@ -1485,8 +1484,114 @@ class TableParameter(Parameter):
 
 registerParameterType('table', TableParameter, override=True)
 
+class TableViewParameterItem(pTypes.WidgetParameterItem):
+
+    def __init__(self, param, depth):
+        pTypes.WidgetParameterItem.__init__(self, param, depth)
+        self.hideWidget = False
+        self.subItem = QtGui.QTreeWidgetItem()
+        self.addChild(self.subItem)
+
+    def treeWidgetChanged(self):
+        """
+            Check for changement in the Widget tree.
+        """
+        ## TODO: fix so that superclass method can be called
+        ## (WidgetParameter should just natively support this style)
+        #WidgetParameterItem.treeWidgetChanged(self)
+        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
+        self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
+
+        # for now, these are copied from ParameterItem.treeWidgetChanged
+        self.setHidden(not self.param.opts.get('visible', True))
+        self.setExpanded(self.param.opts.get('expanded', True))
+
+    def makeWidget(self):
+        """
+            Make and initialize an instance of Table_custom.
+
+            Returns
+            -------
+            table : instance of Table_custom.
+                The initialized table.
+
+            See Also
+            --------
+            Table_custom
+        """
+        w = TableViewCustom()
+
+        w.setMaximumHeight(200)
+        #self.table.setReadOnly(self.param.opts.get('readonly', False))
+        w.value = w.get_table_value
+        w.setValue = w.set_table_value
+        w.sigChanged = w.valueChanged
+        return w
+
+class TableViewCustom(QtWidgets.QTableView):
+    """
+        ============== ===========================
+        *Attributes**    **Type**
+        *valuechanged*   instance of pyqt Signal
+        *QtWidgets*      instance of QTableWidget
+        ============== ===========================
+    """
+
+    valueChanged = pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
 
 
+
+    def data_has_changed(self, topleft, bottomright, roles):
+        self.valueChanged.emit([topleft, bottomright, roles])
+
+    def get_table_value(self):
+        """
+            Get the contents of the self coursed table.
+
+            Returns
+            -------
+            data : ordered dictionnary
+                The getted values dictionnary.
+        """
+        return self.model()
+
+
+    def set_table_value(self,data_model):
+        """
+            Set the data values dictionnary to the custom table.
+
+            =============== ====================== ================================================
+            **Parameters**    **Type**               **Description**
+            *data_dict*       ordered dictionnary    the contents to be stored in the custom table
+            =============== ====================== ================================================
+        """
+        try:
+            self.setModel(data_model)
+            self.model().dataChanged.connect(self.data_has_changed)
+        except Exception as e:
+            pass
+
+class TableViewParameter(Parameter):
+    """
+        =============== =================================
+        **Attributes**    **Type**
+        *itemClass*       instance of TableParameterItem
+        *Parameter*       instance of pyqtgraph parameter
+        =============== =================================
+    """
+    itemClass = TableViewParameterItem
+    """Editable string; displayed as large text box in the tree."""
+    # def __init(self):
+    #     super(TableParameter,self).__init__()
+
+    def setValue(self, value):
+        self.opts['value'] = value
+        self.sigValueChanged.emit(self, value)
+
+registerParameterType('table_view', TableViewParameter, override=True)
 
 class ItemSelectParameterItem(pTypes.WidgetParameterItem):
 
@@ -1540,9 +1645,9 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
            custom_parameter_tree.value, custom_parameter_tree.ItemSelect.setValue
         """
 
-        text,ok = QtWidgets.QInputDialog.getText(None,"Enter a value to add to the parameter",
-                                            "String value:", QtWidgets.QLineEdit.Normal);
-        if ok and not (text==""):
+        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
+                                            "String value:", QtWidgets.QLineEdit.Normal)
+        if ok and not (text == ""):
             all=self.param.value()['all_items']
             all.append(text)
             sel=self.param.value()['selected']

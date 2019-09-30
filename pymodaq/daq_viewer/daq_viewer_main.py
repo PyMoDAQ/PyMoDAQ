@@ -26,9 +26,9 @@ from pymodaq_plugins.daq_viewer_plugins import plugins_0D
 from pymodaq_plugins.daq_viewer_plugins import plugins_1D
 from pymodaq_plugins.daq_viewer_plugins import plugins_2D
 
-DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
-DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
-DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
+DAQ_0DViewer_Det_type = make_enum('daq_0Dviewer')
+DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
+DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
 
 
 from collections import OrderedDict
@@ -891,8 +891,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             --------
             daq_utils.select_file, save_export_data
         """
-        self.do_save_data=True
-        self.save_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
+        self.do_save_data = True
+        self.save_file_pathname = daq_utils.select_file(start_path=self.save_file_pathname, save=True, ext='h5') #see daq_utils
         self.save_export_data(self.data_to_save_export)
 
 
@@ -997,7 +997,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             --------
             daq_utils.select_file, snapshot
         """
-        self.do_save_data=True
+        self.do_save_data = True
         self.save_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
         self.snapshot(pathname=self.save_file_pathname,dosave=True)
 
@@ -2069,9 +2069,9 @@ if __name__ == '__main__':
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
-    win.resize(1000,500)
+    win.resize(1000, 500)
     win.setWindowTitle('pymodaq main')
-    prog = DAQ_Viewer(area,title="Testing",DAQ_type=DAQ_type['DAQ1D'].name)
+    prog = DAQ_Viewer(area, title="Testing",DAQ_type=DAQ_type['DAQ1D'].name)
     win.show()
     sys.exit(app.exec_())
 

@@ -3,7 +3,10 @@
 =========
 Changelog
 =========
-* :release:`1.6.1 <2019-09-10>` patch release
+
+* :release:`1.6.2 <2019-09-16>`
+* :bug:`0` pep8 related modification of variable names not taken into account in version 1.6.1 and producing errors in daq_scan module
+* :release:`1.6.1 <2019-09-10>`
 * :feature:`0` Added sending detector axis from tcp/ip back to tcp server for correct plotting
 * :bug:`0` Error in a tcp/ip communication (wrong signature of send_string method)
 * :release:`1.6.0 <2019-09-04>`

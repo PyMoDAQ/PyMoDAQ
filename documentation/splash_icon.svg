@@ -19,16 +19,16 @@
    width="210mm">
   <sodipodi:namedview
      inkscape:window-maximized="0"
-     inkscape:window-y="256"
-     inkscape:window-x="1906"
+     inkscape:window-y="149"
+     inkscape:window-x="337"
      inkscape:window-height="647"
      inkscape:window-width="1238"
      showgrid="false"
-     inkscape:current-layer="layer1"
+     inkscape:current-layer="g5980-9"
      inkscape:document-units="px"
-     inkscape:cy="574.20696"
-     inkscape:cx="526.99415"
-     inkscape:zoom="1.4"
+     inkscape:cy="419.15926"
+     inkscape:cx="448.08532"
+     inkscape:zoom="0.99961697"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0.0"
      borderopacity="1.0"
@@ -121,6 +121,36 @@
          d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
          id="path4278" />
     </marker>
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="Arrow1Lstart-0"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lstart">
+      <path
+         inkscape:connector-curvature="0"
+         transform="matrix(0.8,0,0,0.8,10,0)"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#ffffff;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path4275-2" />
+    </marker>
+    <marker
+       inkscape:isstock="true"
+       style="overflow:visible"
+       id="Arrow1Lend-7"
+       refX="0"
+       refY="0"
+       orient="auto"
+       inkscape:stockid="Arrow1Lend">
+      <path
+         inkscape:connector-curvature="0"
+         transform="matrix(-0.8,0,0,-0.8,-10,0)"
+         style="fill:#ffffff;fill-opacity:1;fill-rule:evenodd;stroke:#ffffff;stroke-width:1.00000003pt;stroke-opacity:1"
+         d="M 0,0 5,-5 -12.5,0 5,5 Z"
+         id="path4278-8" />
+    </marker>
   </defs>
   <metadata
      id="metadata7">
@@ -130,7 +160,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -170,7 +200,7 @@
       </g>
       <path
          style="fill:none;fill-rule:evenodd;stroke:#ffffff;stroke-width:0.99999988px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart);marker-end:url(#Arrow1Lend)"
-         d="m 186.31182,739.65954 0,130.81476 284.35795,0"
+         d="M 186.31182,739.65954 V 870.4743 h 284.35795"
          id="path4269"
          inkscape:connector-curvature="0" />
       <path
@@ -191,7 +221,7 @@
        ry="10" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#ffffff;stroke-width:1.30851066;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-start:url(#marker6089);marker-end:url(#marker6067)"
-       d="m 33.699693,851.31168 0,67.6064 66.048631,0"
+       d="m 33.699693,851.31168 v 67.6064 h 66.048631"
        id="path6065"
        inkscape:connector-curvature="0" />
     <path
@@ -216,5 +246,59 @@
        preserveAspectRatio="none"
        height="49.231007"
        width="49.231007" />
+    <g
+       id="g5980-9"
+       transform="translate(114.35882,-113.60801)">
+      <rect
+         style="opacity:1;fill:#000000;fill-opacity:1;stroke:none;stroke-width:3.99999952;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="rect4243-5"
+         width="245.625"
+         height="142.5"
+         x="-978.49817"
+         y="-408.23834"
+         transform="matrix(0,-1,-1,0,0,0)"
+         inkscape:export-xdpi="95.633591"
+         inkscape:export-ydpi="95.633591" />
+      <g
+         transform="matrix(1.1036422,0,0,1.1036422,-7.1035321,177.25342)"
+         id="g4178-4-5"
+         inkscape:export-xdpi="95.633591"
+         inkscape:export-ydpi="95.633591">
+        <flowRoot
+           xml:space="preserve"
+           id="flowRoot4679"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:35px;line-height:100%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:vertical-lr;text-orientation:upright;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           transform="matrix(0.84946009,0,0,0.84946009,-68.295101,-67.197025)"><flowRegion
+             id="flowRegion4681"
+             style="line-height:100%;writing-mode:vertical-lr;text-orientation:upright"><rect
+               id="rect4683"
+               width="44.264687"
+               height="255.68689"
+               x="434.49301"
+               y="679.87268"
+               style="line-height:100%;writing-mode:vertical-lr;text-orientation:upright" /></flowRegion><flowPara
+             id="flowPara4685"
+             style="font-size:37.33333206px;line-height:100%;writing-mode:vertical-lr;text-orientation:upright;fill:#ffffff;fill-opacity:1"><flowSpan
+   style="font-size:37.33333206px;letter-spacing:-6.82999992px"
+   id="flowSpan4689">PyMo</flowSpan>DAQ</flowPara></flowRoot>        <flowRoot
+           xml:space="preserve"
+           id="flowRoot4850"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:35px;line-height:100%;font-family:Calibri;-inkscape-font-specification:'Calibri, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           transform="matrix(0.84946009,0,0,0.84946009,-10.903951,-122.60917)"><flowRegion
+             id="flowRegion4852"><rect
+               id="rect4854"
+               width="1.7472908"
+               height="147.9373"
+               x="454.87805"
+               y="662.98218" /></flowRegion><flowPara
+             id="flowPara4856"></flowPara></flowRoot>      </g>
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#ffffff;stroke-width:0.99999988px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-start:url(#Arrow1Lstart-0);marker-end:url(#Arrow1Lend-7)"
+         d="M 382.18982,960.74505 H 286.32088 V 748.0528"
+         id="path4269-7"
+         inkscape:connector-curvature="0"
+         inkscape:export-xdpi="95.633591"
+         inkscape:export-ydpi="95.633591" />
+    </g>
   </g>
 </svg>

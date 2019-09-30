@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6 documentation</title>
+  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6.2 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'./',
-              VERSION:'1.6',
+              VERSION:'1.6.2',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -105,8 +105,9 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Feedback.html">Who use it?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Contributors.html">Contributors</a></li>
 </ul>
 
             
@@ -195,14 +196,29 @@ new experiment, this is under the <a class="reference internal" href="usage/modu
 <li><a class="reference internal" href="usage/modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.</li>
 </ul>
 <p>and many others to simplify any application development.</p>
+<div class="section" id="information">
+<h2>Information<a class="headerlink" href="#information" title="Permalink to this headline">¶</a></h2>
 <p>GitHub repo: <a class="reference external" href="https://github.com/CEMES-CNRS">https://github.com/CEMES-CNRS</a></p>
 <p>Documentation: <a class="reference external" href="http://pymodaq.cnrs.fr/">http://pymodaq.cnrs.fr/</a></p>
 <p>List of available plugins: <a class="reference external" href="https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg">https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg</a></p>
 <p>Based on the <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code> library : <a class="reference external" href="http://www.pyqtgraph.org">http://www.pyqtgraph.org</a> by Luke Campagnola.</p>
-<p>PyMoDAQ is written by Sébastien Weber: <a class="reference external" href="mailto:sebastien&#46;weber&#37;&#52;&#48;cemes&#46;fr">sebastien<span>&#46;</span>weber<span>&#64;</span>cemes<span>&#46;</span>fr</a> under a MIT licence.</p>
+<p>PyMoDAQ is written by Sébastien Weber: <a class="reference external" href="mailto:sebastien&#46;weber&#37;&#52;&#48;cemes&#46;fr">sebastien<span>&#46;</span>weber<span>&#64;</span>cemes<span>&#46;</span>fr</a> under a CeCILL-B license.</p>
+</div>
+<div class="section" id="contribution">
+<h2>Contribution<a class="headerlink" href="#contribution" title="Permalink to this headline">¶</a></h2>
+<p>If you want to contribute see this page: <a class="reference internal" href="usage/Contributors.html#contributors"><span class="std std-ref">Contributors</span></a></p>
+</div>
+<div class="section" id="they-use-it">
+<h2>They use it<a class="headerlink" href="#they-use-it" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference internal" href="usage/Feedback.html#feedback"><span class="std std-ref">Who use it?</span></a></p>
+</div>
+<div class="section" id="citation">
+<h2>Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h2>
+<p>By using PyMoDAQ, you are being asked to cite it (this website) when publishing results obtained with the help of its interface.
+In that way, you’re also helping in its promotion and amelioration.</p>
 </div>
 <div class="section" id="changelog">
-<h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
+<h2>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h2>
 <p>Please see <a class="reference internal" href="changelog.html"><span class="doc">the changelog</span></a>.</p>
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
@@ -312,15 +328,24 @@ new experiment, this is under the <a class="reference internal" href="usage/modu
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a><ul class="simple">
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="usage/api/API_Move_Module.html">DAQ_Move modules</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Move_Module.html#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Feedback.html">Who use it?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/Feedback.html#institutions-using-pymodaq">Institutions using PyMoDAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/Feedback.html#what-they-think-of-pymodaq">What they think of PyMoDAQ?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Contributors.html">Contributors</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#main-modules">Main modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/Contributors.html#functionalities">Functionalities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/Contributors.html#cleaning">Cleaning</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#plugins">Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#you-want-to-contribute">You want to contribute?</a></li>
 </ul>
 </li>
 </ul>
-</li>
-</ul>
+</div>
 </div>
 </div>
 <div class="section" id="indices-and-tables">

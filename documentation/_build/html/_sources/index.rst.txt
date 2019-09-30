@@ -32,6 +32,9 @@ It is divided in three main modules:
 
 and many others to simplify any application development.
 
+Information
+***********
+
 GitHub repo: https://github.com/CEMES-CNRS
 
 Documentation: http://pymodaq.cnrs.fr/
@@ -40,14 +43,27 @@ List of available plugins: https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2
 
 Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola.
 
-PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT licence.
+PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a CeCILL-B license.
+
+Contribution
+************
+
+If you want to contribute see this page: :ref:`contributors`
 
 
+They use it
+***********
+See :ref:`feedback`
 
 
+Citation
+********
+
+By using PyMoDAQ, you are being asked to cite it (this website) when publishing results obtained with the help of its interface.
+In that way, you're also helping in its promotion and amelioration.
 
 Changelog
-=========
+*********
 
 Please see :doc:`the changelog </changelog>`.
 
@@ -60,8 +76,11 @@ Please see :doc:`the changelog </changelog>`.
    usage/How_to_start
    usage/Description
    usage/CustomApp
-   usage/classDiagram
-   usage/APIdoc
+   usage/tcpip
+   usage/Feedback
+   usage/Contributors
+..   usage/classDiagram
+..   usage/APIdoc
 
 
 
