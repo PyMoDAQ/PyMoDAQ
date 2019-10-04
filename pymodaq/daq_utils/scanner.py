@@ -184,7 +184,7 @@ class Scanner(QObject):
     
             if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_selection').value() == 'Manual':
                 steps_x = utils.linspace_step(start, stop, step)
-                steps_y = np.array([])
+                steps_y = steps_x
             else:  # from ROI
                 viewer = self.scan_selector.scan_selector_source
                 positions = self.scan_selector.scan_selector.getArrayIndexes(spacing=step)

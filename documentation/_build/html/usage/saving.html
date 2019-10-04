@@ -122,8 +122,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="CustomApp.html">Custom Application</a></li>
-<li class="toctree-l1"><a class="reference internal" href="classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="APIdoc.html">Library Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tcpip.html">TCP/IP communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Feedback.html">Who use it?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Contributors.html">Contributors</a></li>
 </ul>
 
             
@@ -252,6 +253,24 @@ formed from a <em>base name</em> followed by the date of the day and the time at
 </div>
 <div class="section" id="from-daq-scan">
 <span id="daq-scan-saving"></span><h2>From DAQ_Scan<a class="headerlink" href="#from-daq-scan" title="Permalink to this headline">¶</a></h2>
+<p>DAQ_Scan module will save your data in <strong>datasets</strong>. Each <strong>dataset</strong> is a unique h5 file and may contain multiple scans. The
+idea behind this is to have a unique file for a set of related data (the <strong>dataset</strong>) together with all the meta information:
+logger data, module parameters (settings, ROI…) even <em>png</em> screenshots of the various panels.</p>
+<p><a class="reference internal" href="#figure-h5browser-data"><span class="std std-numref">Fig. 27</span></a> displays the content of a typical <strong>dataset</strong> file containing various scans and how each data
+and metadata is used by the H5Browser to display the info to the user.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="id5">
+<span id="figure-h5browser-data"></span><img alt="h5 browser" src="../_images/h5browser_datas.png" />
+<p class="caption"><span class="caption-number">Fig. 27 </span><span class="caption-text">h5 browser and arrows to explain how each data or metadata is being displayed</span></p>
+</div>
+<p>In order to sdave correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
+it will save scans and datas following the rules displayed on <a class="reference internal" href="#figure-dataset-layout"><span class="std std-numref">Fig. 28</span></a> below:</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure" id="figure-dataset-layout">
+<img alt="File layout" src="../_images/dataset_file_layout.PNG" />
+</div>
 </div>
 <div class="section" id="exploring-datas">
 <h2>Exploring datas<a class="headerlink" href="#exploring-datas" title="Permalink to this headline">¶</a></h2>

@@ -131,8 +131,9 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../CustomApp.html">Custom Application</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../classDiagram.html">Class Diagram</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">Library Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tcpip.html">TCP/IP communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Feedback.html">Who use it?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Contributors.html">Contributors</a></li>
 </ul>
 
             
@@ -439,16 +440,16 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 <div class="section" id="hardware-settings">
 <span id="id2"></span><h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
 <p>An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
-These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 27</span></a>.
+These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a>.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object <code class="docutils literal notranslate"><span class="pre">self.settings</span></code>.
 This object inherits from on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id10">
 <span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
-<p class="caption"><span class="caption-number">Fig. 27 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
+<p class="caption"><span class="caption-number">Fig. 29 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
 </div>
-<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 27</span></a>:</p>
+<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Dll library:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;andor_lib&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;browsepath&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">libpath</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera SN:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_serialnumber&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
@@ -463,11 +464,11 @@ This object inherits from on the <code class="docutils literal notranslate"><spa
 </div>
 <p>The list of available types of parameters <a href="#id4"><span class="problematic" id="id5">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">pymodaq.daq_utils.custom_parameter_tree.py</span></code>) is:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 27</span></a> is of type group</li>
+<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a> is of type group</li>
 <li><code class="docutils literal notranslate"><span class="pre">int</span></code> : settable integer (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">float</span></code> : settable float (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">str</span></code> : a QLineEdit object (see Qt5 documentation)</li>
-<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 27</span></a> is a combo box</li>
+<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a> is a combo box</li>
 <li><code class="docutils literal notranslate"><span class="pre">bool</span></code> : checkable boolean</li>
 <li><code class="docutils literal notranslate"><span class="pre">led</span></code> : checkable boolean in the form of a green (True) of red (False) led</li>
 <li><code class="docutils literal notranslate"><span class="pre">date_time</span></code> : a QDateTime object (see Qt5 documentation)</li>

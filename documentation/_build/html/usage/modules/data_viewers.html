@@ -225,12 +225,26 @@ custom application.</p>
 </div>
 <div class="section" id="nd-viewer">
 <span id="ndviewer"></span><h2>ND Viewer<a class="headerlink" href="#nd-viewer" title="Permalink to this headline">¶</a></h2>
+<p>A ND viewer is a display object that can represent 0D, 1D, 2D, 3D or 4D data. It is a combination of 2 Viewers (up:
+navigation viewer and bottom: signal viewer, see panels of <a class="reference internal" href="#figure-ndviewer"><span class="std std-numref">Fig. 23</span></a>) and use the concept of
+<em>signal</em> axis and <em>navigation</em> axis. Let’s say you
+want to represent a previously acquired 2D scan where each of the pixels in the scan is actually data from a camera (2D).
+It then means that you have 2 navigation axis (the ones of the scan) and two signal axis (the ones of the camera) and
+4D data to deal with. The way to plot them is to represent the <em>scan</em> on a navigation 2D viewer where each pixel intensity
+is the result of the integration of the actual data taken at this pixel (or within a ROI that you can select, see white rectangle
+on <a class="reference internal" href="#figure-ndviewer"><span class="std std-numref">Fig. 23</span></a> bottom panel). Moving the crosshair on the navigation panel change the display in the signal panel
+in order to show the data within the pixel pointed by the crosshair.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id7">
-<span id="figure-ndviewer"></span><img alt="figure_NDviewer" src="image/Utils/figure_NDviewer.png" />
+<span id="figure-ndviewer"></span><img alt="figure_NDviewer" src="../../_images/figure_NDviewer.png" />
 <p class="caption"><span class="caption-number">Fig. 23 </span><span class="caption-text">ND viewer data display</span></p>
 </div>
+<p>ND viewer is used by the H5Browser to display data saved with PyMoDAQ, a few metadata attributes written in the h5file nodes
+(see <a class="reference internal" href="../saving.html#daq-scan-saving"><span class="std std-ref">From DAQ_Scan</span></a>)
+tells the NDViewer how to display acquired scans. If, for some reasons, you want to display your 4D data in another way (that is changing
+which dimension is navigation and which is signal), you can press the <a class="reference internal" href="../../_images/axis_selection.png"><img alt="axes" src="../../_images/axis_selection.png" style="width: 20px;" /></a> button on the top viewer and change the navigation
+axes on the popup window it opened.</p>
 </div>
 </div>
 

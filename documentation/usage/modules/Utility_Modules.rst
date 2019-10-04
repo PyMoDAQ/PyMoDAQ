@@ -40,6 +40,7 @@ data viewer (type :ref:`NDviewer` that can display data dimensionality up to 4)
 .. :download:`png <h5browser.png>`
 
 
+
 .. _preset_manager:
 
 Preset manager

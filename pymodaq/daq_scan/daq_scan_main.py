@@ -1240,6 +1240,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.scan2D_graph.ui.histogram_blue.setVisible(False)
         self.ui.scan2D_graph.ui.histogram_green.setVisible(False)
         self.ui.scan2D_graph.ui.histogram_red.setVisible(False)
+        self.ui.scan2D_graph.ui.Ini_plot_pb.setVisible(False)
+        self.ui.scan2D_graph.ui.FlipUD_pb.setVisible(False)
+        self.ui.scan2D_graph.ui.FlipLR_pb.setVisible(False)
+        self.ui.scan2D_graph.ui.rotate_pb.setVisible(False)
         self.ui.move_to_crosshair_cb = QtWidgets.QCheckBox("Move at doubleClicked")
 
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.move_to_crosshair_cb)
@@ -1647,12 +1651,13 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if not self.plot_1D_ini: #init the datas
                 self.plot_1D_ini = True
 
-                self.scan_x_axis=np.zeros((self.scan_parameters.Nsteps))
+                self.scan_x_axis=np.min(self.scan_parameters.axis_2D_1)*np.ones((self.scan_parameters.Nsteps))
                 self.scan_data_1D=np.zeros((self.scan_parameters.Nsteps,len(datas)))
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
                     self.scan_data_1D_average = np.zeros((self.scan_parameters.Nsteps, len(datas)))
 
-                self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='bottom', label=self.scan_moves[0][0][0], units=''))
+                self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='bottom', label=self.move_modules_scan[0].title,
+                                    units=self.move_modules_scan[0].settings.child('move_settings','units').value()))
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left', label=self.settings.child('scan_options', 'plot_from').value(), units=''))
 
             if self.scanner.settings.child('scan_options','scan1D_settings', 'scan1D_selection').value() == 'Manual':
@@ -1671,7 +1676,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
             data_sorted = list(self.scan_data_1D.T)
             data_sorted=[data[indices] for data in data_sorted]
-            self.ui.scan1D_graph.x_axis=x_axis_sorted
+            x_axis = dict(data=x_axis_sorted,
+                          label=self.move_modules_scan[0].title,
+                          units=self.move_modules_scan[0].settings.child('move_settings','units').value())
+            self.ui.scan1D_graph.x_axis = x_axis
             self.ui.scan1D_graph.show_data(data_sorted)
 
 
@@ -1769,12 +1777,32 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                         self.scan_x_axis=self.scan_parameters.axis_2D_1
 
                     Nx=len(self.scan_x_axis)
+                    self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis,
+                                units=self.move_modules_scan[0].settings.child('move_settings','units').value(),
+                                label=self.move_modules_scan[0].title)
 
+
+                    det_names = [det.title for det in self.detector_modules]
+                    ind_plot_det = det_names.index(self.settings.child('scan_options', 'plot_from').value())
                     if 'x_axis'in data.keys():
                         self.scan_y_axis=data['x_axis']['data']
+                        label = data['x_axis']['label']
+                        units = data['x_axis']['units']
                     else:
                         self.scan_y_axis=np.linspace(0,Ny-1,Ny)
-                    self.ui.scan2D_graph.set_scaling_axes(dict(scaled_xaxis=dict(label=self.scan_moves[0][0][0],units=None,offset=np.min(self.scan_x_axis),scaling=np.mean(np.diff(self.scan_x_axis))),scaled_yaxis=dict(label="",units=None,offset=np.min(self.scan_y_axis),scaling=np.mean(np.diff(self.scan_y_axis)))))
+                        label = ''
+                        units = ''
+
+
+                    if self.detector_modules[ind_plot_det].ui.viewers[0].viewer_type == 'Data1D':
+                        if label == '':
+                            label = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['label']
+                    if units == '':
+                        units = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['units']
+
+                    self.ui.scan2D_graph.y_axis = dict(data=self.scan_y_axis,
+                                                       units=units,
+                                                       label='{:s} {:s}'.format(self.detector_modules[ind_plot_det].title, label))
                     self.scan_data_2D=[]
                     self.scan_data_2D_average = []
                     for ind,key in enumerate(datas):

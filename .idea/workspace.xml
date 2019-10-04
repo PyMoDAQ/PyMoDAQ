@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/gevt.py" line="1768" />
+    <bookmark url="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/gevt.py" line="2029" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="202961c6-e7a8-4c67-a2eb-dac226c96598" name="Default Changelist" comment="" />
@@ -16,54 +16,95 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pymodaq/daq_viewer/daq_viewer_main.py">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="34">
-              <caret line="26" selection-start-line="26" selection-end-line="26" />
+            <state relative-caret-position="131">
+              <caret line="1653" column="110" lean-forward="true" selection-start-line="1653" selection-start-column="110" selection-end-line="1653" selection-end-column="110" />
             </state>
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/pymodaq/daq_measurement/daq_measurement_main.py">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/scanner.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-866">
+            <state relative-caret-position="267">
+              <caret line="252" selection-start-line="252" selection-end-line="252" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer2D/viewer2D_main.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="190">
+              <caret line="327" column="8" selection-start-line="327" selection-start-column="8" selection-end-line="327" selection-end-column="8" />
               <folding>
-                <element signature="e#0#34#0" expanded="true" />
+                <element signature="e#0#42#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer1D/viewer1D_main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="10149">
-              <caret line="606" column="4" selection-start-line="606" selection-start-column="4" selection-end-line="606" selection-end-column="4" />
+            <state relative-caret-position="505">
+              <caret line="526" column="13" lean-forward="true" selection-start-line="526" selection-start-column="13" selection-end-line="526" selection-end-column="81" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/version.py">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_viewer/daq_viewer_main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="153">
-              <caret line="10" column="18" selection-start-line="10" selection-start-column="18" selection-end-line="10" selection-end-column="18" />
+            <state relative-caret-position="187">
+              <caret line="17" column="54" selection-start-line="17" selection-start-column="54" selection-end-line="17" selection-end-column="54" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/documentation/changelog.rst">
-          <provider selected="true" editor-type-id="restructured-text-editor" />
+        <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_GenICam.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="85">
+              <caret line="5" column="45" selection-start-line="5" selection-start-column="40" selection-end-line="5" selection-end-column="45" />
+            </state>
+          </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/gevt.py">
+        <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_move_plugins/daq_move_Mock.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="272">
-              <caret line="1162" column="68" selection-start-line="1162" selection-start-column="68" selection-end-line="1162" selection-end-column="68" />
+            <state relative-caret-position="-153">
+              <caret line="15" column="22" selection-start-line="15" selection-start-column="22" selection-end-line="15" selection-end-column="22" />
+              <folding>
+                <element signature="e#0#72#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_Mock.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="210">
+              <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
+              <folding>
+                <element signature="e#0#32#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_Mock_spectro.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-130">
+              <caret line="206" column="8" selection-start-line="206" selection-start-column="8" selection-end-line="206" selection-end-column="8" />
+              <folding>
+                <element signature="e#0#32#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -88,14 +129,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>Initialized_state</find>
-      <find>get_task_description</find>
-      <find>QTimer</find>
-      <find>self.timer</find>
-      <find>timer</find>
-      <find>QThread</find>
-      <find>self.h5saver</find>
-      <find>init_signal</find>
       <find>jit</find>
       <find>dask</find>
       <find>DockArea</find>
@@ -118,6 +151,14 @@
       <find>append_row</find>
       <find>timeline_needed</find>
       <find>get_overlap</find>
+      <find>temperature_settings</find>
+      <find>shutter</find>
+      <find>'shutter'</find>
+      <find>pick_dialog</find>
+      <find>setStyleSheet</find>
+      <find>create_html</find>
+      <find>self.plot_2D_ini</find>
+      <find>Ini_plot_pb</find>
     </findStrings>
     <replaceStrings>
       <replace>self.operations</replace>
@@ -158,12 +199,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/pymodaq/daq_utils/tcp_client" />
-        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_TCPServer_femtoTEM.py" />
-        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_TCPServer_femtoTEM.py" />
-        <option value="$PROJECT_DIR$/pymodaq/daq_utils/tcp_client.py" />
-        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_TCPServer.py" />
-        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_0D/daq_0Dviewer_TCPServer.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_move_plugins/daq_move_TCPServer.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_TCPServer.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer2D/viewer2D_main.py" />
@@ -182,7 +217,6 @@
         <option value="C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/examples/Arrow.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer1D/viewer1D_main.py" />
         <option value="$PROJECT_DIR$/pymodaq/version.py" />
-        <option value="$PROJECT_DIR$/../../user_interface/gevt/gevt/version.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_Mock.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_move/daq_move_main.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_viewer/daq_viewer_main.py" />
@@ -190,7 +224,6 @@
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py" />
         <option value="$PROJECT_DIR$/documentation/changelog.rst" />
         <option value="$PROJECT_DIR$/documentation/usage/modules/Contributors.rst" />
-        <option value="$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py" />
         <option value="$PROJECT_DIR$/documentation/usage/Contributors.rst" />
         <option value="$PROJECT_DIR$/documentation/index.rst" />
         <option value="$PROJECT_DIR$/documentation/usage/Description.rst" />
@@ -202,18 +235,26 @@
         <option value="$PROJECT_DIR$/documentation/usage/Feedback.rst" />
         <option value="$PROJECT_DIR$/../../user_interface/gevt/gevt/examples/volunteers.csv" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/setup.py" />
-        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/version.py" />
-        <option value="$PROJECT_DIR$/../pymodaq_plugins/documentation/changelog.rst" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_move_plugins/__init__.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/__init__.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/__init__.py" />
         <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_0D/__init__.py" />
+        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/andor/daq_AndorSDK2.py" />
+        <option value="$PROJECT_DIR$/../pymodaq_plugins/documentation/changelog.rst" />
+        <option value="$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/version.py" />
+        <option value="$PROJECT_DIR$/../../user_interface/gevt/gevt/custom_parameter_tree.py" />
+        <option value="$PROJECT_DIR$/documentation/usage/modules/data_viewers.rst" />
+        <option value="$PROJECT_DIR$/documentation/usage/modules/Utility_Modules.rst" />
+        <option value="$PROJECT_DIR$/documentation/usage/saving.rst" />
         <option value="$PROJECT_DIR$/../../user_interface/gevt/gevt/gevt.py" />
+        <option value="$PROJECT_DIR$/../../user_interface/gevt/gevt/version.py" />
+        <option value="$PROJECT_DIR$/pymodaq/daq_utils/scanner.py" />
+        <option value="$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
-    <option name="x" value="248" />
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="221" />
     <option name="y" value="-8" />
     <option name="width" value="1347" />
     <option name="height" value="711" />
@@ -240,7 +281,87 @@
               <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
               <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
               <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
-              <item name="daq_measurement" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_utils" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_utils" type="462c0819:PsiDirectoryNode" />
+              <item name="plotting" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_utils" type="462c0819:PsiDirectoryNode" />
+              <item name="plotting" type="462c0819:PsiDirectoryNode" />
+              <item name="viewer1D" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_utils" type="462c0819:PsiDirectoryNode" />
+              <item name="plotting" type="462c0819:PsiDirectoryNode" />
+              <item name="viewer2D" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_move_plugins" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_viewer_plugins" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_viewer_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins_1D" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_viewer_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins_2D" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="hardware" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="hardware" type="462c0819:PsiDirectoryNode" />
+              <item name="digilent" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_spectro" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq_spectro" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq_spectro" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -290,7 +411,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.gevt">
+  <component name="RunManager" selected="Python.daq_scan_main">
     <configuration name="calibration" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="pymodaq_spectro" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -418,19 +539,19 @@
       <method v="2" />
     </configuration>
     <list>
+      <item itemvalue="Python.daq_viewer_main" />
       <item itemvalue="Python.calibration" />
       <item itemvalue="Python.custom_app" />
       <item itemvalue="Python.daq_scan_main" />
-      <item itemvalue="Python.daq_viewer_main" />
       <item itemvalue="Python.gevt" />
       <item itemvalue="Python.spectromer" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.daq_scan_main" />
         <item itemvalue="Python.gevt" />
         <item itemvalue="Python.spectromer" />
         <item itemvalue="Python.calibration" />
-        <item itemvalue="Python.daq_scan_main" />
         <item itemvalue="Python.custom_app" />
       </list>
     </recent_temporary>
@@ -472,11 +593,11 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1176" extended-state="7" />
+    <frame x="-8" y="-8" width="1936" height="1176" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Favorites" order="0" sideWeight="0.50095785" side_tool="true" weight="0.21428572" />
-      <window_info active="true" content_ui="combo" id="Project" order="1" sideWeight="0.49904215" visible="true" weight="0.2249467" />
+      <window_info content_ui="combo" id="Project" order="1" sideWeight="0.49904215" visible="true" weight="0.26492536" />
       <window_info anchor="bottom" id="Terminal" order="0" weight="0.32981783" />
       <window_info anchor="bottom" id="Event Log" order="1" sideWeight="0.5021322" side_tool="true" weight="0.37931034" />
       <window_info anchor="bottom" id="Python Console" order="2" sideWeight="0.4978678" weight="0.37739465" />
@@ -486,12 +607,12 @@
       <window_info anchor="bottom" id="Run" order="6" sideWeight="0.49946696" weight="0.2710728" />
       <window_info anchor="bottom" id="Cvs" order="7" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="8" weight="0.4" />
-      <window_info anchor="bottom" id="Debug" order="9" sideWeight="0.49733475" weight="0.2835498" />
-      <window_info anchor="bottom" id="TODO" order="10" visible="true" weight="0.32854405" />
+      <window_info active="true" anchor="bottom" id="Debug" order="9" sideWeight="0.49733475" visible="true" weight="0.2835249" />
+      <window_info anchor="bottom" id="TODO" order="10" weight="0.32792208" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" sideWeight="0.49837488" weight="0.25" />
-      <window_info anchor="right" id="Structure" order="3" sideWeight="0.5016251" side_tool="true" visible="true" weight="0.21908316" />
+      <window_info anchor="right" id="Structure" order="3" sideWeight="0.5016251" side_tool="true" visible="true" weight="0.14978679" />
     </layout>
     <layout-to-restore>
       <window_info id="Favorites" order="0" side_tool="true" />
@@ -572,9 +693,19 @@
           <option name="timeStamp" value="525" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/pymodaq/daq_viewer/daq_viewer_main.py</url>
-          <line>7</line>
-          <option name="timeStamp" value="526" />
+          <url>file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py</url>
+          <line>1723</line>
+          <option name="timeStamp" value="535" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py</url>
+          <line>1766</line>
+          <option name="timeStamp" value="544" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py</url>
+          <line>1784</line>
+          <option name="timeStamp" value="545" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -585,111 +716,6 @@
     </watches-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="281">
-          <caret line="95" column="86" selection-start-line="95" selection-start-column="86" selection-end-line="95" selection-end-column="86" />
-          <folding>
-            <element signature="e#201#211#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/documentation/usage/saving.rst">
-      <provider selected="true" editor-type-id="restructured-text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/h5browser.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="962">
-          <caret line="343" column="4" selection-start-line="343" selection-start-column="4" selection-end-line="343" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../../Various_Scripts/test_despiking.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-306" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../../Various_Scripts/sanstitre0.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1734" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../../Various_Scripts/test_peak_finding.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="64" column="4" lean-forward="true" selection-start-line="64" selection-start-column="4" selection-end-line="64" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer2D/viewer2D_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="145">
-          <caret line="153" column="37" selection-start-line="153" selection-start-column="25" selection-end-line="153" selection-end-column="37" />
-          <folding>
-            <element signature="e#0#42#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/documentation/usage/Description.rst">
-      <provider selected="true" editor-type-id="restructured-text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/documentation/usage/modules/DAQ_Utils.rst">
-      <provider selected="true" editor-type-id="restructured-text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/documentation/usage/modules/DAQ_Scan.rst">
-      <provider selected="true" editor-type-id="restructured-text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer1D/viewer1Dbasic.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1309">
-          <caret line="12" column="8" selection-start-line="12" selection-start-column="8" selection-end-line="12" selection-end-column="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/GraphicsScene/GraphicsScene.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="189">
-          <caret line="425" selection-start-line="425" selection-end-line="425" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/parametertree/ParameterItem.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="163">
-          <caret line="63" selection-start-line="63" selection-end-line="63" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pandas/core/indexes/base.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="163">
-          <caret line="2656" selection-start-line="2656" selection-end-line="2656" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/numpy/core/_methods.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="238">
-          <caret line="31" selection-start-line="31" selection-end-line="31" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/parametertree/parameterTypes.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3332">
-          <caret line="206" selection-start-line="206" selection-end-line="206" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/custom_parameter_tree.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="155">
-          <caret line="1551" selection-start-line="1551" selection-end-line="1551" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/numpy/lib/polynomial.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="163">
@@ -704,28 +730,8 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/parametertree/Parameter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="229">
-          <caret line="260" selection-start-line="260" selection-end-line="260" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../pymodaq_spectro/pymodaq_spectro/spectromer.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="8058">
-          <caret line="502" column="26" selection-start-line="502" selection-start-column="26" selection-end-line="502" selection-end-column="26" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://C:/Program Files (x86)/Digilent/WaveFormsSDK/samples/py/DigitalIO.py">
       <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/documentation/usage/Feedback.rst">
-      <provider selected="true" editor-type-id="restructured-text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_AndorCCD.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -734,35 +740,8 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/andor/daq_AndorSDK2.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="9639">
-          <caret line="581" column="8" selection-start-line="581" selection-start-column="8" selection-end-line="581" selection-end-column="8" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/picoscope/picoscope_5000A.py">
       <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/digilent/digilent_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="9877">
-          <caret line="584" column="27" selection-start-line="584" selection-start-column="27" selection-end-line="584" selection-end-column="27" />
-          <folding>
-            <element signature="e#0#13#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer1D/viewer1D_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5661">
-          <caret line="350" column="98" selection-start-line="350" selection-start-column="8" selection-end-line="350" selection-end-column="98" />
-        </state>
-      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/../../user_interface/DAQ_Metheor/DAQ_metheor_main_v4.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -819,13 +798,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="204">
           <caret line="12" column="5" selection-start-line="12" selection-start-column="5" selection-end-line="12" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/tables/file.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="209">
-          <caret line="2158" selection-start-line="2158" selection-end-line="2158" />
         </state>
       </provider>
     </entry>
@@ -894,10 +866,43 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py">
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_measurement/daq_measurement_main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="10149">
-          <caret line="606" column="4" selection-start-line="606" selection-start-column="4" selection-end-line="606" selection-end-column="4" />
+        <state>
+          <folding>
+            <element signature="e#0#34#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/andor/daq_AndorSDK2.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="918">
+          <caret line="68" column="6" selection-start-line="68" selection-start-column="6" selection-end-line="68" selection-end-column="6" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/andor/_andorsdk.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="336">
+          <caret line="1162" column="31" lean-forward="true" selection-start-line="1162" selection-start-column="31" selection-end-line="1162" selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/parametertree/Parameter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2329">
+          <caret line="141" column="12" selection-start-line="117" selection-start-column="10" selection-end-line="141" selection-end-column="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/pyqtgraph/parametertree/parameterTypes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="357">
+          <caret line="31" column="50" selection-start-line="31" selection-start-column="50" selection-end-line="31" selection-end-column="50" />
         </state>
       </provider>
     </entry>
@@ -911,6 +916,105 @@
     <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/documentation/changelog.rst">
       <provider selected="true" editor-type-id="restructured-text-editor" />
     </entry>
+    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/tables/table.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="34629">
+          <caret line="2073" selection-start-line="2073" selection-end-line="2073" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/documentation/usage/saving.rst">
+      <provider selected="true" editor-type-id="restructured-text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/gevt.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="11084">
+          <caret line="655" column="41" selection-start-line="655" selection-start-column="41" selection-end-line="655" selection-end-column="41" />
+          <folding>
+            <element signature="e#94#104#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://C:/Miniconda3/envs/pymodaq_dev/Lib/site-packages/tables/file.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="35955">
+          <caret line="2158" selection-start-line="2158" selection-end-line="2158" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/daq_utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="16643">
+          <caret line="988" selection-start-line="988" selection-end-line="1005" />
+          <folding>
+            <element signature="e#31333#31603#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/documentation/usage/modules/Utility_Modules.rst">
+      <provider selected="true" editor-type-id="restructured-text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/documentation/usage/modules/data_viewers.rst">
+      <provider selected="true" editor-type-id="restructured-text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/documentation/usage/Feedback.rst">
+      <provider selected="true" editor-type-id="restructured-text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/version.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="153">
+          <caret line="10" column="19" selection-start-line="10" selection-start-column="19" selection-end-line="10" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_viewer/utility_classes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <folding>
+            <element signature="e#0#34#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/hardware/digilent/digilent_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="9877">
+          <caret line="584" column="27" selection-start-line="584" selection-start-column="27" selection-end-line="584" selection-end-column="27" />
+          <folding>
+            <element signature="e#0#13#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_move/utility_classes.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1003">
+          <caret line="74" column="4" selection-start-line="74" selection-start-column="4" selection-end-line="74" selection-end-column="26" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pymodaq_spectro/pymodaq_spectro/spectromer.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7820">
+          <caret line="488" column="24" selection-start-line="488" selection-start-column="24" selection-end-line="488" selection-end-column="81" />
+          <folding>
+            <element signature="e#0#10#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/custom_parameter_tree.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="25449">
+          <caret line="1512" column="55" selection-start-line="1512" selection-start-column="55" selection-end-line="1512" selection-end-column="55" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/_pydev_imps/_pydev_execfile.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="289">
@@ -918,26 +1022,78 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../../user_interface/gevt/gevt/gevt.py">
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_2D/daq_2Dviewer_GenICam.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="272">
-          <caret line="1162" column="68" selection-start-line="1162" selection-start-column="68" selection-end-line="1162" selection-end-column="68" />
+        <state relative-caret-position="85">
+          <caret line="5" column="45" selection-start-line="5" selection-start-column="40" selection-end-line="5" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_move_plugins/daq_move_Mock.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-153">
+          <caret line="15" column="22" selection-start-line="15" selection-start-column="22" selection-end-line="15" selection-end-column="22" />
+          <folding>
+            <element signature="e#0#72#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_Mock.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
+          <folding>
+            <element signature="e#0#32#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/pymodaq/daq_viewer/daq_viewer_main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="34">
-          <caret line="26" selection-start-line="26" selection-end-line="26" />
+        <state relative-caret-position="187">
+          <caret line="17" column="54" selection-start-line="17" selection-start-column="54" selection-end-line="17" selection-end-column="54" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pymodaq/daq_measurement/daq_measurement_main.py">
+    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/daq_1Dviewer_Mock_spectro.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-866">
+        <state relative-caret-position="-130">
+          <caret line="206" column="8" selection-start-line="206" selection-start-column="8" selection-end-line="206" selection-end-column="8" />
           <folding>
-            <element signature="e#0#34#0" expanded="true" />
+            <element signature="e#0#32#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer2D/viewer2D_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="190">
+          <caret line="327" column="8" selection-start-line="327" selection-start-column="8" selection-end-line="327" selection-end-column="8" />
+          <folding>
+            <element signature="e#0#42#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/plotting/viewer1D/viewer1D_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="505">
+          <caret line="526" column="13" lean-forward="true" selection-start-line="526" selection-start-column="13" selection-end-line="526" selection-end-column="81" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_utils/scanner.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="267">
+          <caret line="252" selection-start-line="252" selection-end-line="252" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="131">
+          <caret line="1653" column="110" lean-forward="true" selection-start-line="1653" selection-start-column="110" selection-end-line="1653" selection-end-column="110" />
         </state>
       </provider>
     </entry>
