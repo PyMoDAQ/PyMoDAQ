@@ -64,6 +64,11 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.plotitem = self.image_widget.plotitem # for backward compatibility
         self.ui.splitter_VLeft.replaceWidget(0, self.ui.graphicsView)
 
+        axis = self.ui.plotitem.getAxis('bottom')
+        axis.setLabel(text='', units='Pxls')
+
+        axisl = self.ui.plotitem.getAxis('left')
+        axisl.setLabel(text='', units='Pxls')
 
         self.autolevels=False
         self.ui.auto_levels_pb.clicked.connect(self.set_autolevels)
@@ -469,9 +474,13 @@ class Viewer2D(QtWidgets.QWidget):
             self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
 
 
-    def scale_axis(self,xaxis,yaxis):
-        return xaxis*self.scaling_options['scaled_xaxis']['scaling']+self.scaling_options['scaled_xaxis']['offset'],\
-               yaxis*self.scaling_options['scaled_yaxis']['scaling']+self.scaling_options['scaled_yaxis']['offset']
+    def scale_axis(self,xaxis_pxl,yaxis_pxl):
+        return xaxis_pxl*self.scaling_options['scaled_xaxis']['scaling']+self.scaling_options['scaled_xaxis']['offset'],\
+               yaxis_pxl*self.scaling_options['scaled_yaxis']['scaling']+self.scaling_options['scaled_yaxis']['offset']
+
+    def unscale_axis(self, xaxis, yaxis):
+        return (xaxis-self.scaling_options['scaled_xaxis']['offset'])/self.scaling_options['scaled_xaxis']['scaling'],\
+               (yaxis-self.scaling_options['scaled_yaxis']['offset'])/self.scaling_options['scaled_yaxis']['scaling']
 
     def select_file(self,start_path=None,save=True):
         try:

@@ -395,6 +395,8 @@ class H5Saver(QObject):
             array = self.add_array(channel_group, 'y_axis', 'axis',
                     array_type=np.float, array_to_save=array_to_save,
                     enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+
+        self.h5_file.flush()
         return data_array
 
 

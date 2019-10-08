@@ -101,7 +101,7 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
 
 def add_text_to_elt(elt, param):
     param_type = str(param.type())
-    if param_type == 'bool' or param_type == 'bool_push':
+    if param_type == 'bool' or param_type == 'bool_push' or param_type == 'led':
         if param.value():
             text = '1'
         else:
@@ -124,6 +124,12 @@ def add_text_to_elt(elt, param):
             text = 'float({})'.format(param.value())
         else:
             str(param.value())
+    elif param_type == 'int':
+        if param.value() == True:  #known bug
+            val = 1
+        else:
+            val = param.value()
+        text=str(val)
     else:
         text = str(param.value())
     elt.text = text

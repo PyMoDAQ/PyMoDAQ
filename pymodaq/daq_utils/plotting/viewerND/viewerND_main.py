@@ -212,6 +212,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             self.x_axis = dict(data=None, label='', units='')
             self.y_axis = dict(data=None, label='', units='')
             if len(datas_transposed.axes_manager.signal_shape)==1 or len(datas_transposed.axes_manager.signal_shape)==2:#signal data are 1D
+
                 if 'x_axis' in kwargs:
                     if not isinstance(kwargs['x_axis'], dict):
                         self.x_axis['data'] = kwargs['x_axis'][:]
@@ -220,6 +221,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
                         self.x_axis = copy.deepcopy(kwargs['x_axis'])
                 else:
                     self.x_axis['data']=self.set_axis(datas_transposed.axes_manager.signal_shape[0])
+                if 'y_axis' in kwargs:
+                    self.ui.viewer1D.set_axis_label(axis_settings=dict(orientation='left',
+                                                                       label=kwargs['y_axis']['label'],
+                                                                       units=kwargs['y_axis']['units']))
+
 
             if len(datas_transposed.axes_manager.signal_shape)==2:#signal data is 2D
                 if 'y_axis' in kwargs:
@@ -235,6 +241,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.update_viewer_data(*self.ui.navigator1D.ui.crosshair.get_positions())
             elif len(self.axes_nav)==2:
                 self.update_viewer_data(*self.ui.navigator2D.ui.crosshair.get_positions())
+
 
 
             ##get ROI bounds from viewers if any
@@ -312,6 +319,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             elif len(self.axes_nav)==2:#2D Navigator:
                 self.ROI1D.setVisible(True)
                 self.ROI2D.setVisible(True)
+
                 self.ui.navigator1D.parent.setVisible(False)
                 self.ui.navigator2D.parent.setVisible(True)
                 self.navigator_label.setVisible(True)
@@ -361,6 +369,21 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         except Exception as e:
             self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
+
+    def init_ROI(self):
+
+        self.ui.navigator1D.ui.crosshair.set_crosshair_position(np.mean(self.nav_x_axis['data']))
+        x, y = self.ui.navigator2D.unscale_axis(np.mean(self.nav_x_axis['data']), np.mean(self.nav_y_axis['data']))
+        self.ui.navigator2D.ui.crosshair.set_crosshair_position(x, y)
+
+        self.ROI1D.setRegion((np.min(self.x_axis['data']), np.max(self.x_axis['data'])))
+
+        self.ROI2D.setPos((np.min(self.x_axis['data']), np.min(self.y_axis['data'])))
+        self.ROI2D.setSize((np.max(self.x_axis['data']) - np.min(self.x_axis['data']),
+                            np.max(self.y_axis['data']) - np.min(self.y_axis['data'])))
+
+        self.update_Navigator()
+
 
     def set_data_test(self,data_shape='3D'):
 
@@ -455,6 +478,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         #% 2D viewer Dock
         viewer2D_widget=QtWidgets.QWidget()
         self.ui.viewer2D=Viewer2D(viewer2D_widget)
+        self.ui.viewer2D.ui.Ini_plot_pb.setVisible(False)
+        self.ui.viewer2D.ui.FlipUD_pb.setVisible(False)
+        self.ui.viewer2D.ui.FlipLR_pb.setVisible(False)
+        self.ui.viewer2D.ui.rotate_pb.setVisible(False)
         self.ui.viewer2D.ui.auto_levels_pb.click()
         self.ui.viewer2D.ui.ROIselect_pb.click()
         self.ROI2D = self.ui.viewer2D.ui.ROIselect

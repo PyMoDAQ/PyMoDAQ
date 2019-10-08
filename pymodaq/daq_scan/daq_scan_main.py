@@ -479,6 +479,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             # save scan1D
             if len(self.scan_data_1D) != 0:
+
                 if self.settings.child('scan_options', 'scan_average').value() <= 1:
                     datas = OrderedDict([])
                     for ind in range(self.scan_data_1D.shape[1]):
@@ -522,23 +523,23 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
             if self.scan_data_2D != []:
+
                 if len(self.move_modules_scan) == 1:
                     scan_type = 'scan1D'
                 elif len(self.move_modules_scan) == 2:
                     scan_type = 'scan2D'
+
                 if self.settings.child('scan_options', 'scan_average').value() <= 1:
                     datas = OrderedDict([])
                     for ind, data2D in enumerate(self.scan_data_2D):
                         datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
                         datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D
-                        datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(data=self.scan_x_axis,
-                                units=self.move_modules_scan[0].settings.child('move_settings', 'units').value(),
-                                label=self.move_modules_scan[0].title)
-
-                        if scan_type == 'scan2D':
-                            datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(data=self.scan_y_axis,
-                                    units=self.move_modules_scan[1].settings.child('move_settings', 'units').value(),
-                                    label=self.move_modules_scan[1].title)
+                        datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(data=self.ui.scan2D_graph.x_axis,
+                                units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
+                                label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'],)
+                        datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(data=self.ui.scan2D_graph.y_axis,
+                                units=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['units'],
+                                label=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['label'])
 
                     for ind_channel, channel in enumerate(datas):  # list of OrderedDict
                         channel_group = self.h5saver.add_CH_group(live_group, title=channel)
@@ -550,13 +551,13 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     for ind, data2D in enumerate(self.scan_data_2D_average):
                         averaged_datas['Scan_Data_Average_{:03d}'.format(ind)] = OrderedDict([])
                         averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['data'] = data2D
-                        averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['x_axis'] = dict(data=self.scan_x_axis,
-                                units=self.move_modules_scan[0].settings.child('move_settings', 'units').value(),
-                                label=self.move_modules_scan[0].title)
-                        if scan_type == 'scan2D':
-                            averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['y_axis'] = dict(data=self.scan_y_axis,
-                                    units=self.move_modules_scan[1].settings.child('move_settings', 'units').value(),
-                                    label=self.move_modules_scan[1].title)
+                        averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['x_axis'] = dict(data=self.ui.scan2D_graph.x_axis,
+                                units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
+                                label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'],)
+
+                        averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['y_axis'] = dict(data=self.ui.scan2D_graph.y_axis,
+                                units=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['units'],
+                                label=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['label'])
 
                     for ind_channel, channel in enumerate(averaged_datas):  # dict of OrderedDict
                         channel_group = self.h5saver.add_CH_group(live_group, title=channel)
@@ -2171,6 +2172,7 @@ class DAQ_Scan_Acquisition(QObject):
                                                         datas[data_type][channel],
                                                         scan_type=self.scan_settings.child('scan_options', 'scan_type').value(),
                                                         scan_shape=self.scan_shape, init=True, add_scan_dim=True)
+            pass
 
     pyqtSlot(OrderedDict) #edict(name=self.title,data0D=None,data1D=None,data2D=None)
     def det_done(self,data):
@@ -2224,6 +2226,7 @@ class DAQ_Scan_Acquisition(QObject):
                                                 value=self.det_done_datas[det_name][data_type][channel]['data'])
 
                 self.det_done_flag=True
+
                 self.scan_data_tmp.emit(OrderedDict(positions=self.scan_read_positions,datas=self.scan_read_datas))
         except Exception as e:
             self.status_sig.emit(["Update_Status",getLineInfo()+ str(e),'log'])
@@ -2352,7 +2355,7 @@ class DAQ_Scan_Acquisition(QObject):
                         self.detector_modules_commands[ind_det].emit(utils.ThreadCommand("single",
                                   [self.det_averaging[ind_det],str(path['file_path'])]))
                     self.wait_for_det_done()
-
+            self.h5saver.h5_file.flush()
             for sig in self.move_done_signals:
                 sig.disconnect(self.move_done)
             for sig in self.grab_done_signals:

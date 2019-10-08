@@ -12,9 +12,10 @@ import tables
 import numpy as np
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 from collections import OrderedDict
-
+from pathlib import Path
 import warnings
 import os
+from copy import deepcopy
 
 class H5Browser(QtWidgets.QWidget,QObject):
     data_node_signal=pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller 
@@ -23,26 +24,28 @@ class H5Browser(QtWidgets.QWidget,QObject):
     def __init__(self,parent,h5file=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(H5Browser,self).__init__()
-        if type(parent) is not QtWidgets.QWidget:
-            raise Exception('no valid parent container, expected a QWidget')
+        if not (isinstance(parent, QtWidgets.QWidget) or isinstance(parent, QtWidgets.QMainWindow)):
+            raise Exception('no valid parent container, expected a QWidget or a QMainWindow')
 
-        self.parent=parent
-        if h5file is None:
-            h5file=str(select_file(start_path=None,save=False, ext='h5'))
-        if type(h5file)==str:
-            h5file=tables.open_file(h5file, 'a')
-        elif type(h5file)==tables.File:
-            pass
+        self.h5file=None
+
+
+        if isinstance(parent, QtWidgets.QMainWindow):
+            self.main_window = parent
+            self.parent = QtWidgets.QWidget()
+            self.main_window.setCentralWidget(self.parent)
         else:
-            raise Exception('not a valid h5 file or path to a h5 file')
-        self.h5file=h5file
+            self.main_window = None
+            self.parent = parent
 
-        self.ui=QObject() #the user interface
+        self.ui = QObject()  # the user interface
         self.set_GUI()
 
-        self.populate_tree()
+        self.load_file(h5file)
 
         self.ui.h5file_tree.ui.Open_Tree.click()
+
+
 
     def add_comments(self):
         try:
@@ -91,7 +94,79 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
         except Exception as e:
             self.status_signal.emit(getLineInfo() + str(e))
+
+    def load_file(self, h5file=None):
+        if h5file is None:
+            h5file=str(select_file(start_path=None,save=False, ext='h5'))
+        if isinstance(h5file, str) or isinstance(h5file, Path):
+            h5file=tables.open_file(str(h5file), 'a')
+        elif isinstance(h5file, tables.File):
+            pass
+        else:
+            raise Exception('not a valid h5 file or path to a h5 file')
+        self.h5file=h5file
+
+        self.populate_tree()
+
+    def save_file(self):
+
+        filename=select_file(None, save=True, ext='h5')
+        self.h5file.copy_file(str(filename))
+
+    def quit_fun(self):
+        """
+        """
+        try:
+            if self.h5file is not None:
+                self.h5file.flush()
+                if self.h5file.isopen:
+                    self.h5file.close()
+
+            self.parent.close()
+
+        except Exception as e:
+            pass
+
+    def create_menu(self):
+        """
+
+        """
+        self.menubar = self.main_window.menuBar()
+
+        #%% create Settings menu
+        self.file_menu=self.menubar.addMenu('File')
+        load_action=self.file_menu.addAction('Load file')
+        load_action.triggered.connect(lambda: self.load_file(None))
+        save_action=self.file_menu.addAction('Save file')
+        save_action.triggered.connect(self.save_file)
+
+        self.file_menu.addSeparator()
+        quit_action=self.file_menu.addAction('Quit')
+        quit_action.triggered.connect(self.quit_fun)
+
+        #help menu
+        help_menu=self.menubar.addMenu('?')
+        action_about=help_menu.addAction('About')
+        action_about.triggered.connect(self.show_about)
+        action_help=help_menu.addAction('Help')
+        action_help.triggered.connect(self.show_help)
+        action_help.setShortcut(QtCore.Qt.Key_F1)
+
+    def show_about(self):
+        splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
+        splash = QtGui.QPixmap(splash_path)
+        self.splash_sc=QtWidgets.QSplashScreen(splash,QtCore.Qt.WindowStaysOnTopHint)
+        self.splash_sc.setVisible(True)
+        self.splash_sc.showMessage("PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()), QtCore.Qt.AlignRight, QtCore.Qt.white)
+
+
+    def show_help(self):
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
+
     def set_GUI(self):
+
+        if self.main_window is not None:
+            self.create_menu()
 
         layout=QtWidgets.QGridLayout()
 
@@ -238,7 +313,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
                 nav_y_axis = None
                 if isinstance(data, np.ndarray):
                     data = np.squeeze(data)
-                    if 'type' in node._v_attrs: #was the case for older version of pymodaq files
+                    if 'type' in node._v_attrs:
                         if 'data' in node._v_attrs['type'] or 'channel' in node._v_attrs['type'].lower():
                             parent_path = node._v_parent._v_pathname
                             children = list(node._v_parent._v_children)
@@ -257,6 +332,8 @@ class H5Browser(QtWidgets.QWidget,QObject):
                                         axes[ax]['units'] = axis_node._v_attrs['units']
                                     if 'label' in axis_node._v_attrs:
                                         axes[ax]['label'] = axis_node._v_attrs['label']
+                                else:
+                                    axes[ax] = dict(units='', label='')
 
 
                             if 'scan_type' in node._v_attrs:
@@ -283,8 +360,18 @@ class H5Browser(QtWidgets.QWidget,QObject):
                                                     axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
                                                 if 'label' in axis_node._v_attrs:
                                                     axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
-
-                    self.hyperviewer.show_data(data, nav_axes = nav_axes, **axes)
+                        elif 'axis' in node._v_attrs['type']:
+                            axis_node = node
+                            axes['y_axis'] = dict(data=axis_node.read())
+                            if 'units' in axis_node._v_attrs:
+                                axes['y_axis']['units'] = axis_node._v_attrs['units']
+                            if 'label' in axis_node._v_attrs:
+                                axes['y_axis']['label'] = axis_node._v_attrs['label']
+                            axes['x_axis'] = dict(data=np.linspace(0, axis_node.shape[0]-1, axis_node.shape[0]),
+                                                  units='pxls',
+                                                  label='')
+                    self.hyperviewer.show_data(deepcopy(data), nav_axes = nav_axes, **deepcopy(axes))
+                    self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
                     if isinstance(data[0], str):
                         self.ui.text_list.clear()
@@ -411,8 +498,8 @@ def browse_data(fname=None, ret_all = False):
     return None, '', ''
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv);
-    win = QtWidgets.QWidget()
+    app = QtWidgets.QApplication(sys.argv)
+    win = QtWidgets.QMainWindow()
     #h5file=tables.open_file('C:\\Users\\Weber\\Labo\\Programmes Python\\pymodaq\\daq_utils\\test.h5')
     prog = H5Browser(win)
     win.show()
