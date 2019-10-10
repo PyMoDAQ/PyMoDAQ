@@ -73,7 +73,7 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/../../user_interface/holography/phase_retrieval.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="358">
@@ -83,6 +83,11 @@
               </folding>
             </state>
           </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pymodaq/daq_analysis/__init__.py">
+          <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
@@ -194,12 +199,11 @@
     </replaceStrings>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../pymodaq_plugins" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/documentation/usage/How_to_start.rst" />
         <option value="$PROJECT_DIR$/pymodaq/daq_move/utility_classes.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/tcp_server_client.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_viewer/utility_classes.py" />
@@ -250,6 +254,7 @@
         <option value="$PROJECT_DIR$/pymodaq/daq_utils/h5saver.py" />
         <option value="$PROJECT_DIR$/pymodaq/daq_scan/daq_scan_main.py" />
         <option value="$PROJECT_DIR$/../../user_interface/holography/phase_retrieval.py" />
+        <option value="$PROJECT_DIR$/pymodaq/daq_analysis/__init__.py" />
       </list>
     </option>
   </component>
@@ -581,6 +586,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-1608" y="-8" width="1616" height="916" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="Favorites" order="0" sideWeight="0.50095785" side_tool="true" weight="0.21428572" />
       <window_info active="true" content_ui="combo" id="Project" order="1" sideWeight="0.49904215" visible="true" weight="0.22365038" />
@@ -663,16 +669,6 @@
     </watches-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_1D/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="20" column="25" selection-start-line="20" selection-start-column="25" selection-end-line="20" selection-end-column="25" />
-          <folding>
-            <element signature="e#0#17#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/../pymodaq_plugins/pymodaq_plugins/daq_viewer_plugins/plugins_0D/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
@@ -1060,6 +1056,9 @@
           </folding>
         </state>
       </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pymodaq/daq_analysis/__init__.py">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
   </component>
 </project>
