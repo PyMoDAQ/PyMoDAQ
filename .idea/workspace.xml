@@ -73,7 +73,7 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/../../user_interface/holography/phase_retrieval.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="358">
@@ -81,15 +81,6 @@
               <folding>
                 <element signature="e#0#34#0" expanded="true" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://C:/Miniconda3/envs/theano/Lib/site-packages/pymodaq/daq_viewer/daq_viewer_main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="96">
-              <caret line="851" column="36" lean-forward="true" selection-start-line="851" selection-start-column="36" selection-end-line="851" selection-end-column="36" />
             </state>
           </provider>
         </entry>
@@ -274,12 +265,30 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
             <path>
               <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
               <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_analysis" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="pymodaq" type="462c0819:PsiDirectoryNode" />
+              <item name="daq_measurement" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="pymodaq" type="b2602c69:ProjectViewProjectNode" />
@@ -346,7 +355,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -572,11 +580,10 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="true" />
+    <frame x="-1608" y="-8" width="1616" height="916" extended-state="6" />
     <layout>
       <window_info id="Favorites" order="0" sideWeight="0.50095785" side_tool="true" weight="0.21428572" />
-      <window_info content_ui="combo" id="Project" order="1" sideWeight="0.49904215" visible="true" weight="0.18336888" />
+      <window_info active="true" content_ui="combo" id="Project" order="1" sideWeight="0.49904215" visible="true" weight="0.22365038" />
       <window_info anchor="bottom" id="Terminal" order="0" weight="0.32981783" />
       <window_info anchor="bottom" id="Event Log" order="1" sideWeight="0.5021322" side_tool="true" weight="0.37931034" />
       <window_info anchor="bottom" id="Python Console" order="2" sideWeight="0.4978678" weight="0.37739465" />
@@ -591,7 +598,7 @@
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" sideWeight="0.49837488" weight="0.25" />
-      <window_info anchor="right" id="Structure" order="3" sideWeight="0.5016251" side_tool="true" visible="true" weight="0.14978679" />
+      <window_info anchor="right" id="Structure" order="3" sideWeight="0.5016251" side_tool="true" visible="true" weight="0.18059126" />
     </layout>
   </component>
   <component name="XDebuggerManager">
@@ -1037,6 +1044,13 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://C:/Miniconda3/envs/theano/Lib/site-packages/pymodaq/daq_viewer/daq_viewer_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="96">
+          <caret line="851" column="36" selection-start-line="851" selection-start-column="36" selection-end-line="851" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/../../user_interface/holography/phase_retrieval.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="358">
@@ -1044,13 +1058,6 @@
           <folding>
             <element signature="e#0#34#0" expanded="true" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://C:/Miniconda3/envs/theano/Lib/site-packages/pymodaq/daq_viewer/daq_viewer_main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="96">
-          <caret line="851" column="36" lean-forward="true" selection-start-line="851" selection-start-column="36" selection-end-line="851" selection-end-column="36" />
         </state>
       </provider>
     </entry>
