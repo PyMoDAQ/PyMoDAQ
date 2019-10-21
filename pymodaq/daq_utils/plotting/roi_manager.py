@@ -189,24 +189,29 @@ class ROIManager(QObject):
 
                 if par.child(('type')).value() == '1D':
                     roi_type = ''
-                    newroi = LinearROI(index=newindex, pos = [par.child('position', 'left').value(),
-                                                      par.child('position', 'right').value()])
+
+                    pos = self.viewer_widget.plotItem.vb.viewRange()[0]
+                    newroi = LinearROI(index=newindex, pos = pos)
                     newroi.setZValue(-10)
                     newroi.setBrush(par.child(('Color')).value())
                     newroi.setOpacity(0.2)
 
+
                 elif par.child(('type')).value() == '2D':
                     roi_type=par.child(('roi_type')).value()
+                    xrange = self.viewer_widget.plotItem.vb.viewRange()[0]
+                    yrange = self.viewer_widget.plotItem.vb.viewRange()[1]
+                    width = np.max(((xrange[1]-xrange[0])/10, 2))
+                    height = np.max(((yrange[1] - yrange[0])/10, 2))
+                    pos = [int(np.mean(xrange)-width/2), int(np.mean(yrange)-width/2)]
+
+
                     if roi_type == 'RectROI':
-                        newroi=RectROI(index=newindex, pos = [par.child('position', 'x').value(),
-                                                      par.child('position', 'y').value()],
-                                       size =[par.child('size', 'width').value(),
-                                                      par.child('size', 'height').value()])
+                        newroi=RectROI(index=newindex, pos = pos,
+                                       size =[width, height])
                     else:
-                        newroi=EllipseROI(index=newindex, pos = [par.child('position', 'x').value(),
-                                                      par.child('position', 'y').value()],
-                                          size =[par.child('size', 'width').value(),
-                                                      par.child('size', 'height').value()])
+                        newroi=EllipseROI(index=newindex, pos = pos,
+                                       size =[width, height])
                     newroi.setPen(par.child(('Color')).value())
 
                 newroi.sigRegionChanged.connect(self.ROI_changed.emit)
@@ -223,6 +228,7 @@ class ROIManager(QObject):
                 self.ROIs["ROI_%02.0d" % newindex] = newroi
 
                 self.new_ROI_signal.emit(newindex, roi_type)
+                self.update_roi_tree(newindex)
 
                 # self.ui.RoiCurve_H["ROI_%02.0d" % newindex]=self.ui.Lineout_H.plot(pen=QtGui.QColor(*self.color_list[newindex]))
                 # self.ui.RoiCurve_V["ROI_%02.0d" % newindex]=self.ui.Lineout_V.plot(pen=QtGui.QColor(*self.color_list[newindex]))

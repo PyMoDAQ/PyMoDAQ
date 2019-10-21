@@ -376,6 +376,13 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if path != '':
                 self.preset_manager.set_file_preset(str(path))
 
+                if self.detector_modules != []:
+                    mssg = QtWidgets.QMessageBox()
+                    mssg.setText('You have to restart the application to take the modifications into account! Quitting the application...')
+                    mssg.exec()
+
+                    self.quit_fun()
+
             else:  # cancel
                 pass
         except Exception as e:
@@ -1658,8 +1665,22 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.scan_y_axis=np.array([])
             if not self.plot_1D_ini: #init the datas
                 self.plot_1D_ini = True
+                if self.scanner.settings.child('scan_options', 'scan1D_settings',
+                                               'scan1D_selection').value() == 'Manual':
+                    if self.scanner.settings.child('scan_options', 'scan1D_settings',
+                                                   'scan1D_type').value() == 'Linear back to start':
+                        self.scan_x_axis = np.array(self.scan_parameters.axis_2D_1[0::2])
+                    else:
+                        self.scan_x_axis = np.array(self.scan_parameters.axis_2D_1)
+                else: #in case of PolyLines scans, impossible to plot linearly so just use the scan index
+                    if self.scanner.settings.child('scan_options', 'scan1D_settings',
+                                                   'scan1D_type').value() != 'Linear back to start':
+                        self.scan_x_axis = np.linspace(0,len(self.scan_parameters.axis_2D_1)-1, len(self.scan_parameters.axis_2D_1))
+                    else:
+                        self.scan_x_axis = np.linspace(0,int(len(self.scan_parameters.axis_2D_1)/2-1), int(len(self.scan_parameters.axis_2D_1)/2))
 
-                self.scan_x_axis=np.min(self.scan_parameters.axis_2D_1)*np.ones((self.scan_parameters.Nsteps))
+
+                #self.scan_x_axis=np.min(self.scan_parameters.axis_2D_1)*np.ones((self.scan_parameters.Nsteps))
                 self.scan_data_1D=np.zeros((self.scan_parameters.Nsteps,len(datas)))
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
                     self.scan_data_1D_average = np.zeros((self.scan_parameters.Nsteps, len(datas)))
@@ -1668,17 +1689,32 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                                     units=self.move_modules_scan[0].settings.child('move_settings','units').value()))
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left', label=self.settings.child('scan_options', 'plot_from').value(), units=''))
 
-            if self.scanner.settings.child('scan_options','scan1D_settings', 'scan1D_selection').value() == 'Manual':
-                self.scan_x_axis[self.ind_scan]=self.scan_positions[0][1]
-            else: #in case of PolyLines scans, impossible to plot linearly so just use the scan index
-                self.scan_x_axis[self.ind_scan] = self.ind_scan
+
+
+            # if self.scanner.settings.child('scan_options','scan1D_settings', 'scan1D_selection').value() == 'Manual':
+            #     self.scan_x_axis[self.ind_scan]=self.scan_positions[0][1]
+            # else: #in case of PolyLines scans, impossible to plot linearly so just use the scan index
+            #     self.scan_x_axis[self.ind_scan] = self.ind_scan
+
+
+
             #to test random mode:
             #self.scan_data_1D[self.ind_scan, :] =np.random.rand((1))* np.array([np.exp(-(self.scan_x_axis[self.ind_scan]-50)**2/20**2),np.exp(-(self.scan_x_axis[self.ind_scan]-50)**6/10**6)]) # np.array(list(datas.values()))
             #self.scan_data_1D[self.ind_scan, :] =  np.array(list(datas.values()))
-            self.scan_data_1D[self.ind_scan, :] = np.array([datas[key]['data'] for key in datas])
 
-            if self.settings.child('scan_options', 'scan_average').value() > 1:
-                self.scan_data_1D_average[self.ind_scan,:] = (self.ind_average*self.scan_data_1D_average[self.ind_scan,:] +  self.scan_data_1D[self.ind_scan, :])/(self.ind_average+1)
+            if self.scanner.settings.child('scan_options', 'scan1D_settings',
+                                           'scan1D_type').value() == 'Linear back to start':
+                if not utils.odd_even(self.ind_scan):
+                    self.scan_data_1D[int(self.ind_scan / 2), :] = np.array([datas[key]['data'] for key in datas])
+                    if self.settings.child('scan_options', 'scan_average').value() > 1:
+                        self.scan_data_1D_average[self.ind_scan, :] =\
+                            (self.ind_average * self.scan_data_1D_average[int(self.ind_scan / 2),:] +
+                                    self.scan_data_1D[int(self.ind_scan / 2), :]) / (self.ind_average + 1)
+
+            else:
+                self.scan_data_1D[self.ind_scan, :] = np.array([datas[key]['data'] for key in datas])
+                if self.settings.child('scan_options', 'scan_average').value() > 1:
+                    self.scan_data_1D_average[self.ind_scan,:] = (self.ind_average*self.scan_data_1D_average[self.ind_scan,:] +  self.scan_data_1D[self.ind_scan, :])/(self.ind_average+1)
 
 
             x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
@@ -1729,8 +1765,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if "2D" in self.scanner.settings.child('scan_options','scan_type').value():    #scan2D type cartography
                 if not(self.plot_2D_ini):#init the data
                     self.plot_2D_ini=True
-                    self.scan_x_axis=self.scan_parameters.axis_2D_1
-                    self.scan_y_axis=self.scan_parameters.axis_2D_2
+                    self.scan_x_axis=np.array(self.scan_parameters.axis_2D_1)
+                    self.scan_y_axis=np.array(self.scan_parameters.axis_2D_2)
                     self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis,
                                 units=self.move_modules_scan[0].settings.child('move_settings','units').value(),
                                 label=self.move_modules_scan[0].title)
@@ -1780,9 +1816,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
                     self.scan_y_axis=np.array([])
                     if self.scanner.settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
-                        self.scan_x_axis=self.scan_parameters.axis_2D_1[0::2]
+                        self.scan_x_axis=np.array(self.scan_parameters.axis_2D_1[0::2])
                     else:
-                        self.scan_x_axis=self.scan_parameters.axis_2D_1
+                        self.scan_x_axis=np.array(self.scan_parameters.axis_2D_1)
 
                     Nx=len(self.scan_x_axis)
                     self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis,
@@ -1829,7 +1865,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                                 (self.ind_average*self.scan_data_2D_average[ind_plot][:,int(self.ind_scan/2)]+datas[key]['data'])/(self.ind_average+1)
 
                 else:
-                    ind_scan = utils.find_index(self.scan_x_axis,self.scan_positions[0][1])[0][0]
+
+                    x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
+                    ind_scan = utils.find_index(x_axis_sorted,self.scan_positions[0][1])[0][0]
                     for ind_plot,key in enumerate(datas.keys()):
                         if ind_plot >= 3:
                             break
