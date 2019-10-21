@@ -79,8 +79,10 @@ Please see :doc:`the changelog </changelog>`.
    usage/tcpip
    usage/Feedback
    usage/Contributors
+   usage/APIdoc
+
 ..   usage/classDiagram
-..   usage/APIdoc
+   usage/APIdoc
 
 
 

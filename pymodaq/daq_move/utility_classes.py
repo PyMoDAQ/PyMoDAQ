@@ -107,6 +107,16 @@ class DAQ_Move_base(QObject):
             pass
 
     def check_bound(self,position):
+        """
+
+        Parameters
+        ----------
+        position
+
+        Returns
+        -------
+
+        """
         self.move_is_done = False
         if self.settings.child('bounds','is_bounds').value():
             if position>self.settings.child('bounds','max_bound').value():

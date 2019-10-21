@@ -376,11 +376,12 @@ class ViewerND(QtWidgets.QWidget, QObject):
         x, y = self.ui.navigator2D.unscale_axis(np.mean(self.nav_x_axis['data']), np.mean(self.nav_y_axis['data']))
         self.ui.navigator2D.ui.crosshair.set_crosshair_position(x, y)
 
-        self.ROI1D.setRegion((np.min(self.x_axis['data']), np.max(self.x_axis['data'])))
-
-        self.ROI2D.setPos((np.min(self.x_axis['data']), np.min(self.y_axis['data'])))
-        self.ROI2D.setSize((np.max(self.x_axis['data']) - np.min(self.x_axis['data']),
-                            np.max(self.y_axis['data']) - np.min(self.y_axis['data'])))
+        if self.x_axis['data'] is not None:
+            self.ROI1D.setRegion((np.min(self.x_axis['data']), np.max(self.x_axis['data'])))
+        if self.x_axis['data'] is not None and self.y_axis['data'] is not None:
+            self.ROI2D.setPos((np.min(self.x_axis['data']), np.min(self.y_axis['data'])))
+            self.ROI2D.setSize((np.max(self.x_axis['data']) - np.min(self.x_axis['data']),
+                                np.max(self.y_axis['data']) - np.min(self.y_axis['data'])))
 
         self.update_Navigator()
 

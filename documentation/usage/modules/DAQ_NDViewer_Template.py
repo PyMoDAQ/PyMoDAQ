@@ -271,7 +271,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
         else: raise(Exception('Camera not defined'))
         return self.y_axis
 
-    def grab(self, Naverage=1, **kwargs):
+    def grab_data(self, Naverage=1, **kwargs):
         """
 
         """

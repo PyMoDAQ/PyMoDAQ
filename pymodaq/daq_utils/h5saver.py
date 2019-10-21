@@ -23,6 +23,55 @@ scan_types = ['', 'scan1D', 'scan2D']
 
 
 class H5Saver(QObject):
+    """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
+    the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
+    on a UI (see :numref:`other_settings`) using the widget self.settings_tree. At the creation of a new file, a node
+    group named **Raw_datas** and represented by the attribute ``raw_group`` is created and set with a metadata attribute:
+
+    * 'type' given by the **save_type** class parameter
+
+    The root group of the file is then set with a few metadata:
+
+    * 'pymodaq_version' the current pymodaq version, e.g. 1.6.2
+    * 'file' the file name
+    * 'date' the current date
+    * 'time' the current time
+
+    All datas will then be saved under this node in various groups
+
+    See Also
+    --------
+    H5Browser
+
+    Parameters
+    ----------
+    h5_file: pytables hdf5 file
+             object used to save all datas and metadas
+
+    h5_file_path: str or Path
+                  pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
+                  position within the epsilon precision (see comon_parameters variable)
+
+    save_type: str
+               an element of the list module attribute save_types = ['scan', 'detector', 'custom']
+               * 'scan' is used for DAQ_Scan module and should be used for similar application
+               * 'detector' is used for DAQ_Viewer module and should be used for similar application
+               * 'custom' should be used for customized applications
+
+    Attributes
+    ----------
+    status_sig: pyqtSignal
+                emits a signal of type Threadcommand in order to senf log information to a main UI
+    new_file_sig: pyqtSignal
+                  emits a boolean signal to let the program know when the user pressed the new file button on the UI
+
+    settings: Parameter
+               Parameter instance (pyqtgraph) containing all settings (could be represented using the settings_tree widget)
+
+    settings_tree: ParameterTree
+                   Widget representing as a Tree structure, all the settings defined in the class preamble variable ``params``
+
+    """
     status_sig = pyqtSignal(utils.ThreadCommand)
     new_file_sig = pyqtSignal(bool)
 
@@ -49,13 +98,12 @@ class H5Saver(QObject):
                 ]
 
     def __init__(self, h5_file_path=None, h5_file=None, save_type='scan'):
-        """
-        Initialize the h5Saver object
-        Parameters
-        ----------
-        h5_file_path: (Path) Path object pointing to the h5_file
-        h5_file: instance of a h5 file as opened using the pytables module
-        save_type: (str) either 'scan', 'detector' or 'custom'
+        """Initialize the H5Saver object
+
+        Creates the ``setting`` and ``settings_tree`` object
+
+
+
         """
         super(H5Saver, self).__init__()
 
@@ -91,22 +139,37 @@ class H5Saver(QObject):
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
 
     def emit_new_file(self, status):
+        """Emits the new_file_sig
+
+        Parameters
+        ----------
+        status: bool
+                emits True if a new file has been asked by the user pressing the new file button on the UI
+        """
         self.new_file_sig.emit(status)
 
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path = None):
-        """
-        init a new h5 file. Could be a file with a given name (addhoc_file_path) or following the template for scans
-        (datasets) or for detectors or a box to set a custom name (custom naming)
+        """Initializes a new h5 file.
+        Could set the h5_file attributes as:
+
+        * a file with a name following a template if ``custom_naming`` is ``False`` and ``addhoc_file_path`` is ``None``
+        * a file within a name set using a file dialog popup if ``custom_naming`` is ``True``
+        * a file with a custom name if ``addhoc_file_path`` is a ``Path`` object or a path string
+
         Parameters
         ----------
-        update_h5: (bool) create a new h5 file with name specified by other parameters if false try to open an existing
-        file or create it if it doesn't exists
-        custom_naming: (bool) if True, a selection file dialog opens to set a new file name
-        addhoc_file_path: (Path) supplied name for the file
+        update_h5: bool
+                   create a new h5 file with name specified by other parameters
+                   if false try to open an existing file and will append new data to it
+        custom_naming: bool
+                       if True, a selection file dialog opens to set a new file name
+        addhoc_file_path: Path or str
+                          supplied name by the user for the new file
 
         Returns
         -------
-        bool: True if new file has been created, False otherwise
+        update_h5: bool
+                   True if new file has been created, False otherwise
         """
         date = datetime.datetime.now()
 
@@ -175,13 +238,29 @@ class H5Saver(QObject):
             self.h5_file.root._v_attrs['time'] = date.strftime('%H:%M:%S')
 
 
-
-
         return update_h5
 
     def update_file_paths(self,update_h5=False):
+        """Apply the template depending on the 'save_type' settings child
+
+        Parameters
+        ----------
+        update_h5: bool
+                   if True, will increment the file name and eventually the current scan index
+                   if False, get the current scan index in the h5 file
+
+        Returns
+        -------
+        scan_path: Path
+        current_filename: str
+        dataset_path: Path
+
+        See Also
+        --------
+        :py:meth:`pymodaq.daq_utils.daq_utils.set_current_scan_path`
+
         """
-        """
+
         try:
             # set the filename and path
             base_path = self.settings.child(('base_path')).value()
@@ -207,6 +286,14 @@ class H5Saver(QObject):
 
 
     def get_last_scan(self):
+        """Gets the last scan node within the h5_file and under the the **raw_group**
+
+        Returns
+        -------
+        scan_group: pytables group or None
+
+
+        """
         groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
         groups.sort()
         if len(groups) != 0:
@@ -217,6 +304,8 @@ class H5Saver(QObject):
 
 
     def get_scan_index(self):
+        """ return the scan group index in the "scan templating": Scan000, Scan001 as an integer
+        """
         try:
             if self.current_scan_group is None:
                 return 0
@@ -236,6 +325,19 @@ class H5Saver(QObject):
 
 
     def load_file(self, base_path=None, file_path=None):
+        """Opens a file dialog to select a h5file saved on disk to be used
+
+        Parameters
+        ----------
+        base_path
+        file_path
+
+        See Also
+        --------
+        :py:meth:`init_file`
+        :py:meth:`pymodaq.daq_utils.daq_utils.select_file`
+
+        """
         if base_path is None:
             base_path = self.settings.child('base_path').value()
             if not os.path.isdir(base_path):
@@ -247,13 +349,16 @@ class H5Saver(QObject):
         if not isinstance(file_path, Path):
             file_path = Path(file_path)
 
-        if not file_path.suffix == 'h5':
+        if 'h5' not in file_path.suffix:
             raise IOError('Invalid file type, should be a h5 file')
 
         self.init_file(addhoc_file_path=file_path)
 
 
     def close_file(self):
+        """Flush data and close the h5file
+
+        """
         try:
             if self.h5_file is not None:
                 self.h5_file.flush()
@@ -268,18 +373,33 @@ class H5Saver(QObject):
         Check if a given node with name is in the group defined by where (comparison on lower case strings)
         Parameters
         ----------
-        where: (str or node) path or parent node instance
-        name: (str) group node name
+        where: (str or node)
+                path or parent node instance
+        name: (str)
+              group node name
 
         Returns
         -------
-        bool: True if node exists, False otherwise
+        bool
+            True if node exists, False otherwise
         """
 
         nodes_names = [node._v_name.lower() for node in self.h5_file.list_nodes(where)]
         return name.lower() in nodes_names
 
     def get_set_logger(self, where):
+        """ Retrieve or create (if absent) a logger enlargeable array to store logs
+        Get attributed to the class attribute ``logger_array``
+        Parameters
+        ----------
+        where: node
+               location within the tree where to save or retrieve the array
+
+        Returns
+        -------
+        logger_array: vlarray
+                      enlargeable array accepting strings as elements
+        """
         logger = 'Logger'
         if not logger in list(self.h5_file.get_node(where)._v_children.keys()):
             # check if logger node exist
@@ -292,17 +412,21 @@ class H5Saver(QObject):
 
 
     def get_set_group(self, where, name, title=''):
-        """
-        Retrieve or create (if absent) a node group
+        """Retrieve or create (if absent) a node group
+        Get attributed to the class attribute ``current_group``
+
         Parameters
         ----------
-        where: (str or node) path or parent node instance
-        name: (str) group node name
-        title: (str) node title
+        where: str or node
+               path or parent node instance
+        name: str
+              group node name
+        title: str
+               node title
 
         Returns
         -------
-        node: group node
+        group: group node
         """
         if not name in list(self.h5_file.get_node(where)._v_children.keys()):
             self.current_group = self.h5_file.create_group(where, name, title)
@@ -311,6 +435,29 @@ class H5Saver(QObject):
         return self.current_group
 
     def add_data_group(self,where, group_data_type, title='', settings_as_xml='', metadata=dict([])):
+        """Creates a group node at given location in the tree
+
+        Parameters
+        ----------
+        where: group node
+               where to create data group
+        group_data_type: list of str
+                         either ['data0D', 'data1D', 'data2D']
+        title: str, optional
+               a title for this node, will be saved as metadata
+        settings_as_xml: str, optional
+                         XML string created from a Parameter object to be saved as metadata
+        metadata: dict, optional
+                  will be saved as a new metadata attribute with name: key and value: dict value
+
+        Returns
+        -------
+        group: group node
+
+        See Also
+        --------
+        :py:meth:`àdd_group`
+        """
         if group_data_type not in group_data_types:
             raise Exception('Invalid data group type')
         group = self.add_group(group_data_type, '', where, title, settings_as_xml, metadata)

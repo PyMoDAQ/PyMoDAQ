@@ -234,9 +234,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         #%% create Settings menu
         self.file_menu=menubar.addMenu('File')
-        load_action=self.file_menu.addAction('Load file')
-        load_action.triggered.connect(self.load_file)
-        save_action=self.file_menu.addAction('Save file')
+        # load_action=self.file_menu.addAction('Load file')
+        # load_action.triggered.connect(self.load_file)
+        save_action=self.file_menu.addAction('Save file as')
         save_action.triggered.connect(self.save_file)
         show_action=self.file_menu.addAction('Show file content')
         show_action.triggered.connect(self.show_file_content)
@@ -336,9 +336,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),log_type='log')
 
-    def load_file(self):
-        self.h5saver.load_file()
-        self.update_file_settings()
+    # def load_file(self):
+    #     self.h5saver.load_file()
+    #     self.update_file_settings()
 
     def load_layout_state(self, file=None):
         """
@@ -397,14 +397,21 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             update_status
         """
-        if self.ui.move_to_crosshair_cb.isChecked() or self.navigator.moveat_action.isChecked():
-            if "2D" in self.scanner.settings.child('scan_options','scan_type').value():
-                if len(self.move_modules_scan)==2 and posx is not None and posy is not None:
-                    posx_real=posx*self.ui.scan2D_graph.scaled_xaxis.scaling+self.ui.scan2D_graph.scaled_xaxis.offset
-                    posy_real=posy*self.ui.scan2D_graph.scaled_yaxis.scaling+self.ui.scan2D_graph.scaled_yaxis.offset
-                    self.command_DAQ_signal.emit(["move_stages",[posx_real,posy_real]])
-                else:
-                    self.update_status("not valid configuration, check number of stages and scan2D option",log_type='log')
+        try:
+            if self.navigator is not None:
+                nav_bool = self.navigator.moveat_action.isChecked()
+            else:
+                nav_bool = False
+            if self.ui.move_to_crosshair_cb.isChecked() or nav_bool:
+                if "2D" in self.scanner.settings.child('scan_options','scan_type').value():
+                    if len(self.move_modules_scan)==2 and posx is not None and posy is not None:
+                        posx_real=posx*self.ui.scan2D_graph.scaled_xaxis.scaling+self.ui.scan2D_graph.scaled_xaxis.offset
+                        posy_real=posy*self.ui.scan2D_graph.scaled_yaxis.scaling+self.ui.scan2D_graph.scaled_yaxis.offset
+                        self.command_DAQ_signal.emit(["move_stages",[posx_real,posy_real]])
+                    else:
+                        self.update_status("not valid configuration, check number of stages and scan2D option",log_type='log')
+        except Exception as e:
+            self.update_status(getLineInfo()+ str(e),log_type='log')
 
     def quit_fun(self):
         """
@@ -1798,8 +1805,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                     if self.detector_modules[ind_plot_det].ui.viewers[0].viewer_type == 'Data1D':
                         if label == '':
                             label = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['label']
-                    if units == '':
-                        units = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['units']
+                        if units == '':
+                            units = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['units']
 
                     self.ui.scan2D_graph.y_axis = dict(data=self.scan_y_axis,
                                                        units=units,

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Saving datas &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>Saving datas &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -104,7 +104,7 @@
 <li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="How_to_start.html">How to Start</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="Description.html">Description</a><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="Description.html">Modules</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="modules/Main_Modules.html">Main Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/data_viewers.html">Data Viewers</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Saving datas</a><ul>
@@ -125,6 +125,7 @@
 <li class="toctree-l1"><a class="reference internal" href="tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -170,7 +171,7 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-          <li><a href="Description.html">Description</a> &raquo;</li>
+          <li><a href="Description.html">Modules</a> &raquo;</li>
         
       <li>Saving datas</li>
     
@@ -197,14 +198,16 @@
 known as <em>hdf5</em>. This format was originally developped to save big volume of datas from large instruments.
 Its structure is hierarchical (a bit as folder trees) and one can add metadata to all entries in the tree.
 For instance, the data type, shape but also some more complex info such as all the settings related to a
-module or a plugin. This gives a unique file containing both datas and metadata.</p>
+module or a plugin. This gives a unique file containing both datas and metadata. For these data and metadata
+to be saved and interpreted correctly by the <em>H5Browser</em>, a utility module is used: <a class="reference internal" href="modules/Utility_Modules.html#h5saver-module"><span class="std std-ref">H5Saver</span></a> within
+the DAQ_Viewer module and the DAQ_Scan module. This should also be used when building a <em>custom application</em>.</p>
 <div class="section" id="from-daq-viewer">
 <span id="daq-viewer-saving"></span><h2>From DAQ_Viewer<a class="headerlink" href="#from-daq-viewer" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="single-datas">
-<h3>Single Datas<a class="headerlink" href="#single-datas" title="Permalink to this headline">¶</a></h3>
-<p>Datas saved directly from a DAQ_Viewer (for instance the one on <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 13</span></a>) will be recorded in
+<span id="daq-viewer-saving-single"></span><h3>Single Datas<a class="headerlink" href="#single-datas" title="Permalink to this headline">¶</a></h3>
+<p>Datas saved directly from a DAQ_Viewer (for instance the one on <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 14</span></a>) will be recorded in
 a h5file whose structure will be represented
-like <a class="reference internal" href="#single-data"><span class="std std-numref">Fig. 24</span></a> using PyMoDAQ’s h5 browser (see <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a>). The various type
+like <a class="reference internal" href="#single-data"><span class="std std-numref">Fig. 25</span></a> using PyMoDAQ’s h5 browser (see <a class="reference internal" href="modules/Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a>). The various type
 of data exported by the viewer are saved in a dedicated entry (<em>Data0D</em>, …) and all channels are recorded
 within as subentries. Metadata from the detector settings, the measurement module and the activated ROIs
 are also recorded.</p>
@@ -212,13 +215,13 @@ are also recorded.</p>
 <div></div></blockquote>
 <div class="figure" id="id2">
 <span id="single-data"></span><img alt="single_data" src="../_images/single_data.png" />
-<p class="caption"><span class="caption-number">Fig. 24 </span><span class="caption-text">h5 file content containing saved data from a DAQ_Viewer detector (see <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 13</span></a>)</span></p>
+<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">h5 file content containing saved data from a DAQ_Viewer detector (see <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 14</span></a>)</span></p>
 </div>
 </div>
 <div class="section" id="continuous-saving">
 <span id="id1"></span><h3>Continuous Saving<a class="headerlink" href="#continuous-saving" title="Permalink to this headline">¶</a></h3>
 <p>When the <em>continuous saving</em> parameter is set, new parameters are appearing on the <em>DAQ_Viewer</em> panel
-(see <a class="reference internal" href="#figure-continuous"><span class="std std-numref">Fig. 25</span></a>).</p>
+(see <a class="reference internal" href="#figure-continuous"><span class="std std-numref">Fig. 26</span></a>).</p>
 <ul>
 <li><p class="first"><em>Base path</em>: indicates where the data will be saved. If it doesn’t exist the module will try to create it</p>
 </li>
@@ -235,19 +238,19 @@ are also recorded.</p>
 </ul>
 <div class="figure" id="id3">
 <span id="figure-continuous"></span><img alt="continuous" src="../_images/continuous_saving.png" />
-<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">Continuous Saving options</span></p>
+<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">Continuous Saving options</span></p>
 </div>
 <p>The saved file will follow this general structure:</p>
 <blockquote>
 <div>D:\Data\2018\20181220\Data_20181220_16_58_48.h5</div></blockquote>
 <p>With a base path (<code class="docutils literal notranslate"><span class="pre">D:\Data</span></code> in this case) followed by a subfolder year, a subfolder day and a filename
 formed from a <em>base name</em> followed by the date of the day and the time at which you started to log data.
-<a class="reference internal" href="#figure-continuous-struct"><span class="std std-numref">Fig. 26</span></a> displays the tree structure of such a file, with</p>
+<a class="reference internal" href="#figure-continuous-struct"><span class="std std-numref">Fig. 27</span></a> displays the tree structure of such a file, with</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id4">
 <span id="figure-continuous-struct"></span><img alt="continuous" src="../_images/continuous_data_structure.png" />
-<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">Continuous Saving options</span></p>
+<p class="caption"><span class="caption-number">Fig. 27 </span><span class="caption-text">Continuous Saving options</span></p>
 </div>
 </div>
 </div>
@@ -256,16 +259,16 @@ formed from a <em>base name</em> followed by the date of the day and the time at
 <p>DAQ_Scan module will save your data in <strong>datasets</strong>. Each <strong>dataset</strong> is a unique h5 file and may contain multiple scans. The
 idea behind this is to have a unique file for a set of related data (the <strong>dataset</strong>) together with all the meta information:
 logger data, module parameters (settings, ROI…) even <em>png</em> screenshots of the various panels.</p>
-<p><a class="reference internal" href="#figure-h5browser-data"><span class="std std-numref">Fig. 27</span></a> displays the content of a typical <strong>dataset</strong> file containing various scans and how each data
+<p><a class="reference internal" href="#figure-h5browser-data"><span class="std std-numref">Fig. 28</span></a> displays the content of a typical <strong>dataset</strong> file containing various scans and how each data
 and metadata is used by the H5Browser to display the info to the user.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id5">
 <span id="figure-h5browser-data"></span><img alt="h5 browser" src="../_images/h5browser_datas.png" />
-<p class="caption"><span class="caption-number">Fig. 27 </span><span class="caption-text">h5 browser and arrows to explain how each data or metadata is being displayed</span></p>
+<p class="caption"><span class="caption-number">Fig. 28 </span><span class="caption-text">h5 browser and arrows to explain how each data or metadata is being displayed</span></p>
 </div>
-<p>In order to sdave correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
-it will save scans and datas following the rules displayed on <a class="reference internal" href="#figure-dataset-layout"><span class="std std-numref">Fig. 28</span></a> below:</p>
+<p>In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
+it will save scans and datas following the rules displayed on <a class="reference internal" href="#figure-dataset-layout"><span class="std std-numref">Fig. 29</span></a> below:</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="figure-dataset-layout">

@@ -40,6 +40,17 @@ data viewer (type :ref:`NDviewer` that can display data dimensionality up to 4)
 .. :download:`png <h5browser.png>`
 
 
+.. _h5saver_module:
+
+H5Saver
+-------
+
+This module is a help to save data in a hierachical hdf5 binary file through the **pytables** package. Using the ``H5Saver``
+object will make sure you can explore your datas with the H5Browser. The object can be used to: punctually save one set
+of data such as with the DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save multiple acquisition such as with the DAQ_Scan
+(see :ref:`daq_scan_saving`) or save on the fly with enlargeable arrays such as the :ref:`continuous_saving` mode of the DAQ_Viewer.
+
+See :ref:`H5SaverClassDescr` for a detailled description
 
 .. _preset_manager:
 

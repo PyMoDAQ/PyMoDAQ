@@ -7,6 +7,9 @@ from pymodaq.daq_utils.gui_utils import clickable
 
 
 class QLED(QLabel):
+    """Boolean Object as a label displaying a green disk when True and a red one when False. Clickable
+
+    """
     value_changed=pyqtSignal(bool)
     def __init__(self,parent=None):
         QLabel.__init__(self,parent)

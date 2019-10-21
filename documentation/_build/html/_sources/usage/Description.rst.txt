@@ -1,5 +1,5 @@
-Description
-===========
+Modules
+=======
 
 .. toctree::
    :maxdepth: 3

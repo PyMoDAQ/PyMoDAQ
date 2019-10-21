@@ -22,11 +22,11 @@ The flow of this module is as follow:
 Introduction
 ------------
 
-This module has a two windows,
+This module has two windows,
 one is a dashboard (:numref:`daq_scan_dashboard`) where a log and all declared actuators and detector
 will be loaded as instances of DAQ_Move and DAQ_Viewer and
 the other one is the main control window (see :numref:`daq_scan_main`).
-The dashboard will give full control for manual adjustments
+The dashboard gives you full control for manual adjustments
 of each actuator, checking their impact on live data from the detectors. Once all is set, one can move to
 an automated scan using the main control window.
 
@@ -42,8 +42,8 @@ an automated scan using the main control window.
 
 Main Control Window
 -------------------
-The main control window is comprised of a left panel for setting all parameters while the right panel will
-dispay live data taken during the scan.
+The main control window is comprised of a left panel to set all parameters while the right panel will
+dispay live data taken during a scan.
 
    .. _daq_scan_main:
 
@@ -91,7 +91,7 @@ save data and plot live information.
 
 .. :download:`png <list_modules.png>`
 
-* **Moves/Detectors** (see :numref:`list_modules`)
+* **Moves/Detectors** (see :numref:`list_modules`):
 
   * **Moves**: list of all declared *DAQ_Move* modules (and present on the dashboard). One can select
     one or more modules for the current scan.
@@ -105,12 +105,12 @@ save data and plot live information.
     rough cadencing if needed
   * **timeout**: raise a timeout if one of the selected modules is longer than timeout to respond
 
-* **Scan options**:
+* **Scan options** (see :numref:`other_settings`):
 
   * **N average**: Select how many set scans to perform. Save all individual scans and its average
   * **Plot From**: select the detector from which data will be taken in order to plot live data
 
-* **Saving options**
+* **Saving options** (see :numref:`other_settings`):
 
   * **Save 2D datas**: if not selected, 2D datas will **not** be saved but only lineouts or integrated area (only in
     order to save memory space, but dangerous as you loose the possibility to get back initial raw data.
@@ -128,7 +128,7 @@ save data and plot live information.
       * **compression library**: see *pytables* package or *HDF5* documentation for details
       * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
 
-* **Scanner Settings**:
+* **Scanner Settings** (see :numref:`other_settings`):
 
   * **Scan type**: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
     scan as a function of two actuators. Ohter options to come: *batch scan* (list of single scans to perform in a row)
@@ -148,6 +148,16 @@ save data and plot live information.
     * **Start, Stop, Step**: for each axes (each actuators)
     * **Rmax, Rstep**: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.
 
+   .. _other_settings:
+
+.. figure:: /image/DAQ_Scan/other_settings.png
+   :alt: other_settings
+
+   Other Scan Settings
+
+.. :download:`png <other_settings.png>`
+
+
 Live data
 *********
 
@@ -163,11 +173,11 @@ by the setting **plot from** (defining which DAQ_Viewer module exports data). Th
    :alt: 1Ddetector
 
    An example of a 1D detector having 2 channels. 0D data are generated as well from the integration of channel CH0
-   within the red region of interest.
+   within the cyan region of interest (ROI_00).
 
 
 For instance, if the chosen detector is a 1D one, see :numref:`det1D`. Such a detector can generate various
-type of live data:
+type of live data. It will export the raw 1D data and integrated 0D data within the declared ROI, then:
 
 * if the scan is 1D:
 

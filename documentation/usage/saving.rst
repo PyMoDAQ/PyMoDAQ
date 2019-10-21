@@ -7,12 +7,16 @@ Datas saved using PyMoDAQ, either the *DAQ_Scan* or the *DAQ_Viewer* modules, us
 known as *hdf5*. This format was originally developped to save big volume of datas from large instruments.
 Its structure is hierarchical (a bit as folder trees) and one can add metadata to all entries in the tree.
 For instance, the data type, shape but also some more complex info such as all the settings related to a
-module or a plugin. This gives a unique file containing both datas and metadata.
+module or a plugin. This gives a unique file containing both datas and metadata. For these data and metadata
+to be saved and interpreted correctly by the *H5Browser*, a utility module is used: :ref:`h5saver_module` within
+the DAQ_Viewer module and the DAQ_Scan module. This should also be used when building a *custom application*.
 
 .. _daq_viewer_saving:
 
 From DAQ_Viewer
 ---------------
+
+.. _daq_viewer_saving_single:
 
 Single Datas
 ************
@@ -98,7 +102,7 @@ and metadata is used by the H5Browser to display the info to the user.
    h5 browser and arrows to explain how each data or metadata is being displayed
 
 
-In order to sdave correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
+In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
 it will save scans and datas following the rules displayed on :numref:`figure_dataset_layout` below:
 
    .. _figure_dataset_layout:

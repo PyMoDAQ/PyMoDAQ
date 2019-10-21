@@ -332,28 +332,15 @@ and call whatever module I need within (meaning there is a __init__.py file in t
     #and then use it as you see fit in your module
 
 
-Specific TCP/IP plugin
-----------------------
-
-It is possible to use a TCP/IP plugin in order to communicate with a distant client. For instance, the module
-``daq_2Dviewer_TCP_GRABBER`` is one such example. It inherits from the base ``DAQ_TCP_Server`` class:
-
-.. code-block:: python
-
-    from pymodaq.daq_viewer.utility_classes import DAQ_TCP_server
-
-This plugin is still experimental and focused on one particular relation with a client. Please open an issue on github
-if you have specific need and/or propositions.
-
 How to contribute?
 ------------------
 
 If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
-to do so!!), you will have to follow the rules as
-stated above. However, the best practice would be to *fork* pymodaq_plugins repository. On windows, you can use
-`Github Desktop`__. Then you can manually install the forked package (typically using ``pip install -e .`` from
-winpython command line where you *cd* within the forked package. This command will kind of install the package but
-any change you apply on the local folderwill be applied on the package. Once you're ready with a working plugin, you can then
+to do so!!), you will have to follow the rules as stated above. However, the best practice would be to *fork*
+pymodaq_plugins repository. On windows, you can use
+`Github Desktop`__. Then you can manually install the forked package in developer using ``pip install -e .`` from
+the command line where you *cd* within the forked package. This command will install the package but
+any change you apply on the local folder will be applied on the package. Once you're ready with a working plugin, you can then
 *push* your branch that will be merged with the main branch after validation.
 
 __ https://desktop.github.com/

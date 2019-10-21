@@ -3,7 +3,14 @@
 =========
 Changelog
 =========
-
+* :release:`1.6.3 <2019-10-14>`
+* :bug:`14` Logger node was not saved properly from daq_scan
+* :feature:`13` Added axes labels and units within h5 browser when looking at live scan registered data
+* :support:`12` Changed the case to lower in the github repo (was done in windows who doesn't care between lower or
+  upper so was not applying changes on github...
+* :bug:`12` Removed too specific package requirements for plugins (win32com for instance)
+* :support:`7` Changed Licence specification to CECILL-B
+* :bug:`6` Removed dependance of unnecessary Dask package
 * :release:`1.6.2 <2019-09-16>`
 * :bug:`0` pep8 related modification of variable names not taken into account in version 1.6.1 and producing errors in daq_scan module
 * :release:`1.6.1 <2019-09-10>`

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Library Reference &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>Library Reference &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -46,7 +46,9 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Main modules" href="api/API_main_modules.html" />
+    <link rel="prev" title="Contributors" href="Contributors.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -98,15 +100,21 @@
             
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Description.html">Modules</a></li>
 <li class="toctree-l1"><a class="reference internal" href="CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Contributors.html">Contributors</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Library Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/API_main_modules.html">Main modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/API_Utility_Modules.html">Utility Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/API_Utility_Library.html">Utility Libraries</a></li>
+</ul>
+</li>
 </ul>
 
             
@@ -175,8 +183,32 @@
 <span id="id1"></span><h1>Library Reference<a class="headerlink" href="#library-reference" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="api/API_Move_Module.html">DAQ_Move modules</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/API_Move_Module.html#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/API_main_modules.html">Main modules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/api_main_modules/API_Move_Module.html">DAQ_Move modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/api_main_modules/API_Move_Module.html#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/API_Utility_Modules.html">Utility Modules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/API_Utility_Modules.html#h5saver-module">h5saver module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/API_Utility_Library.html">Utility Libraries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/API_Utility_Library.html#daq-utils">daq_utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/tcp_ip.html">TCP/IP related methods</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/units_conversion.html">Units conversion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/mathematical.html">Mathematical utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/scan.html">Scan utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/file_management.html">File management</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/API_Utility_Library.html#custom-tree-module">custom_tree module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/custom_tree/new_items.html">New Tree items</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/custom_tree/param_xml.html">Parameter and XML</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/utility_api/custom_tree/param_manage.html">Parameter management</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -188,6 +220,15 @@
            
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="api/API_main_modules.html" class="btn btn-neutral float-right" title="Main modules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="Contributors.html" class="btn btn-neutral float-left" title="Contributors" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

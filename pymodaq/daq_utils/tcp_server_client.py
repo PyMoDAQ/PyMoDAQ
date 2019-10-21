@@ -10,7 +10,7 @@ import socket
 import select
 import numpy as np
 from pymodaq.daq_utils.daq_utils import check_received_length, ThreadCommand, \
-    getLineInfo, send_scalar, send_string, send_list, get_scalar, get_int, get_string, send_array
+    getLineInfo, send_scalar, send_string, send_list, get_scalar, get_int, get_string, send_array, get_list
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
@@ -184,10 +184,7 @@ class TCPClient(QObject):
         messg = ThreadCommand(message)
 
         if message == 'set_info':
-            list_len = get_int(self.socket)
-            path = []
-            for ind in range(list_len):
-                path.append(get_string(self.socket))
+            path = get_list(self.socket, 'string')
             param_xml = get_string(self.socket)
             messg.attributes = [path, param_xml]
 

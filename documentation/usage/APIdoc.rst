@@ -5,7 +5,8 @@ Library Reference
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 5
 
-   api/API_Move_Module
-
+   api/API_main_modules
+   api/API_Utility_Modules
+   api/API_Utility_Library

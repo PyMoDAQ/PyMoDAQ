@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>Plugins &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../../',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -104,7 +104,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Modules</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Main_Modules.html">Main Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
@@ -123,7 +123,6 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#hardware-averaging">Hardware averaging:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#hardware-needed-files">Hardware needed files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#specific-tcp-ip-plugin">Specific TCP/IP plugin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#how-to-contribute">How to contribute?</a></li>
 </ul>
 </li>
@@ -134,6 +133,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -179,7 +179,7 @@
     
       <li><a href="../../index.html">Docs</a> &raquo;</li>
         
-          <li><a href="../Description.html">Description</a> &raquo;</li>
+          <li><a href="../Description.html">Modules</a> &raquo;</li>
         
       <li>Plugins</li>
     
@@ -440,16 +440,16 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 <div class="section" id="hardware-settings">
 <span id="id2"></span><h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
 <p>An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
-These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a>.
+These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a>.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object <code class="docutils literal notranslate"><span class="pre">self.settings</span></code>.
 This object inherits from on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id10">
 <span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
-<p class="caption"><span class="caption-number">Fig. 29 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
+<p class="caption"><span class="caption-number">Fig. 30 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span></p>
 </div>
-<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a>:</p>
+<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Dll library:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;andor_lib&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;browsepath&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">libpath</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera SN:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_serialnumber&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
@@ -464,11 +464,11 @@ This object inherits from on the <code class="docutils literal notranslate"><spa
 </div>
 <p>The list of available types of parameters <a href="#id4"><span class="problematic" id="id5">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">pymodaq.daq_utils.custom_parameter_tree.py</span></code>) is:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a> is of type group</li>
+<li><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a> is of type group</li>
 <li><code class="docutils literal notranslate"><span class="pre">int</span></code> : settable integer (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">float</span></code> : settable float (SpinBox_Custom object)</li>
 <li><code class="docutils literal notranslate"><span class="pre">str</span></code> : a QLineEdit object (see Qt5 documentation)</li>
-<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 29</span></a> is a combo box</li>
+<li><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a> is a combo box</li>
 <li><code class="docutils literal notranslate"><span class="pre">bool</span></code> : checkable boolean</li>
 <li><code class="docutils literal notranslate"><span class="pre">led</span></code> : checkable boolean in the form of a green (True) of red (False) led</li>
 <li><code class="docutils literal notranslate"><span class="pre">date_time</span></code> : a QDateTime object (see Qt5 documentation)</li>
@@ -679,24 +679,14 @@ and call whatever module I need within (meaning there is a __init__.py file in t
 </pre></div>
 </div>
 </div>
-<div class="section" id="specific-tcp-ip-plugin">
-<h2>Specific TCP/IP plugin<a class="headerlink" href="#specific-tcp-ip-plugin" title="Permalink to this headline">¶</a></h2>
-<p>It is possible to use a TCP/IP plugin in order to communicate with a distant client. For instance, the module
-<code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_TCP_GRABBER</span></code> is one such example. It inherits from the base <code class="docutils literal notranslate"><span class="pre">DAQ_TCP_Server</span></code> class:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymodaq.daq_viewer.utility_classes</span> <span class="kn">import</span> <span class="n">DAQ_TCP_server</span>
-</pre></div>
-</div>
-<p>This plugin is still experimental and focused on one particular relation with a client. Please open an issue on github
-if you have specific need and/or propositions.</p>
-</div>
 <div class="section" id="how-to-contribute">
 <h2>How to contribute?<a class="headerlink" href="#how-to-contribute" title="Permalink to this headline">¶</a></h2>
 <p>If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
-to do so!!), you will have to follow the rules as
-stated above. However, the best practice would be to <em>fork</em> pymodaq_plugins repository. On windows, you can use
-<a class="reference external" href="https://desktop.github.com/">Github Desktop</a>. Then you can manually install the forked package (typically using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> from
-winpython command line where you <em>cd</em> within the forked package. This command will kind of install the package but
-any change you apply on the local folderwill be applied on the package. Once you’re ready with a working plugin, you can then
+to do so!!), you will have to follow the rules as stated above. However, the best practice would be to <em>fork</em>
+pymodaq_plugins repository. On windows, you can use
+<a class="reference external" href="https://desktop.github.com/">Github Desktop</a>. Then you can manually install the forked package in developer using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-e</span> <span class="pre">.</span></code> from
+the command line where you <em>cd</em> within the forked package. This command will install the package but
+any change you apply on the local folder will be applied on the package. Once you’re ready with a working plugin, you can then
 <em>push</em> your branch that will be merged with the main branch after validation.</p>
 </div>
 </div>

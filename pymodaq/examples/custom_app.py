@@ -13,7 +13,7 @@ from pymodaq.daq_utils.daq_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import select_file
+from pymodaq.daq_utils.daq_utils import select_file, getLineInfo
 
 
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -24,6 +24,8 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.h5browser import browse_data
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5browser import H5Browser
+from pymodaq.daq_utils.h5saver import H5Saver, save_types
+
 
 
 class CustomApp(QtWidgets.QWidget, QObject):
@@ -32,9 +34,10 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     #list of dicts enabling the settings tree on the user interface
     params = [{'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
+                {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data'},
                 {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
                 {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
-                {'title': 'Do something:', 'name': 'do_something', 'type': 'bool', 'value': False},
+                {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},
                 {'title': 'Something done:', 'name': 'something_done', 'type': 'led', 'value': False, 'readonly': True},
                 {'title': 'Infos:', 'name': 'info', 'type': 'text', 'value': ""},
                 ]},
@@ -48,26 +51,23 @@ class CustomApp(QtWidgets.QWidget, QObject):
                   ]},
               ]
 
-    def __init__(self, parent):
+    def __init__(self, dockarea):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(CustomApp, self).__init__()
-        if not isinstance(parent, DockArea):
+        if not isinstance(dockarea, DockArea):
             raise Exception('no valid parent container, expected a DockArea')
-        self.dockarea = parent
-        self.mainwindow = parent.parent()
+        self.dockarea = dockarea
+        self.mainwindow = dockarea.parent()
 
         #init the object parameters
-        self.one_parameter = None
-        self.another_parameter = None
         self.detector = None
-        self.save_file_pathname = None
         self.raw_data = []
 
 
         #init the user interface
-        self.set_GUI()
+        self.setup_UI()
 
-    def set_GUI(self):
+    def setup_UI(self):
         ###########################################
         ###########################################
         #init the docks containing the main widgets
@@ -76,6 +76,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
         #this one for the custom application settings
         dock_settings = Dock('Settings', size=(350, 350))
         self.dockarea.addDock(dock_settings, 'left')
+
         # create main parameter tree
         self.settings_tree = ParameterTree()
         dock_settings.addWidget(self.settings_tree, 10)
@@ -87,6 +88,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
         #any change to the tree on the user interface will call the parameter_tree_changed method where all actions will be applied
         self.settings.sigTreeStateChanged.connect(
             self.parameter_tree_changed)
+
 
         ################################################################
         #create a logger dock where to store info senf from the programm
@@ -153,7 +155,8 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     @pyqtSlot(OrderedDict)
     def data_done(self,data):
-        print(data)
+        #print(data)
+        pass
 
 
     @pyqtSlot(QRectF)
@@ -178,6 +181,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
                     if param.value():
                         self.log_signal.emit('Do something')
                         self.detector.grab_done_signal.connect(self.show_data)
+                        self.raw_data = [] #init the data to be finally saved
                         self.settings.child('main_settings', 'something_done').setValue(True)
                     else:
                         self.log_signal.emit('Stop Doing something')
@@ -196,8 +200,16 @@ class CustomApp(QtWidgets.QWidget, QObject):
         ----------
         data: (OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
         """
-        data0D = [[data['data0D'][key]] for key in data['data0D']]
-        self.raw_data.append(data0D)
+        data0D = [[data['data0D'][key]['data']] for key in data['data0D']]
+        if self.raw_data == []:
+            self.raw_data = data0D
+        else:
+            if len(self.raw_data) != len(data0D):
+                self.raw_data = data0D
+            else:
+                for ind in range(len(data0D)):
+                    self.raw_data[ind].append(data0D[ind][0])
+
         self.target_viewer.show_data(data0D)
 
     def create_menu(self, menubar):
@@ -271,39 +283,36 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     def save_data(self):
         try:
-            fname = utils.select_file(start_path=self.save_file_pathname, save=True, ext='h5')
+            path = utils.select_file(start_path=self.settings.child('main_settings', 'base_path').value(), save=True, ext='h5')
+            if path is not None:
+                #init the file object with an addhoc name given by the user
+                h5saver = H5Saver(save_type='custom')
+                h5saver.init_file(update_h5=True, addhoc_file_path=path)
 
-            if not (not (fname)):
-                with tables.open_file(str(fname), mode='w', title='an example h5 file name') as h5file:
-                    data_to_save = np.squeeze(np.array(self.raw_data))
-                    #save metadata
-                    h5file.root._v_attrs['settings'] = custom_tree.parameter_to_xml_string(self.settings)
-                    for ind in range(data_to_save.shape[1]):
-                        arr = h5file.create_array('/', 'data_{:d}'.format(ind), data_to_save[:,ind])
-                        arr._v_attrs['shape'] = data_to_save.shape[0]
-                        arr._v_attrs['type'] = 'data1D'
+                #save all metadata
+                settings_str = custom_tree.parameter_to_xml_string(self.settings)
+                settings_str = b'<All_settings>' + settings_str
+                settings_str += custom_tree.parameter_to_xml_string(self.detector.settings) + \
+                                custom_tree.parameter_to_xml_string(h5saver.settings) + \
+                                b'</All_settings>'
 
-                    arr = h5file.create_array('/', 'data_2D', data_to_save)
-                    arr._v_attrs['shape'] = data_to_save.shape
-                    arr._v_attrs['type'] = 'data2D'
+                data_group = h5saver.add_data_group(h5saver.raw_group, group_data_type='data0D', title='data from custom app',
+                                       settings_as_xml=settings_str )
 
+                for dat in self.raw_data:
+                    channel = h5saver.add_CH_group(data_group)
+                    data_dict = dict(data=np.array(dat), x_axis=dict(data=np.linspace(0,len(dat)-1,len(dat)),units='pxl'))
+                    h5saver.add_data(channel, data_dict=data_dict,scan_type='')
 
-
-                    logger = "logging"
-                    text_atom = tables.atom.ObjectAtom()
-                    logger_array = h5file.create_vlarray('/', logger, atom=text_atom)
-                    logger_array._v_attrs['type'] = 'list'
-                    for ind_log in range(self.logger_list.count()):
-                        txt = self.logger_list.item(ind_log).text()
-                        logger_array.append(txt)
-
-                st = 'file {:s} has been saved'.format(fname)
+                st = 'file {:s} has been saved'.format(str(path))
                 self.add_log(st)
-                self.settings.child('min_settings', 'info').setValue(st)
+                self.settings.child('main_settings', 'info').setValue(st)
+
+                h5saver.close_file()
 
 
         except Exception as e:
-            self.add_log(str(e))
+            self.add_log(getLineInfo() + str(e))
 
 
     @pyqtSlot(str)

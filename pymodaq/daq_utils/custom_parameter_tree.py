@@ -25,14 +25,23 @@ from pathlib import Path
 import numpy as np
 import os
 
-
 def get_param_path(param):
-    path = []
-    par_tmp = param
-    while par_tmp.parent() is not None:
-        path.append(par_tmp.name())
-        par_tmp = param.parent()
-    return par_tmp[-1::-1]
+    """
+
+    Parameters
+    ----------
+    param
+
+    Returns
+    -------
+
+    """
+    path = [param.name()]
+    while param.parent() is not None:
+        path.append(param.parent().name())
+        param = param.parent()
+    return path[::-1]
+
 
 #%% with attribute
 def walk_parameters_to_xml(parent_elt=None,param=None):
@@ -71,7 +80,7 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
 
         See Also
         --------
-        walk_parameters_to_xml
+        add_text_to_elt, walk_parameters_to_xml, dict_from_param
 
     """
 
@@ -100,6 +109,17 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
 
 
 def add_text_to_elt(elt, param):
+    """Add a text filed in a xml element corresponding to the parameter value
+
+    Parameters
+    ----------
+    elt: XML elt
+    param: Parameter
+
+    See Also
+    --------
+    add_text_to_elt, walk_parameters_to_xml, dict_from_param
+    """
     param_type = str(param.type())
     if param_type == 'bool' or param_type == 'bool_push' or param_type == 'led':
         if param.value():
@@ -135,6 +155,20 @@ def add_text_to_elt(elt, param):
     elt.text = text
 
 def dict_from_param(param):
+    """Get Parameter properties as a dictionary
+
+    Parameters
+    ----------
+    param: Parameter
+
+    Returns
+    -------
+    opts: dict
+
+    See Also
+    --------
+    add_text_to_elt, walk_parameters_to_xml, dict_from_param
+    """
     opts = dict([])
     param_type = str(param.type())
     opts.update(dict(type=param_type))
@@ -179,34 +213,29 @@ def dict_from_param(param):
     return opts
 
 def parameter_to_xml_string(param):
-    """
-        Convert  the given parameter to XML string.
+    """ Convert  a Parameter to a XML string.
 
-        =============== ================================ ===============================
-        **Parameters**    **Type**                        **Description**
-        paramm           instance of pyqtgraph parameter  The parameter to be converted
-        =============== ================================ ===============================
+    Parameters
+    ----------
+    param: Parameter
 
-        Returns
-        -------
-        string
-            The converted string XML element.
+    Returns
+    -------
+    str: XMl string
 
-        See Also
-        --------
-        walk_parameters_to_xml
+    See Also
+    --------
+    add_text_to_elt, walk_parameters_to_xml, dict_from_param
 
-        Examples
-        --------
-
-        >>> import custom_parameter_tree as cpt
-        >>> from pyqtgraph.parametertree import Parameter
-        >>>    #Create an instance of Parameter
-        >>> settings=Parameter(name='settings')  
-        >>> converted_xml=cpt.parameter_to_xml_string(settings)
-        >>>    # The converted Parameter
-        >>> print(converted_xml)                 
-        b'<settings title="settings" type="None" />'
+    Examples
+    --------
+    >>> from pyqtgraph.parametertree import Parameter
+    >>>    #Create an instance of Parameter
+    >>> settings=Parameter(name='settings')
+    >>> converted_xml=parameter_to_xml_string(settings)
+    >>>    # The converted Parameter
+    >>> print(converted_xml)
+    b'<settings title="settings" type="None" />'
     """
     xml_elt=walk_parameters_to_xml(param=param)
     return ET.tostring(xml_elt)
@@ -361,6 +390,16 @@ def set_txt_from_elt(el, param_dict):
 
 
 def elt_to_dict(el):
+    """Convert xml element attributes to a dictionnary
+
+    Parameters
+    ----------
+    el
+
+    Returns
+    -------
+
+    """
     param = dict([])
 
     # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
@@ -492,8 +531,7 @@ def XML_string_to_parameter(xml_string):
     return params
 
 def iter_children(param,childlist=[]):
-    """
-        | Iterator over all sub children of a given parameters.
+    """Get a list of parameters name under a given Parameter
         | Returns all childrens names.
 
         =============== ================================= ====================================
@@ -534,7 +572,7 @@ def iter_children(param,childlist=[]):
     return childlist
 
 def iter_children_params(param,childlist=[]):
-    """
+    """Get a list of parameters under a given Parameter
 
     """
     for child in param.children():
@@ -543,14 +581,26 @@ def iter_children_params(param,childlist=[]):
             childlist.extend(iter_children_params(child,[]))
     return childlist
 
-def get_param_path(param):
-    path = [param.name()]
-    while param.parent() is not None:
-        path.append(param.parent().name())
-        param = param.parent()
-    return path[::-1]
+# def get_param_path(param):
+#     path = [param.name()]
+#     while param.parent() is not None:
+#         path.append(param.parent().name())
+#         param = param.parent()
+#     return path[::-1]
 
 def get_param_from_name(parent,name):
+    """Get Parameter under parent whose name is name
+
+    Parameters
+    ----------
+    parent: Parameter
+    name: str
+
+    Returns
+    -------
+    ch: Parameter
+
+    """
     for child in parent.children():
         if child.name() == name:
             return child
@@ -823,10 +873,6 @@ class SliderParameter(Parameter):
         file_browserParameterItem
     """
     itemClass = SliderParameterItem
-
-
-
-
 registerParameterType('slide', SliderParameter, override=True)
 
 class SliderSpinBox(QtWidgets.QWidget):
@@ -1166,8 +1212,6 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
     #         'slide': float
     #     }[self.opts['type']]
     #     return fn(v)
-
-
 registerParameterType('int',SimpleParameterCustom, override=True)
 registerParameterType('float', SimpleParameterCustom , override=True)
 registerParameterType('bool',SimpleParameterCustom, override=True)
@@ -1323,8 +1367,6 @@ class ListParameter_custom(pTypes.ListParameter):
         """
         self.sigActivated.emit(self)
         self.emitStateChanged('activated', None)
-
-
 registerParameterType('list', ListParameter_custom, override=True)
 
 
@@ -2059,8 +2101,6 @@ class TextParameterItemCustom(pTypes.TextParameterItem):
         super(TextParameterItemCustom, self).__init__(param, depth)
 
         self.textBox.setMaximumHeight(50)
-
-
 
 class TextParameter(Parameter):
     """Editable string; displayed as large text box in the tree."""

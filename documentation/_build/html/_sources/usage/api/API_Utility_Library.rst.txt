@@ -1,19 +1,36 @@
-API_Utility_Library
-===================
 
-.. toctree::
-   :maxdepth: 2
 
-DAQ Utils
+.. _UtilsClassDescr:
+
+Utility Libraries
+*****************
+
+daq_utils
 ---------
 
-`DAQ Utils`_
- 
-.. _DAQ Utils: file:autoapi/DAQ_utils/index.html
+.. toctree::
+   :maxdepth: 5
 
-Custom Parameter tree
----------------------
+   utility_api/tcp_ip
+   utility_api/units_conversion
+   utility_api/mathematical
+   utility_api/scan
+   utility_api/file_management
 
-`Custom Parameter Tree`_
 
-.. _Custom Parameter Tree: file:autoapi/custom_parameter_tree/index.html
+custom_tree module
+------------------
+
+Extension of the *pyqtgraph* Parameter, ParameterTree items and dedicated functions to deals with Parameters
+(e.g. save them in XML)
+
+.. toctree::
+   :maxdepth: 5
+
+   utility_api/custom_tree/new_items
+   utility_api/custom_tree/param_xml
+   utility_api/custom_tree/param_manage
+
+
+
+

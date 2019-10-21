@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ_Move modules &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>DAQ_Move modules &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../../',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -46,7 +46,8 @@
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
   <link rel="stylesheet" href="../../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" /> 
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="Library Reference" href="../APIdoc.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -98,15 +99,22 @@
             
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Description.html">Modules</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Contributors.html">Contributors</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../APIdoc.html">Library Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">DAQ_Move modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
             
@@ -151,6 +159,8 @@
   <ul class="wy-breadcrumbs">
     
       <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../APIdoc.html">Library Reference</a> &raquo;</li>
         
       <li>DAQ_Move modules</li>
     
@@ -219,6 +229,19 @@ a Master instance of this plugin and slave instances of this plugin (all sharing
 </tr>
 </tbody>
 </table>
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.check_bound">
+<code class="descname">check_bound</code><span class="sig-paren">(</span><em>position</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.check_bound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.check_bound" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>position</strong> – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 <dl class="method">
 <dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings">
 <code class="descname">commit_settings</code><span class="sig-paren">(</span><em>param</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.commit_settings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings" title="Permalink to this definition">¶</a></dt>
@@ -289,7 +312,7 @@ a Master instance of this plugin and slave instances of this plugin (all sharing
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the computed position.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
 </tr>
 </tbody>
 </table>
@@ -398,7 +421,7 @@ a Master instance of this plugin and slave instances of this plugin (all sharing
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the computed position.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)">float</a></td>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
 </tr>
 </tbody>
 </table>
@@ -441,6 +464,13 @@ a Master instance of this plugin and slave instances of this plugin (all sharing
            
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../APIdoc.html" class="btn btn-neutral float-left" title="Library Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Modules &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>Utility Modules &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../../',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -104,7 +104,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Description</a><ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Modules</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="Main_Modules.html">Main Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
@@ -112,6 +112,7 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Utility Modules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#h5browser">H5Browser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#h5saver">H5Saver</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preset-manager">Preset manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#overshoot-manager">Overshoot manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#daq-measurement">DAQ_Measurement</a></li>
@@ -123,6 +124,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -168,7 +170,7 @@
     
       <li><a href="../../index.html">Docs</a> &raquo;</li>
         
-          <li><a href="../Description.html">Description</a> &raquo;</li>
+          <li><a href="../Description.html">Modules</a> &raquo;</li>
         
       <li>Utility Modules</li>
     
@@ -203,7 +205,7 @@ custom application.</p>
 <div class="section" id="h5browser">
 <span id="h5browser-module"></span><h2>H5Browser<a class="headerlink" href="#h5browser" title="Permalink to this headline">¶</a></h2>
 <p>The h5 browser is an object that helps browsing of datas and metadatas. It asks you to select a h5 file
-and then display a window such as <a class="reference internal" href="#figure-h5browser"><span class="std std-numref">Fig. 30</span></a>. Depending the element of the file you are
+and then display a window such as <a class="reference internal" href="#figure-h5browser"><span class="std std-numref">Fig. 31</span></a>. Depending the element of the file you are
 selecting in the h5 file tree, various metadata can be displayed, such as <em>scan settings</em> or
 <em>module settings</em> at the time of saving. When double clicking on data type entries in the tree, the
 data viewer (type <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a> that can display data dimensionality up to 4)</p>
@@ -211,19 +213,27 @@ data viewer (type <a class="reference internal" href="data_viewers.html#ndviewer
 <div></div></blockquote>
 <div class="figure" id="id3">
 <span id="figure-h5browser"></span><img alt="h5 browser" src="../../_images/h5browser.png" />
-<p class="caption"><span class="caption-number">Fig. 30 </span><span class="caption-text">h5 browser to explore saved datas</span></p>
+<p class="caption"><span class="caption-number">Fig. 31 </span><span class="caption-text">h5 browser to explore saved datas</span></p>
 </div>
+</div>
+<div class="section" id="h5saver">
+<span id="h5saver-module"></span><h2>H5Saver<a class="headerlink" href="#h5saver" title="Permalink to this headline">¶</a></h2>
+<p>This module is a help to save data in a hierachical hdf5 binary file through the <strong>pytables</strong> package. Using the <code class="docutils literal notranslate"><span class="pre">H5Saver</span></code>
+object will make sure you can explore your datas with the H5Browser. The object can be used to: punctually save one set
+of data such as with the DAQ_Viewer (see <a class="reference internal" href="../saving.html#daq-viewer-saving-single"><span class="std std-ref">Single Datas</span></a>), save multiple acquisition such as with the DAQ_Scan
+(see <a class="reference internal" href="../saving.html#daq-scan-saving"><span class="std std-ref">From DAQ_Scan</span></a>) or save on the fly with enlargeable arrays such as the <a class="reference internal" href="../saving.html#continuous-saving"><span class="std std-ref">Continuous Saving</span></a> mode of the DAQ_Viewer.</p>
+<p>See <a class="reference internal" href="../api/API_Utility_Modules.html#h5saverclassdescr"><span class="std std-ref">h5saver module</span></a> for a detailled description</p>
 </div>
 <div class="section" id="preset-manager">
 <span id="id1"></span><h2>Preset manager<a class="headerlink" href="#preset-manager" title="Permalink to this headline">¶</a></h2>
 <p>The <em>Preset manager</em> is an object that helps generate, modify and save preset modes of <a class="reference internal" href="DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a>.
 A preset is a set of
-actuators and detectors represented in a tree like structure, see <a class="reference internal" href="#preset-fig"><span class="std std-numref">Fig. 31</span></a></p>
+actuators and detectors represented in a tree like structure, see <a class="reference internal" href="#preset-fig"><span class="std std-numref">Fig. 32</span></a></p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure" id="id4">
 <span id="preset-fig"></span><img alt="preset_fig" src="../../_images/preset_fig.png" />
-<p class="caption"><span class="caption-number">Fig. 31 </span><span class="caption-text">An example of a preset creation named <em>preset_default</em> containing one DAQ_Move module and one detector
+<p class="caption"><span class="caption-number">Fig. 32 </span><span class="caption-text">An example of a preset creation named <em>preset_default</em> containing one DAQ_Move module and one detector
 module and just about to select a second detector from the list of all available detector plugins.</span></p>
 </div>
 <p>Each added module load on the fly its settings so that one can set them to our need, for instance COM
@@ -238,7 +248,7 @@ out of range with respect to some predefined bounds. It is valid in the framewor
 when actuators and detectors have been activated.</p>
 <div class="figure" id="id5">
 <img alt="overshoot_fig" src="../../_images/overshoot_fig.png" />
-<p class="caption"><span class="caption-number">Fig. 32 </span><span class="caption-text">An example of an overshoot creation named <em>overshoot_default</em> (and corresponding xml file)
+<p class="caption"><span class="caption-number">Fig. 33 </span><span class="caption-text">An example of an overshoot creation named <em>overshoot_default</em> (and corresponding xml file)
 containing one listening detector and 2 actuators to be activated.</span></p>
 </div>
 </div>

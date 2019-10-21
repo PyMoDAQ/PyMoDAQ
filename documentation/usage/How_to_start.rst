@@ -23,7 +23,7 @@ Open a command line and activate your environment (if you're using anaconda or m
 *  ``python -m pymodaq.daq_move.daq_move_main``
 *  ``python -m pymodaq.daq_utils.h5browser``
 
-for PyMoDAQ's main modules. The *-m* option tels python to look within its *site-packages* folder (where you've just
+for PyMoDAQ's main modules. The *-m* option tells python to look within its *site-packages* folder (where you've just
 installed pymodaq) In fact if one of PyMoDAQ's file (*xxx.py*) as an entry point (a ``if __name__='__main__:'``
 statement at the end of the file), you can run it by calling python over it...
 

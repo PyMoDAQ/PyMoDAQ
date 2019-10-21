@@ -90,7 +90,7 @@ setup(
         'easydict',
         #'pyqt5',
         'tables',
-        'pymodaq_plugins>=1.2.0',
+        'pymodaq_plugins>=1.2.3',
         'pymodaq_pid_models',
 	    'simple_pid',
         ],

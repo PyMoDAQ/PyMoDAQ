@@ -30,7 +30,7 @@ custom application.
 
    .. _figure_1Dviewer:
 
-.. figure:: /image/Utils/figure_1Dviewer.png
+.. figure:: /image/Utils/1Ddetector.png
    :alt: figure_1Dviewer
 
    1D viewer data display

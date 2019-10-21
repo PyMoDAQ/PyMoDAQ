@@ -23,15 +23,73 @@ Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
+
+####################################
+## Unis conversion
 def Enm2cmrel(E_nm, ref_wavelength=515):
+    """Converts energy in nm to cm-1 relative to a ref wavelength
+
+    Parameters
+    ----------
+    E_nm: float
+          photon energy in wavelength (nm)
+    ref_wavelength: float
+                    reference wavelength in nm from which calculate the photon relative energy
+
+    Returns
+    -------
+    float
+         photon energy in cm-1 relative to the ref wavelength
+
+    Examples
+    --------
+    >>> Enm2cmrel(520, 515)
+    549.551199853453
+    """
     return 1/(ref_wavelength*1e-7)-1/(E_nm*1e-7)
 
 def Ecmrel2Enm(Ecmrel, ref_wavelength=515):
+    """Converts energy from cm-1 relative to a ref wavelength to an energy in wavelength (nm)
+
+    Parameters
+    ----------
+    Ecmrel: float
+            photon energy in cm-1
+    ref_wavelength: float
+                    reference wavelength in nm from which calculate the photon relative energy
+
+    Returns
+    -------
+    float
+         photon energy in nm
+
+    Examples
+    --------
+    >>> Ecmrel2Enm(500, 515)
+    528.6117526302285
+    """
     Ecm = 1/(ref_wavelength*1e-7)-Ecmrel
     return 1/(Ecm*1e-7)
 
 
 def eV2nm(E_eV):
+    """Converts photon energy from electronvolt to wavelength in nm
+
+    Parameters
+    ----------
+    E_eV: float
+          Photon energy in eV
+
+    Returns
+    -------
+    float
+         photon energy in nm
+
+    Examples
+    --------
+    >>> eV2nm(1.55)
+    799.898112990037
+    """
     E_J = E_eV * Cb
     E_freq = E_J / h
     E_nm = c / E_freq * 1e9
@@ -39,6 +97,23 @@ def eV2nm(E_eV):
 
 
 def nm2eV(E_nm):
+    """Converts photon energy from wavelength in nm to electronvolt
+
+    Parameters
+    ----------
+    E_nm: float
+          Photon energy in nm
+
+    Returns
+    -------
+    float
+         photon energy in eV
+
+    Examples
+    --------
+    >>> nm2eV(800)
+    1.549802593918197
+    """
     E_freq = c / E_nm * 1e9;
     E_J = E_freq * h;
     E_eV = E_J / Cb;
@@ -51,6 +126,23 @@ def E_J2eV(E_J):
 
 
 def eV2cm(E_eV):
+    """Converts photon energy from electronvolt to absolute cm-1
+
+    Parameters
+    ----------
+    E_eV: float
+          Photon energy in eV
+
+    Returns
+    -------
+    float
+         photon energy in cm-1
+
+    Examples
+    --------
+    >>> eV2cm(0.07)
+    564.5880342655984
+    """
     E_nm = eV2nm(E_eV)
     E_cm = 1 / (E_nm * 1e-7);
     return E_cm
@@ -60,7 +152,6 @@ def nm2cm(E_nm):
 
 def cm2nm(E_cm):
     return 1 / (E_cm * 1e-7)
-
 
 def eV2E_J(E_eV):
     E_J = E_eV * Cb;
@@ -75,11 +166,30 @@ def eV2radfs(E_eV):
 
 
 def l2w(x, speedlight=300):
-    # y=l2w(x,c)
-    # speedlight is the speed of light =300 nm/fs
+    """Converts photon energy in rad/fs to nm (and vice-versa)
+
+    Parameters
+    ----------
+    x: float
+       photon energy in wavelength or rad/fs
+    speedlight: float, optional
+                the speed of light, by default 300 nm/fs
+
+    Returns
+    -------
+    float
+
+    Examples
+    --------
+    >>> l2w(800)
+    2.356194490192345
+    >>> l2w(800,3e8)
+    2356194.490192345
+    """
     y = 2 * np.pi * speedlight / x
     return y
 
+#############################
 
 def capitalize(string):
     """
@@ -287,7 +397,22 @@ def elt_as_first_element(elt_list,match_word='Mock'):
     else: plugins=[]
     return plugins
 
+
+##############################
+## TCP/IP related functions
+
 def send_string(socket, string):
+    """
+
+    Parameters
+    ----------
+    socket
+    string
+
+    Returns
+    -------
+
+    """
     cmd_bytes, cmd_length_bytes = message_to_bytes(string)
     check_sended(socket, cmd_length_bytes)
     check_sended(socket, cmd_bytes)
@@ -320,7 +445,16 @@ def get_int(socket):
     return data
 
 def get_scalar(socket):
+    """
 
+    Parameters
+    ----------
+    socket
+
+    Returns
+    -------
+
+    """
     data_type = get_string(socket)
     data_len = get_int(socket)
     data_bytes = check_received_length(socket, data_len)
@@ -329,7 +463,17 @@ def get_scalar(socket):
     return data
 
 def send_list(socket, data_list):
+    """
 
+    Parameters
+    ----------
+    socket
+    data_list
+
+    Returns
+    -------
+
+    """
     check_sended(socket, len(data_list).to_bytes(4, 'big'))
     for data in data_list:
 
@@ -469,6 +613,9 @@ def check_received_length(sock,length):
         data_bytes+=data_bytes_tmp
     #print(data_bytes)
     return data_bytes
+
+##End of TCP/IP functions
+##########################
 
 
 def find_in_path(path, mode):
@@ -961,7 +1108,6 @@ def get_h5file_scans(h5file,path='/'):
 
     return scan_list
 
-
 def pixmap2ndarray(pixmap,scale=None):
     channels_count = 4
     image = pixmap.toImage()
@@ -979,75 +1125,82 @@ def pixmap2ndarray(pixmap,scale=None):
     arr = np.frombuffer(b, np.uint8).reshape((image.height(), image.width(), channels_count))
     return arr
 
-def my_moment(x,y):
-    dx=np.mean(np.diff(x))
-    norm=np.sum(y)*dx
-    m=[np.sum(x*y)*dx/norm]
-    m.extend([np.sqrt(np.sum((x-m[0])**2*y)*dx/norm)])
-    return m
+def set_param_from_param(param_old,param_new):
+    """
+        Walk through parameters children and set values using new parameter values.
+    """
+    for child_old in param_old.children():
+        try:
+            path=param_old.childPath(child_old)
+            child_new=param_new.child(*path)
+            param_type=child_old.type()
 
-def odd_even(x):
-    """
-		odd_even tells if a number is odd (return True) or even (return False)
-		
-		Parameters
-		----------
-		x: the integer number to test
-		  
-		Returns
-		-------
-		bool : boolean
-    """
-    if int(x)%2==0:
-        bool=False
-    else:
-        bool=True
-    return bool 
+            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
+                try:
+                    if 'list' in param_type:#check if the value is in the limits of the old params (limits are usually set at initialization)
+                        if child_new.value() not in child_old.opts['limits']:
+                            child_old.opts['limits'].append(child_new.value())
+
+                        child_old.setValue(child_new.value())
+                    elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
+                        if child_new.value()!="":#to make sure one doesnt overwrite something
+                            child_old.setValue(child_new.value())
+                    else:
+                        child_old.setValue(child_new.value())
+                except Exception as e:
+                    print(str(e))
+            else:
+                set_param_from_param(child_old,child_new)
+        except Exception as e:
+            print(str(e))
+
+
+####################
+##Scan utilities
 
 def set_scan_spiral(start_axis1,start_axis2,rmax,rstep):
     """Set a spiral scan of a 0D Data aquisition.
 
-        =============== ========== ==========================================
-        **Parameters**   **Type**   **Description**
-        *start_axis1*    int        The starting value of the first sequence
-        *start_axis2*    int        The starting value of the second sequence  
-        *rmax*           int        The end point
-        *rstep*          int        The value of one step
-        =============== ========== ==========================================
+    =============== ========== ==========================================
+    **Parameters**   **Type**   **Description**
+    *start_axis1*    int        The starting value of the first sequence
+    *start_axis2*    int        The starting value of the second sequence
+    *rmax*           int        The end point
+    *rstep*          int        The value of one step
+    =============== ========== ==========================================
 
-        Returns
-        -------
-        (int,int list,int list,float list,float list,float list,list of 2 float lists) tuple
-            The tuple containing :
-             * the number of steps
-             * the first axis indexes
-             * the second axis indexes
-             * the first axis with unique values
-             * the second axis with unique values
-             * the first axis
-             * the second axis
-             * the positions float values
+    Returns
+    -------
+    (int,int list,int list,float list,float list,float list,list of 2 float lists) tuple
+        The tuple containing :
+         * the number of steps
+         * the first axis indexes
+         * the second axis indexes
+         * the first axis with unique values
+         * the second axis with unique values
+         * the first axis
+         * the second axis
+         * the positions float values
 
-        Examples
-        --------
+    Examples
+    --------
 
-            >>> import daq_utils as Du
-            >>> start_axis1,start_axis2=1,1
-            >>> rmax=2
-            >>> rstep=1
-            >>> spiral_scan=Du.set_scan_spiral(start_axis1,start_axis2,rmax,rstep)
-            >>> print(spiral_scan[0])       #The number of step
-            25                                  
-            >>> print(spiral_scan[1])       #The first distributed axis
-            [-1  0  1  2  3]
-            >>> print(spiral_scan[2])       #The second distributed axis
-            [-1  0  1  2  3]
-            >>> print(spiral_scan[3])       #The positions scalar list computed
-            [[1, 1], [2, 1], [2, 2], [1, 2], [0, 2],
-            [0, 1], [0, 0], [1, 0], [2, 0], [3, 0],
-            [3, 1], [3, 2], [3, 3], [2, 3], [1, 3],
-            [0, 3], [-1, 3], [-1, 2], [-1, 1], [-1, 0],
-            [-1, -1], [0, -1], [1, -1], [2, -1], [3, -1]]
+    >>> start_axis1,start_axis2=1,1
+    >>> rmax=2
+    >>> rstep=1
+    >>> spiral_scan=set_scan_spiral(start_axis1,start_axis2,rmax,rstep)
+    >>> print(spiral_scan[0])       #The number of step
+    25
+    >>> print(spiral_scan[1])       #The first distributed axis
+    [-1  0  1  2  3]
+    >>> print(spiral_scan[2])       #The second distributed axis
+    [-1  0  1  2  3]
+    >>> print(spiral_scan[3])       #The positions scalar list computed
+    [[1, 1], [2, 1], [2, 2], [1, 2], [0, 2],
+    [0, 1], [0, 0], [1, 0], [2, 0], [3, 0],
+    [3, 1], [3, 2], [3, 3], [2, 3], [1, 3],
+    [0, 3], [-1, 3], [-1, 2], [-1, 1], [-1, 0],
+    [-1, -1], [0, -1], [1, -1], [2, -1], [3, -1]]
     """
     ind=0
     flag=True
@@ -1106,100 +1259,54 @@ def set_scan_spiral(start_axis1,start_axis2,rmax,rstep):
     Nsteps=len(positions)
     return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,positions)
 
-def linspace_step(start,stop,step):
-    """
-        Compute a regular linspace_step distribution from start to stop values.
-
-        =============== =========== ======================================
-        **Parameters**    **Type**    **Description**
-        *start*            scalar      the starting value of distribution
-        *stop*             scalar      the stopping value of distribution
-        *step*             scalar      the length of a distribution step
-        =============== =========== ======================================
-
-        Returns
-        -------
-
-        scalar array
-            The computed distribution axis as an array.
-
-        Examples
-        --------
-        >>> import DAQ_utils as Du
-        >>> import numpy as np
-        >>>    #arguments initializing
-        >>> start=0
-        >>> stop=5
-        >>> step=0.25
-        >>> linspace_distribution=Du.linspace_step(start,stop,step)
-        >>> print(linspace_distribution)
-        >>>    #computed distribution
-        [ 0.    0.25  0.5   0.75  1.    1.25  1.5   1.75  2.    2.25  2.5   2.75
-          3.    3.25  3.5   3.75  4.    4.25  4.5   4.75  5.  ]        
-    """
-    tmp=start
-    out=np.array([tmp])    
-    if step>=0:
-        while (tmp<=stop):
-            tmp=tmp+step
-            out=np.append(out,tmp)
-    else:
-        while (tmp>=stop):
-            tmp=tmp+step
-            out=np.append(out,tmp)
-    return out[0:-1]
-
-
-
 def set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2,back_and_force=False):
     """
-        Set a linear scan of a 0D Data aquisition.
-        The positions scalar list is computed by a Cartesian product of the first distributed axis and the second one.
-        
-        The result size is composed by :
-        * a single integer representing the number of step
-        * a n items integer array representing the first distributed axis
-        * a k items integer array representing the second distributed axis
-        * a n*k items containing the combinaisons of the first and the second axis distribution.
+    Set a linear scan of a 0D Data aquisition.
+    The positions scalar list is computed by a Cartesian product of the first distributed axis and the second one.
 
-        ================ ========== =============================================
-        **Parameters**    **Type**   **Description**
-        *start_axis1*     scalar     The starting value of the first sequence
-        *start_axis2*     scalar     The starting value of the second sequence
-        *stop_axis1*      scalar     The end point of the first sequence
-        *stop_axis2*      scalar     The end point of the second sequence
-        *step_axis1*      float      The value of one step of the first sequence
-        *step_axis2*     float      The value of one step of the second sequence
-        *back_and_force*  boolean    ???
-        ================ ========== =============================================
+    The result size is composed by :
+    * a single integer representing the number of step
+    * a n items integer array representing the first distributed axis
+    * a k items integer array representing the second distributed axis
+    * a n*k items containing the combinaisons of the first and the second axis distribution.
+
+    ================ ========== =============================================
+    **Parameters**    **Type**   **Description**
+    *start_axis1*     scalar     The starting value of the first sequence
+    *start_axis2*     scalar     The starting value of the second sequence
+    *stop_axis1*      scalar     The end point of the first sequence
+    *stop_axis2*      scalar     The end point of the second sequence
+    *step_axis1*      float      The value of one step of the first sequence
+    *step_axis2*     float      The value of one step of the second sequence
+    *back_and_force*  boolean    ???
+    ================ ========== =============================================
 
 
-        Returns
-        -------
-        (int,float list,float list,scalar list) tuple
-            The tuple containing:
-             * The number of step
-             * The first distributed axis
-             * The second distributed axis
-             * The positions scalar list computed
+    Returns
+    -------
+    (int,float list,float list,scalar list) tuple
+        The tuple containing:
+         * The number of step
+         * The first distributed axis
+         * The second distributed axis
+         * The positions scalar list computed
 
-        Examples
-        --------
-        ..doctest::
+    Examples
+    --------
+    ..doctest::
 
-            >>> import DAQ_utils as Du
-            >>> start_axis1,start_axis2=1,1
-            >>> stop_axis1,stop_axis2=3,3
-            >>> step_axis1,step_axis2=1,1
-            >>> linear_scan=Du.set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2)
-            >>> print(linear_scan[0])       #The number of step
-            9
-            >>> print(linear_scan[1])       #The first distributed axis
-            [1 2 3]
-            >>> print(linear_scan[2])       #The second distributed axis
-            [1 2 3]
-            >>> print(linear_scan[3])       #The positions scalar list computed
-            [[1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3], [3, 1], [3, 2], [3, 3]]
+        >>> start_axis1,start_axis2=1,1
+        >>> stop_axis1,stop_axis2=3,3
+        >>> step_axis1,step_axis2=1,1
+        >>> linear_scan=set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2)
+        >>> print(linear_scan[0])       #The number of step
+        9
+        >>> print(linear_scan[1])       #The first distributed axis
+        [1 2 3]
+        >>> print(linear_scan[2])       #The second distributed axis
+        [1 2 3]
+        >>> print(linear_scan[3])       #The positions scalar list computed
+        [[1, 1], [1, 2], [1, 3], [2, 1], [2, 2], [2, 3], [3, 1], [3, 2], [3, 3]]
     """
     axis_1_unique=linspace_step(start_axis1,stop_axis1,step_axis1)
     axis_2_unique=linspace_step(start_axis2,stop_axis2,step_axis2)
@@ -1235,8 +1342,22 @@ def set_scan_linear(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     Nsteps=len(positions)
     return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,axis_1_unique,axis_2_unique,positions)
 
-
 def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,step_axis2):
+    """
+
+    Parameters
+    ----------
+    start_axis1
+    start_axis2
+    stop_axis1
+    stop_axis2
+    step_axis1
+    step_axis2
+
+    Returns
+    -------
+
+    """
     scan_parameters = set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
 
     positions_shuffled=scan_parameters.positions[:]
@@ -1253,143 +1374,21 @@ def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,scan_parameters.axis_2D_1,scan_parameters.axis_2D_2,
                           positions_shuffled)
 
-def set_param_from_param(param_old,param_new):
-    """
-        Walk through parameters children and set values using new parameter values.
-    """
-    for child_old in param_old.children():
-        try:
-            path=param_old.childPath(child_old)
-            child_new=param_new.child(*path)
-            param_type=child_old.type()
-
-            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
-                try:
-                    if 'list' in param_type:#check if the value is in the limits of the old params (limits are usually set at initialization)
-                        if child_new.value() not in child_old.opts['limits']:
-                            child_old.opts['limits'].append(child_new.value())
-
-                        child_old.setValue(child_new.value())
-                    elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
-                        if child_new.value()!="":#to make sure one doesnt overwrite something
-                            child_old.setValue(child_new.value())
-                    else:
-                        child_old.setValue(child_new.value())
-                except Exception as e:
-                    print(str(e))
-            else:
-                set_param_from_param(child_old,child_new)
-        except Exception as e:
-            print(str(e))
-
-def find_part_in_path_and_subpath(base_dir,part='',create=False):
-    """
-        Find path from part time.
-
-        =============== ============ =============================================
-        **Parameters**  **Type**      **Description**
-        *base_dir*      Path object   The directory to browse
-        *part*          string        The date of the directory to find/create
-        *create*        boolean       Indicate the creation flag of the directory
-        =============== ============ =============================================
-
-        Returns
-        -------
-        Path object
-            found path from part
-
-        Examples
-        --------
-        ..doctest::
-
-            >>> import DAQ_utils as Du
-            >>> import pathlib as pl
-            >>> base_dir=pl.Path("") #Getting the current path
-            >>> print(base_dir)
-            .
-            >>> path=Du.find_part_in_path_and_subpath(base_dir,"2018",True)
-            >>> print(path)       #Path of created directory "2018"
-            2018
-            >>> path=Du.find_part_in_path_and_subpath(base_dir,"2017",False)
-            >>> print(path)       #Path is none since "2017" dir doesn't exist
-            None
-            >>> path=Du.find_part_in_path_and_subpath(base_dir,"2018",False)
-            >>> print(path)       #Path of directory "2018"
-            2018
-    """
-    found_path=None
-    if part in base_dir.parts: #check if current year is in the given base path
-        if base_dir.name==part:
-            found_path=base_dir
-        else:
-            for ind in range(len(base_dir.parts)):
-                tmp_path=base_dir.parents[ind]
-                if tmp_path.name==part:
-                    found_path=base_dir.parents[ind]
-                    break
-    else:#if not check if year is in the subfolders
-        subfolders_year_name=[x.name for x in base_dir.iterdir() if x.is_dir()]
-        subfolders_found_path=[x for x in base_dir.iterdir() if x.is_dir()]
-        if part not in subfolders_year_name:
-            if create:
-                found_path=base_dir.joinpath(part)
-                found_path.mkdir()
-            else:
-                found_path = base_dir
-        else:
-            ind_path=subfolders_year_name.index(part)
-            found_path=subfolders_found_path[ind_path]
-    return found_path
-
 def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_index=0,create_scan_folder = False, create_dataset_folder=True):
     """
-        Set the path of the current scan and create associated directory tree.
-        As default :
 
-        Year/Date/Dataset_Date_ScanID/ScanID
+    Parameters
+    ----------
+    base_dir
+    base_name
+    update_h5
+    next_scan_index
+    create_scan_folder
+    create_dataset_folder
 
+    Returns
+    -------
 
-        =============== ============ =====================================
-        **Parameters**  **Type**      **Description**
-        base_dir        Path object   The base directory
-        base_name       string        Name of the current scan
-        update_h5       boolean       1/0 to update the associated h5 file
-        =============== ============ =====================================
-
-        Returns
-        -------
-        scan_path 
-            indexed base_name, new folder indexed from base name at the day
-
-        See Also
-        --------
-        DAQ_utils.find_part_in_path_and_subpath
-
-        Examples
-        --------
-        ..doctest::
-
-            >>> import DAQ_utils as Du
-            >>> import pathlib as pl
-            >>> base_dir=pl.Path("") #Getting the current path
-            >>>
-            >>> current_scan_path=Du.set_current_scan_path(base_dir)
-            >>>  #Function call with default name
-            >>> print(current_scan_path[0])       #The full scan path
-            2018\20180424\Dataset_20180424_000\Scan000
-            >>> print(current_scan_path[1])       #The indexed base name
-            Scan000
-            >>> print(current_scan_path[2])       #The dataset_path
-            2018\20180424\Dataset_20180424_000
-            >>>
-            >>> current_scan_path=Du.set_current_scan_path(base_dir,'Specific name')
-            >>> #Function call with a specific name
-            >>> print(current_scan_path[0])       #The full scan path
-            2018\20180424\Dataset_20180424_000\Specific name000
-            >>> print(current_scan_path[1])       #The indexed base name
-            Specific name000
-            >>> print(current_scan_path[2])       #The dataset_path
-            2018\20180424\Dataset_20180424_000
     """
     base_dir=Path(base_dir)
     date=datetime.date.today()
@@ -1422,34 +1421,91 @@ def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_in
     scan_path=find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
     return scan_path,base_name+'{:03d}'.format(ind_scan),dataset_path
 
+#########################
+##File management
+
+def find_part_in_path_and_subpath(base_dir,part='',create=False):
+    """
+    Find path from part time.
+
+    =============== ============ =============================================
+    **Parameters**  **Type**      **Description**
+    *base_dir*      Path object   The directory to browse
+    *part*          string        The date of the directory to find/create
+    *create*        boolean       Indicate the creation flag of the directory
+    =============== ============ =============================================
+
+    Returns
+    -------
+    Path object
+        found path from part
+
+    Examples
+    --------
+    >>> import pathlib as pl
+    >>> base_dir=pl.Path("") #Getting the current path
+    >>> print(base_dir)
+    .
+    >>> path=find_part_in_path_and_subpath(base_dir,"2018",True)
+    >>> print(path)       #Path of created directory "2018"
+    2018
+    >>> path=find_part_in_path_and_subpath(base_dir,"2017",False)
+    >>> print(path)       #Path is none since "2017" dir doesn't exist
+    None
+    >>> path=find_part_in_path_and_subpath(base_dir,"2018",False)
+    >>> print(path)       #Path of directory "2018"
+    2018
+    """
+    found_path=None
+    if part in base_dir.parts: #check if current year is in the given base path
+        if base_dir.name==part:
+            found_path=base_dir
+        else:
+            for ind in range(len(base_dir.parts)):
+                tmp_path=base_dir.parents[ind]
+                if tmp_path.name==part:
+                    found_path=base_dir.parents[ind]
+                    break
+    else:#if not check if year is in the subfolders
+        subfolders_year_name=[x.name for x in base_dir.iterdir() if x.is_dir()]
+        subfolders_found_path=[x for x in base_dir.iterdir() if x.is_dir()]
+        if part not in subfolders_year_name:
+            if create:
+                found_path=base_dir.joinpath(part)
+                found_path.mkdir()
+            else:
+                found_path = base_dir
+        else:
+            ind_path=subfolders_year_name.index(part)
+            found_path=subfolders_found_path[ind_path]
+    return found_path
 
 def select_file(start_path=None,save=True, ext=None):
-    """
-        Save or open a file with Qt5 file dialog, to be used within an Qt5 loop.
+    """Save or open a file with Qt5 file dialog, to be used within an Qt5 loop.
 
-        =============== ======================================= ===========================================================================
-        **Parameters**     **Type**                              **Description**
+    Usage::
 
-        *start_path*       Path object or str or None, optional  the path Qt5 will open in te dialog
-        *save*             bool, optional                        * if True, a savefile dialog will open in order to set a savefilename
-                                                                 * if False, a openfile dialog will open in order to open an existing file
-        *ext*              str, optional                         the extension of the file to be saved or opened
-        =============== ======================================= ===========================================================================
+        from pymodaq.daq_utils.daq_utils import select_file
+        select_file(start_path="C:\\test.h5",save=True,ext='h5')
 
-        Returns
-        -------
-        Path object
-            the Path object pointing to the file
+    =============== ======================================= ===========================================================================
+    **Parameters**     **Type**                              **Description**
 
-        Examples
-        --------
-        >>>from PyQt5 import QtWidgets
-        >>>from PyMoDAQ.DAQ_Utils.DAQ_utils import select_file
-        >>>import sys
-        >>>app = QtWidgets.QApplication(sys.argv)
-        >>>    #Open a save windows
-        >>>select_file(start_path="C:/test",save=False,ext='h5')
-        >>>sys.exit(app.exec_())
+    *start_path*       Path object or str or None, optional  the path Qt5 will open in te dialog
+    *save*             bool, optional                        * if True, a savefile dialog will open in order to set a savefilename
+                                                             * if False, a openfile dialog will open in order to open an existing file
+    *ext*              str, optional                         the extension of the file to be saved or opened
+    =============== ======================================= ===========================================================================
+
+    Returns
+    -------
+    Path object
+        the Path object pointing to the file
+
+    Examples
+    --------
+
+
 
     """
     if ext is None:
@@ -1479,6 +1535,87 @@ def select_file(start_path=None,save=True, ext=None):
             fname=parent.joinpath(filename+"."+ext) #forcing the right extension on the filename
     return fname #fname is a Path object
 
+
+###############
+##Math utilities
+def my_moment(x, y):
+    """Returns the moments of a distribution y over an axe x
+
+    Parameters
+    ----------
+    x: list or ndarray
+       vector of floats
+    y: list or ndarray
+       vector of floats corresponding to the x axis
+
+    Returns
+    -------
+    m: list
+       Contains moment of order 0 (mean) and of order 1 (std) of hte distribution y
+    """
+    dx = np.mean(np.diff(x))
+    norm = np.sum(y) * dx
+    m = [np.sum(x * y) * dx / norm]
+    m.extend([np.sqrt(np.sum((x - m[0]) ** 2 * y) * dx / norm)])
+    return m
+
+def odd_even(x):
+    """
+    odd_even tells if a number is odd (return True) or even (return False)
+
+    Parameters
+    ----------
+    x: the integer number to test
+
+    Returns
+    -------
+    bool : boolean
+    """
+    if int(x) % 2 == 0:
+        bool = False
+    else:
+        bool = True
+    return bool
+
+def linspace_step(start, stop, step):
+    """
+    Compute a regular linspace_step distribution from start to stop values.
+
+    =============== =========== ======================================
+    **Parameters**    **Type**    **Description**
+    *start*            scalar      the starting value of distribution
+    *stop*             scalar      the stopping value of distribution
+    *step*             scalar      the length of a distribution step
+    =============== =========== ======================================
+
+    Returns
+    -------
+
+    scalar array
+        The computed distribution axis as an array.
+
+    Examples
+    --------
+    >>> start=0
+    >>> stop=5
+    >>> step=0.25
+    >>> linspace_distribution=linspace_step(start,stop,step)
+    >>> print(linspace_distribution)
+    [ 0.    0.25  0.5   0.75  1.    1.25  1.5   1.75  2.    2.25  2.5   2.75
+      3.    3.25  3.5   3.75  4.    4.25  4.5   4.75  5.  ]
+    """
+    tmp = start
+    out = np.array([tmp])
+    if step >= 0:
+        while (tmp <= stop):
+            tmp = tmp + step
+            out = np.append(out, tmp)
+    else:
+        while (tmp >= stop):
+            tmp = tmp + step
+            out = np.append(out, tmp)
+    return out[0:-1]
+
 def find_index(x,threshold):
     """
     find_index finds the index ix such that x(ix) is the closest from threshold
@@ -1492,27 +1629,6 @@ def find_index(x,threshold):
     -------
     out : list of 2-tuple containing ix,x[ix]
             out=[(ix0,xval0),(ix1,xval1),...]
-    
-    Examples
-    --------
-    >>> import array_manipulation as am
-    >>> import numpy as np
-    >>>    #vector creation
-    >>> x_vector=np.array([1,2,3])
-    >>> index=am.find_index(x_vector,4)
-    >>>    #the nearest index from threshold
-    >>> print(index)
-    >>>    #ix=2, x[2]=3  , threshold=4
-    [(2, 3)]
-    >>>
-    >>> x_vector=np.array([1,2,3,4,5,6,7,8,9,10])
-    >>> index=am.find_index(x_vector,[3.8,7.5,12.])
-    >>>    #the nearest indexs from threshold list [3.8,7.5,12.]
-    >>> print(index)
-    >>>    #ix0=3, x[3]=4  , threshold=3.8
-    >>>    #ix1=6, x[6]=7  , threshold=7.5
-    >>>    #ix2=9, x[9]=10 , threshold=12.0
-    [(3, 4), (6, 7), (9, 10)]
     """
         
     if np.isscalar(threshold):
@@ -1595,46 +1711,6 @@ def gauss2D(x,x0,dx,y,y0,dy,n=1,angle=0):
                   
     return data
     
-def ftAxis_time(Npts,time_max):
-    """
-    Given two numbers Npts,omega_max, return two vectors spanning the temporal
-    and spectral range. They are related by Fourier Transform
-
-    =============== =========== ===========================================================================
-    **Parameters**    **Type**    **Description**
-    *Npts*            int          A number of points defining the length of both grids
-    *time_max*       float         The maximum circular frequency in the spectral domain. its unit defines
-                                   the temporal units. ex: omega_max in rad/fs implies time_grid in fs
-    =============== =========== ===========================================================================
-
-    Returns
-    -------
-    omega_grid : vector
-      The spectral axis of the FFT
-
-    time_grid : vector
-      The temporal axis of the FFT
-
-    Example
-    -------
-    >>> (omega_grid, time_grid)=ftAxis(Npts,omega_max)
-    ...
-    """
-    dT=time_max/Npts
-    omega_max=(Npts-1)/2*2*np.pi/time_max
-    omega_grid = np.linspace(-omega_max,omega_max,Npts)
-    time_grid = dT*np.linspace(-(Npts-1)/2,(Npts-1)/2,Npts)
-    return omega_grid, time_grid
-    
-    
-def ft(x,dim=0):
-    out=np.fft.fftshift(np.fft.fft(np.fft.fftshift(x,axes=dim),axis=dim),axes=dim)
-    return out
-    
-def ift(x,dim=0):
-    out=np.fft.fftshift(np.fft.ifft(np.fft.fftshift(x,axes=dim),axis=dim),axes=dim)
-    return out
-
 
 def ftAxis(Npts, omega_max):
     """
@@ -1666,7 +1742,6 @@ def ftAxis(Npts, omega_max):
     omega_grid = np.linspace(-omega_max, omega_max, Npts)
     time_grid = dT * np.linspace(-(Npts - 1) / 2, (Npts - 1) / 2, Npts)
     return omega_grid, time_grid
-
 
 def ftAxis_time(Npts, time_max):
     """
@@ -1700,16 +1775,17 @@ def ftAxis_time(Npts, time_max):
     time_grid = dT * np.linspace(-(Npts - 1) / 2, (Npts - 1) / 2, Npts)
     return omega_grid, time_grid
 
-
 def ft(x, dim=0):
     out = np.fft.fftshift(np.fft.fft(np.fft.fftshift(x, axes=dim), axis=dim), axes=dim)
     return out
 
+def ift(x,dim=0):
+    out=np.fft.fftshift(np.fft.ifft(np.fft.fftshift(x,axes=dim),axis=dim),axes=dim)
+    return out
 
 def ft2(x, dim=None):
     out = np.fft.fftshift(np.fft.fft2(np.fft.fftshift(x, axes=dim)), axes=dim)
     return out
-
 
 def ift2(x, dim=0):
     out = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(x, axes=dim)), axes=dim)

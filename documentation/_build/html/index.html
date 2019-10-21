@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'./',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -103,11 +103,12 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Modules</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -236,7 +237,7 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l2"><a class="reference internal" href="usage/How_to_start.html#create-windows-s-shortcuts">Create windows’s shortcuts:</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/modules/Main_Modules.html">Main Modules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/DAQ_Move.html">DAQ Move</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Move.html#introduction">Introduction</a></li>
@@ -311,13 +312,13 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-averaging">Hardware averaging:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#specific-tcp-ip-plugin">Specific TCP/IP plugin</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#how-to-contribute">How to contribute?</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/modules/Utility_Modules.html">Utility Modules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#introduction">Introduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#h5browser">H5Browser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#h5saver">H5Saver</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#preset-manager">Preset manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#overshoot-manager">Overshoot manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#daq-measurement">DAQ_Measurement</a></li>
@@ -342,6 +343,37 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#plugins">Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#you-want-to-contribute">You want to contribute?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/api/API_main_modules.html">Main modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/api_main_modules/API_Move_Module.html">DAQ_Move modules</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/api_main_modules/API_Move_Module.html#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage/api/API_Utility_Modules.html">Utility Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Utility_Modules.html#h5saver-module">h5saver module</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage/api/API_Utility_Library.html">Utility Libraries</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Utility_Library.html#daq-utils">daq_utils</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/tcp_ip.html">TCP/IP related methods</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/units_conversion.html">Units conversion</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/mathematical.html">Mathematical utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/scan.html">Scan utilities</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/file_management.html">File management</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Utility_Library.html#custom-tree-module">custom_tree module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/custom_tree/new_items.html">New Tree items</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/custom_tree/param_xml.html">Parameter and XML</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/api/utility_api/custom_tree/param_manage.html">Parameter management</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

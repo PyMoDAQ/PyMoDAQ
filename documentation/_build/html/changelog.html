@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Changelog &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>Changelog &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'./',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -102,11 +102,12 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Modules</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -176,6 +177,10 @@
 <div class="section" id="Next feature release">
 <h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/master">Next feature release</a></h2><ul class="simple">
 <li>[<span style="color: #40A056;">Feature</span>]<span>:</span><span> </span> Added sending detector axis from tcp/ip back to tcp server for correct plotting</li>
+<li>[<span style="color: #40A056;">Feature</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/13">#13</a><span>:</span> Added axes labels and units within h5 browser when looking at live scan registered data</li>
+<li>[<span style="color: #4070A0;">Support</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/7">#7</a><span>:</span> Changed Licence specification to CECILL-B</li>
+<li>[<span style="color: #4070A0;">Support</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/12">#12</a><span>:</span> Changed the case to lower in the github repo (was done in windows who doesn’t care between lower or
+upper so was not applying changes on github…</li>
 </ul>
 </div>
 <div class="section" id="Next bugfix release">
@@ -184,6 +189,13 @@
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> viewer1D displayed incorrectly the legend, now fixed</li>
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> Error in a tcp/ip communication (wrong signature of send_string method)</li>
 <li>[<span style="color: #A04040;">Bug</span>]<span>:</span><span> </span> pep8 related modification of variable names not taken into account in version 1.6.1 and producing errors in daq_scan module</li>
+</ul>
+</div>
+<div class="section" id="1.6.3">
+<h2 style="margin-bottom: 0.3em;"><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/tree/1.6.3">1.6.3</a> <span style="font-size: 75%;">2019-10-14</span></h2><ul class="simple">
+<li>[<span style="color: #A04040;">Bug</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/6">#6</a><span>:</span> Removed dependance of unnecessary Dask package</li>
+<li>[<span style="color: #A04040;">Bug</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/12">#12</a><span>:</span> Removed too specific package requirements for plugins (win32com for instance)</li>
+<li>[<span style="color: #A04040;">Bug</span>]<span> </span><a class="reference external" href="https://github.com/CEMES-CNRS/PyMoDAQ/issues/14">#14</a><span>:</span> Logger node was not saved properly from daq_scan</li>
 </ul>
 </div>
 <div class="section" id="1.6.2">

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 1.6.2 documentation</title>
+  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 1.6.3 documentation</title>
   
 
   
@@ -25,7 +25,7 @@
       <script type="text/javascript">
           var DOCUMENTATION_OPTIONS = {
               URL_ROOT:'../../../',
-              VERSION:'1.6.2',
+              VERSION:'1.6.3',
               LANGUAGE:'None',
               COLLAPSE_INDEX:false,
               FILE_SUFFIX:'.html',
@@ -102,11 +102,12 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Features.html">PyMoDAQ features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/How_to_start.html">How to Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage/Description.html">Description</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage/Description.html">Modules</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Feedback.html">Who use it?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Contributors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage/APIdoc.html">Library Reference</a></li>
 </ul>
 
             
@@ -204,7 +205,7 @@
 
 
 
-<div class="viewcode-block" id="DAQ_Move_base"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base">[docs]</a><span class="k">class</span> <span class="nc">DAQ_Move_base</span><span class="p">(</span><span class="n">QObject</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base">[docs]</a><span class="k">class</span> <span class="nc">DAQ_Move_base</span><span class="p">(</span><span class="n">QObject</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; The base class to be herited by all actuator modules</span>
 
 <span class="sd">    This base class implements all necessary parameters and methods for the plugin to communicate with its parent (the</span>
@@ -278,7 +279,17 @@
         <span class="k">except</span><span class="p">:</span>
             <span class="k">pass</span>
 
-    <span class="k">def</span> <span class="nf">check_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">position</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.check_bound"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.check_bound">[docs]</a>    <span class="k">def</span> <span class="nf">check_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">position</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        position</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;is_bounds&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">position</span><span class="o">&gt;</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;max_bound&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
@@ -287,9 +298,9 @@
             <span class="k">elif</span> <span class="n">position</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;min_bound&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">():</span>
                 <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;bounds&#39;</span><span class="p">,</span><span class="s1">&#39;min_bound&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">emit_status</span><span class="p">(</span><span class="n">ThreadCommand</span><span class="p">(</span><span class="s1">&#39;outofbounds&#39;</span><span class="p">,[]))</span>
-        <span class="k">return</span> <span class="n">position</span>
+        <span class="k">return</span> <span class="n">position</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.emit_status"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.emit_status">[docs]</a>    <span class="k">def</span> <span class="nf">emit_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">status</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.emit_status"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.emit_status">[docs]</a>    <span class="k">def</span> <span class="nf">emit_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">status</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            | Emit the statut signal from the given status parameter.</span>
 <span class="sd">            |</span>
@@ -310,7 +321,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="n">status</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.commit_settings"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings">[docs]</a>    <span class="k">def</span> <span class="nf">commit_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.commit_settings"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings">[docs]</a>    <span class="k">def</span> <span class="nf">commit_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">):</span>
       <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        to subclass to transfer parameters to hardware</span>
 <span class="sd">      &quot;&quot;&quot;</span>
@@ -319,7 +330,7 @@
     <span class="k">def</span> <span class="nf">commit_common_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">):</span>
         <span class="k">pass</span>
 
-<div class="viewcode-block" id="DAQ_Move_base.get_position_with_scaling"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.get_position_with_scaling">[docs]</a>    <span class="k">def</span> <span class="nf">get_position_with_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pos</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.get_position_with_scaling"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.get_position_with_scaling">[docs]</a>    <span class="k">def</span> <span class="nf">get_position_with_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pos</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Get the current position from the hardware with scaling conversion.</span>
 
@@ -337,7 +348,7 @@
             <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="n">pos</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;scaling&#39;</span><span class="p">,</span><span class="s1">&#39;offset&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">())</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;scaling&#39;</span><span class="p">,</span><span class="s1">&#39;scaling&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">pos</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.move_done"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.move_done">[docs]</a>    <span class="k">def</span> <span class="nf">move_done</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span><span class="c1">#the position argument is just there to match some signature of child classes</span>
+<div class="viewcode-block" id="DAQ_Move_base.move_done"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.move_done">[docs]</a>    <span class="k">def</span> <span class="nf">move_done</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span><span class="c1">#the position argument is just there to match some signature of child classes</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            | Emit a move done signal transmitting the float position to hardware.</span>
 <span class="sd">            | The position argument is just there to match some signature of child classes.</span>
@@ -352,7 +363,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">Move_Done_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span> <span class="o">=</span> <span class="kc">True</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.poll_moving"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.poll_moving">[docs]</a>    <span class="k">def</span> <span class="nf">poll_moving</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.poll_moving"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.poll_moving">[docs]</a>    <span class="k">def</span> <span class="nf">poll_moving</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Poll the current moving. In case of timeout emit the raise timeout Thread command.</span>
 
@@ -380,7 +391,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">move_done</span><span class="p">()</span></div>
 
 
-<div class="viewcode-block" id="DAQ_Move_base.send_param_status"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.send_param_status">[docs]</a>    <span class="k">def</span> <span class="nf">send_param_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">,</span><span class="n">changes</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.send_param_status"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.send_param_status">[docs]</a>    <span class="k">def</span> <span class="nf">send_param_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">,</span><span class="n">changes</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            | Send changes value updates to the gui to update consequently the User Interface.</span>
 <span class="sd">            | The message passing is made via the Thread Command &quot;update_settings&quot;.</span>
@@ -407,7 +418,7 @@
             <span class="k">elif</span> <span class="n">change</span> <span class="o">==</span> <span class="s1">&#39;parent&#39;</span><span class="p">:</span>
                 <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.set_position_with_scaling"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_with_scaling">[docs]</a>    <span class="k">def</span> <span class="nf">set_position_with_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.set_position_with_scaling"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_with_scaling">[docs]</a>    <span class="k">def</span> <span class="nf">set_position_with_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Set the current position from the parameter and hardware with scaling conversion.</span>
 
@@ -425,7 +436,7 @@
             <span class="n">pos</span><span class="o">=</span><span class="n">pos</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;scaling&#39;</span><span class="p">,</span> <span class="s1">&#39;scaling&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;scaling&#39;</span><span class="p">,</span> <span class="s1">&#39;offset&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">pos</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.set_position_relative_with_scaling"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_relative_with_scaling">[docs]</a>    <span class="k">def</span> <span class="nf">set_position_relative_with_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
+<div class="viewcode-block" id="DAQ_Move_base.set_position_relative_with_scaling"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_relative_with_scaling">[docs]</a>    <span class="k">def</span> <span class="nf">set_position_relative_with_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pos</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Set the scaled positions in case of relative moves</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -433,7 +444,7 @@
             <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">(</span><span class="s1">&#39;scaling&#39;</span><span class="p">,</span> <span class="s1">&#39;scaling&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">pos</span></div>
 
-<div class="viewcode-block" id="DAQ_Move_base.update_settings"><a class="viewcode-back" href="../../../usage/api/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.update_settings">[docs]</a>    <span class="nd">@pyqtSlot</span><span class="p">(</span><span class="n">edict</span><span class="p">)</span>
+<div class="viewcode-block" id="DAQ_Move_base.update_settings"><a class="viewcode-back" href="../../../usage/api/api_main_modules/API_Move_Module.html#pymodaq.daq_move.utility_classes.DAQ_Move_base.update_settings">[docs]</a>    <span class="nd">@pyqtSlot</span><span class="p">(</span><span class="n">edict</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">update_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">settings_parameter_dict</span><span class="p">):</span><span class="c1">#settings_parameter_dict=edict(path=path,param=param)</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.</span>
