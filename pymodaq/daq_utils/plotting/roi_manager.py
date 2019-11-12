@@ -5,11 +5,41 @@ from collections import OrderedDict
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph import ROI as pgROI
+from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import select_file
 import numpy as np
 import copy
+
+
+class ROIBrushable(pgROI):
+    def __init__(self, brush=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if brush is None:
+            brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 50))
+        self.setBrush(brush)
+
+    def setBrush(self, *br, **kargs):
+        """Set the brush that fills the region. Can have any arguments that are valid
+        for :func:`mkBrush <pyqtgraph.mkBrush>`.
+        """
+        self.brush = fn.mkBrush(*br, **kargs)
+        self.currentBrush = self.brush
+
+    def paint(self, p, opt, widget):
+        # p.save()
+        # Note: don't use self.boundingRect here, because subclasses may need to redefine it.
+        r = QtCore.QRectF(0, 0, self.state['size'][0], self.state['size'][1]).normalized()
+
+        p.setRenderHint(QtGui.QPainter.Antialiasing)
+        p.setPen(self.currentPen)
+        p.setBrush(self.currentBrush)
+        p.translate(r.left(), r.top())
+        p.scale(r.width(), r.height())
+        p.drawRect(0, 0, 1, 1)
+        # p.restore()
 
 class LinearROI(pgLinearROI):
     index_signal = pyqtSignal(int)
