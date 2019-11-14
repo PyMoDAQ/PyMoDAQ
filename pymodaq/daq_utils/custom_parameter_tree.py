@@ -11,7 +11,7 @@ from PyQt5 import QtWidgets,QtGui
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterItem
+from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.Parameter import registerParameterType
 #from PyMoDAQ.daq_utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
 from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
@@ -24,6 +24,16 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import numpy as np
 import os
+
+
+def get_widget_from_tree(parameter_tree, widget_instance):
+    widgets = []
+    for item in parameter_tree.listAllItems():
+        if hasattr(item, 'widget'):
+            if isinstance(item.widget, widget_instance):
+                widgets.append(item.widget)
+    return widgets
+
 
 def get_param_path(param):
     """
@@ -1021,7 +1031,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 w.setText(opts['title'])
             else:
                 w.setText(opts['name'])
-            w.setMaximumWidth(50)
+            #w.setMaximumWidth(50)
             w.setCheckable(True)
             w.sigChanged = w.toggled
             w.value = w.isChecked
@@ -1404,7 +1414,7 @@ class Combo_pb(QtWidgets.QWidget):
         self.setLayout(self.hor_layout)
 
 
-class TableParameterItem(pTypes.WidgetParameterItem):
+class TableParameterItem(WidgetParameterItemcustom):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
@@ -1532,7 +1542,7 @@ class TableParameter(Parameter):
 
 registerParameterType('table', TableParameter, override=True)
 
-class TableViewParameterItem(pTypes.WidgetParameterItem):
+class TableViewParameterItem(WidgetParameterItemcustom):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)

@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import pyqtSignal, QObject, QVariant
 import sys
 import tables
 from collections import OrderedDict
@@ -24,8 +24,40 @@ h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
 
+def decode_data(encoded_data):
+    """
+    Decode QbyteArrayData generated when drop items in table/tree/list view
+    Parameters
+    ----------
+    encoded_data: QByteArray
+                    Encoded data of the mime data to be dropped
+    Returns
+    -------
+    data: list
+            list of dict whose key is the QtRole in the Model, and the value a QVariant
+
+    """
+    data = []
+
+    ds = QtCore.QDataStream(encoded_data, QtCore.QIODevice.ReadOnly)
+    while not ds.atEnd():
+        row = ds.readInt32()
+        col = ds.readInt32()
+
+        map_items = ds.readInt32()
+        item = {}
+        for ind in range(map_items):
+            key = ds.readInt32()
+            value = QVariant()
+            ds >> value
+            item[QtCore.Qt.ItemDataRole(key)] = value
+        data.append(item)
+    return data
+
+
+
 ####################################
-## Unis conversion
+## Units conversion
 def Enm2cmrel(E_nm, ref_wavelength=515):
     """Converts energy in nm to cm-1 relative to a ref wavelength
 
@@ -1420,6 +1452,52 @@ def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_in
 
     scan_path=find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
     return scan_path,base_name+'{:03d}'.format(ind_scan),dataset_path
+
+def pos_above_stops(positions, steps, stops):
+    state =[]
+    for pos, step, stop in zip(positions, steps, stops):
+        if step >= 0:
+            state.append(pos>stop)
+        else:
+            state.append(pos<stop)
+    return state
+
+
+def set_scan_sequential(starts=[0.0, 10.0], stops=[10.0, 0.0], steps=[1.0, -1.0]):
+    """
+    Create a list of positions (one for each actuator == one for each element in starts list) that are sequential
+    Parameters
+    ----------
+    starts: list
+            list of starts of all selected actuators
+    stops: list
+                list of stops of all selected actuators
+    steps: list
+
+    Returns
+    -------
+    positions: list of list
+    """
+    all_positions = [starts[:]]
+    positions = starts[:]
+    state = pos_above_stops(positions, steps, stops)
+    while  not np.all(np.array(state)):
+        if not np.any(np.array(state)):
+            positions[-1] += steps[-1]
+        else:
+            index = state.index(True)
+            if index != 0:
+                positions[index] = starts[index]
+            positions[index-1] += steps[index-1]
+
+        state = pos_above_stops(positions, steps, stops)
+        if not np.any(np.array(state)):
+            all_positions.append(positions[:])
+
+
+    return all_positions
+
+
 
 #########################
 ##File management

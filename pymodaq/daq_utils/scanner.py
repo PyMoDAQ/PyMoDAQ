@@ -2,14 +2,14 @@ import sys
 from collections import OrderedDict
 import numpy as np
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime, QVariant
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
 import itertools
-
+import pandas as pd
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-
+from pymodaq.daq_utils.drop_table_view import TableModel, ItemEditorFactory
 
 
 class Scanner(QObject):
@@ -18,7 +18,7 @@ class Scanner(QObject):
     params = [{'title': 'Scanner settings', 'name': 'scan_options', 'type': 'group', 'children': [
                 {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
                 {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
-                {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D'],
+                {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D', 'Sequential'],
                          'value': 'Scan1D'},
                 {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
                     {'title': 'Scan type:', 'name': 'scan1D_type', 'type': 'list',
@@ -44,17 +44,22 @@ class Scanner(QObject):
                     {'title': 'Rstep:', 'name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible': True},
                     {'title': 'Rmax:', 'name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible': True}
                 ]},
-
+                {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
+                    {'title': 'Load sequence', 'name': 'load_seq', 'type': 'action'},
+                    {'title': 'Save sequence', 'name': 'save_seq', 'type': 'action'},
+                    {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view'},
+                ]},
                 ]},
                 ]
 
-    def __init__(self, scanner_items=OrderedDict([]), scan_type = 'Scan1D'):
+    def __init__(self, scanner_items=OrderedDict([]), scan_type = 'Scan1D', actuators=[]):
         """
 
         Parameters
         ----------
-        parent
         scanner_items: (items used by ScanSelector for chosing scan area or linear traces)
+        scan_type: type of scan selector
+        actuators: list of actuators names
         """
 
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -72,10 +77,58 @@ class Scanner(QObject):
             limits=self.scan_selector.sources_names)
         self.settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').setOpts(
             limits=self.scan_selector.sources_names)
+        self.table_model = None
 
         self.scan_selector.widget.setVisible(False)
         self.scan_selector.show_scan_selector(visible=False)
+        self.settings.child('scan_options', 'seq_settings', 'load_seq').sigActivated.connect(self.load_sequence_xml)
+        self.settings.child('scan_options', 'seq_settings', 'save_seq').sigActivated.connect(self.save_sequence_xml)
+        self.actuators = actuators
+
         self.set_scan()
+
+    def load_sequence_xml(self):
+        fname = utils.select_file(start_path=None, save=False, ext='xml')
+        if fname is not None:
+            pass
+
+    def save_sequence_xml(self):
+        pass
+
+
+    @property
+    def actuators(self):
+        return self._actuators
+
+    @actuators.setter
+    def actuators(self, act_list):
+        self._actuators = act_list
+        self.update_model()
+
+    def update_model(self):
+        self.table_model = TableModel([[name, 0., 1., 0.1] for name in self._actuators],
+                              header=['Actuator', 'Start', 'Stop', 'Step'],
+                              editable=[False, True, True, True])
+        self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
+
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+
+        self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+
+        self.table_view.setDragEnabled(True)
+        self.table_view.setDropIndicatorShown(True)
+        self.table_view.setAcceptDrops(True)
+        self.table_view.viewport().setAcceptDrops(True)
+        self.table_view.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.table_view.setDragDropMode(QtWidgets.QTableView.InternalMove)
+        self.table_view.setDragDropOverwriteMode(False)
+
+        styledItemDelegate = QtWidgets.QStyledItemDelegate()
+        styledItemDelegate.setItemEditorFactory(ItemEditorFactory())
+        self.table_view.setItemDelegate(styledItemDelegate)
+
+        self.settings.child('scan_options', 'seq_settings', 'seq_table').setValue(self.table_model)
 
     @property
     def viewers_items(self):
@@ -109,6 +162,8 @@ class Scanner(QObject):
                     if data == 'Scan1D':
                         self.settings.child('scan_options', 'scan1D_settings').show()
                         self.settings.child('scan_options', 'scan2D_settings').hide()
+                        self.settings.child('scan_options', 'seq_settings').hide()
+                        self.settings_tree.setMaximumHeight(300)
                         if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_selection').value() == 'Manual':
                             self.scan_selector.show_scan_selector(visible=False)
                         else:
@@ -116,10 +171,18 @@ class Scanner(QObject):
                     elif data == 'Scan2D':
                         self.settings.child('scan_options', 'scan1D_settings').hide()
                         self.settings.child('scan_options', 'scan2D_settings').show()
+                        self.settings.child('scan_options', 'seq_settings').hide()
+                        self.settings_tree.setMaximumHeight(300)
                         if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_selection').value() == 'Manual':
                             self.scan_selector.show_scan_selector(visible=False)
                         else:
                             self.scan_selector.show_scan_selector(visible=True)
+                    elif data == 'Sequential':
+                        self.settings.child('scan_options', 'scan1D_settings').hide()
+                        self.settings.child('scan_options', 'scan2D_settings').hide()
+                        self.settings.child('scan_options', 'seq_settings').show()
+                        self.settings_tree.setMaximumHeight(600)
+
                     self.update_scan_type(self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type'))
                     self.update_scan_2D_positions()
 
@@ -299,66 +362,75 @@ class Scanner(QObject):
 
 
 
+#Parameter only
 if __name__ == '__main__':
-    from pymodaq.daq_utils.daq_utils import DockArea
-    from pyqtgraph.dockarea import Dock
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-    from pymodaq.daq_utils.plotting.navigator import Navigator
-    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-    class UI():
-        def __init__(self):
-            pass
-
-
-    class FakeDaqScan():
-
-        def __init__(self, area):
-            self.area = area
-            self.detector_modules = None
-            self.ui = UI()
-            self.dock = Dock('2D scan', size=(500, 300), closable=False)
-
-            form = QtWidgets.QWidget()
-            self.ui.scan2D_graph = Viewer2D(form)
-            self.dock.addWidget(form)
-            self.area.addDock(self.dock)
-
     app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('pymodaq main')
-    fake = FakeDaqScan(area)
-
-    prog = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D', parent_scan=fake)
-    prog.ui.IniDet_pb.click()
-    QThread.msleep(1000)
-    QtWidgets.QApplication.processEvents()
-    prog2 = Navigator()
-    widgnav = QtWidgets.QWidget()
-    prog2 = Navigator(widgnav)
-    nav_dock = Dock('Navigator')
-    nav_dock.addWidget(widgnav)
-    area.addDock(nav_dock)
-    QThread.msleep(1000)
-    QtWidgets.QApplication.processEvents()
-
-
-    fake.detector_modules=[prog, prog2]
-    items = OrderedDict()
-    items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
-                           names=[view.title for view in prog.ui.viewers],
-                           )
-    items['Navigator'] = dict(viewers=[prog2.viewer],
-                             names=['Navigator'])
-    items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
-                             names=["DaqScan"])
-
-
-
-    prog = Scanner(items)
+    prog = Scanner(actuators=['Xaxis', 'Yaxis', 'Theta Axis'])
     prog.settings_tree.show()
-    win.show()
+    prog.actuators = ['xxx', 'yyy']
+
     sys.exit(app.exec_())
+
+# if __name__ == '__main__':
+#     from pymodaq.daq_utils.daq_utils import DockArea
+#     from pyqtgraph.dockarea import Dock
+#     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+#     from pymodaq.daq_utils.plotting.navigator import Navigator
+#     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+#     class UI():
+#         def __init__(self):
+#             pass
+#
+#
+#     class FakeDaqScan():
+#
+#         def __init__(self, area):
+#             self.area = area
+#             self.detector_modules = None
+#             self.ui = UI()
+#             self.dock = Dock('2D scan', size=(500, 300), closable=False)
+#
+#             form = QtWidgets.QWidget()
+#             self.ui.scan2D_graph = Viewer2D(form)
+#             self.dock.addWidget(form)
+#             self.area.addDock(self.dock)
+#
+#     app = QtWidgets.QApplication(sys.argv)
+#     win = QtWidgets.QMainWindow()
+#     area = DockArea()
+#
+#     win.setCentralWidget(area)
+#     win.resize(1000, 500)
+#     win.setWindowTitle('pymodaq main')
+#     fake = FakeDaqScan(area)
+#
+#     prog = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D', parent_scan=fake)
+#     prog.ui.IniDet_pb.click()
+#     QThread.msleep(1000)
+#     QtWidgets.QApplication.processEvents()
+#     prog2 = Navigator()
+#     widgnav = QtWidgets.QWidget()
+#     prog2 = Navigator(widgnav)
+#     nav_dock = Dock('Navigator')
+#     nav_dock.addWidget(widgnav)
+#     area.addDock(nav_dock)
+#     QThread.msleep(1000)
+#     QtWidgets.QApplication.processEvents()
+#
+#
+#     fake.detector_modules=[prog, prog2]
+#     items = OrderedDict()
+#     items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
+#                            names=[view.title for view in prog.ui.viewers],
+#                            )
+#     items['Navigator'] = dict(viewers=[prog2.viewer],
+#                              names=['Navigator'])
+#     items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
+#                              names=["DaqScan"])
+#
+#
+#
+#     prog = Scanner(items)
+#     prog.settings_tree.show()
+#     win.show()
+#     sys.exit(app.exec_())
