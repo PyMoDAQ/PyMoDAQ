@@ -159,7 +159,7 @@ def add_text_to_elt(elt, param):
             val = 1
         else:
             val = param.value()
-        text=str(val)
+        text = str(val)
     else:
         text = str(param.value())
     elt.text = text
@@ -219,6 +219,13 @@ def dict_from_param(param):
         else:
             show_pb = '0'
         opts.update(dict(show_pb=show_pb))
+
+    if 'filetype' in param.opts:
+        if param.opts['filetype']:
+            filetype = '1'
+        else:
+            filetype = '0'
+        opts.update(dict(filetype=filetype))
 
     return opts
 
@@ -415,30 +422,30 @@ def elt_to_dict(el):
     # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
     #              visible=visible, removable=removable, readonly=readonly, show_pb=show_pb)
     param.update(dict(name=el.tag))
-    param_type=el.get('type')
+    param_type = el.get('type')
     param.update(dict(type=param_type))
 
-    title=el.get('title')
-    if title=='None':
-        title=el.tag
+    title = el.get('title')
+    if title == 'None':
+        title = el.tag
     param.update(dict(title=title))
 
     if 'visible' not in el.attrib.keys():
-        visible=True
+        visible = True
     else:
-        visible=bool(int(el.get('visible')))
+        visible = bool(int(el.get('visible')))
     param.update(dict(visible=visible))
 
     if 'removable' not in el.attrib.keys():
-        removable=False
+        removable = False
     else:
-        removable=bool(int(el.get('removable')))
+        removable = bool(int(el.get('removable')))
     param.update(dict(removable=removable))
 
     if 'readonly' not in el.attrib.keys():
-        readonly=False
+        readonly = False
     else:
-        readonly=bool(int(el.get('readonly')))
+        readonly = bool(int(el.get('readonly')))
     param.update(dict(readonly=readonly))
 
     if 'show_pb' in el.attrib.keys():
@@ -446,11 +453,16 @@ def elt_to_dict(el):
     else:
         show_pb = False
     param.update(dict(show_pb=show_pb))
+
+    if 'filetype' in el.attrib.keys():
+        filetype = bool(int(el.get('filetype')))
+        param.update(dict(filetype=filetype))
+
     if 'detlist' in el.attrib.keys():
-        detlist=eval(el.get('detlist'))
+        detlist = eval(el.get('detlist'))
         param.update(dict(detlist=detlist))
     if 'movelist' in el.attrib.keys():
-        movelist=eval(el.get('movelist'))
+        movelist = eval(el.get('movelist'))
         param.update(dict(movelist=movelist))
 
     return param
@@ -1818,11 +1830,11 @@ class ItemSelectParameter(Parameter):
 
 registerParameterType('itemselect', ItemSelectParameter, override=True)
 
-class file_browserParameterItem(pTypes.WidgetParameterItem):
+class file_browserParameterItem(WidgetParameterItemcustom):
 
     def __init__(self, param, depth):
         self.filetype=False
-        pTypes.WidgetParameterItem.__init__(self, param, depth)
+        super().__init__(param, depth)
         self.hideWidget = False
         self.subItem = QtWidgets.QTreeWidgetItem()
         self.addChild(self.subItem)

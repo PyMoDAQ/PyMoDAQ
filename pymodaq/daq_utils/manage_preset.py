@@ -385,10 +385,9 @@ class PresetManager():
 
 
 if __name__ == '__main__':
+
     app = QtWidgets.QApplication(sys.argv)
     #prog = PresetManager(True)
+    prog = PresetManager(True)
 
-    prog = PresetManager(False)
-    #prog.set_PID_preset('PIDModelMock')
-    prog.set_new_preset()
     sys.exit(app.exec_())

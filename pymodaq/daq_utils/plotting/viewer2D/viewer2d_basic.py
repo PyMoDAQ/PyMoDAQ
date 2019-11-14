@@ -123,17 +123,17 @@ class ImageItem(pg.ImageItem):
 class ImageWidget(pg.GraphicsLayoutWidget):
     """this gives a layout to add imageitems.
     """
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, *args_plotitem, **kwargs_plotitem):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(ImageWidget, self).__init__(parent)
-        self.setupUI()
+        self.setupUI( *args_plotitem, **kwargs_plotitem)
 
-    def setupUI(self):
+    def setupUI(self,  *args_plotitem, **kwargs_plotitem):
         layout = QtWidgets.QGridLayout()
         #set viewer area
         self.scene_obj = self.scene()
         self.view = View_cust()
-        self.plotitem = pg.PlotItem(viewBox=self.view)
+        self.plotitem = pg.PlotItem(viewBox=self.view,  *args_plotitem, **kwargs_plotitem)
         self.plotItem = self.plotitem #for backcompatibility
         self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         self.setCentralItem(self.plotitem)

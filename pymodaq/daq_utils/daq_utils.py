@@ -301,8 +301,9 @@ def scroll_log(scroll_val, min_val , max_val):
     -------
 
     """
-    scr = scroll_val
-    value = scr * (np.log10(max_val)-np.log10(min_val))/100+ np.log10(min_val)
+    assert scroll_val >= 0
+    assert scroll_val <= 100
+    value = scroll_val * (np.log10(max_val)-np.log10(min_val))/100+ np.log10(min_val)
     return 10**value
 
 def scroll_linear(scroll_val, min_val , max_val):
@@ -317,8 +318,9 @@ def scroll_linear(scroll_val, min_val , max_val):
     -------
 
     """
-    scr = scroll_val
-    value = scr * (max_val-min_val)/100+ min_val
+    assert scroll_val >= 0
+    assert scroll_val <= 100
+    value = scroll_val * (max_val-min_val)/100+ min_val
     return value
 
 def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny = 1, Ntime = 512, ind_line_offset = 0,
@@ -368,6 +370,7 @@ def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny 
 
 def getLineInfo():
     return "in {:s}, method: {:s}, line: {:d}: ".format(os.path.split(inspect.stack()[1][1])[1], inspect.stack()[1][3], inspect.stack()[1][2])
+
 
 class ScanParameters(object):
     def __init__(self, Nsteps=0,axis_1_indexes=[],axis_2_indexes=[],axis_1_unique=[],axis_2_unique=[],
@@ -419,12 +422,12 @@ def elt_as_first_element(elt_list,match_word='Mock'):
     if elt_list!=[]:
         ind_elt=0
         for ind,elt in enumerate(elt_list):
-            if 'Mock' in elt:
+            if match_word in elt:
                 ind_elt=ind
                 break
-        plugin_mock=elt_list[ind_elt]
-        elt_list.remove(plugin_mock)
-        plugins=[plugin_mock]
+        plugin_match=elt_list[ind_elt]
+        elt_list.remove(plugin_match)
+        plugins=[plugin_match]
         plugins.extend(elt_list)
     else: plugins=[]
     return plugins
