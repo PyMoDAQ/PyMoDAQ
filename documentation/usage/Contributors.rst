@@ -28,6 +28,11 @@ Plugins
 * Sophie Meuret, Researcher at CEMES/CNRS
 * David Bresteau, Research Engineer at Attolab facility, CEA Saclay
 
+Documentation
+*************
+
+* Matthieu Cabos helped with this documentation
+
 You want to contribute?
 ***********************
 

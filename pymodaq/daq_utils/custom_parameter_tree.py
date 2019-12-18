@@ -91,11 +91,12 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         opts = dict_from_param(param)
         parent_elt = ET.Element(param.name(), **opts)
         param_type = str(param.type())
-        if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
+        if 'group' not in param_type:  # covers 'group', custom 'groupmove', 'groupai' ...
             add_text_to_elt(parent_elt, param)
 
     params_list=param.children()
     for param in params_list:
+
         opts = dict_from_param(param)
         elt = ET.Element(param.name(), **opts)
         param_type = str(param.type())
@@ -195,6 +196,10 @@ def dict_from_param(param):
         readonly = '0'
     opts.update(dict(readonly=readonly))
 
+    if 'values' in param.opts:
+        values = str(param.opts['values'])
+        opts.update(dict(values=values))
+
     if 'detlist' in param.opts:
         detlist = str(param.opts['detlist'])
         opts.update(dict(detlist=detlist))
@@ -218,6 +223,71 @@ def dict_from_param(param):
         opts.update(dict(filetype=filetype))
 
     return opts
+
+def elt_to_dict(el):
+    """Convert xml element attributes to a dictionnary
+
+    Parameters
+    ----------
+    el
+
+    Returns
+    -------
+
+    """
+    param = dict([])
+
+    # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
+    #              visible=visible, removable=removable, readonly=readonly, show_pb=show_pb)
+    param.update(dict(name=el.tag))
+    param_type = el.get('type')
+    param.update(dict(type=param_type))
+
+    title = el.get('title')
+    if title == 'None':
+        title = el.tag
+    param.update(dict(title=title))
+
+    if 'visible' not in el.attrib.keys():
+        visible = True
+    else:
+        visible = bool(int(el.get('visible')))
+    param.update(dict(visible=visible))
+
+    if 'removable' not in el.attrib.keys():
+        removable = False
+    else:
+        removable = bool(int(el.get('removable')))
+    param.update(dict(removable=removable))
+
+    if 'readonly' not in el.attrib.keys():
+        readonly = False
+    else:
+        readonly = bool(int(el.get('readonly')))
+    param.update(dict(readonly=readonly))
+
+    if 'show_pb' in el.attrib.keys():
+        show_pb = bool(int(el.get('show_pb')))
+    else:
+        show_pb = False
+    param.update(dict(show_pb=show_pb))
+
+    if 'filetype' in el.attrib.keys():
+        filetype = bool(int(el.get('filetype')))
+        param.update(dict(filetype=filetype))
+
+    if 'detlist' in el.attrib.keys():
+        detlist = eval(el.get('detlist'))
+        param.update(dict(detlist=detlist))
+    if 'movelist' in el.attrib.keys():
+        movelist = eval(el.get('movelist'))
+        param.update(dict(movelist=movelist))
+
+    if 'values' in el.attrib.keys():
+        values = eval(el.get('values'))
+        param.update(dict(values=values))
+
+    return param
 
 def parameter_to_xml_string(param):
     """ Convert  a Parameter to a XML string.
@@ -396,66 +466,6 @@ def set_txt_from_elt(el, param_dict):
         param_dict.update(dict(values=[param_value]))
 
 
-def elt_to_dict(el):
-    """Convert xml element attributes to a dictionnary
-
-    Parameters
-    ----------
-    el
-
-    Returns
-    -------
-
-    """
-    param = dict([])
-
-    # name=el.tag, title=title, type=param_type, value=param_value, values=[param_value],
-    #              visible=visible, removable=removable, readonly=readonly, show_pb=show_pb)
-    param.update(dict(name=el.tag))
-    param_type = el.get('type')
-    param.update(dict(type=param_type))
-
-    title = el.get('title')
-    if title == 'None':
-        title = el.tag
-    param.update(dict(title=title))
-
-    if 'visible' not in el.attrib.keys():
-        visible = True
-    else:
-        visible = bool(int(el.get('visible')))
-    param.update(dict(visible=visible))
-
-    if 'removable' not in el.attrib.keys():
-        removable = False
-    else:
-        removable = bool(int(el.get('removable')))
-    param.update(dict(removable=removable))
-
-    if 'readonly' not in el.attrib.keys():
-        readonly = False
-    else:
-        readonly = bool(int(el.get('readonly')))
-    param.update(dict(readonly=readonly))
-
-    if 'show_pb' in el.attrib.keys():
-        show_pb = bool(int(el.get('show_pb')))
-    else:
-        show_pb = False
-    param.update(dict(show_pb=show_pb))
-
-    if 'filetype' in el.attrib.keys():
-        filetype = bool(int(el.get('filetype')))
-        param.update(dict(filetype=filetype))
-
-    if 'detlist' in el.attrib.keys():
-        detlist = eval(el.get('detlist'))
-        param.update(dict(detlist=detlist))
-    if 'movelist' in el.attrib.keys():
-        movelist = eval(el.get('movelist'))
-        param.update(dict(movelist=movelist))
-
-    return param
 
 def XML_file_to_parameter(file_name):
     """
