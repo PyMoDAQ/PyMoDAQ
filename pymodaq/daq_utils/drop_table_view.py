@@ -62,6 +62,9 @@ class TableModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent):
         return len(self._data[0])
 
+    def get_data(self, row, col):
+        return self._data[row][col]
+
     def data(self, index, role):
         if index.isValid():
             if role == Qt.DisplayRole or role == Qt.EditRole:
@@ -98,13 +101,31 @@ class TableModel(QtCore.QAbstractTableModel):
     def supportedDropActions(self):
         return Qt.MoveAction | Qt.CopyAction
 
+    def validate_data(self, row, col, value):
+        """
+        to be subclassed in order to validate ranges of values
+        Parameters
+        ----------
+        row
+        col
+        value
+
+        Returns
+        -------
+        bool: True if value is valid for the given row and col
+        """
+        return True
+
     def setData(self, index, value, role):
         if index.isValid():
             if role == Qt.EditRole:
-                if index.column() != 0:
-                    self._data[index.row()][index.column()] = value
-                    self.dataChanged.emit(index, index, [role])
-                    return True
+                if self.validate_data(index.row, index.column(), value):
+                    if index.column() != 0:
+                        self._data[index.row()][index.column()] = value
+                        self.dataChanged.emit(index, index, [role])
+                        return True
+                    else:
+                        return False
                 else:
                     return False
         return False

@@ -10,6 +10,7 @@ import pandas as pd
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.drop_table_view import TableModel, ItemEditorFactory
+from pymodaq.exceptions.exceptions import ScannerException
 
 
 class Scanner(QObject):
@@ -83,7 +84,8 @@ class Scanner(QObject):
         self.scan_selector.show_scan_selector(visible=False)
         self.settings.child('scan_options', 'seq_settings', 'load_seq').sigActivated.connect(self.load_sequence_xml)
         self.settings.child('scan_options', 'seq_settings', 'save_seq').sigActivated.connect(self.save_sequence_xml)
-        self.actuators = actuators
+        if actuators != []:
+            self.actuators = actuators
 
         self.set_scan()
 
@@ -106,11 +108,12 @@ class Scanner(QObject):
         self.update_model()
 
     def update_model(self):
-        self.table_model = TableModel([[name, 0., 1., 0.1] for name in self._actuators],
+        self.table_model = TableModelScanner([[name, 0., 1., 0.1] for name in self._actuators],
                               header=['Actuator', 'Start', 'Stop', 'Step'],
                               editable=[False, True, True, True])
         self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
 
+        self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_view.horizontalHeader().setStretchLastSection(True)
 
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
@@ -218,8 +221,8 @@ class Scanner(QObject):
                 else:
                     try:
                         self.set_scan()
-                    except:
-                        pass
+                    except Exception as e:
+                        raise ScannerException(f'Invalid call to setScan ({str(e)})')
 
             elif change == 'parent':
                 pass
@@ -310,6 +313,12 @@ class Scanner(QObject):
                     scan_parameters = utils.set_scan_random(start_axis1, start_axis2,
                                                                 stop_axis1, stop_axis2, step_axis1, step_axis2)
 
+        elif self.settings.child('scan_options', 'scan_type').value() == "Sequential":
+            starts = [self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))]
+            stops = [self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))]
+            steps = [self.table_model.get_data(ind, 3) for ind in range(self.table_model.rowCount(None))]
+            scan_parameters = utils.set_scan_sequential(starts, stops, steps)
+
 
         self.settings.child('scan_options', 'Nsteps').setValue(scan_parameters.Nsteps)
         self.scan_params_signal.emit(scan_parameters)
@@ -334,7 +343,7 @@ class Scanner(QObject):
                 self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
             self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(pos_ur_scaled[1])
         except Exception as e:
-            print(e)
+            raise ScannerException(str(e))
 
     def update_scan_type(self, param):
         """
@@ -358,9 +367,17 @@ class Scanner(QObject):
             self.settings.child('scan_options','scan2D_settings','Rstep_2d').setOpts(visible=state,value=self.settings.child('scan_options','scan2D_settings','Rstep_2d').value())
             self.settings.child('scan_options','scan2D_settings','Rmax_2d').setOpts(visible=state,value=self.settings.child('scan_options','scan2D_settings','Rstep_2d').value())
         except Exception as e:
-            print(e)
+            raise ScannerException(str(e))
 
+class TableModelScanner(TableModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+    def validate_data(self, row, col, value):
+        if col == 3: #the steps column
+            if value == 0: #not possible to set a value 0 for the steps
+                return False
+        return True
 
 #Parameter only
 if __name__ == '__main__':

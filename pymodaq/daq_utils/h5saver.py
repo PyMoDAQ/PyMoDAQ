@@ -1,4 +1,4 @@
-
+import re
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QDateTime, QTime, QDate, QObject, pyqtSignal
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -19,11 +19,11 @@ group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
 group_data_types = ['data0D', 'data1D', 'data2D']
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
 data_dimensions = ['0D', '1D', '2D']
-scan_types = ['', 'scan1D', 'scan2D']
+scan_types = ['', 'scan1D', 'scan2D', 'sequential']
 
 
 class H5Saver(QObject):
-    """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
+    """QObject containing all methods in order to save datas in a *hdf5 file* with a hierarchy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
     on a UI (see :numref:`other_settings`) using the widget self.settings_tree. At the creation of a new file, a node
     group named **Raw_datas** and represented by the attribute ``raw_group`` is created and set with a metadata attribute:
@@ -472,7 +472,7 @@ class H5Saver(QObject):
         parent_group: (str or node) parent node where to save new data
         axis: (str) either x_axis or y_axis
         """
-        if axis not in ['x_axis', 'y_axis', 'z_axis']:
+        if axis not in ['x_axis', 'y_axis', 'z_axis'] or re.search(r'[_]\d{2}[_][a][x][i][s]',axis) is not None:
             raise Exception('Invalid navigation axis name')
         array = self.add_array(parent_group, 'scan_{:s}'.format(axis), 'navigation_axis', data_shape=data.shape,
                     data_dimension='1D', array_to_save=data, enlargeable=enlargeable, title=title, metadata=metadata)

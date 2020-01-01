@@ -3,6 +3,10 @@
 =========
 Changelog
 =========
+
+* :support:`0` Changed the getLineInfo output for the logging to obtain exact location of the exception
+* :release:`1.6.4 <2019-11-17>`
+* :bug:`0` Small bugs cleaning for more stability of the code
 * :release:`1.6.3 <2019-10-14>`
 * :bug:`14` Logger node was not saved properly from daq_scan
 * :feature:`13` Added axes labels and units within h5 browser when looking at live scan registered data

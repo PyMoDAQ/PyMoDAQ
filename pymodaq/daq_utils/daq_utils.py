@@ -2,6 +2,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import pyqtSignal, QObject, QVariant
 import sys
 import tables
+import traceback
 from collections import OrderedDict
 
 import numpy as np
@@ -369,22 +370,39 @@ def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny 
 
 
 def getLineInfo():
-    return "in {:s}, method: {:s}, line: {:d}: ".format(os.path.split(inspect.stack()[1][1])[1], inspect.stack()[1][3], inspect.stack()[1][2])
+    """get information about where the Exception has been triggered"""
+    tb = sys.exc_info()[2]
+    res = ''
+    for t in traceback.format_tb(tb):
+        res += t
+    return res
 
 
 class ScanParameters(object):
     def __init__(self, Nsteps=0,axis_1_indexes=[],axis_2_indexes=[],axis_1_unique=[],axis_2_unique=[],
-                 positions=[]):
+                 positions=[], axis_seq=[], axis_seq_indexes=[]):
         super(ScanParameters, self).__init__()
         self.positions = positions
         self.axis_2D_1 = axis_1_unique
         self.axis_2D_2 = axis_2_unique
         self.axis_2D_1_indexes = axis_1_indexes
         self.axis_2D_2_indexes = axis_2_indexes
+        self.axis_seq = axis_seq
+        self.axis_seq_indexes = axis_seq_indexes
         self.Nsteps = Nsteps
 
     def __repr__(self):
-        return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1), len(self.axis_2D_2))
+        if self.axis_seq_indexes == []:
+            return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1), len(self.axis_2D_2))
+        else:
+            shape = ''
+            for ind, axis in enumerate(self.axis_seq):
+                if ind != len(self.axis_seq)-1:
+                    shape += '{:d}, '.format(len(axis))
+                else:
+                    shape += '{:d}'.format(len(axis))
+            return 'Scanner with {:d} positions and shape:({:s})'.format(self.Nsteps, shape)
+
 
 class DockArea(dockarea.DockArea, QObject):
     dock_signal = pyqtSignal()
@@ -1481,24 +1499,37 @@ def set_scan_sequential(starts=[0.0, 10.0], stops=[10.0, 0.0], steps=[1.0, -1.0]
     -------
     positions: list of list
     """
+
+    axis_seq=[linspace_step(starts[ind],stops[ind],steps[ind]) for ind in range(len(starts))]
+
+
     all_positions = [starts[:]]
     positions = starts[:]
     state = pos_above_stops(positions, steps, stops)
-    while  not np.all(np.array(state)):
+    while  not state[0]:
         if not np.any(np.array(state)):
             positions[-1] += steps[-1]
+
         else:
-            index = state.index(True)
-            if index != 0:
-                positions[index] = starts[index]
-            positions[index-1] += steps[index-1]
+            indexes_true = np.where(np.array(state))
+            positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
+            positions[indexes_true[-1][0]-1] += steps[indexes_true[-1][0]-1]
 
         state = pos_above_stops(positions, steps, stops)
         if not np.any(np.array(state)):
             all_positions.append(positions[:])
 
 
-    return all_positions
+    axis_seq_indexes = []
+    for poss in all_positions:
+        indexes = []
+        for ind, pos in enumerate(poss):
+            indexes.append(np.where(axis_seq[ind]==pos)[0][0])
+        axis_seq_indexes.append(indexes)
+
+
+    Nsteps = len(all_positions)
+    return ScanParameters(Nsteps, positions=all_positions, axis_seq=axis_seq, axis_seq_indexes=axis_seq_indexes)
 
 
 
