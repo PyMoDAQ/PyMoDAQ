@@ -7,6 +7,7 @@ from pymodaq.daq_utils.h5browser import H5Browser
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.version import get_version
 import datetime
+from dateutil import parser
 import os
 import tables
 import numpy as np
@@ -114,6 +115,7 @@ class H5Saver(QObject):
         self.h5_file_path = h5_file_path
         self.h5_file_name = None
         self.logger_array = None
+        self.file_loaded = False
 
         self.current_group = None
         self.current_scan_group = None
@@ -148,7 +150,7 @@ class H5Saver(QObject):
         """
         self.new_file_sig.emit(status)
 
-    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path = None):
+    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
@@ -171,7 +173,7 @@ class H5Saver(QObject):
         update_h5: bool
                    True if new file has been created, False otherwise
         """
-        date = datetime.datetime.now()
+        datetime_now = datetime.datetime.now()
 
         if addhoc_file_path is None:
             if not os.path.isdir(self.settings.child(('base_path')).value()):
@@ -192,7 +194,7 @@ class H5Saver(QObject):
 
                 if not scan_type:
                     self.h5_file_path = save_path #will remove the dataset part used for DAQ_scan datas
-                    self.h5_file_name = base_name+date.strftime('_%Y%m%d_%H_%M_%S.h5')
+                    self.h5_file_name = base_name+datetime_now.strftime('_%Y%m%d_%H_%M_%S.h5')
                 else:
                     self.h5_file_path = save_path
                     self.h5_file_name = save_path.name+".h5"
@@ -232,16 +234,16 @@ class H5Saver(QObject):
             self.current_scan_group = self.get_last_scan()
 
         self.raw_group._v_attrs['type'] = self.settings.child(('save_type')).value()
-        self.h5_file.root._v_attrs['file'] = date.strftime(self.h5_file_name)
+        self.h5_file.root._v_attrs['file'] = self.h5_file_name
         if update_h5:
-            self.h5_file.root._v_attrs['date'] = date.strftime('%Y%m%d')
-            self.h5_file.root._v_attrs['time'] = date.strftime('%H:%M:%S')
+            self.h5_file.root._v_attrs['date'] = datetime_now.date().isoformat()
+            self.h5_file.root._v_attrs['time'] = datetime_now.time().isoformat()
 
 
         return update_h5
 
-    def update_file_paths(self,update_h5=False):
-        """Apply the template depending on the 'save_type' settings child
+    def update_file_paths(self, update_h5=False):
+        """
 
         Parameters
         ----------
@@ -255,10 +257,6 @@ class H5Saver(QObject):
         current_filename: str
         dataset_path: Path
 
-        See Also
-        --------
-        :py:meth:`pymodaq.daq_utils.daq_utils.set_current_scan_path`
-
         """
 
         try:
@@ -267,15 +265,25 @@ class H5Saver(QObject):
             base_name = self.settings.child(('base_name')).value()
             current_scan = self.settings.child(('current_scan_name')).value()
             scan_type = self.settings.child(('save_type')).value() == 'scan'
-
+            ind_dataset = None
             if current_scan == '' or update_h5:
                 next_scan_index = 0
                 update_h5 = True #just started the main program so one should create a new h5
+                self.file_loaded = False
             else:
                 next_scan_index = self.get_scan_index()
+            if self.file_loaded:
+                ind_dataset = int(os.path.splitext(self.h5_file_name)[0][-3:])
+                try:
+                    curr_date = datetime.date.fromisoformat(self.h5_file.root._v_attrs['date'])
+                except ValueError:
+                    curr_date = parser.parse(self.h5_file.root._v_attrs['date']).date()
+            else:
+                curr_date = datetime.date.today()										 
 
-            scan_path, current_filename, dataset_path=utils.set_current_scan_path(base_path, base_name, update_h5,
-                                next_scan_index, create_dataset_folder=scan_type)
+            scan_path, current_filename, dataset_path = self.set_current_scan_path(base_path, base_name, update_h5,
+                                next_scan_index, create_dataset_folder=scan_type, curr_date=curr_date,
+                                ind_dataset=ind_dataset)
             self.settings.child(('current_scan_path')).setValue(str(scan_path))
 
             return scan_path, current_filename, dataset_path
@@ -284,6 +292,59 @@ class H5Saver(QObject):
         except Exception as e:
             print(e)
 
+    def set_current_scan_path(self, base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
+                              create_dataset_folder=True, curr_date=None, ind_dataset=None):
+        """
+
+        Parameters
+        ----------
+        base_dir
+        base_name
+        update_h5
+        next_scan_index
+        create_scan_folder
+        create_dataset_folder
+
+        Returns
+        -------
+
+        """
+        base_dir = Path(base_dir)
+        if curr_date is None:
+            curr_date = datetime.date.today()
+
+        year_path = utils.find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
+                                                  create=True)  # create directory of the year if it doen't exist and return it
+        day_path = utils.find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
+                                                 create=True)  # create directory of the day if it doen't exist and return it
+        dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
+        dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
+
+        if ind_dataset is None:
+            if dataset_paths == []:
+
+                ind_dataset = 0
+            else:
+                if update_h5:
+                    ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2]) + 1
+                else:
+                    ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2])
+
+        dataset_path = utils.find_part_in_path_and_subpath(day_path, part=dataset_base_name + "_{:03d}".format(ind_dataset),
+                                                     create=create_dataset_folder)
+        scan_paths = sorted([path for path in dataset_path.glob(base_name + '*') if path.is_dir()])
+        # if scan_paths==[]:
+        #     ind_scan=0
+        # else:
+        #     if list(scan_paths[-1].iterdir())==[]:
+        #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])
+        #     else:
+        #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
+        ind_scan = next_scan_index
+
+        scan_path = utils.find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
+                                                  create=create_scan_folder)
+        return scan_path, base_name + '{:03d}'.format(ind_scan), dataset_path
 
     def get_last_scan(self):
         """Gets the last scan node within the h5_file and under the the **raw_group**
@@ -353,7 +414,7 @@ class H5Saver(QObject):
             raise IOError('Invalid file type, should be a h5 file')
 
         self.init_file(addhoc_file_path=file_path)
-
+        self.file_loaded = True
 
     def close_file(self):
         """Flush data and close the h5file

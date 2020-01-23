@@ -83,7 +83,8 @@ setup(
                                     'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
                                     ]
                   },
-    install_requires = [
+    install_requires=[
+        'python<3.8'
         'numpy',
         'scipy',
         'pyqtgraph==0.10',
@@ -93,6 +94,7 @@ setup(
         'pymodaq_plugins>=1.2.3',
         'pymodaq_pid_models',
 	    'simple_pid',
+        'python-dateutil'
         ],
     include_package_data=True,
     **setupOpts
