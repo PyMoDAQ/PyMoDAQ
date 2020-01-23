@@ -15,6 +15,7 @@
     <orderEntry type="module" module-name="pymodaq_spectro" />
     <orderEntry type="module" module-name="django_test" />
     <orderEntry type="module" module-name="couts_complets" />
+    <orderEntry type="module" module-name="pymodaq_plugins" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="" />

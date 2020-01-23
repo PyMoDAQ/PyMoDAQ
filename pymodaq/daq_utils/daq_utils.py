@@ -1,7 +1,8 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import pyqtSignal, QObject, QVariant
 import sys
 import tables
+import traceback
 from collections import OrderedDict
 
 import numpy as np
@@ -337,7 +338,12 @@ def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny 
 
 
 def getLineInfo():
-    return "in {:s}, method: {:s}, line: {:d}: ".format(os.path.split(inspect.stack()[1][1])[1], inspect.stack()[1][3], inspect.stack()[1][2])
+    """get information about where the Exception has been triggered"""
+    tb = sys.exc_info()[2]
+    res = ''
+    for t in traceback.format_tb(tb):
+        res += t
+    return res
 
 
 class ScanParameters(object):
@@ -1377,7 +1383,8 @@ def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,scan_parameters.axis_2D_1,scan_parameters.axis_2D_2,
                           positions_shuffled)
 
-def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_index=0,create_scan_folder = False, create_dataset_folder=True):
+def set_current_scan_path(base_dir,base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
+			create_dataset_folder=True, curr_date=None, ind_dataset=None):
     """
 
     Parameters
@@ -1393,24 +1400,29 @@ def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_in
     -------
 
     """
-    base_dir=Path(base_dir)
-    date=datetime.date.today()
+    base_dir = Path(base_dir)
+    if curr_date is None:
+        curr_date = datetime.date.today()
 
-    year_path=find_part_in_path_and_subpath(base_dir,part=str(date.year),create=True)# create directory of the year if it doen't exist and return it
-    day_path=find_part_in_path_and_subpath(year_path,part=date.strftime('%Y%m%d'),create=True)# create directory of the day if it doen't exist and return it
+																																					
+																																							
 
-    date=datetime.date.today()
-    dataset_base_name=date.strftime('Dataset_%Y%m%d')
+    year_path = find_part_in_path_and_subpath(base_dir,part=str(curr_date.year),create=True)# create directory of the year if it doen't exist and return it
+    day_path = find_part_in_path_and_subpath(year_path,part=curr_date.strftime('%Y%m%d'),create=True)# create directory of the day if it doen't exist and return it
+    dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
     dataset_paths=sorted([path for path in day_path.glob(dataset_base_name+"*") if path.is_dir()])
-    if dataset_paths==[]:
-        ind_dataset=0
-    else:
-        if update_h5:
-            ind_dataset=int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])+1
+						 
+    if ind_dataset is None:
+        if dataset_paths==[]:
+					 
+            ind_dataset=0
         else:
-            ind_dataset=int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])
-    dataset_path=find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=create_dataset_folder)
+            if update_h5:
+                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])+1
+            else:
+                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])
 
+    dataset_path = find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=create_dataset_folder)
     scan_paths=sorted([path for path in dataset_path.glob(base_name+'*') if path.is_dir()])
     # if scan_paths==[]:
     #     ind_scan=0
@@ -1421,7 +1433,7 @@ def set_current_scan_path(base_dir,base_name='Scan',update_h5=False,next_scan_in
     #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
     ind_scan = next_scan_index
 
-    scan_path=find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
+    scan_path = find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
     return scan_path,base_name+'{:03d}'.format(ind_scan),dataset_path
 
 #########################

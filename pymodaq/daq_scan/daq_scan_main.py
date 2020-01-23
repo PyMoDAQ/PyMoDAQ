@@ -51,6 +51,8 @@ overshoot_path= os.path.join(local_path, 'overshoot_configurations')
 if not os.path.isdir(overshoot_path):
     os.makedirs(overshoot_path)
 
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)																		   
 logging.basicConfig(filename=os.path.join(log_path,'daq_scan_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))),level=logging.DEBUG)
 
 
@@ -97,24 +99,24 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Scan,self).__init__()
-        self.title='daq_scan'
+        self.title ='daq_scan'
         splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
         splash = QtGui.QPixmap(splash_path)
-        self.splash_sc=QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
-        self.init_prog=True
-        self.dockarea=parent
+        self.splash_sc = QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
+        self.init_prog = True
+        self.dockarea = parent
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
-        self.mainwindow=parent.parent()
+        self.mainwindow = parent.parent()
 
         self.preset_file = None
-        self.wait_time=1000
+        self.wait_time = 1000
         self.navigator = None
         self.scan_x_axis = None
         self.scan_y_axis = None
         self.scan_data_1D = np.array([])
         self.scan_data_2D = []
         self.ind_scan = 0
-        self.ind_average=0
+        self.ind_average = 0
         self.scan_data_2D_to_save = []
         self.scan_data_1D_to_save = []
         self.plot_1D_ini = False
@@ -154,7 +156,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if self.h5saver.h5_file.isopen:
                 self.h5saver.append(self.h5saver.logger_array, now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
 
-        except:
+        except Exception as e:
             pass
 
     def clear_move_det_controllers(self):
@@ -234,12 +236,16 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         #%% create Settings menu
         self.file_menu=menubar.addMenu('File')
-        # load_action=self.file_menu.addAction('Load file')
-        # load_action.triggered.connect(self.load_file)
-        save_action=self.file_menu.addAction('Save file as')
+        load_action = self.file_menu.addAction('Load file')
+        load_action.triggered.connect(self.load_file)
+        self.file_menu.addSeparator()
+        save_action = self.file_menu.addAction('Save file as')
         save_action.triggered.connect(self.save_file)
-        show_action=self.file_menu.addAction('Show file content')
+        show_action = self.file_menu.addAction('Show file content')
         show_action.triggered.connect(self.show_file_content)
+        self.file_menu.addSeparator()
+        log_action = self.file_menu.addAction('Show log file')
+        log_action.triggered.connect(self.show_log)
 
         self.file_menu.addSeparator()
         quit_action=self.file_menu.addAction('Quit')
@@ -308,6 +314,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         action_help=help_menu.addAction('Help')
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
+
+    def load_file(self):
+        self.h5saver.load_file(self.h5saver.h5_file_path)
 
     def open_PID(self):
         area = self.dockarea.addTempArea()
@@ -629,7 +638,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             path = os.path.join(layout_path, file+'.dock')
             self.save_layout_state(path)
 
-    def save_metadata(self,node,type_info='dataset_info'):
+    def save_metadata(self, node, type_info='dataset_info'):
         """
             Switch the type_info value with :
                 * *'dataset_info'* : Give the params attributes the dataset_attributes values
@@ -652,21 +661,29 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             custom_tree.parameter_to_xml_string
         """
 
-        attr=node._v_attrs
-        if type_info=='dataset_info':
+        attr = node._v_attrs
+        if type_info == 'dataset_info':
             attr['type']='dataset'
             params=self.dataset_attributes
         else:
-            attr['type']='scan'
-            params=self.scan_attributes
+            attr['type'] = 'scan'
+            params = self.scan_attributes
         for child in params.child((type_info)).children():
             if type(child.value()) is QDateTime:
                 attr[child.name()]=child.value().toString('dd/mm/yyyy HH:MM:ss')
             else:
                 attr[child.name()]=child.value()
-        #save contents of given parameter object into an xml string under the attribute settings
-        attr.settings=custom_tree.parameter_to_xml_string(params)
-        if type_info=='scan_info':
+        if type_info == 'dataset_info':
+            #save contents of given parameter object into an xml string under the attribute settings
+            settings_str = b'<All_settings title="All Settings" type="group">' + \
+                           custom_tree.parameter_to_xml_string(params) + \
+                           custom_tree.parameter_to_xml_string(self.settings) + \
+                           custom_tree.parameter_to_xml_string(self.preset_manager.preset_params)  + b'</All_settings>'
+
+            attr.settings = settings_str
+
+
+        elif type_info=='scan_info':
             settings_str = b'<All_settings title="All Settings" type="group">' + \
                            custom_tree.parameter_to_xml_string(params) + \
                            custom_tree.parameter_to_xml_string(self.settings) + \
@@ -948,8 +965,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             show_file_attributes
         """
-        date=QDateTime(QDate.currentDate(),QTime.currentTime())
-        self.dataset_attributes.child('dataset_info','date_time').setValue(date)
+        date = QDateTime(QDate.currentDate(),QTime.currentTime())
+        self.dataset_attributes.child('dataset_info', 'date_time').setValue(date)
         res = self.show_file_attributes('dataset')
         return res
 
@@ -1208,6 +1225,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.ui.start_scan_pb.setEnabled(False)
             self.ui.stop_scan_pb.setEnabled(False)
 
+    def show_log(self):
+
+        import webbrowser
+        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
     def setupUI(self):
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()
@@ -1408,8 +1429,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             --------
             custom_tree.parameter_to_xml_file, create_menu
         """
-        dialog=QtWidgets.QDialog()
-        vlayout=QtWidgets.QVBoxLayout()
+        dialog = QtWidgets.QDialog()
+        vlayout = QtWidgets.QVBoxLayout()
         tree = ParameterTree()
         tree.setMinimumWidth(400)
         tree.setMinimumHeight(500)
@@ -1463,6 +1484,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
             self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.addTab(self.ui.tab_navigator, 'Navigator'))
+            self.set_scan() #to load current scans into the navigator
 
     def start_scan(self):
         """
