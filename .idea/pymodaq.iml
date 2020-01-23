@@ -2,28 +2,10 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$" />
-    <orderEntry type="jdk" jdkName="Python 3.7 (pymodaq_dev)" jdkType="Python SDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="plugins" />
-    <orderEntry type="module" module-name="pymodaq_plugins" />
-    <orderEntry type="module" module-name="gestion_benevoles" />
-    <orderEntry type="module" module-name="pyicic" />
-    <orderEntry type="module" module-name="phconvert" />
-    <orderEntry type="module" module-name="Various_Scripts" />
-    <orderEntry type="module" module-name="pymodaq_pid_models" />
-    <orderEntry type="module" module-name="holography" />
-    <orderEntry type="module" module-name="pymodaq_spectro" />
-    <orderEntry type="module" module-name="django_test" />
-    <orderEntry type="module" module-name="couts_complets" />
-  </component>
-  <component name="PackageRequirementsSettings">
-    <option name="requirementsPath" value="" />
-  </component>
-  <component name="PyDocumentationSettings">
-    <option name="myDocStringFormat" value="NumPy" />
   </component>
   <component name="TestRunnerService">
-    <option name="projectConfiguration" value="pytest" />
-    <option name="PROJECT_TEST_RUNNER" value="pytest" />
+    <option name="PROJECT_TEST_RUNNER" value="Unittests" />
   </component>
 </module>
