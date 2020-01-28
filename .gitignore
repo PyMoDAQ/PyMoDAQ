@@ -116,3 +116,7 @@ venv.bak/
 .idea/workspace.xml
 *.xml
 *.iml
+.idea/workspace.xml
+*.iml
+*.xml
+*.xml

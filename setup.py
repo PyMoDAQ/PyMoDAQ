@@ -83,8 +83,8 @@ setup(
                                     'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
                                     ]
                   },
+    python_requires='>=3.6, <3.8',
     install_requires=[
-        'python<3.8'
         'numpy',
         'scipy',
         'pyqtgraph==0.10',
