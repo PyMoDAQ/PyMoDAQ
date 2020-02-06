@@ -292,8 +292,9 @@ def scroll_linear(scroll_val, min_val , max_val):
     value = scroll_val * (max_val-min_val)/100+ min_val
     return value
 
-def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny = 1, Ntime = 512, ind_line_offset = 0,
-                                    channel = 0):
+
+def extract_TTTR_histo_every_pixels(nanotimes, markers, marker=65, Nx=1, Ny=1, Ntime=512, ind_line_offset=0,
+                                    channel=0):
     """
     Extract histograms from photon tags and attributes them in the given pixel of the FLIM
     The marker is used to check where a new line within the image starts
@@ -310,7 +311,7 @@ def extract_TTTR_histo_every_pixels(nanotimes, markers, marker = 65, Nx = 1, Ny 
     marker: (int) the marker value corresponding to a new Y line within the image (for instance 65)
     Nx: (int) the number of pixels along the xaxis
     Ny: (int) the number of pixels along the yaxis
-    Ntime: (int) the number of pixels alond the time axis
+    Ntime: (int) the number of pixels along the time axis
     ind_line_offset: (int) the offset of previously read lines
     channel: (int) marker of the specific channel (0 or 1) for channel 1 or 2
 

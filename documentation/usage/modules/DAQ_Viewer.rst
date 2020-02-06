@@ -66,7 +66,7 @@ Data Acquisition
     :width: 10pt
     :height: 10pt
 
-.. |showsettings| image:: /image/DAQ_Viewer/HLM.ico
+.. |showsettings| image:: /image/DAQ_Viewer/HLM.png
     :width: 10pt
     :height: 10pt
 

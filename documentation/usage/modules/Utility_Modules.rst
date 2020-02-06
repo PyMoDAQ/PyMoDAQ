@@ -92,3 +92,15 @@ when actuators and detectors have been activated.
 DAQ_Measurement
 ---------------
 
+In construction
+
+Scanner
+-------
+
+See :ref:`scanner_paragrah` and :ref:`scan_selector_paragraph`
+
+
+Navigator
+---------
+
+See :ref:`navigator_paragrah`

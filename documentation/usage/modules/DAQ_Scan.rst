@@ -43,7 +43,7 @@ an automated scan using the main control window.
 Main Control Window
 -------------------
 The main control window is comprised of a left panel to set all parameters while the right panel will
-dispay live data taken during a scan.
+display live data taken during a scan.
 
    .. _daq_scan_main:
 
@@ -56,7 +56,7 @@ dispay live data taken during a scan.
 
 Scan Flow
 *********
-The top of the settings panel is comprised of buttons to set, start and stop a scan.
+The top of the settings panel is comprised of buttons to set, start and stop a scan as well as quit the application.
 
 .. |start| image:: /image/DAQ_Scan/start_scan.png
     :width: 60pt
@@ -73,14 +73,14 @@ The top of the settings panel is comprised of buttons to set, start and stop a s
 * |quit|: will shut down all modules and quit the application (redundant with: *File/Quit* menu)
 * **Set Scan**: take into account the selected scan options and valid them or not. Gives also the number
   of steps for the currently set scan.
-* **Set Ini. Positions**: will move all selected actuators to their initial positions as defined by the currently set scan.
+* **Init. Positions**: will move all selected actuators to their initial positions as defined by the currently set scan.
 * |start|: will start the currently set scan (first it will set it then start it)
 * |stop|: stop the currently running scan.
 
 Settings
 ********
-The settings tree as shown on :numref:`daq_scan_main` contains everything needed to define a given scan,
-save data and plot live information.
+The settings tree as shown on :numref:`daq_scan_main` is actually divided in three subtrees that contain everything
+needed to define a given scan, save data and plot live information.
 
    .. _list_modules:
 
@@ -91,6 +91,12 @@ save data and plot live information.
 
 .. :download:`png <list_modules.png>`
 
+Scan options
+++++++++++++
+
+Leftmost Tree comprised of:
+
+* Loaded preset files: configuration (preset), overshoot and layout if any
 * **Moves/Detectors** (see :numref:`list_modules`):
 
   * **Moves**: list of all declared *DAQ_Move* modules (and present on the dashboard). One can select
@@ -110,39 +116,47 @@ save data and plot live information.
   * **N average**: Select how many set scans to perform. Save all individual scans and its average
   * **Plot From**: select the detector from which data will be taken in order to plot live data
 
-* **Saving options** (see :numref:`other_settings`):
+Saving Settings
++++++++++++++++
 
-  * **Save 2D datas**: if not selected, 2D datas will **not** be saved but only lineouts or integrated area (only in
-    order to save memory space, but dangerous as you loose the possibility to get back initial raw data.
-  * **Base path**: The folder where all datasets and scans will be saved, for instance: ``C:\Data``
-  * **Base name**: the name given to the scans you are going to do (default is *Scan*)
-  * **current path**: generated path to save infos on current scan, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Scan000``
-  * **current scan name**: indexed name from *base name*, for instance: ``Scan000``. Any scan from the current h5
-    file can be selected here in order to add to it *comments*
-  * **comments**: Other comments to add to the scan. Metadata can be entered before the scan but these
-    *comments* can be added after, once one know if the scan is interesting or not for instance
-  * **h5 file**: complete path of the current h5 file, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Dataset_20181226_000.h5``
+Top right tree (see :numref:`other_settings`):
 
-    * **Compression options**: by default data are compressed to mid level
+* **Save 2D datas**: if not selected, 2D datas will **not** be saved but only lineouts or integrated area (only in
+order to save memory space, but dangerous as you loose the possibility to get back initial raw data.
+* **Base path**: The folder where all datasets and scans will be saved, for instance: ``C:\Data``
+* **Base name**: the name given to the scans you are going to do (default is *Scan*)
+* **current path**: generated path to save infos on current scan, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Scan000``
+* **current scan name**: indexed name from *base name*, for instance: ``Scan000``. Any scan from the current h5
+file can be selected here in order to add to it *comments*
+* **comments**: Other comments to add to the scan. Metadata can be entered before the scan but these
+*comments* can be added after, once one know if the scan is interesting or not for instance
+* **h5 file**: complete path of the current h5 file, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Dataset_20181226_000.h5``
 
-      * **compression library**: see *pytables* package or *HDF5* documentation for details
-      * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
+* **Compression options**: by default data are compressed to mid level
 
-* **Scanner Settings** (see :numref:`other_settings`):
+  * **compression library**: see *pytables* package or *HDF5* documentation for details
+  * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
 
-  * **Scan type**: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
-    scan as a function of two actuators. Ohter options to come: *batch scan* (list of single scans to perform in a row)
-    *point scan* (list of positions to scan from)
 
-  * **Scan 1D settings**
+.. _scanner_paragrah:
 
+Scanner Settings
+++++++++++++++++
+
+Bottom rigt tree (see :numref:`other_settings`):
+
+
+* **Scan type**: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
+scan as a function of two actuators. Ohter options to come: *batch scan* (list of single scans to perform in a row)
+*point scan* (list of positions to scan from), *sequential scan* (sequence of scans)
+
+* **Scan 1D settings**
     * **scan type**: either *linear* (usual scan) or *back to start* (the actuator comes back to the initial position
       after each linear step, for a reference measurement for instance). More to come if needed
     * **Start**: Initial position of the selected actuator (in selected actuator controller unit)
     * **Stop**: Last position of the scan (in selected actuator controller unit)
     * **Step**: Step size of the step (in selected actuator controller unit)
-  * **Scan 2D settings**
-
+* **Scan 2D settings**
     * **Scan type**: either *linear* (scan line by line), *linear back and forth* (scan line by line
       but in reverse direction each 2 lines) or *spiral* (start from the center and scan as a spiral)
     * **Start, Stop, Step**: for each axes (each actuators)
@@ -221,6 +235,8 @@ So at maximum, 2D dimensionality can be represented. In order to see live data f
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
 to perform using the ROI features of the data viewers (see :ref:`data_viewers`)
 
+.. _scan_selector_paragraph:
+
 Scan Selector
 -------------
 
@@ -252,7 +268,7 @@ difficult to set manually. :numref:`scan_selector` displays such sections within
    (in the case of 1D scans) or *From ROI* in the case of 2D scans.
 
 
-
+.. _navigator_paragrah:
 
 Navigator
 ---------

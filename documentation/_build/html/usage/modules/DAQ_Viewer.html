@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ Viewer &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>DAQ Viewer &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../../',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
         <script type="text/javascript" src="../../_static/jquery.js"></script>
         <script type="text/javascript" src="../../_static/underscore.js"></script>
         <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -208,9 +199,9 @@ specific of the type of data to be acquired (see <a class="reference internal" h
 DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id1">
+<div class="figure align-default" id="id1">
 <span id="figure-daq-viewer"></span><img alt="Viewer panel" src="../../_images/DAQ_Viewer_pannel.png" />
-<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span></p>
+<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="settings">
@@ -223,27 +214,27 @@ list displaying the viewer main settings (<a class="reference internal" href="#v
 <div class="section" id="hardware-initialization">
 <h3>Hardware initialization<a class="headerlink" href="#hardware-initialization" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">DAQ_type</span></code>: either <em>DAQ0D</em>, <em>DAQ1D</em> or <em>DAQ2D</em> respectively for scalar detectors (powermeter for instance),
-vector detectors (spectrometer for instance) and image like detectors.</li>
-<li><code class="docutils literal notranslate"><span class="pre">Detector</span></code>: list of available hardware plugins of the DAQ_type type.</li>
-<li><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Det</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</li>
-<li><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DAQ_type</span></code>: either <em>DAQ0D</em>, <em>DAQ1D</em> or <em>DAQ2D</em> respectively for scalar detectors (powermeter for instance),
+vector detectors (spectrometer for instance) and image like detectors.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Detector</span></code>: list of available hardware plugins of the DAQ_type type.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Det</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</p></li>
 </ul>
 </div>
 <div class="section" id="data-acquisition">
 <h3>Data Acquisition<a class="headerlink" href="#data-acquisition" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><a class="reference internal" href="../../_images/run2.png"><img alt="grab" src="../../_images/run2.png" style="width: 10pt; height: 10pt;" /></a>: Start a continuous grabing of data. Detector must be initialized.</li>
-<li><a class="reference internal" href="../../_images/snap.png"><img alt="snap" src="../../_images/snap.png" style="width: 10pt; height: 10pt;" /></a>: Start a single grab (snap). Mandatory for the first time data is acquired after initialization.</li>
-<li><a class="reference internal" href="../../_images/SaveAs.png"><img alt="save" src="../../_images/SaveAs.png" style="width: 10pt; height: 10pt;" /></a>: Save current data</li>
-<li><a class="reference internal" href="../../_images/Snap&amp;Save.png"><img alt="snap&amp;save" src="../../_images/Snap&amp;Save.png" style="width: 10pt; height: 10pt;" /></a>: Do a new snap and then save the data</li>
-<li><a class="reference internal" href="../../_images/Open.png"><img alt="open" src="../../_images/Open.png" style="width: 10pt; height: 10pt;" /></a>: Load data previously saved with the save button</li>
-<li><a class="reference internal" href="../../_images/HLM.ico"><img alt="showsettings" src="../../_images/HLM.ico" style="width: 10pt; height: 10pt;" /></a>: Display or hide the settings Tree</li>
-<li><a class="reference internal" href="../../_images/Refresh2.png"><img alt="refresh" src="../../_images/Refresh2.png" style="width: 10pt; height: 10pt;" /></a>: try to refresh the hardware, for instance the list of COM ports</li>
-<li><a class="reference internal" href="../../_images/take_bkg.png"><img alt="take_bkg" src="../../_images/take_bkg.png" style="width: 30pt; height: 15pt;" /></a>: do a specific snap where the data will be saved as a background</li>
-<li><a class="reference internal" href="../../_images/do_bkg.png"><img alt="do_bkg" src="../../_images/do_bkg.png" style="width: 30pt; height: 15pt;" /></a>: use the background previously saved to correct the displayed (only displayed, saved data are still raw data) datas.</li>
-<li><a class="reference internal" href="../../_images/save_settings.png"><img alt="save_sett" src="../../_images/save_settings.png" style="width: 30pt; height: 15pt;" /></a>: Save in a file the current settings in a file for later recall</li>
-<li><a class="reference internal" href="../../_images/open_settings.png"><img alt="load_sett" src="../../_images/open_settings.png" style="width: 30pt; height: 15pt;" /></a>: Recall from a file the settings</li>
+<li><p><a class="reference internal" href="../../_images/run2.png"><img alt="grab" src="../../_images/run2.png" style="width: 10pt; height: 10pt;" /></a>: Start a continuous grabing of data. Detector must be initialized.</p></li>
+<li><p><a class="reference internal" href="../../_images/snap.png"><img alt="snap" src="../../_images/snap.png" style="width: 10pt; height: 10pt;" /></a>: Start a single grab (snap). Mandatory for the first time data is acquired after initialization.</p></li>
+<li><p><a class="reference internal" href="../../_images/SaveAs.png"><img alt="save" src="../../_images/SaveAs.png" style="width: 10pt; height: 10pt;" /></a>: Save current data</p></li>
+<li><p><a class="reference internal" href="../../_images/Snap&amp;Save.png"><img alt="snap&amp;save" src="../../_images/Snap&amp;Save.png" style="width: 10pt; height: 10pt;" /></a>: Do a new snap and then save the data</p></li>
+<li><p><a class="reference internal" href="../../_images/Open.png"><img alt="open" src="../../_images/Open.png" style="width: 10pt; height: 10pt;" /></a>: Load data previously saved with the save button</p></li>
+<li><p><a class="reference internal" href="../../_images/HLM.png"><img alt="showsettings" src="../../_images/HLM.png" style="width: 10pt; height: 10pt;" /></a>: Display or hide the settings Tree</p></li>
+<li><p><a class="reference internal" href="../../_images/Refresh2.png"><img alt="refresh" src="../../_images/Refresh2.png" style="width: 10pt; height: 10pt;" /></a>: try to refresh the hardware, for instance the list of COM ports</p></li>
+<li><p><a class="reference internal" href="../../_images/take_bkg.png"><img alt="take_bkg" src="../../_images/take_bkg.png" style="width: 30pt; height: 15pt;" /></a>: do a specific snap where the data will be saved as a background</p></li>
+<li><p><a class="reference internal" href="../../_images/do_bkg.png"><img alt="do_bkg" src="../../_images/do_bkg.png" style="width: 30pt; height: 15pt;" /></a>: use the background previously saved to correct the displayed (only displayed, saved data are still raw data) datas.</p></li>
+<li><p><a class="reference internal" href="../../_images/save_settings.png"><img alt="save_sett" src="../../_images/save_settings.png" style="width: 30pt; height: 15pt;" /></a>: Save in a file the current settings in a file for later recall</p></li>
+<li><p><a class="reference internal" href="../../_images/open_settings.png"><img alt="load_sett" src="../../_images/open_settings.png" style="width: 30pt; height: 15pt;" /></a>: Recall from a file the settings</p></li>
 </ul>
 <p>The last two options are useful only in stand alone mode. When used with the DAQ_Scan module, all settings are <em>preset</em>
 using the <em>preset manager</em> (see <a class="reference internal" href="Utility_Modules.html#preset-manager"><span class="std std-ref">Preset manager</span></a>).</p>
@@ -254,26 +245,26 @@ using the <em>preset manager</em> (see <a class="reference internal" href="Utili
 detector currently activated.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id2">
+<div class="figure align-default" id="id2">
 <span id="figure-daq-viewer-settings"></span><img alt="settings" src="../../_images/settings.png" />
-<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span></p>
+<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 <ul class="simple">
-<li><strong>DAQ type</strong>: readonly string recalling the DAQ type used</li>
-<li><strong>Detector type</strong>: readonly string recalling the selected plugin</li>
-<li><strong>Nviewers</strong>: readonly integer displaying the number of data viewers</li>
-<li><strong>Controller ID</strong>: integer used to deal with a controller controlling multiple hardware, see <a class="reference internal" href="DAQ_Scan.html#multiple-hardware"><span class="std std-ref">Multiple hardware from one controller</span></a></li>
-<li><strong>Naverage</strong>: integer to set in order to do data averaging, see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>.</li>
-<li><strong>Show averaging</strong>: in the case of software averaging (see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>), if this is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, intermediate averaging data will be displayed</li>
-<li><strong>Live averaging</strong>: <em>show averaging</em> must be set tot <code class="docutils literal notranslate"><span class="pre">False</span></code>. If set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, a <em>live</em> <code class="docutils literal notranslate"><span class="pre">grab</span></code> will perform
-non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one should average, then set <em>Naverage</em> to this value</li>
-<li><strong>Wait time (ms)</strong>: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging</li>
-<li><strong>Continuous saving</strong>: useful for data logging. Will display new options below in order to set a h5 file to log live data, see <a class="reference internal" href="../saving.html#continuous-saving"><span class="std std-ref">Continuous Saving</span></a>.</li>
-<li><strong>Overshoot options</strong>: useful to protect the experiment. If this is activated, then as soon as any value of the datas exported by this
+<li><p><strong>DAQ type</strong>: readonly string recalling the DAQ type used</p></li>
+<li><p><strong>Detector type</strong>: readonly string recalling the selected plugin</p></li>
+<li><p><strong>Nviewers</strong>: readonly integer displaying the number of data viewers</p></li>
+<li><p><strong>Controller ID</strong>: integer used to deal with a controller controlling multiple hardware, see <a class="reference internal" href="DAQ_Scan.html#multiple-hardware"><span class="std std-ref">Multiple hardware from one controller</span></a></p></li>
+<li><p><strong>Naverage</strong>: integer to set in order to do data averaging, see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>.</p></li>
+<li><p><strong>Show averaging</strong>: in the case of software averaging (see <a class="reference internal" href="Plugins.html#hardware-averaging"><span class="std std-ref">Hardware averaging:</span></a>), if this is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, intermediate averaging data will be displayed</p></li>
+<li><p><strong>Live averaging</strong>: <em>show averaging</em> must be set tot <code class="docutils literal notranslate"><span class="pre">False</span></code>. If set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, a <em>live</em> <code class="docutils literal notranslate"><span class="pre">grab</span></code> will perform
+non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one should average, then set <em>Naverage</em> to this value</p></li>
+<li><p><strong>Wait time (ms)</strong>: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging</p></li>
+<li><p><strong>Continuous saving</strong>: useful for data logging. Will display new options below in order to set a h5 file to log live data, see <a class="reference internal" href="../saving.html#continuous-saving"><span class="std std-ref">Continuous Saving</span></a>.</p></li>
+<li><p><strong>Overshoot options</strong>: useful to protect the experiment. If this is activated, then as soon as any value of the datas exported by this
 detector reaches the <em>overshoot value</em>, the module will throw a <code class="docutils literal notranslate"><span class="pre">overshoot_signal</span></code> (boolean PyQtSignal) that will <strong>stop the DAQ_Scan execution right away</strong>.
-Other features related will soon be added (action triggered on a DAQ_Move, for instance a shutter on a laser beam)</li>
-<li><strong>Axis options</strong>: only valid for 2D detector. You can add labels, units, scaling and offset (with respect to pixels)
-to both x and y axis of the detector. Redundant with the plugin data export feature (see <a class="reference internal" href="Plugins.html#data-emission"><span class="std std-ref">Emission of data</span></a>)</li>
+Other features related will soon be added (action triggered on a DAQ_Move, for instance a shutter on a laser beam)</p></li>
+<li><p><strong>Axis options</strong>: only valid for 2D detector. You can add labels, units, scaling and offset (with respect to pixels)
+to both x and y axis of the detector. Redundant with the plugin data export feature (see <a class="reference internal" href="Plugins.html#data-emission"><span class="std std-ref">Emission of data</span></a>)</p></li>
 </ul>
 </div>
 </div>
@@ -299,7 +290,7 @@ to both x and y axis of the detector. Redundant with the plugin data export feat
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ Move &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>DAQ Move &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../../',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
         <script type="text/javascript" src="../../_static/jquery.js"></script>
         <script type="text/javascript" src="../../_static/underscore.js"></script>
         <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -211,17 +202,17 @@ the manual control of the actuator <em>position</em> and a side tree like interf
 dashboard)</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id2">
+<div class="figure align-default" id="id2">
 <span id="daq-move-gui-base"></span><img alt="daq_move_gui_base" src="../../_images/daq_move_gui_base.png" />
-<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Minimal DAQ_Move user interface</span></p>
+<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Minimal DAQ_Move user interface</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="hardware-initialization">
 <h2>Hardware initialization<a class="headerlink" href="#hardware-initialization" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">Stage</span></code>: list of available hardware plugins of the DAQ_Move type.</li>
-<li><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Stage</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</li>
-<li><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Stage</span></code>: list of available hardware plugins of the DAQ_Move type.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Stage</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</p></li>
 </ul>
 </div>
 <div class="section" id="positioning">
@@ -236,19 +227,19 @@ and apply it using the <a class="reference internal" href="../../_images/green_a
 The user interface will then look like <a class="reference internal" href="#daq-move-gui-rel"><span class="std std-numref">Fig. 6</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id3">
+<div class="figure align-default" id="id3">
 <span id="daq-move-gui-rel"></span><img alt="daq_move_gui_rel" src="../../_images/daq_move_gui_rel.png" />
-<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">DAQ_Move user interface with controls</span></p>
+<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">DAQ_Move user interface with controls</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
 <p>The two new displayed spinbox relate to Absolute positioning (redundant with the one on the top)  and
 Relative one.</p>
 <ul class="simple">
-<li><a class="reference internal" href="../../_images/home.png"><img alt="home" src="../../_images/home.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a home position (knwon position or physical switch limit)</li>
-<li><a class="reference internal" href="../../_images/abs.png"><img alt="abs" src="../../_images/abs.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach the set Absolute position</li>
-<li><a class="reference internal" href="../../_images/move_rel.png"><img alt="move_rel" src="../../_images/move_rel.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a relative position (+increment)</li>
-<li><a class="reference internal" href="../../_images/move_rel_m.png"><img alt="move_rel_m" src="../../_images/move_rel_m.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a relative position (-increment)</li>
-<li><a class="reference internal" href="../../_images/where.png"><img alt="where" src="../../_images/where.png" style="width: 60pt; height: 20pt;" /></a>: will update the current position display</li>
-<li><a class="reference internal" href="../../_images/stop.png"><img alt="stop" src="../../_images/stop.png" style="width: 60pt; height: 20pt;" /></a>: stop the current motion (if possible)</li>
+<li><p><a class="reference internal" href="../../_images/home.png"><img alt="home" src="../../_images/home.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a home position (knwon position or physical switch limit)</p></li>
+<li><p><a class="reference internal" href="../../_images/abs.png"><img alt="abs" src="../../_images/abs.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach the set Absolute position</p></li>
+<li><p><a class="reference internal" href="../../_images/move_rel.png"><img alt="move_rel" src="../../_images/move_rel.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a relative position (+increment)</p></li>
+<li><p><a class="reference internal" href="../../_images/move_rel_m.png"><img alt="move_rel_m" src="../../_images/move_rel_m.png" style="width: 60pt; height: 20pt;" /></a>: the actuator will try to reach a relative position (-increment)</p></li>
+<li><p><a class="reference internal" href="../../_images/where.png"><img alt="where" src="../../_images/where.png" style="width: 60pt; height: 20pt;" /></a>: will update the current position display</p></li>
+<li><p><a class="reference internal" href="../../_images/stop.png"><img alt="stop" src="../../_images/stop.png" style="width: 60pt; height: 20pt;" /></a>: stop the current motion (if possible)</p></li>
 </ul>
 </div>
 <div class="section" id="settings">
@@ -258,9 +249,9 @@ options by pressing the <a class="reference internal" href="../../_images/settin
 <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 7</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id4">
+<div class="figure align-default" id="id4">
 <span id="daq-move-gui-settings"></span><img alt="daq_move_gui_settings" src="../../_images/daq_move_gui_settings.png" />
-<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span></p>
+<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 <p>In the settings tree, there is two sections. The first relates to <em>Main settings</em> (not much there for
 the moment apart for the selected stage type and <em>Controller ID</em> that is related to multiaxes controller.
@@ -275,12 +266,12 @@ address represented in the settings tree by the <em>Controller ID</em> entry. Th
 within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
 in <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 7</span></a>).</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">Controller</span> <span class="pre">ID</span></code>: unique identifier of the controller driving the stage</li>
-<li><code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">Multiaxes</span></code>: boolean</li>
-<li><code class="docutils literal notranslate"><span class="pre">Status</span></code>: Master or Slave</li>
-<li><code class="docutils literal notranslate"><span class="pre">Axis</span></code>: identifier defined in the plugin script</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Controller</span> <span class="pre">ID</span></code>: unique identifier of the controller driving the stage</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">Multiaxes</span></code>: boolean</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Status</span></code>: Master or Slave</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Axis</span></code>: identifier defined in the plugin script</p></li>
 </ul>
-<p>See <a class="reference download internal" href="../../_downloads/daq_move_Template.py" download=""><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed example. These settings are
+<p>See <a class="reference download internal" download="" href="../../_downloads/3edbed0b9c935d78d3e29f17a42436c0/daq_move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed example. These settings are
 really valid only when the module is used within the DAQ_Scan framework that deals with multiple modules
 at the same time.</p>
 </div>
@@ -304,10 +295,10 @@ to <em>mm</em> or other native controller unit.</p>
 <div class="section" id="other-settings">
 <h3>Other settings<a class="headerlink" href="#other-settings" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">epsilon</span></code>: -<strong>very important feature</strong>- the actuator will try to reach the target position with a precision
+<li><p><code class="docutils literal notranslate"><span class="pre">epsilon</span></code>: -<strong>very important feature</strong>- the actuator will try to reach the target position with a precision
 <em>epsilon</em>. So one could use it if one want to be sure the actuator really reached a given position before moving on.
-However if the set precision is too small, the actuator may never reached it and will issue a timeout</li>
-<li><code class="docutils literal notranslate"><span class="pre">Timeout</span></code>: maximum amout of time the module will wait for the actuator to reach the desired position.</li>
+However if the set precision is too small, the actuator may never reached it and will issue a timeout</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Timeout</span></code>: maximum amout of time the module will wait for the actuator to reach the desired position.</p></li>
 </ul>
 </div>
 </div>
@@ -333,7 +324,7 @@ However if the set precision is too small, the actuator may never reached it and
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>

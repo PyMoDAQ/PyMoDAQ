@@ -50,7 +50,7 @@ Creating shortcuts on **Windows**
 ---------------------------------
 
 Python packages can easily be started from the command line (see :ref:`section_how_to_start`). However, Windows users
-will probably prefer using shortcuts on the desktop. Here is how to do it:
+will probably prefer using shortcuts on the desktop. Here is how to do it (Thanks to Christophe Halgand for the procedure):
 
 * First create a shortcut (see :numref:`shortcut_create`) on your desktop (pointing to any file or program, it doesn't matter)
 * Right click on it and open its properties (see :numref:`shortcut_prop`)

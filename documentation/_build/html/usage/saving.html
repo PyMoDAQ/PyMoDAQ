@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Saving datas &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>Saving datas &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
         <script type="text/javascript" src="../_static/jquery.js"></script>
         <script type="text/javascript" src="../_static/underscore.js"></script>
         <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -213,9 +204,9 @@ within as subentries. Metadata from the detector settings, the measurement modul
 are also recorded.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id2">
+<div class="figure align-default" id="id2">
 <span id="single-data"></span><img alt="single_data" src="../_images/single_data.png" />
-<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">h5 file content containing saved data from a DAQ_Viewer detector (see <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 14</span></a>)</span></p>
+<p class="caption"><span class="caption-number">Fig. 25 </span><span class="caption-text">h5 file content containing saved data from a DAQ_Viewer detector (see <a class="reference internal" href="modules/DAQ_Scan.html#det1d"><span class="std std-numref">Fig. 14</span></a>)</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="continuous-saving">
@@ -223,34 +214,31 @@ are also recorded.</p>
 <p>When the <em>continuous saving</em> parameter is set, new parameters are appearing on the <em>DAQ_Viewer</em> panel
 (see <a class="reference internal" href="#figure-continuous"><span class="std std-numref">Fig. 26</span></a>).</p>
 <ul>
-<li><p class="first"><em>Base path</em>: indicates where the data will be saved. If it doesn’t exist the module will try to create it</p>
-</li>
-<li><p class="first"><em>Base name</em>: indicates the base name from which the save file will derive</p>
-</li>
-<li><p class="first"><em>Current Path</em>: <em>readonly</em>, complete path of the saved file</p>
-</li>
-<li><p class="first"><em>Do Save</em>: Initialize the file and logging can start. A new file is created if clicked again.</p>
-</li>
-<li><p class="first"><em>Compression options</em>: data can be compressed before saving, using one of the proposed library and the given value of compression [0-9], see <em>pytables</em> documentation.</p>
+<li><p><em>Base path</em>: indicates where the data will be saved. If it doesn’t exist the module will try to create it</p></li>
+<li><p><em>Base name</em>: indicates the base name from which the save file will derive</p></li>
+<li><p><em>Current Path</em>: <em>readonly</em>, complete path of the saved file</p></li>
+<li><p><em>Do Save</em>: Initialize the file and logging can start. A new file is created if clicked again.</p></li>
+<li><p><em>Compression options</em>: data can be compressed before saving, using one of the proposed library and the given value of compression [0-9], see <em>pytables</em> documentation.</p>
 <blockquote>
 <div></div></blockquote>
 </li>
 </ul>
-<div class="figure" id="id3">
+<div class="figure align-default" id="id3">
 <span id="figure-continuous"></span><img alt="continuous" src="../_images/continuous_saving.png" />
-<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">Continuous Saving options</span></p>
+<p class="caption"><span class="caption-number">Fig. 26 </span><span class="caption-text">Continuous Saving options</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
 <p>The saved file will follow this general structure:</p>
 <blockquote>
-<div>D:\Data\2018\20181220\Data_20181220_16_58_48.h5</div></blockquote>
+<div><p>D:\Data\2018\20181220\Data_20181220_16_58_48.h5</p>
+</div></blockquote>
 <p>With a base path (<code class="docutils literal notranslate"><span class="pre">D:\Data</span></code> in this case) followed by a subfolder year, a subfolder day and a filename
 formed from a <em>base name</em> followed by the date of the day and the time at which you started to log data.
 <a class="reference internal" href="#figure-continuous-struct"><span class="std std-numref">Fig. 27</span></a> displays the tree structure of such a file, with</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id4">
+<div class="figure align-default" id="id4">
 <span id="figure-continuous-struct"></span><img alt="continuous" src="../_images/continuous_data_structure.png" />
-<p class="caption"><span class="caption-number">Fig. 27 </span><span class="caption-text">Continuous Saving options</span></p>
+<p class="caption"><span class="caption-number">Fig. 27 </span><span class="caption-text">Continuous Saving options</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>
@@ -263,15 +251,15 @@ logger data, module parameters (settings, ROI…) even <em>png</em> screenshots 
 and metadata is used by the H5Browser to display the info to the user.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id5">
+<div class="figure align-default" id="id5">
 <span id="figure-h5browser-data"></span><img alt="h5 browser" src="../_images/h5browser_datas.png" />
-<p class="caption"><span class="caption-number">Fig. 28 </span><span class="caption-text">h5 browser and arrows to explain how each data or metadata is being displayed</span></p>
+<p class="caption"><span class="caption-number">Fig. 28 </span><span class="caption-text">h5 browser and arrows to explain how each data or metadata is being displayed</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
 </div>
 <p>In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
 it will save scans and datas following the rules displayed on <a class="reference internal" href="#figure-dataset-layout"><span class="std std-numref">Fig. 29</span></a> below:</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="figure-dataset-layout">
+<div class="figure align-default" id="figure-dataset-layout">
 <img alt="File layout" src="../_images/dataset_file_layout.PNG" />
 </div>
 </div>
@@ -301,7 +289,7 @@ it will save scans and datas following the rules displayed on <a class="referenc
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>

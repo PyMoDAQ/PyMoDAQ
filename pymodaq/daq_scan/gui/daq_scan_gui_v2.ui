@@ -24,15 +24,11 @@
        <item>
         <layout class="QVBoxLayout" name="settings_layout">
          <item>
-          <layout class="QGridLayout" name="gridLayout_3">
-           <item row="2" column="1">
-            <widget class="QPushButton" name="set_ini_positions_pb">
-             <property name="text">
-              <string>Set Ini Positions</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
             <widget class="QPushButton" name="quit_pb">
              <property name="toolTip">
               <string>Stop Scan</string>
@@ -46,21 +42,47 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
+           <item>
+            <spacer name="horizontalSpacer_2">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="set_scan_pb">
+             <property name="toolTip">
+              <string>Process the scanner settings and prepare the modules for coming scan</string>
+             </property>
+             <property name="text">
+              <string>Set Scan</string>
+             </property>
+            </widget>
+           </item>
+           <item>
             <widget class="Line" name="line">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="set_scan_pb">
+           <item>
+            <widget class="QPushButton" name="set_ini_positions_pb">
+             <property name="toolTip">
+              <string>Set Move Modules to their initial position as defined in the current scan</string>
+             </property>
              <property name="text">
-              <string>Set Scan</string>
+              <string>Init Positions</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
+           <item>
             <widget class="QPushButton" name="start_scan_pb">
              <property name="toolTip">
               <string>Start Scan</string>
@@ -74,7 +96,7 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
+           <item>
             <widget class="QPushButton" name="stop_scan_pb">
              <property name="toolTip">
               <string>Stop Scan</string>
@@ -87,19 +109,6 @@
                <normaloff>:/icons/Icon_Library/stop.png</normaloff>:/icons/Icon_Library/stop.png</iconset>
              </property>
             </widget>
-           </item>
-           <item row="0" column="2" rowspan="4">
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
            </item>
           </layout>
          </item>

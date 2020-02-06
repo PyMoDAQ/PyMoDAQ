@@ -151,7 +151,7 @@ htmlhelp_basename = 'PyMoDAQ documentation'
 
 # -- Options for LaTeX output ------------------------------------------------
 
-
+latex_engine = 'pdflatex'
 
 latex_elements = {
     'papersize': 'letterpaper',

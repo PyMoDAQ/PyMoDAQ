@@ -45,6 +45,8 @@ Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a CeCILL-B license.
 
+PDF version of this documentation: http://pymodaq.cnrs.fr/_static/PyMoDAQ.pdf
+
 Contribution
 ************
 

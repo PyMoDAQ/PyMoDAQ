@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Installation &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>Installation &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
         <script type="text/javascript" src="../_static/jquery.js"></script>
         <script type="text/javascript" src="../_static/underscore.js"></script>
         <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -186,10 +177,10 @@
 <span id="section-installation"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <div class="contents local topic" id="contents">
 <ul class="simple">
-<li><a class="reference internal" href="#overview" id="id8">Overview</a></li>
-<li><a class="reference internal" href="#setting-up-a-new-environment" id="id9">Setting up a new environment</a></li>
-<li><a class="reference internal" href="#installing-pymodaq" id="id10">Installing PyMoDAQ</a></li>
-<li><a class="reference internal" href="#creating-shortcuts-on-windows" id="id11">Creating shortcuts on <strong>Windows</strong></a></li>
+<li><p><a class="reference internal" href="#overview" id="id8">Overview</a></p></li>
+<li><p><a class="reference internal" href="#setting-up-a-new-environment" id="id9">Setting up a new environment</a></p></li>
+<li><p><a class="reference internal" href="#installing-pymodaq" id="id10">Installing PyMoDAQ</a></p></li>
+<li><p><a class="reference internal" href="#creating-shortcuts-on-windows" id="id11">Creating shortcuts on <strong>Windows</strong></a></p></li>
 </ul>
 </div>
 <div class="section" id="overview">
@@ -204,13 +195,13 @@ light package manager.</p>
 <div class="section" id="setting-up-a-new-environment">
 <h2>Setting up a new environment<a class="headerlink" href="#setting-up-a-new-environment" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>Download and install Miniconda3.</li>
-<li>Open a console, and cd to the location of the <em>condabin</em> folder, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Miniconda3\condabin</span></code></li>
-<li>Create a new environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">-n</span> <span class="pre">my_env</span></code>, where my_env is your new environment name, could be <em>pymodaq16</em>
-if you plan to install PyMoDAQ version 1.6.0 for instance</li>
-<li>Activate your environment so that only packages installed within this environment will be <em>seen</em> by Python:
-<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">my_env</span></code></li>
-<li>Install, using conda manager, some mandatory packages: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">pip</span></code> and <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">pyqt</span></code></li>
+<li><p>Download and install Miniconda3.</p></li>
+<li><p>Open a console, and cd to the location of the <em>condabin</em> folder, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Miniconda3\condabin</span></code></p></li>
+<li><p>Create a new environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">-n</span> <span class="pre">my_env</span></code>, where my_env is your new environment name, could be <em>pymodaq16</em>
+if you plan to install PyMoDAQ version 1.6.0 for instance</p></li>
+<li><p>Activate your environment so that only packages installed within this environment will be <em>seen</em> by Python:
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">my_env</span></code></p></li>
+<li><p>Install, using conda manager, some mandatory packages: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">pip</span></code> and <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">pyqt</span></code></p></li>
 </ul>
 </div>
 <div class="section" id="installing-pymodaq">
@@ -223,37 +214,32 @@ PyMoDAQ and all its dependencies (the version 1.6.0 in the example)</p>
 <div class="section" id="creating-shortcuts-on-windows">
 <span id="shortcut-section"></span><h2>Creating shortcuts on <strong>Windows</strong><a class="headerlink" href="#creating-shortcuts-on-windows" title="Permalink to this headline">¶</a></h2>
 <p>Python packages can easily be started from the command line (see <a class="reference internal" href="How_to_start.html#section-how-to-start"><span class="std std-ref">How to Start</span></a>). However, Windows users
-will probably prefer using shortcuts on the desktop. Here is how to do it:</p>
+will probably prefer using shortcuts on the desktop. Here is how to do it (Thanks to Christophe Halgand for the procedure):</p>
 <ul>
-<li><p class="first">First create a shortcut (see <a class="reference internal" href="#shortcut-create"><span class="std std-numref">Fig. 3</span></a>) on your desktop (pointing to any file or program, it doesn’t matter)</p>
-</li>
-<li><p class="first">Right click on it and open its properties (see <a class="reference internal" href="#shortcut-prop"><span class="std std-numref">Fig. 4</span></a>)</p>
-</li>
-<li><p class="first">On the <em>Start in</em> field (“Démarrer dans” in french and in the figure), enter the path to the condabin folder of your miniconda or
-anaconda distribution, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Miniconda3\condabin</span></code></p>
-</li>
-<li><p class="first">On the <em>Target</em> field, (“Cible” in french and in the figure), enter this string:
+<li><p>First create a shortcut (see <a class="reference internal" href="#shortcut-create"><span class="std std-numref">Fig. 3</span></a>) on your desktop (pointing to any file or program, it doesn’t matter)</p></li>
+<li><p>Right click on it and open its properties (see <a class="reference internal" href="#shortcut-prop"><span class="std std-numref">Fig. 4</span></a>)</p></li>
+<li><p>On the <em>Start in</em> field (“Démarrer dans” in french and in the figure), enter the path to the condabin folder of your miniconda or
+anaconda distribution, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Miniconda3\condabin</span></code></p></li>
+<li><p>On the <em>Target</em> field, (“Cible” in french and in the figure), enter this string:
 <code class="docutils literal notranslate"><span class="pre">C:\Windows\System32\cmd.exe</span> <span class="pre">/k</span> <span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">my_env</span> <span class="pre">&amp;</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">pymodaq.daq_scan.daq_scan_main</span></code>. This means that
 yout shortcut will open the windows’s command line, then execute your environment activation (<em>conda activate my_env</em> bit),
 then finally execute and start <strong>Python</strong>, opening the correct pymodaq file (here <em>daq_scan_main.py</em>,
-starting the DAQ_Scan module, <em>python -m pymodaq.daq_scan.daq_scan_main</em> bit)</p>
-</li>
-<li><p class="first">You’re done!</p>
-</li>
-<li><p class="first">Do it again for each PyMoDAQ’s module you want (to get the correct python file and it’s path, see <a class="reference internal" href="How_to_start.html#run-module"><span class="std std-ref">From command line tool:</span></a>).</p>
+starting the DAQ_Scan module, <em>python -m pymodaq.daq_scan.daq_scan_main</em> bit)</p></li>
+<li><p>You’re done!</p></li>
+<li><p>Do it again for each PyMoDAQ’s module you want (to get the correct python file and it’s path, see <a class="reference internal" href="How_to_start.html#run-module"><span class="std std-ref">From command line tool:</span></a>).</p>
 <blockquote>
 <div></div></blockquote>
 </li>
 </ul>
-<div class="figure" id="id6">
+<div class="figure align-default" id="id6">
 <span id="shortcut-create"></span><img alt="shortcut" src="../_images/shortcut_creation.png" />
-<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Create a shortcut on your desktop</span></p>
+<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">Create a shortcut on your desktop</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
 <div class="legend">
 </div>
 </div>
-<div class="figure" id="id7">
+<div class="figure align-default" id="id7">
 <span id="shortcut-prop"></span><img alt="shortcut properties" src="../_images/shortcut_prop.png" />
-<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Shortcut properties</span></p>
+<p class="caption"><span class="caption-number">Fig. 4 </span><span class="caption-text">Shortcut properties</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>
@@ -278,7 +264,7 @@ starting the DAQ_Scan module, <em>python -m pymodaq.daq_scan.daq_scan_main</em> 
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>

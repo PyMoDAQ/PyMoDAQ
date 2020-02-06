@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../../../',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
         <script type="text/javascript" src="../../../_static/jquery.js"></script>
         <script type="text/javascript" src="../../../_static/underscore.js"></script>
         <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../../_static/js/theme.js"></script>
 
@@ -171,22 +162,22 @@
            <div itemprop="articleBody">
             
   <h1>Source code for pymodaq.daq_move.utility_classes</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">PyQt5</span> <span class="k">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtWidgets</span>
-<span class="kn">from</span> <span class="nn">PyQt5.QtCore</span> <span class="k">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">pyqtSlot</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">pyqtSignal</span><span class="p">,</span> <span class="n">QLocale</span><span class="p">,</span> <span class="n">QVariant</span><span class="p">,</span> <span class="n">QSize</span>
+<span></span><span class="kn">from</span> <span class="nn">PyQt5</span> <span class="kn">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtWidgets</span>
+<span class="kn">from</span> <span class="nn">PyQt5.QtCore</span> <span class="kn">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">pyqtSlot</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">pyqtSignal</span><span class="p">,</span> <span class="n">QLocale</span><span class="p">,</span> <span class="n">QVariant</span><span class="p">,</span> <span class="n">QSize</span>
 <span class="c1"># from enum import IntEnum</span>
-<span class="kn">from</span> <span class="nn">easydict</span> <span class="k">import</span> <span class="n">EasyDict</span> <span class="k">as</span> <span class="n">edict</span>
-<span class="kn">from</span> <span class="nn">pyqtgraph.parametertree</span> <span class="k">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">ParameterTree</span>
+<span class="kn">from</span> <span class="nn">easydict</span> <span class="kn">import</span> <span class="n">EasyDict</span> <span class="k">as</span> <span class="n">edict</span>
+<span class="kn">from</span> <span class="nn">pyqtgraph.parametertree</span> <span class="kn">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">ParameterTree</span>
 <span class="kn">import</span> <span class="nn">pyqtgraph.parametertree.parameterTypes</span> <span class="k">as</span> <span class="nn">pTypes</span>
 <span class="kn">import</span> <span class="nn">pymodaq.daq_utils.custom_parameter_tree</span> <span class="k">as</span> <span class="nn">custom_tree</span>
-<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.daq_utils</span> <span class="k">import</span> <span class="n">ThreadCommand</span><span class="p">,</span> <span class="n">getLineInfo</span><span class="p">,</span> <span class="n">check_received_length</span><span class="p">,</span> <span class="n">check_sended</span><span class="p">,</span>\
+<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.daq_utils</span> <span class="kn">import</span> <span class="n">ThreadCommand</span><span class="p">,</span> <span class="n">getLineInfo</span><span class="p">,</span> <span class="n">check_received_length</span><span class="p">,</span> <span class="n">check_sended</span><span class="p">,</span>\
     <span class="n">message_to_bytes</span><span class="p">,</span> <span class="n">send_scalar</span><span class="p">,</span> <span class="n">send_string</span><span class="p">,</span> <span class="n">get_scalar</span><span class="p">,</span> <span class="n">get_int</span><span class="p">,</span> <span class="n">get_string</span><span class="p">,</span> <span class="n">send_list</span>
 <span class="kn">import</span> <span class="nn">socket</span>
 <span class="kn">import</span> <span class="nn">select</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
-<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.tcp_server_client</span> <span class="k">import</span> <span class="n">TCPServer</span><span class="p">,</span> <span class="n">tcp_parameters</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.tcp_server_client</span> <span class="kn">import</span> <span class="n">TCPServer</span><span class="p">,</span> <span class="n">tcp_parameters</span>
 
 
 <span class="n">comon_parameters</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Units:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span> <span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
@@ -247,7 +238,7 @@
     <span class="n">params</span><span class="o">=</span> <span class="p">[]</span>
     <span class="n">_controller_units</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">params_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">params_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">QObject</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="c1">#to make sure this is the parent class</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">move_is_done</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">=</span><span class="n">parent</span>
@@ -507,7 +498,7 @@
     <span class="n">params</span><span class="o">=</span><span class="n">comon_parameters</span> <span class="o">+</span>  <span class="n">tcp_parameters</span>
 
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">params_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">params_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">        Parameters</span>
@@ -681,7 +672,7 @@
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>

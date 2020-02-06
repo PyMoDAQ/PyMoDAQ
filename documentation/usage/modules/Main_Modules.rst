@@ -2,7 +2,7 @@ Main Modules
 ============
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
    :caption: Contents:
 
    DAQ_Move

@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'daq_scan_gui_v2.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -24,42 +26,43 @@ class Ui_Form(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.settings_layout = QtWidgets.QVBoxLayout()
         self.settings_layout.setObjectName("settings_layout")
-        self.gridLayout_3 = QtWidgets.QGridLayout()
-        self.gridLayout_3.setObjectName("gridLayout_3")
-        self.set_ini_positions_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
-        self.set_ini_positions_pb.setObjectName("set_ini_positions_pb")
-        self.gridLayout_3.addWidget(self.set_ini_positions_pb, 2, 1, 1, 1)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setSpacing(0)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.quit_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.quit_pb.setIcon(icon)
         self.quit_pb.setObjectName("quit_pb")
-        self.gridLayout_3.addWidget(self.quit_pb, 0, 0, 1, 1)
+        self.horizontalLayout_2.addWidget(self.quit_pb)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.set_scan_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.set_scan_pb.setObjectName("set_scan_pb")
+        self.horizontalLayout_2.addWidget(self.set_scan_pb)
         self.line = QtWidgets.QFrame(self.horizontalLayoutWidget)
         self.line.setFrameShape(QtWidgets.QFrame.HLine)
         self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
         self.line.setObjectName("line")
-        self.gridLayout_3.addWidget(self.line, 1, 0, 1, 1)
-        self.set_scan_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
-        self.set_scan_pb.setObjectName("set_scan_pb")
-        self.gridLayout_3.addWidget(self.set_scan_pb, 2, 0, 1, 1)
+        self.horizontalLayout_2.addWidget(self.line)
+        self.set_ini_positions_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
+        self.set_ini_positions_pb.setObjectName("set_ini_positions_pb")
+        self.horizontalLayout_2.addWidget(self.set_ini_positions_pb)
         self.start_scan_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.start_scan_pb.setText("")
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.start_scan_pb.setIcon(icon1)
         self.start_scan_pb.setObjectName("start_scan_pb")
-        self.gridLayout_3.addWidget(self.start_scan_pb, 3, 0, 1, 1)
+        self.horizontalLayout_2.addWidget(self.start_scan_pb)
         self.stop_scan_pb = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.stop_scan_pb.setText("")
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.stop_scan_pb.setIcon(icon2)
         self.stop_scan_pb.setObjectName("stop_scan_pb")
-        self.gridLayout_3.addWidget(self.stop_scan_pb, 3, 1, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout_3.addItem(spacerItem, 0, 2, 4, 1)
-        self.settings_layout.addLayout(self.gridLayout_3)
+        self.horizontalLayout_2.addWidget(self.stop_scan_pb)
+        self.settings_layout.addLayout(self.horizontalLayout_2)
         self.horizontalLayout.addLayout(self.settings_layout)
         self.tabWidget = QtWidgets.QTabWidget(self.splitter)
         self.tabWidget.setTabsClosable(False)
@@ -105,17 +108,19 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
-        self.set_ini_positions_pb.setText(_translate("Form", "Set Ini Positions"))
         self.quit_pb.setToolTip(_translate("Form", "Stop Scan"))
         self.quit_pb.setText(_translate("Form", "Quit"))
+        self.set_scan_pb.setToolTip(_translate("Form", "Process the scanner settings and prepare the modules for coming scan"))
         self.set_scan_pb.setText(_translate("Form", "Set Scan"))
+        self.set_ini_positions_pb.setToolTip(_translate("Form", "Set Move Modules to their initial position as defined in the current scan"))
+        self.set_ini_positions_pb.setText(_translate("Form", "Init Positions"))
         self.start_scan_pb.setToolTip(_translate("Form", "Start Scan"))
         self.stop_scan_pb.setToolTip(_translate("Form", "Stop Scan"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot1D), _translate("Form", "1D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_navigator), _translate("Form", "Navigator"))
-
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 if __name__ == "__main__":
     import sys
@@ -125,4 +130,3 @@ if __name__ == "__main__":
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
-

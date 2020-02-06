@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'./',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
         <script type="text/javascript" src="_static/jquery.js"></script>
         <script type="text/javascript" src="_static/underscore.js"></script>
         <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -178,23 +169,23 @@
 <p>Announcement: Training session in Toulouse, France 21/22/23 October 2019:</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure" id="id1">
+<div class="figure align-default" id="id1">
 <span id="flyer"></span><img alt="Flyer_femto" src="_images/Flyer_PyMoDAQ.png" />
-<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">Training session announcement</span></p>
+<p class="caption"><span class="caption-number">Fig. 1 </span><span class="caption-text">Training session announcement</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
 <p>PyMoDAQ, Modular Data Acquisition with Python, is a set of <strong>python</strong> modules used to interface any kind of experiments.
 It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.</p>
 <p>It has two purposes:</p>
 <ul class="simple">
-<li>First, to provide a complete interface to perform automated measurements without having to write a user/interface for each
-new experiment, this is under the <a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> environment.</li>
-<li>Second, to provide various tools (modules) to easily build a <a class="reference internal" href="usage/CustomApp.html#custom-app"><span class="std std-ref">Custom Application</span></a></li>
+<li><p>First, to provide a complete interface to perform automated measurements without having to write a user/interface for each
+new experiment, this is under the <a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> environment.</p></li>
+<li><p>Second, to provide various tools (modules) to easily build a <a class="reference internal" href="usage/CustomApp.html#custom-app"><span class="std std-ref">Custom Application</span></a></p></li>
 </ul>
 <p>It is divided in three main modules:</p>
 <ul class="simple">
-<li><a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> : This is the module that will initialize all preset actuators and detectors. Then will automate the data acquisition.</li>
-<li><a class="reference internal" href="usage/modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.</li>
-<li><a class="reference internal" href="usage/modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.</li>
+<li><p><a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> : This is the module that will initialize all preset actuators and detectors. Then will automate the data acquisition.</p></li>
+<li><p><a class="reference internal" href="usage/modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.</p></li>
+<li><p><a class="reference internal" href="usage/modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.</p></li>
 </ul>
 <p>and many others to simplify any application development.</p>
 <div class="section" id="information">
@@ -204,6 +195,7 @@ new experiment, this is under the <a class="reference internal" href="usage/modu
 <p>List of available plugins: <a class="reference external" href="https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg">https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg</a></p>
 <p>Based on the <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code> library : <a class="reference external" href="http://www.pyqtgraph.org">http://www.pyqtgraph.org</a> by Luke Campagnola.</p>
 <p>PyMoDAQ is written by Sébastien Weber: <a class="reference external" href="mailto:sebastien&#46;weber&#37;&#52;&#48;cemes&#46;fr">sebastien<span>&#46;</span>weber<span>&#64;</span>cemes<span>&#46;</span>fr</a> under a CeCILL-B license.</p>
+<p>PDF version of this documentation: <a class="reference external" href="http://pymodaq.cnrs.fr/_static/PyMoDAQ.pdf">http://pymodaq.cnrs.fr/_static/PyMoDAQ.pdf</a></p>
 </div>
 <div class="section" id="contribution">
 <h2>Contribution<a class="headerlink" href="#contribution" title="Permalink to this headline">¶</a></h2>
@@ -322,6 +314,8 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#preset-manager">Preset manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#overshoot-manager">Overshoot manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#daq-measurement">DAQ_Measurement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#scanner">Scanner</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#navigator">Navigator</a></li>
 </ul>
 </li>
 </ul>
@@ -342,6 +336,7 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#plugins">Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#documentation">Documentation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Contributors.html#you-want-to-contribute">You want to contribute?</a></li>
 </ul>
 </li>
@@ -383,9 +378,9 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
 </div>
 
@@ -407,7 +402,7 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>

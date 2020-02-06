@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Modules &mdash; PyMoDAQ 1.6.3 documentation</title>
+  <title>Utility Modules &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -22,20 +22,11 @@
   <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
   
     
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../../',
-              VERSION:'1.6.3',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
         <script type="text/javascript" src="../../_static/jquery.js"></script>
         <script type="text/javascript" src="../../_static/underscore.js"></script>
         <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -186,12 +177,12 @@
             
   <div class="section" id="utility-modules">
 <h1>Utility Modules<a class="headerlink" href="#utility-modules" title="Permalink to this headline">¶</a></h1>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-default">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
+<tbody>
 </tbody>
 </table>
 <div class="section" id="h5saver-module">
@@ -243,122 +234,134 @@ of data such as with the DAQ_Viewer (see <a class="reference internal" href="../
 </div>
 <dl class="class">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver">
-<em class="property">class </em><code class="descclassname">pymodaq.daq_utils.h5saver.</code><code class="descname">H5Saver</code><span class="sig-paren">(</span><em>h5_file_path=None</em>, <em>h5_file=None</em>, <em>save_type='scan'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">pymodaq.daq_utils.h5saver.</code><code class="sig-name descname">H5Saver</code><span class="sig-paren">(</span><em class="sig-param">h5_file_path=None</em>, <em class="sig-param">h5_file=None</em>, <em class="sig-param">save_type='scan'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver" title="Permalink to this definition">¶</a></dt>
 <dd><p>QObject containing all methods in order to save datas in a <em>hdf5 file</em> with a hierachy compatible with
 the H5Browser. The saving parameters are contained within a <strong>Parameter</strong> object: self.settings that can be displayed
 on a UI (see <a class="reference internal" href="../modules/DAQ_Scan.html#other-settings"><span class="std std-numref">Fig. 13</span></a>) using the widget self.settings_tree. At the creation of a new file, a node
 group named <strong>Raw_datas</strong> and represented by the attribute <code class="docutils literal notranslate"><span class="pre">raw_group</span></code> is created and set with a metadata attribute:</p>
 <ul class="simple">
-<li>‘type’ given by the <strong>save_type</strong> class parameter</li>
+<li><p>‘type’ given by the <strong>save_type</strong> class parameter</p></li>
 </ul>
 <p>The root group of the file is then set with a few metadata:</p>
 <ul class="simple">
-<li>‘pymodaq_version’ the current pymodaq version, e.g. 1.6.2</li>
-<li>‘file’ the file name</li>
-<li>‘date’ the current date</li>
-<li>‘time’ the current time</li>
+<li><p>‘pymodaq_version’ the current pymodaq version, e.g. 1.6.2</p></li>
+<li><p>‘file’ the file name</p></li>
+<li><p>‘date’ the current date</p></li>
+<li><p>‘time’ the current time</p></li>
 </ul>
 <p>All datas will then be saved under this node in various groups</p>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><code class="xref py py-class docutils literal notranslate"><span class="pre">H5Browser</span></code></p>
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">H5Browser</span></code></p>
 </div>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>h5_file</strong> (<em>pytables hdf5 file</em>) – object used to save all datas and metadas</li>
-<li><strong>h5_file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em> or </em><em>Path</em>) – pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
-position within the epsilon precision (see comon_parameters variable)</li>
-<li><strong>save_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – an element of the list module attribute save_types = [‘scan’, ‘detector’, ‘custom’]
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h5_file</strong> (<em>pytables hdf5 file</em>) – object used to save all datas and metadas</p></li>
+<li><p><strong>h5_file_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em> or </em><em>Path</em>) – pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
+position within the epsilon precision (see comon_parameters variable)</p></li>
+<li><p><strong>save_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – an element of the list module attribute save_types = [‘scan’, ‘detector’, ‘custom’]
 * ‘scan’ is used for DAQ_Scan module and should be used for similar application
 * ‘detector’ is used for DAQ_Viewer module and should be used for similar application
-* ‘custom’ should be used for customized applications</li>
+* ‘custom’ should be used for customized applications</p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 <dl class="attribute">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.status_sig">
-<code class="descname">status_sig</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.status_sig" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>pyqtSignal</em> – emits a signal of type Threadcommand in order to senf log information to a main UI</p>
+<code class="sig-name descname">status_sig</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.status_sig" title="Permalink to this definition">¶</a></dt>
+<dd><p>emits a signal of type Threadcommand in order to senf log information to a main UI</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pyqtSignal</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.new_file_sig">
-<code class="descname">new_file_sig</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.new_file_sig" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>pyqtSignal</em> – emits a boolean signal to let the program know when the user pressed the new file button on the UI</p>
+<code class="sig-name descname">new_file_sig</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.new_file_sig" title="Permalink to this definition">¶</a></dt>
+<dd><p>emits a boolean signal to let the program know when the user pressed the new file button on the UI</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pyqtSignal</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.settings">
-<code class="descname">settings</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.settings" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>Parameter</em> – Parameter instance (pyqtgraph) containing all settings (could be represented using the settings_tree widget)</p>
+<code class="sig-name descname">settings</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parameter instance (pyqtgraph) containing all settings (could be represented using the settings_tree widget)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Parameter</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.settings_tree">
-<code class="descname">settings_tree</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.settings_tree" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>ParameterTree</em> – Widget representing as a Tree structure, all the settings defined in the class preamble variable <code class="docutils literal notranslate"><span class="pre">params</span></code></p>
+<code class="sig-name descname">settings_tree</code><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.settings_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Widget representing as a Tree structure, all the settings defined in the class preamble variable <code class="docutils literal notranslate"><span class="pre">params</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>ParameterTree</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.__init__">
-<code class="descname">__init__</code><span class="sig-paren">(</span><em>h5_file_path=None</em>, <em>h5_file=None</em>, <em>save_type='scan'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.__init__" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">h5_file_path=None</em>, <em class="sig-param">h5_file=None</em>, <em class="sig-param">save_type='scan'</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize the H5Saver object</p>
 <p>Creates the <code class="docutils literal notranslate"><span class="pre">setting</span></code> and <code class="docutils literal notranslate"><span class="pre">settings_tree</span></code> object</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_CH_group">
-<code class="descname">add_CH_group</code><span class="sig-paren">(</span><em>where</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_CH_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_CH_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_CH_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_CH_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_CH_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new group of type channel
 .. seealso:: <a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_incremental_group()</span></code></a></p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_data_group">
-<code class="descname">add_data_group</code><span class="sig-paren">(</span><em>where</em>, <em>group_data_type</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_data_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_data_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_data_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">group_data_type</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_data_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_data_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Creates a group node at given location in the tree</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>where</strong> (<em>group node</em>) – where to create data group</li>
-<li><strong>group_data_type</strong> (<em>list of str</em>) – either [‘data0D’, ‘data1D’, ‘data2D’]</li>
-<li><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – a title for this node, will be saved as metadata</li>
-<li><strong>settings_as_xml</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – XML string created from a Parameter object to be saved as metadata</li>
-<li><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>, </em><em>optional</em>) – will be saved as a new metadata attribute with name: key and value: dict value</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>where</strong> (<em>group node</em>) – where to create data group</p></li>
+<li><p><strong>group_data_type</strong> (<em>list of str</em>) – either [‘data0D’, ‘data1D’, ‘data2D’]</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – a title for this node, will be saved as metadata</p></li>
+<li><p><strong>settings_as_xml</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – XML string created from a Parameter object to be saved as metadata</p></li>
+<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>, </em><em>optional</em>) – will be saved as a new metadata attribute with name: key and value: dict value</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>group</strong></p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">group node</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>group</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>group node</p>
+</dd>
+</dl>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><code class="xref py py-meth docutils literal notranslate"><span class="pre">àdd_group()</span></code></p>
+<p class="admonition-title">See also</p>
+<p><code class="xref py py-meth docutils literal notranslate"><span class="pre">àdd_group()</span></code></p>
 </div>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_det_group">
-<code class="descname">add_det_group</code><span class="sig-paren">(</span><em>where</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_det_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_det_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_det_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_det_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_det_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new group of type detector
 .. seealso:: <a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_incremental_group()</span></code></a></p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_group">
-<code class="descname">add_group</code><span class="sig-paren">(</span><em>group_name</em>, <em>group_type</em>, <em>where</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_group</code><span class="sig-paren">(</span><em class="sig-param">group_name</em>, <em class="sig-param">group_type</em>, <em class="sig-param">where</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a node in the h5 file tree of the group type
 :param group_name:
 :type group_name: (str) a custom name for this group
@@ -370,21 +373,19 @@ position within the epsilon precision (see comon_parameters variable)</li>
 :type settings_as_xml: (str) XML string containing Parameters representation (see custom_Tree)
 :param metadata:
 :type metadata: (dict) extra metadata to be saved with this new group node</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>(node)</strong></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">newly created group node</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>(node)</strong></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>newly created group node</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group">
-<code class="descname">add_incremental_group</code><span class="sig-paren">(</span><em>group_type</em>, <em>where</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_incremental_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_incremental_group</code><span class="sig-paren">(</span><em class="sig-param">group_type</em>, <em class="sig-param">where</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_incremental_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a node in the h5 file tree of the group type with an increment in the given name
 :param group_type:
 :type group_type: (str) one of the possible values of <strong>group_types</strong>
@@ -394,35 +395,33 @@ position within the epsilon precision (see comon_parameters variable)</li>
 :type settings_as_xml: (str) XML string containing Parameters representation (see custom_Tree)
 :param metadata:
 :type metadata: (dict) extra metadata to be saved with this new group node</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>(node)</strong></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">newly created group node</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>(node)</strong></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>newly created group node</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_live_scan_group">
-<code class="descname">add_live_scan_group</code><span class="sig-paren">(</span><em>where</em>, <em>dimensionality</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_live_scan_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_live_scan_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_live_scan_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">dimensionality</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_live_scan_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_live_scan_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new group of type live scan
 .. seealso:: <a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_incremental_group()</span></code></a></p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_move_group">
-<code class="descname">add_move_group</code><span class="sig-paren">(</span><em>where</em>, <em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_move_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_move_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_move_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_move_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_move_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new group of type move
 .. seealso:: <a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_incremental_group()</span></code></a></p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis">
-<code class="descname">add_navigation_axis</code><span class="sig-paren">(</span><em>data</em>, <em>parent_group</em>, <em>axis='x_axis'</em>, <em>enlargeable=False</em>, <em>title=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_navigation_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_navigation_axis</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">parent_group</em>, <em class="sig-param">axis='x_axis'</em>, <em class="sig-param">enlargeable=False</em>, <em class="sig-param">title=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_navigation_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create carray for navigation axis within a scan
 :param data:
 :type data: (ndarray) of dimension 1
@@ -434,197 +433,185 @@ position within the epsilon precision (see comon_parameters variable)</li>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_scan_group">
-<code class="descname">add_scan_group</code><span class="sig-paren">(</span><em>title=''</em>, <em>settings_as_xml=''</em>, <em>metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_scan_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_scan_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">add_scan_group</code><span class="sig-paren">(</span><em class="sig-param">title=''</em>, <em class="sig-param">settings_as_xml=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_scan_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_scan_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a new group of type scan
 .. seealso:: <a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group" title="pymodaq.daq_utils.h5saver.H5Saver.add_incremental_group"><code class="xref py py-meth docutils literal notranslate"><span class="pre">add_incremental_group()</span></code></a></p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.close_file">
-<code class="descname">close_file</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.close_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.close_file" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">close_file</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.close_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.close_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Flush data and close the h5file</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.emit_new_file">
-<code class="descname">emit_new_file</code><span class="sig-paren">(</span><em>status</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.emit_new_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.emit_new_file" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">emit_new_file</code><span class="sig-paren">(</span><em class="sig-param">status</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.emit_new_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.emit_new_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Emits the new_file_sig</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>status</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – emits True if a new file has been asked by the user pressing the new file button on the UI</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>status</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – emits True if a new file has been asked by the user pressing the new file button on the UI</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.get_last_scan">
-<code class="descname">get_last_scan</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_last_scan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_last_scan" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_last_scan</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_last_scan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_last_scan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Gets the last scan node within the h5_file and under the the <strong>raw_group</strong></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>scan_group</strong></td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">pytables group or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.8)">None</a></td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>scan_group</strong></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>pytables group or <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.8)">None</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.get_scan_index">
-<code class="descname">get_scan_index</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_scan_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_scan_index" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_scan_index</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_scan_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_scan_index" title="Permalink to this definition">¶</a></dt>
 <dd><p>return the scan group index in the “scan templating”: Scan000, Scan001 as an integer</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.get_set_group">
-<code class="descname">get_set_group</code><span class="sig-paren">(</span><em>where</em>, <em>name</em>, <em>title=''</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_set_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_set_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_set_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">name</em>, <em class="sig-param">title=''</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_set_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_set_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieve or create (if absent) a node group
 Get attributed to the class attribute <code class="docutils literal notranslate"><span class="pre">current_group</span></code></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>where</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em> or </em><em>node</em>) – path or parent node instance</li>
-<li><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – group node name</li>
-<li><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – node title</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>where</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em> or </em><em>node</em>) – path or parent node instance</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – group node name</p></li>
+<li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – node title</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>group</strong></p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">group node</p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>group</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>group node</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.get_set_logger">
-<code class="descname">get_set_logger</code><span class="sig-paren">(</span><em>where</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_set_logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_set_logger" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_set_logger</code><span class="sig-paren">(</span><em class="sig-param">where</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.get_set_logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.get_set_logger" title="Permalink to this definition">¶</a></dt>
 <dd><p>Retrieve or create (if absent) a logger enlargeable array to store logs
 Get attributed to the class attribute <code class="docutils literal notranslate"><span class="pre">logger_array</span></code>
 :param where: location within the tree where to save or retrieve the array
 :type where: node</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>logger_array</strong> – enlargeable array accepting strings as elements</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">vlarray</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>logger_array</strong> – enlargeable array accepting strings as elements</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>vlarray</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.init_file">
-<code class="descname">init_file</code><span class="sig-paren">(</span><em>update_h5=False</em>, <em>custom_naming=False</em>, <em>addhoc_file_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.init_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.init_file" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">init_file</code><span class="sig-paren">(</span><em class="sig-param">update_h5=False</em>, <em class="sig-param">custom_naming=False</em>, <em class="sig-param">addhoc_file_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.init_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.init_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initializes a new h5 file.
 Could set the h5_file attributes as:</p>
 <ul class="simple">
-<li>a file with a name following a template if <code class="docutils literal notranslate"><span class="pre">custom_naming</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code> and <code class="docutils literal notranslate"><span class="pre">addhoc_file_path</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code></li>
-<li>a file within a name set using a file dialog popup if <code class="docutils literal notranslate"><span class="pre">custom_naming</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code></li>
-<li>a file with a custom name if <code class="docutils literal notranslate"><span class="pre">addhoc_file_path</span></code> is a <code class="docutils literal notranslate"><span class="pre">Path</span></code> object or a path string</li>
+<li><p>a file with a name following a template if <code class="docutils literal notranslate"><span class="pre">custom_naming</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code> and <code class="docutils literal notranslate"><span class="pre">addhoc_file_path</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code></p></li>
+<li><p>a file within a name set using a file dialog popup if <code class="docutils literal notranslate"><span class="pre">custom_naming</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code></p></li>
+<li><p>a file with a custom name if <code class="docutils literal notranslate"><span class="pre">addhoc_file_path</span></code> is a <code class="docutils literal notranslate"><span class="pre">Path</span></code> object or a path string</p></li>
 </ul>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>update_h5</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – create a new h5 file with name specified by other parameters
-if false try to open an existing file and will append new data to it</li>
-<li><strong>custom_naming</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – if True, a selection file dialog opens to set a new file name</li>
-<li><strong>addhoc_file_path</strong> (<em>Path</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – supplied name by the user for the new file</li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>update_h5</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – create a new h5 file with name specified by other parameters
+if false try to open an existing file and will append new data to it</p></li>
+<li><p><strong>custom_naming</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – if True, a selection file dialog opens to set a new file name</p></li>
+<li><p><strong>addhoc_file_path</strong> (<em>Path</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – supplied name by the user for the new file</p></li>
 </ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>update_h5</strong> – True if new file has been created, False otherwise</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></p>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>update_h5</strong> – True if new file has been created, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.is_node_in_group">
-<code class="descname">is_node_in_group</code><span class="sig-paren">(</span><em>where</em>, <em>name</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.is_node_in_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.is_node_in_group" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">is_node_in_group</code><span class="sig-paren">(</span><em class="sig-param">where</em>, <em class="sig-param">name</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.is_node_in_group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.is_node_in_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if a given node with name is in the group defined by where (comparison on lower case strings)
 :param where: path or parent node instance
 :type where: (str or node)
 :param name: group node name
 :type name: (str)</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">True if node exists, False otherwise</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>True if node exists, False otherwise</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.load_file">
-<code class="descname">load_file</code><span class="sig-paren">(</span><em>base_path=None</em>, <em>file_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.load_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.load_file" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">load_file</code><span class="sig-paren">(</span><em class="sig-param">base_path=None</em>, <em class="sig-param">file_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.load_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.load_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Opens a file dialog to select a h5file saved on disk to be used</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>base_path</strong> – </li>
-<li><strong>file_path</strong> – </li>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_path</strong> – </p></li>
+<li><p><strong>file_path</strong> – </p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
 <div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.init_file" title="pymodaq.daq_utils.h5saver.H5Saver.init_file"><code class="xref py py-meth docutils literal notranslate"><span class="pre">init_file()</span></code></a>
-<a class="reference internal" href="utility_api/file_management.html#pymodaq.daq_utils.daq_utils.select_file" title="pymodaq.daq_utils.daq_utils.select_file"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pymodaq.daq_utils.daq_utils.select_file()</span></code></a></p>
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#pymodaq.daq_utils.h5saver.H5Saver.init_file" title="pymodaq.daq_utils.h5saver.H5Saver.init_file"><code class="xref py py-meth docutils literal notranslate"><span class="pre">init_file()</span></code></a>, <a class="reference internal" href="utility_api/file_management.html#pymodaq.daq_utils.daq_utils.select_file" title="pymodaq.daq_utils.daq_utils.select_file"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pymodaq.daq_utils.daq_utils.select_file()</span></code></a></p>
 </div>
 </dd></dl>
 
 <dl class="method">
-<dt id="pymodaq.daq_utils.h5saver.H5Saver.update_file_paths">
-<code class="descname">update_file_paths</code><span class="sig-paren">(</span><em>update_h5=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.update_file_paths"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.update_file_paths" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply the template depending on the ‘save_type’ settings child</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>update_h5</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – if True, will increment the file name and eventually the current scan index
-if False, get the current scan index in the h5 file</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
-<li><strong>scan_path</strong> (<em>Path</em>)</li>
-<li><strong>current_filename</strong> (<em>str</em>)</li>
-<li><strong>dataset_path</strong> (<em>Path</em>)</li>
+<dt id="pymodaq.daq_utils.h5saver.H5Saver.set_current_scan_path">
+<code class="sig-name descname">set_current_scan_path</code><span class="sig-paren">(</span><em class="sig-param">base_dir</em>, <em class="sig-param">base_name='Scan'</em>, <em class="sig-param">update_h5=False</em>, <em class="sig-param">next_scan_index=0</em>, <em class="sig-param">create_scan_folder=False</em>, <em class="sig-param">create_dataset_folder=True</em>, <em class="sig-param">curr_date=None</em>, <em class="sig-param">ind_dataset=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.set_current_scan_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.set_current_scan_path" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>base_dir</strong> – </p></li>
+<li><p><strong>base_name</strong> – </p></li>
+<li><p><strong>update_h5</strong> – </p></li>
+<li><p><strong>next_scan_index</strong> – </p></li>
+<li><p><strong>create_scan_folder</strong> – </p></li>
+<li><p><strong>create_dataset_folder</strong> – </p></li>
 </ul>
-</td>
-</tr>
-</tbody>
-</table>
-<div class="admonition seealso">
-<p class="first admonition-title">See also</p>
-<p class="last"><a class="reference internal" href="utility_api/scan.html#pymodaq.daq_utils.daq_utils.set_current_scan_path" title="pymodaq.daq_utils.daq_utils.set_current_scan_path"><code class="xref py py-meth docutils literal notranslate"><span class="pre">pymodaq.daq_utils.daq_utils.set_current_scan_path()</span></code></a></p>
-</div>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_utils.h5saver.H5Saver.update_file_paths">
+<code class="sig-name descname">update_file_paths</code><span class="sig-paren">(</span><em class="sig-param">update_h5=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.update_file_paths"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.update_file_paths" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>update_h5</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – if True, will increment the file name and eventually the current scan index
+if False, get the current scan index in the h5 file</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>scan_path</strong> (<em>Path</em>)</p></li>
+<li><p><strong>current_filename</strong> (<em>str</em>)</p></li>
+<li><p><strong>dataset_path</strong> (<em>Path</em>)</p></li>
+</ul>
+</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -652,7 +639,7 @@ if False, get the current scan index in the h5 file</td>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, Weber Sébastien
+        &copy; Copyright 2020, Weber Sébastien
 
     </p>
   </div>
