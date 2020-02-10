@@ -292,52 +292,6 @@ def scroll_linear(scroll_val, min_val , max_val):
     value = scroll_val * (max_val-min_val)/100+ min_val
     return value
 
-
-def extract_TTTR_histo_every_pixels(nanotimes, markers, marker=65, Nx=1, Ny=1, Ntime=512, ind_line_offset=0,
-                                    channel=0):
-    """
-    Extract histograms from photon tags and attributes them in the given pixel of the FLIM
-    The marker is used to check where a new line within the image starts
-    Parameters
-    ----------
-    nanotimes: (ndarray of uint16) photon arrival times (in timeharp units)
-    markers: (ndarray of uint8) markers: 0 means the corresponding nanotime is a photon on detector 0,
-                                         1 means the corresponding nanotime is a photon on detector 1,
-                                         65 => Marker 1 event
-                                         66 => Marker 2 event
-                                         ...
-                                         79 => Marker 15 event
-                                         127 =>overflow
-    marker: (int) the marker value corresponding to a new Y line within the image (for instance 65)
-    Nx: (int) the number of pixels along the xaxis
-    Ny: (int) the number of pixels along the yaxis
-    Ntime: (int) the number of pixels along the time axis
-    ind_line_offset: (int) the offset of previously read lines
-    channel: (int) marker of the specific channel (0 or 1) for channel 1 or 2
-
-    Returns
-    -------
-    ndarray: FLIM hypertemporal image in the order (X, Y, time)
-    """
-    bins = np.linspace(0, Ntime, Ntime + 1, dtype=np.uint32)
-    nanotimes = nanotimes[np.logical_or(markers == marker, markers == channel)]
-    markers = markers[np.logical_or(markers == marker, markers == channel)]
-    indexes_new_line = np.squeeze(np.argwhere(markers == marker)).astype(np.uint64)
-    datas = np.zeros((Nx, Ny, Ntime), dtype=np.int64)
-
-    if indexes_new_line.size == 0:
-        indexes_new_line = np.array([0, nanotimes.size], dtype=np.uint64)
-    # print(indexes_new_line)
-    for ind_line in range(indexes_new_line.size - 1):
-        # print(ind_line)
-        data_line_tmp = nanotimes[int(indexes_new_line[ind_line] + 1):indexes_new_line[ind_line + 1]]
-        ix = np.int((ind_line + ind_line_offset) % Nx)
-        iy = np.int(((ind_line + ind_line_offset) // Nx) % Ny)
-        datas[ix, iy, :] += np.histogram(data_line_tmp, bins, range=None)[0]
-
-    return datas
-
-
 def getLineInfo():
     """get information about where the Exception has been triggered"""
     tb = sys.exc_info()[2]
