@@ -622,22 +622,22 @@ class DAQ_Move(Ui_Form,QObject):
             update_status, set_enabled_move_buttons, get_position, DAQ_utils.ThreadCommand, parameter_tree_changed, raise_timeout
         """
 
-        if status.command=="Update_Status":
+        if status.command == "Update_Status":
             if len(status.attributes)>2:
                 self.update_status(status.attributes[0],wait_time=self.wait_time,log_type=status.attributes[1])
             else:
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
 
-        elif status.command=="ini_stage":
+        elif status.command == "ini_stage":
             #status.attributes[0]=edict(initialized=bool,info="", controller=)
             self.update_status("Stage initialized: {:} info: {:}".format(status.attributes[0]['initialized'],status.attributes[0]['info']),wait_time=self.wait_time,log_type='log')
             if status.attributes[0]['initialized']:
-                self.controller=status.attributes[0]['controller']
+                self.controller = status.attributes[0]['controller']
                 self.set_enabled_move_buttons(enable=True)
                 self.ui.Ini_state_LED.set_as_true()
-                self.initialized_state=True
+                self.initialized_state = True
             else:
-                self.initialized_state=False
+                self.initialized_state = False
             if self.initialized_state:
                 self.get_position()
             self.init_signal.emit(self.initialized_state)
@@ -647,40 +647,52 @@ class DAQ_Move(Ui_Form,QObject):
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
                 self.stage_thread.exit()
                 self.stage_thread.wait()
-                finished=self.stage_thread.isFinished()
+                finished = self.stage_thread.isFinished()
                 if finished:
                     pass
-                    delattr(self,'stage_thread')
+                    delattr(self, 'stage_thread')
                 else:
-                    self.update_status('thread is locked?!',self.wait_time,'log')
+                    self.update_status('thread is locked?!', self.wait_time, 'log')
             except Exception as e:
-                self.update_status(getLineInfo()+ str(e),log_type="log")
-            self.initialized_state=False
+                self.update_status(getLineInfo() + str(e), log_type="log")
+            self.initialized_state = False
             self.init_signal.emit(self.initialized_state)
 
-        elif status.command=="check_position":
+        elif status.command == "check_position":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
                self.command_tcpip.emit(ThreadCommand('position_is', status.attributes))
 
-        elif status.command=="move_done":
+        elif status.command == "move_done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
-            self.move_done_bool=True
+            self.move_done_bool = True
             self.ui.Move_Done_LED.set_as_true()
-            self.move_done_signal.emit(self.title,status.attributes[0])
+            self.move_done_signal.emit(self.title, status.attributes[0])
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
                 self.command_tcpip.emit(ThreadCommand('move_done', status.attributes))
 
-        elif status.command=="Move_Not_Done":
+        elif status.command == "Move_Not_Done":
             self.ui.Current_position_sb.setValue(status.attributes[0])
             self.current_position=status.attributes[0]
             self.move_done_bool=False
             self.ui.Move_Done_LED.set_as_false()
             self.command_stage.emit(ThreadCommand(command="move_Abs",attributes=[self.target_position]))
 
-        elif status.command=='update_settings':
+        elif status.command == 'update_main_settings':
+            #this is a way for the plugins to update main settings of the ui (solely values, limits and options)
+            try:
+                if status.attributes[2] == 'value':
+                    self.settings.child('main_settings', *status.attributes[0]).setValue(status.attributes[1])
+                elif status.attributes[2] == 'limits':
+                    self.settings.child('main_settings', *status.attributes[0]).setLimits(status.attributes[1])
+                elif status.attributes[2] == 'options':
+                    self.settings.child('main_settings', *status.attributes[0]).setOpts(**status.attributes[1])
+            except Exception as e:
+                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+
+        elif status.command == 'update_settings':
             #ThreadCommand(command='update_settings',attributes=[path,data,change]))
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
@@ -699,16 +711,15 @@ class DAQ_Move(Ui_Form,QObject):
 
             except Exception as e:
                 self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
-
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
 
-        elif status.command=='raise_timeout':
+        elif status.command == 'raise_timeout':
             self.raise_timeout()
 
-        elif status.command=='outofbounds':
+        elif status.command == 'outofbounds':
             self.bounds_signal.emit(True)
 
-    def update_status(self,txt,wait_time=0,log_type=None):
+    def update_status(self, txt, wait_time=0, log_type=None):
         """
             Show the given txt message in the status bar with a delay of wait_time ms if specified (0 by default).
 

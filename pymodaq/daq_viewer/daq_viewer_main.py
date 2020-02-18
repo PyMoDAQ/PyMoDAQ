@@ -1479,13 +1479,13 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             --------
             update_status, set_enabled_grab_buttons, raise_timeout
         """
-        if status.command=="Update_Status":
+        if status.command == "Update_Status":
             if len(status.attributes) > 2:
                 self.update_status(status.attributes[0], wait_time=self.wait_time, log_type=status.attributes[1])
             else:
                 self.update_status(status.attributes[0], wait_time=self.wait_time)
 
-        elif status.command=="ini_detector":
+        elif status.command == "ini_detector":
             self.update_status("detector initialized: "+str(status.attributes[0]['initialized']), wait_time=self.wait_time)
 
             if status.attributes[0]['initialized']:
@@ -1497,7 +1497,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.initialized_state = False
             self.init_signal.emit(self.initialized_state)
 
-        elif status.command=="close":
+        elif status.command == "close":
             try:
                 self.update_status(status.attributes[0],wait_time=self.wait_time)
                 self.detector_thread.exit()
@@ -1553,14 +1553,26 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             except Exception as e:
                 self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
 
-        elif status.command=="update_channels":
+        elif status.command == "update_channels":
             pass
             #if self.DAQ_type=='DAQ0D':
             #    for viewer in self.ui.viewers:
             #        viewer.update_channels()
 
+        elif status.command == 'update_main_settings':
+            #this is a way for the plugins to update main settings of the ui (solely values, limits and options)
+            try:
+                if status.attributes[2] == 'value':
+                    self.settings.child('main_settings', *status.attributes[0]).setValue(status.attributes[1])
+                elif status.attributes[2] == 'limits':
+                    self.settings.child('main_settings', *status.attributes[0]).setLimits(status.attributes[1])
+                elif status.attributes[2] == 'options':
+                    self.settings.child('main_settings', *status.attributes[0]).setOpts(**status.attributes[1])
+            except Exception as e:
+                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
-        elif status.command=='update_settings':
+        elif status.command == 'update_settings':
+            #using this the settings shown in the UI for the plugin reflects the real plugin settings
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)#any changes on the detcetor settings will update accordingly the gui
             except: pass
@@ -1577,7 +1589,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.settings.child('detector_settings', *status.attributes[0]).addChild(status.attributes[1][0])
 
             except Exception as e:
-                self.update_status(getLineInfo()+ str(e),self.wait_time, 'log')
+                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         elif status.command=='raise_timeout':
