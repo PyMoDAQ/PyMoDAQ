@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'daq_gui_settings.ui'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -110,6 +112,13 @@ class Ui_Form(object):
         self.navigator_pb.setIcon(icon8)
         self.navigator_pb.setObjectName("navigator_pb")
         self.horizontalLayout_2.addWidget(self.navigator_pb)
+        self.log_pb = QtWidgets.QPushButton(self.command_widget)
+        self.log_pb.setText("")
+        icon9 = QtGui.QIcon()
+        icon9.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/information2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.log_pb.setIcon(icon9)
+        self.log_pb.setObjectName("log_pb")
+        self.horizontalLayout_2.addWidget(self.log_pb)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.verticalLayout_4.addWidget(self.command_widget)
         self.settings_widget = QtWidgets.QWidget(Form)
@@ -131,15 +140,16 @@ class Ui_Form(object):
         self.DAQ_type_combo.addItem("")
         self.DAQ_type_combo.addItem("")
         self.DAQ_type_combo.addItem("")
+        self.DAQ_type_combo.addItem("")
         self.gridLayout_3.addWidget(self.DAQ_type_combo, 0, 3, 1, 3)
         self.label_4 = QtWidgets.QLabel(self.settings_widget)
         self.label_4.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
         self.label_4.setObjectName("label_4")
         self.gridLayout_3.addWidget(self.label_4, 0, 0, 1, 3)
         self.Quit_pb = QtWidgets.QPushButton(self.settings_widget)
-        icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.Quit_pb.setIcon(icon9)
+        icon10 = QtGui.QIcon()
+        icon10.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.Quit_pb.setIcon(icon10)
         self.Quit_pb.setObjectName("Quit_pb")
         self.gridLayout_3.addWidget(self.Quit_pb, 4, 0, 1, 2)
         self.Detector_type_combo = QtWidgets.QComboBox(self.settings_widget)
@@ -190,11 +200,13 @@ class Ui_Form(object):
         self.settings_pb.setToolTip(_translate("Form", "Open Settings"))
         self.update_com_pb.setToolTip(_translate("Form", "Refresh Hardware"))
         self.navigator_pb.setToolTip(_translate("Form", "Send current data to navigator"))
+        self.log_pb.setToolTip(_translate("Form", "Show Cuurent log file"))
         self.label_3.setText(_translate("Form", "Detector:"))
         self.DAQ_type_combo.setToolTip(_translate("Form", "Detector Type"))
         self.DAQ_type_combo.setItemText(0, _translate("Form", "DAQ0D"))
         self.DAQ_type_combo.setItemText(1, _translate("Form", "DAQ1D"))
         self.DAQ_type_combo.setItemText(2, _translate("Form", "DAQ2D"))
+        self.DAQ_type_combo.setItemText(3, _translate("Form", "DAQND"))
         self.label_4.setText(_translate("Form", "DAQ type:"))
         self.Quit_pb.setToolTip(_translate("Form", "quit and close the viewer"))
         self.Quit_pb.setText(_translate("Form", "Quit"))
@@ -211,9 +223,9 @@ class Ui_Form(object):
         self.data_ready_led.setText(_translate("Form", "TextLabel"))
         self.IniDet_pb.setToolTip(_translate("Form", "To initialize the detector"))
         self.IniDet_pb.setText(_translate("Form", "Ini. Det."))
-
-from pymodaq.daq_utils.plotting.QLED.qled import QLED
+from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 if __name__ == "__main__":
     import sys
@@ -223,4 +235,3 @@ if __name__ == "__main__":
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
-

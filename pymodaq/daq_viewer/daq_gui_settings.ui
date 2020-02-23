@@ -225,6 +225,20 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="log_pb">
+              <property name="toolTip">
+               <string>Show Cuurent log file</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="icon">
+               <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
+                <normaloff>:/icons/Icon_Library/information2.png</normaloff>:/icons/Icon_Library/information2.png</iconset>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -284,6 +298,11 @@
               <item>
                <property name="text">
                 <string>DAQ2D</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>DAQND</string>
                </property>
               </item>
              </widget>

@@ -17,9 +17,9 @@ import copy
 version = '0.0.1'
 save_types = ['scan', 'detector', 'custom']
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
-group_data_types = ['data0D', 'data1D', 'data2D']
+group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
-data_dimensions = ['0D', '1D', '2D']
+data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
 
@@ -77,7 +77,7 @@ class H5Saver(QObject):
     new_file_sig = pyqtSignal(bool)
 
     params = [  {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True},
-                {'title': 'Save 2D datas:', 'name': 'save_2D', 'type': 'bool', 'value': True},
+                {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': True},
                 {'title': 'Save raw datas only:', 'name': 'save_raw_only', 'type': 'bool', 'value': True, 'tooltip':
                         'if True, will not save extracted ROIs used to do live plotting, only raw datas and the scan \
                         result will be saved'},
@@ -503,7 +503,7 @@ class H5Saver(QObject):
         where: group node
                where to create data group
         group_data_type: list of str
-                         either ['data0D', 'data1D', 'data2D']
+                         either ['data0D', 'data1D', 'data2D', 'dataND']
         title: str, optional
                a title for this node, will be saved as metadata
         settings_as_xml: str, optional
@@ -571,45 +571,69 @@ class H5Saver(QObject):
                                    enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
 
-    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_shape = [], title='', enlargeable=False, init=False, add_scan_dim=False):
+    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_shape=[], title='', enlargeable=False,
+                 init=False, add_scan_dim=False, metadata=dict([])):
 
         shape, dimension, size = utils.get_data_dimension(data_dict['data'])
-        data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
-            title=title, data_shape=shape,enlargeable=enlargeable, data_dimension = dimension, scan_type=scan_type,
-            scan_shape = scan_shape,
-            array_to_save=data_dict['data'],
-            init = init, add_scan_dim = add_scan_dim)
 
-        if 'x_axis' in data_dict:
-            if not isinstance(data_dict['x_axis'], dict):
-                array_to_save = data_dict['x_axis']
+
+        #save axis
+        # this loop covers all type of axis : x_axis, y_axis... nav_x_axis, ...
+        axis_keys = [k for k in data_dict.keys() if 'axis' in k]
+        for key in axis_keys:
+            if not isinstance(data_dict[key], dict):
+                array_to_save = data_dict[key]
                 tmp_dict = dict(label='', units='')
             else:
-                tmp_dict = copy.deepcopy(data_dict['x_axis'])
+                tmp_dict = copy.deepcopy(data_dict[key])
                 array_to_save = tmp_dict.pop('data')
+                data_dict.pop(key)
 
-            array = self.add_array(channel_group, 'x_axis', 'axis',
-                   array_type=np.float,array_to_save=array_to_save,
+            array = self.add_array(channel_group, key, 'axis',
+                   array_type=np.float, array_to_save=array_to_save,
                             enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
-        if 'y_axis' in data_dict:
-            if not isinstance(data_dict['y_axis'], dict):
-                array_to_save = data_dict['y_axis']
-                tmp_dict = dict(label='', units='')
-            else:
-                tmp_dict = copy.deepcopy(data_dict['y_axis'])
-                array_to_save = tmp_dict.pop('data')
+        # if 'x_axis' in data_dict:
+        #     if not isinstance(data_dict['x_axis'], dict):
+        #         array_to_save = data_dict['x_axis']
+        #         tmp_dict = dict(label='', units='')
+        #     else:
+        #         tmp_dict = copy.deepcopy(data_dict['x_axis'])
+        #         array_to_save = tmp_dict.pop('data')
+        #         data_dict.pop('x_axis')
+        #
+        #     array = self.add_array(channel_group, 'x_axis', 'axis',
+        #            array_type=np.float, array_to_save=array_to_save,
+        #                     enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+        #
+        # if 'y_axis' in data_dict:
+        #     if not isinstance(data_dict['y_axis'], dict):
+        #         array_to_save = data_dict['y_axis']
+        #         tmp_dict = dict(label='', units='')
+        #     else:
+        #         tmp_dict = copy.deepcopy(data_dict['y_axis'])
+        #         array_to_save = tmp_dict.pop('data')
+        #         data_dict.pop('y_axis')
+        #
+        #     array = self.add_array(channel_group, 'y_axis', 'axis',
+        #             array_type=np.float, array_to_save=array_to_save,
+        #             enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
-            array = self.add_array(channel_group, 'y_axis', 'axis',
-                    array_type=np.float, array_to_save=array_to_save,
-                    enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+        array_to_save = data_dict.pop('data')
+        tmp_dict = copy.deepcopy(data_dict)
+        tmp_dict.update(metadata)
+        data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
+            title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension, scan_type=scan_type,
+            scan_shape=scan_shape,
+            array_to_save=array_to_save,
+            init=init, add_scan_dim=add_scan_dim, metadata=tmp_dict)
 
         self.h5_file.flush()
         return data_array
 
 
     def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
-                  title='', array_to_save=None, array_type = np.float, enlargeable = False, metadata=dict([]),
+                  title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
                   init=False, add_scan_dim=False):
 
         if data_dimension not in data_dimensions:

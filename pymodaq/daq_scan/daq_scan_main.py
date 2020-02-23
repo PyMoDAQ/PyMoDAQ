@@ -38,7 +38,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5saver import H5Saver
 
 local_path = utils.get_set_local_dir()
-now=datetime.datetime.now()
+now = datetime.datetime.now()
 log_path=os.path.join(local_path,'logging')
 if not os.path.isdir(log_path):
     os.makedirs(log_path)
@@ -1226,9 +1226,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.ui.stop_scan_pb.setEnabled(False)
 
     def show_log(self):
-
         import webbrowser
         webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
+
     def setupUI(self):
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()

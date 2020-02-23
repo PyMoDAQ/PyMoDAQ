@@ -50,9 +50,9 @@ class ViewerND(QtWidgets.QWidget, QObject):
         PyQt5, pyqtgraph, QtWidgets, QObject
 
     """
-    command_DAQ_signal=pyqtSignal(list)
-    log_signal=pyqtSignal(str)
-    data_to_export_signal=pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+    command_DAQ_signal = pyqtSignal(list)
+    log_signal = pyqtSignal(str)
+    data_to_export_signal = pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
 
 
     def __init__(self,parent=None):
@@ -83,31 +83,39 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # self.set_nav_axes(3)
         self.ui = QObject()  # the user interface
         self.set_GUI()
-
+        self.title = ""
+        self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(),
+                                          data2D=OrderedDict(),
+                                          dataND=OrderedDict())
 
 
 
     @pyqtSlot(OrderedDict)
     def export_data(self, datas):
-        datas['acq_time_s'] = datetime.datetime.now().timestamp()
-        self.data_to_export_signal.emit(datas)
+        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
+        for key in datas.keys():
+            if key in self.data_to_export.keys():
+                if isinstance(datas[key], OrderedDict):
+                    if list(datas[key].keys()) != []:
+                        self.data_to_export[key].update(datas[key])
+        self.data_to_export_signal.emit(self.data_to_export)
 
     def get_data_dimension(self):
         try:
-            dimension="("
-            for ind,ax in enumerate(self.datas.axes_manager.navigation_shape):
-                if ind!=len(self.datas.axes_manager.navigation_shape)-1:
-                    dimension+=str(ax)+','
+            dimension = "("
+            for ind, ax in enumerate(self.datas.axes_manager.navigation_shape):
+                if ind != len(self.datas.axes_manager.navigation_shape) - 1:
+                    dimension += str(ax) + ','
                 else:
-                    dimension+=str(ax)+'|'
+                    dimension += str(ax) + '|'
             for ind, ax in enumerate(self.datas.axes_manager.signal_shape):
-                if ind!=len(self.datas.axes_manager.signal_shape)-1:
-                    dimension+=str(ax)+','
+                if ind != len(self.datas.axes_manager.signal_shape) - 1:
+                    dimension += str(ax) + ','
                 else:
-                    dimension+=str(ax)+')'
+                    dimension += str(ax) + ')'
             return dimension
         except Exception as e:
-            self.update_status(utils.getLineInfo()+str(e), self.wait_time)
+            self.update_status(utils.getLineInfo() + str(e), self.wait_time, log='log')
             return ""
 
 
@@ -171,13 +179,13 @@ class ViewerND(QtWidgets.QWidget, QObject):
         axis=np.linspace(0,Npts,Npts,endpoint=False)
         return axis
 
-    def set_data(self,datas_transposed,temp_data=False, **kwargs):
+    def set_data(self, datas_transposed, temp_data=False, **kwargs):
         """
         """
         try:
             self.nav_x_axis = dict(data=None, label='', units='')
             self.nav_y_axis = dict(data=None, label='', units='')
-            if len(self.axes_nav)==1 or len(self.axes_nav)==2:#1D Navigator
+            if len(self.axes_nav) == 1 or len(self.axes_nav) == 2:#1D Navigator
                 self.nav_y_axis['data'] = [0]
                 if 'nav_x_axis' in kwargs:
                     if not isinstance(kwargs['nav_x_axis'], dict):
@@ -195,23 +203,23 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     else:
                         self.nav_y_axis = copy.deepcopy(kwargs['nav_y_axis'])
                 else:
-                    self.nav_y_axis['data']=self.set_axis(datas_transposed.axes_manager.navigation_shape[1])
+                    self.nav_y_axis['data'] = self.set_axis(datas_transposed.axes_manager.navigation_shape[1])
 
 
             ##########################################################################
             #display the correct signal viewer
-            if len(datas_transposed.axes_manager.signal_shape)==0: #signal data are 0D
+            if len(datas_transposed.axes_manager.signal_shape) == 0: #signal data are 0D
                 self.ui.viewer1D.parent.setVisible(True)
                 self.ui.viewer2D.parent.setVisible(False)
-            elif len(datas_transposed.axes_manager.signal_shape)==1: #signal data are 1D
+            elif len(datas_transposed.axes_manager.signal_shape) == 1: #signal data are 1D
                 self.ui.viewer1D.parent.setVisible(True)
                 self.ui.viewer2D.parent.setVisible(False)
-            elif len(datas_transposed.axes_manager.signal_shape)==2: #signal data are 2D
+            elif len(datas_transposed.axes_manager.signal_shape) == 2: #signal data are 2D
                 self.ui.viewer1D.parent.setVisible(False)
                 self.ui.viewer2D.parent.setVisible(True)
             self.x_axis = dict(data=None, label='', units='')
             self.y_axis = dict(data=None, label='', units='')
-            if len(datas_transposed.axes_manager.signal_shape)==1 or len(datas_transposed.axes_manager.signal_shape)==2:#signal data are 1D
+            if len(datas_transposed.axes_manager.signal_shape) == 1 or len(datas_transposed.axes_manager.signal_shape) == 2:#signal data are 1D
 
                 if 'x_axis' in kwargs:
                     if not isinstance(kwargs['x_axis'], dict):
@@ -237,9 +245,9 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 else:
                     self.y_axis['data']=self.set_axis(datas_transposed.axes_manager.signal_shape[1])
 
-            if len(self.axes_nav)==0 or len(self.axes_nav)==1:
+            if len(self.axes_nav) == 0 or len(self.axes_nav) == 1:
                 self.update_viewer_data(*self.ui.navigator1D.ui.crosshair.get_positions())
-            elif len(self.axes_nav)==2:
+            elif len(self.axes_nav) == 2:
                 self.update_viewer_data(*self.ui.navigator2D.ui.crosshair.get_positions())
 
 
@@ -303,11 +311,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
                         elif self.ui.combomath.currentText() == 'Half-life':
                             navigator_data = [datas_transposed.isig[:].halflife((-1)).data]
 
-                elif len(datas_transposed.axes_manager.signal_shape)==2:#signal data is 2D
-                    if ROI_bounds_2D!=[]:
-                        navigator_data=[datas_transposed.isig[rect.x():rect.x()+rect.width(),rect.y():rect.y()+rect.height()].sum((-1,-2)).data for rect in ROI_bounds_2D]
+                elif len(datas_transposed.axes_manager.signal_shape) == 2:#signal data is 2D
+                    if ROI_bounds_2D != []:
+                        navigator_data=[datas_transposed.isig[rect.x():rect.x()+rect.width(), rect.y():rect.y()+rect.height()].sum((-1,-2)).data for rect in ROI_bounds_2D]
                     else:
-                        navigator_data=[datas_transposed.sum((-1,-2)).data]
+                        navigator_data=[datas_transposed.sum((-1, -2)).data]
 
                 else:
                     pass
@@ -316,7 +324,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 else:
                     self.ui.navigator1D.show_data(navigator_data)
 
-            elif len(self.axes_nav)==2:#2D Navigator:
+            elif len(self.axes_nav) == 2:#2D Navigator:
                 self.ROI1D.setVisible(True)
                 self.ROI2D.setVisible(True)
 
@@ -385,40 +393,42 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         self.update_Navigator()
 
+    def set_data_test(self, data_shape='3D'):
 
-    def set_data_test(self,data_shape='3D'):
-
-
-        x=utils.linspace_step(0,20,1)
-        y=utils.linspace_step(0,30,1)
-        t=utils.linspace_step(0,200,1)
-        z=utils.linspace_step(0,200,1)
-        datas=np.zeros((len(y),len(x),len(t),len(z)))
-        amp=utils.gauss2D(x,7,5,y,12,10)
+        x = utils.linspace_step(0, 20, 1)
+        y = utils.linspace_step(0, 30, 1)
+        t = utils.linspace_step(0, 200, 1)
+        z = utils.linspace_step(0, 200, 1)
+        datas = np.zeros((len(y), len(x), len(t), len(z)))
+        amp = utils.gauss2D(x, 7, 5, y, 12, 10)
         for indx in range(len(x)):
             for indy in range(len(y)):
-                datas[indy,indx,:,:]=amp[indy,indx]*(utils.gauss2D(z,50+indx*2,20,t,50+3*indy,30)+np.random.rand(len(t),len(z))/10)
+                datas[indy, indx, :, :] = amp[indy, indx] * (
+                            utils.gauss2D(z, 50 + indx * 2, 20, t, 50 + 3 * indy, 30) + np.random.rand(len(t),
+                                                                                                       len(z)) / 10)
 
-        if data_shape=='4D':
-            self.show_data(datas,temp_data=False,nav_axes=[2,3])
-        elif data_shape=='3D':
-            self.show_data(np.sum(datas,axis=3),temp_data=False,nav_axes=[0,1])
-        elif data_shape=='2D':
-            self.show_data(np.sum(datas,axis=(2,3)))
-        elif data_shape=='1D':
-            self.show_data(np.sum(datas,axis=(1,2,3)))
+        if data_shape == '4D':
+            self.show_data(datas, temp_data=False, nav_axes=[2, 3])
+        elif data_shape == '3D':
+            self.show_data(np.sum(datas, axis=3), temp_data=False, nav_axes=[0, 1])
+        elif data_shape == '2D':
+            self.show_data(np.sum(datas, axis=(2, 3)))
+        elif data_shape == '1D':
+            self.show_data(np.sum(datas, axis=(1, 2, 3)))
 
-    def set_nav_axes(self,Ndim,nav_axes=None):
-        self.data_axes=[ind for ind in range(Ndim)]
+    def set_nav_axes(self, Ndim, nav_axes=None):
+        self.data_axes = [ind for ind in range(Ndim)]
         if nav_axes is None:
-            if Ndim>0:
-                self.axes_nav=self.data_axes[0:2]
+            if Ndim > 0:
+                self.axes_nav = self.data_axes[0:2]
             else:
-                self.axes_nav=self.data_axes[0]
+                self.axes_nav = self.data_axes[0]
         else:
-            self.axes_nav=[Ndim-ind_ax-1 for ind_ax in nav_axes] #because hyperspy array order is reversed compared to numpy....
-        self.axes_signal=[ax for ax in self.data_axes if ax not in self.axes_nav]
-        self.settings.child('data_shape_settings', 'navigator_axes').setValue(dict(all_items=[str(ax) for ax in self.data_axes],selected=[str(ax) for ax in self.axes_nav]))
+            self.axes_nav = [Ndim - ind_ax - 1 for ind_ax in
+                             nav_axes]  # because hyperspy array order is reversed compared to numpy....
+        self.axes_signal = [ax for ax in self.data_axes if ax not in self.axes_nav]
+        self.settings.child('data_shape_settings', 'navigator_axes').setValue(
+            dict(all_items=[str(ax) for ax in self.data_axes], selected=[str(ax) for ax in self.axes_nav]))
 
 
     def set_GUI(self):
@@ -567,11 +577,16 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.show_data(datas,temp_data=True,nav_axes=nav_axes, **kwargs)
 
 
-    def show_data(self,datas,temp_data=False,nav_axes=None, **kwargs):
+    def show_data(self,datas, temp_data=False, nav_axes=None, **kwargs):
         """Display datas as a hyperspaced dataset
         only one numpy ndarray should be used
         """
         self.data_buffer = []
+        self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(),
+                                          data2D=OrderedDict(), dataND=OrderedDict(),)
+        self.data_to_export['dataND']['CH000'] = OrderedDict(data=datas, type='raw', nav_axes=nav_axes)
+        for key in kwargs:
+            self.data_to_export['dataND']['CH000'][key] = kwargs[key]
         try:
             if self.data_axes is not None:
                 if datas.ndim != len(self.data_axes) or self.axes_nav != nav_axes:
@@ -624,7 +639,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.set_data(self.datas, **self.datas_settings)
 
 
-    def update_status(self,txt,wait_time=1000,log=''):
+    def update_status(self,txt, wait_time=1000, log=''):
         """
             | Update the statut bar showing a Message with a delay of wait_time ms (1s by default)
 
@@ -638,7 +653,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         """
         self.ui.statusbar.showMessage(txt,wait_time)
-        if log=='log':
+        if log != '':
             self.log_signal.emit(txt)
 
 
@@ -661,33 +676,33 @@ class ViewerND(QtWidgets.QWidget, QObject):
             update_status
         """
         try:
-            #datas_transposed=self.update_data_signal(self.datas)
-            if len(self.axes_nav)==0:
-                data=self.datas.data
+            # datas_transposed=self.update_data_signal(self.datas)
+            if len(self.axes_nav) == 0:
+                data = self.datas.data
 
-            elif len(self.axes_nav)==1:
-                ind_x=utils.find_index(self.nav_x_axis['data'],posx)[0][0]
-                data=self.datas.inav[ind_x].data
-            elif len(self.axes_nav)==2:
-                ind_x=utils.find_index(self.nav_x_axis['data'],posx)[0][0]
-                ind_y=utils.find_index(self.nav_y_axis['data'],posy)[0][0]
-                data=self.datas.inav[ind_x,ind_y].data
+            elif len(self.axes_nav) == 1:
+                ind_x = utils.find_index(self.nav_x_axis['data'], posx)[0][0]
+                data = self.datas.inav[ind_x].data
+            elif len(self.axes_nav) == 2:
+                ind_x = utils.find_index(self.nav_x_axis['data'], posx)[0][0]
+                ind_y = utils.find_index(self.nav_y_axis['data'], posy)[0][0]
+                data = self.datas.inav[ind_x, ind_y].data
 
-            if len(self.datas.axes_manager.signal_shape)==0:#means 0D data, plot on 1D viewer
+            if len(self.datas.axes_manager.signal_shape) == 0:  # means 0D data, plot on 1D viewer
                 self.data_buffer.extend(data)
                 self.ui.viewer1D.show_data([self.data_buffer])
 
-            elif len(self.datas.axes_manager.signal_shape)==1: #means 1D data, plot on 1D viewer
+            elif len(self.datas.axes_manager.signal_shape) == 1:  # means 1D data, plot on 1D viewer
                 self.ui.viewer1D.remove_plots()
-                self.ui.viewer1D.x_axis=self.x_axis
+                self.ui.viewer1D.x_axis = self.x_axis
                 self.ui.viewer1D.show_data([data])
 
-            elif len(self.datas.axes_manager.signal_shape)==2: #means 2D data, plot on 2D viewer
+            elif len(self.datas.axes_manager.signal_shape) == 2:  # means 2D data, plot on 2D viewer
                 self.ui.viewer2D.x_axis = self.x_axis
                 self.ui.viewer2D.y_axis = self.y_axis
                 self.ui.viewer2D.setImage(data)
         except Exception as e:
-            self.update_status(utils.getLineInfo()+str(e),wait_time=self.wait_time)
+            self.update_status(utils.getLineInfo() + str(e), wait_time=self.wait_time, log='log')
 
 
 
