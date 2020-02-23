@@ -620,6 +620,8 @@ class H5Saver(QObject):
         #             enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
         array_to_save = data_dict.pop('data')
+        if 'type' in data_dict:
+            data_dict.pop('type') #otherwise this metadata would overide mandatory type for a h5 node
         tmp_dict = copy.deepcopy(data_dict)
         tmp_dict.update(metadata)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,

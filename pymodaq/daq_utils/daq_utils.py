@@ -334,6 +334,12 @@ class DockArea(dockarea.DockArea, QObject):
         self.addDock(dock, position, neighbor)
         self.dock_signal.emit()
 
+class Axis(dict):
+    def __init__(self, data=None, label='', units=''):
+        self['data'] = data
+        self['label'] = label
+        self['units'] = units
+
 class ThreadCommand(object):
     """ | Micro class managing the thread commands.
         |

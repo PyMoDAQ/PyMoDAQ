@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDa
 import sys
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-
+from pymodaq.daq_utils.daq_utils import Axis
 
 from collections import OrderedDict
 import numpy as np
@@ -176,15 +176,15 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 the computed values axis.
 
         """
-        axis=np.linspace(0,Npts,Npts,endpoint=False)
+        axis=np.linspace(0, Npts, Npts, endpoint=False)
         return axis
 
     def set_data(self, datas_transposed, temp_data=False, **kwargs):
         """
         """
         try:
-            self.nav_x_axis = dict(data=None, label='', units='')
-            self.nav_y_axis = dict(data=None, label='', units='')
+            self.nav_x_axis = Axis()
+            self.nav_y_axis = Axis()
             if len(self.axes_nav) == 1 or len(self.axes_nav) == 2:#1D Navigator
                 self.nav_y_axis['data'] = [0]
                 if 'nav_x_axis' in kwargs:
@@ -193,10 +193,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     else:
                         self.nav_x_axis = copy.deepcopy(kwargs['nav_x_axis'])
                 else:
-                    self.nav_x_axis['data']=self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
+                    self.nav_x_axis['data'] = self.set_axis(datas_transposed.axes_manager.navigation_shape[0])
 
 
-            if len(self.axes_nav)==2:#2D Navigator:
+            if len(self.axes_nav) == 2:#2D Navigator:
                 if 'nav_y_axis' in kwargs:
                     if not isinstance(kwargs['nav_y_axis'], dict):
                         self.nav_y_axis['data'] = kwargs['nav_y_axis'][:]
@@ -217,8 +217,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
             elif len(datas_transposed.axes_manager.signal_shape) == 2: #signal data are 2D
                 self.ui.viewer1D.parent.setVisible(False)
                 self.ui.viewer2D.parent.setVisible(True)
-            self.x_axis = dict(data=None, label='', units='')
-            self.y_axis = dict(data=None, label='', units='')
+            self.x_axis = Axis()
+            self.y_axis = Axis()
             if len(datas_transposed.axes_manager.signal_shape) == 1 or len(datas_transposed.axes_manager.signal_shape) == 2:#signal data are 1D
 
                 if 'x_axis' in kwargs:
@@ -228,7 +228,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     else:
                         self.x_axis = copy.deepcopy(kwargs['x_axis'])
                 else:
-                    self.x_axis['data']=self.set_axis(datas_transposed.axes_manager.signal_shape[0])
+                    self.x_axis['data'] = self.set_axis(datas_transposed.axes_manager.signal_shape[0])
                 if 'y_axis' in kwargs:
                     self.ui.viewer1D.set_axis_label(axis_settings=dict(orientation='left',
                                                                        label=kwargs['y_axis']['label'],
@@ -243,7 +243,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     else:
                         self.y_axis = copy.deepcopy(kwargs['y_axis'])
                 else:
-                    self.y_axis['data']=self.set_axis(datas_transposed.axes_manager.signal_shape[1])
+                    self.y_axis['data'] = self.set_axis(datas_transposed.axes_manager.signal_shape[1])
 
             if len(self.axes_nav) == 0 or len(self.axes_nav) == 1:
                 self.update_viewer_data(*self.ui.navigator1D.ui.crosshair.get_positions())
@@ -624,11 +624,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     def update_data_signal(self):
         try:
-            self.axes_nav=[int(ax) for ax in self.settings.child('data_shape_settings', 'navigator_axes').value()['selected']]
-            self.axes_signal=[ax for ax in self.data_axes if ax not in self.axes_nav]
+            self.axes_nav = [int(ax) for ax in self.settings.child('data_shape_settings', 'navigator_axes').value()['selected']]
+            self.axes_signal = [ax for ax in self.data_axes if ax not in self.axes_nav]
 
 
-            self.datas=self.datas.transpose(signal_axes=self.axes_signal,navigation_axes=self.axes_nav)
+            self.datas = self.datas.transpose(signal_axes=self.axes_signal,navigation_axes=self.axes_nav)
 
 
         except Exception as e:

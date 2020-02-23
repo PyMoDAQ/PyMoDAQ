@@ -2219,7 +2219,7 @@ class DAQ_Scan_Acquisition(QObject):
             self.channel_arrays[det_name] = OrderedDict([])
             data_types = ['data0D', 'data1D']
             if self.h5saver.settings.child(('save_2D')).value():
-                data_types.append('data2D')
+                data_types.extend(['data2D', 'dataND'])
 
             for data_type in data_types:
                 if data_type in datas.keys():
