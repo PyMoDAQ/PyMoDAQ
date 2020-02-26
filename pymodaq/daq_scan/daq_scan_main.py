@@ -38,7 +38,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5saver import H5Saver
 
 local_path = utils.get_set_local_dir()
-now=datetime.datetime.now()
+now = datetime.datetime.now()
 log_path=os.path.join(local_path,'logging')
 if not os.path.isdir(log_path):
     os.makedirs(log_path)
@@ -1226,9 +1226,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.ui.stop_scan_pb.setEnabled(False)
 
     def show_log(self):
-
         import webbrowser
         webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
+
     def setupUI(self):
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()
@@ -1523,7 +1523,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                                             self.det_modules_scan[ind_det].ui.viewers]:  # no roi_settings in viewer0D
                             settings_str = b'<All_settings title="All Settings" type="group">' + settings_str
                             for ind_viewer, viewer in enumerate(self.det_modules_scan[ind_det].ui.viewers):
-                                if '0D' not in viewer.viewer_type:
+                                if hasattr(viewer, 'roi_manager'):
                                     settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
                                         ind_viewer).encode()
                                     settings_str += custom_tree.parameter_to_xml_string(
@@ -2219,7 +2219,7 @@ class DAQ_Scan_Acquisition(QObject):
             self.channel_arrays[det_name] = OrderedDict([])
             data_types = ['data0D', 'data1D']
             if self.h5saver.settings.child(('save_2D')).value():
-                data_types.append('data2D')
+                data_types.extend(['data2D', 'dataND'])
 
             for data_type in data_types:
                 if data_type in datas.keys():
@@ -2280,7 +2280,7 @@ class DAQ_Scan_Acquisition(QObject):
 
                     data_types = ['data0D', 'data1D']
                     if self.h5saver.settings.child(('save_2D')).value():
-                        data_types.append('data2D')
+                        data_types.extend(['data2D', 'dataND'])
 
 
                     for data_type in data_types:

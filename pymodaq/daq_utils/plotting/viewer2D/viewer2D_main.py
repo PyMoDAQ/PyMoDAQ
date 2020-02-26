@@ -31,12 +31,12 @@ import datetime
 
 
 class Viewer2D(QtWidgets.QWidget):
-    data_to_export_signal=pyqtSignal(OrderedDict) #OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-    crosshair_dragged=pyqtSignal(float, float) #signal used to pass crosshair position to other modules in scaled axes units
-    sig_double_clicked=pyqtSignal(float, float)
-    ROI_select_signal=pyqtSignal(QRectF)
-    ROI_changed=pyqtSignal()
-    ROI_changed_finished=pyqtSignal()
+    data_to_export_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+    crosshair_dragged = pyqtSignal(float, float) #signal used to pass crosshair position to other modules in scaled axes units
+    sig_double_clicked = pyqtSignal(float, float)
+    ROI_select_signal = pyqtSignal(QRectF)
+    ROI_changed = pyqtSignal()
+    ROI_changed_finished = pyqtSignal()
 
     def __init__(self,parent=None,scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))):
         super(Viewer2D,self).__init__()
@@ -44,7 +44,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui=Ui_Form()
 
         if parent is None:
-            parent=QtWidgets.QWidget()
+            parent = QtWidgets.QWidget()
 
 
 
@@ -574,7 +574,7 @@ class Viewer2D(QtWidgets.QWidget):
             blue_flag= data_blue is not None
             self.isdata["blue"]=blue_flag
 
-            self.data_to_export=OrderedDict(name=self.title,data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
+            self.data_to_export = OrderedDict(name=self.title,data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
             self.image=edict(blue=data_blue,green=data_green,red=data_red)
             if red_flag:
                 bounds=QRectF(0,0,data_red.shape[1],data_red.shape[0])

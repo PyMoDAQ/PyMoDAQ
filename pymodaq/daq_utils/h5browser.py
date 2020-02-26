@@ -5,7 +5,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize
+from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize, get_set_local_dir, Axis
 
 import sys
 import tables
@@ -16,18 +16,32 @@ from pathlib import Path
 import warnings
 import os
 from copy import deepcopy
+import datetime
+
+
+import logging
+now = datetime.datetime.now()
+local_path = get_set_local_dir()
+log_path = os.path.join(local_path, 'logging')
+if not os.path.isdir(log_path):
+    os.makedirs(log_path)
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+logging.basicConfig(filename=os.path.join(log_path, 'H5Browser_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
+
+
 
 class H5Browser(QtWidgets.QWidget,QObject):
-    data_node_signal=pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller 
-    status_signal=pyqtSignal(str)
+    data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
+    status_signal = pyqtSignal(str)
 
-    def __init__(self,parent,h5file=None):
+    def __init__(self, parent, h5file=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(H5Browser,self).__init__()
+        super(H5Browser, self).__init__()
         if not (isinstance(parent, QtWidgets.QWidget) or isinstance(parent, QtWidgets.QMainWindow)):
             raise Exception('no valid parent container, expected a QWidget or a QMainWindow')
 
-        self.h5file=None
+        self.h5file = None
 
 
         if isinstance(parent, QtWidgets.QMainWindow):
@@ -44,6 +58,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.load_file(h5file)
 
         self.ui.h5file_tree.ui.Open_Tree.click()
+
 
 
 
@@ -133,24 +148,25 @@ class H5Browser(QtWidgets.QWidget,QObject):
         """
         self.menubar = self.main_window.menuBar()
 
-        #%% create Settings menu
-        self.file_menu=self.menubar.addMenu('File')
-        load_action=self.file_menu.addAction('Load file')
+        # %% create Settings menu
+        self.file_menu = self.menubar.addMenu('File')
+        load_action = self.file_menu.addAction('Load file')
         load_action.triggered.connect(lambda: self.load_file(None))
-        save_action=self.file_menu.addAction('Save file')
+        save_action = self.file_menu.addAction('Save file')
         save_action.triggered.connect(self.save_file)
-
         self.file_menu.addSeparator()
-        quit_action=self.file_menu.addAction('Quit')
+        quit_action = self.file_menu.addAction('Quit')
         quit_action.triggered.connect(self.quit_fun)
 
-        #help menu
-        help_menu=self.menubar.addMenu('?')
-        action_about=help_menu.addAction('About')
+        # help menu
+        help_menu = self.menubar.addMenu('?')
+        action_about = help_menu.addAction('About')
         action_about.triggered.connect(self.show_about)
-        action_help=help_menu.addAction('Help')
+        action_help = help_menu.addAction('Help')
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
+        log_action = help_menu.addAction('Show log')
+        log_action.triggered.connect(self.show_log)
 
     def show_about(self):
         splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
@@ -159,6 +175,9 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.splash_sc.setVisible(True)
         self.splash_sc.showMessage("PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()), QtCore.Qt.AlignRight, QtCore.Qt.white)
 
+    def show_log(self):
+        import webbrowser
+        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
 
     def show_help(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
@@ -224,19 +243,24 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.settings=Parameter.create(name='Param', type='group')
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
 
-    def show_h5_attributes(self,item,col):
+        self.status_signal.connect(self.add_log)
+
+    def add_log(self, txt):
+        logging.info(txt)
+
+    def show_h5_attributes(self, item, col):
         """
 
         """
         try:
-            self.current_node_path=item.text(2)
-            node=self.h5file.get_node(item.text(2))
-            attrs=node._v_attrs
-            attrs_names=attrs._f_list('all')
-            attr_dict=OrderedDict([])
+            self.current_node_path = item.text(2)
+            node = self.h5file.get_node(item.text(2))
+            attrs = node._v_attrs
+            attrs_names = attrs._f_list('all')
+            attr_dict = OrderedDict([])
             for attr in attrs_names:
-                #if attr!='settings':
-                attr_dict[attr]=attrs[attr]
+                # if attr!='settings':
+                attr_dict[attr] = attrs[attr]
             for child in self.settings_raw.children():
                 child.remove()
             params = []
@@ -268,6 +292,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
         except Exception as e:
             self.status_signal.emit(getLineInfo()+str(e))
+            logging.info(txt)
 
     def show_pixmaps(self,pixmaps=[]):
         if self.pixmap_widget.layout() is None:
@@ -300,8 +325,8 @@ class H5Browser(QtWidgets.QWidget,QObject):
         """
         try:
             self.current_node_path=item.text(2)
-            self.show_h5_attributes(item,col)
-            node=self.h5file.get_node(item.text(2))
+            self.show_h5_attributes(item, col)
+            node = self.h5file.get_node(item.text(2))
             self.data_node_signal.emit(node._v_pathname)
             if 'ARRAY' in node._v_attrs['CLASS']:
                 data = node.read()
@@ -335,6 +360,25 @@ class H5Browser(QtWidgets.QWidget,QObject):
                                 else:
                                     axes[ax] = dict(units='', label='')
 
+                            if data_dim == 'ND': #check for navigation axis
+                                tmp_nav_axes = ['y_axis', 'x_axis', ]
+                                nav_axes = []
+                                for ind_ax, ax in enumerate(tmp_nav_axes):
+                                    if 'Nav_{:s}'.format(ax) in children:
+                                        nav_axes.append(ind_ax)
+                                        axis_node = self.h5file.get_node(parent_path + '/Nav_{:s}'.format(ax))
+                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
+                                        if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
+                                            ind_ax]:  # could happen in case of linear back to start type of scan
+                                            tmp_ax = []
+                                            for ix in axes['nav_{:s}'.format(ax)]['data']:
+                                                tmp_ax.extend([ix, ix])
+                                                axes['nav_{:s}'.format(ax)] = dict(data=np.array(tmp_ax))
+
+                                        if 'units' in axis_node._v_attrs:
+                                            axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
+                                        if 'label' in axis_node._v_attrs:
+                                            axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
 
                             if 'scan_type' in node._v_attrs:
                                 scan_type = node._v_attrs['scan_type'].lower()
@@ -370,7 +414,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
                             axes['x_axis'] = dict(data=np.linspace(0, axis_node.shape[0]-1, axis_node.shape[0]),
                                                   units='pxls',
                                                   label='')
-                    self.hyperviewer.show_data(deepcopy(data), nav_axes = nav_axes, **deepcopy(axes))
+                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
                     if isinstance(data[0], str):

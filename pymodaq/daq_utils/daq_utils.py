@@ -250,13 +250,16 @@ def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
     if dimension == 1:
         if arr.size == 1:
             dimension = 0
+
     if remove_scan_dimension:
         if scan_type.lower() == 'scan1d':
             dimension -= 1
         elif scan_type.lower() == 'scan2d':
             dimension -= 2
-
-    return arr.shape, '{:d}D'.format(dimension), arr.size
+    else:
+        if dimension > 2:
+            dimension = 'N'
+    return arr.shape, f'{dimension}D', arr.size
 
 def scroll_log(scroll_val, min_val , max_val):
     """
@@ -330,6 +333,12 @@ class DockArea(dockarea.DockArea, QObject):
             neighbor = neighbor.container()
         self.addDock(dock, position, neighbor)
         self.dock_signal.emit()
+
+class Axis(dict):
+    def __init__(self, data=None, label='', units=''):
+        self['data'] = data
+        self['label'] = label
+        self['units'] = units
 
 class ThreadCommand(object):
     """ | Micro class managing the thread commands.
@@ -659,7 +668,7 @@ def get_names(mode):
     import pymodaq_plugins
     base_path = os.path.split(pymodaq_plugins.__file__)[0]
     # base_path=os.path.join(os.path.split(os.path.split(__file__)[0])[0],'plugins')
-    if (mode == 'daq_move'):
+    if mode == 'daq_move':
         plugin_list = find_in_path(os.path.join(base_path, 'daq_move_plugins'), mode)
         plugins = elt_as_first_element(plugin_list, match_word='Mock')
         # check if modules are importable
@@ -672,7 +681,7 @@ def get_names(mode):
                 pass
 
         return plugins_import
-    elif (mode == 'daq_0Dviewer'):
+    elif mode == 'daq_0Dviewer':
         plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_0D'), mode)
         plugins = elt_as_first_element(plugin_list, match_word='Mock')
         # check if modules are importable
@@ -685,7 +694,7 @@ def get_names(mode):
                 pass
 
         return plugins_import
-    elif (mode == 'daq_1Dviewer'):
+    elif mode == 'daq_1Dviewer':
         plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_1D'), mode)
         plugins = elt_as_first_element(plugin_list, match_word='Mock')
         # check if modules are importable
@@ -698,7 +707,7 @@ def get_names(mode):
                 pass
 
         return plugins_import
-    elif (mode == 'daq_2Dviewer'):
+    elif mode == 'daq_2Dviewer':
         plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_2D'), mode)
         plugins = elt_as_first_element(plugin_list, match_word='Mock')
         # check if modules are importable
@@ -711,7 +720,19 @@ def get_names(mode):
                 pass
 
         return plugins_import
+    elif mode == 'daq_NDviewer':
+        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_ND'), mode)
+        plugins = elt_as_first_element(plugin_list, match_word='Mock')
+        # check if modules are importable
+        plugins_import = []
+        for mod in plugins:
+            try:
+                importlib.import_module('.daq_NDviewer_' + mod, 'pymodaq_plugins.daq_viewer_plugins.plugins_ND')
+                plugins_import.append(mod)
+            except:
+                pass
 
+        return plugins_import
 
 # class EnumMeta (EnumMeta):
 
@@ -725,20 +746,20 @@ def make_enum(mode):
         Instance of Enum
             The enum object representing loaded plugins
     """
-    names=get_names(mode)
-    values={}
-    for i in range(0,len(names)):
+    names = get_names(mode)
+    values = {}
+    for i in range(0, len(names)):
         values.update({names[i]:i+1})
-    meta=type(enum.Enum)
-    bases=(enum.Enum,)
-    dict=meta.__prepare__(names,bases)
+    meta = type(enum.Enum)
+    bases = (enum.Enum,)
+    dict = meta.__prepare__(names,bases)
     dict.update({'names': get_names})
-    for key,value in values.items():
-        dict[key]=value
-    if(mode=='daq_move'):
-        return meta(mode+'_Stage_type',bases,dict)
-    else :
-        return meta(mode+'_Type',bases,dict)
+    for key, value in values.items():
+        dict[key] = value
+    if mode == 'daq_move':
+        return meta(mode+'_Stage_type', bases, dict)
+    else:
+        return meta(mode+'_Type', bases, dict)
 
 
 
