@@ -14,8 +14,8 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(713, 485)
-        self.gridLayout_4 = QtWidgets.QGridLayout(Form)
-        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.verticalLayout = QtWidgets.QVBoxLayout(Form)
+        self.verticalLayout.setObjectName("verticalLayout")
         self.splitter = QtWidgets.QSplitter(Form)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.splitter.setObjectName("splitter")
@@ -96,10 +96,10 @@ class Ui_Form(object):
         self.navigator_layout.setObjectName("navigator_layout")
         self.gridLayout_5.addLayout(self.navigator_layout, 0, 0, 1, 1)
         self.tabWidget.addTab(self.tab_navigator, "")
-        self.gridLayout_4.addWidget(self.splitter, 0, 0, 1, 1)
+        self.verticalLayout.addWidget(self.splitter)
         self.StatusBarLayout = QtWidgets.QHBoxLayout()
         self.StatusBarLayout.setObjectName("StatusBarLayout")
-        self.gridLayout_4.addLayout(self.StatusBarLayout, 1, 0, 1, 1)
+        self.verticalLayout.addLayout(self.StatusBarLayout)
 
         self.retranslateUi(Form)
         self.tabWidget.setCurrentIndex(2)
@@ -119,7 +119,7 @@ class Ui_Form(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot1D), _translate("Form", "1D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_navigator), _translate("Form", "Navigator"))
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.QtDesigner_Ressources import  QtDesigner_ressources_rc
 
 
 if __name__ == "__main__":

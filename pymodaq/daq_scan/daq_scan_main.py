@@ -21,39 +21,18 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
-from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
 from pymodaq.version import get_version
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.navigator import Navigator
-from pymodaq.daq_utils.manage_preset import PresetManager
-from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5saver import H5Saver
-
-local_path = utils.get_set_local_dir()
-now = datetime.datetime.now()
-log_path=os.path.join(local_path,'logging')
-if not os.path.isdir(log_path):
-    os.makedirs(log_path)
-
-layout_path = os.path.join(local_path,'layout')
-if not os.path.isdir(layout_path):
-    os.makedirs(layout_path)
-
-overshoot_path= os.path.join(local_path, 'overshoot_configurations')
-if not os.path.isdir(overshoot_path):
-    os.makedirs(overshoot_path)
-
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)																		   
-logging.basicConfig(filename=os.path.join(log_path,'daq_scan_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))),level=logging.DEBUG)
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
@@ -68,8 +47,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
-    command_DAQ_signal=pyqtSignal(list)
-    log_signal=pyqtSignal(str)
+    command_DAQ_signal = pyqtSignal(list)
+    log_signal = pyqtSignal(str)
 
     params = [
         {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
@@ -90,25 +69,21 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},]},
     ]
 
-    def __init__(self,parent):
+    def __init__(self, dockarea=None, dashboard=None):
         """
 
         Parameters
         ----------
-        parent: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
+        dockarea: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
+        dashboard: (DashBoard) instance of the pymodaq dashboard
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(DAQ_Scan,self).__init__()
-        self.title ='daq_scan'
-        splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
-        splash = QtGui.QPixmap(splash_path)
-        self.splash_sc = QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
-        self.init_prog = True
-        self.dockarea = parent
-        self.dockarea.dock_signal.connect(self.save_layout_state_auto)
-        self.mainwindow = parent.parent()
-
-        self.preset_file = None
+        super().__init__()
+        self.dockarea = dockarea
+        self.dashboard = dashboard
+        if dashboard is None:
+            raise Exception('No valid dashboard initialized')
+        self.mainwindow = self.dockarea.parent()
         self.wait_time = 1000
         self.navigator = None
         self.scan_x_axis = None
@@ -123,9 +98,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.plot_2D_ini = False
 
         self.scan_thread = None
-        self.move_modules = []
-        self.detector_modules = []
-        self.pid_controller = None
+        self.move_modules = self.dashboard.move_modules
+        self.detector_modules = self.dashboard.detector_modules
 
         self.h5saver = H5Saver()
         self.h5saver.settings.child(('do_save')).hide()
@@ -135,54 +109,8 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.det_modules_scan = []
         self.move_modules_scan = []
 
-        self.overshoot = False
-
         self.setupUI()
-
-    @pyqtSlot(str)
-    def add_log(self,txt):
-        """
-            Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
-
-            =============== =========== ======================
-            **Parameters**    **Type**   **Description**
-            *txt*             string     the log info to add.
-            =============== =========== ======================
-        """
-        try:
-            now=datetime.datetime.now()
-            new_item=QtWidgets.QListWidgetItem(now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
-            self.ui.logger_list.addItem(new_item)
-            if self.h5saver.h5_file.isopen:
-                self.h5saver.append(self.h5saver.logger_array, now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
-
-        except Exception as e:
-            pass
-
-    def clear_move_det_controllers(self):
-        """
-            Remove all docks containing Moves or Viewers.
-
-            See Also
-            --------
-            quit_fun, update_status
-        """
-        try:
-        #remove all docks containing Moves or Viewers
-            if hasattr(self,'move_modules'):
-                if self.move_modules is not None:
-                    for module in self.move_modules:
-                        module.quit_fun()
-                self.move_modules=None
-
-            if hasattr(self,'detector_modules'):
-                if self.detector_modules is not None:
-                    for module in self.detector_modules:
-                        module.quit_fun()
-                self.detector_modules=None
-        except Exception as e:
-            
-            self.update_status(getLineInfo()+ str(e),self.wait_time,log_type='log')
+        self.setup_modules(self.dashboard.title)
 
     def create_average_dock(self):
         self.ui.average_dock = Dock("Averaging")
@@ -205,37 +133,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         self.ui.average_dock.setVisible(False)
 
-    def create_menu(self,menubar):
+    def create_menu(self):
         """
-            Create the menubar object looking like :
-                * **Docked windows**
-                    * Load Layout
-                    * Save Layout
-                    * Clear Moves/Detector
-                    * Show/Hide Log Window
-                * **Preset Modes**
-                    * Create a preset
-                * **Load Presets**
-                    * Mock preset
-                    * Canon preset
-
-            | Connect each action to his referenced function.
-            |
-            | Finnaly store the directory list of xml files paths into the load_actions list.
-
-            =============== ======================= =====================================
-            **Parameters**   **Type**                 **Description**
-            *menubar*         instance of QMenuBar    The generic menubar object of menu
-            =============== ======================= =====================================
-
-            See Also
-            --------
-            clear_move_det_controllers, load_layout_state, save_layout_state, show_file_attributes, set_preset_mode
         """
-        menubar.clear()
-
         #%% create Settings menu
-        self.file_menu=menubar.addMenu('File')
+        menubar = QtWidgets.QMenuBar()
+        menubar.setMaximumHeight(30)
+        self.ui.verticalLayout.insertWidget(0, menubar)
+
+        self.file_menu = menubar.addMenu('File')
         load_action = self.file_menu.addAction('Load file')
         load_action.triggered.connect(self.load_file)
         self.file_menu.addSeparator()
@@ -243,159 +149,15 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         save_action.triggered.connect(self.save_file)
         show_action = self.file_menu.addAction('Show file content')
         show_action.triggered.connect(self.show_file_content)
-        self.file_menu.addSeparator()
-        log_action = self.file_menu.addAction('Show log file')
-        log_action.triggered.connect(self.show_log)
 
-        self.file_menu.addSeparator()
-        quit_action=self.file_menu.addAction('Quit')
-        quit_action.triggered.connect(self.quit_fun)
-
-        self.settings_menu=menubar.addMenu('Settings')
+        self.settings_menu = menubar.addMenu('Settings')
         action_navigator = self.settings_menu.addAction('Show Navigator')
-        docked_menu=self.settings_menu.addMenu('Docked windows')
-        action_load=docked_menu.addAction('Load Layout')
-        action_save=docked_menu.addAction('Save Layout')
-        action_clear=self.settings_menu.addAction('Clear moves/Detectors')
-        action_clear.triggered.connect(self.clear_move_det_controllers)
         action_navigator.triggered.connect(self.show_navigator)
 
 
-        action_load.triggered.connect(self.load_layout_state)
-        action_save.triggered.connect(self.save_layout_state)
-
-        docked_menu.addSeparator()
-        action_show_log=docked_menu.addAction('Show/hide log window')
-        action_show_log.setCheckable(True)
-        action_show_log.toggled.connect(self.ui.logger_dock.setVisible)
-
-
-
-        self.preset_menu=menubar.addMenu('Preset Modes')
-        action_new_preset=self.preset_menu.addAction('New preset')
-        #action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
-        action_new_preset.triggered.connect(self.create_preset)
-        action_modify_preset=self.preset_menu.addAction('Modify preset')
-        action_modify_preset.triggered.connect(self.modify_preset)
-        self.preset_menu.addSeparator()
-        load_preset=self.preset_menu.addMenu('Load presets')
-
-        slots=dict([])
-        for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'preset_modes'))):
-            if file.endswith(".xml"):
-                (filesplited, ext)=os.path.splitext(file)
-                slots[filesplited]=load_preset.addAction(filesplited)
-                slots[filesplited].triggered.connect(self.create_menu_slot(os.path.join(local_path,'preset_modes',file)))
-
-        self.overshoot_menu=menubar.addMenu('Overshoot Modes')
-        action_new_overshoot=self.overshoot_menu.addAction('New Overshoot')
-        #action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
-        action_new_overshoot.triggered.connect(self.create_overshoot)
-        action_modify_overshoot=self.overshoot_menu.addAction('Modify Overshoot')
-        action_modify_overshoot.triggered.connect(self.modify_overshoot)
-        self.overshoot_menu.addSeparator()
-        load_overshoot=self.overshoot_menu.addMenu('Load Overshoots')
-
-        slots_over=dict([])
-        for ind_file,file in enumerate(os.listdir(os.path.join(local_path,'overshoot_configurations'))):
-            if file.endswith(".xml"):
-                (filesplited, ext)=os.path.splitext(file)
-                slots_over[filesplited]=load_overshoot.addAction(filesplited)
-                slots_over[filesplited].triggered.connect(self.create_menu_slot_over(os.path.join(local_path,'overshoot_configurations',file)))
-
-
-
-
-
-        #help menu
-        help_menu=menubar.addMenu('?')
-        action_about=help_menu.addAction('About')
-        action_about.triggered.connect(self.show_about)
-        action_help=help_menu.addAction('Help')
-        action_help.triggered.connect(self.show_help)
-        action_help.setShortcut(QtCore.Qt.Key_F1)
 
     def load_file(self):
         self.h5saver.load_file(self.h5saver.h5_file_path)
-
-    def open_PID(self):
-        area = self.dockarea.addTempArea()
-        self.pid_controller = DAQ_PID(area, [], [])
-
-    def create_menu_slot(self,filename):
-        return lambda: self.set_preset_mode(filename)
-
-    def create_menu_slot_over(self,filename):
-        return lambda: self.set_overshoot_configuration(filename)
-
-    def create_overshoot(self):
-        try:
-            if self.preset_file is not None:
-                file = os.path.split(self.preset_file)[1]
-                file = os.path.splitext(file)[0]
-            self.overshoot_manager.set_new_overshoot(file)
-            self.create_menu(self.menubar)
-        except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
-
-    def create_preset(self):
-        try:
-            self.preset_manager.set_new_preset()
-            self.create_menu(self.menubar)
-        except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
-
-    # def load_file(self):
-    #     self.h5saver.load_file()
-    #     self.update_file_settings()
-
-    def load_layout_state(self, file=None):
-        """
-            Load and restore a layout state from the select_file obtained pathname file.
-
-            See Also
-            --------
-            utils.select_file
-        """
-        try:
-            if file is None:
-                file=utils.select_file(save=False, ext='dock')
-            if file is not None:
-                with open(str(file), 'rb') as f:
-                    dockstate = pickle.load(f)
-                    self.dockarea.restoreState(dockstate)
-            file = os.path.split(file)[1]
-            self.settings.child('loaded_files', 'layout_file').setValue(file)
-        except: pass
-
-    def modify_overshoot(self):
-        try:
-            path = utils.select_file(start_path=os.path.join(local_path,'overshoot_configurations'), save=False, ext='xml')
-            if path != '':
-                self.overshoot_manager.set_file_overshoot(str(path))
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
-
-    def modify_preset(self):
-        try:
-            path = utils.select_file(start_path=os.path.join(local_path,'preset_modes'), save=False, ext='xml')
-            if path != '':
-                self.preset_manager.set_file_preset(str(path))
-
-                if self.detector_modules != []:
-                    mssg = QtWidgets.QMessageBox()
-                    mssg.setText('You have to restart the application to take the modifications into account! Quitting the application...')
-                    mssg.exec()
-
-                    self.quit_fun()
-
-            else:  # cancel
-                pass
-        except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
 
     @pyqtSlot(float, float)
     def move_to_crosshair(self,posx=None,posy=None):
@@ -438,48 +200,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             quit_fun
         """
         try:
-            try:
-                self.h5saver.close_file()
-            except:
-                pass
-
-            for module in self.move_modules:
-                try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except:
-                    pass
-
-            for module in self.detector_modules:
-                try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except:
-                    pass
-            areas=self.dockarea.tempAreas[:]
-            for area in areas:
-                area.win.close()
-                QtWidgets.QApplication.processEvents()
-                QThread.msleep(1000)
-                QtWidgets.QApplication.processEvents()
-
-
-            #save scan settings related to the current preset
-            if self.preset_file is not None:
-                file = os.path.split(self.preset_file)[1]
-                # path = os.path.join(scan_conf_path, file)
-                # custom_tree.parameter_to_xml_file(self.settings, path)
-
-            if hasattr(self,'mainwindow'):
-                self.mainwindow.close()
-
-
-
-
+            self.h5saver.close_file()
         except Exception as e:
             pass
 
@@ -613,31 +334,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         filename=utils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
-    def save_layout_state(self, file = None):
-        """
-            Save the current layout state in the select_file obtained pathname file.
-            Once done dump the pickle.
-
-            See Also
-            --------
-            utils.select_file
-        """
-        try:
-            dockstate = self.dockarea.saveState()
-            if file is None:
-                file=utils.select_file(start_path=None, save=True, ext='dock')
-            if file is not None:
-                with open(str(file), 'wb') as f:
-                    pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
-        except: pass
-
-    def save_layout_state_auto(self):
-        if self.preset_file is not None:
-            file = os.path.split(self.preset_file)[1]
-            file = os.path.splitext(file)[0]
-            path = os.path.join(layout_path, file+'.dock')
-            self.save_layout_state(path)
-
     def save_metadata(self, node, type_info='dataset_info'):
         """
             Switch the type_info value with :
@@ -678,7 +374,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             settings_str = b'<All_settings title="All Settings" type="group">' + \
                            custom_tree.parameter_to_xml_string(params) + \
                            custom_tree.parameter_to_xml_string(self.settings) + \
-                           custom_tree.parameter_to_xml_string(self.preset_manager.preset_params)  + b'</All_settings>'
+                           custom_tree.parameter_to_xml_string(self.dashboard.preset_manager.preset_params)  + b'</All_settings>'
 
             attr.settings = settings_str
 
@@ -728,212 +424,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         if show:
             self.ui.average_dock.setStretch(100, 100)
 
-    def set_file_preset(self,filename):
-        """
-            Set a file preset from the converted xml file given by the filename parameter.
-
-
-            =============== =========== ===================================================
-            **Parameters**    **Type**    **Description**
-            *filename*        string      the name of the xml file to be converted/treated
-            =============== =========== ===================================================
-
-            Returns
-            -------
-            (Object list, Object list) tuple
-                The updated (Move modules list, Detector modules list).
-
-            See Also
-            --------
-            custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
-        """
-        if os.path.splitext(filename)[1] == '.xml':
-            self.preset_file = filename
-            self.preset_manager.set_file_preset(filename, show=False)
-            self.move_docks = []
-            self.det_docks_settings = []
-            self.det_docks_viewer = []
-            move_forms = []
-            move_modules = []
-            detector_modules = []
-            move_types = []
-
-
-            ### set daq scan settings set in preset
-            try:
-                for child in self.preset_manager.preset_params.child(('saving_options')).children():
-                    self.h5saver.settings.child((child.name())).setValue(child.value())
-            except Exception as e:
-                self.update_status(getLineInfo()+ str(e), 'log')
-
-            ## set PID if checked in preset
-            try:
-                if self.preset_manager.preset_params.child(('use_pid')).value():
-                    self.open_PID()
-                    QtWidgets.QApplication.processEvents()
-                    for child in custom_tree.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')), []):
-                        preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
-                        self.pid_controller.settings.child(*preset_path).setValue(child.value())
-
-                    move_modules.append(self.pid_controller)
-
-            except Exception as e:
-                self.update_status(getLineInfo()+ str(e), 'log')
-
-            #################################################################
-            ###### sort plugins by IDs and within the same IDs by Master and Slave status
-            plugins=[{'type': 'move', 'value': child} for child in self.preset_manager.preset_params.child(('Moves')).children()]+[{'type': 'det', 'value': child} for child in self.preset_manager.preset_params.child(('Detectors')).children()]
-
-            for plug in plugins:
-                plug['ID']=plug['value'].child('params','main_settings','controller_ID').value()
-                if plug["type"]=='det':
-                    plug['status']=plug['value'].child('params','detector_settings','controller_status').value()
-                else:
-                    plug['status']=plug['value'].child('params','move_settings', 'multiaxes', 'multi_status').value()
-
-            IDs=list(set([plug['ID'] for plug in plugins]))
-            #%%
-            plugins_sorted=[]
-            for id in IDs:
-                plug_Ids=[]
-                for plug in plugins:
-                    if plug['ID']==id:
-                        plug_Ids.append(plug)
-                plug_Ids.sort(key=lambda status: status['status'])
-                plugins_sorted.append(plug_Ids)
-            #################################################################
-            #######################
-
-            ind_move=-1
-            ind_det=-1
-            for plug_IDs in plugins_sorted:
-                for ind_plugin, plugin in enumerate(plug_IDs):
-
-
-                    plug_name=plugin['value'].child(('name')).value()
-                    plug_init=plugin['value'].child(('init')).value()
-                    plug_settings=plugin['value'].child(('params'))
-                    self.splash_sc.showMessage('Loading {:s} module: {:s}'.format(plugin['type'],plug_name),color = Qt.white)
-                    if plugin['type'] == 'move':
-                        ind_move+=1
-                        plug_type=plug_settings.child('main_settings','move_type').value()
-                        self.move_docks.append(Dock(plug_name, size=(150,250)))
-                        if ind_move==0:
-                            self.dockarea.addDock(self.move_docks[-1], 'right',self.ui.logger_dock)
-                        else:
-                            self.dockarea.addDock(self.move_docks[-1], 'above',self.move_docks[-2])
-                        move_forms.append(QtWidgets.QWidget())
-                        mov_mod_tmp=DAQ_Move(move_forms[-1],plug_name)
-
-                        mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
-                        mov_mod_tmp.ui.Quit_pb.setEnabled(False)
-                        QtWidgets.QApplication.processEvents()
-
-                        utils.set_param_from_param(mov_mod_tmp.settings,plug_settings)
-                        QtWidgets.QApplication.processEvents()
-
-                        mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
-                        self.move_docks[-1].addWidget(move_forms[-1])
-                        move_modules.append(mov_mod_tmp)
-
-                        try:
-                            if ind_plugin==0: #should be a master type plugin
-                                if plugin['status']!="Master":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                                if plug_init:
-                                    move_modules[-1].ui.IniStage_pb.click()
-                                    QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_type:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                    QtWidgets.QApplication.processEvents()
-                                    master_controller=move_modules[-1].controller
-                            else:
-                                if plugin['status']!="Slave":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                                if plug_init:
-                                    move_modules[-1].controller=master_controller
-                                    move_modules[-1].ui.IniStage_pb.click()
-                                    QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_type:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                    QtWidgets.QApplication.processEvents()
-                        except Exception as e:
-                            self.update_status(getLineInfo()+ str(e),'log')
-
-
-                    else:
-                        ind_det+=1
-                        plug_type=plug_settings.child('main_settings','DAQ_type').value()
-                        plug_subtype=plug_settings.child('main_settings','detector_type').value()
-
-                        self.det_docks_settings.append(Dock(plug_name+" settings", size=(150,250)))
-                        self.det_docks_viewer.append(Dock(plug_name+" viewer", size=(350,350)))
-
-                        if ind_det==0:
-                            self.ui.logger_dock.area.addDock(self.det_docks_settings[-1], 'bottom') #dockarea of the logger dock
-                        else:
-                            self.dockarea.addDock(self.det_docks_settings[-1], 'right',self.det_docks_viewer[-2])
-                        self.dockarea.addDock(self.det_docks_viewer[-1],'right',self.det_docks_settings[-1])
-
-                        det_mod_tmp=DAQ_Viewer(self.dockarea,dock_settings=self.det_docks_settings[-1],
-                                                            dock_viewer=self.det_docks_viewer[-1],title=plug_name,
-                                               DAQ_type=plug_type, parent_scan=self)
-                        detector_modules.append(det_mod_tmp)
-                        detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
-                        detector_modules[-1].ui.Quit_pb.setEnabled(False)
-                        utils.set_param_from_param(det_mod_tmp.settings,plug_settings)
-                        QtWidgets.QApplication.processEvents()
-
-
-                        try:
-                            if ind_plugin==0: #should be a master type plugin
-                                if plugin['status']!="Master":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                                if plug_init:
-                                    detector_modules[-1].ui.IniDet_pb.click()
-                                    QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_subtype:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                    QtWidgets.QApplication.processEvents()
-                                    master_controller=detector_modules[-1].controller
-                            else:
-                                if plugin['status']!="Slave":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                                if plug_init:
-                                    detector_modules[-1].controller=master_controller
-                                    detector_modules[-1].ui.IniDet_pb.click()
-                                    QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_subtype:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                    QtWidgets.QApplication.processEvents()
-                        except Exception as e:
-                            self.update_status(getLineInfo()+ str(e),'log')
-
-                        detector_modules[-1].settings.child('main_settings','overshoot').show()
-                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
-
-            QtWidgets.QApplication.processEvents()
-            #restore dock state if saved
-            file = os.path.split(self.preset_file)[1]
-            file = os.path.splitext(file)[0]
-            path = os.path.join(layout_path, file + '.dock')
-            if os.path.isfile(path):
-                self.load_layout_state(path)
-
-
-
-            return move_modules,detector_modules
-        else:
-            raise Exception('Invalid file selected')
-
     def set_ini_positions(self):
         """
             Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
@@ -970,78 +460,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         res = self.show_file_attributes('dataset')
         return res
 
-
-    def set_overshoot_configuration(self,filename):
-        try:
-            if os.path.splitext(filename)[1]=='.xml':
-                file = os.path.split(filename)[1]
-                self.settings.child('loaded_files', 'overshoot_file').setValue(file)
-                self.update_status('Overshoot configuration ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
-                self.overshoot_manager.set_file_overshoot(filename,show=False)
-
-                det_titles=[det.title for det in self.detector_modules]
-                move_titles=[move.title for move in self.move_modules]
-
-                for det_param in self.overshoot_manager.overshoot_params.child(('Detectors')).children():
-                    if det_param.child(('trig_overshoot')).value():
-                        det_index = det_titles.index(det_param.opts['title'])
-                        det_module = self.detector_modules[det_index]
-                        det_module.settings.child('main_settings','overshoot','stop_overshoot').setValue(True)
-                        det_module.settings.child('main_settings','overshoot','overshoot_value').setValue(det_param.child(('overshoot_value')).value())
-                        for move_param in det_param.child(('params')).children():
-                            if move_param.child(('move_overshoot')).value():
-                                move_index = move_titles.index(move_param.opts['title'])
-                                move_module = self.move_modules[move_index]
-                                det_module.overshoot_signal.connect(self.create_overshoot_fun(move_module,move_param.child(('position')).value()))
-
-        except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,log_type='log')
-
-    def create_overshoot_fun(self,move_module,position):
-        return lambda: move_module.move_Abs(position)
-
-    def set_preset_mode(self,filename):
+    def setup_modules(self, filename):
         """
-            | Set the preset mode from the given filename.
-            |
-            | In case of "mock" or "canon" move, set the corresponding preset calling set_(*)_preset procedure.
-            |
-            | Else set the preset file using set_file_preset function.
-            | Once done connect the move and detector modules to logger to recipe/transmit informations.
 
-            Finally update DAQ_scan_settings tree with :
-                * Detectors
-                * Move
-                * plot_form.
-
-            =============== =========== =============================================
-            **Parameters**    **Type**    **Description**
-            *filename*        string      the name of the preset file to be treated
-            =============== =========== =============================================
-
-            See Also
-            --------
-            set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status
         """
         try:
-            self.mainwindow.setVisible(False)
-            for area in self.dockarea.tempAreas:
-                area.window().setVisible(False)
-
-            self.splash_sc.show()
-            QtWidgets.QApplication.processEvents()
-            self.splash_sc.raise_()
-            self.splash_sc.showMessage('Loading Modules, please wait',color = Qt.white)
-            QtWidgets.QApplication.processEvents()
-            self.clear_move_det_controllers()
-            QtWidgets.QApplication.processEvents()
-
-
-            move_modules, detector_modules= self.set_file_preset(filename)
-            self.update_status('Preset mode ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
             self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
-            self.move_modules = move_modules
-            self.detector_modules = detector_modules
 
             ######################################################################
             #set scan selector
@@ -1066,32 +490,16 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.scanner.scan_selector.widget.setVisible(False)
             self.scanner.scan_selector.show_scan_selector(visible=False)
 
-            #####################################################
-            self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
-            #load overshoot if present
-            file = os.path.split(self.preset_file)[1]
-            path = os.path.join(overshoot_path, file)
-            if os.path.isfile(path):
-                self.set_overshoot_configuration(path)
+            # setting moves and det in tree
+            preset_items_det = []
+            preset_items_move = []
+            items_det = [module.title for module in self.detector_modules]
+            if items_det != []:
+                preset_items_det = [items_det[0]]
 
-
-            #connecting to logger
-            for mov in move_modules:
-                mov.log_signal[str].connect(self.add_log)
-                mov.init_signal.connect(self.update_init_tree)
-            for det in detector_modules:
-                det.log_signal[str].connect(self.add_log)
-                det.init_signal.connect(self.update_init_tree)
-            #setting moves and det in tree
-            preset_items_det=[]
-            preset_items_move=[]
-            items_det=[module.title for module in detector_modules]
-            if items_det!=[]:
-                preset_items_det=[items_det[0]]
-
-            items_move=[module.title for module in move_modules]
-            if items_move!=[]:
-                preset_items_move=[items_move[0]]
+            items_move = [module.title for module in self.move_modules]
+            if items_move != []:
+                preset_items_move = [items_move[0]]
 
             self.settings.child('Move_Detectors', 'Detectors').setValue(dict(all_items=items_det, selected=preset_items_det))
             self.settings.child('Move_Detectors', 'Moves').setValue(dict(all_items=items_move, selected=preset_items_move))
@@ -1099,23 +507,17 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             if preset_items_det!=[]:
                 self.settings.child('scan_options', 'plot_from').setValue(preset_items_det[0])
 
-            self.splash_sc.close()
-            self.mainwindow.setVisible(True)
-            for area in self.dockarea.tempAreas:
-                area.window().setVisible(True)
+
             self.show_average_dock(False)
 
             self.ui.scan_dock.setEnabled(True)
             self.file_menu.setEnabled(True)
             self.settings_menu.setEnabled(True)
-            self.overshoot_menu.setEnabled(True)
-
             self.create_new_file(True)
-            self.update_init_tree()
+
 
         except Exception as e:
-
-            self.update_status(getLineInfo()+ str(e), self.wait_time, log_type='log')
+            self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
     def create_new_file(self, new_file):
         self.h5saver.init_file(update_h5=new_file)
@@ -1230,38 +632,16 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
 
     def setupUI(self):
-        self.ui=Ui_Form()
-        widgetsettings=QtWidgets.QWidget()
+        self.ui = Ui_Form()
+        widgetsettings = QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
-        self.mainwindow.setVisible(False)
 
         #%% create scan dock and make it a floating window
         self.ui.scan_dock = Dock("Scan", size=(1, 1), autoOrientation=False)     ## give this dock the minimum possible size
         self.ui.scan_dock.setOrientation('vertical')
-
         self.ui.scan_dock.addWidget(widgetsettings)
-        self.dockarea.addDock(self.ui.scan_dock,'left')
-
-
-
-        #%% create logger dock
-        self.ui.logger_dock=Dock("Logger")
-        self.ui.logger_list=QtWidgets.QListWidget()
-        self.ui.logger_list.setMinimumWidth(300)
-        self.init_tree = ParameterTree()
-        self.init_tree.setMinimumWidth(300)
-        self.ui.logger_dock.addWidget(self.init_tree)
-        self.ui.logger_dock.addWidget(self.ui.logger_list)
-
-        self.init_settings=Parameter.create(name='init_settings', type='group', children=[
-            {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
-            {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
-            ])
-        self.init_tree.setParameters(self.init_settings, showTop=False)
-
-        self.dockarea.addDock(self.ui.logger_dock,'top')
-        self.ui.logger_dock.setVisible(True)
-        self.ui.logger_dock.float()
+        self.dockarea.addDock(self.ui.scan_dock, 'left')
+        self.ui.scan_dock.float()
 
         #%% init the 1D viewer
         self.ui.scan1D_graph_widget = QtWidgets.QWidget()
@@ -1285,19 +665,19 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.move_to_crosshair_cb)
         self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
 
-        #%% init and set the status bar
-        self.ui.statusbar=QtWidgets.QStatusBar(self.dockarea)
+        # %% init and set the status bar
+        self.ui.statusbar = QtWidgets.QStatusBar(self.dockarea)
         self.ui.statusbar.setMaximumHeight(25)
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.ui.log_message=QtWidgets.QLabel('Initializing')
+        self.ui.log_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.log_message)
-        self.ui.N_scan_steps_sb=QSpinBox_ro()
+        self.ui.N_scan_steps_sb = QSpinBox_ro()
         self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb=QSpinBox_ro()
+        self.ui.indice_scan_sb = QSpinBox_ro()
         self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb=QSpinBox_ro()
+        self.ui.indice_average_sb = QSpinBox_ro()
         self.ui.indice_average_sb.setToolTip('Current average value')
-        self.ui.scan_done_LED=QLED()
+        self.ui.scan_done_LED = QLED()
         self.ui.scan_done_LED.setToolTip('Scan done state')
         self.ui.statusbar.addPermanentWidget(self.ui.N_scan_steps_sb)
         self.ui.statusbar.addPermanentWidget(self.ui.indice_scan_sb)
@@ -1305,15 +685,11 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.indice_average_sb.setVisible(False)
         self.ui.statusbar.addPermanentWidget(self.ui.scan_done_LED)
 
-        self.plot_colors=utils.plot_colors
-
+        self.plot_colors = utils.plot_colors
         self.ui.splitter.setSizes([500, 1200])
 
-
         self.ui.scan_done_LED.set_as_false()
-        self.ui.scan_done_LED.clickable=False
-        self.ui.start_scan_pb.setEnabled(False)
-        self.ui.stop_scan_pb.setEnabled(False)
+        self.ui.scan_done_LED.clickable = False
 
         #displaying the settings
         widget_settings = QtWidgets.QWidget()
@@ -1323,10 +699,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumWidth(300)
-        settings_layout.addWidget(self.settings_tree, 0, 0, 2 ,1)
+        settings_layout.addWidget(self.settings_tree, 0, 0, 2, 1)
         settings_layout.addWidget(self.h5saver.settings_tree, 0, 1, 1, 1)
         self.h5saver.settings_tree.setMinimumWidth(300)
-        self.settings=Parameter.create(name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
 
         self.settings_tree.setParameters(self.settings, showTop=False)
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
@@ -1336,28 +712,22 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.scanner = Scanner()
         settings_layout.addWidget(self.scanner.settings_tree, 1, 1, 1, 1)
 
-
-
         #params about dataset attributes and scan attibutes
-        date=QDateTime(QDate.currentDate(),QTime.currentTime())
-        params_dataset=[{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children':[
+        date = QDateTime(QDate.currentDate(),QTime.currentTime())
+        params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children':[
                             {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': 'Sebastien Weber'},
                             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
                             {'title': 'Sample:', 'name': 'sample', 'type': 'str', 'value':''},
                             {'title': 'Experiment type:', 'name': 'experiment_type', 'type': 'str', 'value': ''},
                             {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''}]}]
 
-        params_scan=[{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children':[
+        params_scan = [{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children':[
                             {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': 'Sebastien Weber'},
                             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
                             {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'value':'Scan1D', 'values':['Scan1D','Scan2D']},
                             {'title': 'Scan name:', 'name': 'scan_name', 'type': 'str', 'value': '', 'readonly': True},
                             {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''},
                             ]}]
-
-
-        self.preset_manager=PresetManager()
-        self.overshoot_manager = OvershootManager(det_modules=[],move_modules=[])
 
         self.dataset_attributes=Parameter.create(name='Attributes', type='group', children=params_dataset)
         self.scan_attributes=Parameter.create(name='Attributes', type='group', children=params_scan)
@@ -1366,11 +736,10 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.create_average_dock()
 
         #creating the menubar
-        self.menubar=self.mainwindow.menuBar()
-        self.create_menu(self.menubar)
+        self.create_menu()
 
 #        connecting
-        self.log_signal[str].connect(self.add_log)
+        self.log_signal[str].connect(self.dashboard.add_log)
         self.ui.set_scan_pb.clicked.connect(self.set_scan)
         self.ui.quit_pb.clicked.connect(self.quit_fun)
 
@@ -1379,32 +748,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
 
         self.ui.tabWidget.removeTab(2)
-
-        self.ui.scan_dock.setEnabled(False)
-        self.file_menu.setEnabled(False)
-        self.settings_menu.setEnabled(False)
-        self.overshoot_menu.setEnabled(False)
-        self.preset_menu.setEnabled(True)
-        self.mainwindow.setVisible(True)
-
-
-    def update_init_tree(self):
-        for act in self.move_modules:
-            if act.title not in custom_tree.iter_children(self.init_settings.child(('actuators')), []):
-                self.init_settings.child(('actuators')).addChild({'title': act.title, 'name': act.title, 'type': 'led', 'value': False})
-            QtWidgets.QApplication.processEvents()
-            self.init_settings.child('actuators', act.title).setValue(act.initialized_state)
-
-        for act in self.detector_modules:
-            if act.title not in custom_tree.iter_children(self.init_settings.child(('detectors')), []):
-                self.init_settings.child(('detectors')).addChild({'title': act.title, 'name': act.title, 'type': 'led', 'value': False})
-            QtWidgets.QApplication.processEvents()
-            self.init_settings.child('detectors', act.title).setValue(act.initialized_state)
-
-
-    def show_about(self):
-        self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage("PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()), QtCore.Qt.AlignRight, QtCore.Qt.white)
 
     def show_file_attributes(self,type_info='dataset'):
         """
@@ -1459,9 +802,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.h5saver.show_file_content()
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),self.wait_time,log_type='log')
-
-    def show_help(self):
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
     def show_navigator(self):
         if self.navigator is None:
@@ -1582,21 +922,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             self.ui.log_message.setText('Running acquisition')
 
-    pyqtSlot(bool)
-    def stop_moves(self,overshoot):
-        """
-            Foreach module of the move module object list, stop motion.
-
-            See Also
-            --------
-            stop_scan,  DAQ_Move_main.daq_move.stop_Motion
-        """
-        self.overshoot = overshoot
-        self.stop_scan()
-        for mod in self.move_modules:
-            mod.stop_Motion()
-
-
     def stop_scan(self):
         """
             Emit the command_DAQ signal "stop_acquisiion".
@@ -1608,7 +933,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         self.ui.log_message.setText('Stoping acquisition')
         self.command_DAQ_signal.emit(["stop_acquisition"])
 
-        if not self.overshoot:
+        if not self.dashboard.overshoot:
             self.set_ini_positions() #do not set ini position again in case overshoot fired
             status = 'Data Acquisition has been stopped by user'
         else:
@@ -2460,35 +1785,15 @@ class DAQ_Scan_Acquisition(QObject):
 
 
 if __name__ == '__main__':
+    from pymodaq.daq_utils.dashboard import DashBoard
     app = QtWidgets.QApplication(sys.argv)
-
-    splash_path = os.path.join(os.path.split(__file__)[0],'splash.png')
-    splash = QtGui.QPixmap(splash_path)
-    if splash is None:
-        print('no splash')
-    splash_sc=QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-
-    splash_sc.show()
-    QtWidgets.QApplication.processEvents()
-    splash_sc.raise_()
-    splash_sc.showMessage('Loading Main components',color=Qt.white)
-    QtWidgets.QApplication.processEvents()
-    QtWidgets.QApplication.processEvents()
-
     win = QtWidgets.QMainWindow()
-    win.setVisible(False)
     area = utils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000,500)
-    win.setWindowTitle('pymodaq Scan')
+    win.setWindowTitle('PyMoDAQ Dashboard')
 
     #win.setVisible(False)
-    prog = DAQ_Scan(area)
-    QThread.sleep(0)
-    win.show()
-    splash_sc.finish(win)
-    #win.setVisible(True)
-    
-    
+    prog = DashBoard(area)
     sys.exit(app.exec_())
 
