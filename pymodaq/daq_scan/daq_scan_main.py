@@ -1523,7 +1523,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                                             self.det_modules_scan[ind_det].ui.viewers]:  # no roi_settings in viewer0D
                             settings_str = b'<All_settings title="All Settings" type="group">' + settings_str
                             for ind_viewer, viewer in enumerate(self.det_modules_scan[ind_det].ui.viewers):
-                                if '0D' not in viewer.viewer_type:
+                                if hasattr(viewer, 'roi_manager'):
                                     settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
                                         ind_viewer).encode()
                                     settings_str += custom_tree.parameter_to_xml_string(
@@ -2280,7 +2280,7 @@ class DAQ_Scan_Acquisition(QObject):
 
                     data_types = ['data0D', 'data1D']
                     if self.h5saver.settings.child(('save_2D')).value():
-                        data_types.append('data2D')
+                        data_types.extend(['data2D', 'dataND'])
 
 
                     for data_type in data_types:

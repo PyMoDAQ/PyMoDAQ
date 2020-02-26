@@ -575,19 +575,19 @@ class H5Saver(QObject):
                  init=False, add_scan_dim=False, metadata=dict([])):
 
         shape, dimension, size = utils.get_data_dimension(data_dict['data'])
-
+        tmp_data_dict = copy.deepcopy(data_dict)
 
         #save axis
         # this loop covers all type of axis : x_axis, y_axis... nav_x_axis, ...
-        axis_keys = [k for k in data_dict.keys() if 'axis' in k]
+        axis_keys = [k for k in tmp_data_dict.keys() if 'axis' in k]
         for key in axis_keys:
-            if not isinstance(data_dict[key], dict):
-                array_to_save = data_dict[key]
+            if not isinstance(tmp_data_dict[key], dict):
+                array_to_save = tmp_data_dict[key]
                 tmp_dict = dict(label='', units='')
             else:
-                tmp_dict = copy.deepcopy(data_dict[key])
+                tmp_dict = copy.deepcopy(tmp_data_dict[key])
                 array_to_save = tmp_dict.pop('data')
-                data_dict.pop(key)
+                tmp_data_dict.pop(key)
 
             array = self.add_array(channel_group, key, 'axis',
                    array_type=np.float, array_to_save=array_to_save,
@@ -619,16 +619,15 @@ class H5Saver(QObject):
         #             array_type=np.float, array_to_save=array_to_save,
         #             enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
-        array_to_save = data_dict.pop('data')
-        if 'type' in data_dict:
-            data_dict.pop('type') #otherwise this metadata would overide mandatory type for a h5 node
-        tmp_dict = copy.deepcopy(data_dict)
-        tmp_dict.update(metadata)
+        array_to_save = tmp_data_dict.pop('data')
+        if 'type' in tmp_data_dict:
+            tmp_data_dict.pop('type') #otherwise this metadata would overide mandatory type for a h5 node
+        tmp_data_dict.update(metadata)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
             title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension, scan_type=scan_type,
             scan_shape=scan_shape,
             array_to_save=array_to_save,
-            init=init, add_scan_dim=add_scan_dim, metadata=tmp_dict)
+            init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
 
         self.h5_file.flush()
         return data_array

@@ -131,7 +131,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
     params = [
         {'title': 'Main Settings:','name': 'main_settings', 'expanded': False, 'type': 'group','children':[
-            {'title': 'DAQ type:','name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D','DAQ1D','DAQ2D'], 'readonly': True},
+            {'title': 'DAQ type:','name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D','DAQ1D','DAQ2D','DAQND'], 'readonly': True},
             {'title': 'Detector type:','name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:','name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
             {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': True},
