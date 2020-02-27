@@ -1359,8 +1359,9 @@ def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,scan_parameters.axis_2D_1,scan_parameters.axis_2D_2,
                           positions_shuffled)
 
-def set_current_scan_path(base_dir,base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
-			create_dataset_folder=True, curr_date=None, ind_dataset=None):
+
+def set_current_scan_path(base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
+                          create_dataset_folder=True, curr_date=None, ind_dataset=None):
     """
 
     Parameters
@@ -1380,26 +1381,26 @@ def set_current_scan_path(base_dir,base_name='Scan', update_h5=False, next_scan_
     if curr_date is None:
         curr_date = datetime.date.today()
 
-																																					
-																																							
-
-    year_path = find_part_in_path_and_subpath(base_dir,part=str(curr_date.year),create=True)# create directory of the year if it doen't exist and return it
-    day_path = find_part_in_path_and_subpath(year_path,part=curr_date.strftime('%Y%m%d'),create=True)# create directory of the day if it doen't exist and return it
+    year_path = find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
+                                              create=True)  # create directory of the year if it doen't exist and return it
+    day_path = find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
+                                             create=True)  # create directory of the day if it doen't exist and return it
     dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
-    dataset_paths=sorted([path for path in day_path.glob(dataset_base_name+"*") if path.is_dir()])
-						 
+    dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
+
     if ind_dataset is None:
-        if dataset_paths==[]:
-					 
-            ind_dataset=0
+        if dataset_paths == []:
+
+            ind_dataset = 0
         else:
             if update_h5:
-                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])+1
+                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2]) + 1
             else:
-                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])
+                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2])
 
-    dataset_path = find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=create_dataset_folder)
-    scan_paths=sorted([path for path in dataset_path.glob(base_name+'*') if path.is_dir()])
+    dataset_path = find_part_in_path_and_subpath(day_path, part=dataset_base_name + "_{:03d}".format(ind_dataset),
+                                                 create=create_dataset_folder)
+    scan_paths = sorted([path for path in dataset_path.glob(base_name + '*') if path.is_dir()])
     # if scan_paths==[]:
     #     ind_scan=0
     # else:
@@ -1409,11 +1410,36 @@ def set_current_scan_path(base_dir,base_name='Scan', update_h5=False, next_scan_
     #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
     ind_scan = next_scan_index
 
-    scan_path = find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
-    return scan_path,base_name+'{:03d}'.format(ind_scan),dataset_path
+    scan_path = find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
+                                              create=create_scan_folder)
+    return scan_path, base_name + '{:03d}'.format(ind_scan), dataset_path
+
 
 #########################
 ##File management
+
+def get_new_file_name(base_path='C:\Data', base_name='tttr_data'):
+    today = datetime.datetime.now()
+
+    date = today.strftime('%Y%m%d')
+    year = today.strftime('%Y')
+    curr_dir = os.path.join(base_path, year, date)
+    if not os.path.isdir(curr_dir):
+        os.mkdir(curr_dir)
+
+    with os.scandir(curr_dir) as it:
+        files = []
+        for entry in it:
+            if entry.name.startswith(base_name) and entry.is_file():
+                files.append(entry.name)
+        files.sort()
+        if not files:
+            index = 0
+        else:
+            index = int(os.path.splitext(files[-1])[0][-3:])+1
+
+        file = f'{base_name}_{index:03d}'
+    return file, curr_dir
 
 def find_part_in_path_and_subpath(base_dir,part='',create=False):
     """

@@ -9,6 +9,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 import sys
 from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
+import copy
 
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
@@ -179,16 +180,16 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             ]}
         ]
 
-    def __init__(self,parent,dock_settings=None,dock_viewer=None,title="Testing",DAQ_type="DAQ0D",
-                 preset=None,init=False,controller_ID=-1, parent_scan=None):
+    def __init__(self, parent, dock_settings=None, dock_viewer=None, title="Testing", DAQ_type="DAQ0D",
+                 preset=None, init=False, controller_ID=-1, parent_scan=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(DAQ_Viewer,self).__init__()
+        super(DAQ_Viewer, self).__init__()
 
-        splash=QtGui.QPixmap('..//Documentation//splash.png')
-        self.splash_sc = QtWidgets.QSplashScreen(splash,Qt.WindowStaysOnTopHint)
+        splash = QtGui.QPixmap('..//splash.png')
+        self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
 
-        self.ui=Ui_Form()
-        widgetsettings=QtWidgets.QWidget()
+        self.ui = Ui_Form()
+        widgetsettings = QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
 
         self.h5saver_continuous = H5Saver(save_type='detector')
@@ -199,17 +200,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.scanner = None
         self.ui.navigator_pb.setVisible(False)
         self.ui.navigator_pb.clicked.connect(self.send_to_nav)
-
+        self.received_data = 0
         self.lcd = None
         self.parent_scan =parent_scan #to use if one need the DAQ_Scan object
 
-        self.ini_time= 0
-        self.wait_time=1000
-        self.title=title
+        self.ini_time = 0
+        self.wait_time = 1000
+        self.title = title
         self.ui.title_label.setText(self.title)
-        self.DAQ_type=DAQ_type
-        self.dockarea=parent
-        self.bkg=None #buffer to store background
+        self.DAQ_type = DAQ_type
+        self.dockarea = parent
+        self.bkg = None  #buffer to store background
         self.filters = tables.Filters(complevel=5)        #options to save data to h5 file using compression zlib library and level 5 compression
 
         self.send_to_tcpip = False
@@ -492,6 +493,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             =============== ===================== ===================
         """
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
+        self.received_data += 1
         self.data_to_save_export['Ndatas'] += 1
         for key in datas:
             if not(key == 'name' or key == 'acq_time_s'):
@@ -499,9 +501,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     if self.data_to_save_export[key] is None:
                        self.data_to_save_export[key] = OrderedDict([])
                     for k in datas[key]:
-                        self.data_to_save_export[key][k] = datas[key][k]
+                            self.data_to_save_export[key][k].update(datas[key][k])
 
-        if self.data_to_save_export['Ndatas'] == len(self.ui.viewers):
+        if self.received_data == len(self.ui.viewers):
             if self.do_continuous_save:
                 self.do_save_continuous(self.data_to_save_export)
                 
@@ -950,7 +952,22 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             settings_str += b'</All_settings>'
 
         det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
+        if 'external_h5' in datas:
+            try:
+                external_group = h5saver.add_group('external_data', 'external_h5', det_group)
+                if not datas['external_h5'].isopen:
+                    h5saver = H5Saver()
+                    h5saver.init_file(addhoc_file_path=datas['external_h5'].filename)
+                    h5_file = h5saver.h5_file
+                else:
+                    h5_file = datas['external_h5']
+                h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
+                h5_file.flush()
+                h5_file.close()
 
+
+            except Exception as e:
+                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
         try:
             self.channel_arrays = OrderedDict([])
             data_types = ['data1D'] #we don't recrod 0D data in this mode (only in continuous)
@@ -966,6 +983,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                             for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
 
                                 channel_group = h5saver.add_CH_group(data_group, title=channel)
+
+
+
                                 self.channel_arrays[data_type]['parent'] = channel_group
                                 self.channel_arrays[data_type][channel] = h5saver.add_data(channel_group, datas[data_type][channel], scan_type='', enlargeable=False)
 
@@ -982,12 +1002,12 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
         try:
-            (root,filename)=os.path.split(str(path))
-            filename,ext=os.path.splitext(filename)
-            image_path=os.path.join(root,filename+'.png')
+            (root, filename) = os.path.split(str(path))
+            filename, ext = os.path.splitext(filename)
+            image_path = os.path.join(root, filename + '.png')
             self.dockarea.parent().grab().save(image_path)
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
+            self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
         h5saver.close_file()
 
@@ -1285,7 +1305,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         """
         try:
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
-               self.command_tcpip.emit(ThreadCommand('data_ready', datas))
+                self.command_tcpip.emit(ThreadCommand('data_ready', datas))
 
             self.ui.data_ready_led.set_as_true()
             self.init_show_data(datas)
@@ -1296,46 +1316,54 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.ind_continuous_grab += 1
                 if self.ind_continuous_grab > 1:
                     try:
-                        for ind,dic in enumerate(datas):
-                            dic['data'] = [((self.ind_continuous_grab-1)*self.current_datas[ind]['data'][ind_channel]+dic['data'][ind_channel])/self.ind_continuous_grab for ind_channel in range(len(dic['data']))]
+                        for ind, dic in enumerate(datas):
+                            dic['data'] = [((self.ind_continuous_grab - 1) * self.current_datas[ind]['data'][
+                                ind_channel] + dic['data'][ind_channel]) / self.ind_continuous_grab for ind_channel in
+                                           range(len(dic['data']))]
                     except Exception as e:
-                        self.update_status(getLineInfo()+ str(e), self.wait_time,log_type='log')
+                        self.update_status(getLineInfo() + str(e), self.wait_time, log_type='log')
 
-            if self.settings.child('main_settings','show_data').value():
+
+            #store raw data for further processing
+            Ndatas = len(datas)
+            acq_time = datetime.datetime.now().timestamp()
+            name = self.title
+            self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name)
+            data0D = OrderedDict([])
+            data1D = OrderedDict([])
+            data2D = OrderedDict([])
+            dataND = OrderedDict([])
+
+            for ind_data, data in enumerate(datas):
+                if 'external_h5' in data.keys():
+                    self.data_to_save_export['external_h5'] = data.pop('external_h5')
+                data_tmp = copy.deepcopy(data)
+                data_type = data_tmp.pop('type')
+                if data_type.lower() != 'datand':
+                    self.set_xy_axis(data_tmp, ind_data)
+                data_arrays = data_tmp.pop('data')
+
+                for ind_sub_data, dat in enumerate(data_arrays):
+                    subdata_tmp = copy.deepcopy(data_tmp)
+                    subdata_tmp.update(OrderedDict(data=dat, type='raw'))
+                    if data_type.lower() == 'data0d':
+                        data0D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                    elif data_type.lower() == 'data1d':
+                        data1D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                    elif data_type.lower() == 'data2d':
+                        data2D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                    elif data_type.lower() == 'datand':
+                        dataND['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+
+            self.data_to_save_export['data0D'] = data0D
+            self.data_to_save_export['data1D'] = data1D
+            self.data_to_save_export['data2D'] = data2D
+            self.data_to_save_export['dataND'] = dataND
+
+            if self.settings.child('main_settings', 'show_data').value():
+                self.received_data = 0  # so that data send back from viewers can be properly counted
                 self.set_datas_to_viewers(datas)
             else:
-                Ndatas = len(datas)
-                acq_time = datetime.datetime.now().timestamp()
-                name = self.title
-                self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name)
-                data0D = OrderedDict([])
-                data1D = OrderedDict([])
-                data2D = OrderedDict([])
-                dataND = OrderedDict([])
-
-                for data in datas:
-                    for ind_data, dat in enumerate(data['data']):
-                        data_tmp = OrderedDict(data=dat)
-                        if data['type'].lower() != 'datand':
-                            self.set_xy_axis(dat, ind_data)
-                        if data['type'].lower() == 'data0d':
-                            data0D['CH{:03d}'.format(ind_data)] = data_tmp
-                        elif data['type'].lower() == 'data1d':
-                            data1D['CH{:03d}'.format(ind_data)] = data_tmp
-                        elif data['type'].lower() == 'data2d':
-                            data2D['CH{:03d}'.format(ind_data)] = data_tmp
-                        elif data['type'].lower() == 'dataNd':
-                            dataND['CH{:03d}'.format(ind_data)] = data_tmp
-
-                if len(data0D) != 0:
-                    self.data_to_save_export['data0D'] = data0D
-                if len(data1D) != 0:
-                    self.data_to_save_export['data1D'] = data1D
-                if len(data2D) != 0:
-                    self.data_to_save_export['data2D'] = data2D
-                if len(dataND) != 0:
-                    self.data_to_save_export['dataND'] = data2D
-
                 if self.do_continuous_save:
                     self.do_save_continuous(self.data_to_save_export)
 
@@ -1345,7 +1373,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.current_datas = datas
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
+            self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
     def show_scanner(self):
         if self.scanner is None:

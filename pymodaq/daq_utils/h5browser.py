@@ -358,7 +358,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
                                     if 'label' in axis_node._v_attrs:
                                         axes[ax]['label'] = axis_node._v_attrs['label']
                                 else:
-                                    axes[ax] = dict(units='', label='')
+                                    axes[ax] = Axis()
 
                             if data_dim == 'ND': #check for navigation axis
                                 tmp_nav_axes = ['y_axis', 'x_axis', ]
@@ -417,10 +417,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
                     self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
-                    if isinstance(data[0], str):
-                        self.ui.text_list.clear()
-                        for txt in node.read():
-                            self.ui.text_list.addItem(txt)
+                    if not(not data):
+                        if isinstance(data[0], str):
+                            self.ui.text_list.clear()
+                            for txt in node.read():
+                                self.ui.text_list.addItem(txt)
             
 
         except Exception as e:
@@ -437,8 +438,8 @@ class H5Browser(QtWidgets.QWidget,QObject):
         try:
             if self.h5file is not None:
                 self.ui.h5file_tree.ui.Tree.clear()
-                base_node=self.h5file.root
-                base_tree_item,pixmap_items=h5tree_to_QTree(self.h5file,base_node)
+                base_node = self.h5file.root
+                base_tree_item, pixmap_items = h5tree_to_QTree(self.h5file, base_node)
                 self.ui.h5file_tree.ui.Tree.addTopLevelItem(base_tree_item)
                 self.add_widget_totree(pixmap_items)
 

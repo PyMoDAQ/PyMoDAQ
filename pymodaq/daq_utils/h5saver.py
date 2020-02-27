@@ -16,9 +16,9 @@ import copy
 
 version = '0.0.1'
 save_types = ['scan', 'detector', 'custom']
-group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
+group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
-data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
+data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5']
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
@@ -106,7 +106,7 @@ class H5Saver(QObject):
 
 
         """
-        super(H5Saver, self).__init__()
+        super().__init__()
 
         if save_type not in save_types:
             raise Exception('Invalid saving type')
@@ -150,7 +150,7 @@ class H5Saver(QObject):
         """
         self.new_file_sig.emit(status)
 
-    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None):
+    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([])):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
@@ -167,7 +167,8 @@ class H5Saver(QObject):
                        if True, a selection file dialog opens to set a new file name
         addhoc_file_path: Path or str
                           supplied name by the user for the new file
-
+        metadata: dict
+                    dictionnary with pair of key, value that should be saved as attributes of the root group
         Returns
         -------
         update_h5: bool
@@ -238,6 +239,8 @@ class H5Saver(QObject):
         if update_h5:
             self.h5_file.root._v_attrs['date'] = datetime_now.date().isoformat()
             self.h5_file.root._v_attrs['time'] = datetime_now.time().isoformat()
+            for metadat in metadata:
+                self.raw_group._v_attrs[metadat] = metadata[metadat]
 
 
         return update_h5
@@ -634,7 +637,7 @@ class H5Saver(QObject):
 
 
     def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
-                  title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
+                  title='', array_to_save=None, array_type=np.float, enlargeable=False, metadata=dict([]),
                   init=False, add_scan_dim=False):
 
         if data_dimension not in data_dimensions:

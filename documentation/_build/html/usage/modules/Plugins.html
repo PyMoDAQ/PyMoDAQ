@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
+  <title>Plugins &mdash; PyMoDAQ 1.7 pre-database documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                1.6
+                1.7
               </div>
             
           
@@ -525,14 +525,16 @@ used to send temporary data to update the plotting but without triggering anythi
 for data completion before moving on). It is also used in the initialisation of the plugin in order to preset the type and number of data viewers
 displayed by the viewer module. The second signal is to be used once data are fully ready to be send back to the user interface
 and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an example of emission of data:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">x_axis</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Wavelength&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span> <span class="s2">&quot;nm&quot;</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vector_X</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pymodaq.daq_utils.daq_utils</span> <span class="kn">import</span> <span class="n">Axis</span>
+<span class="n">x_axis</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Wavelength&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span> <span class="s2">&quot;nm&quot;</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">vector_X</span><span class="p">)</span>
+<span class="n">y_axis</span> <span class="o">=</span> <span class="n">Axis</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">vector_Y</span><span class="p">)</span>
 <span class="bp">self</span><span class="o">.</span><span class="n">data_grabed_signal</span><span class="o">.</span><span class="n">emit</span><span class="p">([</span><span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Camera&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data2D_0</span><span class="p">,</span> <span class="n">data2D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data2D&#39;</span><span class="p">,</span>
-                                    <span class="n">x_axis</span><span class="o">=</span><span class="n">vector_X</span><span class="p">,</span><span class="n">y_axis</span><span class="o">=</span><span class="n">vector_Y</span><span class="p">),</span>
+                                    <span class="n">x_axis</span><span class="o">=</span><span class="n">x_axis</span><span class="p">,</span><span class="n">y_axis</span><span class="o">=</span><span class="n">y_axis</span><span class="p">),</span>
                               <span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Spectrum&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data1D_0</span><span class="p">,</span> <span class="n">data1D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data1D&#39;</span><span class="p">,</span>
-                                    <span class="n">x_axis</span><span class="o">=</span><span class="n">vector_X</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;label0&#39;</span><span class="p">,</span> <span class="s1">&#39;label1&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]),</span>
+                                    <span class="n">x_axis</span><span class="o">=</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;label0&#39;</span><span class="p">,</span> <span class="s1">&#39;label1&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]),</span>
                               <span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Current&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data0D_0</span><span class="p">,</span> <span class="n">data0D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;Data0D&#39;</span><span class="p">),</span>
                               <span class="n">OrderedDict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Datacube&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">dataND_0</span><span class="p">,</span> <span class="n">dataND_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;DataND&#39;</span><span class="p">,</span>
-                                    <span class="n">nav_axes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="p">])</span>
+                                    <span class="n">nav_axes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="n">nav_x_axis</span><span class="o">=...</span><span class="p">])</span>
 </pre></div>
 </div>
 <p>Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each <code class="docutils literal notranslate"><span class="pre">OrderedDict</span></code>
@@ -544,13 +546,15 @@ Each array will generate one channel within the corresponding viewer. Here is th
 <li><p><code class="docutils literal notranslate"><span class="pre">type</span></code>: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">data</span></code>: list of numpy array. Each array shape should correspond to the <em>type</em></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">labels</span></code>: list of string, one for each numpy array within the <code class="docutils literal notranslate"><span class="pre">data</span></code> field. Will be displayed on 0DViewer and 1DViewer</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">x_axis</span></code>: either a numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance,
-default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
-(see code above)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">y_axis</span></code>: either a numpy 1D array representing the y axis of the detector (only for 2D detector)
-(default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
-(see code above)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">nav_axis</span></code>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">x_axis</span></code>: dictionnary or <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the viewer
+(see code above and the Axis object in the daq_utils module)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">y_axis</span></code>: dictionnary or <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the viewer
+(see code above and the Axis object in the daq_utils module)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nav_axes</span></code>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nav_x_axis</span></code>: dictionnary or <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the NDViewer, concerning the navigation viewer
+(see code above and the Axis object in the daq_utils module)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nav_y_axis</span></code>: dictionnary or <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the NDViewer, concerning the navigation viewer
+(see code above and the Axis object in the daq_utils module)</p></li>
 </ul>
 </div>
 <div class="section" id="data-ready">

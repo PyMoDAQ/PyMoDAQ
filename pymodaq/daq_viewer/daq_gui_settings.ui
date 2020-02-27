@@ -228,7 +228,7 @@
             <item>
              <widget class="QPushButton" name="log_pb">
               <property name="toolTip">
-               <string>Show Cuurent log file</string>
+               <string>Show Current log file</string>
               </property>
               <property name="text">
                <string/>

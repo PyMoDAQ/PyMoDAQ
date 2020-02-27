@@ -8,7 +8,7 @@ from subprocess import Popen, PIPE
 from os.path import abspath, dirname
 
 
-VERSION = (1, 6, 5, 'flim', 0)
+VERSION = (1, 7, 0, 'database', 0)
 
 
 def git_sha():

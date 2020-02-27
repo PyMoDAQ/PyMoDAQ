@@ -359,7 +359,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.datas = datas
             self.update_labels(self.labels)
 
-            self.data_to_export=OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
+            self.data_to_export = OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
             for ind,data in enumerate(datas):
                 self.data_to_export['data1D']['CH{:03d}'.format(ind)] = OrderedDict()
 
