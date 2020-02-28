@@ -9,7 +9,8 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from easydict import EasyDict as edict
 import socket, select
 import numpy as np
-from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, check_received_length, check_sended, message_to_bytes,\
+from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
+from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended, message_to_bytes,\
     get_int, get_list, send_string, send_list, get_array, get_string
 from collections import OrderedDict
 from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo
@@ -215,15 +216,16 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         --------
         utility_classes.DAQ_TCP_server
     """
-    params_GRABBER =[] #parameters of a client grabber
-    command_server=pyqtSignal(list)
+    params_GRABBER = []  # parameters of a client grabber
+    command_server = pyqtSignal(list)
 
-    message_list=["Quit","Send Data 0D","Send Data 1D","Send Data 2D","Status","Done","Server Closed","Info","Infos",
-                  "Info_xml", 'x_axis', 'y_axis']
-    socket_types=["GRABBER"]
-    params= comon_parameters+tcp_parameters
+    message_list = ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D", "Status", "Done", "Server Closed", "Info",
+                    "Infos",
+                    "Info_xml", 'x_axis', 'y_axis']
+    socket_types = ["GRABBER"]
+    params = comon_parameters + tcp_parameters
 
-    def __init__(self,parent=None,params_state=None, grabber_type='2D'):
+    def __init__(self, parent=None, params_state=None, grabber_type='2D'):
         """
 
         Parameters
@@ -233,17 +235,17 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         grabber_type: (str) either '0D', '1D' or '2D'
         """
         self.client_type = "GRABBER"
-        DAQ_Viewer_base.__init__(self, parent,params_state) #initialize base class with commom attributes and methods
+        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with commom attributes and methods
         TCPServer.__init__(self, self.client_type)
 
         self.x_axis = None
         self.y_axis = None
         self.data = None
         self.grabber_type = grabber_type
-        self.ind_data=0
-        self.data_mock=None
+        self.ind_data = 0
+        self.data_mock = None
 
-    def command_to_from_client(self,command):
+    def command_to_from_client(self, command):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
 
@@ -310,7 +312,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
         check_sended(sock, data_bytes)  # then send data
 
-    def read_data(self,sock):
+    def read_data(self, sock):
         """
             Read the unsigned 32bits int data contained in the given socket in five steps :
                 * get back the message
@@ -335,9 +337,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
         return data_list
 
-
-
-    def data_ready(self,data):
+    def data_ready(self, data):
         """
             Send the grabed data signal. to be written in the detailed plugin using this base class
 
@@ -364,16 +364,18 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-    def commit_settings(self,param):
+    def commit_settings(self, param):
 
         if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
-            grabber_socket = [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
+            grabber_socket = \
+            [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             send_string(grabber_socket, 'set_info')
 
-            path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'
+            path = custom_tree.get_param_path(param)[
+                   2:]  # get the path of this param as a list starting at parent 'infos'
             send_list(grabber_socket, path)
 
-            #send value
+            # send value
             data = custom_tree.parameter_to_xml_string(param)
             send_string(grabber_socket, data)
 
@@ -387,24 +389,24 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False,info="",x_axis=None,y_axis=None,controller=None))
+        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
         try:
             self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
             self.init_server()
 
-        #%%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
-            self.x_axis=self.get_xaxis()
-            self.y_axis=self.get_yaxis()
-            self.status.x_axis=self.x_axis
-            self.status.y_axis=self.y_axis
-            self.status.initialized=True
-            self.status.controller=self.serversocket
+            # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+            self.x_axis = self.get_xaxis()
+            self.y_axis = self.get_yaxis()
+            self.status.x_axis = self.x_axis
+            self.status.y_axis = self.y_axis
+            self.status.initialized = True
+            self.status.controller = self.serversocket
             return self.status
 
         except Exception as e:
-            self.status.info=getLineInfo()+ str(e)
-            self.status.initialized=False
+            self.status.info = getLineInfo() + str(e)
+            self.status.initialized = False
             return self.status
 
     def close(self):
@@ -415,7 +417,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.close_server
         """
-        self.listening=False
+        self.listening = False
         self.close_server()
 
     def get_xaxis(self):
@@ -458,14 +460,14 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             utility_classes.DAQ_TCP_server.process_cmds
         """
         try:
-            self.ind_grabbed=0 #to keep track of the current image in the average
-            self.Naverage=Naverage
+            self.ind_grabbed = 0  # to keep track of the current image in the average
+            self.Naverage = Naverage
             self.process_cmds("Send Data {:s}".format(self.grabber_type))
-            #self.command_server.emit(["process_cmds","Send Data 2D"])
+            # self.command_server.emit(["process_cmds","Send Data 2D"])
 
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[getLineInfo()+ str(e),"log"]))
+            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
 
     def stop(self):
         """
@@ -474,20 +476,18 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         pass
         return ""
 
-
     def set_1D_Mock_data(self):
         self.data_mock
-        x=np.linspace(0,99,100)
-        data_tmp=10*gauss1D(x,50,10,1)+1*np.random.rand((100))
-        self.ind_data+=1
-        self.data_mock=np.roll(data_tmp,self.ind_data)
-
+        x = np.linspace(0, 99, 100)
+        data_tmp = 10 * gauss1D(x, 50, 10, 1) + 1 * np.random.rand((100))
+        self.ind_data += 1
+        self.data_mock = np.roll(data_tmp, self.ind_data)
 
     def set_2D_Mock_data(self):
-        self.x_axis=np.linspace(0,50,50,endpoint=False)
-        self.y_axis=np.linspace(0,30,30,endpoint=False)
-        self.data_mock=10*gauss2D(self.x_axis,20,10,
-                                  self.y_axis,15,7,1)+2*np.random.rand(len(self.y_axis),len(self.x_axis))
+        self.x_axis = np.linspace(0, 50, 50, endpoint=False)
+        self.y_axis = np.linspace(0, 30, 30, endpoint=False)
+        self.data_mock = 10 * gauss2D(self.x_axis, 20, 10,
+                                      self.y_axis, 15, 7, 1) + 2 * np.random.rand(len(self.y_axis), len(self.x_axis))
 
 
 if __name__ == '__main__':

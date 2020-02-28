@@ -9,16 +9,17 @@ from PyQt5 import QtWidgets
 import socket
 import select
 import numpy as np
-from pymodaq.daq_utils.daq_utils import check_received_length, ThreadCommand, \
-    getLineInfo, send_scalar, send_string, send_list, get_scalar, get_int, get_string, send_array, get_list
+from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand
+from pymodaq.daq_utils.tcpip_utils import check_received_length, send_scalar, send_string, send_list, get_scalar,\
+    get_int, get_string, send_array, get_list
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from collections import OrderedDict
 
 tcp_parameters = [{'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': 6341, 'default': 6341},
-                                 {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': 'localhost',
-                                  'default': '10.47.1.33'},
+                                 {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': '10.47.0.39',
+                                  'default': '10.47.0.39'},
                                  {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
                                  {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',
                                   'value': dict(), 'header': ['Type', 'adress']},]
@@ -83,8 +84,6 @@ class TCPClient(QObject):
         elif command.command == 'send_info':
             path = command.attributes['path']
             param = command.attributes['param']
-
-            param_xml = custom_tree.parameter_to_xml_string(param)
 
             send_string(self.socket, 'Info_xml')
             send_list(self.socket, path)
@@ -248,8 +247,8 @@ class TCPServer(QObject):
         self.serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # bind the socket to a public host, and a well-known port
         try:
-            # self.serversocket.bind((self.settings.child(('socket_ip')).value(),self.settings.child(('port_id')).value()))
-            self.serversocket.bind((socket.gethostname(), self.settings.child(('port_id')).value()))
+            self.serversocket.bind((self.settings.child(('socket_ip')).value(), self.settings.child(('port_id')).value()))
+            #self.serversocket.bind((socket.gethostname(), self.settings.child(('port_id')).value()))
         except socket.error as msg:
             self.emit_status(ThreadCommand("Update_Status",
                                            ['Bind failed. Error Code : ' + str(msg.errno) + ' Message ' + msg.strerror,

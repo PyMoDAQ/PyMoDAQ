@@ -169,8 +169,10 @@
 <span class="kn">from</span> <span class="nn">pyqtgraph.parametertree</span> <span class="kn">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">ParameterTree</span>
 <span class="kn">import</span> <span class="nn">pyqtgraph.parametertree.parameterTypes</span> <span class="k">as</span> <span class="nn">pTypes</span>
 <span class="kn">import</span> <span class="nn">pymodaq.daq_utils.custom_parameter_tree</span> <span class="k">as</span> <span class="nn">custom_tree</span>
-<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.daq_utils</span> <span class="kn">import</span> <span class="n">ThreadCommand</span><span class="p">,</span> <span class="n">getLineInfo</span><span class="p">,</span> <span class="n">check_received_length</span><span class="p">,</span> <span class="n">check_sended</span><span class="p">,</span>\
+<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.daq_utils</span> <span class="kn">import</span> <span class="n">ThreadCommand</span><span class="p">,</span> <span class="n">getLineInfo</span>
+<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.tcpip_utils</span> <span class="kn">import</span> <span class="n">check_received_length</span><span class="p">,</span> <span class="n">check_sended</span><span class="p">,</span>\
     <span class="n">message_to_bytes</span><span class="p">,</span> <span class="n">send_scalar</span><span class="p">,</span> <span class="n">send_string</span><span class="p">,</span> <span class="n">get_scalar</span><span class="p">,</span> <span class="n">get_int</span><span class="p">,</span> <span class="n">get_string</span><span class="p">,</span> <span class="n">send_list</span>
+
 <span class="kn">import</span> <span class="nn">socket</span>
 <span class="kn">import</span> <span class="nn">select</span>
 <span class="kn">import</span> <span class="nn">os</span>

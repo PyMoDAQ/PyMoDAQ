@@ -5,8 +5,10 @@ from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, check_received_length, check_sended,\
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended,\
     message_to_bytes, send_scalar, send_string, get_scalar, get_int, get_string, send_list
+
 import socket
 import select
 import os

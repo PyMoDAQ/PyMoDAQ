@@ -146,7 +146,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
                  {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
                  {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
-                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
                  {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
             ]},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': True, 'expanded': False,'children':[
