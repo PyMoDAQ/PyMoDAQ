@@ -187,11 +187,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
         if self.main_window is not None:
             self.create_menu()
 
-        layout=QtWidgets.QGridLayout()
+        layout = QtWidgets.QGridLayout()
 
-        V_splitter=QtWidgets.QSplitter(Qt.Vertical)
-        V_splitter2=QtWidgets.QSplitter(Qt.Vertical)
-        H_splitter=QtWidgets.QSplitter(Qt.Horizontal)
+        V_splitter = QtWidgets.QSplitter(Qt.Vertical)
+        V_splitter2 = QtWidgets.QSplitter(Qt.Vertical)
+        H_splitter = QtWidgets.QSplitter(Qt.Horizontal)
 
         Form = QtWidgets.QWidget()
         #self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
@@ -222,25 +222,20 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.ui.settings_tree=ParameterTree()
         self.ui.settings_tree.setMinimumWidth(300)
         V_splitter2.addWidget(self.ui.settings_tree)
-        self.ui.text_list=QtWidgets.QListWidget()
-
+        self.ui.text_list = QtWidgets.QListWidget()
 
         V_splitter2.addWidget(self.ui.text_list)
 
-
-
         H_splitter.addWidget(V_splitter2)
-        
-        form_viewer=QtWidgets.QWidget()
-        self.hyperviewer=ViewerND(form_viewer)
-        H_splitter.addWidget(form_viewer)
 
+        form_viewer = QtWidgets.QWidget()
+        self.hyperviewer = ViewerND(form_viewer)
+        H_splitter.addWidget(form_viewer)
 
         layout.addWidget(H_splitter)
         self.parent.setLayout(layout)
 
-
-        self.settings=Parameter.create(name='Param', type='group')
+        self.settings = Parameter.create(name='Param', type='group')
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
 
         self.status_signal.connect(self.add_log)

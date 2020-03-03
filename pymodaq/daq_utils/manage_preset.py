@@ -17,11 +17,11 @@ from pymodaq.daq_utils.h5saver import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
 
-DAQ_Move_Stage_type=make_enum('daq_move')
-DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
-DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
-DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
-DAQ_NDViewer_Det_type=make_enum('daq_NDviewer')
+DAQ_Move_Stage_type = make_enum('daq_move')
+DAQ_0DViewer_Det_type = make_enum('daq_0Dviewer')
+DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
+DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
+DAQ_NDViewer_Det_type = make_enum('daq_NDviewer')
 
 class PresetScalableGroupMove( pTypes.GroupParameter):
     """

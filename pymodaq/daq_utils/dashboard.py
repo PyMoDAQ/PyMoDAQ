@@ -17,6 +17,7 @@ import logging
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.daq_utils.custom_parameter_tree import GroupParameterCustom
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
@@ -30,6 +31,7 @@ from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan.daq_scan_main import DAQ_Scan
+from pymodaq.daq_logger.daq_logger_main import DAQ_Logger
 from pymodaq.daq_utils import daq_utils as utils
 
 
@@ -130,8 +132,9 @@ class DashBoard(QObject):
         self.scan_module.log_signal.connect(self.add_log)
         self.actions_menu.setEnabled(False)
 
-    def load_database_module(self):
-        pass
+    def load_log_module(self):
+        self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
+        self.log_module.log_signal.connect(self.add_log)
         self.actions_menu.setEnabled(False)
 
     def create_menu(self, menubar):
@@ -201,8 +204,8 @@ class DashBoard(QObject):
         self.actions_menu = menubar.addMenu('Actions')
         action_scan = self.actions_menu.addAction('Do Scans')
         action_scan.triggered.connect(self.load_scan_module)
-        action_database = self.actions_menu.addAction('Log to DataBase')
-        action_database.triggered.connect(self.load_database_module)
+        action_log = self.actions_menu.addAction('Log data')
+        action_log.triggered.connect(self.load_log_module)
 
         # help menu
         help_menu = menubar.addMenu('?')
@@ -366,7 +369,7 @@ class DashBoard(QObject):
         area = self.dockarea.addTempArea()
         self.pid_controller = DAQ_PID(area, [], [])
 
-    def set_file_preset(self,filename):
+    def set_file_preset(self, filename):
         """
             Set a file preset from the converted xml file given by the filename parameter.
 
@@ -394,8 +397,6 @@ class DashBoard(QObject):
             move_forms = []
             move_modules = []
             detector_modules = []
-            move_types = []
-
 
             ### set daq scan settings set in preset
             try:
@@ -420,11 +421,13 @@ class DashBoard(QObject):
 
             #################################################################
             ###### sort plugins by IDs and within the same IDs by Master and Slave status
-            plugins = [{'type': 'move', 'value': child} for child in
-                       self.preset_manager.preset_params.child(('Moves')).children()] + [{'type': 'det', 'value': child}
-                                                                                         for child in
-                                                                                         self.preset_manager.preset_params.child(
-                                                                                             ('Detectors')).children()]
+            plugins = []
+            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], GroupParameterCustom):
+                plugins += [{'type': 'move', 'value': child} for child in
+                           self.preset_manager.preset_params.child(('Moves')).children()]
+            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], GroupParameterCustom):
+                plugins += [{'type': 'det', 'value': child} for child in
+                            self.preset_manager.preset_params.child(('Detectors')).children()]
 
             for plug in plugins:
                 plug['ID'] = plug['value'].child('params', 'main_settings', 'controller_ID').value()

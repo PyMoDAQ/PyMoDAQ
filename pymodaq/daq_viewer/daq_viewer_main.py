@@ -439,7 +439,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         try:
             #init the enlargeable arrays
             if not self.is_continuous_initialized:
-                self.channel_arrays=OrderedDict([])
+                self.channel_arrays = OrderedDict([])
                 self.ini_time = time.perf_counter()
                 self.time_array = self.h5saver_continuous.add_navigation_axis(np.array([0.0, ]),
                               self.h5saver_continuous.raw_group, 'x_axis', enlargeable=True,
@@ -942,14 +942,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
 
-
-        settings_str = custom_tree.parameter_to_xml_string(self.settings)
-        if self.DAQ_type != 'DAQ0D':
-            settings_str = b'<All_settings>' + settings_str
-            if hasattr(self.ui.viewers[0], 'roi_manager'):
-                settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings) + \
-                            custom_tree.parameter_to_xml_string(h5saver.settings)
-            settings_str += b'</All_settings>'
+        settings_str = b'<All_settings>' + custom_tree.parameter_to_xml_string(self.settings)
+        if hasattr(self.ui.viewers[0], 'roi_manager'):
+            settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
+        settings_str += custom_tree.parameter_to_xml_string(h5saver.settings)
+        settings_str += b'</All_settings>'
 
         det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
         if 'external_h5' in datas:
@@ -1115,11 +1112,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.h5saver_continuous.settings.child(('N_saved')).setValue(0)
             self.h5saver_continuous.init_file(update_h5=True)
 
-            settings_str=custom_tree.parameter_to_xml_string(self.settings)
-            if self.DAQ_type!='DAQ0D':
-                settings_str=b'<All_settings>'+settings_str
-                settings_str+=custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_settings)+ \
-                            custom_tree.parameter_to_xml_string(self.h5saver_continuous.settings) + \
+            settings_str = custom_tree.parameter_to_xml_string(self.settings)
+            settings_str = b'<All_settings>'+settings_str
+            if hasattr(self.ui.viewers[0], 'roi_manager'):
+                settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
+            settings_str += custom_tree.parameter_to_xml_string(self.h5saver_continuous.settings) + \
                               b'</All_settings>'
 
             self.continuous_group = self.h5saver_continuous.add_det_group(self.h5saver_continuous.raw_group, "Continuous saving", settings_str)
