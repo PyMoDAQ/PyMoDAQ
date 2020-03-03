@@ -204,16 +204,16 @@ def check_received_length(sock,length):
     -------
 
     """
-    l=0
-    data_bytes=b''
-    while l<length:
-        if l<length-4096:
-            data_bytes_tmp=sock.recv(4096)
+    l = 0
+    data_bytes = b''
+    while l < length:
+        if l < length - 4096:
+            data_bytes_tmp = sock.recv(4096)
         else:
-            data_bytes_tmp=sock.recv(length-l)
-        l+=len(data_bytes_tmp)
-        data_bytes+=data_bytes_tmp
-    #print(data_bytes)
+            data_bytes_tmp = sock.recv(length - l)
+        l += len(data_bytes_tmp)
+        data_bytes += data_bytes_tmp
+    # print(data_bytes)
     return data_bytes
 
 ##End of TCP/IP functions
