@@ -201,6 +201,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         try:
             self.h5saver.close_file()
+            self.dashboard.quit_fun()
         except Exception as e:
             pass
 
@@ -836,7 +837,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             set_scan
         """
         self.ui.log_message.setText('Starting acquisition')
-        self.overshoot = False
+        self.dashboard.overshoot = False
         self.plot_2D_ini=False
         self.plot_1D_ini = False
         res = self.set_scan()
@@ -978,7 +979,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         elif status[0]=="Scan_done":
             self.ui.scan_done_LED.set_as_true()
             self.save_scan()
-            if not self.overshoot:
+            if not self.dashboard.overshoot:
                 self.set_ini_positions()
             self.ui.set_scan_pb.setEnabled(True)
             self.ui.set_ini_positions_pb.setEnabled(True)
@@ -1627,12 +1628,12 @@ class DAQ_Scan_Acquisition(QObject):
         """
             Send the status signal *'Time out during acquisition'* and stop the timer.
         """
-        self.timeout_scan_flag=True
+        self.timeout_scan_flag = True
         self.timer.stop()
         self.status_sig.emit(["Update_Status","Timeout during acquisition",'log'])
         self.status_sig.emit(["Timeout"])
 
-    def move_stages(self,positions):
+    def move_stages(self, positions):
         """
             Move all the activated modules to the specified positions.
 

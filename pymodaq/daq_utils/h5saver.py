@@ -15,7 +15,7 @@ from pathlib import Path
 import copy
 
 version = '0.0.1'
-save_types = ['scan', 'detector', 'custom']
+save_types = ['scan', 'detector', 'logger', 'custom']
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5']
@@ -361,7 +361,7 @@ class H5Saver(QObject):
         groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
         groups.sort()
         if len(groups) != 0:
-            scan_group = self.h5_file.get_node(self.raw_group, groups[-1])
+            scan_group = self.get_node(self.raw_group, groups[-1])
         else:
             scan_group = None
         return scan_group
@@ -378,7 +378,7 @@ class H5Saver(QObject):
                 groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
                 groups.sort()
                 flag = False
-                for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
+                for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
                     if 'scan' in child:
                         return len(groups)
 
@@ -465,13 +465,13 @@ class H5Saver(QObject):
                       enlargeable array accepting strings as elements
         """
         logger = 'Logger'
-        if not logger in list(self.h5_file.get_node(where)._v_children.keys()):
+        if not logger in list(self.get_node(where)._v_children.keys()):
             # check if logger node exist
             text_atom = tables.atom.ObjectAtom()
             self.logger_array = self.h5_file.create_vlarray(where, logger, atom=text_atom)
             self.logger_array._v_attrs['type'] = 'log'
         else:
-            self.logger_array = self.h5_file.get_node(where, name=logger)
+            self.logger_array = self.get_node(where, name=logger)
         return self.logger_array
 
 
@@ -492,11 +492,24 @@ class H5Saver(QObject):
         -------
         group: group node
         """
-        if not name in list(self.h5_file.get_node(where)._v_children.keys()):
+        if not name in list(self.get_node(where)._v_children.keys()):
             self.current_group = self.h5_file.create_group(where, name, title)
         else:
-            self.current_group = self.h5_file.get_node(where, name)
+            self.current_group = self.get_node(where, name)
         return self.current_group
+
+    def get_group_by_title(self, where, title):
+        node = self.get_node(where)
+        for child_name in node._v_children:
+            child = node._f_get_child(child_name)
+            if 'TITLE' in child._v_attrs:
+                if child._v_attrs['TITLE'] == title:
+                    return child
+        return None
+
+    def get_node(self, where, name=None):
+        return self.h5_file.get_node(where, name)
+
 
     def add_data_group(self,where, group_data_type, title='', settings_as_xml='', metadata=dict([])):
         """Creates a group node at given location in the tree
@@ -529,16 +542,22 @@ class H5Saver(QObject):
 
     def add_navigation_axis(self, data, parent_group, axis='x_axis', enlargeable=False, title='', metadata=dict([])):
         """
-        Create carray for navigation axis within a scan
+        Create carray or earray for navigation axis within a scan
         Parameters
         ----------
         data: (ndarray) of dimension 1
         parent_group: (str or node) parent node where to save new data
-        axis: (str) either x_axis or y_axis
+        axis: (str) either x_axis, y_axis, z_axis or time_axis
+            'x_axis', 'y_axis', 'z_axis', 'time_axis' are axes containing scalar values (floats or ints)
+            'time_axis' can be interpreted as the posix timestamp corresponding to a datetime object, see datetime.timestamp()
+        enlargeable: (bool)
+            if True the created array is a earray type
+            if False the created array is a carray type
         """
-        if axis not in ['x_axis', 'y_axis', 'z_axis']:
+        if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
             raise Exception('Invalid navigation axis name')
-        array = self.add_array(parent_group, 'scan_{:s}'.format(axis), 'navigation_axis', data_shape=data.shape,
+
+        array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis', data_shape=data.shape,
                     data_dimension='1D', array_to_save=data, enlargeable=enlargeable, title=title, metadata=metadata)
         return array
 
@@ -713,7 +732,7 @@ class H5Saver(QObject):
             raise Exception('Invalid group type')
 
         try:
-            node = self.h5_file.get_node(where, utils.capitalize(group_name))
+            node = self.get_node(where, utils.capitalize(group_name))
         except tables.NoSuchNodeError as e:
             node = None
 
@@ -742,7 +761,7 @@ class H5Saver(QObject):
         """
         if group_type not in group_types:
             raise Exception('Invalid group type')
-        nodes = list(self.h5_file.get_node(where)._v_children.keys())
+        nodes = list(self.get_node(where)._v_children.keys())
         nodes_tmp = []
         for node in nodes:
             if utils.capitalize(group_type) in node:
@@ -801,7 +820,6 @@ class H5Saver(QObject):
         -------
         add_incremental_group
         """
-
         if self.current_scan_group is not None:
             if list(self.current_scan_group._v_children) == []:
                 new_scan = False

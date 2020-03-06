@@ -77,108 +77,17 @@ class DAQ_Logger(QObject):
         
         self.logger_thread = None
         self.detector_modules = self.dashboard.detector_modules
-
+        self.det_modules_log = []
         self.log_types = ['H5 File', 'SQL DataBase']
 
-        self.h5saver = H5Saver()
-        #self.h5saver.settings.child(('do_save')).hide()
-        #self.h5saver.settings.child(('custom_name')).hide()
-        self.h5saver.new_file_sig.connect(self.create_new_file)
+        self.h5saver = H5Saver(save_type='logger')
         self.is_h5_initialized = False
 
 
         self.setupUI()
         self.setup_modules(self.dashboard.title)
 
-    def set_continuous_save(self):
-        """
-            Set a continous save file using the base path located file with
-            a header-name containing date as a string.
 
-            See Also
-            --------
-            daq_utils.set_current_scan_path
-        """
-        if self.h5saver.settings.child(('do_save')).value():
-            self.do_continuous_save = True
-            self.is_h5_initialized = False
-            self.h5saver.settings.child(('base_name')).setValue('Data')
-            self.h5saver.settings.child(('N_saved')).show()
-            self.h5saver.settings.child(('N_saved')).setValue(0)
-            self.h5saver.init_file(update_h5=True)
-
-            settings_str = b'<All_settings>' + custom_tree.parameter_to_xml_string(self.settings)
-            if hasattr(self.ui.viewers[0], 'roi_manager'):
-                settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
-            settings_str += custom_tree.parameter_to_xml_string(self.h5saver.settings)
-            settings_str += b'</All_settings>'
-
-            self.continuous_group = self.h5saver.add_det_group(self.h5saver.raw_group, "Continuous saving", settings_str)
-            self.h5saver.h5_file.flush()
-        else:
-            self.do_continuous_save=False
-            self.h5saver.settings.child(('N_saved')).hide()
-
-            try:
-                self.h5saver.close()
-            except Exception as e:
-                pass
-
-    def do_save_continuous(self, datas):
-        """
-        method used to perform continuous saving of data, for instance for logging. Will save datas as a function of
-        time in a h5 file set when *continuous_saving* parameter as been set.
-
-        Parameters
-        ----------
-        datas:  list of OrderedDict as exported by detector plugins
-
-        """
-        try:
-            #init the enlargeable arrays
-            if not self.is_h5_initialized:
-                self.channel_arrays = OrderedDict([])
-                self.ini_time = time.perf_counter()
-                self.time_array = self.h5saver.add_navigation_axis(np.array([0.0, ]),
-                              self.h5saver.raw_group, 'x_axis', enlargeable=True,
-                              title='Time axis', metadata=dict(label='Time axis', units='second'))
-
-                data_types = ['data0D', 'data1D']
-                if self.h5saver.settings.child(('save_2D')).value():
-                    data_types.append('data2D')
-
-                for data_type in data_types:
-                    if data_type in datas.keys() and len(datas[data_type]) != 0:
-                        if not self.h5saver.is_node_in_group(self.continuous_group, data_type):
-                            self.channel_arrays[data_type] = OrderedDict([])
-
-                            data_group=self.h5saver.add_data_group(self.continuous_group, data_type)
-                            for ind_channel, channel in enumerate(datas[data_type]): #list of OrderedDict
-
-                                channel_group = self.h5saver.add_CH_group(data_group, title=channel)
-                                self.channel_arrays[data_type]['parent'] = channel_group
-                                self.channel_arrays[data_type][channel] = self.h5saver.add_data(channel_group,
-                                        datas[data_type][channel], scan_type='scan1D', enlargeable = True)
-                self.is_h5_initialized = True
-
-            dt=np.array([time.perf_counter()-self.ini_time])
-            self.h5saver.append(self.time_array,dt)
-
-            data_types = ['data0D', 'data1D']
-            if self.h5saver.settings.child(('save_2D')).value():
-                data_types.append('data2D')
-
-            for data_type in data_types:
-                if data_type in datas.keys() and len(datas[data_type]) != 0:
-                    for ind_channel, channel in enumerate(datas[data_type]):
-                        self.h5saver.append(self.channel_arrays[data_type][channel],
-                                                  datas[data_type][channel]['data'])
-
-            self.h5saver.h5_file.flush()
-            self.h5saver.settings.child(('N_saved')).setValue(self.h5saver.settings.child(('N_saved')).value()+1)
-
-        except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
 
     def create_menu(self):
         """
@@ -214,6 +123,7 @@ class DAQ_Logger(QObject):
         """
         try:
             self.h5saver.close_file()
+            self.dashboard.quit_fun()
         except Exception as e:
             pass
 
@@ -297,8 +207,7 @@ class DAQ_Logger(QObject):
             if change == 'childAdded':pass
 
             elif change == 'value':
-                if param.name() == 'do_save':
-                    self.set_continuous_save()
+                pass
 
             elif change == 'parent':pass
 
@@ -343,108 +252,55 @@ class DAQ_Logger(QObject):
             preset_items_det = []
             items_det = [module.title for module in self.detector_modules]
             if items_det != []:
-                preset_items_det = [items_det[0]]
+                preset_items_det = items_det
 
             self.settings.child('detectors', 'Detectors').setValue(dict(all_items=items_det, selected=preset_items_det))
-
-            self.create_new_file(True)
-
 
         except Exception as e:
             self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
-    def create_new_file(self, new_file):
-        self.h5saver.init_file(update_h5=new_file)
-        res = self.update_file_settings(new_file)
-        if new_file:
-            pass
-        return res
+    def set_continuous_save(self):
+        """
+            Set a continous save file using the base path located file with
+            a header-name containing date as a string.
 
-    def set_scan(self):
+            See Also
+            --------
+            daq_utils.set_current_scan_path
+        """
+        self.do_continuous_save = True
+        self.is_h5_initialized = False
+        self.h5saver.settings.child(('base_name')).setValue('Data')
+        self.h5saver.settings.child(('N_saved')).show()
+        self.h5saver.settings.child(('N_saved')).setValue(0)
+        self.h5saver.init_file(update_h5=True)
+
+        settings_str = b'<All_settings>' + custom_tree.parameter_to_xml_string(self.settings)
+        settings_str += custom_tree.parameter_to_xml_string(self.h5saver.settings)
+        settings_str += b'</All_settings>'
+
+        self.h5saver.h5_file.flush()
+
+
+    def set_logging(self):
         """
         Sets the current scan given the selected settings. Makes some checks, increments the h5 file scans.
         In case the dialog is cancelled, return False and aborts the scan
         """
         try:
-            # set the filename and path
-            res = self.create_new_file(False)
-            if not res:
-                return
 
-            #reinit these objects
-            self.scan_data_1D = []
-            self.scan_data_1D_average = []
-            self.scan_data_2D = []
-            self.scan_data_2D_average = []
+            self.set_continuous_save()
 
-
-            scan_path=Path(self.h5saver.settings.child(('current_scan_path')).value())
-            current_filename=self.h5saver.settings.child(('current_scan_name')).value()
-            # set the moves positions according to data from user
-            move_names_scan=self.settings.child('detectors', 'Moves').value()['selected'] #selected move modules names
-            move_names=[mod.title for mod in self.move_modules] # names of all move modules initialized
-            self.move_modules_scan=[] #list of move modules used for this scan
-            for name in move_names_scan:
-                self.move_modules_scan.append(self.move_modules[move_names.index(name)])#create list of modules used for this current scan
-
-            det_names_scan=self.settings.child('detectors', 'Detectors').value()['selected']# names of all selected detector modules initialized
-            det_names=[mod.title for mod in self.detector_modules]
-            self.det_modules_scan=[]#list of detector modules used for this scan
+            det_names_scan = self.settings.child('detectors', 'Detectors').value()[
+                'selected']  # names of all selected detector modules initialized
+            det_names = [mod.title for mod in self.detector_modules]
+            self.det_modules_log = []  # list of detector modules used for this scan
             for name in det_names_scan:
-                self.det_modules_scan.append(self.detector_modules[det_names.index(name)])
-
-            self.scan_saves=[]
-
-            self.scan_parameters = self.scanner.set_scan()
-
-            if self.scanner.settings.child('scan_options','scan_type').value() == "Scan1D":
-                if self.scanner.settings.child('scan_options','scan1D_settings','scan1D_selection').value() == 'Manual':
-                    Nmove_module = 1
-                else:  # from ROI
-                    Nmove_module = 2
-                if len(move_names_scan) != Nmove_module:
-                    msgBox = QtWidgets.QMessageBox(parent=None)
-                    msgBox.setWindowTitle("Error")
-                    msgBox.setText("There are not enough or too much selected move modules")
-                    ret = msgBox.exec()
-                    return
-
-                self.scan_moves = [[[move_names_scan[ind_pos], pos[ind_pos]] for ind_pos in range(Nmove_module)] for
-                                   pos in self.scan_parameters.positions]
-                ###############################
-                #old stuff when all data where saved in separated files but still needed to perform the scan (only the paths are not)
-                for ind,pos in enumerate(self.scan_moves):
-                    self.scan_saves.append([OrderedDict(det_name=det_name,file_path=str(scan_path.joinpath(current_filename+"_"+det_name+'_{:03d}.h5'.format(ind))),indexes=OrderedDict(indx=ind)) for det_name in det_names_scan])
-
-
-            elif self.scanner.settings.child('scan_options','scan_type').value() == "Scan2D":
-                Nmove_module = 2
-                if len(move_names_scan) < Nmove_module:
-                    msgBox = QtWidgets.QMessageBox(parent=None)
-                    msgBox.setWindowTitle("Error")
-                    msgBox.setText("There are not enough selected move modules")
-                    ret = msgBox.exec();
-                    return
-                self.scan_moves = [[[move_names_scan[ind_pos], pos[ind_pos]] for ind_pos in range(Nmove_module)] for
-                                   pos in self.scan_parameters.positions]
-                for ind,pos in enumerate(self.scan_moves):
-                    ind1=self.scan_parameters.axis_2D_1_indexes[ind]
-                    ind2=self.scan_parameters.axis_2D_2_indexes[ind]
-                    self.scan_saves.append([OrderedDict(det_name=det_name,file_path=str(scan_path.joinpath(current_filename+"_"+det_name+'_{:03d}_{:03d}.h5'.format(ind1,ind2))),indexes=OrderedDict(indx=ind1,indy=ind2)) for det_name in det_names_scan])
-
-
-
-            self.ui.N_scan_steps_sb.setValue(self.scan_parameters.Nsteps)
-
+                self.det_modules_log.append(self.detector_modules[det_names.index(name)])
 
 
             #check if the modules are initialized
-
-            for module in self.move_modules_scan:
-                if not module.initialized_state:
-                    raise Exception('module '+module.title+" is not initialized")
-
-            for module in self.det_modules_scan:
+            for module in self.det_modules_log:
                 if not module.initialized_state:
                     raise Exception('module '+module.title+" is not initialized")
 
@@ -456,7 +312,7 @@ class DAQ_Logger(QObject):
             return True
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            self.update_status(getLineInfo() + str(e), wait_time=self.wait_time, log_type='log')
             self.ui.start_button.setEnabled(False)
             self.ui.stop_button.setEnabled(False)
 
@@ -496,8 +352,14 @@ class DAQ_Logger(QObject):
         log_type_combo.addItems(self.log_types)
         log_type_combo.currentTextChanged.connect(self.set_log_type)
 
+        iconstartall = QtGui.QIcon()
+        iconstartall.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run_all.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.startall_button = QtWidgets.QPushButton(iconstartall,'')
+        self.ui.startall_button.setToolTip('Grab all selected detectors')
+
         layout_buttons.addWidget(self.ui.quit_button)
         layout_buttons.addStretch()
+        layout_buttons.addWidget(self.ui.startall_button)
         layout_buttons.addWidget(log_type_combo)
         layout_buttons.addWidget(self.ui.start_button)
         layout_buttons.addWidget(self.ui.stop_button)
@@ -549,8 +411,22 @@ class DAQ_Logger(QObject):
         self.log_signal[str].connect(self.dashboard.add_log)
         self.ui.quit_button.clicked.connect(self.quit_fun)
 
-        self.ui.start_button.clicked.connect(self.start_scan)
-        self.ui.stop_button.clicked.connect(self.stop_scan)
+        self.ui.start_button.clicked.connect(self.start_logging)
+        self.ui.stop_button.clicked.connect(self.stop_logging)
+        self.ui.startall_button.clicked.connect(self.start_all)
+
+    def get_det_from_preset(self):
+        preset_items_det = []
+        for det in self.settings.child('detectors', 'Detectors').value()['selected']:
+            for module in self.detector_modules:
+                if module.title == det:
+                    preset_items_det.append(module)
+        return preset_items_det
+
+    def start_all(self):
+        preset_items_det = self.get_det_from_preset()
+        for det in preset_items_det:
+            det.ui.grab_pb.click()
 
     def set_log_type(self, log_type):
         if log_type not in self.log_types:
@@ -614,103 +490,44 @@ class DAQ_Logger(QObject):
         except Exception as e:
             self.update_status(getLineInfo()+ str(e),self.wait_time,log_type='log')
 
-    def start_scan(self):
+    def start_logging(self):
         """
-            Start an acquisition calling the set_scan function.
-            Emit the command_DAQ signal "start_acquisition".
+            Start a logging.
+        """
+        self.ui.log_message.setText('Starting logging')
 
-            See Also
-            --------
-            set_scan
-        """
-        self.ui.log_message.setText('Starting acquisition')
         self.overshoot = False
-        self.plot_2D_ini=False
-        self.plot_1D_ini = False
-        res = self.set_scan()
-        if res:
+        res = self.set_logging()
 
-            # save settings from move modules
-            move_modules_names = [mod.title for mod in self.move_modules_scan]
-            for ind_move, move_name in enumerate(move_modules_names):
-                move_group_name = 'Move{:03d}'.format(ind_move)
-                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, move_group_name):
-                    self.h5saver.add_move_group(self.h5saver.current_scan_group, title='',
-                                                                           settings_as_xml=custom_tree.parameter_to_xml_string(
-                                                                               self.move_modules_scan[ind_move].settings),
-                                                                           metadata=dict(name=move_name))
+        #mandatory to deal with multithreads
+        if self.logger_thread is not None:
+            self.command_DAQ_signal.disconnect()
+            if self.logger_thread.isRunning():
+                self.logger_thread.exit()
+                while not self.logger_thread.isFinished():
+                    QThread.msleep(100)
+                self.logger_thread = None
 
-            # save settings from detector modules
-            detector_modules_names = [mod.title for mod in self.det_modules_scan]
-            for ind_det, det_name in enumerate(detector_modules_names):
-                det_group_name = 'Detector{:03d}'.format(ind_det)
-                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, det_group_name):
-                    settings_str = custom_tree.parameter_to_xml_string(self.det_modules_scan[ind_det].settings)
-                    try:
-                        if 'Data0D' not in [viewer.viewer_type for viewer in
-                                            self.det_modules_scan[ind_det].ui.viewers]:  # no roi_settings in viewer0D
-                            settings_str = b'<All_settings title="All Settings" type="group">' + settings_str
-                            for ind_viewer, viewer in enumerate(self.det_modules_scan[ind_det].ui.viewers):
-                                if hasattr(viewer, 'roi_manager'):
-                                    settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
-                                        ind_viewer).encode()
-                                    settings_str += custom_tree.parameter_to_xml_string(
-                                        viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(ind_viewer).encode()
-                            settings_str += b'</All_settings>'
-                    except Exception as e:
-                        self.update_status(getLineInfo() + str(e), wait_time=self.wait_time, log_type='log')
+        self.logger_thread = QThread()
 
-                    self.h5saver.add_det_group(self.h5saver.current_scan_group,
-                                                                         settings_as_xml=settings_str,
-                                                                         metadata=dict(name=det_name))
+        log_acquisition = DAQ_Logging(self.settings, self.h5saver.settings, self.det_modules_log)
 
+        log_acquisition.moveToThread(self.logger_thread)
 
-            #mandatory to deal with multithreads
-            if self.logger_thread is not None:
-                self.command_DAQ_signal.disconnect()
-                if self.logger_thread.isRunning():
-                    self.logger_thread.exit()
-                    while not self.logger_thread.isFinished():
-                        QThread.msleep(100)
-                    self.logger_thread = None
+        self.command_DAQ_signal[list].connect(log_acquisition.queue_command)
+        log_acquisition.status_sig[list].connect(self.thread_status)
 
-            self.logger_thread = QThread()
+        self.logger_thread.log_acquisition = log_acquisition
+        self.logger_thread.start()
 
-            scan_acquisition = DAQ_Scan_Acquisition(self.settings, self.scanner.settings, self.h5saver.settings,
-                            self.scan_moves,
-                            self.scan_saves,
-                            [mod.command_stage for mod in self.move_modules_scan],
-                            [mod.command_detector for mod in self.det_modules_scan],
-                            [mod.move_done_signal for mod in self.move_modules_scan],
-                            [mod.grab_done_signal for mod in self.det_modules_scan],
-                            [mod.settings.child('main_settings', 'Naverage').value() for mod in self.det_modules_scan],
-                            move_modules_names,
-                            detector_modules_names,
-                             [mod.settings for mod in self.move_modules_scan],
-                             [mod.settings for mod in self.det_modules_scan],
-                             )
-            scan_acquisition.moveToThread(self.logger_thread)
+        self.ui.start_button.setEnabled(False)
+        QtWidgets.QApplication.processEvents()
+        self.ui.logging_state.set_as_false()
 
-            self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
-            scan_acquisition.scan_data_tmp[OrderedDict].connect(self.update_scan_GUI)
-            scan_acquisition.status_sig[list].connect(self.thread_status)
+        self.command_DAQ_signal.emit(["start_logging"])
+        self.ui.log_message.setText('Running acquisition')
 
-            self.logger_thread.scan_acquisition = scan_acquisition
-            self.logger_thread.start()
-
-            self.ui.set_scan_pb.setEnabled(False)
-            self.ui.set_ini_positions_pb.setEnabled(False)
-            self.ui.start_button.setEnabled(False)
-            QtWidgets.QApplication.processEvents()
-            self.ui.scan_done_LED.set_as_false()
-
-
-
-            self.command_DAQ_signal.emit(["start_acquisition"])
-
-            self.ui.log_message.setText('Running acquisition')
-
-    def stop_scan(self):
+    def stop_logging(self):
         """
             Emit the command_DAQ signal "stop_acquisiion".
 
@@ -718,20 +535,20 @@ class DAQ_Logger(QObject):
             --------
             set_ini_positions
         """
-        self.ui.log_message.setText('Stoping acquisition')
+        preset_items_det = self.get_det_from_preset()
+        for det in preset_items_det:
+            det.ui.stop_pb.click()
+
+        self.ui.log_message.setText('Stopping acquisition')
         self.command_DAQ_signal.emit(["stop_acquisition"])
 
         if not self.dashboard.overshoot:
-            self.set_ini_positions() #do not set ini position again in case overshoot fired
             status = 'Data Acquisition has been stopped by user'
         else:
             status = 'Data Acquisition has been stopped due to overshoot'
 
         self.update_status(status, log_type='log')
         self.ui.log_message.setText('')
-
-        self.ui.set_scan_pb.setEnabled(True)
-        self.ui.set_ini_positions_pb.setEnabled(True)
         self.ui.start_button.setEnabled(True)
 
     @pyqtSlot(list)
@@ -779,62 +596,20 @@ class DAQ_Logger(QObject):
             pass
 
 
-class DAQ_Scan_Acquisition(QObject):
+class DAQ_Logging(QObject):
     """
         =========================== ========================================
         **Attributes**               **Type**
-        *scan_data_tmp*              instance of pyqtSignal
-        *status_sig*                 instance of pyqtSignal
-        *stop_scan_flag*             boolean
-        *settings*                   instance og pyqtgraph.parametertree
-        *filters*                    instance of tables.Filters
-        *ind_scan*                   int
-        *detector_modules*           Object list
-        *detector_modules_names*     string list
-        *move_modules*               Object list
-        *move_modules_names*         string list
-        *scan_moves*                 float list
-        *scan_x_axis*                float array
-        *scan_y_axis*                float array
-        *scan_z_axis*                float array
-        *scan_x_axis_unique*         float array
-        *scan_y_axis_unique*         float array
-        *scan_z_axis_unique*         float array
-        *scan_shape*                 int
-        *Nscan_steps*                int
-        *scan_read_positions*        list
-        *scan_read_datas*            list
-        *scan_saves*                 dictionnary list
-        *move_done_flag*             boolean
-        *det_done_flag*              boolean
-        *timeout_scan_flag*          boolean
-        *timer*                      instance of QTimer
-        *move_done_positions*        OrderedDict
-        *det_done_datas*             OrderedDict
-        *h5_file*                    instance class File from tables module
-        *h5_file_current_group*      instance of Group
-        *h5_file_det_groups*         Group list
-        *h5_file_move_groups*        Group list
-        *h5_file_channels_group*     Group dictionnary
+
         =========================== ========================================
 
     """
-    scan_data_tmp=pyqtSignal(OrderedDict)
+    scan_data_tmp = pyqtSignal(OrderedDict)
     status_sig = pyqtSignal(list)
-    def __init__(self,settings=None,scan_settings = None, h5saver=None,
-                 scan_moves=[],scan_saves=[],
-                 move_modules_commands = [],
-                 detector_modules_commands = [],
-                 move_done_signals = [] ,
-                 grab_done_signals = [],
-                 det_averaging = [],
-                 move_modules_name = [],
-                 det_modules_name = [],
-                 move_modules_settings = [],
-                 det_modules_settings = []):
+    def __init__(self, settings=None, h5saver=None, det_modules_log=[]):
 
         """
-            DAQ_Scan_Acquisition deal with the acquisition part of daq_scan.
+            DAQ_Logging deal with the acquisition part of daq_scan.
 
             See Also
             --------
@@ -843,66 +618,25 @@ class DAQ_Scan_Acquisition(QObject):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(QObject, self).__init__()
 
-        self.stop_scan_flag = False
+        self.stop_logging_flag = False
         self.settings = settings
-        self.scan_settings = scan_settings
-        self.Naverage = self.settings.child('scan_options', 'scan_average').value()
-        self.ind_average = 0
-        self.ind_scan = 0
+        self.ini_time = 0
+        self.ind_log = 0
+        self.det_modules_log = det_modules_log
+        self.detector_modules_names = [mod.title for mod in self.det_modules_log]
+        self.grab_done_signals = [mod.grab_done_signal for mod in self.det_modules_log]
+        self.det_modules_settings = [mod.settings for mod in self.det_modules_log]
 
-        self.detector_modules_names = det_modules_name
-
-        self.move_modules_names = move_modules_name
-        self.move_modules_commands = move_modules_commands
-        self.detector_modules_commands = detector_modules_commands
-        self.grab_done_signals = grab_done_signals
-        self.move_done_signals = move_done_signals
-        self.det_averaging = det_averaging
-        self.move_modules_settings = move_modules_settings
-        self.det_modules_settings = det_modules_settings
-
-        self.scan_moves = scan_moves
-        self.scan_x_axis = None
-        self.scan_y_axis = None
-        self.scan_z_axis = None
-        self.scan_x_axis_unique = None
-        self.scan_y_axis_unique = None
-        self.scan_z_axis_unique = None
-        self.scan_shape = None
-        self.Nscan_steps = len(scan_moves)
-        self.scan_read_positions = []
-        self.scan_read_datas = []
-        self.scan_saves = scan_saves
-        self.move_done_flag = False
-        self.det_done_flag = False
-        self.timeout_scan_flag = False
-        self.timer = QTimer()
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.timeout)
-        self.move_done_positions = OrderedDict()
-        self.det_done_datas = OrderedDict()
         self.h5saver = H5Saver()
         self.h5saver.settings.restoreState(h5saver.saveState())
         self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
-
-        self.h5_det_groups = []
-        self.h5_move_groups = []
-        self.channel_arrays = OrderedDict([])
-        # save settings from move modules
-        for ind_move, move_name in enumerate(self.move_modules_names):
-            move_group_name = 'Move{:03d}'.format(ind_move)
-            self.h5_move_groups.append(self.h5saver.h5_file.get_node(self.h5saver.current_scan_group, move_group_name))
-
-        #save settings from detector modules
-        for ind_det,det_name in enumerate(self.detector_modules_names):
-            det_group_name = 'Detector{:03d}'.format(ind_det)
-            self.h5_det_groups.append(self.h5saver.h5_file.get_node(self.h5saver.current_scan_group, det_group_name))
+        self.is_h5_initialized = False
 
     @pyqtSlot(list)
-    def queue_command(self,command):
+    def queue_command(self, command):
         """
             Treat the queue of commands from the current command to act, between :
-                * *start_acquisition*
+                * *start_logging*
                 * *stop_acquisition*
                 * *set_ini_position*
                 * *move_stages*
@@ -914,316 +648,100 @@ class DAQ_Scan_Acquisition(QObject):
 
             See Also
             --------
-            start_acquisition, set_ini_positions, move_stages
+            start_logging, set_ini_positions, move_stages
         """
-        if command[0]=="start_acquisition":
-            self.start_acquisition()
+        if command[0] == "start_logging":
+            self.is_h5_initialized = False
+            self.start_logging()
 
+        elif command[0] == "stop_acquisition":
+            self.stop_scan_flag = True
+            self.stop_logging()
 
-        elif command[0]=="stop_acquisition":
-            self.stop_scan_flag=True
-
-        elif command[0]=="set_ini_positions":
-            self.set_ini_positions()
-
-        elif command[0]=="move_stages":
-            self.move_stages(command[1])
-
-    def set_ini_positions(self):
+    def do_save_continuous(self, datas):
         """
-            | Set the positions from the scan_move attribute.
-            |
-            | Move all activated modules to specified positions.
-            | Check the module corresponding to the name assigned in pos.
+        method used to perform continuous saving of data, for instance for logging. Will save datas as a function of
+        time in a h5 file set when *continuous_saving* parameter as been set.
 
-            See Also
-            --------
-            DAQ_Move_main.daq_move.move_Abs
+        Parameters
+        ----------
+        datas:  list of OrderedDict as exported by detector plugins
+
         """
         try:
-            positions=self.scan_moves[0]
-            for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
-                # if pos[0]!=self.move_modules[ind_move].title: # check the module correspond to the name assigned in pos
-                #     raise Exception('wrong move module assignment')
-                #self.move_modules[ind_move].move_Abs(pos[1])
-                self.move_modules_commands[ind_move].emit(utils.ThreadCommand(command="move_Abs", attributes=[pos[1]]))
+            det_name = datas['name']
+            det_group = self.h5saver.get_group_by_title(self.h5saver.raw_group, det_name)
+            time_array = self.h5saver.get_node(det_group, 'Logger_x_axis')
+            self.h5saver.append(time_array, np.array([datas['acq_time_s']]))
 
-        except Exception as e:
-            self.status_sig.emit(["Update_Status",getLineInfo()+ str(e),'log'])
-
-    pyqtSlot(str,float)
-    def move_done(self,name,position):
-        """
-            | Update the move_done_positions attribute if needed.
-            | If position attribute is setted, for all move modules launched, update scan_read_positions with a [modulename, position] list.
-
-            ============== ============ =================
-            **Parameters**    **Type**    **Description**
-            *name*            string     the module name
-            *position*        float      ???
-            ============== ============ =================
-        """
-        try:
-            if name not in list(self.move_done_positions.keys()):
-                self.move_done_positions[name]=position
-
-            if len(self.move_done_positions.items())==len(self.move_modules_names):
-
-
-                list_tmp=[]
-                for name_tmp in self.move_modules_names:
-                    list_tmp.append([name_tmp,self.move_done_positions[name_tmp]])
-                self.scan_read_positions=list_tmp
-
-                self.move_done_flag=True
-                #print(self.scan_read_positions[-1])
-        except Exception as e:
-            self.status_sig.emit(["Update_Status",getLineInfo()+ str(e),'log'])
-
-    def init_data(self):
-        self.channel_arrays = OrderedDict([])
-        for ind_det, det_name in enumerate(self.detector_modules_names):
-            datas = self.det_done_datas[det_name]
-            det_group = self.h5_det_groups[ind_det]
-            self.channel_arrays[det_name] = OrderedDict([])
             data_types = ['data0D', 'data1D']
             if self.h5saver.settings.child(('save_2D')).value():
                 data_types.extend(['data2D', 'dataND'])
 
             for data_type in data_types:
-                if data_type in datas.keys():
-                    if datas[data_type] is not None:
-                        if len(datas[data_type]) != 0:
-                            data_raw_roi = [datas[data_type][key]['type'] for key in datas[data_type]]
-                            if not (self.h5saver.settings.child(('save_raw_only')).value() and 'raw' not in data_raw_roi):
-                                if not self.h5saver.is_node_in_group(det_group, data_type):
-                                    self.channel_arrays[det_name][data_type] = OrderedDict([])
+                if data_type in datas.keys() and len(datas[data_type]) != 0:
+                    if not self.h5saver.is_node_in_group(det_group, data_type):
+                        data_group = self.h5saver.add_data_group(det_group, data_type, metadata=dict(type='scan'))
+                    else:
+                        data_group = self.h5saver.get_node(det_group, utils.capitalize(data_type))
+                    for ind_channel, channel in enumerate(datas[data_type]):
+                        channel_group = self.h5saver.get_group_by_title(data_group, channel)
+                        if channel_group is None:
+                            channel_group = self.h5saver.add_CH_group(data_group, title=channel)
+                            data_array = self.h5saver.add_data(channel_group, datas[data_type][channel],
+                                                               scan_type='scan1D', enlargeable=True)
+                        else:
+                            data_array = self.h5saver.get_node(channel_group, 'Data')
+                        if data_type == 'data0D':
+                            self.h5saver.append(data_array, np.array([datas[data_type][channel]['data']]))
+                        else:
+                            self.h5saver.append(data_array, datas[data_type][channel]['data'])
 
-                                    data_group = self.h5saver.add_data_group(det_group, data_type)
-                                    for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
-                                        if not(self.h5saver.settings.child(('save_raw_only')).value() and datas[data_type][channel]['type'] != 'raw'):
-                                            channel_group = self.h5saver.add_CH_group(data_group, title=channel)
-                                            self.channel_arrays[det_name][data_type]['parent'] = channel_group
-                                            self.channel_arrays[det_name][data_type][channel] = self.h5saver.add_data(channel_group,
-                                                        datas[data_type][channel],
-                                                        scan_type=self.scan_settings.child('scan_options', 'scan_type').value(),
-                                                        scan_shape=self.scan_shape, init=True, add_scan_dim=True)
-            pass
-
-    pyqtSlot(OrderedDict) #edict(name=self.title,data0D=None,data1D=None,data2D=None)
-    def det_done(self,data):
-        """
-            | Initialize 0D/1D/2D datas from given data parameter.
-            | Update h5_file group and array.
-            | Save 0D/1D/2D datas.
-
-            =============== ============================== ======================================
-            **Parameters**    **Type**                      **Description**
-            *data*          Double precision float array   The initializing data of the detector
-            =============== ============================== ======================================
-        """
-        try:
-            if data['name'] not in list(self.det_done_datas.keys()):
-                self.det_done_datas[data['name']]=data
-            if len(self.det_done_datas.items())==len(self.detector_modules_names):
-
-                self.scan_read_datas=self.det_done_datas[self.settings.child('scan_options','plot_from').value()].copy()
-
-                if self.ind_scan == 0 and self.ind_average == 0:#first occurence=> initialize the channels
-                    self.init_data()
-
-                if len(self.scan_saves[self.ind_scan][0]['indexes'])==1:
-                    indexes=[self.scan_saves[self.ind_scan][0]['indexes']['indx']]
-                elif len(self.scan_saves[self.ind_scan][0]['indexes'])==2:
-                    indexes=[self.scan_saves[self.ind_scan][0]['indexes']['indx'],self.scan_saves[self.ind_scan][0]['indexes']['indy']]
-                else:
-                    raise Exception('Wrong indexes dimensionality')
-
-                if self.Naverage > 1:
-                    indexes.append(self.ind_average)
-
-                indexes=tuple(indexes)
-
-                for ind_det, det_name in enumerate(self.detector_modules_names):
-                    datas = self.det_done_datas[det_name]
-
-                    data_types = ['data0D', 'data1D']
-                    if self.h5saver.settings.child(('save_2D')).value():
-                        data_types.extend(['data2D', 'dataND'])
-
-
-                    for data_type in data_types:
-                        if data_type in datas.keys():
-                            if datas[data_type] is not None:
-                                if len(datas[data_type]) != 0:
-                                    for ind_channel, channel in enumerate(datas[data_type]):
-                                        if not(self.h5saver.settings.child(('save_raw_only')).value() and datas[data_type][channel]['type'] != 'raw'):
-                                            self.channel_arrays[det_name][data_type][channel].__setitem__(indexes,
-                                                value=self.det_done_datas[det_name][data_type][channel]['data'])
-
-                self.det_done_flag=True
-
-                self.scan_data_tmp.emit(OrderedDict(positions=self.scan_read_positions,datas=self.scan_read_datas))
-        except Exception as e:
-            self.status_sig.emit(["Update_Status",getLineInfo()+ str(e),'log'])
-
-    def timeout(self):
-        """
-            Send the status signal *'Time out during acquisition'* and stop the timer.
-        """
-        self.timeout_scan_flag=True
-        self.timer.stop()
-        self.status_sig.emit(["Update_Status","Timeout during acquisition",'log'])
-        self.status_sig.emit(["Timeout"])
-
-    def move_stages(self,positions):
-        """
-            Move all the activated modules to the specified positions.
-
-            =============== ============ =============================================
-            **Parameters**    **Type**    **Description**
-            *positions*       tuple list  The list of the positions related to indices
-            =============== ============ =============================================
-
-            See Also
-            --------
-            DAQ_Move_main.daq_move.move_Abs, move_done, det_done, wait_for_move_done, wait_for_det_done, det_done
-        """
-        for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
-            #self.move_modules[ind_move].move_Abs(pos)
-            self.move_modules_commands[ind_move].emit(utils.ThreadCommand(command="move_Abs", attributes=[pos]))
-
-    def start_acquisition(self):
-        try:
-
-
-            status=''
-            # for mod in self.move_modules:
-            #     mod.move_done_signal.connect(self.move_done)
-            # for mod in self.detector_modules:
-            #     mod.grab_done_signal.connect(self.det_done)
-
-            for sig in self.move_done_signals:
-                sig.connect(self.move_done)
-            for sig in self.grab_done_signals:
-                sig.connect(self.det_done)
-
-            self.scan_read_positions=[]
-            self.scan_read_datas=[]
-            self.stop_scan_flag=False
-            Naxis=len(self.scan_moves[0])
-
-
-            self.scan_x_axis=np.array([pos[0][1] for pos in self.scan_moves])
-            self.scan_x_axis_unique=np.unique(self.scan_x_axis)
-
-            if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_x_axis'):
-                x_axis_meta = dict(units=self.move_modules_settings[0].child('move_settings', 'units').value(),
-                              label=self.move_modules_names[0])
-                self.h5saver.add_navigation_axis(self.scan_x_axis, self.h5saver.current_scan_group, axis='x_axis', metadata=x_axis_meta)
-
-            if self.scan_settings.child('scan_options','scan_type').value() == 'Scan1D': #"means scan 1D"
-                if self.scan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
-                    self.scan_shape=[len(self.scan_x_axis)]
-
-                else:
-                    self.scan_shape=[len(self.scan_x_axis_unique)]
-                if Naxis == 2: #means 1D scan along a line in a 2D plane
-                    self.scan_y_axis = np.array([pos[1][1] for pos in self.scan_moves])
-                    if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_y_axis'):
-                        y_axis_meta = dict(units=self.move_modules_settings[1].settings.child('move_settings', 'units').value(),
-                                      label=self.move_modules_names[1])
-
-                        self.h5saver.add_navigation_axis(self.scan_y_axis, self.h5saver.current_scan_group,
-                                                         axis='y_axis', metadata=y_axis_meta)
-                    self.scan_y_axis_unique = np.unique(self.scan_y_axis)
-
-            else:
-                self.scan_shape=[len(self.scan_x_axis_unique)]
-
-            if self.scan_settings.child('scan_options','scan_type').value() == 'Scan2D':#"means scan 2D"
-                self.scan_y_axis=np.array([pos[1][1] for pos in self.scan_moves])
-                self.scan_y_axis_unique=np.unique(self.scan_y_axis)
-                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_y_axis'):
-                    y_axis_meta = dict(units=self.move_modules_settings[1].child('move_settings', 'units').value(),
-                                  label=self.move_modules_names[1])
-                    self.h5saver.add_navigation_axis(self.scan_y_axis, self.h5saver.current_scan_group,
-                    axis='y_axis', metadata=y_axis_meta)
-                self.scan_shape.append(len(self.scan_y_axis_unique))
-            elif Naxis>2:#"means scan 3D" not implemented yet
-                pass
-
-            if self.Naverage > 1:
-                self.scan_shape.append(self.Naverage)
-
-            self.status_sig.emit(["Update_Status","Acquisition has started",'log'])
-
-            for ind_average in range(self.Naverage):
-                self.ind_average=ind_average
-                for ind_scan,positions in enumerate(self.scan_moves): #move motors of modules
-                    self.ind_scan=ind_scan
-                    self.status_sig.emit(["Update_scan_index",[ind_scan,ind_average]])
-                    if self.stop_scan_flag or  self.timeout_scan_flag:
-
-                        break
-                    self.move_done_positions=OrderedDict()
-                    self.move_done_flag=False
-                    for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
-                        # if pos[0]!=self.move_modules[ind_move].title: # check the module correspond to the name assigned in pos
-                        #     raise Exception('wrong move module assignment')
-                        #self.move_modules[ind_move].move_Abs(pos[1])
-                        self.move_modules_commands[ind_move].emit(utils.ThreadCommand(command="move_Abs",attributes=[pos[1]]))
-
-                    self.wait_for_move_done()
-
-                    paths =self.scan_saves[ind_scan] #start acquisition
-                    if self.stop_scan_flag or  self.timeout_scan_flag:
-                        if self.stop_scan_flag:
-                            status='Data Acquisition has been stopped by user'
-                            self.status_sig.emit(["Update_Status",status,'log'])
-                        break
-                    self.det_done_flag=False
-                    self.det_done_datas=OrderedDict()
-                    for ind_det, path in enumerate(paths): #path on the form edict(det_name=...,file_path=...,indexes=...)
-                        # if path['det_name']!=self.detector_modules[ind_det].title: # check the module correspond to the name assigned in path
-                        #     raise Exception('wrong det module assignment')
-                        #self.detector_modules[ind_det].snapshot(str(path['file_path']),dosave=False) #do not save each grabs in independant files
-                        self.detector_modules_commands[ind_det].emit(utils.ThreadCommand("single",
-                                  [self.det_averaging[ind_det],str(path['file_path'])]))
-                    self.wait_for_det_done()
             self.h5saver.h5_file.flush()
-            for sig in self.move_done_signals:
-                sig.disconnect(self.move_done)
-            for sig in self.grab_done_signals:
-                sig.disconnect(self.det_done)
+            self.h5saver.settings.child(('N_saved')).setValue(self.h5saver.settings.child(('N_saved')).value()+1)
 
-            # for mod in self.move_modules:
-            #     mod.move_done_signal.disconnect(self.move_done)
-            # for mod in self.detector_modules:
-            #     mod.grab_done_signal.disconnect(self.det_done)
-            self.status_sig.emit(["Update_Status","Acquisition has finished",'log'])
-            self.status_sig.emit(["Scan_done"])
-
-            self.timer.stop()
         except Exception as e:
-            self.status_sig.emit(["Update_Status",getLineInfo()+ str(e),'log'])
+            self.status_sig.emit(["Update_Status", getLineInfo()+str(e), 'log'])
 
-    def wait_for_det_done(self):
-        self.timeout_scan_flag=False
-        self.timer.start(self.settings.child('time_flow','timeout').value())
-        while not(self.det_done_flag or  self.timeout_scan_flag):
-            #wait for grab done signals to end
-            QtWidgets.QApplication.processEvents()
+    def stop_logging(self):
+        for sig in self.grab_done_signals:
+            sig.disconnect(self.do_save_continuous)
+        if self.stop_logging_flag:
+            status = 'Data Acquisition has been stopped by user'
+            self.status_sig.emit(["Update_Status", status, 'log'])
 
-    def wait_for_move_done(self):
-        self.timeout_scan_flag=False
-        self.timer.start(self.settings.child('time_flow','timeout').value())
+        self.h5saver.h5_file.flush()
 
 
-        while not(self.move_done_flag or  self.timeout_scan_flag):
-            #wait for move done signals to end
-            QtWidgets.QApplication.processEvents()
+    def start_logging(self):
+        try:
 
+            for det in self.det_modules_log:
+                if not self.h5saver.is_node_in_group(self.h5saver.raw_group, det.title):
+                    settings_str = custom_tree.parameter_to_xml_string(self.settings)
+                    settings_str = b'<All_settings>' + settings_str
+                    if hasattr(det.ui.viewers[0], 'roi_manager'):
+                        settings_str += custom_tree.parameter_to_xml_string(det.ui.viewers[0].roi_manager.settings)
+                    settings_str += custom_tree.parameter_to_xml_string(self.h5saver.settings) + \
+                                    b'</All_settings>'
+                    det_group = self.h5saver.add_det_group(self.h5saver.raw_group, det.title, settings_str)
+                    self.h5saver.add_navigation_axis(np.array([0.0, ]),
+                          det_group, 'x_axis', enlargeable=True,
+                          title='Time axis', metadata=dict(label='Time axis', units='timestamp'))
+
+
+            for sig in self.grab_done_signals:
+                sig.connect(self.do_save_continuous)
+
+            self.stop_logging_flag = False
+            self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
+            self.det_done_flag = False
+
+            # for det in self.det_modules_log:
+            #     det.ui.grab_pb.click()
+
+        except Exception as e:
+            self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
 
 
@@ -1240,4 +758,8 @@ if __name__ == '__main__':
 
     # win.setVisible(False)
     prog = DashBoard(area)
+    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_modes\\preset_logger.xml')
+    # QThread.msleep(4000)
+
+    prog.load_log_module()
     sys.exit(app.exec_())

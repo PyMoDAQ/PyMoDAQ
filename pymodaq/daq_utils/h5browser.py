@@ -29,7 +29,37 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 logging.basicConfig(filename=os.path.join(log_path, 'H5Browser_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
 
+def find_scan_node(scan_node):
+    """
+    utility function to find the parent node of "scan" type, meaning some of its children (DAQ_scan case)
+    or co-nodes (daq_logger case) are navigation axes
+    Parameters
+    ----------
+    scan_node: (pytables node)
+        data node from where this function look for its navigation axes if any
+    Returns
+    -------
+    node: the parent node of 'scan' type
+    list: the data nodes of type 'navigation_axis' corresponding to the initial data node
 
+
+    """
+    try:
+        while True:
+            if scan_node._v_attrs['type'] == 'scan':
+                break
+            else:
+                scan_node = scan_node._v_parent
+        children = [scan_node._v_children[child] for child in scan_node._v_children] #for data saved using daq_scan
+        children.extend([scan_node._v_parent._v_children[child] for child in scan_node._v_parent._v_children]) #for data saved using the daq_logger
+        nav_children = []
+        for child in children:
+            if 'type' in child._v_attrs:
+                if child._v_attrs['type'] == 'navigation_axis':
+                    nav_children.append(child)
+        return scan_node, nav_children
+    except:
+        return None, []
 
 class H5Browser(QtWidgets.QWidget,QObject):
     data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
@@ -378,27 +408,25 @@ class H5Browser(QtWidgets.QWidget,QObject):
                             if 'scan_type' in node._v_attrs:
                                 scan_type = node._v_attrs['scan_type'].lower()
                                 if scan_type == 'scan1d' or scan_type == 'scan2d':
-                                    scan_path = node._v_parent._v_parent._v_parent._v_parent._v_pathname
-                                    children = list(node._v_parent._v_parent._v_parent._v_parent._v_children)
-
+                                    scan_node, nav_children = find_scan_node(node)
                                     tmp_nav_axes = ['x_axis', 'y_axis']
                                     if scan_type == 'scan1d' or scan_type == 'scan2d':
                                         nav_axes = []
                                         for ind_ax, ax in enumerate(tmp_nav_axes):
-                                            if 'Scan_{:s}'.format(ax) in children:
-                                                nav_axes.append(ind_ax)
-                                                axis_node = self.h5file.get_node(scan_path + '/Scan_{:s}'.format(ax))
-                                                axes['nav_{:s}'.format(ax)] = dict(data=np.unique(axis_node.read()))
-                                                if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:  #could happen in case of linear back to start type of scan
-                                                    tmp_ax=[]
-                                                    for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                                        tmp_ax.extend([ix, ix])
-                                                        axes['nav_{:s}'.format(ax)]=dict(data=np.array(tmp_ax))
+                                            for axis_node in nav_children:
+                                                if ax in axis_node._v_name:
+                                                    nav_axes.append(ind_ax)
+                                                    axes['nav_{:s}'.format(ax)] = dict(data=np.unique(axis_node.read()))
+                                                    if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:  #could happen in case of linear back to start type of scan
+                                                        tmp_ax = []
+                                                        for ix in axes['nav_{:s}'.format(ax)]['data']:
+                                                            tmp_ax.extend([ix, ix])
+                                                            axes['nav_{:s}'.format(ax)]=dict(data=np.array(tmp_ax))
 
-                                                if 'units' in axis_node._v_attrs:
-                                                    axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
-                                                if 'label' in axis_node._v_attrs:
-                                                    axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
+                                                    if 'units' in axis_node._v_attrs:
+                                                        axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
+                                                    if 'label' in axis_node._v_attrs:
+                                                        axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
                         elif 'axis' in node._v_attrs['type']:
                             axis_node = node
                             axes['y_axis'] = dict(data=axis_node.read())
