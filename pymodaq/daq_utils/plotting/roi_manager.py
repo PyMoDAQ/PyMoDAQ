@@ -199,7 +199,7 @@ class ROIManager(QObject):
 
         params = [{'title': 'Measurements:', 'name': 'measurements', 'type': 'table', 'value': OrderedDict([]), 'Ncol': 2, 'header': ["LO", "Value"]},
                 ROIScalableGroup(roi_type=self.ROI_type, name="ROIs")]
-        self.settings=Parameter.create(title='ROIs Settings', name='rois_settings', type='group', children=params)
+        self.settings = Parameter.create(title='ROIs Settings', name='rois_settings', type='group', children=params)
         self.roitree.setParameters(self.settings, showTop=False)
         self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
@@ -354,36 +354,38 @@ class ROIManager(QObject):
         except Exception as e:
             print(e)
 
-    def load_ROI(self, path=None):
+    def load_ROI(self, path=None, params=None):
         try:
-            if path is None:
-                path = select_file(save=False, ext='xml')
-                if path != '':
-                    for roi in self.ROIs.values():
-                        index = roi.index
-                        self.viewer_widget.plotitem.removeItem(roi)
-                        # self.settings.sigTreeStateChanged.disconnect()
-                        self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
-                        # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
-                    self.ROIs = OrderedDict([])
+            if params is None:
+                if path is None:
+                    path = select_file(save=False, ext='xml')
+                    if path != '':
+                        params = custom_tree.XML_file_to_parameter(path)
+
+            if params is not None:
+                for roi in self.ROIs.values():
+                    index = roi.index
+                    self.viewer_widget.plotitem.removeItem(roi)
+                    # self.settings.sigTreeStateChanged.disconnect()
+                    self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
+                    # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+                self.ROIs = OrderedDict([])
+
+                for param in params:
+                    if 'roi_type' in custom_tree.iter_children(param, []):
+                        self.settings.child(('ROIs')).addNew(param.child(('roi_type')).value())
+                    else:
+                        self.settings.child(('ROIs')).addNew()
+                #self.settings.child(('ROIs')).addChildren(params)
+                QtWidgets.QApplication.processEvents()
+
+                # settings = Parameter.create(title='Settings', name='settings', type='group')
+                #
+                # for param in params:
+                #     settings.addChildren(custom_tree.XML_string_to_parameter(custom_tree.parameter_to_xml_string(param)))
 
 
-                    params = custom_tree.XML_file_to_parameter(path)
-                    for param in params:
-                        self.settings.child(('ROIs')).addChild(param)
-                    #self.settings.child(('ROIs')).addChildren(params)
-                    QtWidgets.QApplication.processEvents()
-
-                    settings = Parameter.create(title='Settings', name='settings', type='group', children=params)
-                    self.set_roi(self.settings.child(('ROIs')).children(), settings.children())
-
-                    # for child, new_child in zip(self.settings.child(('ROIs')).children(), settings.children()):
-                    #     child.restoreState(new_child.saveState())
-
-
-                    #self.roi_update_children.emit(settings.children())
-
-
+                self.set_roi(self.settings.child(('ROIs')).children(), params)
 
         except Exception as e:
             pass
@@ -396,7 +398,7 @@ class ROIManager(QObject):
                 self.set_roi(child.children(), new_child.children())
 
 class ROIScalableGroup(pTypes.GroupParameter):
-    def __init__(self, roi_type = '1D', **opts):
+    def __init__(self, roi_type='1D', **opts):
         opts['type'] = 'group'
         opts['addText'] = "Add"
         self.roi_type = roi_type

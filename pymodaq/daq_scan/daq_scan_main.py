@@ -51,11 +51,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
     log_signal = pyqtSignal(str)
 
     params = [
-        {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
-            {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': ''},
-            {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': ''},
-            {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': ''},
-        ]},
+
         {'title': 'Moves/Detectors', 'name': 'Move_Detectors', 'type': 'group', 'children': [
             {'name': 'Detectors', 'type': 'itemselect'},
             {'name': 'Moves', 'type': 'itemselect'}
@@ -466,7 +462,6 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
         """
         try:
-            self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
 
             ######################################################################
             #set scan selector

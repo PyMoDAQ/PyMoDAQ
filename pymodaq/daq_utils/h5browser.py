@@ -6,7 +6,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize, get_set_local_dir, Axis
-
+from pymodaq.daq_utils import manage_preset #to activate recognition of 'groupmove' and 'groupdet' parameters
 import sys
 import tables
 import numpy as np
@@ -299,11 +299,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
                     for child in self.settings.children():
                         child.remove()
                     QtWidgets.QApplication.processEvents() #so that the tree associated with settings updates
-                    params=custom_tree.XML_string_to_parameter(attrs.settings.decode())
+                    params = custom_tree.XML_string_to_parameter(attrs.settings.decode())
                     self.settings.addChildren(params)
             if 'scan_settings' in attrs:
                 if attrs['scan_settings'] != '':
-                    params=custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
+                    params = custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
                     self.settings.addChildren(params)
             pixmaps=[]
             for attr in attrs_names:
@@ -317,7 +317,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
         except Exception as e:
             self.status_signal.emit(getLineInfo()+str(e))
-            logging.info(txt)
+            logging.info(getLineInfo()+str(e))
 
     def show_pixmaps(self,pixmaps=[]):
         if self.pixmap_widget.layout() is None:

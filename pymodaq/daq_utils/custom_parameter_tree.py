@@ -354,17 +354,17 @@ def parameter_to_xml_file(param,filename):
         >>> print(check.read())
         <settings title="settings" type="None" />      
     """
-    fname=Path(filename)
-    parent=fname.parent
-    filename=fname.stem
-    fname=parent.joinpath(filename+".xml") #forcing the right extension on the filename
-    xml_elt=walk_parameters_to_xml(param=param)
-    tree=ET.ElementTree(xml_elt)
+    fname = Path(filename)
+    parent = fname.parent
+    filename = fname.stem
+    fname = parent.joinpath(filename + ".xml")  # forcing the right extension on the filename
+    xml_elt = walk_parameters_to_xml(param=param)
+    tree = ET.ElementTree(xml_elt)
     tree.write(str(fname))
 
 
 
-def walk_xml_to_parameter(params=[],XML_elt=None):
+def walk_xml_to_parameter(params=[], XML_elt=None):
     """ To convert an XML element (and children) to dict enabling creation of parameter object.
 
         =============== ================== =======================================
@@ -554,10 +554,10 @@ def XML_string_to_parameter(xml_string):
 
     """
     root = ET.fromstring(xml_string)
-    tree=ET.ElementTree(root)
+    tree = ET.ElementTree(root)
 
     #tree.write('test.xml')
-    params=walk_xml_to_parameter(params=[],XML_elt=root)
+    params = walk_xml_to_parameter(params=[], XML_elt=root)
 
     return params
 

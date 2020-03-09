@@ -191,19 +191,19 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.rotate_pb.clicked.connect(self.update_image_flip)
 
         ## ROI stuff
-        self.ui.RoiCurve_H=edict()
-        self.ui.RoiCurve_V=edict()
-        self.ui.RoiCurve_integrated=edict()
-        self.data_integrated_plot= edict()
-        self.ui.ROIs=OrderedDict([])
+        self.ui.RoiCurve_H = edict()
+        self.ui.RoiCurve_V = edict()
+        self.ui.RoiCurve_integrated = edict()
+        self.data_integrated_plot = edict()
+        self.ui.ROIs = OrderedDict([])
         self.ui.roiBtn.clicked.connect(self.roi_clicked)
 
-        self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
+        self.data_to_export = OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
 
-        self._x_axis=None
-        self._y_axis=None
-        self.x_axis_scaled=None
-        self.y_axis_scaled=None
+        self._x_axis = None
+        self._y_axis = None
+        self.x_axis_scaled = None
+        self.y_axis_scaled = None
 
         self.ui.Ini_plot_pb.clicked.connect(self.ini_plot)
 
@@ -456,7 +456,7 @@ class Viewer2D(QtWidgets.QWidget):
 
 
     def roi_clicked(self):
-        roistate=self.ui.roiBtn.isChecked()
+        roistate = self.ui.roiBtn.isChecked()
 
         self.roi_manager.roiwidget.setVisible(roistate)
         for k,roi in self.roi_manager.ROIs.items():
@@ -470,8 +470,8 @@ class Viewer2D(QtWidgets.QWidget):
 
         self.show_lineouts()
 
-        if len(self.ui.ROIs)==0 and roistate:
-            self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
+        # if len(self.ui.ROIs) == 0 and roistate:
+        #     self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
 
 
     def scale_axis(self,xaxis_pxl,yaxis_pxl):

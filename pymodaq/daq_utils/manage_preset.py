@@ -86,8 +86,6 @@ class PresetScalableGroupMove( pTypes.GroupParameter):
                  }], 'removable': True, 'renamable': False}
 
         self.addChild(child)
-
-
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
 
 class PresetScalableGroupDet( pTypes.GroupParameter):
@@ -179,11 +177,11 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
 
                     main_child['children'].extend(params_hardware)
 
-            child={'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
-                    {'title': 'Name:' , 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
-                    {'title': 'Init?:' , 'name': 'init', 'type': 'bool', 'value': True},
-                    {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params
-                   }],'removable':True, 'renamable':False}
+            child = {'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
+                    {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
+                    {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
+                    {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},
+                    ], 'removable': True, 'renamable': False}
 
             self.addChild(child)
         except Exception as e:
@@ -205,7 +203,7 @@ if not os.path.isdir(preset_path):
 class PresetManager:
     def __init__(self, msgbox=False):
 
-        self.preset_params=None
+        self.preset_params = None
         self.pid_type = False
         if msgbox:
             msgBox = QtWidgets.QMessageBox()

@@ -22,20 +22,20 @@ class Viewer1D(QtWidgets.QWidget,QObject):
     data_to_export_signal
     """
 
-    data_to_export_signal=pyqtSignal(OrderedDict) #self.data_to_export=edict(data0D=None,data1D=None,data2D=None)
-    math_signal=pyqtSignal(OrderedDict) #OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
-    ROI_changed=pyqtSignal()
-    ROI_changed_finished=pyqtSignal()
+    data_to_export_signal = pyqtSignal(OrderedDict)  # self.data_to_export=edict(data0D=None,data1D=None,data2D=None)
+    math_signal = pyqtSignal(OrderedDict)  # OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
+    ROI_changed = pyqtSignal()
+    ROI_changed_finished = pyqtSignal()
 
     def __init__(self, parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(Viewer1D, self).__init__()
 
-        self.viewer_type='Data1D'
+        self.viewer_type = 'Data1D'
 
         if parent is None:
-            parent=QtWidgets.QWidget()
-        self.parent=parent
+            parent = QtWidgets.QWidget()
+        self.parent = parent
 
         self.roi_manager = ROIManager('1D')
         self.roi_manager.new_ROI_signal.connect(self.add_lineout)
@@ -72,7 +72,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         # and value is the result of a given lineout or measurement
 
     def setupUI(self):
-        self.ui=Ui_Form()
+        self.ui = Ui_Form()
         self.ui.setupUi(self.parent)
 
 
