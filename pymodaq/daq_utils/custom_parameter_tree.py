@@ -94,7 +94,7 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         if 'group' not in param_type:  # covers 'group', custom 'groupmove', 'groupai' ...
             add_text_to_elt(parent_elt, param)
 
-    params_list=param.children()
+    params_list = param.children()
     for param in params_list:
 
         opts = dict_from_param(param)
@@ -200,6 +200,11 @@ def dict_from_param(param):
         values = str(param.opts['values'])
         opts.update(dict(values=values))
 
+    if 'limits' in param.opts:
+        limits = str(param.opts['limits'])
+        opts.update(dict(limits=limits))
+        opts.update(dict(values=limits))
+
     if 'detlist' in param.opts:
         detlist = str(param.opts['detlist'])
         opts.update(dict(detlist=detlist))
@@ -287,6 +292,10 @@ def elt_to_dict(el):
         values = eval(el.get('values'))
         param.update(dict(values=values))
 
+    if 'limits' in el.attrib.keys():
+        limits = eval(el.get('limits'))
+        param.update(dict(limits=limits))
+
     return param
 
 def parameter_to_xml_string(param):
@@ -314,7 +323,7 @@ def parameter_to_xml_string(param):
     >>> print(converted_xml)
     b'<settings title="settings" type="None" />'
     """
-    xml_elt=walk_parameters_to_xml(param=param)
+    xml_elt = walk_parameters_to_xml(param=param)
     return ET.tostring(xml_elt)
 
 def parameter_to_xml_file(param,filename):
@@ -462,8 +471,8 @@ def set_txt_from_elt(el, param_dict):
         param_value = val_text
     param_dict.update(dict(value=param_value))
 
-    if param_type == 'list':
-        param_dict.update(dict(values=[param_value]))
+    # if param_type == 'list':
+    #     param_dict.update(dict(values=[param_value]))
 
 
 
@@ -506,7 +515,7 @@ def XML_file_to_parameter(file_name):
     tree = ET.parse(file_name)
 
     root = tree.getroot()
-    params=walk_xml_to_parameter(params=[],XML_elt=root)
+    params = walk_xml_to_parameter(params=[],XML_elt=root)
     return params
 
 def XML_string_to_parameter(xml_string):
@@ -1039,11 +1048,13 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             self.hideWidget = False
         elif t == 'bool_push':
             w = QtWidgets.QPushButton()
-            if 'title' in opts:
+            if 'label' in opts:
+                w.setText(opts['label'])
+            elif 'title' in opts:
                 w.setText(opts['title'])
             else:
                 w.setText(opts['name'])
-            w.setMaximumWidth(50)
+            #w.setMaximumWidth(50)
             w.setCheckable(True)
             w.sigChanged = w.toggled
             w.value = w.isChecked

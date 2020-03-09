@@ -881,11 +881,12 @@ class H5Saver(QObject):
         form = QtWidgets.QWidget()
         if not self.h5_file.isopen:
             if self.h5_file_path.exists():
-                self.analysis_prog = H5Browser(form,h5file=self.h5_file_path)
+                self.analysis_prog = H5Browser(form, h5file=self.h5_file_path)
             else:
                 raise FileExistsError('no File presents')
         else:
-            self.analysis_prog = H5Browser(form,h5file=self.h5_file)
+            self.h5_file.flush()
+            self.analysis_prog = H5Browser(form, h5file=self.h5_file)
         form.show()
 
 

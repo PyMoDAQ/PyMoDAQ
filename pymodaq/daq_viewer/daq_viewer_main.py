@@ -226,7 +226,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
         ############IMPORTANT############################
-        self.controller=None #the hardware controller/set after initialization and to be used by other modules if needed
+        self.controller = None #the hardware controller/set after initialization and to be used by other modules if needed
         #################################################
 
         #create main parameter tree
@@ -262,7 +262,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
         #install specific viewers
-        self.viewer_widgets=[]
+        self.viewer_widgets = []
         self.change_viewer()
 
         self.ui.settings_dock.addWidget(widgetsettings)
@@ -272,35 +272,29 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.ui.Detector_type_combo.clear()
         self.ui.Detector_type_combo.addItems(self.detector_types)
 
-        self.measurement_module=None
-        self.detector=None
+        self.measurement_module = None
+        self.detector = None
         self.set_enabled_grab_buttons(enable=False)
         self.set_enabled_Ini_buttons(enable=True)
         self.ui.data_ready_led.set_as_false()
 
-        self.save_file_pathname=None # to store last active path, will be an Path object
-        self.ind_continuous_grab=0
+        self.save_file_pathname = None  # to store last active path, will be an Path object
+        self.ind_continuous_grab = 0
 
-        self.ui.Ini_state_LED.clickable=False
+        self.ui.Ini_state_LED.clickable = False
         self.ui.Ini_state_LED.set_as_false()
-        self.initialized_state=False
-        self.measurement_module=None
-        self.snapshot_pathname=None
+        self.initialized_state = False
+        self.measurement_module = None
+        self.snapshot_pathname = None
 
-
-
-        self.current_datas=None
-        #edict to be send to the daq_measurement module from 1D traces if any
+        self.current_datas = None
+        # edict to be send to the daq_measurement module from 1D traces if any
 
         self.data_to_save_export = OrderedDict([])
         self.do_save_data = False
         self.do_continuous_save = False
         self.is_continuous_initialized = False
         self.file_continuous_save = None
-
-
-
-
 
         ##Connecting buttons:
         self.ui.update_com_pb.clicked.connect(self.update_com) #update communications with hardware
@@ -499,9 +493,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             if not(key == 'name' or key == 'acq_time_s'):
                 if datas[key] is not None:
                     if self.data_to_save_export[key] is None:
-                       self.data_to_save_export[key] = OrderedDict([])
+                        self.data_to_save_export[key] = OrderedDict([])
                     for k in datas[key]:
-                            self.data_to_save_export[key][k].update(datas[key][k])
+                        if k not in self.data_to_save_export[key]:
+                            self.data_to_save_export[key][k] = OrderedDict([])
+                        self.data_to_save_export[key][k].update(datas[key][k])
 
         if self.received_data == len(self.ui.viewers):
             if self.do_continuous_save:

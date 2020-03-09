@@ -704,8 +704,12 @@ class DAQ_Logging(QObject):
             self.status_sig.emit(["Update_Status", getLineInfo()+str(e), 'log'])
 
     def stop_logging(self):
-        for sig in self.grab_done_signals:
-            sig.disconnect(self.do_save_continuous)
+        try:
+            for sig in self.grab_done_signals:
+                sig.disconnect(self.do_save_continuous)
+        except Exception as e:
+            pass
+
         if self.stop_logging_flag:
             status = 'Data Acquisition has been stopped by user'
             self.status_sig.emit(["Update_Status", status, 'log'])

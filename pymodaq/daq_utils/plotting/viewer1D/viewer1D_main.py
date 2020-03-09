@@ -71,8 +71,6 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         # dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
         # and value is the result of a given lineout or measurement
 
-
-
     def setupUI(self):
         self.ui=Ui_Form()
         self.ui.setupUi(self.parent)
@@ -134,25 +132,28 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.ui.zoom_pb.clicked.connect(self.enable_zoom)
 
     def update_lineouts(self):
-        operations = []
-        channels = []
-        for ind, key in enumerate(self.roi_manager.ROIs):
-            operations.append(self.roi_manager.settings.child('ROIs', key, 'math_function').value())
-            channels.append(
-                self.roi_manager.settings.child('ROIs', key,
-                                'use_channel').opts['limits'].index(self.roi_manager.settings.child('ROIs',
-                                        key, 'use_channel').value()))
-            self.lo_items[key].setPen(self.roi_manager.settings.child('ROIs', key,
-                                'Color').value())
+        try:
+            operations = []
+            channels = []
+            for ind, key in enumerate(self.roi_manager.ROIs):
+                operations.append(self.roi_manager.settings.child('ROIs', key, 'math_function').value())
+                channels.append(
+                    self.roi_manager.settings.child('ROIs', key,
+                                    'use_channel').opts['limits'].index(self.roi_manager.settings.child('ROIs',
+                                            key, 'use_channel').value()))
+                self.lo_items[key].setPen(self.roi_manager.settings.child('ROIs', key,
+                                    'Color').value())
 
-        self.measurement_dict['datas'] = self.datas
-        self.measurement_dict['ROI_bounds'] = [self.roi_manager.ROIs[item].getRegion() for item in
-                                               self.roi_manager.ROIs]
-        self.measurement_dict['channels'] = channels
-        self.measurement_dict['operations'] = operations
+            self.measurement_dict['datas'] = self.datas
+            self.measurement_dict['ROI_bounds'] = [self.roi_manager.ROIs[item].getRegion() for item in
+                                                   self.roi_manager.ROIs]
+            self.measurement_dict['channels'] = channels
+            self.measurement_dict['operations'] = operations
 
-        data_lo = self.math_module.update_math(self.measurement_dict)
-        self.show_math(data_lo)
+            data_lo = self.math_module.update_math(self.measurement_dict)
+            self.show_math(data_lo)
+        except Exception as e:
+            pass
 
     @pyqtSlot(str)
     def remove_ROI(self, roi_name):
@@ -164,26 +165,27 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
     @pyqtSlot(int, str)
     def add_lineout(self, index, roi_type=''):
+        try:
+            item = self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
+            item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(index))
+            item_param.child(('use_channel')).setOpts(limits=self.labels)
+            item_param.child(('use_channel')).setValue(self.labels[0])
+            item.sigRegionChanged.connect(self.update_lineouts)
+            item.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
+            for child in customparameter.iter_children_params(item_param, childlist=[]):
+                if child.type() != 'group':
+                    child.sigValueChanged.connect(self.update_lineouts)
 
-        item=self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
-        item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(index))
-        item_param.child(('use_channel')).setOpts(limits=self.labels)
-        item_param.child(('use_channel')).setValue(self.labels[0])
-        item.sigRegionChanged.connect(self.update_lineouts)
-        item.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
-        for child in customparameter.iter_children_params(item_param, childlist=[]):
-            if child.type() != 'group':
-                child.sigValueChanged.connect(self.update_lineouts)
 
-
-        item_lo=self.ui.Graph_Lineouts.plot()
-        item_lo.setPen(item_param.child(('Color')).value())
-        self.lo_items['ROI_{:02d}'.format(index)] = item_lo
-        self.lo_data = OrderedDict([])
-        for k in self.lo_items:
-            self.lo_data[k] = np.zeros((1,))
-        self.update_lineouts()
-
+            item_lo=self.ui.Graph_Lineouts.plot()
+            item_lo.setPen(item_param.child(('Color')).value())
+            self.lo_items['ROI_{:02d}'.format(index)] = item_lo
+            self.lo_data = OrderedDict([])
+            for k in self.lo_items:
+                self.lo_data[k] = np.zeros((1,))
+            self.update_lineouts()
+        except Exception as e:
+            self.update_status(str(e), wait_time=self.wait_time)
 
     def clear_lo(self):
         self.lo_data=[[] for ind in range(len(self.lo_data))]
@@ -214,7 +216,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                 self.roi_manager.roiwidget.hide()
 
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time)
+            self.update_status(str(e), wait_time=self.wait_time)
 
     def do_zoom(self):
         bounds=self.ui.zoom_region.getRegion()

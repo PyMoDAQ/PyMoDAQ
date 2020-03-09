@@ -202,13 +202,13 @@ if not os.path.isdir(preset_path):
     os.makedirs(preset_path)
 
 
-class PresetManager():
-    def __init__(self,msgbox=False):
+class PresetManager:
+    def __init__(self, msgbox=False):
 
         self.preset_params=None
         self.pid_type = False
         if msgbox:
-            msgBox=QtWidgets.QMessageBox()
+            msgBox = QtWidgets.QMessageBox()
             msgBox.setText("Preset Manager?");
             msgBox.setInformativeText("What do you want to do?");
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
