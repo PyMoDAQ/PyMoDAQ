@@ -57,10 +57,10 @@ class ROISaver:
             for ind_viewer, viewer in enumerate(det_module.ui.viewers):
                 rois_params = [child for child in viewer_children[ind_viewer].children() if 'ROI' in child.opts['name']]
                 if hasattr(viewer, 'roi_manager'):
-                    if hasattr(viewer.ui, 'roiBtn'):
-                        viewer.ui.roiBtn.click()
-                    elif hasattr(viewer.ui, 'Do_math_pb'):
-                        viewer.ui.Do_math_pb.click()
+                    # if hasattr(viewer.ui, 'roiBtn'):
+                    #     viewer.ui.roiBtn.click()
+                    # elif hasattr(viewer.ui, 'Do_math_pb'):
+                    #     viewer.ui.Do_math_pb.click()
 
                     viewer.roi_manager.load_ROI(params=rois_params)
                     QtWidgets.QApplication.processEvents()

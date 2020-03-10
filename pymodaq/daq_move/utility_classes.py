@@ -32,6 +32,20 @@ comon_parameters=[{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '
                          {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                          {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
+params = [
+    {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
+        {'title': 'Move type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
+        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+         ]},
+    ]},
+    {'title': 'Move Settings:', 'name': 'move_settings', 'type': 'group'}
+]
 
 
 class DAQ_Move_base(QObject):

@@ -10,26 +10,20 @@ import sys
 from collections import OrderedDict
 import numpy as np
 from pathlib import Path
-import datetime
-import pickle
 import os
 import logging
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
-from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
-from pymodaq.version import get_version
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5saver import H5Saver
@@ -43,7 +37,7 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
 
 
-class DAQ_Scan(QtWidgets.QWidget,QObject):
+class DAQ_Scan(QObject):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
@@ -628,9 +622,79 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
 
     def setupUI(self):
-        self.ui = Ui_Form()
+        self.ui = QObject()
         widgetsettings = QtWidgets.QWidget()
-        self.ui.setupUi(widgetsettings)
+        self.ui.verticalLayout = QtWidgets.QVBoxLayout()
+        widgetsettings.setLayout(self.ui.verticalLayout)
+        self.ui.StatusBarLayout = QtWidgets.QHBoxLayout()
+        self.ui.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+
+        self.ui.verticalLayout.addWidget(self.ui.splitter)
+        self.ui.verticalLayout.addLayout(self.ui.StatusBarLayout)
+
+        self.ui.horizontalLayout = QtWidgets.QHBoxLayout()
+        sett_widget = QtWidgets.QWidget()
+        self.ui.settings_layout = QtWidgets.QVBoxLayout()
+        sett_widget.setLayout(self.ui.settings_layout)
+        self.ui.horizontalLayout.addWidget(sett_widget)
+
+        ############################BUTTONS##################
+        widget_buttons = QtWidgets.QWidget()
+        self.ui.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        widget_buttons.setLayout(self.ui.horizontalLayout_2)
+
+        iconquit = QtGui.QIcon()
+        iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.quit_pb = QtWidgets.QPushButton(iconquit, 'Quit')
+
+        iconstart = QtGui.QIcon()
+        iconstart.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.start_scan_pb = QtWidgets.QPushButton(iconstart, '')
+        self.ui.start_scan_pb.setToolTip('Start Scan')
+
+        iconstop = QtGui.QIcon()
+        iconstop.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.stop_scan_pb = QtWidgets.QPushButton(iconstop, '')
+        self.ui.stop_scan_pb.setToolTip('Stop Scan')
+
+        self.ui.set_scan_pb = QtWidgets.QPushButton('Set Scan')
+        self.ui.set_scan_pb.setToolTip('Process the scanner settings and prepare the modules for coming scan')
+        self.ui.set_ini_positions_pb = QtWidgets.QPushButton('Init Positions')
+        self.ui.set_ini_positions_pb.setToolTip('Set Move Modules to their initial position as defined in the current scan')
+
+        self.ui.horizontalLayout_2.addWidget(self.ui.quit_pb)
+        self.ui.horizontalLayout_2.addStretch()
+        self.ui.horizontalLayout_2.addWidget(self.ui.set_scan_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.set_ini_positions_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.start_scan_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.stop_scan_pb)
+
+        self.ui.settings_layout.addWidget(widget_buttons)
+        self.ui.splitter.addWidget(sett_widget)
+        ###################TAB########################################
+        self.ui.tabWidget = QtWidgets.QTabWidget()
+
+        self.ui.tab_plot1D = QtWidgets.QWidget()
+        self.ui.scan1D_layout = QtWidgets.QVBoxLayout()
+        self.ui.tab_plot1D.setLayout(self.ui.scan1D_layout)
+
+        self.ui.tab_plot2D = QtWidgets.QWidget()
+        self.ui.scan2D_layout = QtWidgets.QVBoxLayout()
+        self.ui.tab_plot2D.setLayout(self.ui.scan2D_layout)
+
+        self.ui.tab_navigator = QtWidgets.QWidget()
+        self.ui.navigator_layout = QtWidgets.QVBoxLayout()
+        self.ui.tab_navigator.setLayout(self.ui.navigator_layout)
+
+        self.ui.tabWidget.addTab(self.ui.tab_plot1D, "")
+        self.ui.tabWidget.addTab(self.ui.tab_plot2D, "")
+        self.ui.tabWidget.addTab(self.ui.tab_navigator, "")
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot1D), '1D plot')
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot2D), '2D plot')
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_navigator), 'Navigator')
+
+        self.ui.splitter.addWidget(self.ui.tabWidget)
+        ##################################################################
 
         #%% create scan dock and make it a floating window
         self.ui.scan_dock = Dock("Scan", size=(1, 1), autoOrientation=False)     ## give this dock the minimum possible size
@@ -1711,37 +1775,39 @@ class DAQ_Scan_Acquisition(QObject):
             self.status_sig.emit(["Update_Status","Acquisition has started",'log'])
 
             for ind_average in range(self.Naverage):
-                self.ind_average=ind_average
-                for ind_scan,positions in enumerate(self.scan_moves): #move motors of modules
-                    self.ind_scan=ind_scan
-                    self.status_sig.emit(["Update_scan_index",[ind_scan,ind_average]])
-                    if self.stop_scan_flag or  self.timeout_scan_flag:
-
+                self.ind_average = ind_average
+                for ind_scan, positions in enumerate(self.scan_moves):  # move motors of modules
+                    self.ind_scan = ind_scan
+                    self.status_sig.emit(["Update_scan_index", [ind_scan, ind_average]])
+                    if self.stop_scan_flag or self.timeout_scan_flag:
                         break
-                    self.move_done_positions=OrderedDict()
-                    self.move_done_flag=False
-                    for ind_move,pos in enumerate(positions): #move all activated modules to specified positions
+                    self.move_done_positions = OrderedDict()
+                    self.move_done_flag = False
+                    for ind_move, pos in enumerate(positions):  # move all activated modules to specified positions
                         # if pos[0]!=self.move_modules[ind_move].title: # check the module correspond to the name assigned in pos
                         #     raise Exception('wrong move module assignment')
-                        #self.move_modules[ind_move].move_Abs(pos[1])
-                        self.move_modules_commands[ind_move].emit(utils.ThreadCommand(command="move_Abs",attributes=[pos[1]]))
+                        # self.move_modules[ind_move].move_Abs(pos[1])
+                        self.move_modules_commands[ind_move].emit(
+                            utils.ThreadCommand(command="move_Abs", attributes=[pos[1]]))
 
                     self.wait_for_move_done()
 
-                    paths =self.scan_saves[ind_scan] #start acquisition
-                    if self.stop_scan_flag or  self.timeout_scan_flag:
+                    paths = self.scan_saves[ind_scan]  # start acquisition
+                    if self.stop_scan_flag or self.timeout_scan_flag:
                         if self.stop_scan_flag:
-                            status='Data Acquisition has been stopped by user'
-                            self.status_sig.emit(["Update_Status",status,'log'])
+                            status = 'Data Acquisition has been stopped by user'
+                            self.status_sig.emit(["Update_Status", status, 'log'])
                         break
-                    self.det_done_flag=False
-                    self.det_done_datas=OrderedDict()
-                    for ind_det, path in enumerate(paths): #path on the form edict(det_name=...,file_path=...,indexes=...)
+                    self.det_done_flag = False
+                    self.det_done_datas = OrderedDict()
+                    for ind_det, path in enumerate(
+                            paths):  # path on the form edict(det_name=...,file_path=...,indexes=...)
                         # if path['det_name']!=self.detector_modules[ind_det].title: # check the module correspond to the name assigned in path
                         #     raise Exception('wrong det module assignment')
-                        #self.detector_modules[ind_det].snapshot(str(path['file_path']),dosave=False) #do not save each grabs in independant files
+                        # self.detector_modules[ind_det].snapshot(str(path['file_path']),dosave=False) #do not save each grabs in independant files
                         self.detector_modules_commands[ind_det].emit(utils.ThreadCommand("single",
-                                  [self.det_averaging[ind_det],str(path['file_path'])]))
+                                                                                         [self.det_averaging[ind_det],
+                                                                                          str(path['file_path'])]))
                     self.wait_for_det_done()
             self.h5saver.h5_file.flush()
             for sig in self.move_done_signals:
@@ -1753,23 +1819,23 @@ class DAQ_Scan_Acquisition(QObject):
             #     mod.move_done_signal.disconnect(self.move_done)
             # for mod in self.detector_modules:
             #     mod.grab_done_signal.disconnect(self.det_done)
-            self.status_sig.emit(["Update_Status","Acquisition has finished",'log'])
+            self.status_sig.emit(["Update_Status", "Acquisition has finished", 'log'])
             self.status_sig.emit(["Scan_done"])
 
             self.timer.stop()
         except Exception as e:
-            self.status_sig.emit(["Update_Status",getLineInfo()+ str(e),'log'])
+            self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def wait_for_det_done(self):
         self.timeout_scan_flag=False
-        self.timer.start(self.settings.child('time_flow','timeout').value())
+        self.timer.start(self.settings.child('time_flow', 'timeout').value())
         while not(self.det_done_flag or  self.timeout_scan_flag):
             #wait for grab done signals to end
             QtWidgets.QApplication.processEvents()
 
     def wait_for_move_done(self):
         self.timeout_scan_flag=False
-        self.timer.start(self.settings.child('time_flow','timeout').value())
+        self.timer.start(self.settings.child('time_flow', 'timeout').value())
 
 
         while not(self.move_done_flag or  self.timeout_scan_flag):
@@ -1781,7 +1847,7 @@ class DAQ_Scan_Acquisition(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.dashboard import DashBoard
+    from pymodaq.dashboard import DashBoard
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = utils.DockArea()
@@ -1791,5 +1857,9 @@ if __name__ == '__main__':
 
     #win.setVisible(False)
     prog = DashBoard(area)
+    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_modes\\preset_default.xml')
+    # QThread.msleep(4000)
+
+    prog.load_scan_module()
     sys.exit(app.exec_())
 

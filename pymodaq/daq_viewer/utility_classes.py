@@ -1,22 +1,87 @@
+import os
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
 
-import sys
-import pyqtgraph as pg
+
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from easydict import EasyDict as edict
-import socket, select
+
 import numpy as np
-from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
+from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
 from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended, message_to_bytes,\
     get_int, get_list, send_string, send_list, get_array, get_string
-from collections import OrderedDict
+
 from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
-comon_parameters=[{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
+comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
+
+local_path = get_set_local_dir()
+# look for eventual calibration files
+calibs = ['None']
+try:
+    for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'camera_calibrations'))):
+        if file.endswith(".xml"):
+            (filesplited, ext) = os.path.splitext(file)
+        calibs.append(filesplited)
+except:
+    pass
+
+params = [
+    {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
+        {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
+         'readonly': True},
+        {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
+        {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': True},
+        {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
+        {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
+        {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
+        {'title': 'Live averaging:', 'name': 'live_averaging', 'type': 'bool', 'default': False, 'value': False},
+        {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0,
+         'visible': False},
+        {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
+        {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
+         'value': False},
+        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
+            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
+            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+        ]},
+        {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
+             {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
+        {'title': 'Axis options:', 'name': 'axes', 'type': 'group', 'visible': False, 'expanded': False, 'children': [
+            {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'values': calibs},
+            {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
+                {'title': 'Label:', 'name': 'xlabel', 'type': 'str', 'value': "x axis"},
+                {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "pxls"},
+                {'title': 'Offset:', 'name': 'xoffset', 'type': 'float', 'default': 0., 'value': 0.},
+                {'title': 'Scaling', 'name': 'xscaling', 'type': 'float', 'default': 1., 'value': 1.},
+            ]},
+            {'title': 'Y axis:', 'name': 'yaxis', 'type': 'group', 'children': [
+                {'title': 'Label:', 'name': 'ylabel', 'type': 'str', 'value': "y axis"},
+                {'title': 'Units:', 'name': 'yunits', 'type': 'str', 'value': "pxls"},
+                {'title': 'Offset:', 'name': 'yoffset', 'type': 'float', 'default': 0., 'value': 0.},
+                {'title': 'Scaling', 'name': 'yscaling', 'type': 'float', 'default': 1., 'value': 1.},
+            ]},
+        ]},
+
+    ]},
+    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': [
+        {'title': 'ROI select:', 'name': 'ROIselect', 'type': 'group', 'visible': False, 'children': [
+            {'title': 'Use ROI:', 'name': 'use_ROI', 'type': 'bool', 'value': False},
+            {'title': 'x0:', 'name': 'x0', 'type': 'int', 'value': 0, 'min': 0},
+            {'title': 'y0:', 'name': 'y0', 'type': 'int', 'value': 0, 'min': 0},
+            {'title': 'width:', 'name': 'width', 'type': 'int', 'value': 10, 'min': 1},
+            {'title': 'height:', 'name': 'height', 'type': 'int', 'value': 10, 'min': 1},
+        ]}
+    ]}
+]
 
 
 class DAQ_Viewer_base(QObject):

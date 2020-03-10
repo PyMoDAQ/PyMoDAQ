@@ -9,27 +9,16 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 import sys
 from collections import OrderedDict
 import numpy as np
-from pathlib import Path
-import datetime
-import time
 import os
 import logging
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
-from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
-from pymodaq.version import get_version
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from pymodaq.daq_utils.plotting.navigator import Navigator
-from pymodaq.daq_utils.scanner import Scanner
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5saver import H5Saver
@@ -755,7 +744,7 @@ class DAQ_Logging(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.dashboard import DashBoard
+    from pymodaq.dashboard import DashBoard
 
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()

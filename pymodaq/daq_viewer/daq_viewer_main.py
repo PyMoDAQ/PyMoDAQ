@@ -42,7 +42,7 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 import os
 from easydict import EasyDict as edict
 
-from pymodaq.daq_utils.daq_utils import DockArea
+from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
 from pyqtgraph.dockarea import Dock
 import pickle
 import time
@@ -50,7 +50,7 @@ import datetime
 import tables
 from pathlib import Path
 from pymodaq.daq_utils.h5saver import H5Saver
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
+from pymodaq.daq_utils.daq_utils import get_set_local_dir, DockArea
 
 if __name__ == '__main__':
     import logging
@@ -120,65 +120,9 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
     overshoot_signal = pyqtSignal(bool)
     log_signal = pyqtSignal(str)
 
-    #look for eventual calibration files
-    calibs = ['None']
-    try:
-        for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'camera_calibrations'))):
-            if file.endswith(".xml"):
-                (filesplited, ext) = os.path.splitext(file)
-            calibs.append(filesplited)
-    except:
-        pass
 
-    params = [
-        {'title': 'Main Settings:','name': 'main_settings', 'expanded': False, 'type': 'group','children':[
-            {'title': 'DAQ type:','name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D','DAQ1D','DAQ2D','DAQND'], 'readonly': True},
-            {'title': 'Detector type:','name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'Nviewers:','name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
-            {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': True},
-            {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
-            {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
-            {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
-            {'title': 'Live averaging:', 'name': 'live_averaging', 'type': 'bool', 'default': False, 'value': False},
-            {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
-            {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
-            {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False, 'value': False},
-            {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
-                 {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
-                 {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
-                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
-                 {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
-            ]},
-            {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': True, 'expanded': False,'children':[
-                    {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
-                    {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
-            {'title': 'Axis options:','name':'axes','type':'group', 'visible': False, 'expanded': False, 'children':[
-                    {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'values': calibs},
-                    {'title': 'X axis:','name':'xaxis','type':'group','children':[
-                        {'title': 'Label:', 'name': 'xlabel', 'type': 'str', 'value': "x axis"},
-                        {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "pxls"},
-                        {'title': 'Offset:', 'name': 'xoffset', 'type': 'float', 'default': 0., 'value': 0.},
-                        {'title': 'Scaling', 'name': 'xscaling', 'type': 'float', 'default': 1., 'value': 1.},
-                        ]},
-                    {'title': 'Y axis:','name':'yaxis','type':'group','children':[
-                        {'title': 'Label:', 'name': 'ylabel', 'type': 'str', 'value': "y axis"},
-                        {'title': 'Units:', 'name': 'yunits', 'type': 'str', 'value': "pxls"},
-                        {'title': 'Offset:', 'name': 'yoffset', 'type': 'float', 'default': 0., 'value': 0.},
-                        {'title': 'Scaling', 'name': 'yscaling', 'type': 'float', 'default': 1., 'value': 1.},
-                        ]},
-            ]},
 
-        ]},
-        {'title': 'Detector Settings','name': 'detector_settings', 'type': 'group', 'children':[
-            {'title': 'ROI select:','name':'ROIselect','type':'group', 'visible': False,'children':[
-                {'title': 'Use ROI:', 'name': 'use_ROI', 'type': 'bool', 'value': False},
-                {'title': 'x0:', 'name': 'x0', 'type': 'int', 'value': 0, 'min': 0},
-                {'title': 'y0:', 'name': 'y0', 'type': 'int', 'value': 0, 'min': 0},
-                {'title': 'width:', 'name': 'width', 'type': 'int', 'value': 10, 'min': 1},
-                {'title': 'height:', 'name': 'height', 'type': 'int', 'value': 10, 'min': 1},
-                ]}
-            ]}
-        ]
+    params = daq_viewer_params
 
     def __init__(self, parent, dock_settings=None, dock_viewer=None, title="Testing", DAQ_type="DAQ0D",
                  preset=None, init=False, controller_ID=-1, parent_scan=None):

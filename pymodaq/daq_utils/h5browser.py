@@ -1,25 +1,23 @@
+import sys
+import os
+from collections import OrderedDict
+from pathlib import Path
+import warnings
+import numpy as np
+import tables
+import datetime
+import logging
+from copy import deepcopy
+
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
-import sip
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize, get_set_local_dir, Axis
-from pymodaq.daq_utils import manage_preset #to activate recognition of 'groupmove' and 'groupdet' parameters
-import sys
-import tables
-import numpy as np
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
-from collections import OrderedDict
-from pathlib import Path
-import warnings
-import os
-from copy import deepcopy
-import datetime
 
-
-import logging
 now = datetime.datetime.now()
 local_path = get_set_local_dir()
 log_path = os.path.join(local_path, 'logging')
@@ -470,33 +468,31 @@ class H5Browser(QtWidgets.QWidget,QObject):
         except Exception as e:
             self.status_signal.emit(getLineInfo()+str(e))
 
-    def add_widget_totree(self,pixmap_items):
-        
-        for item in pixmap_items:
-            widget=QtWidgets.QWidget()
+    def add_widget_totree(self, pixmap_items):
 
-            vLayout=QtWidgets.QVBoxLayout()
-            label1D=QtWidgets.QLabel()
-            bytes=QByteArray(item['node']._v_attrs['pixmap1D'])
-            im1=QtGui.QImage.fromData(bytes)
-            a=QtGui.QPixmap.fromImage(im1)
+        for item in pixmap_items:
+            widget = QtWidgets.QWidget()
+
+            vLayout = QtWidgets.QVBoxLayout()
+            label1D = QtWidgets.QLabel()
+            bytes = QByteArray(item['node']._v_attrs['pixmap1D'])
+            im1 = QtGui.QImage.fromData(bytes)
+            a = QtGui.QPixmap.fromImage(im1)
             label1D.setPixmap(a)
 
-            label2D=QtWidgets.QLabel()
-            bytes=QByteArray(item['node']._v_attrs['pixmap2D'])
-            im2=QtGui.QImage.fromData(bytes)
-            b=QtGui.QPixmap.fromImage(im2)
+            label2D = QtWidgets.QLabel()
+            bytes = QByteArray(item['node']._v_attrs['pixmap2D'])
+            im2 = QtGui.QImage.fromData(bytes)
+            b = QtGui.QPixmap.fromImage(im2)
             label2D.setPixmap(b)
 
             vLayout.addWidget(label1D)
-            VLayout.addwidget(label2D)
+            vLayout.addwidget(label2D)
             widget.setLayout(vLayout)
-            self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'],1,widget)
+            self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'], 1, widget)
 
 
-
-
-def browse_data(fname=None, ret_all = False):
+def browse_data(fname=None, ret_all=False):
     """
         | Browse data present in any h5 file, when user has selected the one,
         |
@@ -516,48 +512,46 @@ def browse_data(fname=None, ret_all = False):
 
     """
     if fname is None:
-        fname=str(select_file(start_path=None,save=False, ext='h5'))
-    
-    if type(fname)!=str:
+        fname = str(select_file(start_path=None, save=False, ext='h5'))
+
+    if type(fname) != str:
         try:
-            fname=str(fname)
+            fname = str(fname)
         except:
             raise Exception('filename in browse data is not valid')
     if fname != '':
-        (root,ext)=os.path.splitext(fname)
-        if not( 'h5' in ext or 'hdf5' in ext):
-            warnings.warn('This is not a PyMODAQ h5 file, there could be issues',Warning)
+        (root, ext) = os.path.splitext(fname)
+        if not ('h5' in ext or 'hdf5' in ext):
+            warnings.warn('This is not a PyMODAQ h5 file, there could be issues', Warning)
 
         with tables.open_file(fname) as h5file:
-            dialog=QtWidgets.QDialog()
+            dialog = QtWidgets.QDialog()
             dialog.setWindowTitle('Select a data node in the tree')
-            vlayout=QtWidgets.QVBoxLayout()
-            form= QtWidgets.QWidget()
-            browser=H5Browser(form,h5file)
+            vlayout = QtWidgets.QVBoxLayout()
+            form = QtWidgets.QWidget()
+            browser = H5Browser(form, h5file)
 
             vlayout.addWidget(form)
             dialog.setLayout(vlayout)
             buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-
-
             dialog.setLayout(vlayout)
             buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-            buttonBox.addButton('OK',buttonBox.AcceptRole)
+            buttonBox.addButton('OK', buttonBox.AcceptRole)
             buttonBox.accepted.connect(dialog.accept)
-            buttonBox.addButton('Cancel',buttonBox.RejectRole)
+            buttonBox.addButton('Cancel', buttonBox.RejectRole)
             buttonBox.rejected.connect(dialog.reject)
 
             vlayout.addWidget(buttonBox)
             dialog.setWindowTitle('Select data to be loaded')
-            res=dialog.exec()
+            res = dialog.exec()
 
-            if res==dialog.Accepted:
-                node_path=browser.current_node_path
-                data=h5file.get_node(node_path).read()#save preset parameters in a xml file
+            if res == dialog.Accepted:
+                node_path = browser.current_node_path
+                data = h5file.get_node(node_path).read()  # save preset parameters in a xml file
             else:
-                data=None
+                data = None
                 node_path = None
         if ret_all:
             return data, fname, node_path

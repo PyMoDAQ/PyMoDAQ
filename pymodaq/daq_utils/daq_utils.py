@@ -874,8 +874,6 @@ def get_h5file_scans(h5file,path='/'):
     return scan_list
 
 
-
-
 def pixmap2ndarray(pixmap,scale=None):
     channels_count = 4
     image = pixmap.toImage()

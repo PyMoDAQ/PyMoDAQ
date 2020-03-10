@@ -14,7 +14,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
 from pyqtgraph.parametertree.Parameter import registerParameterType
 #from PyMoDAQ.daq_utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
-from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
+from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear, make_enum
 from collections import OrderedDict
 from decimal import Decimal as D
 
@@ -639,6 +639,8 @@ def get_param_from_name(parent,name):
             ch = get_param_from_name(child, name)
             if ch is not None:
                 return ch
+
+
 
 class GroupParameterItemCustom(pTypes.GroupParameterItem):
     """
