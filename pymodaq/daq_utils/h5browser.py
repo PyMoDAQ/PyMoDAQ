@@ -1,25 +1,23 @@
+import sys
+import os
+from collections import OrderedDict
+from pathlib import Path
+import warnings
+import numpy as np
+import tables
+import datetime
+import logging
+from copy import deepcopy
+
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
-import sip
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize, get_set_local_dir, Axis
-
-import sys
-import tables
-import numpy as np
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
-from collections import OrderedDict
-from pathlib import Path
-import warnings
-import os
-from copy import deepcopy
-import datetime
 
-
-import logging
 now = datetime.datetime.now()
 local_path = get_set_local_dir()
 log_path = os.path.join(local_path, 'logging')
@@ -29,7 +27,37 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 logging.basicConfig(filename=os.path.join(log_path, 'H5Browser_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
 
+def find_scan_node(scan_node):
+    """
+    utility function to find the parent node of "scan" type, meaning some of its children (DAQ_scan case)
+    or co-nodes (daq_logger case) are navigation axes
+    Parameters
+    ----------
+    scan_node: (pytables node)
+        data node from where this function look for its navigation axes if any
+    Returns
+    -------
+    node: the parent node of 'scan' type
+    list: the data nodes of type 'navigation_axis' corresponding to the initial data node
 
+
+    """
+    try:
+        while True:
+            if scan_node._v_attrs['type'] == 'scan':
+                break
+            else:
+                scan_node = scan_node._v_parent
+        children = [scan_node._v_children[child] for child in scan_node._v_children] #for data saved using daq_scan
+        children.extend([scan_node._v_parent._v_children[child] for child in scan_node._v_parent._v_children]) #for data saved using the daq_logger
+        nav_children = []
+        for child in children:
+            if 'type' in child._v_attrs:
+                if child._v_attrs['type'] == 'navigation_axis':
+                    nav_children.append(child)
+        return scan_node, nav_children
+    except:
+        return None, []
 
 class H5Browser(QtWidgets.QWidget,QObject):
     data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
@@ -85,25 +113,44 @@ class H5Browser(QtWidgets.QWidget,QObject):
             self.current_node_path = item.text(2)
             node = self.h5file.get_node(item.text(2))
             if 'ARRAY' in node._v_attrs['CLASS']:
-                data = node.read()
-                if isinstance(data, np.ndarray):
-                    file = select_file(save=True, ext='txt')
-                    if file != '':
+                file = select_file(save=True, ext='txt')
+                if file != '':
+                    data = node.read()
+                    if not isinstance(data, np.ndarray):
+                        # in case one has a list of same objects (array of strings for instance, logger or other)
+                        data = np.array(data)
+                        np.savetxt(file, data, '%s', '\t')
+                    else:
                         np.savetxt(file, data, '%.6e', '\t')
             elif 'GROUP' in node._v_attrs['CLASS']:
                 children_names = list(node._v_children)
-                data = []
+                data_tot = []
                 header = []
+                dtypes = []
+                fmts = []
                 for subnode_name in node._v_children:
                     subnode = node._f_get_child(subnode_name)
                     if 'ARRAY' in subnode._v_attrs['CLASS']:
                         if len(subnode.shape) == 1:
-                            data.append(subnode.read())
+                            data = subnode.read()
+                            if not isinstance(data, np.ndarray):
+                                # in case one has a list of same objects (array of strings for instance, logger or other)
+                                data = np.array(data)
+                            data_tot.append(data)
+                            dtypes.append((subnode_name, data.dtype))
                             header.append(subnode_name)
+                            if data.dtype.char == 'U':
+                                fmt = '%s'  #for strings
+                            elif data.dtype.char == 'l':
+                                fmt = '%d'  # for integers
+                            else:
+                                fmt = '%.6f' # for decimal numbers
+                            fmts.append(fmt)
 
                 file = select_file(save=True, ext='txt')
                 if file != '':
-                    np.savetxt(file, np.array(data).T, '%.6e', '\t', header='\t'.join(header))
+                    data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
+                    np.savetxt(file, data_trans, fmts,'\t', header='\t'.join(header))
 
 
 
@@ -187,11 +234,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
         if self.main_window is not None:
             self.create_menu()
 
-        layout=QtWidgets.QGridLayout()
+        layout = QtWidgets.QGridLayout()
 
-        V_splitter=QtWidgets.QSplitter(Qt.Vertical)
-        V_splitter2=QtWidgets.QSplitter(Qt.Vertical)
-        H_splitter=QtWidgets.QSplitter(Qt.Horizontal)
+        V_splitter = QtWidgets.QSplitter(Qt.Vertical)
+        V_splitter2 = QtWidgets.QSplitter(Qt.Vertical)
+        H_splitter = QtWidgets.QSplitter(Qt.Horizontal)
 
         Form = QtWidgets.QWidget()
         #self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
@@ -222,25 +269,20 @@ class H5Browser(QtWidgets.QWidget,QObject):
         self.ui.settings_tree=ParameterTree()
         self.ui.settings_tree.setMinimumWidth(300)
         V_splitter2.addWidget(self.ui.settings_tree)
-        self.ui.text_list=QtWidgets.QListWidget()
-
+        self.ui.text_list = QtWidgets.QListWidget()
 
         V_splitter2.addWidget(self.ui.text_list)
 
-
-
         H_splitter.addWidget(V_splitter2)
-        
-        form_viewer=QtWidgets.QWidget()
-        self.hyperviewer=ViewerND(form_viewer)
-        H_splitter.addWidget(form_viewer)
 
+        form_viewer = QtWidgets.QWidget()
+        self.hyperviewer = ViewerND(form_viewer)
+        H_splitter.addWidget(form_viewer)
 
         layout.addWidget(H_splitter)
         self.parent.setLayout(layout)
 
-
-        self.settings=Parameter.create(name='Param', type='group')
+        self.settings = Parameter.create(name='Param', type='group')
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
 
         self.status_signal.connect(self.add_log)
@@ -274,11 +316,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
                     for child in self.settings.children():
                         child.remove()
                     QtWidgets.QApplication.processEvents() #so that the tree associated with settings updates
-                    params=custom_tree.XML_string_to_parameter(attrs.settings.decode())
+                    params = custom_tree.XML_string_to_parameter(attrs.settings.decode())
                     self.settings.addChildren(params)
             if 'scan_settings' in attrs:
                 if attrs['scan_settings'] != '':
-                    params=custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
+                    params = custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
                     self.settings.addChildren(params)
             pixmaps=[]
             for attr in attrs_names:
@@ -292,7 +334,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
 
         except Exception as e:
             self.status_signal.emit(getLineInfo()+str(e))
-            logging.info(txt)
+            logging.info(getLineInfo()+str(e))
 
     def show_pixmaps(self,pixmaps=[]):
         if self.pixmap_widget.layout() is None:
@@ -358,7 +400,7 @@ class H5Browser(QtWidgets.QWidget,QObject):
                                     if 'label' in axis_node._v_attrs:
                                         axes[ax]['label'] = axis_node._v_attrs['label']
                                 else:
-                                    axes[ax] = dict(units='', label='')
+                                    axes[ax] = Axis()
 
                             if data_dim == 'ND': #check for navigation axis
                                 tmp_nav_axes = ['y_axis', 'x_axis', ]
@@ -383,27 +425,25 @@ class H5Browser(QtWidgets.QWidget,QObject):
                             if 'scan_type' in node._v_attrs:
                                 scan_type = node._v_attrs['scan_type'].lower()
                                 if scan_type == 'scan1d' or scan_type == 'scan2d':
-                                    scan_path = node._v_parent._v_parent._v_parent._v_parent._v_pathname
-                                    children = list(node._v_parent._v_parent._v_parent._v_parent._v_children)
-
+                                    scan_node, nav_children = find_scan_node(node)
                                     tmp_nav_axes = ['x_axis', 'y_axis']
                                     if scan_type == 'scan1d' or scan_type == 'scan2d':
                                         nav_axes = []
                                         for ind_ax, ax in enumerate(tmp_nav_axes):
-                                            if 'Scan_{:s}'.format(ax) in children:
-                                                nav_axes.append(ind_ax)
-                                                axis_node = self.h5file.get_node(scan_path + '/Scan_{:s}'.format(ax))
-                                                axes['nav_{:s}'.format(ax)] = dict(data=np.unique(axis_node.read()))
-                                                if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:  #could happen in case of linear back to start type of scan
-                                                    tmp_ax=[]
-                                                    for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                                        tmp_ax.extend([ix, ix])
-                                                        axes['nav_{:s}'.format(ax)]=dict(data=np.array(tmp_ax))
+                                            for axis_node in nav_children:
+                                                if ax in axis_node._v_name:
+                                                    nav_axes.append(ind_ax)
+                                                    axes['nav_{:s}'.format(ax)] = dict(data=np.unique(axis_node.read()))
+                                                    if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:  #could happen in case of linear back to start type of scan
+                                                        tmp_ax = []
+                                                        for ix in axes['nav_{:s}'.format(ax)]['data']:
+                                                            tmp_ax.extend([ix, ix])
+                                                            axes['nav_{:s}'.format(ax)]=dict(data=np.array(tmp_ax))
 
-                                                if 'units' in axis_node._v_attrs:
-                                                    axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
-                                                if 'label' in axis_node._v_attrs:
-                                                    axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
+                                                    if 'units' in axis_node._v_attrs:
+                                                        axes['nav_{:s}'.format(ax)]['units'] = axis_node._v_attrs['units']
+                                                    if 'label' in axis_node._v_attrs:
+                                                        axes['nav_{:s}'.format(ax)]['label'] = axis_node._v_attrs['label']
                         elif 'axis' in node._v_attrs['type']:
                             axis_node = node
                             axes['y_axis'] = dict(data=axis_node.read())
@@ -417,10 +457,11 @@ class H5Browser(QtWidgets.QWidget,QObject):
                     self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
-                    if isinstance(data[0], str):
-                        self.ui.text_list.clear()
-                        for txt in node.read():
-                            self.ui.text_list.addItem(txt)
+                    if not(not data):
+                        if isinstance(data[0], str):
+                            self.ui.text_list.clear()
+                            for txt in node.read():
+                                self.ui.text_list.addItem(txt)
             
 
         except Exception as e:
@@ -437,8 +478,8 @@ class H5Browser(QtWidgets.QWidget,QObject):
         try:
             if self.h5file is not None:
                 self.ui.h5file_tree.ui.Tree.clear()
-                base_node=self.h5file.root
-                base_tree_item,pixmap_items=h5tree_to_QTree(self.h5file,base_node)
+                base_node = self.h5file.root
+                base_tree_item, pixmap_items = h5tree_to_QTree(self.h5file, base_node)
                 self.ui.h5file_tree.ui.Tree.addTopLevelItem(base_tree_item)
                 self.add_widget_totree(pixmap_items)
 
@@ -446,33 +487,31 @@ class H5Browser(QtWidgets.QWidget,QObject):
         except Exception as e:
             self.status_signal.emit(getLineInfo()+str(e))
 
-    def add_widget_totree(self,pixmap_items):
-        
-        for item in pixmap_items:
-            widget=QtWidgets.QWidget()
+    def add_widget_totree(self, pixmap_items):
 
-            vLayout=QtWidgets.QVBoxLayout()
-            label1D=QtWidgets.QLabel()
-            bytes=QByteArray(item['node']._v_attrs['pixmap1D'])
-            im1=QtGui.QImage.fromData(bytes)
-            a=QtGui.QPixmap.fromImage(im1)
+        for item in pixmap_items:
+            widget = QtWidgets.QWidget()
+
+            vLayout = QtWidgets.QVBoxLayout()
+            label1D = QtWidgets.QLabel()
+            bytes = QByteArray(item['node']._v_attrs['pixmap1D'])
+            im1 = QtGui.QImage.fromData(bytes)
+            a = QtGui.QPixmap.fromImage(im1)
             label1D.setPixmap(a)
 
-            label2D=QtWidgets.QLabel()
-            bytes=QByteArray(item['node']._v_attrs['pixmap2D'])
-            im2=QtGui.QImage.fromData(bytes)
-            b=QtGui.QPixmap.fromImage(im2)
+            label2D = QtWidgets.QLabel()
+            bytes = QByteArray(item['node']._v_attrs['pixmap2D'])
+            im2 = QtGui.QImage.fromData(bytes)
+            b = QtGui.QPixmap.fromImage(im2)
             label2D.setPixmap(b)
 
             vLayout.addWidget(label1D)
-            VLayout.addwidget(label2D)
+            vLayout.addwidget(label2D)
             widget.setLayout(vLayout)
-            self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'],1,widget)
+            self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'], 1, widget)
 
 
-
-
-def browse_data(fname=None, ret_all = False):
+def browse_data(fname=None, ret_all=False):
     """
         | Browse data present in any h5 file, when user has selected the one,
         |
@@ -492,48 +531,46 @@ def browse_data(fname=None, ret_all = False):
 
     """
     if fname is None:
-        fname=str(select_file(start_path=None,save=False, ext='h5'))
-    
-    if type(fname)!=str:
+        fname = str(select_file(start_path=None, save=False, ext='h5'))
+
+    if type(fname) != str:
         try:
-            fname=str(fname)
+            fname = str(fname)
         except:
             raise Exception('filename in browse data is not valid')
     if fname != '':
-        (root,ext)=os.path.splitext(fname)
-        if not( 'h5' in ext or 'hdf5' in ext):
-            warnings.warn('This is not a PyMODAQ h5 file, there could be issues',Warning)
+        (root, ext) = os.path.splitext(fname)
+        if not ('h5' in ext or 'hdf5' in ext):
+            warnings.warn('This is not a PyMODAQ h5 file, there could be issues', Warning)
 
         with tables.open_file(fname) as h5file:
-            dialog=QtWidgets.QDialog()
+            dialog = QtWidgets.QDialog()
             dialog.setWindowTitle('Select a data node in the tree')
-            vlayout=QtWidgets.QVBoxLayout()
-            form= QtWidgets.QWidget()
-            browser=H5Browser(form,h5file)
+            vlayout = QtWidgets.QVBoxLayout()
+            form = QtWidgets.QWidget()
+            browser = H5Browser(form, h5file)
 
             vlayout.addWidget(form)
             dialog.setLayout(vlayout)
             buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-
-
             dialog.setLayout(vlayout)
             buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-            buttonBox.addButton('OK',buttonBox.AcceptRole)
+            buttonBox.addButton('OK', buttonBox.AcceptRole)
             buttonBox.accepted.connect(dialog.accept)
-            buttonBox.addButton('Cancel',buttonBox.RejectRole)
+            buttonBox.addButton('Cancel', buttonBox.RejectRole)
             buttonBox.rejected.connect(dialog.reject)
 
             vlayout.addWidget(buttonBox)
             dialog.setWindowTitle('Select data to be loaded')
-            res=dialog.exec()
+            res = dialog.exec()
 
-            if res==dialog.Accepted:
-                node_path=browser.current_node_path
-                data=h5file.get_node(node_path).read()#save preset parameters in a xml file
+            if res == dialog.Accepted:
+                node_path = browser.current_node_path
+                data = h5file.get_node(node_path).read()  # save preset parameters in a xml file
             else:
-                data=None
+                data = None
                 node_path = None
         if ret_all:
             return data, fname, node_path

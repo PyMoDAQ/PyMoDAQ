@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Main Modules &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
+  <title>Main Modules &mdash; PyMoDAQ 2.2 pre- documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                1.6
+                2.2
               </div>
             
           
@@ -99,7 +99,9 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Main Modules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Move.html">DAQ Move</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Viewer.html">DAQ Viewer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DashBoard.html">DashBoard</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Logger.html">DAQ Logger</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
@@ -208,6 +210,14 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="DashBoard.html">DashBoard</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="DashBoard.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DashBoard.html#preset-manager">Preset manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DashBoard.html#overshoot-manager">Overshoot manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DashBoard.html#roi-manager">ROI manager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DashBoard.html#multiple-hardware-from-one-controller">Multiple hardware from one controller</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#main-control-window">Main Control Window</a><ul>
@@ -223,17 +233,22 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#scan-selector">Scan Selector</a></li>
 <li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#navigator">Navigator</a></li>
-<li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#preset-manager">Preset manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#overshoot-manager">Overshoot manager</a></li>
-<li class="toctree-l2"><a class="reference internal" href="DAQ_Scan.html#multiple-hardware-from-one-controller">Multiple hardware from one controller</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="DAQ_Logger.html">DAQ Logger</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="DAQ_Logger.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DAQ_Logger.html#main-control-window">Main Control Window</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DAQ_Logger.html#h5-saving">H5 saving</a></li>
+<li class="toctree-l2"><a class="reference internal" href="DAQ_Logger.html#sql-database-saving">SQL Database saving</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<p>The three modules below are the main modules used in PyMoDAQ. DAQ_Move and DAQ_Viewer can be used as stand alone user
+<p>The 5 modules below are the main modules used in PyMoDAQ. DAQ_Move and DAQ_Viewer can be used as stand alone user
 interface to manually control hardware. DAQ_Viewer can be used like this to monitor and/or log data from a specific
-detector. However, the main use is through the DAQ_Scan module that will be used to perform automatic data acquisition.
-The usage of these three modules is explained below.</p>
+detector. However, the main use is through the DashBoard module and its functionalities given by the DAQ_Scan module
+that will be used to perform automatic data acquisition and by the DAQ_Logger module to perform advanced data logging.
+The usage of these modules is explained below.</p>
 </div>
 
 

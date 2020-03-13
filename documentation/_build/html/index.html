@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
+  <title>Welcome to PyMoDAQ’s documentation! &mdash; PyMoDAQ 2.2 pre- documentation</title>
   
 
   
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                1.6
+                2.2
               </div>
             
           
@@ -166,7 +166,7 @@
             
   <div class="section" id="welcome-to-pymodaq-s-documentation">
 <h1>Welcome to PyMoDAQ’s documentation!<a class="headerlink" href="#welcome-to-pymodaq-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>Announcement: Training session in Toulouse, France 21/22/23 October 2019:</p>
+<p>Announcement: Training session in Toulouse, France 22/23/24 Juin 2020:</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id1">
@@ -177,13 +177,21 @@
 It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.</p>
 <p>It has two purposes:</p>
 <ul class="simple">
-<li><p>First, to provide a complete interface to perform automated measurements without having to write a user/interface for each
-new experiment, this is under the <a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> environment.</p></li>
+<li><p>First, to provide a complete interface to perform automated measurements or logging data without having to write a user/interface for each
+new experiment, this is under the <a class="reference internal" href="usage/modules/DashBoard.html#dashboard-module"><span class="std std-ref">DashBoard</span></a> environment and its two extensions.</p></li>
 <li><p>Second, to provide various tools (modules) to easily build a <a class="reference internal" href="usage/CustomApp.html#custom-app"><span class="std std-ref">Custom Application</span></a></p></li>
 </ul>
 <p>It is divided in three main modules:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> : This is the module that will initialize all preset actuators and detectors. Then will automate the data acquisition.</p></li>
+<li><p><a class="reference internal" href="usage/modules/DashBoard.html#dashboard-module"><span class="std std-ref">DashBoard</span></a> : This is the module that will initialize actuators and detectors given the need of your
+particular experiment. You configure the dashboard using an interface for quick launch of various configurations.</p></li>
+<li><p><a class="reference internal" href="usage/modules/DAQ_Logger.html#daq-logger-module"><span class="std std-ref">DAQ Logger</span></a> : This module lets you log data from one or many detectors defined in the dashboard. You can log data
+in a binary hierarchical hdf5 file or towards a sql database</p></li>
+<li><p><a class="reference internal" href="usage/modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> : This module lets you configure automated data acquisition from one or many detectors defined
+in the dashboard as a function or one or more actuators defined also in the dashboard.</p></li>
+</ul>
+<p>The detectors and the actuators are represented and manipulated using two generic modules:</p>
+<ul class="simple">
 <li><p><a class="reference internal" href="usage/modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.</p></li>
 <li><p><a class="reference internal" href="usage/modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.</p></li>
 </ul>
@@ -255,6 +263,14 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 </li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/DashBoard.html">DashBoard</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DashBoard.html#introduction">Introduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DashBoard.html#preset-manager">Preset manager</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DashBoard.html#overshoot-manager">Overshoot manager</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DashBoard.html#roi-manager">ROI manager</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DashBoard.html#multiple-hardware-from-one-controller">Multiple hardware from one controller</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/DAQ_Scan.html">DAQ Scan</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#introduction">Introduction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#main-control-window">Main Control Window</a><ul>
@@ -265,9 +281,13 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#scan-selector">Scan Selector</a></li>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#navigator">Navigator</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#preset-manager">Preset manager</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#overshoot-manager">Overshoot manager</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#multiple-hardware-from-one-controller">Multiple hardware from one controller</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/DAQ_Logger.html">DAQ Logger</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Logger.html#introduction">Introduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Logger.html#main-control-window">Main Control Window</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Logger.html#h5-saving">H5 saving</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Logger.html#sql-database-saving">SQL Database saving</a></li>
 </ul>
 </li>
 </ul>
@@ -313,6 +333,7 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#h5saver">H5Saver</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#preset-manager">Preset manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#overshoot-manager">Overshoot manager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#roi-manager">ROI manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#daq-measurement">DAQ_Measurement</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#scanner">Scanner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#navigator">Navigator</a></li>
@@ -323,7 +344,17 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a><ul class="simple">
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/tcpip.html#with-pymodaq">With PyMoDAQ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/tcpip.html#on-another-software">On another software</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/tcpip.html#making-sure-messages-are-complete">Making sure messages are complete:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/tcpip.html#sending-and-receiving-commands-or-message">Sending and receiving commands (or message):</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/tcpip.html#sending-and-receiving-datas">Sending and receiving Datas:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/tcpip.html#custom-client-how-to">Custom client: how to?</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Feedback.html">Who use it?</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="usage/Feedback.html#institutions-using-pymodaq">Institutions using PyMoDAQ</a></li>
 <li class="toctree-l2"><a class="reference internal" href="usage/Feedback.html#what-they-think-of-pymodaq">What they think of PyMoDAQ?</a></li>

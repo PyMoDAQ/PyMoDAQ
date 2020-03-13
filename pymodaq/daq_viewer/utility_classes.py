@@ -1,21 +1,87 @@
+import os
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
 
-import sys
-import pyqtgraph as pg
+
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from easydict import EasyDict as edict
-import socket, select
+
 import numpy as np
-from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, check_received_length, check_sended, message_to_bytes,\
+from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
+from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended, message_to_bytes,\
     get_int, get_list, send_string, send_list, get_array, get_string
-from collections import OrderedDict
+
 from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
-comon_parameters=[{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
+comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
+
+local_path = get_set_local_dir()
+# look for eventual calibration files
+calibs = ['None']
+try:
+    for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'camera_calibrations'))):
+        if file.endswith(".xml"):
+            (filesplited, ext) = os.path.splitext(file)
+        calibs.append(filesplited)
+except:
+    pass
+
+params = [
+    {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
+        {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
+         'readonly': True},
+        {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
+        {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': True},
+        {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
+        {'title': 'Naverage', 'name': 'Naverage', 'type': 'int', 'default': 1, 'value': 1, 'min': 1},
+        {'title': 'Show averaging:', 'name': 'show_averaging', 'type': 'bool', 'default': False, 'value': False},
+        {'title': 'Live averaging:', 'name': 'live_averaging', 'type': 'bool', 'default': False, 'value': False},
+        {'title': 'N Live aver.:', 'name': 'N_live_averaging', 'type': 'int', 'default': 0, 'value': 0,
+         'visible': False},
+        {'title': 'Wait time (ms):', 'name': 'wait_time', 'type': 'int', 'default': 0, 'value': 00, 'min': 0},
+        {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
+         'value': False},
+        {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
+            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+            {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
+            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+        ]},
+        {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
+         'children': [
+             {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
+             {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
+        {'title': 'Axis options:', 'name': 'axes', 'type': 'group', 'visible': False, 'expanded': False, 'children': [
+            {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'values': calibs},
+            {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
+                {'title': 'Label:', 'name': 'xlabel', 'type': 'str', 'value': "x axis"},
+                {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "pxls"},
+                {'title': 'Offset:', 'name': 'xoffset', 'type': 'float', 'default': 0., 'value': 0.},
+                {'title': 'Scaling', 'name': 'xscaling', 'type': 'float', 'default': 1., 'value': 1.},
+            ]},
+            {'title': 'Y axis:', 'name': 'yaxis', 'type': 'group', 'children': [
+                {'title': 'Label:', 'name': 'ylabel', 'type': 'str', 'value': "y axis"},
+                {'title': 'Units:', 'name': 'yunits', 'type': 'str', 'value': "pxls"},
+                {'title': 'Offset:', 'name': 'yoffset', 'type': 'float', 'default': 0., 'value': 0.},
+                {'title': 'Scaling', 'name': 'yscaling', 'type': 'float', 'default': 1., 'value': 1.},
+            ]},
+        ]},
+
+    ]},
+    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': [
+        {'title': 'ROI select:', 'name': 'ROIselect', 'type': 'group', 'visible': False, 'children': [
+            {'title': 'Use ROI:', 'name': 'use_ROI', 'type': 'bool', 'value': False},
+            {'title': 'x0:', 'name': 'x0', 'type': 'int', 'value': 0, 'min': 0},
+            {'title': 'y0:', 'name': 'y0', 'type': 'int', 'value': 0, 'min': 0},
+            {'title': 'width:', 'name': 'width', 'type': 'int', 'value': 10, 'min': 1},
+            {'title': 'height:', 'name': 'height', 'type': 'int', 'value': 10, 'min': 1},
+        ]}
+    ]}
+]
 
 
 class DAQ_Viewer_base(QObject):
@@ -215,15 +281,16 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         --------
         utility_classes.DAQ_TCP_server
     """
-    params_GRABBER =[] #parameters of a client grabber
-    command_server=pyqtSignal(list)
+    params_GRABBER = []  # parameters of a client grabber
+    command_server = pyqtSignal(list)
 
-    message_list=["Quit","Send Data 0D","Send Data 1D","Send Data 2D","Status","Done","Server Closed","Info","Infos",
-                  "Info_xml", 'x_axis', 'y_axis']
-    socket_types=["GRABBER"]
-    params= comon_parameters+tcp_parameters
+    message_list = ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D", "Status", "Done", "Server Closed", "Info",
+                    "Infos",
+                    "Info_xml", 'x_axis', 'y_axis']
+    socket_types = ["GRABBER"]
+    params = comon_parameters + tcp_parameters
 
-    def __init__(self,parent=None,params_state=None, grabber_type='2D'):
+    def __init__(self, parent=None, params_state=None, grabber_type='2D'):
         """
 
         Parameters
@@ -233,17 +300,17 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         grabber_type: (str) either '0D', '1D' or '2D'
         """
         self.client_type = "GRABBER"
-        DAQ_Viewer_base.__init__(self, parent,params_state) #initialize base class with commom attributes and methods
+        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with commom attributes and methods
         TCPServer.__init__(self, self.client_type)
 
         self.x_axis = None
         self.y_axis = None
         self.data = None
         self.grabber_type = grabber_type
-        self.ind_data=0
-        self.data_mock=None
+        self.ind_data = 0
+        self.data_mock = None
 
-    def command_to_from_client(self,command):
+    def command_to_from_client(self, command):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
 
@@ -310,7 +377,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
         check_sended(sock, data_bytes)  # then send data
 
-    def read_data(self,sock):
+    def read_data(self, sock):
         """
             Read the unsigned 32bits int data contained in the given socket in five steps :
                 * get back the message
@@ -335,9 +402,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
         return data_list
 
-
-
-    def data_ready(self,data):
+    def data_ready(self, data):
         """
             Send the grabed data signal. to be written in the detailed plugin using this base class
 
@@ -364,16 +429,18 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-    def commit_settings(self,param):
+    def commit_settings(self, param):
 
         if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
-            grabber_socket = [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
+            grabber_socket = \
+            [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             send_string(grabber_socket, 'set_info')
 
-            path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'
+            path = custom_tree.get_param_path(param)[
+                   2:]  # get the path of this param as a list starting at parent 'infos'
             send_list(grabber_socket, path)
 
-            #send value
+            # send value
             data = custom_tree.parameter_to_xml_string(param)
             send_string(grabber_socket, data)
 
@@ -387,24 +454,24 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False,info="",x_axis=None,y_axis=None,controller=None))
+        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
         try:
             self.settings.child(('infos')).addChildren(self.params_GRABBER)
 
             self.init_server()
 
-        #%%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
-            self.x_axis=self.get_xaxis()
-            self.y_axis=self.get_yaxis()
-            self.status.x_axis=self.x_axis
-            self.status.y_axis=self.y_axis
-            self.status.initialized=True
-            self.status.controller=self.serversocket
+            # %%%%%%% init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+            self.x_axis = self.get_xaxis()
+            self.y_axis = self.get_yaxis()
+            self.status.x_axis = self.x_axis
+            self.status.y_axis = self.y_axis
+            self.status.initialized = True
+            self.status.controller = self.serversocket
             return self.status
 
         except Exception as e:
-            self.status.info=getLineInfo()+ str(e)
-            self.status.initialized=False
+            self.status.info = getLineInfo() + str(e)
+            self.status.initialized = False
             return self.status
 
     def close(self):
@@ -415,7 +482,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.close_server
         """
-        self.listening=False
+        self.listening = False
         self.close_server()
 
     def get_xaxis(self):
@@ -458,14 +525,14 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             utility_classes.DAQ_TCP_server.process_cmds
         """
         try:
-            self.ind_grabbed=0 #to keep track of the current image in the average
-            self.Naverage=Naverage
+            self.ind_grabbed = 0  # to keep track of the current image in the average
+            self.Naverage = Naverage
             self.process_cmds("Send Data {:s}".format(self.grabber_type))
-            #self.command_server.emit(["process_cmds","Send Data 2D"])
+            # self.command_server.emit(["process_cmds","Send Data 2D"])
 
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[getLineInfo()+ str(e),"log"]))
+            self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))
 
     def stop(self):
         """
@@ -474,20 +541,18 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         pass
         return ""
 
-
     def set_1D_Mock_data(self):
         self.data_mock
-        x=np.linspace(0,99,100)
-        data_tmp=10*gauss1D(x,50,10,1)+1*np.random.rand((100))
-        self.ind_data+=1
-        self.data_mock=np.roll(data_tmp,self.ind_data)
-
+        x = np.linspace(0, 99, 100)
+        data_tmp = 10 * gauss1D(x, 50, 10, 1) + 1 * np.random.rand((100))
+        self.ind_data += 1
+        self.data_mock = np.roll(data_tmp, self.ind_data)
 
     def set_2D_Mock_data(self):
-        self.x_axis=np.linspace(0,50,50,endpoint=False)
-        self.y_axis=np.linspace(0,30,30,endpoint=False)
-        self.data_mock=10*gauss2D(self.x_axis,20,10,
-                                  self.y_axis,15,7,1)+2*np.random.rand(len(self.y_axis),len(self.x_axis))
+        self.x_axis = np.linspace(0, 50, 50, endpoint=False)
+        self.y_axis = np.linspace(0, 30, 30, endpoint=False)
+        self.data_mock = 10 * gauss2D(self.x_axis, 20, 10,
+                                      self.y_axis, 15, 7, 1) + 2 * np.random.rand(len(self.y_axis), len(self.x_axis))
 
 
 if __name__ == '__main__':

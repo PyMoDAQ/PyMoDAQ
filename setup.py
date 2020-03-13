@@ -72,17 +72,7 @@ setup(
     packages=allPackages,
     #package_dir={'examples': 'examples'},  ## install examples along with the rest of the source
     package_data={},
-    entry_points={'console_scripts':['pymodaq_scan=pymodaq.pymodaq_exec:scan',
-                                     'pymodaq_move=pymodaq.pymodaq_exec:move',
-                                    'pymodaq_viewer=pymodaq.pymodaq_exec:viewer',
-                                    'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
-                                     ],
-                   'gui_scripts': ['pymodaq_scan=pymodaq.pymodaq_exec:scan',
-                                    'pymodaq_move=pymodaq.pymodaq_exec:move',
-                                    'pymodaq_viewer=pymodaq.pymodaq_exec:viewer',
-                                    'pymodaq_h5browser=pymodaq.pymodaq_exec:h5browser'
-                                    ]
-                  },
+    entry_points={},
     python_requires='>=3.6, <3.8',
     install_requires=[
         'numpy',
