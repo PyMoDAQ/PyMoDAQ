@@ -32,8 +32,9 @@ Setting up a new environment
 
 * Download and install Miniconda3.
 * Open a console, and cd to the location of the *condabin* folder, for instance: ``C:\Miniconda3\condabin``
-* Create a new environment: ``conda create -n my_env``, where my_env is your new environment name, could be *pymodaq16*
-  if you plan to install PyMoDAQ version 1.6.0 for instance
+* Create a new environment: ``conda create -n my_env python=3.7``, where my_env is your new environment name, could be *pymodaq16*
+  if you plan to install PyMoDAQ version 1.6.0 for instance.. This will create the environment with python version 3.7
+  that is currently the recommended one.
 * Activate your environment so that only packages installed within this environment will be *seen* by Python:
   ``conda activate my_env``
 * Install, using conda manager, some mandatory packages: ``conda install pip`` and ``conda install pyqt``
