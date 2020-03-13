@@ -89,6 +89,12 @@ when actuators and detectors have been activated.
    An example of an overshoot creation named *overshoot_default* (and corresponding xml file)
    containing one listening detector and 2 actuators to be activated.
 
+.. _roi_manager:
+
+ROI manager
+-----------
+In construction
+
 DAQ_Measurement
 ---------------
 
