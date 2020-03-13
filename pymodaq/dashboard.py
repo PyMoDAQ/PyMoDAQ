@@ -297,7 +297,7 @@ class DashBoard(QObject):
                     dockstate = pickle.load(f)
                     self.dockarea.restoreState(dockstate)
             file = os.path.split(file)[1]
-            self.settings.child('loaded_files', 'roi_file').setValue(file)
+            self.settings.child('loaded_files', 'layout_file').setValue(file)
         except: pass
 
     def modify_overshoot(self):
@@ -388,9 +388,6 @@ class DashBoard(QObject):
 
             if hasattr(self, 'mainwindow'):
                 self.mainwindow.close()
-
-
-
 
         except Exception as e:
             pass

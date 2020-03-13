@@ -122,7 +122,7 @@ def add_text_to_elt(elt, param):
     add_text_to_elt, walk_parameters_to_xml, dict_from_param
     """
     param_type = str(param.type())
-    if param_type == 'bool' or param_type == 'bool_push' or param_type == 'led':
+    if 'bool' in param_type or 'led' in param_type:
         if param.value():
             text = '1'
         else:
@@ -205,6 +205,10 @@ def dict_from_param(param):
         opts.update(dict(limits=limits))
         opts.update(dict(values=limits))
 
+    if 'addList' in param.opts:
+        addList = str(param.opts['addList'])
+        opts.update(dict(addList=addList))
+
     if 'detlist' in param.opts:
         detlist = str(param.opts['detlist'])
         opts.update(dict(detlist=detlist))
@@ -284,9 +288,14 @@ def elt_to_dict(el):
     if 'detlist' in el.attrib.keys():
         detlist = eval(el.get('detlist'))
         param.update(dict(detlist=detlist))
+
     if 'movelist' in el.attrib.keys():
         movelist = eval(el.get('movelist'))
         param.update(dict(movelist=movelist))
+
+    if 'addList' in el.attrib.keys():
+        addList = eval(el.get('addList'))
+        param.update(dict(addList=addList))
 
     if 'values' in el.attrib.keys():
         values = eval(el.get('values'))
@@ -452,7 +461,7 @@ def set_txt_from_elt(el, param_dict):
         param_value = bool(int(val_text))
     elif param_type == 'bool_push':
         param_value = bool(int(val_text))
-    elif param_type == 'led':
+    elif 'led' in param_type:  #covers 'led' and 'led_push'types
         param_value = bool(val_text)
     elif param_type == 'date_time':
         param_value = eval(val_text)
@@ -1063,6 +1072,14 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.setValue = w.setChecked
             w.setEnabled(not opts.get('readonly', False))
             self.hideWidget = False
+        elif t == 'led_push':
+            w = QLED()
+            w.clickable = True
+            w.set_as_false()
+            w.sigChanged = w.value_changed
+            w.value = w.get_state
+            w.setValue = w.set_as
+            self.hideWidget = False
         elif t == 'str':
             w = QtWidgets.QLineEdit()
             w.sigChanged = w.editingFinished
@@ -1086,47 +1103,47 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.value = w.colorMap
             w.setValue = w.setColorMap
             self.hideWidget = False
-        elif t== 'date_time':
-            w=QtWidgets.QDateTimeEdit(QDateTime(QDate.currentDate(),QTime.currentTime()))
+        elif t == 'date_time':
+            w = QtWidgets.QDateTimeEdit(QDateTime(QDate.currentDate(), QTime.currentTime()))
             w.setCalendarPopup(True)
             w.setDisplayFormat('dd/MM/yyyy hh:mm')
-            w.sigChanged=w.dateTimeChanged
+            w.sigChanged = w.dateTimeChanged
             w.value = w.dateTime
-            w.setValue= w.setDateTime
-        elif t== 'date':
-            w=QtWidgets.QDateEdit(QDate(QDate.currentDate()))
+            w.setValue = w.setDateTime
+        elif t == 'date':
+            w = QtWidgets.QDateEdit(QDate(QDate.currentDate()))
             w.setCalendarPopup(True)
             w.setDisplayFormat('dd/MM/yyyy')
-            w.sigChanged=w.dateChanged
+            w.sigChanged = w.dateChanged
             w.value = w.date
-            w.setValue= w.setDate
-            
-        elif t== 'time':
-            w=QTimeCustom(QTime(QTime.currentTime()))
+            w.setValue = w.setDate
+
+        elif t == 'time':
+            w = QTimeCustom(QTime(QTime.currentTime()))
             if 'minutes_increment' in opts:
                 w.setMinuteIncrement(opts['minutes_increment'])
             w.setDisplayFormat('hh:mm')
-            w.sigChanged=w.timeChanged
+            w.sigChanged = w.timeChanged
             w.value = w.time
-            w.setValue= w.setTime
+            w.setValue = w.setTime
 
-        elif t=='led':
-            w=QLED()
-            w.clickable=False
+        elif t == 'led':
+            w = QLED()
+            w.clickable = False
             w.set_as_false()
-            w.sigChanged=w.value_changed
+            w.sigChanged = w.value_changed
             w.value = w.get_state
-            w.setValue= w.set_as
-        elif t=='pixmap':
-            w=QtWidgets.QLabel()
-            w.sigChanged=None
+            w.setValue = w.set_as
+        elif t == 'pixmap':
+            w = QtWidgets.QLabel()
+            w.sigChanged = None
             w.value = w.pixmap
-            w.setValue= w.setPixmap
-        elif t=='pixmap_check':
-            w=Pixmap_check()
-            w.sigChanged=w.checkbox.toggled
+            w.setValue = w.setPixmap
+        elif t == 'pixmap_check':
+            w = Pixmap_check()
+            w.sigChanged = w.checkbox.toggled
             w.value = w.value
-            w.setValue= w.setValue
+            w.setValue = w.setValue
         # elif t=='slide':
         #
         #     defs = {
@@ -1165,7 +1182,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         """
             Hide the widget attribute.
         """
-        if not (self.param.opts['type']=='led' or self.param.opts['type']=='pixmap' or self.param.opts['type']=='pixmap_check'):
+        if not ('led' in self.param.opts['type'] or self.param.opts['type']=='pixmap' or self.param.opts['type']=='pixmap_check'):
             self.widget.hide()
             self.displayLabel.show()
 
@@ -1247,16 +1264,21 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
     #         'slide': float
     #     }[self.opts['type']]
     #     return fn(v)
-registerParameterType('int',SimpleParameterCustom, override=True)
-registerParameterType('float', SimpleParameterCustom , override=True)
-registerParameterType('bool',SimpleParameterCustom, override=True)
-registerParameterType('bool_push',SimpleParameterCustom, override=True)
-registerParameterType('date_time', SimpleParameterCustom , override=True)
-registerParameterType('date', SimpleParameterCustom , override=True)
-registerParameterType('time', SimpleParameterCustom , override=True)
-registerParameterType('led', SimpleParameterCustom , override=True)
-registerParameterType('pixmap', SimpleParameterCustom , override=True)
-registerParameterType('pixmap_check', SimpleParameterCustom , override=True)
+
+
+registerParameterType('int', SimpleParameterCustom, override=True)
+registerParameterType('float', SimpleParameterCustom, override=True)
+registerParameterType('bool', SimpleParameterCustom, override=True)
+registerParameterType('bool_push', SimpleParameterCustom, override=True)
+registerParameterType('led_push', SimpleParameterCustom, override=True)
+registerParameterType('date_time', SimpleParameterCustom, override=True)
+registerParameterType('date', SimpleParameterCustom, override=True)
+registerParameterType('time', SimpleParameterCustom, override=True)
+registerParameterType('led', SimpleParameterCustom, override=True)
+registerParameterType('pixmap', SimpleParameterCustom, override=True)
+registerParameterType('pixmap_check', SimpleParameterCustom, override=True)
+
+
 # registerParameterType('slide', SimpleParameterCustom , override=True)
 
 class ListParameterItem_custom(pTypes.ListParameterItem):

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Modules &mdash; PyMoDAQ 1.7 pre-database documentation</title>
+  <title>Utility Modules &mdash; PyMoDAQ 2.2 pre- documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                1.7
+                2.2
               </div>
             
           
@@ -106,6 +106,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#h5saver">H5Saver</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#preset-manager">Preset manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#overshoot-manager">Overshoot manager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#roi-manager">ROI manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#daq-measurement">DAQ_Measurement</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#scanner">Scanner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#navigator">Navigator</a></li>
@@ -204,9 +205,9 @@ selecting in the h5 file tree, various metadata can be displayed, such as <em>sc
 data viewer (type <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a> that can display data dimensionality up to 4)</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id3">
+<div class="figure align-default" id="id4">
 <span id="figure-h5browser"></span><img alt="h5 browser" src="../../_images/h5browser.png" />
-<p class="caption"><span class="caption-number">Fig. 31 </span><span class="caption-text">h5 browser to explore saved datas</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 31 </span><span class="caption-text">h5 browser to explore saved datas</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="h5saver">
@@ -224,10 +225,10 @@ A preset is a set of
 actuators and detectors represented in a tree like structure, see <a class="reference internal" href="#preset-fig"><span class="std std-numref">Fig. 32</span></a></p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id4">
+<div class="figure align-default" id="id5">
 <span id="preset-fig"></span><img alt="preset_fig" src="../../_images/preset_fig.png" />
 <p class="caption"><span class="caption-number">Fig. 32 </span><span class="caption-text">An example of a preset creation named <em>preset_default</em> containing one DAQ_Move module and one detector
-module and just about to select a second detector from the list of all available detector plugins.</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+module and just about to select a second detector from the list of all available detector plugins.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
 </div>
 <p>Each added module load on the fly its settings so that one can set them to our need, for instance COM
 port selection, channel activation, exposure time… Every time a preset is created, it is them <em>loadable</em>.
@@ -239,11 +240,15 @@ The <em>init?</em> boolean specifies if DAQ_Scan should try to initialize the ha
 actuators, such as a beam block to stop a laser eam) when a detected value (from a running detector module) gets
 out of range with respect to some predefined bounds. It is valid in the framework of the DAQ_Scan module,
 when actuators and detectors have been activated.</p>
-<div class="figure align-default" id="id5">
+<div class="figure align-default" id="id6">
 <img alt="overshoot_fig" src="../../_images/overshoot_fig.png" />
 <p class="caption"><span class="caption-number">Fig. 33 </span><span class="caption-text">An example of an overshoot creation named <em>overshoot_default</em> (and corresponding xml file)
-containing one listening detector and 2 actuators to be activated.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+containing one listening detector and 2 actuators to be activated.</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
 </div>
+</div>
+<div class="section" id="roi-manager">
+<span id="id3"></span><h2>ROI manager<a class="headerlink" href="#roi-manager" title="Permalink to this headline">¶</a></h2>
+<p>In construction</p>
 </div>
 <div class="section" id="daq-measurement">
 <h2>DAQ_Measurement<a class="headerlink" href="#daq-measurement" title="Permalink to this headline">¶</a></h2>

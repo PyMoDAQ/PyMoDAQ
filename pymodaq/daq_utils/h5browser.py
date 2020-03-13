@@ -113,25 +113,44 @@ class H5Browser(QtWidgets.QWidget,QObject):
             self.current_node_path = item.text(2)
             node = self.h5file.get_node(item.text(2))
             if 'ARRAY' in node._v_attrs['CLASS']:
-                data = node.read()
-                if isinstance(data, np.ndarray):
-                    file = select_file(save=True, ext='txt')
-                    if file != '':
+                file = select_file(save=True, ext='txt')
+                if file != '':
+                    data = node.read()
+                    if not isinstance(data, np.ndarray):
+                        # in case one has a list of same objects (array of strings for instance, logger or other)
+                        data = np.array(data)
+                        np.savetxt(file, data, '%s', '\t')
+                    else:
                         np.savetxt(file, data, '%.6e', '\t')
             elif 'GROUP' in node._v_attrs['CLASS']:
                 children_names = list(node._v_children)
-                data = []
+                data_tot = []
                 header = []
+                dtypes = []
+                fmts = []
                 for subnode_name in node._v_children:
                     subnode = node._f_get_child(subnode_name)
                     if 'ARRAY' in subnode._v_attrs['CLASS']:
                         if len(subnode.shape) == 1:
-                            data.append(subnode.read())
+                            data = subnode.read()
+                            if not isinstance(data, np.ndarray):
+                                # in case one has a list of same objects (array of strings for instance, logger or other)
+                                data = np.array(data)
+                            data_tot.append(data)
+                            dtypes.append((subnode_name, data.dtype))
                             header.append(subnode_name)
+                            if data.dtype.char == 'U':
+                                fmt = '%s'  #for strings
+                            elif data.dtype.char == 'l':
+                                fmt = '%d'  # for integers
+                            else:
+                                fmt = '%.6f' # for decimal numbers
+                            fmts.append(fmt)
 
                 file = select_file(save=True, ext='txt')
                 if file != '':
-                    np.savetxt(file, np.array(data).T, '%.6e', '\t', header='\t'.join(header))
+                    data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
+                    np.savetxt(file, data_trans, fmts,'\t', header='\t'.join(header))
 
 
 

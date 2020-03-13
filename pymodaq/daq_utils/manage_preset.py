@@ -85,7 +85,7 @@ class PresetManager:
             params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
             params_det = [{'title': 'Detectors:', 'name': 'Detectors',
                            'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
-            self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+            self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
 
             QtWidgets.QApplication.processEvents()
             for ind_act, act in enumerate(actuators):

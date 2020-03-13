@@ -18,7 +18,7 @@ version = '0.0.1'
 save_types = ['scan', 'detector', 'logger', 'custom']
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
-data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5']
+data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings']
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
@@ -139,6 +139,9 @@ class H5Saver(QObject):
 
 
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
+
+    def flush(self):
+        self.h5_file.flush()
 
     def emit_new_file(self, status):
         """Emits the new_file_sig
@@ -378,9 +381,15 @@ class H5Saver(QObject):
                 groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
                 groups.sort()
                 flag = False
-                for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
-                    if 'scan' in child:
-                        return len(groups)
+                if len(groups) != 0:
+                    if 'scan_done' in self.get_node(self.raw_group, groups[-1])._v_attrs:
+                        if self.get_node(self.raw_group, groups[-1])._v_attrs['scan_done']:
+                            return len(groups)
+                        return len(groups)-1
+
+                # for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
+                #     if 'scan' in child: #checks if a group like live_scan has been saved, meaning the previous scan completed
+                #         return len(groups)
 
                 return 0
 
@@ -468,12 +477,25 @@ class H5Saver(QObject):
         if not logger in list(self.get_node(where)._v_children.keys()):
             # check if logger node exist
             text_atom = tables.atom.ObjectAtom()
-            self.logger_array = self.h5_file.create_vlarray(where, logger, atom=text_atom)
+            self.logger_array = self.add_string_array(where, logger)
             self.logger_array._v_attrs['type'] = 'log'
         else:
             self.logger_array = self.get_node(where, name=logger)
         return self.logger_array
 
+    def add_string_array(self, where, name, title='', metadata=dict([])):
+        text_atom = tables.atom.ObjectAtom()
+        array = self.h5_file.create_vlarray(where, name, atom=text_atom, title=title)
+        array._v_attrs['shape'] = (1,)
+
+        array._v_attrs['type'] = 'strings'
+        array._v_attrs['data_dimension'] = '0D'
+        array._v_attrs['scan_type'] = 'scan1D'
+
+
+        for metadat in metadata:
+            array._v_attrs[metadat] = metadata[metadat]
+        return array
 
     def get_set_group(self, where, name, title=''):
         """Retrieve or create (if absent) a node group
@@ -656,8 +678,13 @@ class H5Saver(QObject):
 
 
     def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
-                  title='', array_to_save=None, array_type=np.float, enlargeable=False, metadata=dict([]),
+                  title='', array_to_save=None, array_type=None, enlargeable=False, metadata=dict([]),
                   init=False, add_scan_dim=False):
+        if array_type is None:
+            if array_to_save is None:
+                array_type = np.float
+            else:
+                array_type = array_to_save.dtype
 
         if data_dimension not in data_dimensions:
             raise Exception('Invalid data dimension')
@@ -682,7 +709,7 @@ class H5Saver(QObject):
                 if init or array_to_save is None:
                     array_to_save = np.zeros(shape)
 
-            array = self.h5_file.create_carray(where, utils.capitalize(name), obj = array_to_save,
+            array = self.h5_file.create_carray(where, utils.capitalize(name), obj=array_to_save,
                                                title=title,
                                                filters=self.filters)
             array._v_attrs['shape'] = array_to_save.shape

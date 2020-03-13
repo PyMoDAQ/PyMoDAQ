@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Modules &mdash; PyMoDAQ 1.7 pre-database documentation</title>
+  <title>Utility Modules &mdash; PyMoDAQ 2.2 pre- documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                1.7
+                2.2
               </div>
             
           
@@ -422,13 +422,21 @@ position within the epsilon precision (see comon_parameters variable)</p></li>
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis">
 <code class="sig-name descname">add_navigation_axis</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">parent_group</em>, <em class="sig-param">axis='x_axis'</em>, <em class="sig-param">enlargeable=False</em>, <em class="sig-param">title=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_navigation_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create carray for navigation axis within a scan
+<dd><p>Create carray or earray for navigation axis within a scan
 :param data:
 :type data: (ndarray) of dimension 1
 :param parent_group:
 :type parent_group: (str or node) parent node where to save new data
-:param axis:
-:type axis: (str) either x_axis or y_axis</p>
+:param axis: ‘x_axis’, ‘y_axis’, ‘z_axis’, ‘time_axis’ are axes containing scalar values (floats or ints)</p>
+<blockquote>
+<div><p>‘time_axis’ can be interpreted as the posix timestamp corresponding to a datetime object, see datetime.timestamp()</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>enlargeable</strong> (<em>(</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>)</em>) – if True the created array is a earray type
+if False the created array is a carray type</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">

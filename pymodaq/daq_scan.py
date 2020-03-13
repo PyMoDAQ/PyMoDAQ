@@ -15,11 +15,12 @@ import logging
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.navigator import Navigator
@@ -199,9 +200,10 @@ class DAQ_Scan(QObject):
 
     def save_scan(self):
         """
-
+        save live data and adds metadata to write that the scan is done
         """
         try:
+            self.h5saver.current_scan_group._v_attrs['scan_done'] = True
             self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
             #create Live scan node (may be empty if no possible live data could be plotted) but mandatory for
             # incrementing scan index, otherwise current scan is overwritten
@@ -512,6 +514,7 @@ class DAQ_Scan(QObject):
     def create_new_file(self, new_file):
         self.h5saver.init_file(update_h5=new_file)
         res = self.update_file_settings(new_file)
+        self.h5saver.current_scan_group._v_attrs['scan_done'] = False
         if new_file:
             self.ui.start_scan_pb.setEnabled(False)
             self.ui.stop_scan_pb.setEnabled(False)
@@ -1289,7 +1292,7 @@ class DAQ_Scan(QObject):
 
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            self.update_status(getLineInfo() + str(e), wait_time=self.wait_time, log_type='log')
 
     def update_file_settings(self,new_file=False):
         try:
@@ -1738,8 +1741,8 @@ class DAQ_Scan_Acquisition(QObject):
                               label=self.move_modules_names[0])
                 self.h5saver.add_navigation_axis(self.scan_x_axis, self.h5saver.current_scan_group, axis='x_axis', metadata=x_axis_meta)
 
-            if self.scan_settings.child('scan_options','scan_type').value() == 'Scan1D': #"means scan 1D"
-                if self.scan_settings.child('scan_options','scan1D_settings','scan1D_type').value()=='Linear back to start':
+            if self.scan_settings.child('scan_options', 'scan_type').value() == 'Scan1D': #"means scan 1D"
+                if self.scan_settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value()=='Linear back to start':
                     self.scan_shape=[len(self.scan_x_axis)]
 
                 else:
@@ -1755,10 +1758,10 @@ class DAQ_Scan_Acquisition(QObject):
                     self.scan_y_axis_unique = np.unique(self.scan_y_axis)
 
             else:
-                self.scan_shape=[len(self.scan_x_axis_unique)]
+                self.scan_shape = [len(self.scan_x_axis_unique)]
 
-            if self.scan_settings.child('scan_options','scan_type').value() == 'Scan2D':#"means scan 2D"
-                self.scan_y_axis=np.array([pos[1][1] for pos in self.scan_moves])
+            if self.scan_settings.child('scan_options', 'scan_type').value() == 'Scan2D':#"means scan 2D"
+                self.scan_y_axis = np.array([pos[1][1] for pos in self.scan_moves])
                 self.scan_y_axis_unique=np.unique(self.scan_y_axis)
                 if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_y_axis'):
                     y_axis_meta = dict(units=self.move_modules_settings[1].child('move_settings', 'units').value(),
@@ -1766,13 +1769,14 @@ class DAQ_Scan_Acquisition(QObject):
                     self.h5saver.add_navigation_axis(self.scan_y_axis, self.h5saver.current_scan_group,
                     axis='y_axis', metadata=y_axis_meta)
                 self.scan_shape.append(len(self.scan_y_axis_unique))
-            elif Naxis>2:#"means scan 3D" not implemented yet
+
+            elif Naxis > 2:#"means scan 3D" not implemented yet
                 pass
 
             if self.Naverage > 1:
                 self.scan_shape.append(self.Naverage)
 
-            self.status_sig.emit(["Update_Status","Acquisition has started",'log'])
+            self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
 
             for ind_average in range(self.Naverage):
                 self.ind_average = ind_average
