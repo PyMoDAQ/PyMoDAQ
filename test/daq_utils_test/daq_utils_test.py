@@ -122,4 +122,6 @@ class TCPIP():
     def set_client(self, set_s):
         import socket
 
+    @pytest.mark.tcpip
     def test_send_string(self):        string = 'this is a message'
+        pass

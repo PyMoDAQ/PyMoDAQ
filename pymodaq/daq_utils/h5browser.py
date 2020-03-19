@@ -158,15 +158,27 @@ class H5Browser(QtWidgets.QWidget,QObject):
             self.status_signal.emit(getLineInfo() + str(e))
 
     def load_file(self, h5file=None):
+        """Load a HDF5 file
+
+        Parameters
+        ----------
+        h5file: (str or Path) path to the h5 file
+             or (H5Saver.h5file attribute) representation of the h5file
+
+        See Also
+        --------
+        H5Saver.h5_file, H5Backend._h5file
+
+        """
         if h5file is None:
-            h5file=str(select_file(start_path=None,save=False, ext='h5'))
+            h5file = str(select_file(start_path=None,save=False, ext='h5'))
         if isinstance(h5file, str) or isinstance(h5file, Path):
-            h5file=tables.open_file(str(h5file), 'a')
+            h5file = tables.open_file(str(h5file), 'a')
         elif isinstance(h5file, tables.File):
             pass
         else:
             raise Exception('not a valid h5 file or path to a h5 file')
-        self.h5file=h5file
+        self.h5file = h5file
 
         self.populate_tree()
 

@@ -1,4 +1,4 @@
-
+import pickle
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QDateTime, QTime, QDate, QObject, pyqtSignal
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -9,10 +9,33 @@ from pymodaq.version import get_version
 import datetime
 from dateutil import parser
 import os
-import tables
+
+
 import numpy as np
 from pathlib import Path
 import copy
+
+
+#default backend
+is_tables = True
+try:
+    import tables
+except:
+    is_tables = False
+is_h5py = True
+
+#other possibility
+try:
+    import h5py
+except:
+    is_h5y = False
+is_h5pyd = True
+
+#this one is to be used for remote reading/writing towards a HSDS server (or h5serv), see HDFGroup
+try:
+    import h5pyd
+except:
+    is_h5yd = False
 
 version = '0.0.1'
 save_types = ['scan', 'detector', 'logger', 'custom']
@@ -22,6 +45,405 @@ data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'st
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
+class InvalidGroupType(Exception):
+    pass
+class InvalidSave(Exception):
+    pass
+class InvalidGroupDataType(Exception):
+    pass
+class InvalidDataType(Exception):
+    pass
+class InvalidDataDimension(Exception):
+    pass
+class InvalidScanType(Exception):
+    pass
+
+class H5Backend:
+    def __init__(self, backend='tables'):
+
+        self._h5file = None
+        self.backend = backend
+        self.compression = None
+        if backend == 'tables':
+            if is_tables:
+                self.h5module = tables
+            else:
+                raise ImportError('the pytables module is not present')
+        elif backend == 'h5py':
+            if is_h5py:
+                self.h5module = h5py
+            else:
+                raise ImportError('the h5py module is not present')
+        elif backend == 'h5pyd':
+            if is_h5pyd:
+                self.h5module = h5pyd
+            else:
+                raise ImportError('the h5pyd module is not present')
+
+
+    @classmethod
+    def class_members(cls):
+        members = [member for member in dir(cls) if '__' not in member]
+        members.pop(members.index('class_members'))
+        members.pop(members.index('append_backend'))
+        return members
+
+    def isopen(self):
+        if self._h5file is None:
+            return False
+        if self.backend == 'tables':
+            return bool(self._h5file.isopen)
+        else:
+            return bool(self._h5file.id.valid)
+
+    def close_file(self):
+        """Flush data and close the h5file
+        """
+        try:
+            if self._h5file is not None:
+                self.flush()
+                if self.isopen():
+                    self._h5file.close()
+        except Exception as e:
+            print(e) #no big deal
+
+    def open_file(self, fullpathname, read_write='r', title='PyMoDAQ file', **kwargs):
+
+        if self.backend == 'tables':
+            self._h5file = self.h5module.open_file(fullpathname, read_write, title=title, **kwargs)
+            if read_write == 'w':
+                self._h5file.root._v_attrs['pymodaq_version'] = get_version()
+            return self._h5file
+        else:
+            self._h5file = self.h5module.File(fullpathname, read_write, **kwargs)
+            self._h5file.attrs['TITLE'] = title
+            if read_write == 'w':
+                self._h5file.attrs['pymodaq_version'] = get_version()
+            return self._h5file
+
+    def root(self):
+        if self.backend == 'tables':
+            return self._h5file.get_node('/')
+        else:
+            return self._h5file
+
+    def get_attr(self, node, attr_name=None):
+        if self.backend == 'tables':
+            if attr_name is not None:
+                return node._v_attrs[attr_name]
+            else:
+                attrs = dict([])
+                for attr in node._v_attrs._v_attrnames:
+                    attrs[attr] = node._v_attrs[attr]
+                return attrs
+        else:
+            if attr_name is not None:
+                return node.attrs[attr_name]
+            else:
+                attrs = dict([])
+                for attr in node.attrs.keys():
+                    attrs[attr] = node.attrs[attr]
+                return attrs
+
+    def set_attr(self, node, attr_name, attr_value):
+        if self.backend == 'tables':
+            node._v_attrs[attr_name] = attr_value
+        else:
+            node.attrs[attr_name] = attr_value
+
+    def flush(self):
+        if self._h5file is not None:
+            self._h5file.flush()
+
+    def define_compression(self, compression, compression_opts):
+        """Define cmpression library and level of compression
+        Parameters
+        ----------
+        compression: (str) either gzip and zlib are supported here as they are compatible
+                        but zlib is used by pytables while gzip is used by h5py
+        compression_opts (int) : 0 to 9  0: None, 9: maximum compression
+        """
+        #
+        if self.backend == 'tables':
+            if compression == 'gzip':
+                compression = 'zlib'
+            self.compression = self.h5module.Filters(complevel=compression_opts, complib=compression)
+        else:
+            if compression == 'zlib':
+                compression = 'gzip'
+            self.compression = dict(compression=compression, compression_opts=compression_opts)
+
+    def get_set_group(self, where, name, title=''):
+        """Retrieve or create (if absent) a node group
+        Get attributed to the class attribute ``current_group``
+
+        Parameters
+        ----------
+        where: str or node
+               path or parent node instance
+        name: str
+              group node name
+        title: str
+               node title
+
+        Returns
+        -------
+        group: group node
+        """
+        if not name in list(self.get_children(where)):
+            if self.backend == 'tables':
+                group = self._h5file.create_group(where, name, title)
+            else:
+                group = self.get_node(where).create_group(name)
+                group.attrs['TITLE'] = title
+                self.set_attr(group, 'CLASS', 'GROUP')
+
+        else:
+            group = self.get_node(where, name)
+        return group
+
+    def get_group_by_title(self, where, title):
+        node = self.get_node(where)
+        for child_name in self.get_children(node):
+            child = node[child_name]
+            if 'TITLE' in self.get_attr(child):
+                if self.get_attr(child, 'TITLE') == title:
+                    return child
+        return None
+
+    def is_node_in_group(self, where, name):
+        """
+        Check if a given node with name is in the group defined by where (comparison on lower case strings)
+        Parameters
+        ----------
+        where: (str or node)
+                path or parent node instance
+        name: (str)
+              group node name
+
+        Returns
+        -------
+        bool
+            True if node exists, False otherwise
+        """
+
+        return name.lower() in [name.lower() for name in self.get_children(where)]
+
+    def get_node(self, where, name=None):
+        if self.backend == 'tables':
+            return self._h5file.get_node(where, name)
+        else:
+            if name is not None:
+                if isinstance(where, str):
+                    where += f'/{name}'
+                    return self._h5file.get(where)
+                else:
+                    where = where.get(name)
+                    return where
+            else:
+                if isinstance(where, str):
+                    return self._h5file.get(where)
+                else:
+                    return where
+
+    def get_node_name(self, node):
+        """return node name
+        Parameters
+        ----------
+        node (str or node instance), see h5py and pytables documentation on nodes
+
+        Returns
+        -------
+        str: name of the node
+        """
+        if self.backend == 'tables':
+            return self.get_node(node)._v_name
+        else:
+            path = self.get_node(node).name
+            if path == '/':
+                return path
+            else:
+                return path.split('/')[-1]
+
+    def get_node_path(self, node):
+        """return node path
+        Parameters
+        ----------
+        node (str or node instance), see h5py and pytables documentation on nodes
+
+        Returns
+        -------
+        str : full path of the node
+        """
+        if self.backend == 'tables':
+            return self.get_node(node)._v_pathname
+        else:
+            return self.get_node(node).name
+
+    def get_children(self, where):
+        if self.backend == 'tables':
+            return self.get_node(where)._v_children.keys()
+        else:
+            return self.get_node(where).keys()
+
+    def read(self, array, *args, **kwargs):
+        if self.backend == 'tables':
+            return array.read()
+        else:
+            return array[:]
+
+    def create_carray(self, where, name, obj=None, title=''):
+        if obj is None:
+            raise ValueError('Data to be saved as carray cannot be None')
+        dtype = obj.dtype
+        if self.backend == 'tables':
+            array = self._h5file.create_carray(where, name, obj=obj,
+                                               title=title,
+                                               filters=self.compression)
+        else:
+            if self.compression is not None:
+                array = self.get_node(where).create_dataset(name, data=obj, **self.compression)
+            else:
+                array = self.get_node(where).create_dataset(name, data=obj)
+            array.attrs['TITLE'] = title
+            self.set_attr(array, 'CLASS', 'CARRAY')
+        self.set_attr(array, 'shape', obj.shape)
+        self.set_attr(array, 'dtype', dtype.name)
+        self.set_attr(array, 'subdtype', '')
+        return array
+
+    def create_earray(self, where, name, dtype, data_shape=None, title=''):
+        """create enlargeable arrays from data with a given shape and of a given type. The array is enlargeable along
+        the first dimension
+        """
+        dtype = np.dtype(dtype)
+        shape = [0]
+        if data_shape is not None:
+            shape.extend(list(data_shape))
+        shape = tuple(shape)
+
+        if self.backend == 'tables':
+            atom = self.h5module.Atom.from_dtype(dtype)
+            array = self._h5file.create_earray(where, name, atom, shape=shape, title=title,
+                                               filters=self.compression)
+        else:
+            maxshape = [None]
+            if data_shape is not None:
+                maxshape.extend(list(data_shape))
+            maxshape = tuple(maxshape)
+            if self.compression is not None:
+                array = self.get_node(where).create_dataset(name, shape=shape, dtype=dtype, maxshape=maxshape,
+                                                            **self.compression)
+            else:
+                array = self.get_node(where).create_dataset(name, shape=shape, dtype=dtype, maxshape=maxshape)
+            array.attrs['TITLE'] = title
+            self.set_attr(array, 'CLASS', 'EARRAY')
+            self.set_attr(array, 'EXTDIM', 0)
+        self.set_attr(array, 'shape', shape)
+        self.set_attr(array, 'dtype', dtype.name)
+        self.set_attr(array, 'subdtype', '')
+        return array
+
+    def create_vlarray(self, where, name, dtype, title=''):
+        """create variable data length and type and enlargeable 1D arrays
+
+        Parameters
+        ----------
+        where: (str) group location in the file where to create the array node
+        name: (str) name of the array
+        dtype: (dtype) numpy dtype style, for particular case of strings, use dtype='string'
+        title: (str) node title attribute (written in capitals)
+
+        Returns
+        -------
+        array
+
+        """
+        if dtype == 'string':
+            dtype = np.dtype(np.uint8)
+            subdtype = 'string'
+        else:
+            dtype = np.dtype(dtype)
+            subdtype = ''
+        if self.backend == 'tables':
+            atom = self.h5module.Atom.from_dtype(dtype)
+            array = self._h5file.create_vlarray(where, name, atom, title=title,
+                                                filters=self.compression)
+        else:
+            maxshape = (None, )
+            dt = self.h5module.vlen_dtype(dtype)
+            if self.compression is not None:
+                array = self.get_node(where).create_dataset(name, (0,), dtype=dt, **self.compression, maxshape=maxshape)
+            else:
+                array = self.get_node(where).create_dataset(name, (0,), dtype=dt, maxshape=maxshape)
+            array.attrs['TITLE'] = title
+            self.set_attr(array, 'CLASS', 'VLARRAY')
+        self.set_attr(array, 'shape', (0, ))
+        self.set_attr(array, 'dtype', dtype.name)
+        self.set_attr(array, 'subdtype', subdtype)
+        return array
+
+    def add_group(self, group_name, group_type, where, title='', metadata=dict([])):
+        """
+        Add a node in the h5 file tree of the group type
+        Parameters
+        ----------
+        group_name: (str) a custom name for this group
+        group_type: (str) one of the possible values of **group_types**
+        where: (str or node) parent node where to create the new group
+        metadata: (dict) extra metadata to be saved with this new group node
+
+        Returns
+        -------
+        (node): newly created group node
+        """
+
+        if group_type not in group_types:
+            raise InvalidGroupType('Invalid group type')
+
+        if group_name in self.get_children(self.get_node(where)):
+            node = self.get_node(where, group_name)
+
+        else:
+            node = self.get_set_group(where, utils.capitalize(group_name), title)
+            self.set_attr(node, 'type', group_type.lower())
+            for metadat in metadata:
+                self.set_attr(node, metadat,  metadata[metadat])
+
+        return node
+
+    def append(self, array, data):
+        """Add data to an enlargeable array"""
+        if not (self.get_attr(array, 'CLASS') == 'VLARRAY' or self.get_attr(array, 'CLASS') == 'EARRAY'):
+            raise ValueError('This array cannot be appended')
+        if isinstance(data, np.ndarray) and self.get_attr(array, 'CLASS') == 'EARRAY':
+            if data.shape != (1,):
+                shape = [1]
+                shape.extend(data.shape)
+                data = data.reshape(shape)
+
+        self.append_backend(array, data)
+
+        sh = list(self.get_attr(array, 'shape'))
+        sh[0] += 1
+        self.set_attr(array, 'shape',  tuple(sh))
+
+    def append_backend(self, array, data):
+        if self.backend == 'tables':
+            array.append(data)
+        else:
+            array.resize(array.len()+1, axis=0)
+            array[-1] = data
+
+    def append_string(self, array, string):
+        data = self.string_to_array(string)
+        self.append(array, data)
+
+    def array_to_string(self, array):
+        return pickle.loads(array)
+
+    def string_to_array(self, string):
+        return np.frombuffer(pickle.dumps (string), np.uint8)
 
 class H5Saver(QObject):
     """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
@@ -93,26 +515,34 @@ class H5Saver(QObject):
                 {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
                 {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
                     {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
-                     'values': ['zlib', 'lzo', 'bzip2', 'blosc']},
+                     'values': ['zlib', 'gzip']},
                     {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0, 'max': 9},
                 ]},
                 ]
 
-    def __init__(self, h5_file_path=None, h5_file=None, save_type='scan'):
-        """Initialize the H5Saver object
+    def __init__(self, save_type='scan', backend='tables'):
+        """
 
-        Creates the ``setting`` and ``settings_tree`` object
+        Parameters
+        ----------
+        save_type (str): one of ['scan', 'detector', 'logger', 'custom']
+        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend
 
-
-
+        See Also
+        --------
+        https://github.com/HDFGroup/hsds
         """
         super().__init__()
 
         if save_type not in save_types:
-            raise Exception('Invalid saving type')
+            raise InvalidSave('Invalid saving type')
 
-        self.h5_file = h5_file
-        self.h5_file_path = h5_file_path
+        # init the correct backend and duplicate all its methods here
+        self.backend = H5Backend(backend)
+        for attr in H5Backend.class_members():
+            setattr(self, attr, getattr(self.backend, attr))
+
+        self.h5_file_path = None
         self.h5_file_name = None
         self.logger_array = None
         self.file_loaded = False
@@ -122,7 +552,7 @@ class H5Saver(QObject):
         self.current_scan_name = None
         self.raw_group = None
 
-        self.settings=Parameter.create(title='Saving settings', name='save_settings', type='group', children=self.params)
+        self.settings = Parameter.create(title='Saving settings', name='save_settings', type='group', children=self.params)
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumHeight(310)
         self.settings_tree.setParameters(self.settings, showTop=False)
@@ -130,9 +560,7 @@ class H5Saver(QObject):
 
         self.settings.child(('save_type')).setValue(save_type)
 
-        self.filters = tables.Filters(
-            complevel=self.settings.child('compression_options', 'h5comp_level').value(),
-            complib=self.settings.child('compression_options', 'h5comp_library').value())
+
         # self.settings.child('saving_options', 'save_independent').show(save_type == 'scan')
         # self.settings.child('saving_options', 'do_save').show(not save_type == 'scan')
         # self.settings.child('saving_options', 'current_scan_name').show(save_type == 'scan')
@@ -140,8 +568,9 @@ class H5Saver(QObject):
 
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
 
-    def flush(self):
-        self.h5_file.flush()
+    @property
+    def h5_file(self):
+        return self.backend._h5file
 
     def emit_new_file(self, status):
         """Emits the new_file_sig
@@ -220,33 +649,56 @@ class H5Saver(QObject):
 
         scan_group = None
         if self.current_scan_group is not None:
-            scan_group = self.current_scan_group._v_name
+            scan_group = self.get_node_name(self.current_scan_group)
 
         if update_h5:
             self.close_file()
-            self.h5_file = tables.open_file(fullpathname,'w', title='PyMoDAQ file')
-            self.h5_file.root._v_attrs['pymodaq_version'] = get_version()
+            self.open_file(fullpathname, 'w', title='PyMoDAQ file')
+
         else:
             self.close_file()
-            self.h5_file = tables.open_file(fullpathname, 'a', title='PyMoDAQ file')
+            self.open_file(fullpathname, 'a', title='PyMoDAQ file')
 
-        self.raw_group = self.get_set_group(self.h5_file.root, 'Raw_datas', title='Data from PyMoDAQ modules')
+        self.raw_group = self.get_set_group(self.root(), 'Raw_datas', title='Data from PyMoDAQ modules')
         self.get_set_logger(self.raw_group)
         if scan_group is not None:
             self.current_scan_group = self.get_set_group(self.raw_group, scan_group)
         else:
             self.current_scan_group = self.get_last_scan()
 
-        self.raw_group._v_attrs['type'] = self.settings.child(('save_type')).value()
-        self.h5_file.root._v_attrs['file'] = self.h5_file_name
+
+        self.set_attr(self.raw_group, 'type', self.settings.child(('save_type')).value())
+        self.set_attr(self.root(), 'file', self.h5_file_name)
         if update_h5:
-            self.h5_file.root._v_attrs['date'] = datetime_now.date().isoformat()
-            self.h5_file.root._v_attrs['time'] = datetime_now.time().isoformat()
+            self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
+            self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
             for metadat in metadata:
-                self.raw_group._v_attrs[metadat] = metadata[metadat]
-
-
+                self.set_attr(self.raw_group, metadat, metadata[metadat])
         return update_h5
+
+
+    def add_scan_group(self, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type scan
+        See Also
+        -------
+        add_incremental_group
+        """
+        if self.current_scan_group is not None:
+            if len(list(self.get_children(self.current_scan_group))) == 0:
+                new_scan = False
+            else:
+                new_scan = True
+        else:
+            new_scan = True
+        if new_scan:
+            self.current_scan_group = self.add_incremental_group('scan', self.raw_group, title, settings_as_xml, metadata)
+            self.set_attr(self.current_scan_group, 'description', '')
+            self.settings.child(('current_scan_name')).setValue(self.get_node_name(self.current_scan_group))
+
+
+        return self.current_scan_group
+
 
     def update_file_paths(self, update_h5=False):
         """
@@ -281,9 +733,9 @@ class H5Saver(QObject):
             if self.file_loaded:
                 ind_dataset = int(os.path.splitext(self.h5_file_name)[0][-3:])
                 try:
-                    curr_date = datetime.date.fromisoformat(self.h5_file.root._v_attrs['date'])
+                    curr_date = datetime.date.fromisoformat(self.get_attr(self.root(), 'date'))
                 except ValueError:
-                    curr_date = parser.parse(self.h5_file.root._v_attrs['date']).date()
+                    curr_date = parser.parse(self.get_attr(self.root(), 'date')).date()
             else:
                 curr_date = datetime.date.today()										 
 
@@ -294,9 +746,8 @@ class H5Saver(QObject):
 
             return scan_path, current_filename, dataset_path
 
-
         except Exception as e:
-            print(e)
+            self.update_status(utils.getLineInfo() + str(e))
 
     def set_current_scan_path(self, base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
                               create_dataset_folder=True, curr_date=None, ind_dataset=None):
@@ -320,9 +771,9 @@ class H5Saver(QObject):
             curr_date = datetime.date.today()
 
         year_path = utils.find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
-                                                  create=True)  # create directory of the year if it doen't exist and return it
+                                                        create=True)  # create directory of the year if it doen't exist and return it
         day_path = utils.find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
-                                                 create=True)  # create directory of the day if it doen't exist and return it
+                                                       create=True)  # create directory of the day if it doen't exist and return it
         dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
         dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
 
@@ -361,7 +812,7 @@ class H5Saver(QObject):
 
 
         """
-        groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
+        groups = [group for group in list(self.get_children(self.raw_group)) if 'Scan' in group]
         groups.sort()
         if len(groups) != 0:
             scan_group = self.get_node(self.raw_group, groups[-1])
@@ -378,12 +829,12 @@ class H5Saver(QObject):
                 return 0
             else:
 
-                groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
+                groups = [group for group in list(self.get_children(self.raw_group)) if 'Scan' in group]
                 groups.sort()
                 flag = False
                 if len(groups) != 0:
-                    if 'scan_done' in self.get_node(self.raw_group, groups[-1])._v_attrs:
-                        if self.get_node(self.raw_group, groups[-1])._v_attrs['scan_done']:
+                    if 'scan_done' in self.get_attr(self.get_node(self.raw_group, groups[-1])):
+                        if self.get_attr(self.get_node(self.raw_group, groups[-1]), 'scan_done'):
                             return len(groups)
                         return len(groups)-1
 
@@ -394,7 +845,7 @@ class H5Saver(QObject):
                 return 0
 
         except Exception as e:
-            return 0
+            self.update_status(utils.getLineInfo() + str(e))
 
 
     def load_file(self, base_path=None, file_path=None):
@@ -428,37 +879,6 @@ class H5Saver(QObject):
         self.init_file(addhoc_file_path=file_path)
         self.file_loaded = True
 
-    def close_file(self):
-        """Flush data and close the h5file
-
-        """
-        try:
-            if self.h5_file is not None:
-                self.h5_file.flush()
-                if self.h5_file.isopen:
-                    self.h5_file.close()
-        except Exception as e:
-            print(e) #no big deal
-
-
-    def is_node_in_group(self,where, name):
-        """
-        Check if a given node with name is in the group defined by where (comparison on lower case strings)
-        Parameters
-        ----------
-        where: (str or node)
-                path or parent node instance
-        name: (str)
-              group node name
-
-        Returns
-        -------
-        bool
-            True if node exists, False otherwise
-        """
-
-        nodes_names = [node._v_name.lower() for node in self.h5_file.list_nodes(where)]
-        return name.lower() in nodes_names
 
     def get_set_logger(self, where):
         """ Retrieve or create (if absent) a logger enlargeable array to store logs
@@ -474,63 +894,14 @@ class H5Saver(QObject):
                       enlargeable array accepting strings as elements
         """
         logger = 'Logger'
-        if not logger in list(self.get_node(where)._v_children.keys()):
+        if not logger in list(self.get_children(where)):
             # check if logger node exist
-            text_atom = tables.atom.ObjectAtom()
             self.logger_array = self.add_string_array(where, logger)
-            self.logger_array._v_attrs['type'] = 'log'
+            self.set_attr(self.logger_array, 'type', 'log')
         else:
             self.logger_array = self.get_node(where, name=logger)
         return self.logger_array
 
-    def add_string_array(self, where, name, title='', metadata=dict([])):
-        text_atom = tables.atom.ObjectAtom()
-        array = self.h5_file.create_vlarray(where, name, atom=text_atom, title=title)
-        array._v_attrs['shape'] = (1,)
-
-        array._v_attrs['type'] = 'strings'
-        array._v_attrs['data_dimension'] = '0D'
-        array._v_attrs['scan_type'] = 'scan1D'
-
-
-        for metadat in metadata:
-            array._v_attrs[metadat] = metadata[metadat]
-        return array
-
-    def get_set_group(self, where, name, title=''):
-        """Retrieve or create (if absent) a node group
-        Get attributed to the class attribute ``current_group``
-
-        Parameters
-        ----------
-        where: str or node
-               path or parent node instance
-        name: str
-              group node name
-        title: str
-               node title
-
-        Returns
-        -------
-        group: group node
-        """
-        if not name in list(self.get_node(where)._v_children.keys()):
-            self.current_group = self.h5_file.create_group(where, name, title)
-        else:
-            self.current_group = self.get_node(where, name)
-        return self.current_group
-
-    def get_group_by_title(self, where, title):
-        node = self.get_node(where)
-        for child_name in node._v_children:
-            child = node._f_get_child(child_name)
-            if 'TITLE' in child._v_attrs:
-                if child._v_attrs['TITLE'] == title:
-                    return child
-        return None
-
-    def get_node(self, where, name=None):
-        return self.h5_file.get_node(where, name)
 
 
     def add_data_group(self,where, group_data_type, title='', settings_as_xml='', metadata=dict([])):
@@ -558,8 +929,9 @@ class H5Saver(QObject):
         :py:meth:`àdd_group`
         """
         if group_data_type not in group_data_types:
-            raise Exception('Invalid data group type')
-        group = self.add_group(group_data_type, '', where, title, settings_as_xml, metadata)
+            raise InvalidGroupDataType('Invalid data group type')
+        metadata.update(settings=settings_as_xml)
+        group = self.add_group(group_data_type, '', where, title, metadata)
         return group
 
     def add_navigation_axis(self, data, parent_group, axis='x_axis', enlargeable=False, title='', metadata=dict([])):
@@ -577,14 +949,17 @@ class H5Saver(QObject):
             if False the created array is a carray type
         """
         if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
-            raise Exception('Invalid navigation axis name')
+            raise NameError('Invalid navigation axis name')
 
-        array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis', data_shape=data.shape,
-                    data_dimension='1D', array_to_save=data, enlargeable=enlargeable, title=title, metadata=metadata)
+        array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis',
+                               data_shape=data.shape,
+                               data_dimension='1D', array_to_save=data, enlargeable=enlargeable, title=title,
+                               metadata=metadata)
         return array
 
-    def add_data_live_scan(self,channel_group, data_dict, scan_type='scan1D', title=''):
-        shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type, remove_scan_dimension=True)
+    def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title=''):
+        shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
+                                                          remove_scan_dimension=True)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
                                     title=title,
                                     data_shape=shape,
@@ -597,9 +972,7 @@ class H5Saver(QObject):
             else:
                 tmp_dict = copy.deepcopy(data_dict['x_axis'])
                 array_to_save = tmp_dict.pop('data')
-        if 'x_axis' in data_dict:
-
-            array = self.add_array(channel_group, 'x_axis', 'axis',
+            self.add_array(channel_group, 'x_axis', 'axis',
                                    array_type=np.float, array_to_save=array_to_save,
                                    enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         if 'y_axis' in data_dict:
@@ -609,8 +982,7 @@ class H5Saver(QObject):
             else:
                 tmp_dict = copy.deepcopy(data_dict['y_axis'])
                 array_to_save = tmp_dict.pop('data')
-        if 'y_axis' in data_dict:
-            array = self.add_array(channel_group, 'y_axis', 'axis',
+            self.add_array(channel_group, 'y_axis', 'axis',
                                    array_type=np.float, array_to_save=array_to_save,
                                    enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
@@ -633,53 +1005,25 @@ class H5Saver(QObject):
                 array_to_save = tmp_dict.pop('data')
                 tmp_data_dict.pop(key)
 
-            array = self.add_array(channel_group, key, 'axis',
-                   array_type=np.float, array_to_save=array_to_save,
-                            enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-
-        # if 'x_axis' in data_dict:
-        #     if not isinstance(data_dict['x_axis'], dict):
-        #         array_to_save = data_dict['x_axis']
-        #         tmp_dict = dict(label='', units='')
-        #     else:
-        #         tmp_dict = copy.deepcopy(data_dict['x_axis'])
-        #         array_to_save = tmp_dict.pop('data')
-        #         data_dict.pop('x_axis')
-        #
-        #     array = self.add_array(channel_group, 'x_axis', 'axis',
-        #            array_type=np.float, array_to_save=array_to_save,
-        #                     enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-        #
-        # if 'y_axis' in data_dict:
-        #     if not isinstance(data_dict['y_axis'], dict):
-        #         array_to_save = data_dict['y_axis']
-        #         tmp_dict = dict(label='', units='')
-        #     else:
-        #         tmp_dict = copy.deepcopy(data_dict['y_axis'])
-        #         array_to_save = tmp_dict.pop('data')
-        #         data_dict.pop('y_axis')
-        #
-        #     array = self.add_array(channel_group, 'y_axis', 'axis',
-        #             array_type=np.float, array_to_save=array_to_save,
-        #             enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+            self.add_array(channel_group, key, 'axis', array_type=np.float, array_to_save=array_to_save,
+                           enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
         array_to_save = tmp_data_dict.pop('data')
         if 'type' in tmp_data_dict:
             tmp_data_dict.pop('type') #otherwise this metadata would overide mandatory type for a h5 node
         tmp_data_dict.update(metadata)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
-            title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension, scan_type=scan_type,
-            scan_shape=scan_shape,
-            array_to_save=array_to_save,
-            init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
+                                    title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension,
+                                    scan_type=scan_type, scan_shape=scan_shape, array_to_save=array_to_save,
+                                    init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
 
-        self.h5_file.flush()
+        self.flush()
         return data_array
 
-
-    def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
+    def add_array(self, where, name, data_type, data_shape=(1,), data_dimension='0D', scan_type='', scan_shape=[],
                   title='', array_to_save=None, array_type=None, enlargeable=False, metadata=dict([]),
                   init=False, add_scan_dim=False):
+
         if array_type is None:
             if array_to_save is None:
                 array_type = np.float
@@ -687,21 +1031,18 @@ class H5Saver(QObject):
                 array_type = array_to_save.dtype
 
         if data_dimension not in data_dimensions:
-            raise Exception('Invalid data dimension')
+            raise InvalidDataDimension('Invalid data dimension')
         if data_type not in data_types:
-            raise Exception('Invalid data type')
+            raise InvalidDataType('Invalid data type')
         if scan_type != '':
             scan_type = utils.uncapitalize(scan_type)
         if scan_type not in scan_types:
-            raise Exception('Invalid scan type')
+            raise InvalidScanType('Invalid scan type')
         if enlargeable:
-            shape = [0]
-            if data_shape != (1,):
-                shape.extend(data_shape)
-            shape = tuple(shape)
-            array = self.h5_file.create_earray(where, utils.capitalize(name), tables.Atom.from_dtype(np.dtype(array_type)), shape=shape,
-                                               title=title, filters=self.filters)
-            array._v_attrs['shape'] = shape
+            if data_shape == (1,):
+                data_shape = None
+            array = self.create_earray(where, utils.capitalize(name), dtype=np.dtype(array_type),
+                                       data_shape=data_shape, title=title)
         else:
             if add_scan_dim:  #means it is an array initialization to zero
                 shape = scan_shape[:]
@@ -709,68 +1050,28 @@ class H5Saver(QObject):
                 if init or array_to_save is None:
                     array_to_save = np.zeros(shape)
 
-            array = self.h5_file.create_carray(where, utils.capitalize(name), obj=array_to_save,
-                                               title=title,
-                                               filters=self.filters)
-            array._v_attrs['shape'] = array_to_save.shape
-
-        array._v_attrs['type'] = data_type
-        array._v_attrs['data_dimension'] = data_dimension
-        array._v_attrs['scan_type'] = scan_type
-
+            array = self.create_carray(where, utils.capitalize(name), obj=array_to_save,  title=title)
+        self.sett_attr(array, 'type', data_type)
+        self.sett_attr(array, 'data_dimension', data_dimension)
+        self.sett_attr(array, 'scan_type', scan_type)
 
         for metadat in metadata:
-            array._v_attrs[metadat] = metadata[metadat]
+            self.sett_attr(array, metadat, metadata[metadat])
         return array
 
-    def append(self, array, data):
-        if not (isinstance(array, tables.vlarray.VLArray) or isinstance(array, tables.earray.EArray)):
-            raise Exception('This array cannot be appended')
-        if isinstance(data, np.ndarray):
-            if data.shape != (1,):
-                shape = [1]
-                shape.extend(data.shape)
-                array.append(data.reshape(shape))
-            else:
-                array.append(data)
-        else:
-            array.append(data)
-        sh = list(array._v_attrs['shape'])
-        sh[0] += 1
-        array._v_attrs['shape'] = tuple(sh)
+    def add_string_array(self, where, name, title='', metadata=dict([])):
+        array = self.create_vlarray(where, name, dtype='string', title=title)
+        self.set_attr(array, 'shape', (0,))
+        self.set_attr(array, 'data_dimension', '0D')
+        self.set_attr(array, 'scan_type', 'scan1D')
 
-    def add_group(self, group_name, group_type, where, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a node in the h5 file tree of the group type
-        Parameters
-        ----------
-        group_name: (str) a custom name for this group
-        group_type: (str) one of the possible values of **group_types**
-        where: (str or node) parent node where to create the new group
-        settings_as_xml: (str) XML string containing Parameters representation (see custom_Tree)
-        metadata: (dict) extra metadata to be saved with this new group node
+        for metadat in metadata:
+            self.set_attr(array, metadat, metadata[metadat])
+        return array
 
-        Returns
-        -------
-        (node): newly created group node
-        """
-
-        if group_type not in group_types:
-            raise Exception('Invalid group type')
-
-        try:
-            node = self.get_node(where, utils.capitalize(group_name))
-        except tables.NoSuchNodeError as e:
-            node = None
-
-        if node is None:
-            node = self.get_set_group(where, utils.capitalize(group_name), title)
-            node._v_attrs['settings'] = settings_as_xml
-            node._v_attrs['type'] = group_type.lower()
-            for metadat in metadata:
-                node._v_attrs[metadat] = metadata[metadat]
-
-        return node
+    def get_set_group(self, where, name, title):
+        self.current_group = self.backend.get_set_group(where, name, title)
+        return self.current_group
 
     def add_incremental_group(self, group_type, where, title='', settings_as_xml='', metadata=dict([])):
         """
@@ -779,6 +1080,7 @@ class H5Saver(QObject):
         ----------
         group_type: (str) one of the possible values of **group_types**
         where: (str or node) parent node where to create the new group
+        title: (str) node title
         settings_as_xml: (str) XML string containing Parameters representation (see custom_Tree)
         metadata: (dict) extra metadata to be saved with this new group node
 
@@ -787,25 +1089,25 @@ class H5Saver(QObject):
         (node): newly created group node
         """
         if group_type not in group_types:
-            raise Exception('Invalid group type')
-        nodes = list(self.get_node(where)._v_children.keys())
+            raise InvalidGroupType('Invalid group type')
+        nodes = list(self.get_children(self.get_node(where)))
         nodes_tmp = []
         for node in nodes:
             if utils.capitalize(group_type) in node:
                 nodes_tmp.append(node)
         nodes_tmp.sort()
-        if len(nodes_tmp) ==0:
+        if len(nodes_tmp) == 0:
             ind_group = -1
         else:
             ind_group = int(nodes_tmp[-1][-3:])
         group = self.get_set_group(where, utils.capitalize(group_type)+'{:03d}'.format(ind_group + 1), title)
-        group._v_attrs['settings'] = settings_as_xml
+        self.set_attr(group, 'settings', settings_as_xml)
         if group_type.lower() != 'ch':
-            group._v_attrs['type'] = group_type.lower()
+            self.set_attr(group, 'type', group_type.lower())
         else:
-            group._v_attrs['type'] = ''
+            self.set_attr(group, 'type', '')
         for metadat in metadata:
-            group._v_attrs[metadat] = metadata[metadat]
+            self.set_attr(group, metadat, metadata[metadat])
         return group
 
 
@@ -836,31 +1138,11 @@ class H5Saver(QObject):
         -------
         add_incremental_group
         """
-        group = self.add_group('Live_scan_{:s}'.format(dimensionality), '', where, title=title,
-                               settings_as_xml=settings_as_xml, metadata=metadata)
+        metadata.update(settings=settings_as_xml)
+        group = self.add_group(utils.capitalize('Live_scan_{:s}'.format(dimensionality)), '', where, title=title,
+                               metadata=metadata)
         return group
 
-    def add_scan_group(self, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type scan
-        See Also
-        -------
-        add_incremental_group
-        """
-        if self.current_scan_group is not None:
-            if list(self.current_scan_group._v_children) == []:
-                new_scan = False
-            else:
-                new_scan = True
-        else:
-            new_scan = True
-        if new_scan:
-            self.current_scan_group = self.add_incremental_group('scan', self.raw_group, title, settings_as_xml, metadata)
-            self.current_scan_group._v_attrs['description'] = ''
-            self.settings.child(('current_scan_name')).setValue(self.current_scan_group._v_name)
-
-
-        return self.current_scan_group
 
     def add_move_group(self, where, title='', settings_as_xml='', metadata=dict([])):
         """
@@ -894,38 +1176,37 @@ class H5Saver(QObject):
                         self.update_status("The base path couldn't be set, please check your options")
 
                 elif param.name() in custom_tree.iter_children(self.settings.child(('compression_options')), []):
-                    self.filters = tables.Filters(
-                        complevel=self.settings.child('compression_options', 'h5comp_level').value(),
-                        complib=self.settings.child('compression_options', 'h5comp_library').value())
+                    compression = self.settings.child('compression_options', 'h5comp_library').value()
+                    compression_opts = self.settings.child('compression_options', 'h5comp_level').value()
+                    self.define_compression(compression, compression_opts)
 
             elif change == 'parent':
                 pass
 
-    def update_status(self,status):
+    def update_status(self, status):
         self.status_sig.emit(utils.ThreadCommand("Update_Status", [status, 'log']))
 
     def show_file_content(self):
         form = QtWidgets.QWidget()
-        if not self.h5_file.isopen:
+        if not self.isopen():
             if self.h5_file_path.exists():
                 self.analysis_prog = H5Browser(form, h5file=self.h5_file_path)
             else:
                 raise FileExistsError('no File presents')
         else:
-            self.h5_file.flush()
+            self.flush()
             self.analysis_prog = H5Browser(form, h5file=self.h5_file)
         form.show()
-
 
 
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
     prog = H5Saver()
-    prog.settings_tree.show()
 
+    #prog.settings_tree.show()
     prog.init_file(True)
-
-    #prog.add_scan_group()
-
+    prog.add_scan_group()
     sys.exit(app.exec_())
+
+

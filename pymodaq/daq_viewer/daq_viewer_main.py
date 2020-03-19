@@ -37,7 +37,6 @@ from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 import os
 from easydict import EasyDict as edict

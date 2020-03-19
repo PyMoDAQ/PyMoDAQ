@@ -1,31 +1,24 @@
 import sys
-import tables
 from collections import OrderedDict
 import datetime
-import os
 import numpy as np
 
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QDateTime, QRectF, QDate, QThread
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QRectF, QDate, QThread
 
 from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.daq_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import select_file, getLineInfo
+from pymodaq.daq_utils.daq_utils import getLineInfo
 
 
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.h5browser import browse_data
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5browser import H5Browser
-from pymodaq.daq_utils.h5saver import H5Saver, save_types
-
+from pymodaq.daq_utils.h5saver import H5Saver
 
 
 class CustomApp(QtWidgets.QWidget, QObject):

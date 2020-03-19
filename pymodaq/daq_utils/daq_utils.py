@@ -715,11 +715,11 @@ def winfunc(name, dll, result, *args):
     return WINFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
 
 
-def get_set_local_dir():
+def get_set_local_dir(basename='pymodaq_local'):
     if 'win32' in sys.platform:
-        local_path = os.path.join(os.environ['HOMEDRIVE'] + os.environ['HOMEPATH'], 'pymodaq_local')
+        local_path = os.path.join(os.environ['HOMEDRIVE'] + os.environ['HOMEPATH'], basename)
     else:
-        local_path = os.path.join(os.environ['PATH'], 'pymodaq_local')
+        local_path = os.path.join(os.environ['PATH'], basename)
 
     if not os.path.isdir(local_path):
         os.makedirs(local_path)

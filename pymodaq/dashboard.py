@@ -149,8 +149,7 @@ class DashBoard(QObject):
 
         # %% create Settings menu
         self.file_menu = menubar.addMenu('File')
-        log_action = self.file_menu.addAction('Show log file')
-        log_action.triggered.connect(self.show_log)
+        self.file_menu.addAction('Show log file', self.show_log)
         self.file_menu.addSeparator()
         quit_action = self.file_menu.addAction('Quit')
         quit_action.triggered.connect(self.quit_fun)
