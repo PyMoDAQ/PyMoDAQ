@@ -10,7 +10,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import select_file, getLineInfo, capitalize, get_set_local_dir, Axis
+from pymodaq.daq_utils.daq_utils import select_file, getLineInfo, capitalize, get_set_local_dir, Axis, JsonConverter
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
@@ -23,6 +23,7 @@ import numpy as np
 from pathlib import Path
 import copy
 import importlib
+
 
 #default backend
 is_tables = True
@@ -64,55 +65,57 @@ for handler in logging.root.handlers[:]:
 logging.basicConfig(filename=os.path.join(log_path, 'H5Browser_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
 
 
-def json_converter(o):
-    return dict(module=type(o).__module__, type=type(o).__name__, data=str(o))
+def check_mandatory_attrs(attr_name, attr):
+    """for cross compatibility between different backends. If these attributes have binary value, then decode them
 
-def convert_attrs_bytes(attr):
-    if isinstance(attr, bytes):
-        try:
-            attr = pickle.loads(attr)
-        except:
-            attr = attr.decode()
-    return attr
+    Parameters
+    ----------
+    attr_name
+    attr
 
+    Returns
+    -------
+
+    """
+    if attr_name == 'TITLE' or attr_name == 'CLASS' or attr_name == 'EXTDIM':
+        if isinstance(attr, bytes):
+            return attr.decode()
+        else:
+            return attr
+    else:
+        return attr
 
 def get_attr(node, attr_name, backend='tables'):
     if backend == 'tables':
         if attr_name is not None:
             attr = node._v_attrs[attr_name]
-            if isinstance(attr, bytes):
-                if b'datetime' in attr:
-                    attr = pickle.loads(attr)
-                attr = attr.decode()
-            return attr
+            attr = check_mandatory_attrs(attr_name, attr)
+            return JsonConverter.json2object(attr)
         else:
             attrs = dict([])
-            for attr in node._v_attrs._v_attrnames:
-                attrval = node._v_attrs[attr]
-                if isinstance(attrval, bytes):
-                    attrval = attrval.decode()
-                attrs[attr] = attrval
+            for attr_name in node._v_attrs._v_attrnames:
+                attrval = node._v_attrs[attr_name]
+                attrval = check_mandatory_attrs(attr_name, attrval)
+                attrs[attr_name] = JsonConverter.json2object(attrval)
             return attrs
     else:
         if attr_name is not None:
             attr = node.attrs[attr_name]
-            if isinstance(attr, bytes):
-                attr = attr.decode()
-            return attr
+            attr = check_mandatory_attrs(attr_name, attr)
+            return JsonConverter.json2object(attr)
         else:
             attrs = dict([])
-            for attr in node.attrs.keys():
-                attrval = node.attrs[attr]
-                if isinstance(attrval, bytes):
-                    attrval = attrval.decode()
-                attrs[attr] = attrval
+            for attr_name in node.attrs.keys():
+                attrval = node.attrs[attr_name]
+                attrval = check_mandatory_attrs(attr_name, attrval)
+                attrs[attr_name] = JsonConverter.json2object(attrval)
             return attrs
 
 def set_attr(node, attr_name, attr_value, backend='tables'):
         if backend == 'tables':
-            node._v_attrs[attr_name] = attr_value
+            node._v_attrs[attr_name] = JsonConverter.object2json(attr_value)
         else:
-            node.attrs[attr_name] = attr_value
+            node.attrs[attr_name] = JsonConverter.object2json(attr_value)
 
 class InvalidGroupType(Exception):
     pass
@@ -175,7 +178,7 @@ class Node(object):
 
 
     def children(self):
-        """Get a dict containing all children node hanging from self
+        """Get a dict containing all children node hanging from self whith their name as keys
 
         Returns
         -------
@@ -189,7 +192,7 @@ class Node(object):
         children = dict([])
         if self.backend == 'tables':
             for child_name, child in self.node._v_children.items():
-                klass = child._v_attrs['CLASS']
+                klass = get_attr(child, 'CLASS', self.backend)
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
@@ -197,7 +200,8 @@ class Node(object):
                 children[child_name] = _cls(child, self.backend)
         else:
             for child_name, child in self.node.items():
-                klass = child.attrs['CLASS']
+
+                klass = get_attr(child, 'CLASS', self.backend)
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
@@ -304,9 +308,9 @@ class EARRAY(CARRAY):
 
         self.append_backend(data)
 
-        sh = list(self.array.attrs['shape'])
+        sh = list(self.attrs['shape'])
         sh[0] += 1
-        self.array.attrs['shape'] = tuple(sh)
+        self.attrs['shape'] = tuple(sh)
 
     def append_backend(self, data):
         if self.backend == 'tables':
@@ -322,9 +326,9 @@ class VLARRAY(EARRAY):
     def append(self, data):
         self.append_backend(data)
 
-        sh = list(self.array.attrs['shape'])
+        sh = list(self.attrs['shape'])
         sh[0] += 1
-        self.array.attrs['shape'] = tuple(sh)
+        self.attrs['shape'] = tuple(sh)
 
 class StringARRAY(VLARRAY):
     def __init__(self, array, backend):
@@ -332,6 +336,10 @@ class StringARRAY(VLARRAY):
 
     def __getitem__(self, item):
         return self.array_to_string(super().__getitem__(item))
+
+    def read(self):
+        data_list = super().read()
+        return [self.array_to_string(data) for data in data_list]
 
     def append(self, string):
         data = self.string_to_array(string)
@@ -350,8 +358,8 @@ class Attributes(object):
 
     def __getitem__(self, item):
         attr = get_attr(self._node.node, item, backend=self.backend)
-        if isinstance(attr, bytes):
-            attr = attr.decode()
+        #if isinstance(attr, bytes):
+        #    attr = attr.decode()
         return attr
 
     def __setitem__(self, key, value):
@@ -440,14 +448,14 @@ class H5Backend:
         if self.backend == 'tables':
             self._h5file = self.h5module.open_file(fullpathname, read_write, title=title, **kwargs)
             if read_write == 'w':
-                self._h5file.root._v_attrs['pymodaq_version'] = get_version()
+                self.root().attrs['pymodaq_version'] = get_version()
             return self._h5file
         else:
             self._h5file = self.h5module.File(fullpathname, read_write, **kwargs)
 
             if read_write == 'w':
-                self._h5file.attrs['TITLE'] = title
-                self._h5file.attrs['pymodaq_version'] = get_version()
+                self.root().attrs['TITLE'] = title
+                self.root().attrs['pymodaq_version'] = get_version()
             return self._h5file
 
     def save_file_as(self, filenamepath='h5copy.txt'):
@@ -581,17 +589,19 @@ class H5Backend:
 
         if 'CLASS' not in self.get_attr(node):
             return Node(node, self.backend)
-        elif not 'ARRAY' in self.get_attr(node, 'CLASS'):
-            return Node(node, self.backend)
-        elif self.get_attr(node, 'CLASS') == 'CARRAY':
-            return CARRAY(node, self.backend)
-        elif self.get_attr(node, 'CLASS') == 'EARRAY':
-            return EARRAY(node, self.backend)
-        elif self.get_attr(node, 'CLASS') == 'VLARRAY':
-            if self.get_attr(node, 'subdtype') == 'string':
-                return StringARRAY(node, self.backend)
-            else:
-                return VLARRAY(node, self.backend)
+        else:
+            attr = self.get_attr(node, 'CLASS')
+            if not 'ARRAY' in attr:
+                return Node(node, self.backend)
+            elif attr == 'CARRAY':
+                return CARRAY(node, self.backend)
+            elif attr == 'EARRAY':
+                return EARRAY(node, self.backend)
+            elif attr == 'VLARRAY':
+                if self.get_attr(node, 'subdtype') == 'string':
+                    return StringARRAY(node, self.backend)
+                else:
+                    return VLARRAY(node, self.backend)
 
 
 
@@ -636,12 +646,43 @@ class H5Backend:
             return self.get_node(node.parent)
 
     def get_children(self, where):
+        """Get a dict containing all children node hanging from where whith their name as keys and types among Node,
+        CARRAY, EARRAY, VLARRAY or StringARRAY
+        Parameters
+        ----------
+        where (str or node instance), see h5py and pytables documentation on nodes, and Node objects of this module
+
+        Returns
+        -------
+        dict: keys are children node names, values are the children nodes
+
+        See Also
+        --------
+        children_name, Node, CARRAY, EARRAY, VLARRAY or StringARRAY
+        """
+        where = self.get_node(where)  #return a node object in case where is a string
         if isinstance(where, Node):
             where = where.node
+
+        mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
+        children = dict([])
         if self.backend == 'tables':
-            return self.get_node(where).node._v_children.keys()
+            for child_name, child in where._v_children.items():
+                klass = get_attr(child, 'CLASS', self.backend)
+                if 'ARRAY' in klass:
+                    _cls = getattr(mod, klass)
+                else:
+                    _cls = Node
+                children[child_name] = _cls(child, self.backend)
         else:
-            return self.get_node(where).node.keys()
+            for child_name, child in where.items():
+                klass = get_attr(child, 'CLASS', self.backend)
+                if 'ARRAY' in klass:
+                    _cls = getattr(mod, klass)
+                else:
+                    _cls = Node
+                children[child_name] = _cls(child, self.backend)
+        return children
 
     def read(self, array, *args, **kwargs):
         if isinstance(array, CARRAY):
@@ -666,8 +707,8 @@ class H5Backend:
                 array = CARRAY(self.get_node(where).node.create_dataset(name, data=obj, **self.compression), self.backend)
             else:
                 array = CARRAY(self.get_node(where).node.create_dataset(name, data=obj), self.backend)
-            array.attrs['TITLE'] = title
-            array.attrs['CLASS'] = 'CARRAY'
+            array.array.attrs['TITLE'] = title
+            array.array.attrs['CLASS'] = 'CARRAY' #direct writing using h5py to be compatible with pytable automatic class writing as binary
         array.attrs['shape'] = obj.shape
         array.attrs['dtype'] = dtype.name
         array.attrs['subdtype'] = ''
@@ -703,9 +744,9 @@ class H5Backend:
                 array = EARRAY(
                     self.get_node(where).node.create_dataset(name, shape=shape, dtype=dtype, maxshape=maxshape),
                     self.backend)
-            array.attrs['TITLE'] = title
-            self.set_attr(array, 'CLASS', 'EARRAY')
-            self.set_attr(array, 'EXTDIM', 0)
+            array.array.attrs['TITLE'] = title
+            array.array.attrs['CLASS'] = 'EARRAY' #direct writing using h5py to be compatible with pytable automatic class writing as binary
+            array.array.attrs['EXTDIM'] = 0
         array.attrs['shape'] = shape
         array.attrs['dtype'] = dtype.name
         array.attrs['subdtype'] = ''
@@ -761,8 +802,9 @@ class H5Backend:
                 else:
                     array = VLARRAY(self.get_node(where).node.create_dataset(name, (0,), dtype=dt,
                                                                              maxshape=maxshape), self.backend)
-            array.attrs['TITLE'] = title
-            self.set_attr(array, 'CLASS', 'VLARRAY')
+            array.array.attrs['TITLE'] = title
+            array.array.attrs['CLASS'] = 'VLARRAY' #direct writing using h5py to be compatible with pytable automatic class writing as binary
+            array.array.attrs['EXTDIM'] = 0
         array.attrs['shape'] = (0, )
         array.attrs['dtype'] = dtype.name
         array.attrs['subdtype'] = subdtype
@@ -1032,7 +1074,7 @@ class H5Saver(H5Backend):
         add_incremental_group
         """
         if self.current_scan_group is not None:
-            if len(list(self.get_children(self.current_scan_group))) == 0:
+            if len(self.get_children(self.current_scan_group)) == 0:
                 new_scan = False
             else:
                 new_scan = True
@@ -1174,7 +1216,7 @@ class H5Saver(H5Backend):
                 return 0
             else:
 
-                groups = [group for group in list(self.get_children(self.raw_group)) if 'Scan' in group]
+                groups = [group for group in self.get_children(self.raw_group) if 'Scan' in group]
                 groups.sort()
                 flag = False
                 if len(groups) != 0:
@@ -1182,11 +1224,7 @@ class H5Saver(H5Backend):
                         if self.get_attr(self.get_node(self.raw_group, groups[-1]), 'scan_done'):
                             return len(groups)
                         return len(groups)-1
-
-                # for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
-                #     if 'scan' in child: #checks if a group like live_scan has been saved, meaning the previous scan completed
-                #         return len(groups)
-
+                    return len(groups)-1
                 return 0
 
         except Exception as e:
@@ -1493,7 +1531,7 @@ class H5Saver(H5Backend):
         """
         if group_type not in group_types:
             raise InvalidGroupType('Invalid group type')
-        nodes = list(self.get_children(self.get_node(where)))
+        nodes = [name for name in self.get_children(self.get_node(where))]
         nodes_tmp = []
         for node in nodes:
             if utils.capitalize(group_type) in node:
@@ -1620,7 +1658,7 @@ def find_scan_node(scan_node):
             else:
                 scan_node = scan_node.parent_node
         children = list(scan_node.children().values()) #for data saved using daq_scan
-        children.extend([scan_node.parent_node.children[child] for child in scan_node.parent_node.children_name()]) #for data saved using the daq_logger
+        children.extend([scan_node.parent_node.children()[child] for child in scan_node.parent_node.children_name()]) #for data saved using the daq_logger
         nav_children = []
         for child in children:
             if 'type' in child.attrs.attrs_name:
@@ -1729,7 +1767,7 @@ class H5BrowserUtil(H5Backend):
                         for ax in tmp_axes:
                             if capitalize(ax) in children:
                                 axis_node = self.get_node(parent_path + '/{:s}'.format(capitalize(ax)))
-                                axes[ax] = dict(data=axis_node.read())
+                                axes[ax] = Axis(data=axis_node.read())
                                 if 'units' in axis_node.attrs.attrs_name:
                                     axes[ax]['units'] = axis_node.attrs['units']
                                 if 'label' in axis_node.attrs.attrs_name:
@@ -1750,7 +1788,7 @@ class H5BrowserUtil(H5Backend):
                                         tmp_ax = []
                                         for ix in axes['nav_{:s}'.format(ax)]['data']:
                                             tmp_ax.extend([ix, ix])
-                                            axes['nav_{:s}'.format(ax)] = dict(data=np.array(tmp_ax))
+                                            axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
 
                                     if 'units' in axis_node.attrs.attrs_name:
                                         axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs['units']
@@ -1768,13 +1806,13 @@ class H5BrowserUtil(H5Backend):
                                         for axis_node in nav_children:
                                             if ax in axis_node.name:
                                                 nav_axes.append(ind_ax)
-                                                axes['nav_{:s}'.format(ax)] = dict(data=np.unique(axis_node.read()))
+                                                axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
                                                 if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
                                                     ind_ax]:  # could happen in case of linear back to start type of scan
                                                     tmp_ax = []
                                                     for ix in axes['nav_{:s}'.format(ax)]['data']:
                                                         tmp_ax.extend([ix, ix])
-                                                        axes['nav_{:s}'.format(ax)] = dict(data=np.array(tmp_ax))
+                                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
 
                                                 if 'units' in axis_node.attrs.attrs_name:
                                                     axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs[
@@ -1784,12 +1822,12 @@ class H5BrowserUtil(H5Backend):
                                                         'label']
                     elif 'axis' in node.attrs['type']:
                         axis_node = node
-                        axes['y_axis'] = dict(data=axis_node.read())
+                        axes['y_axis'] = Axis(data=axis_node.read())
                         if 'units' in axis_node.attrs.attrs_name:
                             axes['y_axis']['units'] = axis_node.attrs['units']
                         if 'label' in axis_node.attrs.attrs_name:
                             axes['y_axis']['label'] = axis_node.attrs['label']
-                        axes['x_axis'] = dict(data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
+                        axes['x_axis'] = Axis(data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
                                               units='pxls',
                                               label='')
                 return data, axes, nav_axes
@@ -2164,8 +2202,14 @@ def browse_data(fname=None, ret_all=False):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow()
-    #h5file=tables.open_file('C:\\Users\\Weber\\Labo\\Programmes Python\\pymodaq\\daq_utils\\test.h5')
-    prog = H5Browser(win)
-    win.show()
+    #win = QtWidgets.QMainWindow()
+    #prog = H5Browser(win)
+    #win.show()
+    filepath = 'C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5'
+    h5utils = H5BrowserUtil(backend='tables')
+    h5utils.open_file(filepath, 'r')
+    node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
+    node = h5utils.get_node(node_path)
+    data, axes, nav_axes = h5utils.get_h5_data(node_path)
+
     sys.exit(app.exec_())

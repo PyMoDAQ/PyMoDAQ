@@ -1,30 +1,47 @@
 import numpy as np
 import socket
-
-from pytest import approx, fixture, yield_fixture
+import pytest
 from pymodaq.daq_utils import daq_utils
+import datetime
+class TestJsonConverter:
+    def test_object2json(self):
+        conv = daq_utils.JsonConverter()
+        assert conv.istrusted('datetime')
+        d = datetime.datetime(year=2020, month=5, day=24, hour=10, minute=52, second=55)
+        date = d.date()
+        time = d.time()
+        dstring = '{"module": "datetime", "type": "datetime", "data": "datetime.datetime(2020, 5, 24, 10, 52, 55)"}'
+        datestring = '{"module": "datetime", "type": "date", "data": "datetime.date(2020, 5, 24)"}'
+        timestring = '{"module": "datetime", "type": "time", "data": "datetime.time(10, 52, 55)"}'
+        assert conv.object2json(d) == dstring
+        assert conv.json2object(dstring) == d
+        assert conv.object2json(date) == datestring
+        assert conv.json2object(datestring) == date
+        assert conv.object2json(time) == timestring
+        assert conv.json2object(timestring) == time
+        assert conv.json2object(conv.object2json([10, 5, 'yui'])) == [10, 5, 'yui']
+        assert conv.json2object(conv.object2json((10, 5, 'yui'))) == (10, 5, 'yui')
 
-
-class TestUnits():
+class TestUnits:
     def test_Enm2cmrel(self):
-        assert daq_utils.Enm2cmrel(520, 515) == approx(186.70649738)
+        assert daq_utils.Enm2cmrel(520, 515) == pytest.approx(186.70649738)
 
     def test_Ecmrel2Enm(self):
-        assert daq_utils.Ecmrel2Enm(500, 515) == approx(528.6117526)
+        assert daq_utils.Ecmrel2Enm(500, 515) == pytest.approx(528.6117526)
 
     def test_eV2nm(self):
-        assert daq_utils.eV2nm(1.55) == approx(799.89811299)
+        assert daq_utils.eV2nm(1.55) == pytest.approx(799.89811299)
 
     def test_nm2eV(self):
-        assert daq_utils.nm2eV(800) == approx(1.54980259)
+        assert daq_utils.nm2eV(800) == pytest.approx(1.54980259)
 
     def test_eV2cm(self):
-        assert daq_utils.eV2cm(0.07) == approx(564.5880342655)
+        assert daq_utils.eV2cm(0.07) == pytest.approx(564.5880342655)
 
     def test_l2w(self):
-        assert daq_utils.l2w(800) == approx(2.35619449)
+        assert daq_utils.l2w(800) == pytest.approx(2.35619449)
 
-class TestString():
+class TestString:
     def test_capitalize(self):
         string = 'abcdef'
         assert daq_utils.capitalize(string) == 'Abcdef'
@@ -55,18 +72,18 @@ def test_get_data_dimension():
                         dim -= 2
                 assert daq_utils.get_data_dimension(arr, scan, rem) == (shape, '{:d}D'.format(dim), size)
 
-class TestScroll():
+class TestScroll:
     def test_scroll_log(self):
         min_val = 50
         max_val = 51
         for scroll_val in range(101):
-            assert daq_utils.scroll_linear(scroll_val, min_val, max_val) == approx(10**(scroll_val * (np.log10(max_val)-np.log10(min_val))/100+ np.log10(min_val)))
+            assert daq_utils.scroll_linear(scroll_val, min_val, max_val) == pytest.approx(10**(scroll_val * (np.log10(max_val)-np.log10(min_val))/100+ np.log10(min_val)))
 
     def test_scroll_linear(self):
         min_val = 50
         max_val = 51
         for scroll_val in range(101):
-            assert daq_utils.scroll_linear(scroll_val, min_val, max_val) == approx(scroll_val * (max_val-min_val)/100+ min_val)
+            assert daq_utils.scroll_linear(scroll_val, min_val, max_val) == pytest.approx(scroll_val * (max_val-min_val)/100+ min_val)
 
 def test_extract_TTTR_histo_every_pixels():
     pass
@@ -104,8 +121,7 @@ def test_elt_as_first_element():
 
 
 class TCPIP():
-
-    @fixture(scope='session')
+    @pytest.fixture(scope='session')
     def set_server(self):
         import socket
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -118,10 +134,11 @@ class TCPIP():
         client.close()
         server.close()
 
-    @fixture(scope='session')
+    @pytest.fixture(scope='session')
     def set_client(self, set_s):
         import socket
 
     @pytest.mark.tcpip
-    def test_send_string(self):        string = 'this is a message'
+    def test_send_string(self):
+        string = 'this is a message'
         pass

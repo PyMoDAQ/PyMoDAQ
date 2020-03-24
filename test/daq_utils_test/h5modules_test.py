@@ -9,7 +9,8 @@ from pytest_datadir.plugin import shared_datadir, datadir
 from pytestqt import qtbot
 from pymodaq.version import get_version
 from pymodaq.daq_utils import daq_utils as utils
-
+from pyqtgraph.parametertree import parameterTypes, Parameter
+from pymodaq.daq_utils import custom_parameter_tree as ctree
 from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
     group_data_types, data_types, data_dimensions, scan_types, InvalidGroupType, InvalidDataDimension, InvalidDataType, \
     InvalidGroupDataType, InvalidSave, InvalidScanType, CARRAY, EARRAY, VLARRAY, StringARRAY, Node, Attributes
@@ -356,8 +357,12 @@ class TestH5Saver:
         h5saver.set_attr(scan_group, 'scan_done', True)
         assert h5saver.get_scan_index() == 1
         scan_group_1 = h5saver.add_scan_group()
+        assert h5saver.get_scan_index() == 1
+        h5saver.set_attr(scan_group_1, 'scan_done', True)
+        assert h5saver.get_scan_index() == 2
+        ch1_group_1 = h5saver.add_CH_group(scan_group_1)
+        assert h5saver.get_scan_index() == 2
         assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan001'
-
 
     def test_hierarchy(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
@@ -449,49 +454,167 @@ class TestH5Saver:
         assert np.all(h5saver.read(array).shape == (2, 10))
 
 
-@pytest.fixture(params=tested_backend)
-def load_test_file(request):
-    bck = H5BrowserUtil(backend=request.param)
-    filepath = './data/Dataset_20200323_002.h5'
-    bck.open_file(filepath, 'r')
-    return bck
+
 
 @pytest.fixture(params=tested_backend)
-def create_test_file(request):
-    bck = H5BrowserUtil(backend=request.param)
+def create_test_file(request, qtbot):
+    bck = H5Saver(backend=request.param)
     filepath = f'./data/data_test_{request.param}.h5'
-    bck.open_file(filepath, 'w')
-    bck.add_group('Raw_datas', 'raw_datas', '/', metadata=dict(date_time=datetime.now(), author='Seb Weber',
-                                                               settings='this should be xml', type='scan'))
+    bck.init_file(update_h5=True, addhoc_file_path=filepath)
+    d = datetime(year=2020, month=5, day=24, hour=10, minute=52, second=55)
+
+    raw_group = bck.add_group('Agroup', 'data', '/',
+                              metadata=dict(date_time=d, author='Seb Weber',
+                                            settings='this should be xml',
+                                            scan_settings=b'scan binary setting',
+                                            type='scan',
+                                            shape=(10, 45),
+                                            pixmap_1D=b'this should be binary png in reality',
+                                            pixmap_2D=b'this should be another binary png in reality'))
+
+    scan_group = bck.add_scan_group('first scan', settings_as_xml='this should dbe xml settings')
+    params = [
+        {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
+            {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
+             'readonly': True},
+            {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
+             'readonly': True},
+        ]
+         }]
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_xml = ctree.parameter_to_xml_string(settings)
+
+    det_group = bck.add_det_group(scan_group, 'det group', settings_as_xml=settings_xml)
+    data_group = bck.add_data_group(det_group, 'data1D')
+    ch_group = bck.add_CH_group(data_group)
+
+    Nx = 12
+    Nnavx = 5
+    Nnavy = 10
+    scan_shape = (Nnavx, Nnavy)
+    x_axis = dict(label='this is data axis', units='no units', data=np.arange(Nx))
+    nav_x_axis = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx))
+    nav_y_axis = dict(label='this is nav y axis', units='y units', data=np.arange(Nnavy))
+    data = np.arange(Nx * Nnavx * Nnavy)
+    data = data.reshape(Nnavx, Nnavy, Nx)
+    data_dict = dict(data=data, x_axis=x_axis)
+
+    bck.add_data(ch_group, data_dict, scan_type='scan2D', scan_shape=scan_shape, add_scan_dim=False)
+    bck.add_navigation_axis(nav_x_axis.pop('data'), scan_group, 'x_axis', metadata=nav_x_axis)
+    bck.add_navigation_axis(nav_y_axis.pop('data'), scan_group, 'y_axis', metadata=nav_y_axis)
+
+    bck.logger_array.append('log1 to check')
+    bck.logger_array.append('log2 to check')
+
     bck.close_file()
     return bck
 
+@pytest.fixture(params=tested_backend)
+def get_file(request):
+    filepath = f'./data/data_test_{request.param}.h5'
+    return filepath
+
+@pytest.fixture(params=tested_backend)
+def load_test_file(request, get_file):
+    bck = H5BrowserUtil(backend=request.param)
+    bck.open_file(get_file, 'r')
+    return bck
 
 class TestH5BrowserUtil:
 
-    def test_get_h5_attributes(self, create_test_file, load_test_file):
+    def test_create(self, create_test_file):
+        """Create "same" files using all backends"""
+        create_test_file
+
+    def test_get_h5_attributes(self, load_test_file):
+        """Load files (created with all backends) and manipulate them using all backends"""
         h5utils = load_test_file
 
-        node_path = '/Raw_datas'
+        node_path = '/Agroup'
         node = h5utils.get_node(node_path)
-        #assert node.attrs['date_time'] == datetime(year=23, month=16)
-
+        assert node.attrs['date_time'] == datetime(year=2020, month=5, day=24, hour=10, minute=52, second=55)
+        assert node.attrs['shape'] == (10, 45)
 
         attr_dict, settings, scan_settings, pixmaps = h5utils.get_h5_attributes(node_path)
-        assert settings == '<Attributes readonly="0" removable="0" title="Attributes" type="group" visible="1"><dataset_info readonly="0" removable="0" title="Dataset information" type="group" visible="1"><author readonly="0" removable="0" title="Author:" type="str" visible="1">Sebastien Weber</author><date_time readonly="0" removable="0" title="Date/time:" type="date_time" visible="1">PyQt5.QtCore.QDateTime(2020, 3, 23, 21, 16, 9, 798)</date_time><sample readonly="0" removable="0" title="Sample:" type="str" visible="1" /><experiment_type readonly="0" removable="0" title="Experiment type:" type="str" visible="1" /><description readonly="0" removable="0" title="Description:" type="text" visible="1" /></dataset_info></Attributes>'
-        assert node.attrs.attrs_name == ['CLASS',
-                                         'TITLE',
-                                         'VERSION',
-                                         'author',
-                                         'date_time',
-                                         'description',
-                                         'experiment_type',
-                                         'sample',
-                                         'settings',
-                                         'type']
+        assert settings == 'this should be xml'
+        assert scan_settings == b'scan binary setting'
+        for attr in ['CLASS', 'TITLE', 'author', 'date_time', 'settings', 'scan_settings', 'type', 'shape',
+                     'pixmap_1D', 'pixmap_2D']:
+            assert attr in node.attrs.attrs_name
+        assert len(pixmaps) == 2
+        assert pixmaps[0] == b'this should be binary png in reality'
+        assert pixmaps[1] == b'this should be another binary png in reality'
 
+        node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
+        node = h5utils.get_node(node_path)
+        attr_dict, settings, scan_settings, pixmaps = h5utils.get_h5_attributes(node_path)
+        assert attr_dict['data_dimension'] == 'ND'
+        assert attr_dict['dtype'] == 'int32'
+        assert attr_dict['scan_type'] == 'scan2D'
+        assert attr_dict['shape'] == (5, 10, 12)
+        assert attr_dict['type'] == 'data'
 
-
+        node_path ='/Raw_datas/Logger'
+        node = h5utils.get_node(node_path)
+        attr_dict, settings, scan_settings, pixmaps = h5utils.get_h5_attributes(node_path)
+        assert attr_dict['data_dimension'] == '0D'
+        assert attr_dict['dtype'] == 'uint8'
+        assert attr_dict['scan_type'] == 'scan1D'
+        assert attr_dict['shape'] == (2, )
+        assert attr_dict['subdtype'] == 'string'
+        assert attr_dict['type'] == 'log'
         h5utils.close_file()
 
 
+    def test_get_h5_data(self, load_test_file):
+        """Load files (created with all backends) and manipulate them using
+         all backends for cross compatibility checks
+         """
+        h5utils = load_test_file
+        node_path = '/Raw_datas/Logger'
+        node = h5utils.get_node(node_path)
+        assert isinstance(node, StringARRAY)
+        data, axes, nav_axes = h5utils.get_h5_data(node_path)
+        assert isinstance(data, list)
+        assert len(data) == 2
+        assert data[0] == 'log1 to check'
+        assert data[1] == 'log2 to check'
+        assert axes == []
+        assert nav_axes == []
+
+        Nx = 12
+        Nnavx = 5
+        Nnavy = 10
+        x_axis_in_file = dict(label='this is data axis', units='no units', data=np.arange(Nx))
+        nav_x_axis_in_file = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx))
+        nav_y_axis_in_file = dict(label='this is nav y axis', units='y units', data=np.arange(Nnavy))
+        data_in_file = np.arange(Nx * Nnavx * Nnavy)
+        data_in_file = data_in_file.reshape(Nnavx, Nnavy, Nx)
+
+        node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
+        node = h5utils.get_node(node_path)
+        data, axes, nav_axes = h5utils.get_h5_data(node_path)
+        assert isinstance(data, np.ndarray)
+        assert data.shape == (5, 10, 12)
+        assert node.attrs['shape'] == (5, 10, 12)
+        assert np.all(data == data_in_file)
+
+        assert len(axes) == 4
+        assert len(nav_axes) == 2
+        check_vals_in_iterable(nav_axes, [0, 1])
+        assert axes['x_axis']['label'] == x_axis_in_file['label']
+        assert axes['x_axis']['units'] == x_axis_in_file['units']
+        assert np.all(axes['x_axis']['data'] == x_axis_in_file['data'])
+        assert isinstance(axes['x_axis'], utils.Axis)
+        assert isinstance(axes['x_axis'], dict)
+
+        assert axes['nav_x_axis']['label'] == nav_x_axis_in_file['label']
+        assert axes['nav_x_axis']['units'] == nav_x_axis_in_file['units']
+        assert np.all(axes['nav_x_axis']['data'] == nav_x_axis_in_file['data'])
+
+        assert axes['nav_y_axis']['label'] == nav_y_axis_in_file['label']
+        assert axes['nav_y_axis']['units'] == nav_y_axis_in_file['units']
+        assert np.all(axes['nav_y_axis']['data'] == nav_y_axis_in_file['data'])
+
+        h5utils.close_file()

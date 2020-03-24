@@ -18,6 +18,7 @@ import os
 import re
 import importlib
 import inspect
+import json
 
 plot_colors = ['r', 'g','b',  'c', 'm', 'y', 'k',' w']
 Cb = 1.602176e-19  # coulomb
@@ -25,6 +26,36 @@ h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
 
+class JsonConverter:
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def trusted_types(cls):
+        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes']
+
+    @classmethod
+    def istrusted(cls, type_name):
+        return type_name in cls.trusted_types()
+
+    @classmethod
+    def object2json(cls, obj):
+        dic = dict(module=type(obj).__module__, type=type(obj).__name__, data=repr(obj))
+        return json.dumps(dic)
+
+    @classmethod
+    def json2object(cls, jsonstring):
+        try:
+            dic = json.loads(jsonstring)
+            if isinstance(dic, dict):
+                if dic['type'] in cls.trusted_types():
+                    return eval(dic['data'])
+                else:
+                    return dic
+            else:
+                return dic
+        except:
+            return jsonstring
 ####################################
 ## Units conversion
 def Enm2cmrel(E_nm, ref_wavelength=515):
