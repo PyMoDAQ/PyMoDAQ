@@ -17,8 +17,7 @@ from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.h5browser import H5Browser
-from pymodaq.daq_utils.h5saver import H5Saver
+from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 
 
 class CustomApp(QtWidgets.QWidget, QObject):

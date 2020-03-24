@@ -27,7 +27,7 @@ from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.h5saver import H5Saver
+from pymodaq.daq_utils.h5modules import H5Saver
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):

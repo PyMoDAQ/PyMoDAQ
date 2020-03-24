@@ -192,18 +192,18 @@ def l2w(x, speedlight=300):
 
 #############################
 
-def capitalize(string):
+def capitalize(string, Nfirst=1):
     """
-    Returns same string but with first letter capitalized
+    Returns same string but with first Nfirst letters upper
     Parameters
     ----------
     string: (str)
-
+    Nfirst: (int)
     Returns
     -------
     str
     """
-    return string.capitalize()[0]+string[1:]
+    return string[:Nfirst].upper()+string[Nfirst:]
 
 def uncapitalize(string):
     return string.lower()[0] + string[1:]
@@ -824,46 +824,6 @@ def nparray2Qpixmap(arr):
     return a
 
 
-def h5tree_to_QTree(h5file,base_node,base_tree_elt=None,pixmap_items=[]):
-    """
-        | Convert a loaded h5 file to a QTreeWidgetItem element structure containing two columns.
-        | The first is the name of the h5 current node, the second is the path of the node in the h5 structure.
-        |
-        | Recursive function discreasing on base_node.
-
-        ==================   ======================================== ===============================
-        **Parameters**        **Type**                                 **Description**
-
-          *h5file*            instance class File from tables module   loaded h5 file
-
-          *base_node*         pytables h5 node                         parent node
-
-          *base_tree_elt*     QTreeWidgetItem                          parent QTreeWidgetItem element
-        ==================   ======================================== ===============================
-
-        Returns
-        -------
-        QTreeWidgetItem
-            h5 structure copy converted into QtreeWidgetItem structure.
-
-        See Also
-        --------
-        h5tree_to_QTree
-
-    """
-    
-    if base_tree_elt is None:
-        base_tree_elt=QtWidgets.QTreeWidgetItem([base_node._v_name,"",base_node._v_pathname])
-    for node in h5file.list_nodes(base_node):
-        child=QtWidgets.QTreeWidgetItem([node._v_name,"",node._v_pathname])
-        if 'pixmap' in node._v_attrs:
-            pixmap_items.append(dict(node=node,item=child))
-        if isinstance(node, tables.Group):
-            h5tree_to_QTree(h5file,node,child,pixmap_items)
-
-        base_tree_elt.addChild(child)
-
-    return base_tree_elt,pixmap_items
 
 def get_h5file_scans(h5file,path='/'):
     scan_list=[]

@@ -1,0 +1,497 @@
+import os
+import numpy as np
+from datetime import datetime
+from pathlib import Path
+import pytest
+import pathlib
+from pytest import approx, fixture, yield_fixture
+from pytest_datadir.plugin import shared_datadir, datadir
+from pytestqt import qtbot
+from pymodaq.version import get_version
+from pymodaq.daq_utils import daq_utils as utils
+
+from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
+    group_data_types, data_types, data_dimensions, scan_types, InvalidGroupType, InvalidDataDimension, InvalidDataType, \
+    InvalidGroupDataType, InvalidSave, InvalidScanType, CARRAY, EARRAY, VLARRAY, StringARRAY, Node, Attributes
+
+tested_backend = ['tables', 'h5py', 'h5pyd']
+tested_backend = ['tables', 'h5py']
+
+@pytest.fixture(scope="module")
+def session_path(tmp_path_factory):
+    return tmp_path_factory.mktemp('h5data')
+
+def check_vals_in_iterable(iterable1, iterable2):
+    assert len(iterable1) == len(iterable2)
+    for val1, val2 in zip(iterable1, iterable2):
+        assert val1 == val2
+
+def generate_random_data(shape, dtype=np.float):
+    return (100 * np.random.rand(*shape)).astype(dtype=dtype)
+
+@pytest.fixture(params=tested_backend)
+def get_backend(request, tmp_path):
+    bck = H5Backend(request.param)
+    title = 'this is a test file'
+    bck.open_file(tmp_path.joinpath('h5file.h5'), 'w', title)
+    return bck
+
+@pytest.fixture(params=save_types)
+def get_save_type(request):
+    return request.param
+
+@pytest.fixture(params=tested_backend)
+def get_h5saver(get_save_type, request, qtbot):
+    return H5Saver(save_type=get_save_type, backend=request.param)
+
+@pytest.fixture(params=tested_backend)
+def get_h5saver_scan(request, qtbot):
+    return H5Saver(save_type='scan', backend=request.param)
+
+
+class TestH5Backend:
+
+    @pytest.mark.parametrize('backend', tested_backend)
+    def test_file_open_close(self, tmp_path, backend):
+        bck = H5Backend(backend)
+        title = 'this is a test file'
+        h5_file = bck.open_file(tmp_path.joinpath('h5file.h5'), 'w', title)
+        assert tmp_path.joinpath('h5file.h5').exists()
+        assert tmp_path.joinpath('h5file.h5').is_file()
+        assert bck.isopen() is True
+        assert bck.root().attrs['TITLE'] == title
+        assert bck.root().attrs['pymodaq_version'] == get_version()
+        bck.close_file()
+        assert bck.isopen() is False
+
+
+
+    def test_attrs(self, get_backend):
+        bck = get_backend
+        attrs = dict(attr1='one attr', attr2=(10, 15), attr3=12.4)
+        for attr in attrs:
+            bck.root().attrs[attr] = attrs[attr]
+        for attr in attrs:
+            attr_back = bck.root().attrs[attr]
+            if hasattr(attr_back, '__iter__'):
+                check_vals_in_iterable(attr_back, attrs[attr])
+            else:
+                assert attr_back == attrs[attr]
+
+        attrs_back = bck.root().attrs.attrs_name
+        for attr in attrs:
+            assert attr in attrs_back
+            if hasattr(attrs[attr], '__iter__'):
+                check_vals_in_iterable(attrs[attr], bck.root().attrs[attr])
+            else:
+                assert attrs[attr] == bck.root().attrs[attr]
+
+        bck.close_file()
+
+    @pytest.mark.parametrize('group_type', group_types)
+    def test_add_group(self, get_backend, group_type):
+        bck = get_backend
+        title = 'this is a group'
+        g3 = bck.add_group('g3', group_type, bck.root(), title=title, metadata=dict(attr1='attr1', attr2=21.4))
+        assert g3.attrs['TITLE'] == title
+        assert g3.attrs['CLASS'] == 'GROUP'
+        assert g3.attrs['type'] == group_type
+        assert g3.attrs['attr1'] == 'attr1'
+        assert g3.attrs['attr2'] == 21.4
+        gtype = 'this is not a valid group type'
+        with pytest.raises(InvalidGroupType):
+            g4 = bck.add_group('g4', gtype, bck.root())
+        bck.close_file()
+
+
+    def test_group_creation(self, get_backend):
+        bck = get_backend
+        title = 'this is a group'
+        assert bck.get_node(bck.root()) == bck.root()
+        assert bck.get_node('/') == bck.root()
+
+        g1 = bck.get_set_group(bck.root(), 'g1', title)
+        g2 = bck.get_set_group('/', 'g2')
+        assert g1.attrs['TITLE'] == title
+        assert g1.attrs['CLASS'] == 'GROUP'
+
+        assert bck.get_node_name(g2) == 'g2'
+
+        g21 = bck.get_set_group(g2, 'g21')
+        assert bck.get_node_path(g21) == '/g2/g21'
+        assert bck.is_node_in_group(g2, 'g21')
+
+        g22 = bck.get_set_group('/g2', 'g22', title='group g22')
+        assert bck.get_group_by_title('/g2', 'group g22') == g22
+
+        assert list(bck.get_children(g2)) == ['g21', 'g22']
+
+
+
+        assert bck.get_parent_node(g22) == g2
+        assert bck.get_parent_node(bck.get_parent_node(g2)) is None
+        assert g22.parent_node == g2
+        assert g2.parent_node.parent_node is None
+
+        assert isinstance(g2, Node)
+        assert isinstance(g22, Node)
+
+        #test node methods
+        assert g2 != g1
+
+        assert g22.parent_node == g2
+        assert g22.parent_node == g21.parent_node
+        check_vals_in_iterable(g2.children_name(), ['g21', 'g22'])
+        for child in g2.children():
+            assert g2.children()[child] in [g21, g22]
+        g22.set_attr('test', 12.5)
+        assert g22.get_attr('test') == 12.5
+        assert g22.attrs['test'] == 12.5
+        g22.attrs['test1'] = 'attr'
+        assert g22.attrs['test1'] == 'attr'
+        assert isinstance(g22.attrs, Attributes)
+        assert g21.name == 'g21'
+        assert bck.root().name == '/'
+        assert g22.path == '/g2/g22'
+
+        bck.close_file()
+
+    def test_carray(self, get_backend):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        carray1_data = np.random.rand(5, 10)
+        title = 'this is a carray'
+        with pytest.raises(ValueError):
+            bck.create_carray(g1, 'carray0', title='')
+        carray1 = bck.create_carray(g1, 'carray1', obj=carray1_data, title=title)
+        assert isinstance(carray1, CARRAY)
+        assert carray1.attrs['dtype'] == carray1_data.dtype.name
+        assert carray1.attrs['TITLE'] == title
+        assert carray1.attrs['CLASS'] == 'CARRAY'
+        check_vals_in_iterable(carray1.attrs['shape'], carray1_data.shape)
+
+        assert np.all(carray1.read() == carray1_data)
+        assert np.all(carray1[1, 2] == carray1_data[1, 2])
+        with pytest.raises(AttributeError):
+            bck.append(carray1, carray1_data)
+
+
+
+        bck.close_file()
+
+    @pytest.mark.parametrize('compression', ['gzip', 'zlib'])
+    @pytest.mark.parametrize('comp_level', list(range(0, 10, 3)))
+    def test_carray_comp(self, get_backend, compression, comp_level):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        array_data = np.random.rand(5, 10)
+        # gzip and zlib filters are compatible, but zlib is used by pytables while gzip is used by h5py
+        bck.define_compression(compression, comp_level)
+        array1 = bck.create_carray(g1, 'carray1', obj=array_data)
+        assert np.all(array1.read() == array_data)
+
+    def test_earray(self, get_backend):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        title = 'this is a earray'
+        dtype = np.uint32
+        array = bck.create_earray(g1, 'array', dtype=dtype, title=title)
+        assert array.attrs['TITLE'] == title
+        assert array.attrs['CLASS'] == 'EARRAY'
+        assert array.attrs['dtype'] == np.dtype(dtype).name
+        check_vals_in_iterable(array.attrs['shape'], [0])
+        array.append(np.array([10]))
+        assert g1.children()['array'] == array
+        assert isinstance(g1.children()['array'], EARRAY)
+        check_vals_in_iterable(array.attrs['shape'], [1])
+
+        array_shape = (10, 3)
+        array1 = bck.create_earray(g1, 'array1', dtype=dtype, data_shape=array_shape, title=title)
+        array1.append(generate_random_data(array_shape, dtype))
+        expected_shape = [1]
+        expected_shape.extend(array_shape)
+        check_vals_in_iterable(array1.attrs['shape'], expected_shape)
+        array1.append(generate_random_data(array_shape, dtype))
+        expected_shape[0] += 1
+        check_vals_in_iterable(array1.attrs['shape'], expected_shape)
+        bck.close_file()
+
+    @pytest.mark.parametrize('compression', ['gzip', 'zlib'])
+    @pytest.mark.parametrize('comp_level', list(range(0, 10, 3)))
+    def test_earray_comp(self, get_backend, compression, comp_level):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        array_shape = (10, 3)
+        dtype = np.uint32
+        bck.define_compression(compression, comp_level)
+        array = bck.create_earray(g1, 'array', dtype=dtype, data_shape=array_shape)
+        data = generate_random_data(array_shape, dtype)
+        array.append(data)
+        assert np.all(array[-1, :, :] == data)
+        array.append(data)
+        assert np.all(array[-1, :, :] == data)
+
+
+    def test_vlarray(self, get_backend):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        title = 'this is a vlarray'
+        dtype = np.uint32
+        array = bck.create_vlarray(g1, 'array', dtype=dtype, title=title)
+        assert array.attrs['TITLE'] == title
+        assert array.attrs['CLASS'] == 'VLARRAY'
+        assert array.attrs['dtype'] == np.dtype(dtype).name
+
+        array.append(np.array([10, 12, 15]))
+        assert isinstance(array[-1], np.ndarray)
+        assert np.all(array[-1] == np.array([10, 12, 15]))
+
+        array.append(np.array([10, 4, 2, 4, 6, 4]))
+        assert np.all(array[-1] == [10, 4, 2, 4, 6, 4])
+
+    def test_vlarray_string(self, get_backend):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        title = 'this is a vlarray'
+        dtype = 'string'
+        sarray = bck.create_vlarray(g1, 'array', dtype=dtype, title=title)
+        assert sarray.attrs['TITLE'] == title
+        assert sarray.attrs['CLASS'] == 'VLARRAY'
+        assert sarray.attrs['dtype'] == np.dtype(np.uint8).name
+        assert sarray.attrs['subdtype'] == 'string'
+        st = 'this is a string'
+        st2 = 'this is a second string'
+        assert sarray.array_to_string(sarray.string_to_array(st)) == st
+
+        sarray.append(st)
+        assert sarray[-1] == st
+
+        sarray.append(st2)
+        assert sarray[-1] == st2
+
+class TestH5Saver:
+
+
+    def test_init_file_addhoc(self, get_h5saver, tmp_path):
+        h5saver = get_h5saver
+        addhoc_file_path = tmp_path.joinpath('h5file.h5')
+        h5saver.init_file(update_h5=True, addhoc_file_path=addhoc_file_path,
+                          metadata=dict(attr1='attr1', attr2=(10, 2)))
+        assert h5saver.h5_file_path == addhoc_file_path.parent
+        assert h5saver.h5_file_name == addhoc_file_path.name
+        assert h5saver.settings.child(('current_h5_file')).value() == str(addhoc_file_path)
+        assert h5saver.current_scan_group is None
+        assert h5saver.get_node_path(h5saver.raw_group) == '/Raw_datas'
+        assert h5saver.get_node_path(h5saver.logger_array) == '/Raw_datas/Logger'
+        assert h5saver.get_attr(h5saver.logger_array, 'data_dimension') == '0D'
+        assert h5saver.get_attr(h5saver.logger_array, 'scan_type') == 'scan1D'
+        assert h5saver.get_attr(h5saver.logger_array, 'dtype') == np.dtype(np.uint8).name
+        assert h5saver.get_attr(h5saver.logger_array, 'subdtype') == 'string'
+        assert h5saver.get_last_scan() is None
+        assert h5saver.get_attr(h5saver.raw_group, 'type') == h5saver.settings.child(('save_type')).value()
+        assert h5saver.get_attr(h5saver.root(), 'date') == datetime.now().date().isoformat()
+        assert h5saver.get_attr(h5saver.raw_group, 'attr1') == 'attr1'
+        check_vals_in_iterable(h5saver.get_attr(h5saver.raw_group, 'attr2'), (10, 2))
+
+    def test_init_file(self, get_h5saver_scan, tmp_path):
+        h5saver = get_h5saver_scan
+        datetime_now = datetime.now()
+        date = datetime_now.date()
+        today = f'{date.year}{date.month:02d}{date.day:02d}'
+        base_path = tmp_path
+        h5saver.settings.child(('base_path')).setValue(str(base_path))
+        update_h5 = True
+        scan_path, current_scan_name, save_path = h5saver.update_file_paths(update_h5)
+        assert scan_path == tmp_path.joinpath(str(date.year)).joinpath(today).joinpath(f'Dataset_{today}_000')
+        assert current_scan_name == 'Scan000'
+
+        assert save_path == tmp_path.joinpath(str(date.year)).joinpath(today).joinpath(f'Dataset_{today}_000')
+
+        h5saver.init_file(update_h5=update_h5)
+        assert h5saver.h5_file is h5saver._h5file
+        assert h5saver.h5_file_path.joinpath(f'Dataset_{today}_001.h5').is_file()
+        assert h5saver.get_scan_index() == 0
+
+        h5saver.init_file(update_h5=update_h5)
+        assert h5saver.h5_file_path.joinpath(f'Dataset_{today}_002.h5').is_file()
+        scan_group = h5saver.add_scan_group()
+        assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan000'
+        assert h5saver.get_scan_index() == 0
+        scan_group1 = h5saver.add_scan_group()
+        assert scan_group == scan_group1 #no increment as no scan_done attribute
+        check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
+        h5saver.init_file(update_h5=False)
+        check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
+
+    def test_load_file(self, get_h5saver_scan, tmp_path):
+        h5saver = get_h5saver_scan
+        h5saver.settings.child(('base_path')).setValue(str(tmp_path))
+        h5saver.init_file(update_h5=True)
+        h5saver.close_file()
+        file_path = h5saver.settings.child(('current_h5_file')).value()
+
+        h5saver.load_file(file_path=file_path)
+        assert h5saver.file_loaded
+
+
+    def test_groups(self, get_h5saver_scan, tmp_path):
+        h5saver = get_h5saver_scan
+        base_path = tmp_path
+        h5saver.settings.child(('base_path')).setValue(base_path)
+        update_h5 = True
+        h5saver.init_file(update_h5=update_h5)
+        scan_group = h5saver.add_scan_group(settings_as_xml='this is a setting',
+                                                   metadata=dict(attr1='blabla', attr2=1.1))
+        assert h5saver.get_scan_index() == 0
+        assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan000'
+        scan_group = h5saver.add_scan_group()
+        # if no child in scan group no incrementation
+        assert h5saver.get_scan_index() == 0
+        assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan000'
+
+        ch1_group = h5saver.add_CH_group(scan_group)
+        assert h5saver.get_node_path(ch1_group) == '/Raw_datas/Scan000/Ch000'
+        assert h5saver.get_set_group(scan_group, 'Ch000') == h5saver.current_group
+        assert h5saver.get_scan_index() == 0
+        h5saver.set_attr(scan_group, 'scan_done', True)
+        assert h5saver.get_scan_index() == 1
+        scan_group_1 = h5saver.add_scan_group()
+        assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan001'
+
+
+    def test_hierarchy(self, get_h5saver_scan, tmp_path):
+        h5saver = get_h5saver_scan
+        base_path = tmp_path
+        h5saver.settings.child(('base_path')).setValue(base_path)
+        h5saver.init_file(update_h5=True)
+        scan_group = h5saver.add_scan_group()
+        h5saver.add_det_group(scan_group)
+        h5saver.add_det_group(scan_group)
+        move_group = h5saver.add_move_group(scan_group)
+        assert h5saver.get_node_path(move_group) == f'/Raw_datas/Scan000/Move000'
+        det_group = h5saver.add_det_group(scan_group)
+        for data_type in group_data_types:
+            data_group = h5saver.add_data_group(det_group, data_type)
+            assert h5saver.get_node_name(data_group) == utils.capitalize(data_type)
+            CH_group0 = h5saver.add_CH_group(data_group)
+            assert h5saver.get_node_path(CH_group0) == f'/Raw_datas/Scan000/Detector002/{utils.capitalize(data_type)}/Ch000'
+            CH_group1 = h5saver.add_CH_group(data_group)
+            assert h5saver.get_node_path(CH_group1) == f'/Raw_datas/Scan000/Detector002/{utils.capitalize(data_type)}/Ch001'
+
+        live_group = h5saver.add_live_scan_group(scan_group, '0D')
+        assert h5saver.get_node_path(live_group) == f'/Raw_datas/Scan000/Live_scan_0D'
+
+    def test_data_save(self, get_h5saver_scan, tmp_path):
+        h5saver = get_h5saver_scan
+        base_path = tmp_path
+        h5saver.settings.child(('base_path')).setValue(base_path)
+        h5saver.init_file(update_h5=True)
+        scan_group = h5saver.add_scan_group()
+        det_group = h5saver.add_det_group(scan_group)
+        data_group = h5saver.add_data_group(det_group, 'data2D')
+        CH_group0 = h5saver.add_CH_group(data_group)
+        CH_group1 = h5saver.add_CH_group(data_group)
+
+
+        xaxis = dict(data=np.linspace(0, 5, 6), label='x_axis_label', units='x_axis_units')
+        yaxis = dict(data=np.linspace(10, 20, 11), label='y_axis_label', units='custom')
+        data_dict = dict(data=np.random.rand(len(xaxis['data']), len(yaxis['data'])), x_axis=xaxis,
+                         y_axis=yaxis)
+        array = h5saver.add_data(CH_group0, data_dict, scan_type='', enlargeable=False)
+        assert h5saver.is_node_in_group(CH_group0, 'Data')
+        assert np.all(h5saver.get_attr(array, 'shape') == data_dict['data'].shape)
+        assert array.attrs['type'] == 'data'
+        assert h5saver.get_attr(array, 'data_dimension') == '2D'
+        assert array.attrs['scan_type'] == ''
+
+        nav_x_axis = dict(data=np.linspace(0, 2, 3), label='navigation', units='custom')
+        data_dict = dict(data=np.random.rand(len(xaxis['data']), len(yaxis['data'])), x_axis=xaxis,
+                         y_axis=yaxis, nav_x_axis=nav_x_axis)
+
+        array = h5saver.add_data(CH_group1, data_dict, init=True, scan_type='scan1D',
+                                 scan_shape=nav_x_axis['data'].shape,
+                                 enlargeable=False, add_scan_dim=True)
+        assert h5saver.is_node_in_group(CH_group1, 'Data')
+        assert np.all(h5saver.get_attr(array, 'shape') == (len(nav_x_axis['data']),
+                                                           len(xaxis['data']), len(yaxis['data'])))
+        assert array.attrs['type'] == 'data'
+        assert array.attrs['data_dimension'] == '2D'
+        assert array.attrs['scan_type'] == 'scan1D'
+        assert np.all(h5saver.read(array).shape == (len(nav_x_axis['data']), len(xaxis['data']), len(yaxis['data'])))
+        assert h5saver.is_node_in_group(CH_group1, 'X_axis')
+        xnode = h5saver.get_node(CH_group1, 'X_axis')
+        assert xnode.attrs['type'] == 'axis'
+        assert xnode.attrs['label'] == 'x_axis_label'
+        assert xnode.attrs['units'] == 'x_axis_units'
+        assert xnode.attrs['data_dimension'] == '1D'
+        assert xnode.attrs['scan_type'] == ''
+
+        assert h5saver.is_node_in_group(CH_group1, 'Y_axis')
+
+        assert h5saver.is_node_in_group(CH_group1, 'Nav_x_axis')
+        navnode = h5saver.get_node(CH_group1, 'Nav_x_axis')
+        assert navnode.attrs['type'] == 'axis'
+        assert navnode.attrs['label'] == 'navigation'
+        assert navnode.attrs['units'] == 'custom'
+        assert navnode.attrs['data_dimension'] == '1D'
+        assert navnode.attrs['scan_type'] == ''
+
+        # test enlargeable array
+        CH_group2 = h5saver.add_CH_group(data_group)
+        dshape = (10,)
+        array = h5saver.add_array(CH_group2, 'earray', data_type='data', data_shape=dshape, data_dimension='1D',
+                                  array_type=np.uint32,
+                                  enlargeable=True)
+        assert h5saver.is_node_in_group(CH_group2, 'earray')
+        assert array.attrs['CLASS'] == 'EARRAY'
+        array.append(np.random.rand(*dshape))
+        array.append(np.random.rand(*dshape))
+        assert np.all(h5saver.read(array).shape == (2, 10))
+
+
+@pytest.fixture(params=tested_backend)
+def load_test_file(request):
+    bck = H5BrowserUtil(backend=request.param)
+    filepath = './data/Dataset_20200323_002.h5'
+    bck.open_file(filepath, 'r')
+    return bck
+
+@pytest.fixture(params=tested_backend)
+def create_test_file(request):
+    bck = H5BrowserUtil(backend=request.param)
+    filepath = f'./data/data_test_{request.param}.h5'
+    bck.open_file(filepath, 'w')
+    bck.add_group('Raw_datas', 'raw_datas', '/', metadata=dict(date_time=datetime.now(), author='Seb Weber',
+                                                               settings='this should be xml', type='scan'))
+    bck.close_file()
+    return bck
+
+
+class TestH5BrowserUtil:
+
+    def test_get_h5_attributes(self, create_test_file, load_test_file):
+        h5utils = load_test_file
+
+        node_path = '/Raw_datas'
+        node = h5utils.get_node(node_path)
+        #assert node.attrs['date_time'] == datetime(year=23, month=16)
+
+
+        attr_dict, settings, scan_settings, pixmaps = h5utils.get_h5_attributes(node_path)
+        assert settings == '<Attributes readonly="0" removable="0" title="Attributes" type="group" visible="1"><dataset_info readonly="0" removable="0" title="Dataset information" type="group" visible="1"><author readonly="0" removable="0" title="Author:" type="str" visible="1">Sebastien Weber</author><date_time readonly="0" removable="0" title="Date/time:" type="date_time" visible="1">PyQt5.QtCore.QDateTime(2020, 3, 23, 21, 16, 9, 798)</date_time><sample readonly="0" removable="0" title="Sample:" type="str" visible="1" /><experiment_type readonly="0" removable="0" title="Experiment type:" type="str" visible="1" /><description readonly="0" removable="0" title="Description:" type="text" visible="1" /></dataset_info></Attributes>'
+        assert node.attrs.attrs_name == ['CLASS',
+                                         'TITLE',
+                                         'VERSION',
+                                         'author',
+                                         'date_time',
+                                         'description',
+                                         'experiment_type',
+                                         'sample',
+                                         'settings',
+                                         'type']
+
+
+
+        h5utils.close_file()
+
+

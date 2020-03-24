@@ -20,7 +20,7 @@ from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.plotting.lcd import LCD
 import pymodaq.daq_utils.daq_utils as daq_utils
-from pymodaq.daq_utils.h5browser import browse_data
+from pymodaq.daq_utils.h5modules import browse_data
 from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
 
 from pymodaq_plugins.daq_viewer_plugins import plugins_0D
@@ -48,7 +48,7 @@ import time
 import datetime
 import tables
 from pathlib import Path
-from pymodaq.daq_utils.h5saver import H5Saver
+from pymodaq.daq_utils.h5modules import H5Saver
 from pymodaq.daq_utils.daq_utils import get_set_local_dir, DockArea
 
 if __name__ == '__main__':

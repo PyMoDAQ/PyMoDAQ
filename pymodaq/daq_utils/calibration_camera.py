@@ -10,7 +10,7 @@ import tables
 import numpy as np
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
-from pymodaq.daq_utils.h5browser import browse_data
+from pymodaq.daq_utils.h5modules import browse_data
 from collections import OrderedDict
 import warnings
 import os

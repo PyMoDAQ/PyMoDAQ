@@ -6,7 +6,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
 from pymodaq.daq_utils.daq_utils import get_set_pid_path, select_file
-from pymodaq.daq_utils.h5saver import H5Saver
+from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
 

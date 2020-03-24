@@ -1927,9 +1927,9 @@ class file_browser(QtWidgets.QWidget):
     value_changed=pyqtSignal(str)
     def __init__(self,init_path='D:/Data',file_type=False):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(file_browser,self).__init__()
-        self.filetype=file_type
-        self.path=init_path
+        super(file_browser, self).__init__()
+        self.filetype = file_type
+        self.path = init_path
         self.initUI()
 
         self.base_path_browse_pb.clicked.connect(self.browse_path)
@@ -1955,7 +1955,7 @@ class file_browser(QtWidgets.QWidget):
              self.set_path(folder_name)
              self.value_changed.emit(folder_name)
 
-    def set_path(self,path_file):
+    def set_path(self, path_file):
         """
             Set the base path attribute with the given path_file.
 
@@ -1964,6 +1964,8 @@ class file_browser(QtWidgets.QWidget):
             *path_file*       string      the pathname of the file
             =============== =========== ===========================
         """
+        if isinstance(path_file, Path):
+            path_file = str(path_file)
         self.base_path_edit.setPlainText(path_file)
         self.path = path_file
 
