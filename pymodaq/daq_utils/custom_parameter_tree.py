@@ -202,6 +202,7 @@ def dict_from_param(param):
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     if 'limits' in param.opts:
         limits = str(param.opts['limits'])
@@ -211,6 +212,8 @@ def dict_from_param(param):
 >>>>>>> parent of ab085bf... pep8 cleaning and other bits
 =======
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
+=======
+>>>>>>> parent of fbf4414... saved ROIs as xml file and reloading now working
     if 'detlist' in param.opts:
         detlist = str(param.opts['detlist'])
         opts.update(dict(detlist=detlist))

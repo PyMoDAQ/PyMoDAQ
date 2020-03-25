@@ -354,6 +354,7 @@ class ROIManager(QObject):
             print(e)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def load_ROI(self, path = None):
         try:
             if path is None:
@@ -372,20 +373,24 @@ class ROIManager(QObject):
                     self.settings.child(('ROIs')).addChildren(params)
 =======
     def load_ROI(self, path=None):
+=======
+    def load_ROI(self, path = None):
+>>>>>>> parent of fbf4414... saved ROIs as xml file and reloading now working
         try:
             if path is None:
-                path = select_file(save=False, ext='xml')
+                path = select_file(save=False, ext='roi')
                 if path != '':
                     for roi in self.ROIs.values():
-                        index = roi.index
+                        index=roi.index
                         self.viewer_widget.plotitem.removeItem(roi)
-                        # self.settings.sigTreeStateChanged.disconnect()
+                        #self.settings.sigTreeStateChanged.disconnect()
                         self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
-                        # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+                        #self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
                     self.ROIs = OrderedDict([])
 
 
                     params = custom_tree.XML_file_to_parameter(path)
+<<<<<<< HEAD
                     for param in params:
                         self.settings.child(('ROIs')).addChild(param)
                     #self.settings.child(('ROIs')).addChildren(params)
@@ -402,6 +407,9 @@ class ROIManager(QObject):
 
 
 >>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
+=======
+                    self.settings.child(('ROIs')).addChildren(params)
+>>>>>>> parent of fbf4414... saved ROIs as xml file and reloading now working
 
         except Exception as e:
             pass

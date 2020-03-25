@@ -294,9 +294,15 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.initialized_state=False
         self.measurement_module=None
         self.snapshot_pathname=None
+<<<<<<< HEAD
 
 
 
+=======
+
+
+
+>>>>>>> parent of fbf4414... saved ROIs as xml file and reloading now working
         self.current_datas=None
         #edict to be send to the daq_measurement module from 1D traces if any
 
@@ -508,7 +514,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     if self.data_to_save_export[key] is None:
                        self.data_to_save_export[key] = OrderedDict([])
                     for k in datas[key]:
+<<<<<<< HEAD
                         self.data_to_save_export[key][k] = datas[key][k]
+=======
+                            self.data_to_save_export[key][k].update(datas[key][k])
+>>>>>>> parent of fbf4414... saved ROIs as xml file and reloading now working
 
         if self.data_to_save_export['Ndatas'] == len(self.ui.viewers):
             if self.do_continuous_save:
