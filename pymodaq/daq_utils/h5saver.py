@@ -16,7 +16,11 @@ import copy
 
 version = '0.0.1'
 save_types = ['scan', 'detector', 'custom']
+<<<<<<< HEAD
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
+=======
+group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
+>>>>>>> parent of 6ccc6aa... added logging from DAQ_logger module
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -385,6 +389,7 @@ class H5Saver(QObject):
                 flag = False
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                 for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
 =======
                 for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
@@ -392,6 +397,9 @@ class H5Saver(QObject):
 =======
                 for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
+=======
+                for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
+>>>>>>> parent of 6ccc6aa... added logging from DAQ_logger module
                     if 'scan' in child:
                         return len(groups)
 

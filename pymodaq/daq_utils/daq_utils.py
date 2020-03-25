@@ -1094,11 +1094,14 @@ def get_h5file_scans(h5file,path='/'):
     return scan_list
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 
 
 >>>>>>> parent of b5f5983... many things
+=======
+>>>>>>> parent of 6ccc6aa... added logging from DAQ_logger module
 def pixmap2ndarray(pixmap,scale=None):
     channels_count = 4
     image = pixmap.toImage()

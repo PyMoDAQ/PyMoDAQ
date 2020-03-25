@@ -37,8 +37,13 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 logging.basicConfig(filename=os.path.join(log_path, 'H5Browser_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
 
+<<<<<<< HEAD
 
 
+=======
+
+
+>>>>>>> parent of 6ccc6aa... added logging from DAQ_logger module
 class H5Browser(QtWidgets.QWidget,QObject):
     data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
     status_signal = pyqtSignal(str)

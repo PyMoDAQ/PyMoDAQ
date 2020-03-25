@@ -464,6 +464,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             quit_fun
         """
         try:
+<<<<<<< HEAD
             try:
                 self.h5saver.close_file()
             except:
@@ -506,6 +507,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
 
+=======
+            self.h5saver.close_file()
+>>>>>>> parent of 6ccc6aa... added logging from DAQ_logger module
         except Exception as e:
             pass
 

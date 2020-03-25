@@ -79,7 +79,7 @@ class DashBoard(QObject):
         splash = QtGui.QPixmap(splash_path)
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
 
-        self.overshoot = False
+
         self.preset_file = None
         self.move_modules = []
         self.detector_modules = []
