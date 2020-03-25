@@ -17,11 +17,19 @@ from pymodaq.daq_utils.h5saver import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
 
+<<<<<<< HEAD
 DAQ_Move_Stage_type=make_enum('daq_move')
 DAQ_0DViewer_Det_type=make_enum('daq_0Dviewer')
 DAQ_1DViewer_Det_type=make_enum('daq_1Dviewer')
 DAQ_2DViewer_Det_type=make_enum('daq_2Dviewer')
 DAQ_NDViewer_Det_type=make_enum('daq_NDviewer')
+=======
+DAQ_Move_Stage_type = make_enum('daq_move')
+DAQ_0DViewer_Det_type = make_enum('daq_0Dviewer')
+DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
+DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
+DAQ_NDViewer_Det_type = make_enum('daq_NDviewer')
+>>>>>>> parent of b5f5983... many things
 
 class PresetScalableGroupMove( pTypes.GroupParameter):
     """
@@ -86,8 +94,11 @@ class PresetScalableGroupMove( pTypes.GroupParameter):
                  }], 'removable': True, 'renamable': False}
 
         self.addChild(child)
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> parent of b5f5983... many things
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
 
 class PresetScalableGroupDet( pTypes.GroupParameter):
@@ -179,11 +190,19 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
 
                     main_child['children'].extend(params_hardware)
 
+<<<<<<< HEAD
             child={'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
                     {'title': 'Name:' , 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
                     {'title': 'Init?:' , 'name': 'init', 'type': 'bool', 'value': True},
                     {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params
                    }],'removable':True, 'renamable':False}
+=======
+            child = {'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
+                    {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
+                    {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
+                    {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},
+                    ], 'removable': True, 'renamable': False}
+>>>>>>> parent of b5f5983... many things
 
             self.addChild(child)
         except Exception as e:

@@ -9,7 +9,12 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from easydict import EasyDict as edict
 import socket, select
 import numpy as np
+<<<<<<< HEAD
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, check_received_length, check_sended, message_to_bytes,\
+=======
+from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
+from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended, message_to_bytes,\
+>>>>>>> parent of b5f5983... many things
     get_int, get_list, send_string, send_list, get_array, get_string
 from collections import OrderedDict
 from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo

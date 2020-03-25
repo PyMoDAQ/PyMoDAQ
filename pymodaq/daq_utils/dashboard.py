@@ -7,6 +7,9 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 """
 
 import sys
+from collections import OrderedDict
+import numpy as np
+from pathlib import Path
 import datetime
 import pickle
 import os
@@ -16,10 +19,11 @@ from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.custom_parameter_tree import GroupParameterCustom
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
+from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
 from pymodaq.version import get_version
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.manage_preset import PresetManager
@@ -27,8 +31,8 @@ from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.roi_saver import ROISaver
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_scan import DAQ_Scan
-from pymodaq.daq_logger import DAQ_Logger
+from pymodaq.daq_scan.daq_scan_main import DAQ_Scan
+from pymodaq.daq_logger.daq_logger_main import DAQ_Logger
 from pymodaq.daq_utils import daq_utils as utils
 
 
@@ -76,7 +80,7 @@ class DashBoard(QObject):
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
         self.mainwindow = dockarea.parent()
         self.title = ''
-        splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
+        splash_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], 'splash.png')
         splash = QtGui.QPixmap(splash_path)
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
         self.overshoot_manager = None
@@ -349,11 +353,11 @@ class DashBoard(QObject):
             quit_fun
         """
         try:
-
-            for mov in self.move_modules:
-                mov.init_signal.disconnect(self.update_init_tree)
-            for det in self.detector_modules:
-                det.init_signal.disconnect(self.update_init_tree)
+            if self.scan_module is not None:
+                try:
+                    self.scan_module.quit_fun()
+                except:
+                    pass
 
             for module in self.move_modules:
                 try:
@@ -372,7 +376,7 @@ class DashBoard(QObject):
                     QtWidgets.QApplication.processEvents()
                 except:
                     pass
-            areas = self.dockarea.tempAreas[:]
+            areas=self.dockarea.tempAreas[:]
             for area in areas:
                 area.win.close()
                 QtWidgets.QApplication.processEvents()
@@ -386,7 +390,7 @@ class DashBoard(QObject):
                 # path = os.path.join(scan_conf_path, file)
                 # custom_tree.parameter_to_xml_file(self.settings, path)
 
-            if hasattr(self, 'mainwindow'):
+            if hasattr(self,'mainwindow'):
                 self.mainwindow.close()
 
 

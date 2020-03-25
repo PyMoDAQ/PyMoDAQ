@@ -13,8 +13,13 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+<<<<<<< HEAD
   <layout class="QGridLayout" name="gridLayout_4">
    <item row="0" column="0">
+=======
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+>>>>>>> parent of b5f5983... many things
     <widget class="QSplitter" name="splitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -198,7 +203,11 @@
      </widget>
     </widget>
    </item>
+<<<<<<< HEAD
    <item row="1" column="0">
+=======
+   <item>
+>>>>>>> parent of b5f5983... many things
     <layout class="QHBoxLayout" name="StatusBarLayout"/>
    </item>
   </layout>

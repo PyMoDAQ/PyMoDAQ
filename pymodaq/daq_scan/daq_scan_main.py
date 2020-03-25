@@ -19,6 +19,7 @@ from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
+<<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
@@ -41,6 +42,14 @@ from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
 from pymodaq.version import get_version
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard:pymodaq/daq_scan.py
+=======
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+
+from pymodaq.daq_utils.daq_utils import getLineInfo
+from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
+from pymodaq.version import get_version
+>>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
@@ -1256,10 +1265,16 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
 
     def setupUI(self):
+<<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
         self.mainwindow.setVisible(False)
+=======
+        self.ui = Ui_Form()
+        widgetsettings = QtWidgets.QWidget()
+        self.ui.setupUi(widgetsettings)
+>>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
 
         #%% create scan dock and make it a floating window
         self.ui.scan_dock = Dock("Scan", size=(1, 1), autoOrientation=False)     ## give this dock the minimum possible size
@@ -2486,6 +2501,10 @@ class DAQ_Scan_Acquisition(QObject):
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
+=======
+    from pymodaq.daq_utils.dashboard import DashBoard
+>>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
     app = QtWidgets.QApplication(sys.argv)
 
     splash_path = os.path.join(os.path.split(__file__)[0],'splash.png')
@@ -2509,6 +2528,7 @@ if __name__ == '__main__':
     win.setWindowTitle('pymodaq Scan')
 
     #win.setVisible(False)
+<<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
     prog = DAQ_Scan(area)
     QThread.sleep(0)
     win.show()
@@ -2516,5 +2536,8 @@ if __name__ == '__main__':
     #win.setVisible(True)
     
     
+=======
+    prog = DashBoard(area)
+>>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
     sys.exit(app.exec_())
 

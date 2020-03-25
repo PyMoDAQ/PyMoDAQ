@@ -145,7 +145,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
                  {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
                  {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+<<<<<<< HEAD
                  {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+=======
+                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
+>>>>>>> parent of b5f5983... many things
                  {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
             ]},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': True, 'expanded': False,'children':[
@@ -179,8 +183,13 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             ]}
         ]
 
+<<<<<<< HEAD
     def __init__(self,parent,dock_settings=None,dock_viewer=None,title="Testing",DAQ_type="DAQ0D",
                  preset=None,init=False,controller_ID=-1, parent_scan=None):
+=======
+    def __init__(self, parent, dock_settings=None, dock_viewer=None, title="Testing", DAQ_type="DAQ0D",
+                 preset=None, init=False, controller_ID=-1, parent_scan=None):
+>>>>>>> parent of b5f5983... many things
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Viewer,self).__init__()
 

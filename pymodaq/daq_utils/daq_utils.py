@@ -1093,6 +1093,12 @@ def get_h5file_scans(h5file,path='/'):
 
     return scan_list
 
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> parent of b5f5983... many things
 def pixmap2ndarray(pixmap,scale=None):
     channels_count = 4
     image = pixmap.toImage()

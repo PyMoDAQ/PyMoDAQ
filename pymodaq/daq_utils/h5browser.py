@@ -6,7 +6,11 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize, get_set_local_dir, Axis
+<<<<<<< HEAD
 
+=======
+from pymodaq.daq_utils import manage_preset #to activate recognition of 'groupmove' and 'groupdet' parameters
+>>>>>>> parent of b5f5983... many things
 import sys
 import tables
 import numpy as np
@@ -468,10 +472,17 @@ class H5Browser(QtWidgets.QWidget,QObject):
             VLayout.addwidget(label2D)
             widget.setLayout(vLayout)
             self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'],1,widget)
+<<<<<<< HEAD
 
 
 
 
+=======
+
+
+
+
+>>>>>>> parent of b5f5983... many things
 def browse_data(fname=None, ret_all = False):
     """
         | Browse data present in any h5 file, when user has selected the one,
