@@ -146,10 +146,14 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                  {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
                  {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
 <<<<<<< HEAD
+<<<<<<< HEAD
                  {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
 =======
                  {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
 >>>>>>> parent of b5f5983... many things
+=======
+                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+>>>>>>> parent of c737429... cleaning and documenting tcp/ip communication
                  {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
             ]},
             {'title': 'Overshoot options:','name':'overshoot','type':'group', 'visible': True, 'expanded': False,'children':[
