@@ -8,7 +8,11 @@ from subprocess import Popen, PIPE
 from os.path import abspath, dirname
 
 
+<<<<<<< HEAD
 VERSION = (1, 6, 5, 'flim', 0)
+=======
+VERSION = (1, 7, 0, 'database', 0)
+>>>>>>> parent of ab085bf... pep8 cleaning and other bits
 
 
 def git_sha():

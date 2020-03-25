@@ -18,7 +18,11 @@ version = '0.0.1'
 save_types = ['scan', 'detector', 'custom']
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
+<<<<<<< HEAD
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
+=======
+data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5']
+>>>>>>> parent of ab085bf... pep8 cleaning and other bits
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
@@ -375,7 +379,11 @@ class H5Saver(QObject):
                 groups = [group for group in list(self.raw_group._v_groups) if 'Scan' in group]
                 groups.sort()
                 flag = False
+<<<<<<< HEAD
                 for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
+=======
+                for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
+>>>>>>> parent of ab085bf... pep8 cleaning and other bits
                     if 'scan' in child:
                         return len(groups)
 
@@ -634,7 +642,11 @@ class H5Saver(QObject):
 
 
     def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
+<<<<<<< HEAD
                   title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
+=======
+                  title='', array_to_save=None, array_type=np.float, enlargeable=False, metadata=dict([]),
+>>>>>>> parent of ab085bf... pep8 cleaning and other bits
                   init=False, add_scan_dim=False):
 
         if data_dimension not in data_dimensions:
