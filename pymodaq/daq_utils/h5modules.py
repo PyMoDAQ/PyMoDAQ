@@ -23,6 +23,7 @@ import numpy as np
 from pathlib import Path
 import copy
 import importlib
+from packaging import version as version_mod
 
 
 #default backend
@@ -407,6 +408,7 @@ class H5Backend:
 
         self._h5file = None
         self.backend = backend
+        self.file_path = None
         self.compression = None
         if backend == 'tables':
             if is_tables:
@@ -423,6 +425,10 @@ class H5Backend:
                 self.h5module = h5pyd
             else:
                 raise ImportError('the h5pyd module is not present')
+
+    @property
+    def h5file(self):
+        return self._h5file
 
     def isopen(self):
         if self._h5file is None:
@@ -444,7 +450,7 @@ class H5Backend:
             print(e) #no big deal
 
     def open_file(self, fullpathname, read_write='r', title='PyMoDAQ file', **kwargs):
-
+        self.file_path = fullpathname
         if self.backend == 'tables':
             self._h5file = self.h5module.open_file(fullpathname, read_write, title=title, **kwargs)
             if read_write == 'w':
@@ -1689,9 +1695,9 @@ class H5BrowserUtil(H5Backend):
                 header = []
                 dtypes = []
                 fmts = []
-                for subnode_name, subnode in node.children():
+                for subnode_name, subnode in node.children().items():
                     if 'ARRAY' in subnode.attrs['CLASS']:
-                        if len(subnode.shape) == 1:
+                        if len(subnode.attrs['shape']) == 1:
                             data = subnode.read()
                             if not isinstance(data, np.ndarray):
                                 # in case one has a list of same objects (array of strings for instance, logger or other)
@@ -1836,6 +1842,7 @@ class H5BrowserUtil(H5Backend):
                 return data, [], []
 
 class H5Browser(QObject):
+    """UI used to explore h5 files, plot and export subdatas"""
     data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
     status_signal = pyqtSignal(str)
 
@@ -1879,34 +1886,58 @@ class H5Browser(QObject):
             h5file_path = select_file(h5file_path, save=False, ext=['h5', 'hdf5'])
 
         self.h5utils.open_file(h5file_path, 'a')
+        self.check_version()
+
         self.populate_tree()
 
         self.ui.h5file_tree.ui.Open_Tree.click()
 
-    def add_comments(self):
-        try:
-            item = self.ui.h5file_tree.ui.Tree.currentItem()
-            self.current_node_path = item.text(2)
-            node = self.h5utils.get_node(item.text(2))
+    def check_version(self):
+        if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
+            msgBox = QtWidgets.QMessageBox(parent=None)
+            msgBox.setWindowTitle("Invalid version")
+            msgBox.setText(f"Your file has been saved using PyMoDAQ "
+                           f"version {self.h5utils.root().attrs['pymodaq_version']} "
+                           f"while you're using version: {get_version()}\n"
+                           f"Please create and use an adapted environment to use this version (up to 1.6.4):\n"
+                           f"pip install pymodaq==1.6.4")
+            ret = msgBox.exec()
+            self.quit_fun()
+            if self.main_window is not None:
+                self.main_window.close()
+            else:
+                self.parent.close()
 
+    def add_comments(self, status, comment=''):
+        try:
+            self.current_node_path = self.get_tree_node_path()
+            node = self.h5utils.get_node(self.current_node_path)
             if 'comments' in node.attrs.attrs_name:
                 tmp = node.attrs['comments']
             else:
                 tmp = ''
-            text, res = QtWidgets.QInputDialog.getMultiLineText(None, 'Enter comments', 'Enter comments here:', tmp)
-            if res and text != '':
-                    node.attrs['comments'] = text
+            if comment == '':
+                text, res = QtWidgets.QInputDialog.getMultiLineText(None, 'Enter comments', 'Enter comments here:', tmp)
+                if res and text != '':
+                    comment = text
+                node.attrs['comments'] = comment
+            else:
+                node.attrs['comments'] = tmp + comment
+
             self.h5utils.flush()
 
         except Exception as e:
             self.status_signal.emit(getLineInfo() + str(e))
 
+    def get_tree_node_path(self):
+        return self.ui.h5file_tree.ui.Tree.currentItem().text(2)
+
     def export_data(self):
         try:
             file = select_file(save=True, ext='txt')
-            node_path = self.ui.h5file_tree.ui.Tree.currentItem()
+            self.current_node_path = self.get_tree_node_path()
             if file != '':
-                self.h5utils.export_data(node_path, str(file))
+                self.h5utils.export_data(self.current_node_path, str(file))
 
         except Exception as e:
             self.status_signal.emit(getLineInfo() + str(e))
@@ -1922,7 +1953,10 @@ class H5Browser(QObject):
         """
         try:
             self.h5utils.close_file()
-            self.parent.close()
+            if self.main_window is None:
+                self.parent.close()
+            else:
+                self.main_window.close()
         except Exception as e:
             pass
 
@@ -1953,7 +1987,7 @@ class H5Browser(QObject):
         log_action.triggered.connect(self.show_log)
 
     def show_about(self):
-        splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
+        splash_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], 'splash.png')
         splash = QtGui.QPixmap(splash_path)
         self.splash_sc = QtWidgets.QSplashScreen(splash, QtCore.Qt.WindowStaysOnTopHint)
         self.splash_sc.setVisible(True)
@@ -1986,12 +2020,12 @@ class H5Browser(QObject):
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
 
-        export_action = QtWidgets.QAction("Export data as *.txt file")
-        export_action.triggered.connect(self.export_data)
-        add_comments_action = QtWidgets.QAction("Add comments to this node")
-        add_comments_action.triggered.connect(self.add_comments)
-        self.ui.h5file_tree.ui.Tree.addAction(export_action)
-        self.ui.h5file_tree.ui.Tree.addAction(add_comments_action)
+        self.export_action = QtWidgets.QAction("Export data as *.txt file", None)
+        self.export_action.triggered.connect(self.export_data)
+        self.add_comments_action = QtWidgets.QAction("Add comments to this node", None)
+        self.add_comments_action.triggered.connect(self.add_comments)
+        self.ui.h5file_tree.ui.Tree.addAction(self.export_action)
+        self.ui.h5file_tree.ui.Tree.addAction(self.add_comments_action)
 
         V_splitter.addWidget(Form)
         self.ui.attributes_tree = ParameterTree()
@@ -2034,7 +2068,7 @@ class H5Browser(QObject):
 
         """
         try:
-            self.current_node_path = item.text(2)
+            self.current_node_path = self.get_tree_node_path()
 
             attr_dict, settings, scan_settings, pixmaps = self.h5utils.get_h5_attributes(self.current_node_path)
 
@@ -2050,11 +2084,11 @@ class H5Browser(QObject):
             QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
 
             if settings is not None:
-                params = custom_tree.XML_string_to_parameter(settings.decode())
+                params = custom_tree.XML_string_to_parameter(settings)
                 self.settings.addChildren(params)
 
             if scan_settings is not None:
-                params = custom_tree.XML_string_to_parameter(scan_settings.decode())
+                params = custom_tree.XML_string_to_parameter(scan_settings)
                 self.settings.addChildren(params)
 
             if pixmaps == []:
@@ -2088,7 +2122,7 @@ class H5Browser(QObject):
         try:
             self.current_node_path = item.text(2)
             self.show_h5_attributes(item)
-            node = self.get_node(self.current_node_path)
+            node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
             if 'ARRAY' in node.attrs['CLASS']:
                 data, axes, nav_axes = self.h5utils.get_h5_data(self.current_node_path)
@@ -2113,9 +2147,9 @@ class H5Browser(QObject):
             h5tree_to_QTree, update_status
         """
         try:
-            if self.h5file is not None:
+            if self.h5utils.h5file is not None:
                 self.ui.h5file_tree.ui.Tree.clear()
-                base_node = self.root()
+                base_node = self.h5utils.root()
                 base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
                 self.ui.h5file_tree.ui.Tree.addTopLevelItem(base_tree_item)
                 self.add_widget_totree(pixmap_items)
@@ -2202,14 +2236,9 @@ def browse_data(fname=None, ret_all=False):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    #win = QtWidgets.QMainWindow()
-    #prog = H5Browser(win)
-    #win.show()
-    filepath = 'C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5'
-    h5utils = H5BrowserUtil(backend='tables')
-    h5utils.open_file(filepath, 'r')
-    node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
-    node = h5utils.get_node(node_path)
-    data, axes, nav_axes = h5utils.get_h5_data(node_path)
+    win = QtWidgets.QMainWindow()
+    prog = H5Browser(win, h5file_path='C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5')
+    win.show()
+    QtWidgets.QApplication.processEvents()
 
     sys.exit(app.exec_())

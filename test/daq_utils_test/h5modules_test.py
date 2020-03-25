@@ -1,12 +1,9 @@
 import os
 import numpy as np
 from datetime import datetime
-from pathlib import Path
 import pytest
-import pathlib
-from pytest import approx, fixture, yield_fixture
-from pytest_datadir.plugin import shared_datadir, datadir
-from pytestqt import qtbot
+
+from PyQt5 import QtGui, QtWidgets, QtCore
 from pymodaq.version import get_version
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import parameterTypes, Parameter
@@ -14,6 +11,7 @@ from pymodaq.daq_utils import custom_parameter_tree as ctree
 from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
     group_data_types, data_types, data_dimensions, scan_types, InvalidGroupType, InvalidDataDimension, InvalidDataType, \
     InvalidGroupDataType, InvalidSave, InvalidScanType, CARRAY, EARRAY, VLARRAY, StringARRAY, Node, Attributes
+import csv
 
 tested_backend = ['tables', 'h5py', 'h5pyd']
 tested_backend = ['tables', 'h5py']
@@ -461,6 +459,17 @@ def create_test_file(request, qtbot):
     bck = H5Saver(backend=request.param)
     filepath = f'./data/data_test_{request.param}.h5'
     bck.init_file(update_h5=True, addhoc_file_path=filepath)
+
+    Nx = 12
+    Nnavx = 5
+    Nnavy = 10
+    scan_shape = (Nnavx, Nnavy)
+    x_axis = dict(label='this is data axis', units='no units', data=np.arange(Nx))
+    data1D = dict(data=np.arange(Nx)*1.0+7, x_axis=x_axis)
+
+    nav_x_axis = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx))
+    nav_y_axis = utils.Axis(label='this is nav y axis', units='y units', data=np.arange(Nnavy))
+
     d = datetime(year=2020, month=5, day=24, hour=10, minute=52, second=55)
 
     raw_group = bck.add_group('Agroup', 'data', '/',
@@ -471,6 +480,9 @@ def create_test_file(request, qtbot):
                                             shape=(10, 45),
                                             pixmap_1D=b'this should be binary png in reality',
                                             pixmap_2D=b'this should be another binary png in reality'))
+
+
+    bck.add_data(raw_group, data1D)
 
     scan_group = bck.add_scan_group('first scan', settings_as_xml='this should dbe xml settings')
     params = [
@@ -489,13 +501,7 @@ def create_test_file(request, qtbot):
     data_group = bck.add_data_group(det_group, 'data1D')
     ch_group = bck.add_CH_group(data_group)
 
-    Nx = 12
-    Nnavx = 5
-    Nnavy = 10
-    scan_shape = (Nnavx, Nnavy)
-    x_axis = dict(label='this is data axis', units='no units', data=np.arange(Nx))
-    nav_x_axis = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx))
-    nav_y_axis = dict(label='this is nav y axis', units='y units', data=np.arange(Nnavy))
+
     data = np.arange(Nx * Nnavx * Nnavy)
     data = data.reshape(Nnavx, Nnavy, Nx)
     data_dict = dict(data=data, x_axis=x_axis)
@@ -592,6 +598,14 @@ class TestH5BrowserUtil:
         data_in_file = np.arange(Nx * Nnavx * Nnavy)
         data_in_file = data_in_file.reshape(Nnavx, Nnavy, Nx)
 
+        node_path = '/Agroup'
+        node = h5utils.get_node(node_path)
+        assert len(node.children()) == 2
+        assert node.children_name() == ['Data', 'X_axis']
+        node_path = '/Agroup/Data'
+        data, axes, nav_axes = h5utils.get_h5_data(node_path)
+        assert np.all(data == pytest.approx(np.arange(Nx)*1.0+7))
+
         node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
         node = h5utils.get_node(node_path)
         data, axes, nav_axes = h5utils.get_h5_data(node_path)
@@ -616,5 +630,91 @@ class TestH5BrowserUtil:
         assert axes['nav_y_axis']['label'] == nav_y_axis_in_file['label']
         assert axes['nav_y_axis']['units'] == nav_y_axis_in_file['units']
         assert np.all(axes['nav_y_axis']['data'] == nav_y_axis_in_file['data'])
+        h5utils.close_file()
+
+    def test_export_h5_data(self, load_test_file):
+        """Load files (created with all backends) and manipulate them using
+         all backends for cross compatibility checks
+         """
+        h5utils = load_test_file
+        node_path = '/Raw_datas/Logger'
+        node = h5utils.get_node(node_path)
+        data = node.read()
+        h5utils.export_data(node_path, '/data/stringdata.txt')
+        with open('/data/stringdata.txt', 'r') as f:
+            reader = csv.reader(f)
+            data_back = []
+            for row in reader:
+                data_back.append(row[0])
+
+        assert data_back == data
+        os.remove('/data/stringdata.txt')
+
+        node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/X_axis'
+        node = h5utils.get_node(node_path)
+        data = node.read()
+        h5utils.export_data(node_path, '/data/data.txt')
+        data_back = np.loadtxt('data.txt')
+        assert np.all(data == pytest.approx(data_back))
+        os.remove('/data/data.txt')
+
+        node_path = '/Agroup'
+        h5utils.export_data(node_path, '/data/data.txt') #export both Data and X_axis node
+
+        xaxis = h5utils.get_node('/Agroup/X_axis').read()
+        data = h5utils.get_node('/Agroup/Data').read()
+
+        data_back = np.loadtxt('/data/data.txt')
+        assert np.all(xaxis == pytest.approx(data_back[:, 1]))
+        assert np.all(data == pytest.approx(data_back[:, 0]))
+        os.remove('/data/data.txt')
 
         h5utils.close_file()
+
+@pytest.fixture(params=tested_backend)
+def load_test_file_h5browser(request, get_file, qtbot):
+    win = QtWidgets.QMainWindow()
+    h5browser = H5Browser(win, h5file_path=get_file, backend=request.param)
+    win.show()
+    qtbot.addWidget(win)
+    return h5browser
+
+class TestH5Browser:
+
+    def test_create(self, create_test_file):
+        """Create "same" files using all backends"""
+        create_test_file
+
+    def test_h5browser(self, load_test_file_h5browser, qtbot):
+        h5browser = load_test_file_h5browser
+
+
+        item = h5browser.ui.h5file_tree.treewidget.findItems('Agroup', QtCore.Qt.MatchExactly|QtCore.Qt.MatchRecursive)[0]
+        assert item.text(2) == '/Agroup'
+        h5browser.ui.h5file_tree.treewidget.setCurrentItem(item)
+
+        node = h5browser.h5utils.get_node('/Agroup')
+        qtbot.mouseClick(h5browser.ui.h5file_tree.treewidget, QtCore.Qt.LeftButton)
+
+        for child in h5browser.settings_raw.children():
+            assert child.name in node.attrs.attrs_name
+
+        node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/X_axis'
+        node = h5browser.h5utils.get_node(node_path)
+        items = h5browser.ui.h5file_tree.treewidget.findItems('X_axis', QtCore.Qt.MatchExactly|QtCore.Qt.MatchRecursive)
+        item = [it for it in items if it.text(2) == node_path][0]
+        h5browser.ui.h5file_tree.treewidget.setCurrentItem(item)
+
+        qtbot.mouseClick(h5browser.ui.h5file_tree.treewidget, QtCore.Qt.LeftButton)
+
+        for child in h5browser.settings_raw.children():
+            assert child.name in node.attrs.attrs_name
+
+        node.attrs['comments'] = '' # mandatory for cross testing
+        h5browser.add_comments(False, comment='this is a comment.')
+        assert node.attrs['comments'] == 'this is a comment.'
+        h5browser.add_comments(False, comment=' This is a second comment')
+        h5browser.h5utils.flush()
+        assert node.attrs['comments'] == 'this is a comment. This is a second comment'
+
+        h5browser.h5utils.close_file()
