@@ -44,6 +44,11 @@ class DAQ_Logger(QObject):
 
     params = [
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
+            {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': '', 'readonly': True},
+        ]},
         {'title': 'Detectors', 'name': 'detectors', 'type': 'group', 'children': [
             {'name': 'Detectors', 'type': 'itemselect'},
         ]},
@@ -240,6 +245,8 @@ class DAQ_Logger(QObject):
 
         """
         try:
+            self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
+
             ######################################################################
             # setting moves and det in tree
             preset_items_det = []
@@ -266,21 +273,11 @@ class DAQ_Logger(QObject):
         self.h5saver.settings.child(('base_name')).setValue('Data')
         self.h5saver.settings.child(('N_saved')).show()
         self.h5saver.settings.child(('N_saved')).setValue(0)
+        self.h5saver.init_file(update_h5=True)
 
-        settings_str = b'<All_settings>'
-        settings_str += custom_tree.parameter_to_xml_string(self.dashboard.settings)
-        settings_str += custom_tree.parameter_to_xml_string(self.dashboard.preset_manager.preset_params)
-        if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-            settings_str += custom_tree.parameter_to_xml_string(self.dashboard.overshoot_manager.overshoot_params)
-        if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-            settings_str += custom_tree.parameter_to_xml_string(self.dashboard.roi_saver.roi_presets)
-        settings_str += custom_tree.parameter_to_xml_string(self.settings)
+        settings_str = b'<All_settings>' + custom_tree.parameter_to_xml_string(self.settings)
         settings_str += custom_tree.parameter_to_xml_string(self.h5saver.settings)
         settings_str += b'</All_settings>'
-
-        self.h5saver.init_file(update_h5=True, metadata=dict(settings=settings_str))
-
-
 
         self.h5saver.h5_file.flush()
 
@@ -725,13 +722,12 @@ class DAQ_Logging(QObject):
 
             for det in self.det_modules_log:
                 if not self.h5saver.is_node_in_group(self.h5saver.raw_group, det.title):
-                    settings_str = b'<All_settings>'
-                    settings_str += custom_tree.parameter_to_xml_string(det.settings)
-                    for viewer in det.ui.viewers:
-                        if hasattr(det.ui.viewers[0], 'roi_manager'):
-                            settings_str += custom_tree.parameter_to_xml_string(det.ui.viewers[0].roi_manager.settings)
-                    settings_str += b'</All_settings>'
-
+                    settings_str = custom_tree.parameter_to_xml_string(self.settings)
+                    settings_str = b'<All_settings>' + settings_str
+                    if hasattr(det.ui.viewers[0], 'roi_manager'):
+                        settings_str += custom_tree.parameter_to_xml_string(det.ui.viewers[0].roi_manager.settings)
+                    settings_str += custom_tree.parameter_to_xml_string(self.h5saver.settings) + \
+                                    b'</All_settings>'
                     det_group = self.h5saver.add_det_group(self.h5saver.raw_group, det.title, settings_str)
                     self.h5saver.add_navigation_axis(np.array([0.0, ]),
                           det_group, 'x_axis', enlargeable=True,

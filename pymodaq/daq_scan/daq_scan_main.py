@@ -1059,6 +1059,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status
         """
         try:
+<<<<<<< HEAD
             self.mainwindow.setVisible(False)
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(False)
@@ -1077,6 +1078,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
             self.move_modules = move_modules
             self.detector_modules = detector_modules
+=======
+            self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
+>>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
 
             ######################################################################
             #set scan selector

@@ -7,10 +7,14 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import h5tree_to_QTree, select_file, getLineInfo, capitalize, get_set_local_dir, Axis
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 from pymodaq.daq_utils import manage_preset #to activate recognition of 'groupmove' and 'groupdet' parameters
 >>>>>>> parent of b5f5983... many things
+=======
+
+>>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
 import sys
 import tables
 import numpy as np

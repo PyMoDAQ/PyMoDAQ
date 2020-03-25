@@ -95,10 +95,15 @@ class PresetScalableGroupMove( pTypes.GroupParameter):
 
         self.addChild(child)
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 =======
 >>>>>>> parent of b5f5983... many things
+=======
+
+
+>>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
 
 class PresetScalableGroupDet( pTypes.GroupParameter):
@@ -191,11 +196,15 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
                     main_child['children'].extend(params_hardware)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
             child={'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
                     {'title': 'Name:' , 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
                     {'title': 'Init?:' , 'name': 'init', 'type': 'bool', 'value': True},
                     {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params
                    }],'removable':True, 'renamable':False}
+<<<<<<< HEAD
 =======
             child = {'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
@@ -203,6 +212,8 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
                     {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},
                     ], 'removable': True, 'renamable': False}
 >>>>>>> parent of b5f5983... many things
+=======
+>>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
 
             self.addChild(child)
         except Exception as e:

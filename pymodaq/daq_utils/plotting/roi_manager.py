@@ -353,6 +353,7 @@ class ROIManager(QObject):
         except Exception as e:
             print(e)
 
+<<<<<<< HEAD
     def load_ROI(self, path = None):
         try:
             if path is None:
@@ -369,6 +370,38 @@ class ROIManager(QObject):
 
                     params = custom_tree.XML_file_to_parameter(path)
                     self.settings.child(('ROIs')).addChildren(params)
+=======
+    def load_ROI(self, path=None):
+        try:
+            if path is None:
+                path = select_file(save=False, ext='xml')
+                if path != '':
+                    for roi in self.ROIs.values():
+                        index = roi.index
+                        self.viewer_widget.plotitem.removeItem(roi)
+                        # self.settings.sigTreeStateChanged.disconnect()
+                        self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
+                        # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+                    self.ROIs = OrderedDict([])
+
+
+                    params = custom_tree.XML_file_to_parameter(path)
+                    for param in params:
+                        self.settings.child(('ROIs')).addChild(param)
+                    #self.settings.child(('ROIs')).addChildren(params)
+                    QtWidgets.QApplication.processEvents()
+
+                    settings = Parameter.create(title='Settings', name='settings', type='group', children=params)
+                    self.set_roi(self.settings.child(('ROIs')).children(), settings.children())
+
+                    # for child, new_child in zip(self.settings.child(('ROIs')).children(), settings.children()):
+                    #     child.restoreState(new_child.saveState())
+
+
+                    #self.roi_update_children.emit(settings.children())
+
+
+>>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
 
         except Exception as e:
             pass
