@@ -465,6 +465,9 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         """
         try:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
             try:
                 self.h5saver.close_file()
             except:
@@ -507,9 +510,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
 
 
+<<<<<<< HEAD
 =======
             self.h5saver.close_file()
 >>>>>>> parent of 6ccc6aa... added logging from DAQ_logger module
+=======
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
         except Exception as e:
             pass
 
@@ -1043,6 +1049,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 * Detectors
                 * Move
                 * plot_form.
+<<<<<<< HEAD
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
 
             =============== =========== =============================================
@@ -1058,12 +1065,23 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
             =============== =========== =============================================
 
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard:pymodaq/daq_scan.py
+=======
+
+            =============== =========== =============================================
+            **Parameters**    **Type**    **Description**
+            *filename*        string      the name of the preset file to be treated
+            =============== =========== =============================================
+
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
             See Also
             --------
             set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status
         """
         try:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
             self.mainwindow.setVisible(False)
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(False)
@@ -1079,12 +1097,18 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
 
             move_modules, detector_modules= self.set_file_preset(filename)
             self.update_status('Preset mode ({}) has been loaded'.format(os.path.split(filename)[1]),log_type='log')
+<<<<<<< HEAD
             self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
             self.move_modules = move_modules
             self.detector_modules = detector_modules
 =======
             self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
 >>>>>>> parent of e7280eb... roi manager as a file configuration done within dashboard
+=======
+            self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
+            self.move_modules = move_modules
+            self.detector_modules = detector_modules
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
 
             ######################################################################
             #set scan selector
@@ -1273,6 +1297,7 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
 
     def setupUI(self):
+<<<<<<< HEAD
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
         self.ui=Ui_Form()
         widgetsettings=QtWidgets.QWidget()
@@ -1283,6 +1308,12 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
         widgetsettings = QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
 >>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
+=======
+        self.ui=Ui_Form()
+        widgetsettings=QtWidgets.QWidget()
+        self.ui.setupUi(widgetsettings)
+        self.mainwindow.setVisible(False)
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
 
         #%% create scan dock and make it a floating window
         self.ui.scan_dock = Dock("Scan", size=(1, 1), autoOrientation=False)     ## give this dock the minimum possible size
@@ -2509,10 +2540,13 @@ class DAQ_Scan_Acquisition(QObject):
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
 =======
     from pymodaq.daq_utils.dashboard import DashBoard
 >>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
+=======
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
     app = QtWidgets.QApplication(sys.argv)
 
     splash_path = os.path.join(os.path.split(__file__)[0],'splash.png')
@@ -2536,7 +2570,10 @@ if __name__ == '__main__':
     win.setWindowTitle('pymodaq Scan')
 
     #win.setVisible(False)
+<<<<<<< HEAD
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
+=======
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
     prog = DAQ_Scan(area)
     QThread.sleep(0)
     win.show()
@@ -2544,8 +2581,11 @@ if __name__ == '__main__':
     #win.setVisible(True)
     
     
+<<<<<<< HEAD
 =======
     prog = DashBoard(area)
 >>>>>>> parent of b5f5983... many things:pymodaq/daq_scan.py
+=======
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
     sys.exit(app.exec_())
 

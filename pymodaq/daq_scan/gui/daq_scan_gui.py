@@ -15,12 +15,17 @@ class Ui_Form(object):
         Form.setObjectName("Form")
         Form.resize(713, 485)
 <<<<<<< HEAD
+<<<<<<< HEAD
         self.gridLayout_4 = QtWidgets.QGridLayout(Form)
         self.gridLayout_4.setObjectName("gridLayout_4")
 =======
         self.verticalLayout = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout.setObjectName("verticalLayout")
 >>>>>>> parent of b5f5983... many things
+=======
+        self.gridLayout_4 = QtWidgets.QGridLayout(Form)
+        self.gridLayout_4.setObjectName("gridLayout_4")
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
         self.splitter = QtWidgets.QSplitter(Form)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.splitter.setObjectName("splitter")
@@ -102,6 +107,7 @@ class Ui_Form(object):
         self.gridLayout_5.addLayout(self.navigator_layout, 0, 0, 1, 1)
         self.tabWidget.addTab(self.tab_navigator, "")
 <<<<<<< HEAD
+<<<<<<< HEAD
         self.gridLayout_4.addWidget(self.splitter, 0, 0, 1, 1)
         self.StatusBarLayout = QtWidgets.QHBoxLayout()
         self.StatusBarLayout.setObjectName("StatusBarLayout")
@@ -112,6 +118,12 @@ class Ui_Form(object):
         self.StatusBarLayout.setObjectName("StatusBarLayout")
         self.verticalLayout.addLayout(self.StatusBarLayout)
 >>>>>>> parent of b5f5983... many things
+=======
+        self.gridLayout_4.addWidget(self.splitter, 0, 0, 1, 1)
+        self.StatusBarLayout = QtWidgets.QHBoxLayout()
+        self.StatusBarLayout.setObjectName("StatusBarLayout")
+        self.gridLayout_4.addLayout(self.StatusBarLayout, 1, 0, 1, 1)
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
 
         self.retranslateUi(Form)
         self.tabWidget.setCurrentIndex(2)
@@ -132,10 +144,14 @@ class Ui_Form(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_plot2D), _translate("Form", "2D plot"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_navigator), _translate("Form", "Navigator"))
 <<<<<<< HEAD
+<<<<<<< HEAD
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 =======
 from pymodaq.QtDesigner_Ressources import  QtDesigner_ressources_rc
 >>>>>>> parent of b5f5983... many things
+=======
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+>>>>>>> parent of 1b50287... making two objects of the dashboard and the daq_scan
 
 
 if __name__ == "__main__":
