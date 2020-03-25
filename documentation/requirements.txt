@@ -1,2 +1,2 @@
 releases
-crate
+sphinx-csv-filter
