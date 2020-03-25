@@ -959,6 +959,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
 
+<<<<<<< HEAD
+=======
+
+        settings_str = custom_tree.parameter_to_xml_string(self.settings)
+        if self.DAQ_type != 'DAQ0D':
+            settings_str = b'<All_settings>' + settings_str
+            if hasattr(self.ui.viewers[0], 'roi_manager'):
+                settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings) + \
+                            custom_tree.parameter_to_xml_string(h5saver.settings)
+            settings_str += b'</All_settings>'
+>>>>>>> parent of 06fafaf... log module creation
 
         settings_str = custom_tree.parameter_to_xml_string(self.settings)
         if self.DAQ_type != 'DAQ0D':
