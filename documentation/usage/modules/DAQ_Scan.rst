@@ -3,15 +3,15 @@
 DAQ Scan
 ========
 
-This module is an extension of the DashBoard but is the heart of PyMoDAQ, it will:
+This module is the heart of PyMoDAQ, it will:
 
+* help you declare the list of actuators and detectors to be used for a given experiment (:ref:`preset_manager`)
 * setup automatic data acquisition of detectors as a function of one or more actuators
-* save datas in hierarchical binary files (compatible with the :ref:`H5Browser_module`)
+* save datas in hierarchical binary files
 
 The flow of this module is as follow:
 
-* at startup you have to define/load a preset (see :ref:`preset_manager`) in the Dashboard
-* Select DAQ_Scan in the actions menu
+* at startup you have to define/load a preset (see :ref:`preset_manager`)
 * A dataset will be declared the first time you set a scan. A dataset is equivalent to a single saved file
   containing multiple scans.  One can see a dataset as a set of scans related to single *subject of test*.
 * Metadata can be saved for each dataset and then for each scan and be later retrieved from the saved file
@@ -22,11 +22,23 @@ The flow of this module is as follow:
 Introduction
 ------------
 
-This module has a main control window (see :numref:`daq_scan_main`).
+This module has two windows,
+one is a dashboard (:numref:`daq_scan_dashboard`) where a log and all declared actuators and detector
+will be loaded as instances of DAQ_Move and DAQ_Viewer and
+the other one is the main control window (see :numref:`daq_scan_main`).
 The dashboard gives you full control for manual adjustments
 of each actuator, checking their impact on live data from the detectors. Once all is set, one can move to
 an automated scan using the main control window.
 
+
+  .. _daq_scan_dashboard:
+
+.. figure:: /image/DAQ_Scan/dashboard.png
+   :alt: dashboard
+
+   DAQ_Scan dashboard containing all declared modules and log.
+
+.. :download:`png <dashboard.png>`
 
 Main Control Window
 -------------------
@@ -276,4 +288,29 @@ a 2D area.
 
    An example of dataset displaying several 2D scans at their respective locations (up and right axis)
 
+Preset manager
+--------------
 
+The *Preset modes* menu is used to create, modify and load preset. A preset is a set of
+actuators and detectors represented in a tree like structure, see :ref:`preset_manager`.
+
+Overshoot manager
+-----------------
+
+The *Overshoot* menu is used to configure actions (for instance the absolute positionning of one or more
+actuators, such as a beam block to stop a laser eam) when a detected value (from a running detector module) gets
+out of range with respect to some predefined bounds. For details, see :ref:`overshoot_manager`.
+
+
+.. _multiple_hardware:
+
+Multiple hardware from one controller
+-------------------------------------
+
+Sometimes one hardware controller can drive multiple actuators and sometimes detectors (for instance a XY translation stage). For
+this particular case the controller should not be initialized multiple times. One should identify one actuator
+refered to as *Master* and the other ones will be referred to as *Slave*. They will share the same controller
+address represented in the settings tree by the *Controller ID* entry. These settings will be activated
+within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
+in :numref:`daq_move_gui_settings`). This feature can be enabled for both DAQ_Move and DAQ_Viewer modules but will be
+most often encountered with actuators, so see for more details: :ref:`multiaxes_controller`.

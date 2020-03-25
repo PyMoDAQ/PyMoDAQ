@@ -173,16 +173,14 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
 
 .. code-block:: python
 
-    from pymodaq.daq_utils.daq_utils import Axis
     x_axis = dict(label='Wavelength', units= "nm", data = vector_X)
-    y_axis = Axis(data=vector_Y)
     self.data_grabed_signal.emit([OrderedDict(name='Camera',data=[data2D_0, data2D_1,...], type='Data2D',
-                                        x_axis=x_axis,y_axis=y_axis),
+                                        x_axis=vector_X,y_axis=vector_Y),
                                   OrderedDict(name='Spectrum',data=[data1D_0, data1D_1,...], type='Data1D',
-                                        x_axis=x_axis, labels=['label0', 'label1', ...]),
+                                        x_axis=vector_X, labels=['label0', 'label1', ...]),
                                   OrderedDict(name='Current',data=[data0D_0, data0D_1,...], type='Data0D'),
                                   OrderedDict(name='Datacube',data=[dataND_0, dataND_1,...], type='DataND',
-                                        nav_axes=[0,2]), nav_x_axis=...])
+                                        nav_axes=[0,2]), ])
 
 Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each ``OrderedDict``
 in the emitted list. The type of data viewer will be determined by the *type* key value while its name will be set to the *name* key value.
@@ -193,15 +191,14 @@ Each array will generate one channel within the corresponding viewer. Here is th
 * ``type``: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)
 * ``data``: list of numpy array. Each array shape should correspond to the *type*
 * ``labels``: list of string, one for each numpy array within the ``data`` field. Will be displayed on 0DViewer and 1DViewer
-* ``x_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
-  (see code above and the Axis object in the daq_utils module)
-* ``y_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
-  (see code above and the Axis object in the daq_utils module)
-* ``nav_axes``: in case of a ND data viewer, will be the index of the navigation axis, see :ref:`NDviewer`
-* ``nav_x_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
-  (see code above and the Axis object in the daq_utils module)
-* ``nav_y_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
-  (see code above and the Axis object in the daq_utils module)
+* ``x_axis``: either a numpy 1D array representing the x axis of the detector (wavelength for a spectrometer for instance,
+  default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
+  (see code above)
+* ``y_axis``: either a numpy 1D array representing the y axis of the detector (only for 2D detector)
+  (default is pixel number) or a dictionnary containing various fields to set the axis labels, units on the viewer
+  (see code above)
+* ``nav_axis``: in case of a ND data viewer, will be the index of the navigation axis, see :ref:`NDviewer`
+
 
 
 .. _data_ready:

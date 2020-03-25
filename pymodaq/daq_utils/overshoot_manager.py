@@ -12,7 +12,7 @@ from pyqtgraph.parametertree.Parameter import registerParameterType
 from pymodaq.daq_utils.daq_utils import select_file
 
 
-class PresetScalableGroupMove(pTypes.GroupParameter):
+class PresetScalableGroupMove( pTypes.GroupParameter):
     """
         |
 
@@ -108,15 +108,15 @@ if not os.path.isdir(overshoot_path):
     os.makedirs(overshoot_path)
 
 
-class OvershootManager:
-    def __init__(self, msgbox=False, det_modules=[], move_modules=[]):
+class OvershootManager():
+    def __init__(self,msgbox=False,det_modules=[],move_modules=[]):
 
-        self.overshoot_params = None
+        self.overshoot_params=None
         self.det_modules = det_modules
         self.move_modules = move_modules
 
         if msgbox:
-            msgBox = QtWidgets.QMessageBox()
+            msgBox=QtWidgets.QMessageBox()
             msgBox.setText("Overshoot Manager?");
             msgBox.setInformativeText("What do you want to do?");
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
@@ -150,7 +150,7 @@ class OvershootManager:
             file = 'overshoot_default'
         param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors','type': 'groupdetover', 'detlist': self.det_modules, 'movelist': self.move_modules}]  # [PresetScalableGroupDet(name="Detectors")]
-        self.overshoot_params = Parameter.create(title='Preset', name='Preset', type='group', children=param+params_det)
+        self.overshoot_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_det)
 
         self.show_overshoot()
 

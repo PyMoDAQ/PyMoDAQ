@@ -371,6 +371,226 @@ def elt_as_first_element(elt_list,match_word='Mock'):
     return plugins
 
 
+##############################
+## TCP/IP related functions
+
+def send_string(socket, string):
+    """
+
+    Parameters
+    ----------
+    socket
+    string
+
+    Returns
+    -------
+
+    """
+    cmd_bytes, cmd_length_bytes = message_to_bytes(string)
+    check_sended(socket, cmd_length_bytes)
+    check_sended(socket, cmd_bytes)
+
+def send_scalar(socket, data):
+    """
+    Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
+    Parameters
+    ----------
+    data
+
+    Returns
+    -------
+
+    """
+    data = np.array([data])
+    data_type = data.dtype.descr[0][1]
+    data_bytes = data.tobytes()
+    send_string(socket, data_type)
+    check_sended(socket, len(data_bytes).to_bytes(4, 'big'))
+    check_sended(socket, data_bytes)
+
+def get_string(socket):
+    string_len = get_int(socket)
+    string = check_received_length(socket, string_len).decode()
+    return string
+
+def get_int(socket):
+    data = int.from_bytes(check_received_length(socket, 4), 'big')
+    return data
+
+def get_scalar(socket):
+    """
+
+    Parameters
+    ----------
+    socket
+
+    Returns
+    -------
+
+    """
+    data_type = get_string(socket)
+    data_len = get_int(socket)
+    data_bytes = check_received_length(socket, data_len)
+
+    data = np.frombuffer(data_bytes, dtype=data_type)[0]
+    return data
+
+def send_list(socket, data_list):
+    """
+
+    Parameters
+    ----------
+    socket
+    data_list
+
+    Returns
+    -------
+
+    """
+    check_sended(socket, len(data_list).to_bytes(4, 'big'))
+    for data in data_list:
+
+        if isinstance(data, np.ndarray):
+            send_array(socket, data)
+
+        elif isinstance(data, str):
+            send_string(socket, data)
+
+        elif isinstance(data, int) or isinstance(data, float):
+            send_scalar(socket, data)
+
+def get_list(socket, data_type):
+    """
+    Receive data from socket as a list
+    Parameters
+    ----------
+    socket: the communication socket
+    data_type: either 'string', 'scalar', 'array' depending which function has been used to send the list
+
+    Returns
+    -------
+
+    """
+    data = []
+    list_len = get_int(socket)
+
+    for ind in range(list_len):
+        if data_type == 'scalar':
+            data.append(get_scalar(socket))
+        elif data_type == 'string':
+            data.append(get_string(socket))
+        elif data_type == 'array':
+            data.append(get_array(socket))
+    return data
+
+def get_array(socket):
+    data_type = get_string(socket)
+    data_len = get_int(socket)
+    Nrow = get_int(socket)
+    Ncol = get_int(socket)
+    data_bytes = check_received_length(socket, data_len)
+
+    data = np.frombuffer(data_bytes, dtype=data_type)
+    if Ncol != 0:
+        data = data.reshape((Nrow, Ncol))
+        # data=np.fliplr(data)  #because it gets inverted compared to digital...
+    data = np.squeeze(data)  # in case one dimension is 1
+
+    return data
+
+
+
+def send_array(socket, data_array):
+    """
+    get data type as a string
+    reshape array as 1D array and get number of rows and cols
+    convert Data array as bytes
+    send data type
+    send data length
+    send N rows
+    send Ncols
+    send data as bytes
+    """
+    data_type = data_array.dtype.descr[0][1]
+    data_shape = data_array.shape
+    Nrow = data_shape[0]
+    if len(data_shape) > 1:
+        Ncol = data_shape[1]
+    else:
+        Ncol = 1
+
+    data = data_array.reshape(np.prod(data_shape))
+    data_bytes = data.tobytes()
+
+    send_string(socket, data_type)
+
+    check_sended(socket, len(data_bytes).to_bytes(4, 'big'))
+    check_sended(socket, Nrow.to_bytes(4, 'big'))
+    check_sended(socket, Ncol.to_bytes(4, 'big'))
+    check_sended(socket, data_bytes)
+
+def message_to_bytes(message):
+    """
+    Convert a string to a byte array
+    Parameters
+    ----------
+    message (str): message
+
+    Returns
+    -------
+    Tuple consisting of the message converted as a byte array, and the length of the byte array, itself as a byte array of length 4
+    """
+
+    if not isinstance(message, bytes):
+        message=message.encode()
+    return message,len(message).to_bytes(4, 'big')
+
+def check_sended(socket, data_bytes):
+    """
+    Make sure all bytes are sent through the socket
+    Parameters
+    ----------
+    socket
+    data_bytes
+
+    Returns
+    -------
+
+    """
+    sended = 0
+    while sended < len(data_bytes):
+        sended += socket.send(data_bytes[sended:])
+    #print(data_bytes)
+
+
+def check_received_length(sock,length):
+    """
+    Make sure all bytes (length) that should be received are received through the socket
+    Parameters
+    ----------
+    sock
+    length
+
+    Returns
+    -------
+
+    """
+    l=0
+    data_bytes=b''
+    while l<length:
+        if l<length-4096:
+            data_bytes_tmp=sock.recv(4096)
+        else:
+            data_bytes_tmp=sock.recv(length-l)
+        l+=len(data_bytes_tmp)
+        data_bytes+=data_bytes_tmp
+    #print(data_bytes)
+    return data_bytes
+
+##End of TCP/IP functions
+##########################
+
+
 def find_in_path(path, mode):
     """
         Find the .py files in the given path directory
@@ -873,7 +1093,6 @@ def get_h5file_scans(h5file,path='/'):
 
     return scan_list
 
-
 def pixmap2ndarray(pixmap,scale=None):
     channels_count = 4
     image = pixmap.toImage()
@@ -1140,9 +1359,8 @@ def set_scan_random(start_axis1,start_axis2,stop_axis1,stop_axis2,step_axis1,ste
     return ScanParameters(Nsteps,axis_1_indexes,axis_2_indexes,scan_parameters.axis_2D_1,scan_parameters.axis_2D_2,
                           positions_shuffled)
 
-
-def set_current_scan_path(base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
-                          create_dataset_folder=True, curr_date=None, ind_dataset=None):
+def set_current_scan_path(base_dir,base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
+			create_dataset_folder=True, curr_date=None, ind_dataset=None):
     """
 
     Parameters
@@ -1162,26 +1380,26 @@ def set_current_scan_path(base_dir, base_name='Scan', update_h5=False, next_scan
     if curr_date is None:
         curr_date = datetime.date.today()
 
-    year_path = find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
-                                              create=True)  # create directory of the year if it doen't exist and return it
-    day_path = find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
-                                             create=True)  # create directory of the day if it doen't exist and return it
+																																					
+																																							
+
+    year_path = find_part_in_path_and_subpath(base_dir,part=str(curr_date.year),create=True)# create directory of the year if it doen't exist and return it
+    day_path = find_part_in_path_and_subpath(year_path,part=curr_date.strftime('%Y%m%d'),create=True)# create directory of the day if it doen't exist and return it
     dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
-    dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
-
+    dataset_paths=sorted([path for path in day_path.glob(dataset_base_name+"*") if path.is_dir()])
+						 
     if ind_dataset is None:
-        if dataset_paths == []:
-
-            ind_dataset = 0
+        if dataset_paths==[]:
+					 
+            ind_dataset=0
         else:
             if update_h5:
-                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2]) + 1
+                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])+1
             else:
-                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2])
+                ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name+"_")[2])
 
-    dataset_path = find_part_in_path_and_subpath(day_path, part=dataset_base_name + "_{:03d}".format(ind_dataset),
-                                                 create=create_dataset_folder)
-    scan_paths = sorted([path for path in dataset_path.glob(base_name + '*') if path.is_dir()])
+    dataset_path = find_part_in_path_and_subpath(day_path,part=dataset_base_name+"_{:03d}".format(ind_dataset),create=create_dataset_folder)
+    scan_paths=sorted([path for path in dataset_path.glob(base_name+'*') if path.is_dir()])
     # if scan_paths==[]:
     #     ind_scan=0
     # else:
@@ -1191,36 +1409,11 @@ def set_current_scan_path(base_dir, base_name='Scan', update_h5=False, next_scan
     #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
     ind_scan = next_scan_index
 
-    scan_path = find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
-                                              create=create_scan_folder)
-    return scan_path, base_name + '{:03d}'.format(ind_scan), dataset_path
-
+    scan_path = find_part_in_path_and_subpath(dataset_path,part=base_name+'{:03d}'.format(ind_scan),create=create_scan_folder)
+    return scan_path,base_name+'{:03d}'.format(ind_scan),dataset_path
 
 #########################
 ##File management
-
-def get_new_file_name(base_path='C:\Data', base_name='tttr_data'):
-    today = datetime.datetime.now()
-
-    date = today.strftime('%Y%m%d')
-    year = today.strftime('%Y')
-    curr_dir = os.path.join(base_path, year, date)
-    if not os.path.isdir(curr_dir):
-        os.mkdir(curr_dir)
-
-    with os.scandir(curr_dir) as it:
-        files = []
-        for entry in it:
-            if entry.name.startswith(base_name) and entry.is_file():
-                files.append(entry.name)
-        files.sort()
-        if not files:
-            index = 0
-        else:
-            index = int(os.path.splitext(files[-1])[0][-3:])+1
-
-        file = f'{base_name}_{index:03d}'
-    return file, curr_dir
 
 def find_part_in_path_and_subpath(base_dir,part='',create=False):
     """

@@ -4,26 +4,25 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import sys
 from pymodaq.daq_move.daq_move_gui import Ui_Form
 
-from pymodaq.daq_move.utility_classes import params as daq_move_params
+import numpy as np
+from pymodaq.daq_move import utility_classes
 #check for plugins to be added to the DAQ_Move_Stage_type enum
 #must be loaded to register proper custom parameter types
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
+from pymodaq.daq_utils.daq_utils import ThreadCommand,make_enum, getLineInfo
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.daq_utils import get_set_local_dir
-import pymodaq_plugins.daq_move_plugins as plugins
-
 local_path = get_set_local_dir()
 sys.path.append(local_path)
+import pymodaq_plugins.daq_move_plugins as plugins
+
+DAQ_Move_Stage_type=make_enum('daq_move')
 
 
-DAQ_Move_Stage_type = make_enum('daq_move')
-
-
-class DAQ_Move(Ui_Form, QObject):
+class DAQ_Move(Ui_Form,QObject):
     """
         | DAQ_Move object is a module used to control one motor from a specified list.
         |
@@ -62,13 +61,26 @@ class DAQ_Move(Ui_Form, QObject):
         QLocale, QObject, pyqtSignal, QStatusBar, ParameterTree
     """
     init_signal = pyqtSignal(bool)
-    command_stage = pyqtSignal(ThreadCommand)
+    command_stage=pyqtSignal(ThreadCommand)
     command_tcpip = pyqtSignal(ThreadCommand)
-    move_done_signal = pyqtSignal(str, float)  # to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
-    update_settings_signal = pyqtSignal(edict)
-    log_signal = pyqtSignal(str)
-    bounds_signal = pyqtSignal(bool)
-    params = daq_move_params
+    move_done_signal=pyqtSignal(str,float) #to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
+    update_settings_signal=pyqtSignal(edict)
+    log_signal=pyqtSignal(str)
+    bounds_signal=pyqtSignal(bool)
+    params = [
+        {'title': 'Main Settings:','name': 'main_settings','type': 'group','children':[
+            {'title': 'Move type:','name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
+            {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
+             'children': [
+                 {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+                 {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
+                 {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
+                 {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+             ]},
+            ]},
+        {'title': 'Move Settings:', 'name': 'move_settings', 'type': 'group'}
+        ]
 
 
 

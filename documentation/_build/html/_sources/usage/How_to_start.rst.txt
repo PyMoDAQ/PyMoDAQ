@@ -18,7 +18,7 @@ From command line tool:
 
 Open a command line and activate your environment (if you're using anaconda or miniconda) and execute either:
 
-*  ``python -m pymodaq.dashboard``
+*  ``python -m pymodaq.daq_scan.daq_scan_main``
 *  ``python -m pymodaq.daq_viewer.daq_viewer_main``
 *  ``python -m pymodaq.daq_move.daq_move_main``
 *  ``python -m pymodaq.daq_utils.h5browser``

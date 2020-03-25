@@ -24,16 +24,16 @@ class QLED(QLabel):
     def get_state(self):
         return self.state
 
-    def set_as(self, state=True):
+    def set_as(self,state=True):
 
         if state:
             self.set_as_true()
         else:
             self.set_as_false()
-        if state != self.state:
+        if state!=self.state:
             self.value_changed.emit(state)       
     def set_as_true(self):
-        self.state = True
+        self.state=True
         self.setPixmap(self.green_icon)
 
     def set_as_false(self):
@@ -46,7 +46,6 @@ class QLED(QLabel):
                 self.set_as_false()
             else:
                 self.set_as_true()
-            self.value_changed.emit(not self.state)
 
 
         

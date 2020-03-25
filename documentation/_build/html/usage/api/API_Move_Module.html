@@ -1,0 +1,509 @@
+
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>DAQ_Move modules &mdash; PyMoDAQ 1.6.3 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript">
+          var DOCUMENTATION_OPTIONS = {
+              URL_ROOT:'../../',
+              VERSION:'1.6.3',
+              LANGUAGE:'None',
+              COLLAPSE_INDEX:false,
+              FILE_SUFFIX:'.html',
+              HAS_SOURCE:  true,
+              SOURCELINK_SUFFIX: '.txt'
+          };
+      </script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../static/style.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="Library Reference" href="../APIdoc.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> PyMoDAQ
+          
+
+          
+            
+            <img src="../../_static/splash.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.6
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Description.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../CustomApp.html">Custom Application</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tcpip.html">TCP/IP communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Feedback.html">Who use it?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Contributors.html">Contributors</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../APIdoc.html">Library Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">DAQ_Move modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-daq-move-base-class">The DAQ_Move_base Class</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">PyMoDAQ</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../APIdoc.html">Library Reference</a> &raquo;</li>
+        
+      <li>DAQ_Move modules</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/usage/api/API_Move_Module.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+</tbody>
+</table>
+<div class="section" id="daq-move-modules">
+<h1>DAQ_Move modules<a class="headerlink" href="#daq-move-modules" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-daq-move-base-class">
+<span id="movebaseclassdescr"></span><h2>The DAQ_Move_base Class<a class="headerlink" href="#the-daq-move-base-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base">
+<em class="property">class </em><code class="descclassname">pymodaq.daq_move.utility_classes.</code><code class="descname">DAQ_Move_base</code><span class="sig-paren">(</span><em>parent=None</em>, <em>params_state=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base" title="Permalink to this definition">¶</a></dt>
+<dd><p>The base class to be herited by all actuator modules</p>
+<p>This base class implements all necessary parameters and methods for the plugin to communicate with its parent (the
+DAQ_Move module)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>parent</strong> (<em>DAQ_Move_stage instance</em><em> (</em><em>see daq_viewer_main module</em><em>)</em>) – </li>
+<li><strong>params_state</strong> (<em>Parameter instance</em><em> (</em><em>pyqtgraph</em><em>) </em><em>from which the module will get the initial settings</em><em> (</em><em>as defined in the preset</em><em>)</em>) – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Variables:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Move_Done_signal</strong> – pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
+position within the epsilon precision (see comon_parameters variable)</li>
+<li><strong>controller</strong> – the object representing the hardware in the plugin. Used to access hardware functionality</li>
+<li><strong>status</strong> – easydict instance to set information (str), controller object, stage object (if required) and initialized
+state (bool) to return to parent after initialization</li>
+<li><strong>settings</strong> – Parameter instance representing the hardware settings defined from the params attribute. Modifications
+on the GUI settings will be transferred to this attribute. It stores at all times the current state of the hardware/plugin</li>
+<li><strong>params</strong> – class level attribute. List of dict used to create a Parameter object. Its definition on the class level enable
+the automatic update of the GUI settings when changing plugins (even in preset mode creation). To be populated
+on the plugin level as the base class does’t represents a real hardware</li>
+<li><strong>is_multiaxes</strong> – class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define
+a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID Parameter)</li>
+<li><strong>current_position</strong> – (float) stores the current position after each call to the check_position in the child module</li>
+<li><strong>target_position</strong> – (float) stores the target position the controller should reach within epsilon</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.check_bound">
+<code class="descname">check_bound</code><span class="sig-paren">(</span><em>position</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.check_bound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.check_bound" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>position</strong> – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings">
+<code class="descname">commit_settings</code><span class="sig-paren">(</span><em>param</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.commit_settings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>to subclass to transfer parameters to hardware</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.emit_status">
+<code class="descname">emit_status</code><span class="sig-paren">(</span><em>status</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.emit_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.emit_status" title="Permalink to this definition">¶</a></dt>
+<dd><div class="line-block">
+<div class="line">Emit the statut signal from the given status parameter.</div>
+<div class="line"><br /></div>
+<div class="line">The signal is sended to the gui to update the user interface.</div>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="9%" />
+<col width="12%" />
+<col width="79%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Parameters</strong></td>
+<td><strong>Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><em>status</em></td>
+<td>ordered dictionnary</td>
+<td><dl class="first last docutils">
+<dt>dictionnary containing keys:</dt>
+<dd><ul class="first last simple">
+<li><em>info</em> : string displaying various info</li>
+<li><em>controller</em>: instance of the controller object in order to control other axes without the need to init the same controller twice</li>
+<li><em>stage</em>: instance of the stage (axis or whatever) object</li>
+<li><em>initialized</em>: boolean indicating if initialization has been done corretly</li>
+</ul>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.get_position_with_scaling">
+<code class="descname">get_position_with_scaling</code><span class="sig-paren">(</span><em>pos</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.get_position_with_scaling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.get_position_with_scaling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the current position from the hardware with scaling conversion.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="33%" />
+<col width="20%" />
+<col width="47%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Parameters</strong></td>
+<td><strong>Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><em>pos</em></td>
+<td>float</td>
+<td>the current position</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the computed position.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.move_done">
+<code class="descname">move_done</code><span class="sig-paren">(</span><em>position=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.move_done"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.move_done" title="Permalink to this definition">¶</a></dt>
+<dd><div class="line-block">
+<div class="line">Emit a move done signal transmitting the float position to hardware.</div>
+<div class="line">The position argument is just there to match some signature of child classes.</div>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="10%" />
+<col width="75%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Arguments</strong></td>
+<td><strong>Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><em>position</em></td>
+<td>float</td>
+<td>The position argument is just there to match some signature of child classes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.poll_moving">
+<code class="descname">poll_moving</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.poll_moving"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.poll_moving" title="Permalink to this definition">¶</a></dt>
+<dd><p>Poll the current moving. In case of timeout emit the raise timeout Thread command.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DAQ_utils.ThreadCommand()</span></code>, <a class="reference internal" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.move_done" title="pymodaq.daq_move.utility_classes.DAQ_Move_base.move_done"><code class="xref py py-meth docutils literal notranslate"><span class="pre">move_done()</span></code></a></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.send_param_status">
+<code class="descname">send_param_status</code><span class="sig-paren">(</span><em>param</em>, <em>changes</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.send_param_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.send_param_status" title="Permalink to this definition">¶</a></dt>
+<dd><div class="line-block">
+<div class="line">Send changes value updates to the gui to update consequently the User Interface.</div>
+<div class="line">The message passing is made via the Thread Command “update_settings”.</div>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="15%" />
+<col width="35%" />
+<col width="50%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Parameters</strong></td>
+<td><strong>Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><em>param</em></td>
+<td>instance of pyqtgraph parameter</td>
+<td>The parameter to be checked</td>
+</tr>
+<tr class="row-odd"><td><em>changes</em></td>
+<td>(parameter,change,infos)tuple list</td>
+<td>The (parameter,change,infos) list to be treated</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><code class="xref py py-meth docutils literal notranslate"><span class="pre">DAQ_utils.ThreadCommand()</span></code></p>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_relative_with_scaling">
+<code class="descname">set_position_relative_with_scaling</code><span class="sig-paren">(</span><em>pos</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.set_position_relative_with_scaling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_relative_with_scaling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the scaled positions in case of relative moves</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_with_scaling">
+<code class="descname">set_position_with_scaling</code><span class="sig-paren">(</span><em>pos</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.set_position_with_scaling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.set_position_with_scaling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the current position from the parameter and hardware with scaling conversion.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="30%" />
+<col width="18%" />
+<col width="52%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Parameters</strong></td>
+<td><strong>Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><em>pos</em></td>
+<td>float</td>
+<td>the position to be setted</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">the computed position.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pymodaq.daq_move.utility_classes.DAQ_Move_base.update_settings">
+<code class="descname">update_settings</code><span class="sig-paren">(</span><em>settings_parameter_dict</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_move/utility_classes.html#DAQ_Move_base.update_settings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.update_settings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="8%" />
+<col width="74%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>Arguments</strong></td>
+<td><strong>Type</strong></td>
+<td><strong>Description</strong></td>
+</tr>
+<tr class="row-even"><td><em>settings_parameter_dict</em></td>
+<td>dictionnary</td>
+<td>Dictionnary with the path of the parameter in hardware structure as key and the parameter name as element</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.send_param_status" title="pymodaq.daq_move.utility_classes.DAQ_Move_base.send_param_status"><code class="xref py py-meth docutils literal notranslate"><span class="pre">send_param_status()</span></code></a>, <a class="reference internal" href="#pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings" title="pymodaq.daq_move.utility_classes.DAQ_Move_base.commit_settings"><code class="xref py py-meth docutils literal notranslate"><span class="pre">commit_settings()</span></code></a></p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../APIdoc.html" class="btn btn-neutral float-left" title="Library Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Weber Sébastien
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

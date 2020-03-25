@@ -11,6 +11,7 @@ from os.path import abspath, dirname
 VERSION = (2, 0, 0, '', 0)
 
 
+
 def git_sha():
     loc = abspath(dirname(__file__))
     try:

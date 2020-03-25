@@ -200,7 +200,7 @@ class Ui_Form(object):
         self.settings_pb.setToolTip(_translate("Form", "Open Settings"))
         self.update_com_pb.setToolTip(_translate("Form", "Refresh Hardware"))
         self.navigator_pb.setToolTip(_translate("Form", "Send current data to navigator"))
-        self.log_pb.setToolTip(_translate("Form", "Show Current log file"))
+        self.log_pb.setToolTip(_translate("Form", "Show Cuurent log file"))
         self.label_3.setText(_translate("Form", "Detector:"))
         self.DAQ_type_combo.setToolTip(_translate("Form", "Detector Type"))
         self.DAQ_type_combo.setItemText(0, _translate("Form", "DAQ0D"))

@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Utility Modules &mdash; PyMoDAQ 2.2 pre- documentation</title>
+  <title>Utility Modules &mdash; PyMoDAQ 1.6.5 pre-flim documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                2.2
+                1.6
               </div>
             
           
@@ -333,7 +333,7 @@ position within the epsilon precision (see comon_parameters variable)</p></li>
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>where</strong> (<em>group node</em>) – where to create data group</p></li>
-<li><p><strong>group_data_type</strong> (<em>list of str</em>) – either [‘data0D’, ‘data1D’, ‘data2D’, ‘dataND’]</p></li>
+<li><p><strong>group_data_type</strong> (<em>list of str</em>) – either [‘data0D’, ‘data1D’, ‘data2D’]</p></li>
 <li><p><strong>title</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – a title for this node, will be saved as metadata</p></li>
 <li><p><strong>settings_as_xml</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – XML string created from a Parameter object to be saved as metadata</p></li>
 <li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>, </em><em>optional</em>) – will be saved as a new metadata attribute with name: key and value: dict value</p></li>
@@ -422,21 +422,13 @@ position within the epsilon precision (see comon_parameters variable)</p></li>
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis">
 <code class="sig-name descname">add_navigation_axis</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">parent_group</em>, <em class="sig-param">axis='x_axis'</em>, <em class="sig-param">enlargeable=False</em>, <em class="sig-param">title=''</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.add_navigation_axis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.add_navigation_axis" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create carray or earray for navigation axis within a scan
+<dd><p>Create carray for navigation axis within a scan
 :param data:
 :type data: (ndarray) of dimension 1
 :param parent_group:
 :type parent_group: (str or node) parent node where to save new data
-:param axis: ‘x_axis’, ‘y_axis’, ‘z_axis’, ‘time_axis’ are axes containing scalar values (floats or ints)</p>
-<blockquote>
-<div><p>‘time_axis’ can be interpreted as the posix timestamp corresponding to a datetime object, see datetime.timestamp()</p>
-</div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>enlargeable</strong> (<em>(</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>)</em>) – if True the created array is a earray type
-if False the created array is a carray type</p>
-</dd>
-</dl>
+:param axis:
+:type axis: (str) either x_axis or y_axis</p>
 </dd></dl>
 
 <dl class="method">
@@ -524,7 +516,7 @@ Get attributed to the class attribute <code class="docutils literal notranslate"
 
 <dl class="method">
 <dt id="pymodaq.daq_utils.h5saver.H5Saver.init_file">
-<code class="sig-name descname">init_file</code><span class="sig-paren">(</span><em class="sig-param">update_h5=False</em>, <em class="sig-param">custom_naming=False</em>, <em class="sig-param">addhoc_file_path=None</em>, <em class="sig-param">metadata={}</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.init_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.init_file" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">init_file</code><span class="sig-paren">(</span><em class="sig-param">update_h5=False</em>, <em class="sig-param">custom_naming=False</em>, <em class="sig-param">addhoc_file_path=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/pymodaq/daq_utils/h5saver.html#H5Saver.init_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pymodaq.daq_utils.h5saver.H5Saver.init_file" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initializes a new h5 file.
 Could set the h5_file attributes as:</p>
 <ul class="simple">
@@ -539,7 +531,6 @@ Could set the h5_file attributes as:</p>
 if false try to open an existing file and will append new data to it</p></li>
 <li><p><strong>custom_naming</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – if True, a selection file dialog opens to set a new file name</p></li>
 <li><p><strong>addhoc_file_path</strong> (<em>Path</em><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – supplied name by the user for the new file</p></li>
-<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – dictionnary with pair of key, value that should be saved as attributes of the root group</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
