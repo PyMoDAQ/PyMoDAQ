@@ -19,10 +19,14 @@ save_types = ['scan', 'detector', 'custom']
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
 <<<<<<< HEAD
+<<<<<<< HEAD
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
 =======
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5']
 >>>>>>> parent of ab085bf... pep8 cleaning and other bits
+=======
+data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
+>>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
@@ -380,10 +384,14 @@ class H5Saver(QObject):
                 groups.sort()
                 flag = False
 <<<<<<< HEAD
+<<<<<<< HEAD
                 for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
 =======
                 for child in list(self.get_node(self.raw_group, groups[-1])._v_groups):
 >>>>>>> parent of ab085bf... pep8 cleaning and other bits
+=======
+                for child in list(self.h5_file.get_node(self.raw_group, groups[-1])._v_groups):
+>>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
                     if 'scan' in child:
                         return len(groups)
 
@@ -643,10 +651,14 @@ class H5Saver(QObject):
 
     def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
 <<<<<<< HEAD
+<<<<<<< HEAD
                   title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
 =======
                   title='', array_to_save=None, array_type=np.float, enlargeable=False, metadata=dict([]),
 >>>>>>> parent of ab085bf... pep8 cleaning and other bits
+=======
+                  title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
+>>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
                   init=False, add_scan_dim=False):
 
         if data_dimension not in data_dimensions:

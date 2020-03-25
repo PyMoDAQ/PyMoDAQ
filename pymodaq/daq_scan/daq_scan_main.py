@@ -18,6 +18,7 @@ import logging
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 <<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
+<<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
@@ -31,6 +32,15 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
 >>>>>>> parent of ab085bf... pep8 cleaning and other bits:pymodaq/daq_scan.py
+=======
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+
+from pymodaq.daq_utils.daq_utils import getLineInfo
+from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
+from pymodaq.daq_scan.gui.daq_scan_gui import Ui_Form
+from pymodaq.version import get_version
+>>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard:pymodaq/daq_scan.py
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
@@ -1020,12 +1030,21 @@ class DAQ_Scan(QtWidgets.QWidget,QObject):
                 * Detectors
                 * Move
                 * plot_form.
+<<<<<<< HEAD:pymodaq/daq_scan/daq_scan_main.py
 
             =============== =========== =============================================
             **Parameters**    **Type**    **Description**
             *filename*        string      the name of the preset file to be treated
             =============== =========== =============================================
 
+=======
+
+            =============== =========== =============================================
+            **Parameters**    **Type**    **Description**
+            *filename*        string      the name of the preset file to be treated
+            =============== =========== =============================================
+
+>>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard:pymodaq/daq_scan.py
             See Also
             --------
             set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status

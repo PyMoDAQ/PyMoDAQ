@@ -201,6 +201,7 @@ def dict_from_param(param):
         opts.update(dict(values=values))
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     if 'limits' in param.opts:
         limits = str(param.opts['limits'])
@@ -208,6 +209,8 @@ def dict_from_param(param):
         opts.update(dict(values=limits))
 
 >>>>>>> parent of ab085bf... pep8 cleaning and other bits
+=======
+>>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
     if 'detlist' in param.opts:
         detlist = str(param.opts['detlist'])
         opts.update(dict(detlist=detlist))
