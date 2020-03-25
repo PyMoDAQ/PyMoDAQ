@@ -2,6 +2,7 @@
 # This file hashes the configuration used when building these files. When it is not found, a full rebuild will be done.
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 config: 51537b65ecc6f94756d9051a9cad7e6e
 =======
 config: d53c27e47c50ae5841f55d7769a1268c
@@ -9,4 +10,7 @@ config: d53c27e47c50ae5841f55d7769a1268c
 =======
 config: 51537b65ecc6f94756d9051a9cad7e6e
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
+=======
+config: 51537b65ecc6f94756d9051a9cad7e6e
+>>>>>>> parent of e6377d5... updated features to take into account temporary h5 file saved by plugins
 tags: 645f666f9bcd5a90fca523b33c5a78b7

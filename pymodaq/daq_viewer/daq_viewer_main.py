@@ -188,12 +188,17 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         ]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def __init__(self,parent,dock_settings=None,dock_viewer=None,title="Testing",DAQ_type="DAQ0D",
                  preset=None,init=False,controller_ID=-1, parent_scan=None):
 =======
     def __init__(self, parent, dock_settings=None, dock_viewer=None, title="Testing", DAQ_type="DAQ0D",
                  preset=None, init=False, controller_ID=-1, parent_scan=None):
 >>>>>>> parent of b5f5983... many things
+=======
+    def __init__(self,parent,dock_settings=None,dock_viewer=None,title="Testing",DAQ_type="DAQ0D",
+                 preset=None,init=False,controller_ID=-1, parent_scan=None):
+>>>>>>> parent of e6377d5... updated features to take into account temporary h5 file saved by plugins
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(DAQ_Viewer,self).__init__()
 
@@ -519,10 +524,14 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                        self.data_to_save_export[key] = OrderedDict([])
                     for k in datas[key]:
 <<<<<<< HEAD
+<<<<<<< HEAD
                         self.data_to_save_export[key][k] = datas[key][k]
 =======
                             self.data_to_save_export[key][k].update(datas[key][k])
 >>>>>>> parent of fbf4414... saved ROIs as xml file and reloading now working
+=======
+                        self.data_to_save_export[key][k] = datas[key][k]
+>>>>>>> parent of e6377d5... updated features to take into account temporary h5 file saved by plugins
 
         if self.data_to_save_export['Ndatas'] == len(self.ui.viewers):
             if self.do_continuous_save:
@@ -975,6 +984,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             settings_str += b'</All_settings>'
 >>>>>>> parent of 06fafaf... log module creation
 
+<<<<<<< HEAD
         settings_str = custom_tree.parameter_to_xml_string(self.settings)
         if self.DAQ_type != 'DAQ0D':
             settings_str = b'<All_settings>' + settings_str
@@ -985,6 +995,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
         det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
 
+=======
+        det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
+
+>>>>>>> parent of e6377d5... updated features to take into account temporary h5 file saved by plugins
         try:
             self.channel_arrays = OrderedDict([])
             data_types = ['data1D'] #we don't recrod 0D data in this mode (only in continuous)

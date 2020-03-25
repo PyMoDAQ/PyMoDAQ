@@ -17,6 +17,7 @@ import copy
 version = '0.0.1'
 save_types = ['scan', 'detector', 'custom']
 <<<<<<< HEAD
+<<<<<<< HEAD
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
 =======
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
@@ -31,6 +32,11 @@ data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5']
 =======
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
+=======
+group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '']
+group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
+data_types = ['data', 'axis', 'live_scan', 'navigation_axis']
+>>>>>>> parent of e6377d5... updated features to take into account temporary h5 file saved by plugins
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
@@ -660,6 +666,7 @@ class H5Saver(QObject):
     def add_array(self, where, name, data_type, data_shape=(1,), data_dimension = '0D', scan_type='', scan_shape=[] ,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                   title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
 =======
                   title='', array_to_save=None, array_type=np.float, enlargeable=False, metadata=dict([]),
@@ -667,6 +674,9 @@ class H5Saver(QObject):
 =======
                   title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
 >>>>>>> parent of 59284af... Merge pull request #22 from CEMES-CNRS/Dashboard
+=======
+                  title='', array_to_save=None, array_type = np.float, enlargeable=False, metadata=dict([]),
+>>>>>>> parent of e6377d5... updated features to take into account temporary h5 file saved by plugins
                   init=False, add_scan_dim=False):
 
         if data_dimension not in data_dimensions:
