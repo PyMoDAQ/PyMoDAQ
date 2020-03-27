@@ -561,7 +561,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
             self.tcpclient_thread = QThread()
 
-            tcpclient = TCPClient(None, self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+            tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
                                   self.settings.child('main_settings', 'tcpip', 'port').value(),
                                   self.settings.child(('detector_settings')))
             tcpclient.moveToThread(self.tcpclient_thread)

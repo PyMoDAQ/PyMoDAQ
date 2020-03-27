@@ -20,11 +20,6 @@ tested_backend = ['tables', 'h5py']
 def session_path(tmp_path_factory):
     return tmp_path_factory.mktemp('h5data')
 
-def check_vals_in_iterable(iterable1, iterable2):
-    assert len(iterable1) == len(iterable2)
-    for val1, val2 in zip(iterable1, iterable2):
-        assert val1 == val2
-
 def generate_random_data(shape, dtype=np.float):
     return (100 * np.random.rand(*shape)).astype(dtype=dtype)
 
@@ -73,7 +68,7 @@ class TestH5Backend:
         for attr in attrs:
             attr_back = bck.root().attrs[attr]
             if hasattr(attr_back, '__iter__'):
-                check_vals_in_iterable(attr_back, attrs[attr])
+                utils.check_vals_in_iterable(attr_back, attrs[attr])
             else:
                 assert attr_back == attrs[attr]
 
@@ -81,7 +76,7 @@ class TestH5Backend:
         for attr in attrs:
             assert attr in attrs_back
             if hasattr(attrs[attr], '__iter__'):
-                check_vals_in_iterable(attrs[attr], bck.root().attrs[attr])
+                utils.check_vals_in_iterable(attrs[attr], bck.root().attrs[attr])
             else:
                 assert attrs[attr] == bck.root().attrs[attr]
 
@@ -140,7 +135,7 @@ class TestH5Backend:
 
         assert g22.parent_node == g2
         assert g22.parent_node == g21.parent_node
-        check_vals_in_iterable(g2.children_name(), ['g21', 'g22'])
+        utils.check_vals_in_iterable(g2.children_name(), ['g21', 'g22'])
         for child in g2.children():
             assert g2.children()[child] in [g21, g22]
         g22.set_attr('test', 12.5)
@@ -167,7 +162,7 @@ class TestH5Backend:
         assert carray1.attrs['dtype'] == carray1_data.dtype.name
         assert carray1.attrs['TITLE'] == title
         assert carray1.attrs['CLASS'] == 'CARRAY'
-        check_vals_in_iterable(carray1.attrs['shape'], carray1_data.shape)
+        utils.check_vals_in_iterable(carray1.attrs['shape'], carray1_data.shape)
 
         assert np.all(carray1.read() == carray1_data)
         assert np.all(carray1[1, 2] == carray1_data[1, 2])
@@ -198,21 +193,21 @@ class TestH5Backend:
         assert array.attrs['TITLE'] == title
         assert array.attrs['CLASS'] == 'EARRAY'
         assert array.attrs['dtype'] == np.dtype(dtype).name
-        check_vals_in_iterable(array.attrs['shape'], [0])
+        utils.check_vals_in_iterable(array.attrs['shape'], [0])
         array.append(np.array([10]))
         assert g1.children()['array'] == array
         assert isinstance(g1.children()['array'], EARRAY)
-        check_vals_in_iterable(array.attrs['shape'], [1])
+        utils.check_vals_in_iterable(array.attrs['shape'], [1])
 
         array_shape = (10, 3)
         array1 = bck.create_earray(g1, 'array1', dtype=dtype, data_shape=array_shape, title=title)
         array1.append(generate_random_data(array_shape, dtype))
         expected_shape = [1]
         expected_shape.extend(array_shape)
-        check_vals_in_iterable(array1.attrs['shape'], expected_shape)
+        utils.check_vals_in_iterable(array1.attrs['shape'], expected_shape)
         array1.append(generate_random_data(array_shape, dtype))
         expected_shape[0] += 1
-        check_vals_in_iterable(array1.attrs['shape'], expected_shape)
+        utils.check_vals_in_iterable(array1.attrs['shape'], expected_shape)
         bck.close_file()
 
     @pytest.mark.parametrize('compression', ['gzip', 'zlib'])
@@ -290,7 +285,7 @@ class TestH5Saver:
         assert h5saver.get_attr(h5saver.raw_group, 'type') == h5saver.settings.child(('save_type')).value()
         assert h5saver.get_attr(h5saver.root(), 'date') == datetime.now().date().isoformat()
         assert h5saver.get_attr(h5saver.raw_group, 'attr1') == 'attr1'
-        check_vals_in_iterable(h5saver.get_attr(h5saver.raw_group, 'attr2'), (10, 2))
+        utils.check_vals_in_iterable(h5saver.get_attr(h5saver.raw_group, 'attr2'), (10, 2))
 
     def test_init_file(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
@@ -318,9 +313,9 @@ class TestH5Saver:
         assert h5saver.get_scan_index() == 0
         scan_group1 = h5saver.add_scan_group()
         assert scan_group == scan_group1 #no increment as no scan_done attribute
-        check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
+        utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
         h5saver.init_file(update_h5=False)
-        check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
+        utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
 
     def test_load_file(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
@@ -616,7 +611,7 @@ class TestH5BrowserUtil:
 
         assert len(axes) == 4
         assert len(nav_axes) == 2
-        check_vals_in_iterable(nav_axes, [0, 1])
+        utils.check_vals_in_iterable(nav_axes, [0, 1])
         assert axes['x_axis']['label'] == x_axis_in_file['label']
         assert axes['x_axis']['units'] == x_axis_in_file['units']
         assert np.all(axes['x_axis']['data'] == x_axis_in_file['data'])

@@ -1,220 +1,308 @@
 import numpy as np
 
-##############################
-## TCP/IP related functions
 
-def send_string(socket, string):
-    """
+class Socket:
+    def __init__(self, socket=None):
+        super().__init__()
+        self._socket = socket
 
-    Parameters
-    ----------
-    socket
-    string
+    def __eq__(self, other_obj):
+        if isinstance(other_obj, Socket):
+            other_obj = other_obj.socket
+        return self.socket == other_obj
 
-    Returns
-    -------
+    @property
+    def socket(self):
+        return self._socket
 
-    """
-    cmd_bytes, cmd_length_bytes = message_to_bytes(string)
-    check_sended(socket, cmd_length_bytes)
-    check_sended(socket, cmd_bytes)
+    def bind(self, *args, **kwargs):
+        return self.socket.bind(*args, **kwargs)
 
-def send_scalar(socket, data):
-    """
-    Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
-    Parameters
-    ----------
-    data
+    def listen(self, *args, **kwargs):
+        return self.socket.listen(*args, **kwargs)
 
-    Returns
-    -------
+    def getsockname(self, *args, **kwargs):
+        return self.socket.getsockname(*args, **kwargs)
 
-    """
-    data = np.array([data])
-    data_type = data.dtype.descr[0][1]
-    data_bytes = data.tobytes()
-    send_string(socket, data_type)
-    check_sended(socket, len(data_bytes).to_bytes(4, 'big'))
-    check_sended(socket, data_bytes)
+    def accept(self):
+        sock, addr = self.socket.accept()
+        return Socket(sock), addr
 
-def get_string(socket):
-    string_len = get_int(socket)
-    string = check_received_length(socket, string_len).decode()
-    return string
+    def connect(self, *args, **kwargs):
+        return self.socket.connect(*args, **kwargs)
 
-def get_int(socket):
-    data = int.from_bytes(check_received_length(socket, 4), 'big')
-    return data
+    def send(self, *args, **kwargs):
+        return self.socket.send(*args, **kwargs)
 
-def get_scalar(socket):
-    """
+    def sendall(self, *args, **kwargs):
+        return self.socket.sendall(*args, **kwargs)
 
-    Parameters
-    ----------
-    socket
+    def recv(self, *args, **kwargs):
+        return self.socket.recv(*args, **kwargs)
 
-    Returns
-    -------
+    def close(self):
+        return self.socket.close()
 
-    """
-    data_type = get_string(socket)
-    data_len = get_int(socket)
-    data_bytes = check_received_length(socket, data_len)
+    @classmethod
+    def message_to_bytes(cls, message):
+        """
+        Convert a string to a byte array
+        Parameters
+        ----------
+        message (str): message
 
-    data = np.frombuffer(data_bytes, dtype=data_type)[0]
-    return data
+        Returns
+        -------
+        Tuple consisting of the message converted as a byte array, and the length of the byte array, itself as a byte array of length 4
+        """
 
-def send_list(socket, data_list):
-    """
+        if not isinstance(message, bytes):
+            message = message.encode()
+        return message, cls.int_to_bytes(len(message))
 
-    Parameters
-    ----------
-    socket
-    data_list
+    @classmethod
+    def int_to_bytes(cls, an_integer):
+        return an_integer.to_bytes(4, 'big')
 
-    Returns
-    -------
+    @classmethod
+    def bytes_to_int(cls, bytes_string):
+        assert len(bytes_string) == 4
+        return int.from_bytes(bytes_string, 'big')
 
-    """
-    check_sended(socket, len(data_list).to_bytes(4, 'big'))
-    for data in data_list:
+    def check_sended(self, data_bytes):
+        """
+        Make sure all bytes are sent through the socket
+        Parameters
+        ----------
+        socket
+        data_bytes
 
-        if isinstance(data, np.ndarray):
-            send_array(socket, data)
+        Returns
+        -------
 
-        elif isinstance(data, str):
-            send_string(socket, data)
+        """
+        sended = 0
+        while sended < len(data_bytes):
+            sended += self.socket.send(data_bytes[sended:])
+        #print(data_bytes)
 
-        elif isinstance(data, int) or isinstance(data, float):
-            send_scalar(socket, data)
 
-def get_list(socket, data_type):
-    """
-    Receive data from socket as a list
-    Parameters
-    ----------
-    socket: the communication socket
-    data_type: either 'string', 'scalar', 'array' depending which function has been used to send the list
+    def check_received_length(self, length):
+        """
+        Make sure all bytes (length) that should be received are received through the socket
+        Parameters
+        ----------
+        sock
+        length
 
-    Returns
-    -------
+        Returns
+        -------
 
-    """
+        """
+        l = 0
+        data_bytes = b''
+        while l < length:
+            if l < length - 4096:
+                data_bytes_tmp = self.socket.recv(4096)
+            else:
+                data_bytes_tmp = self.socket.recv(length - l)
+            l += len(data_bytes_tmp)
+            data_bytes += data_bytes_tmp
+        # print(data_bytes)
+        return data_bytes
+
+    def send_string(self, string):
+        """
+
+        Parameters
+        ----------
+        socket
+        string
+
+        Returns
+        -------
+
+        """
+        cmd_bytes, cmd_length_bytes = self.message_to_bytes(string)
+        self.check_sended(cmd_length_bytes)
+        self.check_sended(cmd_bytes)
+
+    def get_string(self):
+        string_len = self.get_int()
+        string = self.check_received_length(string_len).decode()
+        return string
+
+    def get_int(self):
+        data = self.bytes_to_int(self.check_received_length(4))
+        return data
+
+    def send_scalar(self, data):
+        """
+        Convert it to numpy array then send the data type, the data_byte length and finally the data_bytes
+        Parameters
+        ----------
+        data
+
+        Returns
+        -------
+
+        """
+        data = np.array([data])
+        data_type = data.dtype.descr[0][1]
+        data_bytes = data.tobytes()
+        self.send_string(data_type)
+        self.check_sended(self.int_to_bytes(len(data_bytes)))
+        self.check_sended(data_bytes)
+
+    def get_scalar(self):
+        """
+
+        Parameters
+        ----------
+        socket
+
+        Returns
+        -------
+
+        """
+        data_type = self.get_string()
+        data_len = self.get_int()
+        data_bytes = self.check_received_length(data_len)
+
+        data = np.frombuffer(data_bytes, dtype=data_type)[0]
+        return data
+
+    def get_array(self):
+        """get 1D or 2D arrays"""
+        data_type = self.get_string()
+        data_len = self.get_int()
+        shape_len = self.get_int()
+        shape = []
+        for ind in range(shape_len):
+            shape.append(self.get_int())
+        data_bytes = self.check_received_length(data_len)
+        data = np.frombuffer(data_bytes, dtype=data_type)
+        data = data.reshape(tuple(shape))
+        return data
+
+    def send_array(self, data_array):
+        """send 1D or 2D arrays
+
+        get data type as a string
+        reshape array as 1D array and get the array dimensionality (len of array's shape)
+        convert Data array as bytes
+        send data type
+        send data length
+        send data shape length
+        send all values of the shape as integers converted to bytes
+        send data as bytes
+        """
+        data_type = data_array.dtype.descr[0][1]
+        data_shape = data_array.shape
+
+        data = data_array.reshape(np.prod(data_shape))
+        data_bytes = data.tobytes()
+
+        self.send_string(data_type)
+        self.check_sended(self.int_to_bytes(len(data_bytes)))
+        self.check_sended(self.int_to_bytes(len(data_shape)))
+        for Nxxx in data_shape:
+            self.check_sended(self.int_to_bytes(Nxxx))
+        self.check_sended(data_bytes)
+
+
+
+
+    def send_list(self, data_list):
+        """
+
+        Parameters
+        ----------
+        socket
+        data_list
+
+        Returns
+        -------
+
+        """
+        self.check_sended(self.int_to_bytes(len(data_list)))
+        for data in data_list:
+
+            if isinstance(data, np.ndarray):
+                self.send_string('array')
+                self.send_array(data)
+
+            elif isinstance(data, str):
+                self.send_string('string')
+                self.send_string(data)
+
+            elif isinstance(data, int) or isinstance(data, float):
+                self.send_string('scalar')
+                self.send_scalar(data)
+
+            else:
+                raise TypeError(f'the element {data} type is cannot be sent by TCP/IP, only numpy arrays'
+                                f', strings, or scalars (int or float)')
+
+    def get_list(self, data_type=None):
+        """
+        Receive data from socket as a list
+        Parameters
+        ----------
+        socket: the communication socket
+        data_type: either 'string', 'scalar', 'array' depending which function has been used to send the list
+
+        Returns
+        -------
+
+        """
+        data = []
+        list_len = self.get_int()
+
+        for ind in range(list_len):
+            data_type = self.get_string()
+            if data_type == 'scalar':
+                data.append(self.get_scalar())
+            elif data_type == 'string':
+                data.append(self.get_string())
+            elif data_type == 'array':
+                data.append(self.get_array())
+        return data
+
+if __name__ == '__main__':
+    from gevent import server, socket
+    class SimpleServer(server.StreamServer):
+        def __init__(self, *args, handle_fun=lambda x: print('nothing as an handle'), **kwargs):
+            super().__init__(*args, **kwargs)
+            self.handle_fun = handle_fun
+
+        def handle(self, sock, address):
+            self.handle_fun(sock)
+
+
+    listing = [np.random.rand(7, 2),
+               'Hello World',
+               1,
+               2.654,
+               ]
+
+    server = SimpleServer(('127.0.0.1', 0), handle_fun=
+    lambda x: Socket(x).send_list(listing))
+    server.start()
+    client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
+
     data = []
-    list_len = get_int(socket)
+    list_len = client.get_int()
 
     for ind in range(list_len):
+        data_type = client.get_string()
         if data_type == 'scalar':
-            data.append(get_scalar(socket))
+            data.append(client.get_scalar())
         elif data_type == 'string':
-            data.append(get_string(socket))
+            data.append(client.get_string())
         elif data_type == 'array':
-            data.append(get_array(socket))
-    return data
+            data.append(client.get_array())
+    assert data == listing
 
-def get_array(socket):
-    data_type = get_string(socket)
-    data_len = get_int(socket)
-    Nrow = get_int(socket)
-    Ncol = get_int(socket)
-    data_bytes = check_received_length(socket, data_len)
-
-    data = np.frombuffer(data_bytes, dtype=data_type)
-    if Ncol != 0:
-        data = data.reshape((Nrow, Ncol))
-        # data=np.fliplr(data)  #because it gets inverted compared to digital...
-    data = np.squeeze(data)  # in case one dimension is 1
-
-    return data
-
-
-
-def send_array(socket, data_array):
-    """
-    get data type as a string
-    reshape array as 1D array and get number of rows and cols
-    convert Data array as bytes
-    send data type
-    send data length
-    send N rows
-    send Ncols
-    send data as bytes
-    """
-    data_type = data_array.dtype.descr[0][1]
-    data_shape = data_array.shape
-    Nrow = data_shape[0]
-    if len(data_shape) > 1:
-        Ncol = data_shape[1]
-    else:
-        Ncol = 1
-
-    data = data_array.reshape(np.prod(data_shape))
-    data_bytes = data.tobytes()
-
-    send_string(socket, data_type)
-
-    check_sended(socket, len(data_bytes).to_bytes(4, 'big'))
-    check_sended(socket, Nrow.to_bytes(4, 'big'))
-    check_sended(socket, Ncol.to_bytes(4, 'big'))
-    check_sended(socket, data_bytes)
-
-def message_to_bytes(message):
-    """
-    Convert a string to a byte array
-    Parameters
-    ----------
-    message (str): message
-
-    Returns
-    -------
-    Tuple consisting of the message converted as a byte array, and the length of the byte array, itself as a byte array of length 4
-    """
-
-    if not isinstance(message, bytes):
-        message=message.encode()
-    return message,len(message).to_bytes(4, 'big')
-
-def check_sended(socket, data_bytes):
-    """
-    Make sure all bytes are sent through the socket
-    Parameters
-    ----------
-    socket
-    data_bytes
-
-    Returns
-    -------
-
-    """
-    sended = 0
-    while sended < len(data_bytes):
-        sended += socket.send(data_bytes[sended:])
-    #print(data_bytes)
-
-
-def check_received_length(sock,length):
-    """
-    Make sure all bytes (length) that should be received are received through the socket
-    Parameters
-    ----------
-    sock
-    length
-
-    Returns
-    -------
-
-    """
-    l = 0
-    data_bytes = b''
-    while l < length:
-        if l < length - 4096:
-            data_bytes_tmp = sock.recv(4096)
-        else:
-            data_bytes_tmp = sock.recv(length - l)
-        l += len(data_bytes_tmp)
-        data_bytes += data_bytes_tmp
-    # print(data_bytes)
-    return data_bytes
-
-##End of TCP/IP functions
-##########################
+    client.close()
+    server.stop()

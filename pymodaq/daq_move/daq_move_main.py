@@ -369,7 +369,7 @@ class DAQ_Move(Ui_Form, QObject):
         if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
             self.tcpclient_thread = QThread()
 
-            tcpclient = TCPClient(None, self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
+            tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
                                   self.settings.child('main_settings', 'tcpip', 'port').value(),
                                   self.settings.child(('move_settings')), client_type="ACTUATOR")
             tcpclient.moveToThread(self.tcpclient_thread)

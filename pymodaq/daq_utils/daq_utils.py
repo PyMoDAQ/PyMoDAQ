@@ -383,7 +383,7 @@ class ThreadCommand(object):
         =============== =============
 
     """
-    def __init__(self,command="",attributes=[]):
+    def __init__(self, command="", attributes=[]):
         self.command=command
         self.attributes=attributes
 
@@ -400,6 +400,8 @@ def elt_as_first_element(elt_list,match_word='Mock'):
         plugins.extend(elt_list)
     else: plugins=[]
     return plugins
+
+
 
 
 def find_in_path(path, mode):
@@ -661,6 +663,14 @@ class PIDModelGeneric():
         #print('output converted')
 
         return [output]
+
+def check_vals_in_iterable(iterable1, iterable2):
+    assert len(iterable1) == len(iterable2)
+    for val1, val2 in zip(iterable1, iterable2):
+        if isinstance(val1, np.ndarray):
+            assert np.all(val1 == val2)
+        else:
+            assert val1 == val2
 
 def get_set_log_path():
     local_path = get_set_local_dir()

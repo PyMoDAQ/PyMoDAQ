@@ -1,5 +1,4 @@
 import numpy as np
-import socket
 import pytest
 from pymodaq.daq_utils import daq_utils
 import datetime
@@ -119,26 +118,3 @@ def test_elt_as_first_element():
     elts_sorted = daq_utils.elt_as_first_element(elts[:], elts[1])
     assert elts_sorted[0] == elts[1]
 
-
-class TCPIP():
-    @pytest.fixture(scope='session')
-    def set_server(self):
-        import socket
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind((socket.gethostname(), '1234'))
-        server.listen(1)
-        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect((socket.gethostname(), '1234'))
-        yield server, client
-        client.close()
-        server.close()
-
-    @pytest.fixture(scope='session')
-    def set_client(self, set_s):
-        import socket
-
-    @pytest.mark.tcpip
-    def test_send_string(self):
-        string = 'this is a message'
-        pass

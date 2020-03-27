@@ -10,31 +10,57 @@ import socket
 import select
 import numpy as np
 from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand
-from pymodaq.daq_utils.tcpip_utils import check_received_length, send_scalar, send_string, send_list, get_scalar,\
-    get_int, get_string, send_array, get_list
+from pymodaq.daq_utils.tcpip_utils import Socket
+#check_received_length, send_scalar, send_string, send_list, get_scalar,\
+#    get_int, get_string, send_array, get_list
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from collections import OrderedDict
 
 tcp_parameters = [{'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': 6341, 'default': 6341},
-                                 {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': '10.47.0.39',
-                                  'default': '10.47.0.39'},
-                                 {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
-                                 {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',
-                                  'value': dict(), 'header': ['Type', 'adress']},]
+                  {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': '10.47.0.39',
+                   'default': '10.47.0.39'},
+                  {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
+                  {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
+                  {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',
+                   'value': dict(), 'header': ['Type', 'adress']}, ]
 # %%
 
 class TCPClient(QObject):
-    cmd_signal = pyqtSignal(ThreadCommand)
+    """
+    PyQt5 object initializing a TCP socket client. Can be used by any module but is a builtin functionnality of all
+    actuators and detectors of PyMoDAQ
+
+    The module should init TCPClient, move it in a thread and communicate with it using a custom signal connected to
+    TCPClient.queue_command slot. The module should also connect TCPClient.cmd_signal to one of its methods inorder to
+    get info/data back from the client
+
+    The client itself communicate with a TCP server, it is best to use a server object subclassing the TCPServer
+    class defined within this python module
+
+    """
+    cmd_signal = pyqtSignal(ThreadCommand) #signal to connect with a module slot in order to start communication back
     params = []
 
-    def __init__(self, parent=None, ipaddress="192.168.1.62", port=6341, params_state=None, client_type="GRABBER"):
+    def __init__(self, ipaddress="192.168.1.62", port=6341, params_state=None, client_type="GRABBER"):
+        """Create a socket client particularly fit to be used with PyMoDAQ's TCPServer
+
+        Parameters
+        ----------
+        ipaddress: (str) the IP address of the server
+        port: (int) the port where to communicate with the server
+        params_state: (dict) state of the Parameter settings of the module instantiating this client and wishing to
+                            export its settings to the server. Obtained from param.saveState() where param is an
+                            instance of Parameter object, see pyqtgraph.parametertree::Parameter
+        client_type: (str) should be one of the accepted client_type by the TCPServer instance (within pymodaq it is
+                            either 'GRABBER' or 'ACTUATOR'
+        """
         super().__init__()
 
         self.ipaddress = ipaddress
         self.port = port
-
+        self._socket = None
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
@@ -42,26 +68,40 @@ class TCPClient(QObject):
             elif isinstance(params_state, Parameter):
                 self.settings.restoreState(params_state.saveState())
 
-        self.parent = parent
-        self.socket = None
         self.client_type = client_type #"GRABBER" or "ACTUATOR"
+
+    @property
+    def socket(self):
+        return self._socket
+
+    @socket.setter
+    def socket(self, sock):
+        self._socket = sock
 
     def send_data(self, data_list):
         # first send 'Done' and then send the length of the list
-        send_string(self.socket, 'Done')
-        send_list(self.socket, data_list)
-
-
+        self.socket.send_string('Done')
+        self.socket.send_list(data_list)
 
     def send_infos_xml(self, infos):
-        send_string(self.socket, 'Infos')
-        send_string(self.socket, infos)
+        self.socket.send_string('Infos')
+        self.socket.send_string(infos)
 
+    def send_info_scalar(self, info_to_display, value_as_string):
+        self.socket.send_string('Info') #the command
+        if not isinstance(info_to_display, str):
+            info_to_display = str(info_to_display)
+        self.socket.send_string(info_to_display) #the actual info to display as a string
+        if not isinstance(value_as_string, str):
+            value_as_string = str(value_as_string)
+        self.socket.send_string(value_as_string)
 
     @pyqtSlot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
         """
-
+        when this TCPClient object is within a thread, the corresponding module communicate with it with signal and slots
+        from module to client: module_signal to queue_command slot
+        from client to module: self.cmd_signal to a module slot
         """
         if command.command == "ini_connection":
             status = self.init_connection()
@@ -85,55 +125,55 @@ class TCPClient(QObject):
             path = command.attributes['path']
             param = command.attributes['param']
 
-            send_string(self.socket, 'Info_xml')
-            send_list(self.socket, path)
+            self.socket.send_string('Info_xml')
+            self.socket.send_list(path)
 
             # send value
             data = custom_tree.parameter_to_xml_string(param)
-            send_string(self.socket, data)
+            self.socket.send_string(data)
 
         elif command.command == 'position_is':
-            send_string(self.socket, 'position_is')
-            send_scalar(self.socket, command.attributes[0])
+            self.socket.send_string('position_is')
+            self.socket.send_scalar(command.attributes[0])
 
         elif command.command == 'move_done':
-            send_string(self.socket, 'move_done')
-            send_scalar(self.socket, command.attributes[0])
+            self.socket.send_string('move_done')
+            self.socket.send_scalar(command.attributes[0])
 
         elif command.command == 'x_axis':
-            send_string(self.socket, 'x_axis')
+            self.socket.send_string('x_axis')
             x_axis = dict(label='', units='')
             if isinstance(command.attributes[0], np.ndarray):
                 x_axis['data'] = command.attributes[0]
             elif isinstance(command.attributes[0], dict):
                 x_axis.update(command.attributes[0].copy())
 
-            send_array(self.socket, x_axis['data'])
-            send_string(self.socket, x_axis['label'])
-            send_string(self.socket, x_axis['units'])
+            self.socket.send_array(x_axis['data'])
+            self.socket.send_string(x_axis['label'])
+            self.socket.send_string(x_axis['units'])
 
         elif command.command == 'y_axis':
-            send_string(self.socket, 'y_axis')
+            self.socket.send_string('y_axis')
             y_axis = dict(label='', units='')
             if isinstance(command.attributes[0], np.ndarray):
                 y_axis['data'] = command.attributes[0]
             elif isinstance(command.attributes[0], dict):
                 y_axis.update(command.attributes[0].copy())
 
-            send_array(self.socket, y_axis['data'])
-            send_string(self.socket, y_axis['label'])
-            send_string(self.socket, y_axis['units'])
+            self.socket.send_array(y_axis['data'])
+            self.socket.send_string(y_axis['label'])
+            self.socket.send_string(y_axis['units'])
 
 
     def init_connection(self):
         # %%
         try:
             # create an INET, STREAMing socket
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
             # now connect to the web server on port 80 - the normal http port
             self.socket.connect((self.ipaddress, self.port))
             self.cmd_signal.emit(ThreadCommand('connected'))
-            send_string(self.socket, self.client_type)
+            self.socket.send_string(self.client_type)
 
             self.send_infos_xml(custom_tree.parameter_to_xml_string(self.settings))
             self.cmd_signal.emit(ThreadCommand('get_axis'))
@@ -142,10 +182,10 @@ class TCPClient(QObject):
 
                 try:
                     ready_to_read, ready_to_write, in_error = \
-                        select.select([self.socket], [self.socket], [self.socket], 0)
+                        select.select([self.socket.socket], [self.socket.socket], [self.socket.socket], 0)
 
                     if len(ready_to_read) != 0:
-                        message = get_string(self.socket)
+                        message = self.socket.get_string()
                         # print(message)
                         self.get_data(message)
 
@@ -157,7 +197,7 @@ class TCPClient(QObject):
                 except Exception as e:
                     try:
                         self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
-                        send_string(self.socket, 'Quit')
+                        self.socket.send_string('Quit')
                         self.socket.close()
                     except:
                         pass
@@ -183,16 +223,16 @@ class TCPClient(QObject):
         messg = ThreadCommand(message)
 
         if message == 'set_info':
-            path = get_list(self.socket, 'string')
-            param_xml = get_string(self.socket)
+            path = self.socket.get_list('string')
+            param_xml = self.socket.get_string()
             messg.attributes = [path, param_xml]
 
         elif message == 'move_abs':
-            position = get_scalar(self.socket)
+            position = self.socket.get_scalar()
             messg.attributes = [position]
 
         elif message == 'move_rel':
-            position = get_scalar(self.socket)
+            position = self.socket.get_scalar()
             messg.attributes = [position]
 
         self.cmd_signal.emit(messg)
@@ -243,8 +283,9 @@ class TCPServer(QObject):
         self.emit_status(ThreadCommand("Update_Status", [
             "Started new server for {:s}:{:d}".format(self.settings.child(('socket_ip')).value(),
                                                       self.settings.child(('port_id')).value()), 'log']))
-        self.serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.serversocket = Socket(serversocket)
         # bind the socket to a public host, and a well-known port
         try:
             self.serversocket.bind((self.settings.child(('socket_ip')).value(), self.settings.child(('port_id')).value()))
@@ -253,7 +294,7 @@ class TCPServer(QObject):
             self.emit_status(ThreadCommand("Update_Status",
                                            ['Bind failed. Error Code : ' + str(msg.errno) + ' Message ' + msg.strerror,
                                             'log']))
-            raise Exception('Bind failed. Error Code : ' + str(msg.errno) + ' Message ' + msg.strerror)
+            raise ConnectionError('Bind failed. Error Code : ' + str(msg.errno) + ' Message ' + msg.strerror)
 
         self.serversocket.listen(1)
         self.connected_clients.append(dict(socket=self.serversocket, type='server'))
@@ -305,6 +346,26 @@ class TCPServer(QObject):
         """
         print(status)
 
+    def select(self, rlist, wlist, xlist, timeout=0):
+        read_sockets, write_sockets, error_sockets = select.select([sock.socket for sock in rlist],
+                                                                   [sock.socket for sock in wlist],
+                                                                   [sock.socket for sock in xlist],
+                                                                   timeout)
+
+        return ([Socket(sock) for sock in read_sockets], [Socket(sock) for sock in write_sockets],
+                [Socket(sock) for sock in error_sockets])
+
+    def remove_client(self, sock):
+        sock_type = self.find_socket_type_within_connected_clients(sock)
+        if sock_type is not None:
+            self.connected_clients.remove(dict(socket=sock, type=sock_type))
+            self.settings.child(('conn_clients')).setValue(self.set_connected_clients_table())
+            try:
+                sock.close()
+            except:
+                pass
+            self.emit_status(ThreadCommand("Update_Status", ['Client ' + sock_type + ' disconnected', 'log']))
+
     def listen_client(self):
         """
             Server function.
@@ -328,30 +389,25 @@ class TCPServer(QObject):
         try:
             self.processing = True
             # QtWidgets.QApplication.processEvents() #to let external commands in
-            read_sockets, write_sockets, error_sockets = select.select(
+            read_sockets, write_sockets, error_sockets = self.select(
                 [client['socket'] for client in self.connected_clients], [],
                 [client['socket'] for client in self.connected_clients],
                 0)
             for sock in error_sockets:
-                sock_type = self.find_socket_type_within_connected_clients(sock)
-                if sock_type is not None:
-                    self.connected_clients.remove(dict(socket=sock, type=sock_type))
-                    self.settings.child(('conn_clients')).setValue(self.set_connected_clients_table())
-                    try:
-                        sock.close()
-                    except:
-                        pass
-                    self.emit_status(ThreadCommand("Update_Status", ['Client ' + sock_type + ' disconnected', 'log']))
+                self.remove_client(sock)
 
             for sock in read_sockets:
+
                 QThread.msleep(100)
                 # New connection
                 if sock == self.serversocket:
                     (client_socket, address) = self.serversocket.accept()
                     # client_socket.setblocking(False)
+
                     DAQ_type = self.read_commands(client_socket)
                     if DAQ_type not in self.socket_types:
                         self.emit_status(ThreadCommand("Update_Status", [DAQ_type + ' is not a valid type', 'log']))
+                        client_socket.close()
                         break
 
                     self.connected_clients.append(dict(socket=client_socket, type=DAQ_type))
@@ -365,8 +421,8 @@ class TCPServer(QObject):
                     # Data received from client, process it
                     try:
                         message = self.read_commands(sock)
-                        if message == 'Done' or message == 'Info' or message == 'Infos' or message == 'Info_xml' or message == 'position_is' or message == 'move_done':
-                            self.process_cmds(message)
+                        if message in ['Done', 'Info', 'Infos', 'Info_xml', 'position_is', 'move_done']:
+                            self.process_cmds(message, command_sock=None)
                         elif message == 'Quit':
                             raise Exception("socket disconnect by user")
                         else:
@@ -374,14 +430,7 @@ class TCPServer(QObject):
 
                     # client disconnected, so remove from socket list
                     except Exception as e:
-                        sock_type = self.find_socket_type_within_connected_clients(sock)
-                        if sock_type is not None:
-                            self.connected_clients.remove(dict(socket=sock, type=sock_type))
-                            self.settings.child(('conn_clients')).setValue(self.set_connected_clients_table())
-                            # sock.shutdown(socket.SHUT_RDWR)
-                            sock.close()
-                            self.emit_status(
-                                ThreadCommand("Update_Status", ['Client ' + sock_type + ' disconnected', 'log']))
+                        self.remove_client(sock)
 
             self.processing = False
 
@@ -406,7 +455,7 @@ class TCPServer(QObject):
             --------
             check_received_length
         """
-        message = get_string(sock)
+        message = sock.get_string()
         return message
 
     def send_command(self, sock, command="move_at"):
@@ -430,7 +479,7 @@ class TCPServer(QObject):
             return
 
         if sock is not None:
-            send_string(sock, command)
+            sock.send_string(command)
 
     def find_socket_within_connected_clients(self, client_type):
         """
@@ -472,6 +521,10 @@ class TCPServer(QObject):
                 res = socket_dict['type']
         return res
 
+    def emit_status(self, status):
+        print(status)
+
+
     def read_data(self, sock):
         pass
 
@@ -487,39 +540,6 @@ class TCPServer(QObject):
     def process_cmds(self, command, command_sock=None):
         """
             Process the given command.
-
-            Depending on the command name :
-            * Done :
-
-                * Find a socket from the 'GRABBER' connected client.
-                * Send data to a viewer or a client (depending on command_sock).
-
-            * Info : Find a socket from the 'GRABBER' connected client and read infos.
-
-            * Send Data 0D :
-
-                * Find a socket from the 'GRABBER' connected client.
-                * set a 1D Mock data.
-
-            * Send Data 1D :
-
-                * Find a socket from the 'GRABBER' connected client.
-                * set a 1D Mock data.
-
-            * Send Data 2D :
-
-                * Find a socket from the 'GRABBER' connected client.
-                * set a 2D Mock data.
-
-            =============== =========== ==========================
-            **Parameters**    **Type**    **Description**
-            *command*         string      the command as a string
-            *command_sock*    ???
-            =============== =========== ==========================
-
-            See Also
-            --------
-            find_socket_within_connected_clients, read_data, send_data, utility_classes.DAQ_Viewer_base.emit_status, daq_utils.ThreadCommand, send_command, set_1D_Mock_data, set_2D_Mock_data, process_cmds
         """
         if command not in self.message_list:
             return
@@ -529,6 +549,8 @@ class TCPServer(QObject):
 
 
         elif command == "Infos":
+            """replace entirely the client settings information onthe server widget
+            should be done as the init of the client module"""
             try:
                 sock = self.find_socket_within_connected_clients(self.client_type)
                 if sock is not None:  # if client self.client_type is connected then send it the command
@@ -538,7 +560,22 @@ class TCPServer(QObject):
             except Exception as e:
                 self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
+        elif command == 'Info_xml':
+            """update the state of one of the client settings on the server widget"""
+            sock = self.find_socket_within_connected_clients(self.client_type)
+            if sock is not None:
+                path = sock.get_list()
+                param_xml = sock.get_string()
+                param_dict = custom_tree.XML_string_to_parameter(param_xml)[0]
+
+                param_here = self.settings.child('settings_client', *path[1:])
+                param_here.restoreState(param_dict)
+
         elif command == "Info":
+            """
+            add a custom info (as a string value) in the server widget settings. To be used if the client is not a 
+            PyMoDAQ's module
+            """
             try:
                 sock = self.find_socket_within_connected_clients(self.client_type)
                 if sock is not None:  # if client self.client_type is connected then send it the command
@@ -546,63 +583,82 @@ class TCPServer(QObject):
             except Exception as e:
                 self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-        elif command == 'Info_xml':
-            sock = self.find_socket_within_connected_clients(self.client_type)
-            if sock is not None:
-                list_len = get_int(sock)
-                path = []
-                for ind in range(list_len):
-                    data_len = int.from_bytes(check_received_length(sock, 4), 'big')
-                    path.append(check_received_length(sock, data_len).decode())
-                data_len = int.from_bytes(check_received_length(sock, 4), 'big')
-                param_xml = check_received_length(sock, data_len).decode()
-                param_dict = custom_tree.XML_string_to_parameter(param_xml)[0]
-
-                param_here = self.settings.child('infos', *path[1:])
-                param_here.restoreState(param_dict)
-
         else:
             self.command_to_from_client(command)
 
 
 
-    def read_infos(self, sock):
-        length_bytes = check_received_length(sock, 4)
-        length = np.frombuffer(length_bytes, dtype='>i4')[0]  # big endian 4 bytes==uint32 swaped
-        infos = check_received_length(sock, length).decode()
-        params = custom_tree.XML_string_to_parameter(infos)
-        param_state = {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': params}
-        self.settings.child(('infos')).restoreState(param_state)
 
-    def read_info(self, sock, dtype=np.float64):
+
+
+    def read_infos(self, sock):
+        infos = sock.get_string()
+        params = custom_tree.XML_string_to_parameter(infos)
+        param_state = {'title': 'Infos Client:', 'name': 'settings_client', 'type': 'group', 'children': params}
+        self.settings.child(('settings_client')).restoreState(param_state)
+
+    def read_info(self, sock):
         """
+        if the client is not from PyMoDAQ it can use this method to display some info into the server widget
         """
         try:
 
             ##first get the info type
-            length_bytes = check_received_length(sock, 4)
-            length = np.frombuffer(length_bytes, dtype='>i4')[0]  # big endian 4 bytes==uint32 swaped
-            message = check_received_length(sock, length).decode()
-
-            # get data length
-            length_bytes = check_received_length(sock, 4)
-            length = np.frombuffer(length_bytes, dtype='>i4')[0]
-
-            ##then get data
-            data_bytes = check_received_length(sock, length)
-
-            data = np.frombuffer(data_bytes, dtype=dtype)
-            data = data.newbyteorder()[0]  # convert it to big endian
+            info = sock.get_string()
+            data = sock.get_string()
             try:
-                self.settings.child('infos', message).setValue(data)
+                if info not in custom_tree.iter_children(self.settings.child(('infos')), []):
+                    self.settings.child(('infos')).addChild({'name': info, 'type': 'str', 'value': data})
+                else:
+                    self.settings.child('infos', info).setValue(data)
             except Exception as e:
                 self.emit_status(ThreadCommand('Update_Status', [str(e), 'log']))
 
         except Exception as e:
-            data = 0
+            data = ''
 
         return data
 
+
+class MockServer(TCPServer):
+
+    params = []
+
+    def __init__(self, client_type='GRABBER'):
+        super().__init__(client_type)
+
+        self.settings = Parameter.create(name='settings', type='group', children=tcp_parameters)
+
+
 if __name__ ==  '__main__':
-    tcp_client = TCPClient()
-    tcp_client.init_connection()
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+
+    socket_types = ["GRABBER", "ACTUATOR"]
+    server = MockServer()
+    server.socket_types = socket_types
+    server.settings.child(('socket_ip')).setValue('127.0.0.1')  # local host
+    server.settings.child(('port_id')).setValue(6341)
+    server.init_server()
+
+    server_thread = QThread()
+    server.moveToThread(server_thread)
+    server_thread.start()
+
+
+
+    QThread.msleep(1000)
+    client = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+    client.connect((server.settings.child(('socket_ip')).value(), server.settings.child(('port_id')).value()))
+    # expect a valid client type:
+    client.send_string("GRBER")
+
+
+    QThread.msleep(1000)
+    print(len(server.connected_clients))
+    client.send_string("Quit")
+    QThread.msleep(1000)
+    print(len(server.connected_clients))
+    while True:
+        QThread.msleep(100)
+    sys.exit(app.exec_())
