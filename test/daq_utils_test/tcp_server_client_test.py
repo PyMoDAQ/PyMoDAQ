@@ -1,8 +1,8 @@
 import pytest
 import numpy as np
-import socket
+import socket as native_socket
 from pymodaq.daq_utils import daq_utils as utils
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from pymodaq.daq_utils.tcpip_utils import Socket
 from pymodaq.daq_utils.tcp_server_client import MockServer, TCPServer, TCPClient
 
@@ -12,6 +12,7 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 
 from gevent import server, socket
 from time import sleep
+from collections import OrderedDict
 
 class SimpleServer(server.StreamServer):
     def __init__(self, *args, handle_fun=lambda x: print('nothing as an handle'), **kwargs):
@@ -21,20 +22,22 @@ class SimpleServer(server.StreamServer):
     def handle(self, sock, address):
         self.handle_fun(sock)
 
-class Test:
-    """check the test server is working"""
-    def test(self):
-        server = SimpleServer(('127.0.0.1', 0), )
-        server.start()
-        client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-        sleep(0.5)
-        server_socket = Socket(server.do_read()[0])
+### exemple of use of SimpleServer
 
-        server_socket.sendall(b'hello and goodbye!')
-
-        response = client.recv(4096)
-        assert response == b'hello and goodbye!'
-        server.stop()
+# class Test:
+#     """check the test server is working"""
+#     def test(self):
+#         server = SimpleServer(('127.0.0.1', 0), )
+#         server.start()
+#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
+#         sleep(1)
+#         server_socket = Socket(server.do_read()[0])
+#
+#         server_socket.sendall(b'hello and goodbye!')
+#
+#         response = client.recv(4096)
+#         assert response == b'hello and goodbye!'
+#         server.stop()
 
 
 
@@ -55,7 +58,7 @@ class TestMockServer:
         server = get_server()
         assert hasattr(server, 'emit_status')
         assert hasattr(server, 'settings')
-
+        assert hasattr(server, 'serversocket')
 
         server.settings.child(('socket_ip')).setValue('999.0.0.1')  # a wrong host
         with pytest.raises(ConnectionError):
@@ -83,38 +86,30 @@ class TestMockServer:
         assert server.settings.child(('conn_clients')).value()['server'] == str(server.serversocket.getsockname())
         server.close_server()
 
-
-    @pytest.mark.parametrize('socket_type', socket_types)
-    def test_listen(self, socket_type, get_server, qtbot):
+    def test_methods(self, get_server, qtbot):
         server = get_server()
-        server.socket_types = socket_types
         server.settings.child(('socket_ip')).setValue('127.0.0.1')  # local host
         server.settings.child(('port_id')).setValue(6341)
-        server.init_server()
-        server_thread = QThread()
-        server.moveToThread(server_thread)
-        server_thread.start()
+        server.connected_clients.append(dict(type='server',
+                                             socket=server.serversocket))
+        actu_socket = Socket(native_socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        server.connected_clients.append(dict(type='ACTUATOR',
+                                             socket=actu_socket))
 
-        client = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-        client.connect((server.settings.child(('socket_ip')).value(), server.settings.child(('port_id')).value()))
-        #expect a valid client type:
-        client.send_string(socket_type)
-        QThread.msleep(500)
+        #find_socket_within_connected_clients
+        assert server.find_socket_within_connected_clients('ACTUATOR') == actu_socket
+        assert server.find_socket_within_connected_clients('ACTUAT') is None
 
-        assert len(server.connected_clients) == 2
-        assert socket_type in [dic['type'] for dic in server.connected_clients]
-        client.send_string('Quit')
-        QThread.msleep(500)
-        assert len(server.connected_clients) == 1
+        #find_socket_type_within_connected_clients
+        assert server.find_socket_type_within_connected_clients(server.serversocket) == 'server'
 
-        client = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-        client.connect((server.settings.child(('socket_ip')).value(), server.settings.child(('port_id')).value()))
-        client.send_string('a type not recognized')
-        QThread.msleep(500)
+        #set_connected_clients_table
+        assert server.set_connected_clients_table() == OrderedDict(server="unconnected invalid socket",
+                                                                   ACTUATOR="unconnected invalid socket")
 
-        assert len(server.connected_clients) == 1
-        server.close_server()
-        server_thread.quit()
+        #remove_client
+        server.remove_client(actu_socket)
+        assert server.set_connected_clients_table() == OrderedDict(server="unconnected invalid socket")
 
     def test_commands(self, get_server, qtbot):
         server = get_server()
@@ -125,81 +120,133 @@ class TestMockServer:
                                # 'x_axis', 'y_axis'
                                ]
 
-        server.settings.child(('socket_ip')).setValue('127.0.0.1')  # local host
-        server.settings.child(('port_id')).setValue(6341)
-        server.init_server()
-        server_thread = QThread()
-        server.moveToThread(server_thread)
-        server_thread.start()
+        #read_info
+        server.read_info(None, 'random_info', 'random info value')
 
-        client = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-        client.connect((server.settings.child(('socket_ip')).value(), server.settings.child(('port_id')).value()))
-        #expect a valid client type:
-        client.send_string("GRABBER")
-
-        client.send_string('Info')
-        client.send_string('random_info')
-        client.send_string('random info value')
-        QThread.msleep(500)
         assert 'random_info' in custom_tree.iter_children(server.settings.child(('infos')), [])
         assert server.settings.child('infos', 'random_info').value() == 'random info value'
 
-
+        # read_infos
         params = [{'title': 'Device index:', 'name': 'device', 'type': 'int', 'value': 0, 'max': 3, 'min': 0},
-                  {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
-                  {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
-                   'children': []}]
+                    {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
+                    {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
+                            'children': [
+                                {'title': 'Device index:', 'name': 'device1', 'type': 'int', 'value': 0, 'max': 3,
+                                 'min': 0},
+                                {'title': 'Device index:', 'name': 'device2', 'type': 'int', 'value': 0, 'max': 3,
+                                 'min': 0},]
+                         }]
+
         param = Parameter.create(name='settings', type='group', children=params)
-        param_xml = custom_tree.parameter_to_xml_string(param)
-        client.send_string('Infos')
-        client.send_string(param_xml)
-        QThread.msleep(500)
+        params_xml = custom_tree.parameter_to_xml_string(param)
+        server.read_infos(None, params_xml)
+
         assert 'device' in custom_tree.iter_children(server.settings.child(('settings_client')), [])
         assert 'infos' in custom_tree.iter_children(server.settings.child(('settings_client')), [])
         assert server.settings.child('settings_client', 'infos').value() == 'one_info'
         assert 'line_settings' in custom_tree.iter_children(server.settings.child(('settings_client')), [])
         assert server.settings.child('settings_client', 'line_settings').opts['type'] == 'group'
 
-        param.child(('infos')).setValue('another_info')
-        client.send_string('Info_xml')
-        client.send_list(custom_tree.get_param_path(param.child(('infos'))))
-        client.send_string(custom_tree.parameter_to_xml_string(param.child(('infos'))))
-        QThread.msleep(500)
+
+        # read_info_xml
+        one_param = param.child(('infos'))
+        one_param.setValue('another_info')
+        assert one_param.value() == 'another_info'
+        path = param.childPath(one_param)
+        path.insert(0, '') #add one to mimic correct behaviour
+        server.read_info_xml(None, path, custom_tree.parameter_to_xml_string(one_param))
         assert server.settings.child('settings_client', 'infos').value() == 'another_info'
-        server.close_server()
-        server_thread.quit()
+
+    #
+
+class ClientObjectManager(QObject):
+    cmd_signal = pyqtSignal(utils.ThreadCommand)
 
 class TestMockClient:
     command = ''
+    commands = []
     attributes = []
+
     def get_cmd_signal(self, command=utils.ThreadCommand()):
         self.command = command.command
+        self.commands.append(self.command)
         self.attributes = command.attributes
 
-    def test_init_connection(self, get_server, qtbot):
-        server = get_server()
-        server.socket_types = socket_types
-        # Combination of general messages and specific ones (depending the connected client, Grabber or Actuator
-        server.message_list = ["Quit", "Done", "Info", "Infos", "Info_xml",
-                               # "Send Data 0D", "Send Data 1D", "Send Data 2D", "Send Data ND", "Status",
-                               # 'x_axis', 'y_axis'
-                               ]
-
-        server.settings.child(('socket_ip')).setValue('127.0.0.1')  # local host
-        server.settings.child(('port_id')).setValue(6341)
-        server.init_server()
-        server_thread = QThread()
-        server.moveToThread(server_thread)
-        server_thread.start()
+    def test_methods(self, qtbot):
+        server = SimpleServer(('127.0.0.1', 6341), )
+        server.start()
 
 
         params = [{'title': 'Device index:', 'name': 'device', 'type': 'int', 'value': 0, 'max': 3, 'min': 0},
                   {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
                   {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
-                   'children': []}]
+                   'children': [
+                       {'name': 'someparam', 'type': 'float', 'value': 15.54, 'readonly': True},
+                        ]
+                   }]
         param = Parameter.create(name='settings', type='group', children=params)
-        client = TCPClient(ipaddress="127.0.0.1", port=6341, params_state=param.saveState(), client_type="GRABBER")
+        client = TCPClient(ipaddress="127.0.0.1", port=6341, params_state=param.saveState(), client_type="sometype")
         client.cmd_signal.connect(self.get_cmd_signal)
-        client.init_connection()
 
-        assert self.command == 'connected'
+        #check init method
+        assert client.ipaddress == "127.0.0.1"
+        assert client.port == 6341
+        assert client.client_type == 'sometype'
+
+        client.socket = Socket(native_socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        client.socket.connect((client.ipaddress, client.port))
+        sleep(0.5)
+        server_socket = Socket(server.do_read()[0])
+
+
+        client.send_data([np.array([0, 1, 2, 3]), 'item', 5.1])
+        assert server_socket.get_string() == 'Done'
+        utils.check_vals_in_iterable(server_socket.get_list(), [np.array([0, 1, 2, 3]), 'item', 5.1])
+
+        client.send_infos_xml(custom_tree.parameter_to_xml_string(param))
+        assert server_socket.get_string() == 'Infos'
+        assert server_socket.get_string() == custom_tree.parameter_to_xml_string(param).decode()
+
+        client.send_info_string('someinfo', 'this is an info')
+        assert server_socket.get_string() == 'Info'
+        assert server_socket.get_string() == 'someinfo'
+        assert server_socket.get_string() == 'this is an info'
+
+
+        #test queue_command
+        client.cmd_signal.connect(self.get_cmd_signal)
+        client_manager = ClientObjectManager()
+        client_manager.cmd_signal.connect(client.queue_command)
+
+        with pytest.raises(Exception):
+            client.queue_command(utils.ThreadCommand('Weird command'))
+
+        #test get_data
+        server_socket.send_string('set_info')
+        server_socket.send_list(['line_settings', 'someparam'])
+        server_socket.send_string(custom_tree.parameter_to_xml_string(param.child('line_settings', 'someparam')))
+
+        msg = client.socket.get_string()
+        client.get_data(msg)
+        assert self.command == 'set_info'
+        utils.check_vals_in_iterable(self.attributes, [['line_settings', 'someparam'],
+                        custom_tree.parameter_to_xml_string(param.child('line_settings', 'someparam')).decode()])
+
+
+        server_socket.send_string('move_abs')
+        server_socket.send_scalar(12.546)
+
+        msg = client.socket.get_string()
+        client.get_data(msg)
+        assert self.command == 'move_abs'
+        utils.check_vals_in_iterable(self.attributes, [12.546])
+
+        server_socket.send_string('move_rel')
+        server_socket.send_scalar(3.2)
+
+        msg = client.socket.get_string()
+        client.get_data(msg)
+        assert self.command == 'move_rel'
+        utils.check_vals_in_iterable(self.attributes, [3.2])
+
+        server.stop()

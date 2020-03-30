@@ -18,7 +18,8 @@ class SimpleServer(server.StreamServer):
 class Test:
     """check the test server is working"""
     def test(self):
-        server = SimpleServer(('127.0.0.1', 0))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=
+                              lambda x: Socket(x).check_sended(b'hello and goodbye!'))
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         response = client.recv(4096)

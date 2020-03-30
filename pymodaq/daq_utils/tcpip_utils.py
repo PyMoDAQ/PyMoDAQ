@@ -56,16 +56,22 @@ class Socket:
         Tuple consisting of the message converted as a byte array, and the length of the byte array, itself as a byte array of length 4
         """
 
+        if not isinstance(message, str) and not isinstance(message, bytes):
+            message = str(message)
         if not isinstance(message, bytes):
             message = message.encode()
         return message, cls.int_to_bytes(len(message))
 
     @classmethod
     def int_to_bytes(cls, an_integer):
+        if not isinstance(an_integer, int):
+            raise TypeError(f'{an_integer} should be an integer, not a {type(an_integer)}')
         return an_integer.to_bytes(4, 'big')
 
     @classmethod
     def bytes_to_int(cls, bytes_string):
+        if not isinstance(bytes_string, bytes):
+            raise TypeError(f'{bytes_string} should be an bytes string, not a {type(bytes_string)}')
         assert len(bytes_string) == 4
         return int.from_bytes(bytes_string, 'big')
 
@@ -81,6 +87,8 @@ class Socket:
         -------
 
         """
+        if not isinstance(data_bytes, bytes):
+            raise TypeError(f'{data_bytes} should be an bytes string, not a {type(data_bytes)}')
         sended = 0
         while sended < len(data_bytes):
             sended += self.socket.send(data_bytes[sended:])
@@ -99,6 +107,9 @@ class Socket:
         -------
 
         """
+        if not isinstance(length, int):
+            raise TypeError(f'{length} should be an integer, not a {type(length)}')
+
         l = 0
         data_bytes = b''
         while l < length:
@@ -147,6 +158,8 @@ class Socket:
         -------
 
         """
+        if not (isinstance(data, int) or isinstance(data, float)):
+            raise TypeError(f'{data} should be an integer or a float, not a {type(data)}')
         data = np.array([data])
         data_type = data.dtype.descr[0][1]
         data_bytes = data.tobytes()
@@ -186,7 +199,7 @@ class Socket:
         return data
 
     def send_array(self, data_array):
-        """send 1D or 2D arrays
+        """send ndarrays
 
         get data type as a string
         reshape array as 1D array and get the array dimensionality (len of array's shape)
@@ -197,6 +210,8 @@ class Socket:
         send all values of the shape as integers converted to bytes
         send data as bytes
         """
+        if not isinstance(data_array, np.ndarray):
+            raise TypeError(f'{data_array} should be an numpy array, not a {type(data_array)}')
         data_type = data_array.dtype.descr[0][1]
         data_shape = data_array.shape
 
@@ -225,6 +240,8 @@ class Socket:
         -------
 
         """
+        if not isinstance(data_list, list):
+            raise TypeError(f'{data_list} should be a list, not a {type(data_list)}')
         self.check_sended(self.int_to_bytes(len(data_list)))
         for data in data_list:
 
@@ -244,14 +261,12 @@ class Socket:
                 raise TypeError(f'the element {data} type is cannot be sent by TCP/IP, only numpy arrays'
                                 f', strings, or scalars (int or float)')
 
-    def get_list(self, data_type=None):
+    def get_list(self):
         """
         Receive data from socket as a list
         Parameters
         ----------
         socket: the communication socket
-        data_type: either 'string', 'scalar', 'array' depending which function has been used to send the list
-
         Returns
         -------
 
