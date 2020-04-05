@@ -1,21 +1,15 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QVariant, QSize
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
 # from enum import IntEnum
 from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.daq_utils.tcpip_utils import Socket, check_received_length, check_sended,\
-    message_to_bytes, send_scalar, send_string, get_scalar, get_int, get_string, send_list
-
-
-import numpy as np
-from collections import OrderedDict
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+import numpy as np
 
-
-comon_parameters=[{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
+comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
                   {'name': 'epsilon', 'type': 'float', 'value': 0.01},
                   {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
 
@@ -35,7 +29,7 @@ params = [
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
-             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
              {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
              {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},

@@ -20,6 +20,7 @@ from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.plotting.lcd import LCD
 import pymodaq.daq_utils.daq_utils as daq_utils
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
 from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
 
@@ -49,7 +50,8 @@ import datetime
 import tables
 from pathlib import Path
 from pymodaq.daq_utils.h5modules import H5Saver
-from pymodaq.daq_utils.daq_utils import get_set_local_dir, DockArea
+from pymodaq.daq_utils.daq_utils import get_set_local_dir
+from pymodaq.daq_utils.gui_utils import DockArea
 
 if __name__ == '__main__':
     import logging
@@ -613,7 +615,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.ini_det_fun()
 
             if path is None or path is False:
-                path=daq_utils.select_file(save=False,ext='par')
+                path = gutils.select_file(save=False,ext='par')
             with open(str(path), 'rb') as f:
                 settings = pickle.load(f)
                 settings_main=settings['settings_main']
@@ -851,10 +853,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            daq_utils.select_file, save_export_data
+            gutils.select_file, save_export_data
         """
         self.do_save_data = True
-        self.save_file_pathname = daq_utils.select_file(start_path=self.save_file_pathname, save=True, ext='h5') #see daq_utils
+        self.save_file_pathname = gutils.select_file(start_path=self.save_file_pathname, save=True, ext='h5') #see daq_utils
         self.save_export_data(self.data_to_save_export)
 
 
@@ -874,7 +876,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            daq_utils.select_file, daq_utils.custom_parameter_tree.parameter_to_xml_string, update_status
+            gutils.select_file, daq_utils.custom_parameter_tree.parameter_to_xml_string, update_status
         """
         if path is not None:
             path = Path(path)
@@ -927,13 +929,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
                                 if data_type == 'data2D' and 'Data2D' in self.viewer_types:
                                     ind_viewer = self.viewer_types.index('Data2D')
-                                    png = self.ui.viewers[ind_viewer].parent.grab().toImage()
-                                    png = png.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
-                                    buffer = QtCore.QBuffer()
-                                    buffer.open(QtCore.QIODevice.WriteOnly)
-                                    png.save(buffer, "png")
-                                    string = buffer.data().data()
-                                    self.channel_arrays[data_type][channel]._v_attrs['pixmap2D'] = string
+                                    string = gutils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
+                                    self.channel_arrays[data_type][channel].attrs['pixmap2D'] = string
         except Exception as e:
             self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
 
@@ -973,10 +970,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            daq_utils.select_file, snapshot
+            gutils.select_file, snapshot
         """
         self.do_save_data = True
-        self.save_file_pathname=daq_utils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
+        self.save_file_pathname=gutils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
         self.snapshot(pathname=self.save_file_pathname,dosave=True)
 
 
@@ -993,11 +990,11 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
             See Also
             --------
-            daq_utils.select_file, update_status
+            gutils.select_file, update_status
         """
         try:
             if path is None or path is False:
-                path=daq_utils.select_file(save=True,ext='par')
+                path=gutils.select_file(save=True,ext='par')
 
             settings_main=self.settings.saveState()
             if self.DAQ_type != 'DAQ0D':

@@ -24,7 +24,7 @@ from easydict import EasyDict as edict
 import pickle
 import copy
 import os
-from pymodaq.daq_utils.daq_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea
 
 import  pymodaq.daq_utils.daq_utils as utils
 import datetime
@@ -875,27 +875,29 @@ class Viewer2D(QtWidgets.QWidget):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    Form=DockArea()
-    Form=QtWidgets.QWidget()
-    
-    prog = Viewer2D(Form);
-    prog.set_scaling_axes(scaling_options=dict(scaled_xaxis=dict(label="eV",units=None,offset=20,scaling=2),scaled_yaxis=dict(label="time",units='s',offset=-10,scaling=0.1)))
-    Nx=100;
-    Ny=200
+    Form = DockArea()
+    Form = QtWidgets.QWidget()
+
+    prog = Viewer2D(Form)
+    prog.set_scaling_axes(scaling_options=dict(scaled_xaxis=dict(label="eV", units=None, offset=20, scaling=2),
+                                               scaled_yaxis=dict(label="time", units='s', offset=-10, scaling=0.1)))
+    Nx = 100
+    Ny = 200
     data_random = pg.np.random.normal(size=(Ny, Nx))
-    x=pg.np.linspace(0,Nx-1,Nx)
-    y=pg.np.linspace(0,Ny-1,Ny)
-    from pymodaq.daq_utils.daq_utils import  gauss2D
-    data_red=data_random+3*gauss2D(x,0.2*Nx,Nx/5,y,0.3*Ny,Ny/5,1)
-    data_red = pg.gaussianFilter(data_red, (2, 2))
-    data_green=data_random+3*gauss2D(x,0.6*Nx,Nx/5,y,0.6*Ny,Ny/5,1)
-    data_green = pg.gaussianFilter(data_green, (2, 2))
-    data_blue=data_random+3*gauss2D(x,0.7*Nx,Nx/5,y,0.2*Ny,Ny/5,1)
+    x = pg.np.linspace(0, Nx - 1, Nx)
+    y = pg.np.linspace(0, Ny - 1, Ny)
+    from pymodaq.daq_utils.daq_utils import gauss2D
+
+    data_red =  3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)
+    #data_red = pg.gaussianFilter(data_red, (2, 2))
+    data_green =  3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+    #data_green = pg.gaussianFilter(data_green, (2, 2))
+    data_blue = data_random + 3 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
-    
-    prog.setImage(data_blue=data_blue,data_green=None,data_red=data_red)
-    
-    #prog.roi_manager.settings.child(('ROIs')).addNew('ElipseROI')
+
+    prog.setImage(data_blue=data_blue, data_green=data_green, data_red=data_red)
+
+    # prog.roi_manager.settings.child(('ROIs')).addNew('ElipseROI')
     
     #prog.ui.imag_blue.set
 

@@ -30,6 +30,7 @@ from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils import gui_utils as gutils
 
 
 local_path = utils.get_set_local_dir()
@@ -290,7 +291,7 @@ class DashBoard(QObject):
         """
         try:
             if file is None:
-                file = utils.select_file(save=False, ext='dock')
+                file = gutils.select_file(save=False, ext='dock')
             if file is not None:
                 with open(str(file), 'rb') as f:
                     dockstate = pickle.load(f)
@@ -301,7 +302,7 @@ class DashBoard(QObject):
 
     def modify_overshoot(self):
         try:
-            path = utils.select_file(start_path=os.path.join(local_path,'overshoot_configurations'), save=False, ext='xml')
+            path = gutils.select_file(start_path=os.path.join(local_path,'overshoot_configurations'), save=False, ext='xml')
             if path != '':
                 self.overshoot_manager.set_file_overshoot(str(path))
 
@@ -312,7 +313,7 @@ class DashBoard(QObject):
 
     def modify_roi(self):
         try:
-            path = utils.select_file(start_path=os.path.join(local_path, 'roi_config'), save=False, ext='xml')
+            path = gutils.select_file(start_path=os.path.join(local_path, 'roi_config'), save=False, ext='xml')
             if path != '':
                 self.roi_saver.set_file_roi(str(path))
 
@@ -323,7 +324,7 @@ class DashBoard(QObject):
 
     def modify_preset(self):
         try:
-            path = utils.select_file(start_path=os.path.join(local_path, 'preset_modes'), save=False, ext='xml')
+            path = gutils.select_file(start_path=os.path.join(local_path, 'preset_modes'), save=False, ext='xml')
             if path != '':
                 self.preset_manager.set_file_preset(str(path))
 
@@ -403,7 +404,7 @@ class DashBoard(QObject):
         try:
             dockstate = self.dockarea.saveState()
             if file is None:
-                file = utils.select_file(start_path=None, save=True, ext='dock')
+                file = gutils.select_file(start_path=None, save=True, ext='dock')
             if file is not None:
                 with open(str(file), 'wb') as f:
                     pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
@@ -914,7 +915,7 @@ class DashBoard(QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = utils.DockArea()
+    area = gutils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

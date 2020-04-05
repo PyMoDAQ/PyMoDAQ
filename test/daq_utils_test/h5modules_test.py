@@ -150,6 +150,38 @@ class TestH5Backend:
 
         bck.close_file()
 
+    def test_walk_groups(self, get_backend):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        g2 = bck.get_set_group('/', 'g2')
+        g21 = bck.get_set_group(g2, 'g21')
+        g22 = bck.get_set_group('/g2', 'g22', title='group g22')
+        groups = ['/', 'g1', 'g2', 'g22', 'g21']
+        gps = []
+        for gr in bck.walk_groups('/'):
+            assert gr.attrs['CLASS'] == 'GROUP'
+            gps.append(gr.name)
+        assert len(gps) == len(groups)
+        for gr in gps:
+            assert gr in groups
+
+    def test_walk_nodes(self, get_backend):
+        bck = get_backend
+        g1 = bck.get_set_group(bck.root(), 'g1')
+        array_g1 = bck.create_carray(g1, 'array_g1', np.array([1, 2, 3, 4, 5, 6]))
+        g2 = bck.get_set_group('/', 'g2')
+        array_g2 = bck.create_carray(g2, 'array_g2', np.array([1, 2, 3, 4, 5, 6]))
+        g21 = bck.get_set_group(g2, 'g21')
+        g22 = bck.get_set_group('/g2', 'g22', title='group g22')
+        array_g22 = bck.create_carray(g22, 'array_g22', np.array([1, 2, 3, 4, 5, 6]))
+        nodes = ['/', 'g1', 'g2', 'array_g2', 'g22', 'g21', 'array_g1', 'array_g22']
+        gps = []
+        for gr in bck.walk_nodes('/'):
+            gps.append(gr.name)
+        assert len(gps) == len(nodes)
+        for gr in gps:
+            assert gr in nodes
+
     def test_carray(self, get_backend):
         bck = get_backend
         g1 = bck.get_set_group(bck.root(), 'g1')
@@ -335,7 +367,7 @@ class TestH5Saver:
         update_h5 = True
         h5saver.init_file(update_h5=update_h5)
         scan_group = h5saver.add_scan_group(settings_as_xml='this is a setting',
-                                                   metadata=dict(attr1='blabla', attr2=1.1))
+                                                   metadata=dict(attr1='blabla', attr2=1.1, pixmap2D='invalid pixmap'))
         assert h5saver.get_scan_index() == 0
         assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan000'
         scan_group = h5saver.add_scan_group()
@@ -349,6 +381,7 @@ class TestH5Saver:
         assert h5saver.get_scan_index() == 0
         h5saver.set_attr(scan_group, 'scan_done', True)
         assert h5saver.get_scan_index() == 1
+
         scan_group_1 = h5saver.add_scan_group()
         assert h5saver.get_scan_index() == 1
         h5saver.set_attr(scan_group_1, 'scan_done', True)
@@ -356,6 +389,7 @@ class TestH5Saver:
         ch1_group_1 = h5saver.add_CH_group(scan_group_1)
         assert h5saver.get_scan_index() == 2
         assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan001'
+
 
     def test_hierarchy(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan

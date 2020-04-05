@@ -6,8 +6,6 @@ import pymodaq
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.daq_utils import select_file
-
 
 from collections import OrderedDict
 import numpy as np
@@ -17,6 +15,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 import pymodaq.daq_utils.daq_utils as utils
+from pymodaq.daq_utils import gui_utils as gutils
 import os
 from easydict import EasyDict as edict
 from pyqtgraph.dockarea import DockArea, Dock
@@ -269,7 +268,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
             open_h5_file, update_status, daq_utils.select_file
         """
         try:
-            filename=select_file(start_path=path,save=False,ext='h5')
+            filename = gutils.select_file(start_path=path, save=False,ext='h5')
             if filename is not "":
                 self.open_h5_file(filename)
         except Exception as e:

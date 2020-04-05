@@ -9,7 +9,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
-from pymodaq.daq_utils.daq_utils import select_file
+from pymodaq.daq_utils.gui_utils import select_file
 
 
 class PresetScalableGroupMove(pTypes.GroupParameter):

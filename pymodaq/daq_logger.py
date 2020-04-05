@@ -21,6 +21,7 @@ from pymodaq.daq_utils.daq_utils import getLineInfo
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
 
 
@@ -114,7 +115,7 @@ class DAQ_Logger(QObject):
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
             os.mkdir(self.h5saver.settings.child(('base_path')).value())
-        filename = utils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
+        filename = gutils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
     def save_metadata(self, node, type_info='dataset_info'):
@@ -748,7 +749,7 @@ if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = utils.DockArea()
+    area = gutils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

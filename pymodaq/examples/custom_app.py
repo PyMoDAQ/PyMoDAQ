@@ -7,7 +7,7 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QRectF, QDate, QThread
 
 from pyqtgraph.dockarea import Dock
-from pymodaq.daq_utils.daq_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import getLineInfo
@@ -16,7 +16,7 @@ from pymodaq.daq_utils.daq_utils import getLineInfo
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 
 
@@ -275,7 +275,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     def save_data(self):
         try:
-            path = utils.select_file(start_path=self.settings.child('main_settings', 'base_path').value(), save=True, ext='h5')
+            path = gutils.select_file(start_path=self.settings.child('main_settings', 'base_path').value(), save=True, ext='h5')
             if path is not None:
                 #init the file object with an addhoc name given by the user
                 h5saver = H5Saver(save_type='custom')

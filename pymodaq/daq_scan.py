@@ -27,6 +27,7 @@ from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
 
 
@@ -247,14 +248,9 @@ class DAQ_Scan(QObject):
                                                         scan_type='scan1D')
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    png = self.ui.average1D_graph.parent.grab().toImage()
+                    string = gutils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
                 else:
-                    png = self.ui.scan1D_graph.parent.grab().toImage()
-                png = png.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
-                buffer = QtCore.QBuffer()
-                buffer.open(QtCore.QIODevice.WriteOnly)
-                png.save(buffer, "png")
-                string = buffer.data().data()
+                    string = gutils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
                 live_group._v_attrs['pixmap1D'] = string
 
 
@@ -301,19 +297,11 @@ class DAQ_Scan(QObject):
                         self.h5saver.add_data_live_scan(channel_group, averaged_datas['Scan_Data_Average_{:03d}'.format(ind_channel)],
                                              scan_type=scan_type)
 
-
-
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    png = self.ui.average2D_graph.parent.grab().toImage()
+                    string = gutils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
                 else:
-                    png = self.ui.scan2D_graph.parent.grab().toImage()
-                png = png.scaled(100, 100, QtCore.Qt.KeepAspectRatio)
-                buffer = QtCore.QBuffer()
-                buffer.open(QtCore.QIODevice.WriteOnly)
-                png.save(buffer, "png")
-                string = buffer.data().data()
+                    string = gutils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
                 live_group._v_attrs['pixmap2D'] = string
-
 
             if self.navigator is not None:
                 self.navigator.update_2Dscans()
@@ -324,7 +312,7 @@ class DAQ_Scan(QObject):
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
             os.mkdir(self.h5saver.settings.child(('base_path')).value())
-        filename=utils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
+        filename = gutils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
     def save_metadata(self, node, type_info='dataset_info'):
@@ -1854,7 +1842,7 @@ if __name__ == '__main__':
     from pymodaq.dashboard import DashBoard
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = utils.DockArea()
+    area = gutils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000,500)
     win.setWindowTitle('PyMoDAQ Dashboard')

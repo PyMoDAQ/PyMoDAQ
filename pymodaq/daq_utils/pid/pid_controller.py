@@ -6,7 +6,7 @@ import logging
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils.manage_preset import PresetManager

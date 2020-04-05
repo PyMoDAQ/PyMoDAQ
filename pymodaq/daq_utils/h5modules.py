@@ -10,8 +10,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import select_file, getLineInfo, capitalize, get_set_local_dir, Axis, JsonConverter
-from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel
+from pymodaq.daq_utils.daq_utils import getLineInfo, capitalize, get_set_local_dir, Axis, JsonConverter
+from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
 from PyQt5 import QtWidgets
@@ -147,82 +147,19 @@ class Node(object):
     def __eq__(self, other):
         return self.node == other.node
 
-    def __str__(self):
-        """Return a short string representation of the group.
-        """
-
-        pathname = self.path
-        classname = self.__class__.__name__
-        title = self.attrs['TITLE']
-        return "%s (%s) %r" % (pathname, classname, title)
-
-    def __repr__(self):
-        """Return a detailed string representation of the group.
-        """
-
-        rep = [
-            '%r (%s)' % (childname, child.__class__.__name__)
-            for (childname, child) in self.children().items()
-        ]
-        childlist = '[%s]' % (', '.join(rep))
-
-        return "%s\n  children := %s" % (str(self), childlist)
-
     @property
     def parent_node(self):
         if self.path == '/':
             return None
-        if self.backend == 'tables':
-            return Node(self.node._v_parent, self.backend)
-        else:
-            return Node(self.node.parent, self.backend)
-
-
-    def children(self):
-        """Get a dict containing all children node hanging from self whith their name as keys
-
-        Returns
-        -------
-        dict: keys are children node names, values are the children nodes
-
-        See Also
-        --------
-        children_name
-        """
         mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
-        children = dict([])
+
         if self.backend == 'tables':
-            for child_name, child in self.node._v_children.items():
-                klass = get_attr(child, 'CLASS', self.backend)
-                if 'ARRAY' in klass:
-                    _cls = getattr(mod, klass)
-                else:
-                    _cls = Node
-                children[child_name] = _cls(child, self.backend)
+            p = self.node._v_parent
         else:
-            for child_name, child in self.node.items():
-
-                klass = get_attr(child, 'CLASS', self.backend)
-                if 'ARRAY' in klass:
-                    _cls = getattr(mod, klass)
-                else:
-                    _cls = Node
-                children[child_name] = _cls(child, self.backend)
-        return children
-
-
-    def children_name(self):
-        """Gets the list of children name hanging from self
-
-        Returns
-        -------
-        list: list of name of the children
-        """
-        if self.backend == 'tables':
-            return list(self.node._v_children.keys())
-        else:
-            return list(self.node.keys())
-        pass
+            p = self.node.parent
+        klass = get_attr(p, 'CLASS', self.backend)
+        _cls = getattr(mod, klass)
+        return _cls(p, self.backend)
 
     def set_attr(self, key, value):
         self.attrs[key] = value
@@ -262,6 +199,76 @@ class Node(object):
             return self._node._v_pathname
         else:
             return self._node.name
+
+class GROUP(Node):
+    def __init__(self, node, backend):
+        super().__init__(node, backend)
+
+    def __str__(self):
+        """Return a short string representation of the group.
+        """
+
+        pathname = self.path
+        classname = self.__class__.__name__
+        title = self.attrs['TITLE']
+        return "%s (%s) %r" % (pathname, classname, title)
+
+    def __repr__(self):
+        """Return a detailed string representation of the group.
+        """
+
+        rep = [
+            '%r (%s)' % (childname, child.__class__.__name__)
+            for (childname, child) in self.children().items()
+        ]
+        childlist = '[%s]' % (', '.join(rep))
+
+        return "%s\n  children := %s" % (str(self), childlist)
+
+    def children(self):
+        """Get a dict containing all children node hanging from self whith their name as keys
+
+        Returns
+        -------
+        dict: keys are children node names, values are the children nodes
+
+        See Also
+        --------
+        children_name
+        """
+        mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
+        children = dict([])
+        if self.backend == 'tables':
+            for child_name, child in self.node._v_children.items():
+                klass = get_attr(child, 'CLASS', self.backend)
+                if 'ARRAY' in klass:
+                    _cls = getattr(mod, klass)
+                else:
+                    _cls = GROUP
+                children[child_name] = _cls(child, self.backend)
+        else:
+            for child_name, child in self.node.items():
+
+                klass = get_attr(child, 'CLASS', self.backend)
+                if 'ARRAY' in klass:
+                    _cls = getattr(mod, klass)
+                else:
+                    _cls = GROUP
+                children[child_name] = _cls(child, self.backend)
+        return children
+
+    def children_name(self):
+        """Gets the list of children name hanging from self
+
+        Returns
+        -------
+        list: list of name of the children
+        """
+        if self.backend == 'tables':
+            return list(self.node._v_children.keys())
+        else:
+            return list(self.node.keys())
+        pass
 
 class CARRAY(Node):
     def __init__(self, node, backend):
@@ -473,9 +480,9 @@ class H5Backend:
 
     def root(self):
         if self.backend == 'tables':
-            return Node(self._h5file.get_node('/'), self.backend)
+            return GROUP(self._h5file.get_node('/'), self.backend)
         else:
-            return Node(self._h5file, self.backend)
+            return GROUP(self._h5file, self.backend)
 
     def get_attr(self, node, attr_name=None):
         if isinstance(node, Node):
@@ -539,7 +546,7 @@ class H5Backend:
 
         else:
             group = self.get_node(where, name)
-        return Node(group, self.backend)
+        return GROUP(group, self.backend)
 
     def get_group_by_title(self, where, title):
         if isinstance(where, Node):
@@ -549,8 +556,8 @@ class H5Backend:
         for child_name in self.get_children(node):
             child = node[child_name]
             if 'TITLE' in self.get_attr(child):
-                if self.get_attr(child, 'TITLE') == title:
-                    return Node(child, self.backend)
+                if self.get_attr(child, 'TITLE') == title and self.get_attr(child, 'CLASS') == 'GROUP':
+                    return GROUP(child, self.backend)
         return None
 
     def is_node_in_group(self, where, name):
@@ -594,11 +601,12 @@ class H5Backend:
                     node = where
 
         if 'CLASS' not in self.get_attr(node):
-            return Node(node, self.backend)
+            self.set_attr(node, 'CLASS', 'GROUP')
+            return GROUP(node, self.backend)
         else:
             attr = self.get_attr(node, 'CLASS')
             if not 'ARRAY' in attr:
-                return Node(node, self.backend)
+                return GROUP(node, self.backend)
             elif attr == 'CARRAY':
                 return CARRAY(node, self.backend)
             elif attr == 'EARRAY':
@@ -678,7 +686,7 @@ class H5Backend:
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
-                    _cls = Node
+                    _cls = GROUP
                 children[child_name] = _cls(child, self.backend)
         else:
             for child_name, child in where.items():
@@ -686,9 +694,34 @@ class H5Backend:
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
-                    _cls = Node
+                    _cls = GROUP
                 children[child_name] = _cls(child, self.backend)
         return children
+
+    def walk_nodes(self, where):
+        where = self.get_node(where)  # return a node object in case where is a string
+        yield where
+        for gr in self.walk_groups(where):
+            for child in self.get_children(gr).values():
+                yield child
+
+    def walk_groups(self, where):
+        where = self.get_node(where)  # return a node object in case where is a string
+        if where.attrs['CLASS'] != 'GROUP':
+            return None
+        if self.backend == 'tables':
+            for ch in self.h5file.walk_groups(where.node):
+                yield self.get_node(ch)
+        else:
+            stack = [where]
+            yield where
+            while stack:
+                obj = stack.pop()
+                children = [child for child in self.get_children(obj).values() if child.attrs['CLASS'] == 'GROUP']
+                for child in children:
+                    stack.append(child)
+                    yield child
+
 
     def read(self, array, *args, **kwargs):
         if isinstance(array, CARRAY):
@@ -1029,7 +1062,7 @@ class H5Saver(H5Backend):
                     self.h5_file_path = save_path
                     self.h5_file_name = save_path.name+".h5"
             else:
-                self.h5_file_name = utils.select_file(start_path=base_name, save=True, ext='h5')
+                self.h5_file_name = select_file(start_path=base_name, save=True, ext='h5')
                 self.h5_file_path = self.h5_file_name.parent
 
         else:
@@ -1143,7 +1176,49 @@ class H5Saver(H5Backend):
         except Exception as e:
             self.update_status(utils.getLineInfo() + str(e))
 
-    def set_current_scan_path(self, base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
+    @classmethod
+    def find_part_in_path_and_subpath(cls, base_dir, part='', create=False):
+        """
+        Find path from part time.
+
+        =============== ============ =============================================
+        **Parameters**  **Type**      **Description**
+        *base_dir*      Path object   The directory to browse
+        *part*          string        The date of the directory to find/create
+        *create*        boolean       Indicate the creation flag of the directory
+        =============== ============ =============================================
+
+        Returns
+        -------
+        Path object
+            found path from part
+        """
+        found_path = None
+        if part in base_dir.parts:  # check if current year is in the given base path
+            if base_dir.name == part:
+                found_path = base_dir
+            else:
+                for ind in range(len(base_dir.parts)):
+                    tmp_path = base_dir.parents[ind]
+                    if tmp_path.name == part:
+                        found_path = base_dir.parents[ind]
+                        break
+        else:  # if not check if year is in the subfolders
+            subfolders_year_name = [x.name for x in base_dir.iterdir() if x.is_dir()]
+            subfolders_found_path = [x for x in base_dir.iterdir() if x.is_dir()]
+            if part not in subfolders_year_name:
+                if create:
+                    found_path = base_dir.joinpath(part)
+                    found_path.mkdir()
+                else:
+                    found_path = base_dir
+            else:
+                ind_path = subfolders_year_name.index(part)
+                found_path = subfolders_found_path[ind_path]
+        return found_path
+
+    @classmethod
+    def set_current_scan_path(cls, base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
                               create_dataset_folder=True, curr_date=None, ind_dataset=None):
         """
 
@@ -1164,9 +1239,9 @@ class H5Saver(H5Backend):
         if curr_date is None:
             curr_date = datetime.date.today()
 
-        year_path = utils.find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
+        year_path = cls.find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
                                                         create=True)  # create directory of the year if it doen't exist and return it
-        day_path = utils.find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
+        day_path = cls.find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
                                                        create=True)  # create directory of the day if it doen't exist and return it
         dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
         dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
@@ -1181,7 +1256,7 @@ class H5Saver(H5Backend):
                 else:
                     ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2])
 
-        dataset_path = utils.find_part_in_path_and_subpath(day_path, part=dataset_base_name + "_{:03d}".format(ind_dataset),
+        dataset_path = cls.find_part_in_path_and_subpath(day_path, part=dataset_base_name + "_{:03d}".format(ind_dataset),
                                                      create=create_dataset_folder)
         scan_paths = sorted([path for path in dataset_path.glob(base_name + '*') if path.is_dir()])
         # if scan_paths==[]:
@@ -1193,7 +1268,7 @@ class H5Saver(H5Backend):
         #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
         ind_scan = next_scan_index
 
-        scan_path = utils.find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
+        scan_path = cls.find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
                                                   create=create_scan_folder)
         return scan_path, base_name + '{:03d}'.format(ind_scan), dataset_path
 
@@ -1247,7 +1322,6 @@ class H5Saver(H5Backend):
         See Also
         --------
         :py:meth:`init_file`
-        :py:meth:`pymodaq.daq_utils.daq_utils.select_file`
 
         """
         if base_path is None:
@@ -1256,7 +1330,7 @@ class H5Saver(H5Backend):
                 base_path = None
 
         if file_path is None:
-            file_path = utils.select_file(base_path, save=False, ext='h5')
+            file_path = select_file(base_path, save=False, ext='h5')
 
         if not isinstance(file_path, Path):
             file_path = Path(file_path)
@@ -1269,7 +1343,7 @@ class H5Saver(H5Backend):
 
     def save_file(self, filename=None):
         if filename is None:
-            filename = utils.select_file(None, save=True, ext='h5')
+            filename = select_file(None, save=True, ext='h5')
         if filename != '':
             super().save_file_as(filename)
 
@@ -1716,6 +1790,18 @@ class H5BrowserUtil(H5Backend):
                 data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
                 np.savetxt(filesavename, data_trans, fmts, '\t', header='\t'.join(header))
 
+    def get_h5file_scans(self, where='/'):
+        #TODO add a test for this method
+        scan_list = []
+        where = self.get_node(where)
+        for node in self.walk_nodes(where):
+            if 'pixmap2D' in node.attrs.attrs_name:
+                scan_list.append(
+                    dict(scan_name='{:s}_{:s}'.format(node.parent_node.name, node.name), path=node.path,
+                         data=node.attrs['pixmap2D']))
+
+        return scan_list
+
     def get_h5_attributes(self, node_path):
         """
 
@@ -2106,7 +2192,7 @@ class H5Browser(QObject):
             layout = QtWidgets.QHBoxLayout()
             self.pixmap_widget.setLayout(layout)
         while 1:
-            child=self.pixmap_widget.layout().takeAt(0)
+            child = self.pixmap_widget.layout().takeAt(0)
             if not child:
                 break
             child.widget().deleteLater()
@@ -2199,35 +2285,35 @@ def browse_data(fname=None, ret_all=False):
         if not ('h5' in ext or 'hdf5' in ext):
             warnings.warn('This is not a PyMODAQ h5 file, there could be issues', Warning)
 
-        with tables.open_file(fname) as h5file:
-            dialog = QtWidgets.QDialog()
-            dialog.setWindowTitle('Select a data node in the tree')
-            vlayout = QtWidgets.QVBoxLayout()
-            form = QtWidgets.QWidget()
-            browser = H5Browser(form, h5file)
+        form = QtWidgets.QWidget()
+        browser = H5Browser(form, fname)
 
-            vlayout.addWidget(form)
-            dialog.setLayout(vlayout)
-            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle('Select a data node in the tree')
+        vlayout = QtWidgets.QVBoxLayout()
 
-            dialog.setLayout(vlayout)
-            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+        vlayout.addWidget(form)
+        dialog.setLayout(vlayout)
+        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-            buttonBox.addButton('OK', buttonBox.AcceptRole)
-            buttonBox.accepted.connect(dialog.accept)
-            buttonBox.addButton('Cancel', buttonBox.RejectRole)
-            buttonBox.rejected.connect(dialog.reject)
+        dialog.setLayout(vlayout)
+        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
-            vlayout.addWidget(buttonBox)
-            dialog.setWindowTitle('Select data to be loaded')
-            res = dialog.exec()
+        buttonBox.addButton('OK', buttonBox.AcceptRole)
+        buttonBox.accepted.connect(dialog.accept)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
+        buttonBox.rejected.connect(dialog.reject)
 
-            if res == dialog.Accepted:
-                node_path = browser.current_node_path
-                data = h5file.get_node(node_path).read()  # save preset parameters in a xml file
-            else:
-                data = None
-                node_path = None
+        vlayout.addWidget(buttonBox)
+        dialog.setWindowTitle('Select data to be loaded')
+        res = dialog.exec()
+
+        if res == dialog.Accepted:
+            node_path = browser.current_node_path
+            data = browser.h5utils.get_node(node_path).read()
+        else:
+            data = None
+            node_path = None
         if ret_all:
             return data, fname, node_path
         else:
@@ -2235,10 +2321,25 @@ def browse_data(fname=None, ret_all=False):
     return None, '', ''
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow()
-    prog = H5Browser(win, h5file_path='C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5')
-    win.show()
-    QtWidgets.QApplication.processEvents()
+    #app = QtWidgets.QApplication(sys.argv)
+    #win = QtWidgets.QMainWindow()
+    #prog = H5Browser(win, h5file_path='C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5')
+    #win.show()
+    #QtWidgets.QApplication.processEvents()
+    #sys.exit(app.exec_())
 
-    sys.exit(app.exec_())
+    bck = H5Backend('tables')
+    title = 'this is a test file'
+    bck.open_file('h5file.h5', 'w', title)
+    g1 = bck.get_set_group(bck.root(), 'g1')
+    array_g1 = bck.create_carray(g1, 'array_g1', np.array([1, 2, 3, 4, 5, 6]))
+    g2 = bck.get_set_group('/', 'g2')
+    array_g2 = bck.create_carray(g2, 'array_g2', np.array([1, 2, 3, 4, 5, 6]))
+    g21 = bck.get_set_group(g2, 'g21')
+    g22 = bck.get_set_group('/g2', 'g22', title='group g22')
+    array_g22 = bck.create_carray(g22, 'array_g22', np.array([1, 2, 3, 4, 5, 6]))
+    nodes = ['/', 'g1', 'g2', 'g22', 'g21', 'array_g1', 'array_g22']
+    gps = []
+    for gr in bck.walk_nodes('/'):
+        gps.append(gr.name)
+    a=1
