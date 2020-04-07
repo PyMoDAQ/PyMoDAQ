@@ -24,13 +24,14 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
 
+logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
 
 class DAQ_Logger(QObject):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
     command_DAQ_signal = pyqtSignal(list)
-    log_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str)
 
     params = [
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
@@ -110,7 +111,7 @@ class DAQ_Logger(QObject):
             self.h5saver.close_file()
             self.dashboard.quit_fun()
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
@@ -240,7 +241,7 @@ class DAQ_Logger(QObject):
             self.settings.child('detectors', 'Detectors').setValue(dict(all_items=items_det, selected=preset_items_det))
 
         except Exception as e:
-            self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
+            logger.exception(str(e))
 
     def set_continuous_save(self):
         """
@@ -277,8 +278,7 @@ class DAQ_Logger(QObject):
 
     def set_logging(self):
         """
-        Sets the current scan given the selected settings. Makes some checks, increments the h5 file scans.
-        In case the dialog is cancelled, return False and aborts the scan
+
         """
         try:
 
@@ -305,13 +305,13 @@ class DAQ_Logger(QObject):
             return True
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), wait_time=self.wait_time, log_type='log')
+            logger.exception(str(e))
             self.ui.start_button.setEnabled(False)
             self.ui.stop_button.setEnabled(False)
 
     def show_log(self):
         import webbrowser
-        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
+        webbrowser.open(logger.handlers[0].baseFilename)
 
     def setupUI(self):
 
@@ -401,7 +401,7 @@ class DAQ_Logger(QObject):
 
 
 #       connecting
-        self.log_signal[str].connect(self.dashboard.add_log)
+        self.status_signal[str].connect(self.dashboard.add_log)
         self.ui.quit_button.clicked.connect(self.quit_fun)
 
         self.ui.start_button.clicked.connect(self.start_logging)
@@ -423,6 +423,7 @@ class DAQ_Logger(QObject):
 
     def set_log_type(self, log_type):
         if log_type not in self.log_types:
+            logger.exception('Invalid output for the logs')
             raise IOError('Invalid output for the logs')
 
         self.settings.child(('log_type')).setValue(log_type)
@@ -462,7 +463,6 @@ class DAQ_Logger(QObject):
         elif type_info == 'dataset':
             tree.setParameters(self.dataset_attributes, showTop=False)
 
-
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
@@ -473,7 +473,7 @@ class DAQ_Logger(QObject):
 
         vlayout.addWidget(buttonBox)
         dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
-        res=dialog.exec()
+        res = dialog.exec()
         return res
 
     def show_file_content(self):
@@ -481,7 +481,7 @@ class DAQ_Logger(QObject):
             self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
             self.h5saver.show_file_content()
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,log_type='log')
+            logger.exception(str(e))
 
     def start_logging(self):
         """
@@ -569,7 +569,7 @@ class DAQ_Logger(QObject):
         elif status[0] == "Timeout":
             self.ui.log_message.setText('Timeout occurred')
 
-    def update_status(self,txt,wait_time=0,log_type=None):
+    def update_status(self, txt, wait_time=0):
         """
             Show the txt message in the status bar with a delay of wait_time ms.
 
@@ -581,12 +581,10 @@ class DAQ_Logger(QObject):
             =============== =========== =======================
         """
         try:
-            self.ui.statusbar.showMessage(txt,wait_time)
-            if log_type is not None:
-                self.log_signal.emit(txt)
-                logging.info(txt)
+            self.ui.statusbar.showMessage(txt, wait_time)
+            logging.info(txt)
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
 
 class DAQ_Logging(QObject):
@@ -694,14 +692,14 @@ class DAQ_Logging(QObject):
             self.h5saver.settings.child(('N_saved')).setValue(self.h5saver.settings.child(('N_saved')).value()+1)
 
         except Exception as e:
-            self.status_sig.emit(["Update_Status", getLineInfo()+str(e), 'log'])
+            logger.exception(str(e))
 
     def stop_logging(self):
         try:
             for sig in self.grab_done_signals:
                 sig.disconnect(self.do_save_continuous)
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
         if self.stop_logging_flag:
             status = 'Data Acquisition has been stopped by user'
@@ -739,9 +737,7 @@ class DAQ_Logging(QObject):
             #     det.ui.grab_pb.click()
 
         except Exception as e:
-            self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
-
-
+            logger.exception(str(e))
 
 
 if __name__ == '__main__':

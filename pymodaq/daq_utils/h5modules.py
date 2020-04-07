@@ -10,7 +10,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import getLineInfo, capitalize, get_set_local_dir, Axis, JsonConverter
+from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
@@ -55,16 +55,7 @@ data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'st
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
-
-now = datetime.datetime.now()
-local_path = get_set_local_dir()
-log_path = os.path.join(local_path, 'logging')
-if not os.path.isdir(log_path):
-    os.makedirs(log_path)
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-logging.basicConfig(filename=os.path.join(log_path, 'H5Browser_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
-
+logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
 
 def check_mandatory_attrs(attr_name, attr):
     """for cross compatibility between different backends. If these attributes have binary value, then decode them
@@ -1174,7 +1165,7 @@ class H5Saver(H5Backend):
             return scan_path, current_filename, dataset_path
 
         except Exception as e:
-            self.update_status(utils.getLineInfo() + str(e))
+            logger.exception(str(e))
 
     @classmethod
     def find_part_in_path_and_subpath(cls, base_dir, part='', create=False):
@@ -1309,7 +1300,7 @@ class H5Saver(H5Backend):
                 return 0
 
         except Exception as e:
-            self.update_status(utils.getLineInfo() + str(e))
+            logger.exception(str(e))
 
     def load_file(self, base_path=None, file_path=None):
         """Opens a file dialog to select a h5file saved on disk to be used
@@ -1703,6 +1694,7 @@ class H5Saver(H5Backend):
 
     def update_status(self, status):
         self.status_sig.emit(utils.ThreadCommand("Update_Status", [status, 'log']))
+        logger.info(status)
 
     def show_file_content(self):
         form = QtWidgets.QWidget()
@@ -2013,7 +2005,7 @@ class H5Browser(QObject):
             self.h5utils.flush()
 
         except Exception as e:
-            self.status_signal.emit(getLineInfo() + str(e))
+            logger.exception(str(e))
 
     def get_tree_node_path(self):
         return self.ui.h5file_tree.ui.Tree.currentItem().text(2)
@@ -2026,7 +2018,7 @@ class H5Browser(QObject):
                 self.h5utils.export_data(self.current_node_path, str(file))
 
         except Exception as e:
-            self.status_signal.emit(getLineInfo() + str(e))
+            logger.exception(str(e))
 
     def save_file(self, filename=None):
         if filename is None:
@@ -2044,7 +2036,7 @@ class H5Browser(QObject):
             else:
                 self.main_window.close()
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
     def create_menu(self):
         """
@@ -2083,7 +2075,7 @@ class H5Browser(QObject):
 
     def show_log(self):
         import webbrowser
-        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
+        webbrowser.open(logger.handlers[0].baseFilename)
 
     def show_help(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
@@ -2147,7 +2139,7 @@ class H5Browser(QObject):
         self.status_signal.connect(self.add_log)
 
     def add_log(self, txt):
-        logging.info(txt)
+        logger.info(txt)
 
     def show_h5_attributes(self, item):
         """
@@ -2184,8 +2176,7 @@ class H5Browser(QObject):
                 self.show_pixmaps(pixmaps)
 
         except Exception as e:
-            self.status_signal.emit(getLineInfo()+str(e))
-            logging.info(getLineInfo()+str(e))
+            logger.exception(str(e))
 
     def show_pixmaps(self, pixmaps=[]):
         if self.pixmap_widget.layout() is None:
@@ -2222,7 +2213,7 @@ class H5Browser(QObject):
                             for txt in data:
                                 self.ui.text_list.addItem(txt)
         except Exception as e:
-            self.status_signal.emit(getLineInfo()+str(e))
+            logger.exception(str(e))
 
     def populate_tree(self):
         """
@@ -2242,7 +2233,7 @@ class H5Browser(QObject):
 
 
         except Exception as e:
-            self.status_signal.emit(getLineInfo()+str(e))
+            logger.exception(str(e))
 
     def add_widget_totree(self, pixmap_items):
 

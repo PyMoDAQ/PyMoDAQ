@@ -18,6 +18,8 @@ import enum
 import os
 import re
 import importlib
+import logging
+from logging.handlers import TimedRotatingFileHandler
 import inspect
 import json
 
@@ -485,29 +487,78 @@ def check_vals_in_iterable(iterable1, iterable2):
 
 def get_set_local_dir(basename='pymodaq_local'):
     if 'win32' in sys.platform:
-        local_path = os.path.join(os.environ['HOMEDRIVE'] + os.environ['HOMEPATH'], basename)
+        local_path = Path(os.environ['HOMEDRIVE']).joinpath(os.environ['HOMEPATH'], basename)
     else:
-        local_path = os.path.join(os.environ['PATH'], basename)
+        local_path = Path(os.environ['PATH']).joinpath(basename)
 
-    if not os.path.isdir(local_path):
-        os.makedirs(local_path)
+    if not local_path.is_dir():
+        local_path.mkdir()
     return local_path
 
 
-def get_set_log_path():
+def get_set_config_path(config_name='config'):
     local_path = get_set_local_dir()
-    log_path = os.path.join(local_path, 'logging')
-    if not os.path.isdir(log_path):
-        os.makedirs(log_path)
-    return log_path
+    path = local_path.joinpath(config_name)
+    if not path.is_dir():
+        path.mkdir()
+    return path
+
+
+def get_set_preset_path():
+    return get_set_config_path('preset_configs')
 
 
 def get_set_pid_path():
-    local_path = get_set_local_dir()
-    pid_path = os.path.join(local_path, 'config_pid')
-    if not os.path.isdir(pid_path):
-        os.makedirs(pid_path)
-    return pid_path
+    return get_set_config_path('pid_configs')
+
+
+def get_set_log_path():
+    return get_set_config_path('log')
+
+
+def get_set_layout_path():
+    return get_set_config_path('layout_configs')
+
+
+def get_set_overshoot_path():
+    return get_set_config_path('overshoot_configs')
+
+
+def get_set_roi_path():
+    return get_set_config_path('roi_configs')
+
+
+def get_module_name(module__file__):
+    path = Path(module__file__)
+    return path.stem
+
+
+def set_logger(logger_name, add_handler=False):
+    """defines a logger of a given name and eventually add an handler to it
+
+    Parameters
+    ----------
+    logger_name: (str) the name of the logger (usually it is the module name as returned by get_module_name
+    add_handler (bool) if True adds a TimedRotatingFileHandler to the logger instance (should be True if logger set from
+                main app
+
+    Returns
+    -------
+    logger: (logging.logger) logger instance
+    See Also
+    --------
+    get_module_name, logging.handlers.TimedRotatingFileHandler
+    """
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.DEBUG)  #as a default, can then be cchanged in modules using logger.setLevel(level)
+
+    log_path = get_set_config_path('log')
+    if add_handler:
+        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq_log'), when='midnight')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    return logger
 
 
 def zeros_aligned(n, align, dtype=np.uint32):

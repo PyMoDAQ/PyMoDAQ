@@ -30,6 +30,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
 
+logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -44,7 +45,7 @@ class DAQ_Scan(QObject):
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
     command_DAQ_signal = pyqtSignal(list)
-    log_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str)
 
     params = [
 
@@ -307,7 +308,7 @@ class DAQ_Scan(QObject):
                 self.navigator.update_2Dscans()
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            logger.exception(str(e))
 
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
@@ -340,22 +341,23 @@ class DAQ_Scan(QObject):
 
         attr = node._v_attrs
         if type_info == 'dataset_info':
-            attr['type']='dataset'
-            params=self.dataset_attributes
+            attr['type'] = 'dataset'
+            params = self.dataset_attributes
         else:
             attr['type'] = 'scan'
             params = self.scan_attributes
         for child in params.child((type_info)).children():
             if type(child.value()) is QDateTime:
-                attr[child.name()]=child.value().toString('dd/mm/yyyy HH:MM:ss')
+                attr[child.name()] = child.value().toString('dd/mm/yyyy HH:MM:ss')
             else:
-                attr[child.name()]=child.value()
+                attr[child.name()] = child.value()
         if type_info == 'dataset_info':
-            #save contents of given parameter object into an xml string under the attribute settings
+            # save contents of given parameter object into an xml string under the attribute settings
             settings_str = b'<All_settings title="All Settings" type="group">' + \
                            custom_tree.parameter_to_xml_string(params) + \
                            custom_tree.parameter_to_xml_string(self.settings) + \
-                           custom_tree.parameter_to_xml_string(self.dashboard.preset_manager.preset_params)  + b'</All_settings>'
+                           custom_tree.parameter_to_xml_string(
+                               self.dashboard.preset_manager.preset_params) + b'</All_settings>'
 
             attr.settings = settings_str
 
@@ -604,7 +606,7 @@ class DAQ_Scan(QObject):
             return True
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            logger.exception(str(e))
             self.ui.start_scan_pb.setEnabled(False)
             self.ui.stop_scan_pb.setEnabled(False)
 
@@ -720,8 +722,8 @@ class DAQ_Scan(QObject):
         self.ui.statusbar = QtWidgets.QStatusBar(self.dockarea)
         self.ui.statusbar.setMaximumHeight(25)
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.ui.log_message = QtWidgets.QLabel('Initializing')
-        self.ui.statusbar.addPermanentWidget(self.ui.log_message)
+        self.ui.status_message = QtWidgets.QLabel('Initializing')
+        self.ui.statusbar.addPermanentWidget(self.ui.status_message)
         self.ui.N_scan_steps_sb = QSpinBox_ro()
         self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
         self.ui.indice_scan_sb = QSpinBox_ro()
@@ -790,7 +792,7 @@ class DAQ_Scan(QObject):
         self.create_menu()
 
 #        connecting
-        self.log_signal[str].connect(self.dashboard.add_log)
+        self.status_signal[str].connect(self.dashboard.add_log)
         self.ui.set_scan_pb.clicked.connect(self.set_scan)
         self.ui.quit_pb.clicked.connect(self.quit_fun)
 
@@ -861,7 +863,7 @@ class DAQ_Scan(QObject):
             widgnav = QtWidgets.QWidget()
             self.navigator = Navigator(widgnav)
 
-            self.navigator.log_signal[str].connect(self.add_log)
+            self.navigator.status_signal[str].connect(self.add_log)
             self.navigator.settings.child('settings', 'Load h5').hide()
             self.navigator.loadaction.setVisible(False)
 
@@ -886,7 +888,7 @@ class DAQ_Scan(QObject):
             --------
             set_scan
         """
-        self.ui.log_message.setText('Starting acquisition')
+        self.ui.status_message.setText('Starting acquisition')
         self.dashboard.overshoot = False
         self.plot_2D_ini=False
         self.plot_1D_ini = False
@@ -921,7 +923,7 @@ class DAQ_Scan(QObject):
                                         viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(ind_viewer).encode()
                             settings_str += b'</All_settings>'
                     except Exception as e:
-                        self.update_status(getLineInfo() + str(e), wait_time=self.wait_time, log_type='log')
+                        logger.exception(str(e))
 
                     self.h5saver.add_det_group(self.h5saver.current_scan_group,
                                                                          settings_as_xml=settings_str,
@@ -971,7 +973,7 @@ class DAQ_Scan(QObject):
 
             self.command_DAQ_signal.emit(["start_acquisition"])
 
-            self.ui.log_message.setText('Running acquisition')
+            self.ui.status_message.setText('Running acquisition')
 
     def stop_scan(self):
         """
@@ -981,7 +983,7 @@ class DAQ_Scan(QObject):
             --------
             set_ini_positions
         """
-        self.ui.log_message.setText('Stoping acquisition')
+        self.ui.status_message.setText('Stoping acquisition')
         self.command_DAQ_signal.emit(["stop_acquisition"])
 
         if not self.dashboard.overshoot:
@@ -991,7 +993,7 @@ class DAQ_Scan(QObject):
             status = 'Data Acquisition has been stopped due to overshoot'
 
         self.update_status(status, log_type='log')
-        self.ui.log_message.setText('')
+        self.ui.status_message.setText('')
 
         self.ui.set_scan_pb.setEnabled(True)
         self.ui.set_ini_positions_pb.setEnabled(True)
@@ -1035,7 +1037,7 @@ class DAQ_Scan(QObject):
             self.ui.set_ini_positions_pb.setEnabled(True)
             self.ui.start_scan_pb.setEnabled(True)
         elif status[0]=="Timeout":
-            self.ui.log_message.setText('Timeout occurred')
+            self.ui.status_message.setText('Timeout occurred')
 
     def update_1D_graph(self,datas):
         """
@@ -1132,7 +1134,7 @@ class DAQ_Scan(QObject):
                 self.ui.average1D_graph.show_data(data_averaged_sorted)
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            logger.exception(str(e))
 
     def update_2D_graph(self,datas):
         """
@@ -1280,7 +1282,7 @@ class DAQ_Scan(QObject):
 
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), wait_time=self.wait_time, log_type='log')
+            logger.exception(str(e))
 
     def update_file_settings(self,new_file=False):
         try:
@@ -1310,7 +1312,7 @@ class DAQ_Scan(QObject):
             return res
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            logger.exception(str(e))
 
     def update_plot_det_items(self,param):
         """
@@ -1363,7 +1365,7 @@ class DAQ_Scan(QObject):
                         self.scan_data_2D = []
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type='log')
+            logger.exception(str(e))
 
 
     def update_status(self,txt,wait_time=0,log_type=None):
@@ -1377,13 +1379,10 @@ class DAQ_Scan(QObject):
             *log_type*        string      the type of the log
             =============== =========== =======================
         """
-        try:
-            self.ui.statusbar.showMessage(txt,wait_time)
-            if log_type is not None:
-                self.log_signal.emit(txt)
-                logging.info(txt)
-        except Exception as e:
-            pass
+        self.ui.statusbar.showMessage(txt, wait_time)
+        self.status_signal.emit(txt)
+        logging.info(txt)
+
 
 
 class DAQ_Scan_Acquisition(QObject):

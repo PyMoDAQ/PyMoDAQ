@@ -50,20 +50,10 @@ import datetime
 import tables
 from pathlib import Path
 from pymodaq.daq_utils.h5modules import H5Saver
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
+from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import DockArea
 
-if __name__ == '__main__':
-    import logging
-    now = datetime.datetime.now()
-    local_path = get_set_local_dir()
-    log_path = os.path.join(local_path, 'logging')
-    if not os.path.isdir(log_path):
-        os.makedirs(log_path)
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-    logging.basicConfig(filename=os.path.join(log_path,'daq_viewer_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))), level=logging.DEBUG)
-
+logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
@@ -83,7 +73,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         *quit_signal*              instance of pyqt Signal
         *update_settings_signal*   instance of pyqt Signal
         *overshoot_signal*         instance of pyqt Signal
-        *log_signal*               instance of pyqt Signal
+        *status_signal*               instance of pyqt Signal
         *params*                   dictionnary list
 
         *widgetsettings*           instance of QWidget
@@ -119,7 +109,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
     # snapshot) and to trigger the end of acquisition from main program using this module
     update_settings_signal = pyqtSignal(edict)
     overshoot_signal = pyqtSignal(bool)
-    log_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str)
 
 
 
@@ -341,7 +331,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
-                self.ui.viewers[-1].log_signal.connect(self.log_messages)
+                self.ui.viewers[-1].status_signal.connect(self.log_messages)
             self.detector_types = DAQ_2DViewer_Det_type.names('daq_NDviewer')
 
         self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
@@ -403,7 +393,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 self.is_continuous_initialized = True
 
             dt=np.array([time.perf_counter()-self.ini_time])
-            self.h5saver_continuous.append(self.time_array,dt)
+            self.h5saver_continuous.append(self.time_array, dt)
 
             data_types = ['data0D', 'data1D']
             if self.h5saver_continuous.settings.child(('save_2D')).value():
@@ -419,7 +409,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.h5saver_continuous.settings.child(('N_saved')).setValue(self.h5saver_continuous.settings.child(('N_saved')).value()+1)
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
+            logger.exception(str(e))
 
     @pyqtSlot(OrderedDict)
     def get_data_from_viewer(self, datas):
@@ -556,7 +546,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e))
+            logger.exception(str(e))
             self.set_enabled_grab_buttons(enable=False)
 
     def connect_tcp_ip(self):
@@ -586,11 +576,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             datas = [OrderedDict(name='loaded data', data=[data], type='Data2D')]
             self.show_data(datas)
 
-
-
-
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
+            logger.exception(str(e))
 
 
     def load_settings(self,path=None):
@@ -633,7 +620,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time)
+            logger.exception(str(e))
 
 
     def parameter_tree_changed(self,param,changes):
@@ -826,14 +813,14 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         except Exception as e:
             icon = QtGui.QIcon()
             icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            msgBox=QtWidgets.QMessageBox(parent=None)
+            msgBox = QtWidgets.QMessageBox(parent=None)
             msgBox.addButton(QtWidgets.QMessageBox.Yes)
             msgBox.addButton(QtWidgets.QMessageBox.No)
             msgBox.setWindowTitle("Error")
-            msgBox.setText(str(e)+" error happened when uninitializing the Detector.\nDo you still want to quit?")
+            msgBox.setText(str(e) + " error happened when uninitializing the Detector.\nDo you still want to quit?")
             msgBox.setDefaultButton(QtWidgets.QMessageBox.Yes)
-            ret=msgBox.exec();
-            if ret==QtWidgets.QMessageBox.Yes:
+            ret = msgBox.exec()
+            if ret == QtWidgets.QMessageBox.Yes:
                 self.dockarea.parent().close()
 
     @pyqtSlot()
@@ -905,7 +892,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
 
             except Exception as e:
-                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+                logger.exception(str(e))
         try:
             self.channel_arrays = OrderedDict([])
             data_types = ['data1D'] #we don't recrod 0D data in this mode (only in continuous)
@@ -932,7 +919,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                                     string = gutils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
                                     self.channel_arrays[data_type][channel].attrs['pixmap2D'] = string
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+            logger.exception(str(e))
 
         try:
             (root, filename) = os.path.split(str(path))
@@ -940,7 +927,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             image_path = os.path.join(root, filename + '.png')
             self.dockarea.parent().grab().save(image_path)
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+            logger.exception(str(e))
 
         h5saver.close_file()
 
@@ -1009,7 +996,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     pickle.dump(settings, f, pickle.HIGHEST_PROTOCOL)
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time)
+            logger.exception(str(e))
 
 
     def send_to_nav(self):
@@ -1065,7 +1052,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             try:
                 self.h5saver_continuous.close()
             except Exception as e:
-                pass
+                logger.exception(str(e))
 
     @pyqtSlot(str)
     def set_DAQ_type(self, daq_type):
@@ -1207,7 +1194,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             det_params = Parameter.create(name='Det Settings', type='group', children=params)
             self.settings.child(('detector_settings')).addChildren(det_params.children())
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     def init_show_data(self, datas):
         self.data_to_save_export = OrderedDict(Ndatas=0, acq_time_s=0, name=self.title, data0D=None, data1D=None,
@@ -1228,7 +1215,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                         datas[ind_channels]['data'][ind_channel] = datas[ind_channels]['data'][ind_channel] - \
                                                                    self.bkg[ind_channels]['data'][ind_channel]
             except Exception as e:
-                self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
+                logger.exception(str(e))
 
 
     @pyqtSlot(list)
@@ -1254,7 +1241,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                                 ind_channel] + dic['data'][ind_channel]) / self.ind_continuous_grab for ind_channel in
                                            range(len(dic['data']))]
                     except Exception as e:
-                        self.update_status(getLineInfo() + str(e), self.wait_time, log_type='log')
+                        logger.exception(str(e))
 
 
             #store raw data for further processing
@@ -1306,7 +1293,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.current_datas = datas
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+            logger.exception(str(e))
 
     def show_scanner(self):
         if self.scanner is None:
@@ -1344,7 +1331,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             self.nav_dock.addWidget(self.widgnav)
             self.dockarea.addDock(self.nav_dock)
             self.nav_dock.float()
-            self.navigator.log_signal[str].connect(self.update_status)
+            self.navigator.status_signal[str].connect(self.update_status)
             self.navigator.settings.child('settings', 'Load h5').hide()
             self.navigator.loadaction.setVisible(False)
             self.navigator.sig_double_clicked.connect(self.move_at_navigator)
@@ -1399,21 +1386,22 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             grab, update_status
         """
         try:
-            self.do_save_data=dosave
+            self.do_save_data = dosave
             if pathname is None:
                 raise (Exception("filepathanme has not been defined in snapshot"))
-            self.save_file_pathname=pathname
+            self.save_file_pathname = pathname
 
             self.grab_data(False, pathname, send_to_tcpip=send_to_tcpip)
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),self.wait_time,'log')
+            logger.exception(str(e))
 
     def show_ROI(self):
-        if self.DAQ_type=="DAQ2D":
-            self.settings.child('detector_settings','ROIselect').setOpts(visible=self.ui.viewers[0].ui.ROIselect_pb.isChecked())
-            pos=self.ui.viewers[0].ui.ROIselect.pos()
-            size=self.ui.viewers[0].ui.ROIselect.size()
-            self.update_ROI(QRectF(pos[0],pos[1],size[0],size[1]))
+        if self.DAQ_type == "DAQ2D":
+            self.settings.child('detector_settings', 'ROIselect').setOpts(
+                visible=self.ui.viewers[0].ui.ROIselect_pb.isChecked())
+            pos = self.ui.viewers[0].ui.ROIselect.pos()
+            size = self.ui.viewers[0].ui.ROIselect.size()
+            self.update_ROI(QRectF(pos[0], pos[1], size[0], size[1]))
 
 
     def stop_all(self):
@@ -1491,7 +1479,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 else:
                     self.update_status('thread is locked?!', self.wait_time, 'log')
             except Exception as e:
-                self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
+                logger.exception(str(e))
 
             self.initialized_state=False
             self.init_signal.emit(self.initialized_state)
@@ -1515,7 +1503,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.command_tcpip.emit(ThreadCommand('x_axis', [x_axis]))
 
             except Exception as e:
-                self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
+                logger.exception(str(e))
 
 
         elif status.command == "y_axis":
@@ -1534,7 +1522,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.command_tcpip.emit(ThreadCommand('y_axis', [y_axis]))
 
             except Exception as e:
-                self.update_status(getLineInfo()+ str(e), self.wait_time, 'log')
+                logger.exception(str(e))
 
         elif status.command == "update_channels":
             pass
@@ -1552,7 +1540,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                 elif status.attributes[2] == 'options':
                     self.settings.child('main_settings', *status.attributes[0]).setOpts(**status.attributes[1])
             except Exception as e:
-                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+                logger.exception(str(e))
 
         elif status.command == 'update_settings':
             #using this the settings shown in the UI for the plugin reflects the real plugin settings
@@ -1572,7 +1560,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
                     self.settings.child('detector_settings', *status.attributes[0]).addChild(status.attributes[1][0])
 
             except Exception as e:
-                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+                logger.exception(str(e))
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         elif status.command=='raise_timeout':
@@ -1621,11 +1609,10 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.command_detector.emit(ThreadCommand('update_scanner', [scan_parameters]))
 
     def log_messages(self, txt):
-        self.log_signal.emit(txt)
-        if __name__ == '__main__':
-            logging.info(txt)
+        self.status_signal.emit(txt)
+        logger.info(txt)
 
-    def update_status(self, txt, wait_time=0, log_type=None):
+    def update_status(self, txt, wait_time=0):
         """
             | Show the given txt message in the status bar with a delay of wait_time ms.
             | Emit a log signal if log_type parameter is defined.
@@ -1638,12 +1625,12 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             =============== =========== =====================================
         """
         self.ui.statusbar.showMessage(txt, wait_time)
-        if log_type is not None:
-            self.log_messages(txt)
+        self.status_signal.emit(txt)
+        logger.info(txt)
 
     def show_log(self):
         import webbrowser
-        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
+        webbrowser.open(logger.handlers[0].baseFilename)
 
     def update_viewer_pannels(self, data_types=['Data0D']):
         Nviewers = len(data_types)
@@ -1691,7 +1678,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             else: #for multideimensional data 0 up to dimension 4
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
-                self.ui.viewers[-1].log_signal.connect(self.log_messages)
+                self.ui.viewers[-1].status_signal.connect(self.log_messages)
 
 
             self.ui.viewer_docks.append(Dock(self.title+"_Viewer {:d}".format(len(self.ui.viewer_docks)+1), size=(500,300), closable=False))
@@ -1940,7 +1927,7 @@ class DAQ_Detector(QObject):
 
             return status
         except Exception as e:
-            self.status_sig.emit(ThreadCommand("Update_Status", [str(e), 'log']))
+            logger.exception(str(e))
             return status
 
     @pyqtSlot(list)
@@ -1976,7 +1963,7 @@ class DAQ_Detector(QObject):
                     if self.show_averaging:
                         self.emit_temp_data(self.datas)
                 except Exception as e:
-                    self.status_sig.emit(ThreadCommand("Update_Status", [str(e), 'log']))
+                    logger.exception(str(e))
 
             if self.ind_average == self.Naverage:
                 self.average_done = True
@@ -2012,8 +1999,7 @@ class DAQ_Detector(QObject):
 
 
         except Exception as e:
-
-            self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
+            logger.exception(str(e))
 
     def grab_data(self, Naverage=1, live=True,savepath=None):
         """
@@ -2061,10 +2047,10 @@ class DAQ_Detector(QObject):
                         #self.detector.stop()
                         break
                 except Exception as e:
-                    print(str(e))
+                    logger.exception(str(e))
 
         except Exception as e:
-            self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
+            logger.exception(str(e))
 
 
     def Close(self):
@@ -2072,9 +2058,10 @@ class DAQ_Detector(QObject):
             close the current instance of DAQ_Detector.
         """
         try:
-            status=self.detector.close()
+            status = self.detector.close()
         except Exception as e:
-            status=str(e)
+            logger.exception(str(e))
+            status = str(e)
         return status
 
 

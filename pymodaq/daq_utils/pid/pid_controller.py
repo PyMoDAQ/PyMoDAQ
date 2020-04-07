@@ -11,7 +11,8 @@ from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils.manage_preset import PresetManager
 from pyqtgraph.dockarea import Dock
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, get_set_pid_path, getLineInfo, get_set_local_dir, get_set_log_path
+
+from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, get_set_local_dir, set_logger, get_module_name
 import importlib
 from simple_pid import PID
 import time
@@ -21,9 +22,8 @@ from pymodaq.daq_move.daq_move_main import DAQ_Move
 import numpy as np
 from collections import OrderedDict
 from pymodaq.daq_utils.pid.pid_params import params
-local_path = get_set_local_dir()
-log_path = get_set_log_path()
 
+logger = set_logger(get_module_name(__file__), __name__ == '__main__')
 
 class DAQ_PID(QObject):
     """

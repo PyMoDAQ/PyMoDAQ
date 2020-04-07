@@ -101,11 +101,10 @@ registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
 
 
 #check if overshoot_configurations directory exists on the drive
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
-local_path = get_set_local_dir()
-overshoot_path= os.path.join(local_path, 'overshoot_configurations')
-if not os.path.isdir(overshoot_path):
-    os.makedirs(overshoot_path)
+from pymodaq.daq_utils.daq_utils import get_set_overshoot_path
+
+overshoot_path = get_set_overshoot_path()
+
 
 
 class OvershootManager:
@@ -135,7 +134,7 @@ class OvershootManager:
             else: #cancel
                 pass
 
-    def set_file_overshoot(self, filename,show=True):
+    def set_file_overshoot(self, filename, show=True):
         """
 
         """

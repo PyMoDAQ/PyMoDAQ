@@ -13,11 +13,13 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
+from pymodaq.daq_utils import daq_utils as utils
 import pymodaq_plugins.daq_move_plugins as plugins
 
-local_path = get_set_local_dir()
+local_path = utils.get_set_local_dir()
 sys.path.append(local_path)
+
+logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
 
 
 DAQ_Move_Stage_type = make_enum('daq_move')
@@ -36,7 +38,7 @@ class DAQ_Move(Ui_Form, QObject):
         *command_stage*            instance of pyqtSignal
         *move_done_signal*         instance of pyqtSignal
         *update_settings_signal*   instance of pyqtSignal
-        *log_signal*               instance of pyqtSignal
+        *status_signal*               instance of pyqtSignal
         *bounds_signal*            instance of pyqtSignal
         *params*                   dictionnary list
         *ui*                       instance of UI_Form
@@ -66,7 +68,7 @@ class DAQ_Move(Ui_Form, QObject):
     command_tcpip = pyqtSignal(ThreadCommand)
     move_done_signal = pyqtSignal(str, float)  # to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
     update_settings_signal = pyqtSignal(edict)
-    log_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str)
     bounds_signal = pyqtSignal(bool)
     params = daq_move_params
 
@@ -194,12 +196,13 @@ class DAQ_Move(Ui_Form, QObject):
                     self.ui.Stage_type_combo.setEnabled(True)
                     self.ui.Ini_state_LED.set_as_false()
                     self.command_stage.emit(ThreadCommand(command="close"))
-                except: pass
+                except Exception as e:
+                    logger.exception(str(e))
 
             else:
-                self.stage_name=self.ui.Stage_type_combo.currentText()
-                stage=DAQ_Move_stage(self.stage_name,self.current_position)
-                self.stage_thread=QThread()
+                self.stage_name = self.ui.Stage_type_combo.currentText()
+                stage = DAQ_Move_stage(self.stage_name, self.current_position)
+                self.stage_thread = QThread()
                 stage.moveToThread(self.stage_thread)
 
                 self.command_stage[ThreadCommand].connect(stage.queue_command)
@@ -213,11 +216,8 @@ class DAQ_Move(Ui_Form, QObject):
                 self.ui.Stage_type_combo.setEnabled(False)
                 self.command_stage.emit(ThreadCommand(command="ini_stage",attributes=[self.settings.child(('move_settings')).saveState(),self.controller]))
 
-
-
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),wait_time=self.wait_time,log_type="log")
-
+            logger.exception(str(e))
             self.set_enabled_move_buttons(enable=False)
 
     def get_position(self):
@@ -232,7 +232,7 @@ class DAQ_Move(Ui_Form, QObject):
             self.command_stage.emit(ThreadCommand(command="check_position"))
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type="log")
+            logger.exception(str(e))
 
 
     def move_Abs(self, position, send_to_tcpip=False):
@@ -253,18 +253,18 @@ class DAQ_Move(Ui_Form, QObject):
         """
         try:
             self.send_to_tcpip = send_to_tcpip
-            if not(position==self.current_position and self.stage_name=="Thorlabs_Flipper"):
+            if not (position == self.current_position and self.stage_name == "Thorlabs_Flipper"):
                 self.ui.Move_Done_LED.set_as_false()
-                self.move_done_bool=False
-                self.target_position=position
-                self.update_status("Moving",wait_time=self.wait_time)
-                #self.check_out_bounds(position)
+                self.move_done_bool = False
+                self.target_position = position
+                self.update_status("Moving", wait_time=self.wait_time)
+                # self.check_out_bounds(position)
                 self.command_stage.emit(ThreadCommand(command="Reset_Stop_Motion"))
-                self.command_stage.emit(ThreadCommand(command="move_Abs",attributes=[position]))
+                self.command_stage.emit(ThreadCommand(command="move_Abs", attributes=[position]))
 
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type="log")
+            logger.exception(str(e))
 
     def move_Home(self, send_to_tcpip=False):
         """
@@ -284,7 +284,7 @@ class DAQ_Move(Ui_Form, QObject):
 
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type="log")
+            logger.exception(str(e))
 
     def move_Rel(self, rel_position, send_to_tcpip=False):
         """
@@ -305,16 +305,15 @@ class DAQ_Move(Ui_Form, QObject):
         try:
             self.send_to_tcpip = send_to_tcpip
             self.ui.Move_Done_LED.set_as_false()
-            self.move_done_bool=False
-            self.target_position=self.current_position+rel_position
-            self.update_status("Moving",wait_time=self.wait_time)
-            #self.check_out_bounds(self.target_position)
+            self.move_done_bool = False
+            self.target_position = self.current_position + rel_position
+            self.update_status("Moving", wait_time=self.wait_time)
+            # self.check_out_bounds(self.target_position)
             self.command_stage.emit(ThreadCommand(command="Reset_Stop_Motion"))
-            self.command_stage.emit(ThreadCommand(command="move_Rel",attributes=[rel_position]))
-
+            self.command_stage.emit(ThreadCommand(command="move_Rel", attributes=[rel_position]))
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type="log")
+            logger.exception(str(e))
 
     def parameter_tree_changed(self,param,changes):
         """
@@ -426,19 +425,21 @@ class DAQ_Move(Ui_Form, QObject):
             self.parent.close() #close the parent widget
             try:
                 self.parent.parent().parent().close() #the dock parent (if any)
-            except: pass
+            except Exception as e:
+                logger.exception(str(e))
 
         except Exception as e:
             icon = QtGui.QIcon()
-            icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            msgBox=QtWidgets.QMessageBox(parent=None)
+            icon.addPixmap(QtGui.QPixmap(":/Labview_icons/Icon_Library/close2.png"), QtGui.QIcon.Normal,
+                           QtGui.QIcon.Off)
+            msgBox = QtWidgets.QMessageBox(parent=None)
             msgBox.addButton(QtWidgets.QMessageBox.Yes)
             msgBox.addButton(QtWidgets.QMessageBox.No)
             msgBox.setWindowTitle("Error")
-            msgBox.setText(str(e)+" error happened when uninitializing the stage.\nDo you still want to quit?")
+            msgBox.setText(str(e) + " error happened when uninitializing the stage.\nDo you still want to quit?")
             msgBox.setDefaultButton(QtWidgets.QMessageBox.Yes)
-            ret=msgBox.exec();
-            if ret==QtWidgets.QMessageBox.Yes:
+            ret = msgBox.exec()
+            if ret == QtWidgets.QMessageBox.Yes:
                 self.parent.close()
 
 
@@ -498,7 +499,7 @@ class DAQ_Move(Ui_Form, QObject):
 
 
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e), wait_time=self.wait_time,log_type="log")
+            logger.exception(str(e))
 
     def show_fine_tuning(self):
         """
@@ -508,22 +509,6 @@ class DAQ_Move(Ui_Form, QObject):
             self.ui.groupBox.show()
         else:
             self.ui.groupBox.hide()
-
-    ##def check_out_bounds(self,position):
-    ##    """
-    ##        Emit a bounds signal if the checked position is out of bounds.
-
-    ##        =============== ========== ===========================================
-    ##        **Parameters**   **Type**    **Description**
-
-    ##        *position*        float      The position to be checked
-    ##        =============== ========== ===========================================
-    ##    """
-    ##    if self.settings.child('main_settings','movebounds','stop_bounds').value():
-    ##        if position>self.settings.child('main_settings','movebounds','bound_max').value() or position < self.settings.child('main_settings','movebounds','bound_min').value():
-    ##            self.bounds_signal.emit(True)
-    ##            raise Exception("{:s} is out of specified position bounds".format(self.title))
-
 
     def show_settings(self):
         """
@@ -578,7 +563,7 @@ class DAQ_Move(Ui_Form, QObject):
         try:
             self.command_stage.emit(ThreadCommand(command="stop_Motion"))
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type="log")
+            logger.exception(str(e))
 
     @pyqtSlot(ThreadCommand)
     def thread_status(self,status): # general function to get datas/infos from all threads back to the main
@@ -642,7 +627,7 @@ class DAQ_Move(Ui_Form, QObject):
                 else:
                     self.update_status('thread is locked?!', self.wait_time, 'log')
             except Exception as e:
-                self.update_status(getLineInfo() + str(e), log_type="log")
+                logger.exception(str(e))
             self.initialized_state = False
             self.init_signal.emit(self.initialized_state)
 
@@ -678,7 +663,7 @@ class DAQ_Move(Ui_Form, QObject):
                 elif status.attributes[2] == 'options':
                     self.settings.child('main_settings', *status.attributes[0]).setOpts(**status.attributes[1])
             except Exception as e:
-                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+                logger.exception(str(e))
 
         elif status.command == 'update_settings':
             #ThreadCommand(command='update_settings',attributes=[path,data,change]))
@@ -698,7 +683,7 @@ class DAQ_Move(Ui_Form, QObject):
                     self.settings.child('move_settings', *status.attributes[0]).addChild(status.attributes[1][0])
 
             except Exception as e:
-                self.update_status(getLineInfo() + str(e), self.wait_time, 'log')
+                logger.exception(str(e))
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
 
         elif status.command == 'raise_timeout':
@@ -707,27 +692,22 @@ class DAQ_Move(Ui_Form, QObject):
         elif status.command == 'outofbounds':
             self.bounds_signal.emit(True)
 
-    def update_status(self, txt, wait_time=0, log_type=None):
+    def update_status(self, txt, wait_time=0):
         """
             Show the given txt message in the status bar with a delay of wait_time ms if specified (0 by default).
 
             ================ ========== =================================
             **Parameters**    **Type**   **Description**
-
              *txt*            string     The message to show
-
              *wait_time*      int        The delay time of showing
-
-             *log_type*       string     The type of the log
             ================ ========== =================================
 
         """
-        try:
-            self.ui.statusbar.showMessage(txt,wait_time)
-            if log_type is not None:
-                self.log_signal.emit(txt)
-        except Exception as e:
-            pass
+
+        self.ui.statusbar.showMessage(txt, wait_time)
+        self.status_signal.emit(txt)
+        logger.info(txt)
+
 
 
 class DAQ_Move_stage(QObject):
@@ -806,7 +786,7 @@ class DAQ_Move_stage(QObject):
             #status.initialized=True
             return status
         except Exception as e:
-            self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
+            logger.exception(str(e))
             return status
 
     def move_Abs(self, position):
@@ -942,7 +922,7 @@ class DAQ_Move_stage(QObject):
             elif command.command=="Reset_Stop_Motion":
                 self.motion_stoped=False
         except Exception as e:
-            self.status_sig.emit(ThreadCommand("Update_Status",[str(e),'log']))
+            logger.exception(str(e))
 
 
     def stop_motion(self):
