@@ -5,6 +5,16 @@ import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea import DockArea
 
+
+dashboard_submodules_params = [
+    {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': False},
+    {'title': 'Save raw datas only:', 'name': 'save_raw_only', 'type': 'bool', 'value': True, 'tooltip':
+        'if True, will not save extracted ROIs used to do live plotting, only raw datas will be saved'},
+    {'title': 'Do Save:', 'name': 'do_save', 'type': 'bool', 'default': False, 'value': False},
+    {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
+    ]
+
+
 def clickable(widget):
     class Filter(QObject):
         clicked = pyqtSignal()

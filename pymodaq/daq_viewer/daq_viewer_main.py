@@ -53,17 +53,19 @@ from pymodaq.daq_utils.h5modules import H5Saver
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import DockArea
 
-logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
+
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
-        super(QtWidgets.QSpinBox,self).__init__()
+        super(QtWidgets.QSpinBox, self).__init__()
         self.setMaximum(100000)
         self.setReadOnly(True)
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
 
-class DAQ_Viewer(QtWidgets.QWidget,QObject):
+
+class DAQ_Viewer(QtWidgets.QWidget, QObject):
     """
         ========================= =======================================
         **Attributes**             **Type**
@@ -475,25 +477,29 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
         self.send_to_tcpip = send_to_tcpip
         self.grab_done = False
         self.ui.data_ready_led.set_as_false()
-        if not(grab_state):
-
-            self.command_detector.emit(ThreadCommand("single",[self.settings.child('main_settings','Naverage').value(), savepath]))
+        if not (grab_state):
+            self.update_status(f'{self.title}: Snap')
+            self.command_detector.emit(
+                ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value(), savepath]))
         else:
-            if not(self.ui.grab_pb.isChecked()):
+            if not (self.ui.grab_pb.isChecked()):
 
-                #if self.do_continuous_save:
+                # if self.do_continuous_save:
                 #    try:
                 #        self.file_continuous_save.close()
                 #    except: pass
+                self.update_status(f'{self.title}: Stop Grab')
                 self.command_detector.emit(ThreadCommand("stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
-                #self.ui.settings_tree.setEnabled(True)
+                # self.ui.settings_tree.setEnabled(True)
             else:
 
-                #self.ui.settings_tree.setEnabled(False)
+                # self.ui.settings_tree.setEnabled(False)
                 self.thread_status(ThreadCommand("update_channels"))
                 self.set_enabled_Ini_buttons(enable=False)
-                self.command_detector.emit(ThreadCommand("grab",[self.settings.child('main_settings','Naverage').value()]))
+                self.update_status(f'{self.title}: Continuous Grab')
+                self.command_detector.emit(
+                    ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
 
     def ini_det_fun(self):
         """
@@ -1265,7 +1271,7 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
 
                 for ind_sub_data, dat in enumerate(data_arrays):
                     subdata_tmp = copy.deepcopy(data_tmp)
-                    subdata_tmp.update(OrderedDict(data=dat, type='raw'))
+                    subdata_tmp.update(OrderedDict(name=self.title, data=dat, type='raw'))
                     if data_type.lower() == 'data0d':
                         data0D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
                     elif data_type.lower() == 'data1d':
@@ -1403,8 +1409,8 @@ class DAQ_Viewer(QtWidgets.QWidget,QObject):
             size = self.ui.viewers[0].ui.ROIselect.size()
             self.update_ROI(QRectF(pos[0], pos[1], size[0], size[1]))
 
-
     def stop_all(self):
+        self.update_status(f'{self.title}: Stop Grab')
         self.command_detector.emit(ThreadCommand("stop_all"))
         if self.ui.grab_pb.isChecked():
             self.ui.grab_pb.setChecked(False)
@@ -1819,7 +1825,7 @@ class DAQ_Detector(QObject):
 
         elif command.command == "stop_grab":
             self.grab_state = False
-            self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
+            #self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
 
         elif command.command == "stop_all":
             self.grab_state = False
@@ -2001,7 +2007,7 @@ class DAQ_Detector(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def grab_data(self, Naverage=1, live=True,savepath=None):
+    def grab_data(self, Naverage=1, live=True, savepath=None):
         """
             | Update status with 'Start Grabing' Update_status sub command of the Thread command.
             | Process events and grab naverage is needed.
@@ -2016,12 +2022,12 @@ class DAQ_Detector(QObject):
             daq_utils.ThreadCommand, grab
         """
         try:
-            self.ind_average=0
-            self.Naverage=Naverage
-            if Naverage>1:
-                self.average_done=False
-            self.status_sig.emit(ThreadCommand("Update_Status",['Start Grabing']))
-            self.waiting_for_data=False
+            self.ind_average = 0
+            self.Naverage = Naverage
+            if Naverage > 1:
+                self.average_done = False
+            #self.status_sig.emit(ThreadCommand("Update_Status", [f'Start Grabing']))
+            self.waiting_for_data = False
 
 
             ####TODO: choose if the live mode is only made inside the plugins (suitable with STEM plugins) or if we keep it on top?

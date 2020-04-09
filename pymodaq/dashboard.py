@@ -1,30 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Automated scanning module functionalities for PyMoDAQ
-
-Contains all objects related to the DAQ_Scan module, to do automated scans, saving data...
-"""
-
 import sys
 import datetime
 import pickle
-import os
 import logging
 from pathlib import Path
-from logging.handlers import TimedRotatingFileHandler
+
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from pymodaq.daq_utils import daq_utils as utils
 
-from pymodaq.daq_utils.daq_utils import getLineInfo
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.version import get_version
-
 from pymodaq.daq_utils.manage_preset import PresetManager
 from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.roi_saver import ROISaver
@@ -32,8 +26,8 @@ from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils import gui_utils as gutils
+
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 local_path = utils.get_set_local_dir()
@@ -44,7 +38,7 @@ layout_path = utils.get_set_layout_path()
 overshoot_path = utils.get_set_overshoot_path()
 roi_path = utils.get_set_roi_path()
 
-logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
+
 
 
 class DashBoard(QObject):

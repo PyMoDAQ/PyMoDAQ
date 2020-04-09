@@ -32,7 +32,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         super(Viewer1D, self).__init__()
 
         self.viewer_type = 'Data1D'
-
+        self.title = 'viewer1D'
         if parent is None:
             parent = QtWidgets.QWidget()
         self.parent = parent
@@ -64,7 +64,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self._x_axis = None
 
         self.datas = []  # datas on each channel. list of 1D arrays
-        self.data_to_export = OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
+        self.data_to_export = None
         self.measurement_dict = OrderedDict(x_axis=None, datas=[], ROI_bounds=[], operations=[], channels=[])
         # OrderedDict to be send to the daq_measurement module
         self.measure_data_dict = OrderedDict()
@@ -361,7 +361,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.datas = datas
             self.update_labels(self.labels)
 
-            self.data_to_export = OrderedDict(data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
+            self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
             for ind,data in enumerate(datas):
                 self.data_to_export['data1D']['CH{:03d}'.format(ind)] = OrderedDict()
 
@@ -418,12 +418,13 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.update_status(str(e), wait_time=self.wait_time)
 
     @pyqtSlot(list)
-    def show_math(self,data_lo):
-        #self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+    def show_math(self, data_lo):
+        # self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
         if len(data_lo) != 0:
             for ind, key in enumerate(self.lo_items):
                 self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
-                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = OrderedDict(data=data_lo[ind], type='roi')
+                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = OrderedDict(name=self.title,
+                                                                                          data=data_lo[ind], type='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
 
@@ -436,11 +437,11 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.data_to_export_signal.emit(self.data_to_export)
 
     @pyqtSlot(list)
-    def show_measurement(self,data_meas):
-        ind_offset=len(self.data_to_export['data0D'])
-        for ind,res in enumerate(data_meas):
-            self.measure_data_dict["Meas.{}:".format(ind)]=res
-            self.data_to_export['data0D']['Measure_{:03d}'.format(ind+ind_offset)]=OrderedDict(data=res, type='roi')
+    def show_measurement(self, data_meas):
+        ind_offset = len(self.data_to_export['data0D'])
+        for ind, res in enumerate(data_meas):
+            self.measure_data_dict["Meas.{}:".format(ind)] = res
+            self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] = OrderedDict(name=self.title, data=res, type='roi')
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)
@@ -460,23 +461,24 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         except Exception as e:
             pass
 
-    def update_graph1D(self,datas):
-        #self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
+    def update_graph1D(self, datas):
+        # self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
         try:
 
-            for ind_plot,data in enumerate(datas):
+            for ind_plot, data in enumerate(datas):
                 if self.x_axis is None:
-                    self._x_axis = np.linspace(0,len(data),len(data),endpoint=False)
+                    self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
                 elif len(self.x_axis) != len(data):
-                    self._x_axis = np.linspace(0,len(data),len(data),endpoint=False)
+                    self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
 
-                self.plot_channels[ind_plot].setData(x=self.x_axis,y=data)
+                self.plot_channels[ind_plot].setData(x=self.x_axis, y=data)
 
                 if self.ui.zoom_pb.isChecked():
-                    self.zoom_plot[ind_plot].setData(x=self.x_axis,y=data)
+                    self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
                 x_axis = dict(data=self.x_axis, units=self.axis_settings['units'], label=self.axis_settings['label'])
-                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(OrderedDict(data=data,
-                                                x_axis=x_axis, type='raw'))# to be saved or exported
+                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(OrderedDict(name=self.title, data=data,
+                                                                                              x_axis=x_axis,
+                                                                                              type='raw'))  # to be saved or exported
 
 
             if not self.ui.Do_math_pb.isChecked(): #otherwise math is done and then data is exported

@@ -14,17 +14,25 @@ import logging
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.h5modules import H5Saver
+from pymodaq.daq_utils.h5modules import H5Saver, H5LogHandler
+from pymodaq.daq_utils.db.db_logger.db_logger import DbLoggerGUI, DBLogHandler
 
-logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
+logger = utils.set_logger(utils.get_module_name(__file__))
+
+
+
+
+
+
 
 class DAQ_Logger(QObject):
     """
@@ -64,15 +72,17 @@ class DAQ_Logger(QObject):
         self.logger_thread = None
         self.detector_modules = self.dashboard.detector_modules
         self.det_modules_log = []
-        self.log_types = ['H5 File', 'SQL DataBase']
+        self.log_types = ['None', 'H5 File', 'SQL DataBase']
 
+        self.logger = None #should be a reference either to self.h5saver or self.dblogger depending the choice of the user
         self.h5saver = H5Saver(save_type='logger')
-        self.is_h5_initialized = False
-
+        self.dblogger = DbLoggerGUI(self.dashboard.preset_file.stem)
 
         self.setupUI()
         self.setup_modules(self.dashboard.title)
 
+        self.h5saver.settings_tree.setVisible(False)
+        self.dblogger.settings_tree.setVisible(False)
 
 
     def create_menu(self):
@@ -81,23 +91,10 @@ class DAQ_Logger(QObject):
         #%% create Settings menu
         menubar = QtWidgets.QMenuBar()
         menubar.setMaximumHeight(30)
-        self.ui.verticalLayout.insertWidget(0, menubar)
+        self.ui.layout.insertWidget(0, menubar)
 
         self.file_menu = menubar.addMenu('File')
-        load_action = self.file_menu.addAction('Load file')
-        load_action.triggered.connect(self.load_file)
-        self.file_menu.addSeparator()
-        save_action = self.file_menu.addAction('Save file as')
-        save_action.triggered.connect(self.save_file)
-        show_action = self.file_menu.addAction('Show file content')
-        show_action.triggered.connect(self.show_file_content)
 
-        self.settings_menu = menubar.addMenu('Settings')
-        action_navigator = self.settings_menu.addAction('Show Navigator')
-        action_navigator.triggered.connect(self.show_navigator)
-
-    def load_file(self):
-        self.h5saver.load_file(self.h5saver.h5_file_path)
 
     def quit_fun(self):
         """
@@ -109,69 +106,13 @@ class DAQ_Logger(QObject):
         """
         try:
             self.h5saver.close_file()
-            self.dashboard.quit_fun()
         except Exception as e:
             logger.exception(str(e))
-
-    def save_file(self):
-        if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
-            os.mkdir(self.h5saver.settings.child(('base_path')).value())
-        filename = gutils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
-        self.h5saver.h5_file.copy_file(str(filename))
-
-    def save_metadata(self, node, type_info='dataset_info'):
-        """
-            Switch the type_info value with :
-                * *'dataset_info'* : Give the params attributes the dataset_attributes values
-                * *'dataset'* : Give the params attributes the scan_attributes values
-
-            |
-            | Once done, course the params and add string casted date/time metadata as an element of attributes array.
-            | Save the contents of given parameter object into a xml string unde the attributes settings.
-
-            =============== =================== =========================================
-            **Parameters**    **Type**           **Description**
-            *node*            pytables h5 node   Root node to be treated
-            *type_info*       string             File type info between :
-                                                    * 'dataset_info'
-                                                    * 'scan_info'
-            =============== =================== =========================================
-
-            See Also
-            --------
-            custom_tree.parameter_to_xml_string
-        """
-
-        attr = node._v_attrs
-        if type_info == 'dataset_info':
-            attr['type']='dataset'
-            params=self.dataset_attributes
-        else:
-            attr['type'] = 'scan'
-            params = self.scan_attributes
-        for child in params.child((type_info)).children():
-            if type(child.value()) is QDateTime:
-                attr[child.name()]=child.value().toString('dd/mm/yyyy HH:MM:ss')
-            else:
-                attr[child.name()]=child.value()
-        if type_info == 'dataset_info':
-            #save contents of given parameter object into an xml string under the attribute settings
-            settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           custom_tree.parameter_to_xml_string(params) + \
-                           custom_tree.parameter_to_xml_string(self.settings) + \
-                           custom_tree.parameter_to_xml_string(self.dashboard.preset_manager.preset_params)  + b'</All_settings>'
-
-            attr.settings = settings_str
-
-
-        elif type_info=='scan_info':
-            settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           custom_tree.parameter_to_xml_string(params) + \
-                           custom_tree.parameter_to_xml_string(self.settings) + \
-                           custom_tree.parameter_to_xml_string(self.h5saver.settings) + \
-                           custom_tree.parameter_to_xml_string(self.scanner.settings) + b'</All_settings>'
-
-            attr.settings = settings_str
+        try:
+            self.dblogger.close()
+        except Exception as e:
+            logger.exception(str(e))
+        self.dashboard.quit_fun()
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -193,38 +134,15 @@ class DAQ_Logger(QObject):
             if change == 'childAdded':pass
 
             elif change == 'value':
+                if param.name() == 'log_type':
+                    if param.value() == 'H5 File':
+                        self.logger = self.h5saver
+                    elif param.value() == 'SQL DataBase':
+                        self.logger = self.dblogger
+                self.h5saver.settings_tree.setVisible(param.value() == 'H5 File')
+                self.dblogger.settings_tree.setVisible(param.value() == 'SQL DataBase')
+            elif change == 'parent':
                 pass
-
-            elif change == 'parent':pass
-
-    def set_metadata_about_current_scan(self):
-        """
-            Set the date/time and author values of the scan_info child of the scan_attributes tree.
-            Show the 'scan' file attributes.
-
-            See Also
-            --------
-            show_file_attributes
-        """
-        date=QDateTime(QDate.currentDate(),QTime.currentTime())
-        self.scan_attributes.child('scan_info','date_time').setValue(date)
-        self.scan_attributes.child('scan_info','author').setValue(self.dataset_attributes.child('dataset_info','author').value())
-        res = self.show_file_attributes('scan')
-        return res
-
-    def set_metadata_about_dataset(self):
-        """
-            Set the date value of the data_set_info-date_time child of the data_set_attributes tree.
-            Show the 'dataset' file attributes.
-
-            See Also
-            --------
-            show_file_attributes
-        """
-        date = QDateTime(QDate.currentDate(),QTime.currentTime())
-        self.dataset_attributes.child('dataset_info', 'date_time').setValue(date)
-        res = self.show_file_attributes('dataset')
-        return res
 
     def setup_modules(self, filename):
         """
@@ -253,10 +171,8 @@ class DAQ_Logger(QObject):
             daq_utils.set_current_scan_path
         """
         self.do_continuous_save = True
-        self.is_h5_initialized = False
-        self.h5saver.settings.child(('base_name')).setValue('Data')
-        self.h5saver.settings.child(('N_saved')).show()
-        self.h5saver.settings.child(('N_saved')).setValue(0)
+        self.logger.settings.child(('N_saved')).show()
+        self.logger.settings.child(('N_saved')).setValue(0)
 
         settings_str = b'<All_settings>'
         settings_str += custom_tree.parameter_to_xml_string(self.dashboard.settings)
@@ -266,24 +182,34 @@ class DAQ_Logger(QObject):
         if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
             settings_str += custom_tree.parameter_to_xml_string(self.dashboard.roi_saver.roi_presets)
         settings_str += custom_tree.parameter_to_xml_string(self.settings)
-        settings_str += custom_tree.parameter_to_xml_string(self.h5saver.settings)
+        settings_str += custom_tree.parameter_to_xml_string(self.logger.settings)
         settings_str += b'</All_settings>'
 
-        self.h5saver.init_file(update_h5=True, metadata=dict(settings=settings_str))
+        if self.settings.child(('log_type')).value() == 'H5 File':
+            self.logger.settings.child(('base_name')).setValue('Data')
+            self.h5saver.init_file(update_h5=True, metadata=dict(settings=settings_str))
+            logger.addhandler(H5LogHandler(self.h5saver))
+            self.h5saver.h5_file.flush()
 
+        elif self.settings.child(('log_type')).value() == 'SQL DataBase':
+            if not self.logger.settings.child('connected_db').value():
+                status = self.logger.connect_db()
+                if not status:
+                    logger.critical('the Database is not and cannot be connnect')
+                    self.update_status('the Database is not and cannot be connnect')
+                    return False
+                    
+            self.logger.add_config(settings_str)
+            logger.addHandler(DBLogHandler(self.logger))
 
-
-        self.h5saver.h5_file.flush()
-
+        return True
 
     def set_logging(self):
         """
 
         """
-        try:
-
-            self.set_continuous_save()
-
+        status = self.set_continuous_save()
+        if status:
             det_names_scan = self.settings.child('detectors', 'Detectors').value()[
                 'selected']  # names of all selected detector modules initialized
             det_names = [mod.title for mod in self.detector_modules]
@@ -291,23 +217,40 @@ class DAQ_Logger(QObject):
             for name in det_names_scan:
                 self.det_modules_log.append(self.detector_modules[det_names.index(name)])
 
-
             #check if the modules are initialized
             for module in self.det_modules_log:
                 if not module.initialized_state:
-                    raise Exception('module '+module.title+" is not initialized")
+                    logger.error(f'module {module.title} is not initialized')
+                    return False
+
+            #create the detectors in the chosen logger
+            for det in self.det_modules_log:
+                settings_str = b'<All_settings>'
+                settings_str += custom_tree.parameter_to_xml_string(det.settings)
+                for viewer in det.ui.viewers:
+                    if hasattr(det.ui.viewers[0], 'roi_manager'):
+                        settings_str += custom_tree.parameter_to_xml_string(det.ui.viewers[0].roi_manager.settings)
+                settings_str += b'</All_settings>'
+
+                if self.settings.child(('log_type')).value() == 'H5 File':
+                    if det.title not in self.h5saver.raw_group.children_name():
+                        det_group = self.h5saver.add_det_group(self.h5saver.raw_group, det.title, settings_str)
+                        self.h5saver.add_navigation_axis(np.array([0.0, ]),
+                              det_group, 'x_axis', enlargeable=True,
+                              title='Time axis', metadata=dict(label='Time axis', units='timestamp'))
+
+                elif self.settings.child(('log_type')).value() == 'SQL DataBase':
+                    self.logger.add_detectors([dict(name=det.title, xml_settings=settings_str)])
 
             self.ui.start_button.setEnabled(True)
             self.ui.stop_button.setEnabled(True)
-
-
-
             return True
 
-        except Exception as e:
-            logger.exception(str(e))
+        else:
+            self.update_status('Cannot start logging... check connections')
             self.ui.start_button.setEnabled(False)
             self.ui.stop_button.setEnabled(False)
+            return False
 
     def show_log(self):
         import webbrowser
@@ -318,14 +261,14 @@ class DAQ_Logger(QObject):
         self.ui = QObject()
 
         widget_settings = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
+        self.ui.layout = QtWidgets.QVBoxLayout()
 
-        widget_settings.setLayout(layout)
+        widget_settings.setLayout(self.ui.layout)
 
         widget_buttons = QtWidgets.QWidget()
         layout_buttons = QtWidgets.QHBoxLayout()
         widget_buttons.setLayout(layout_buttons)
-        layout.addWidget(widget_buttons)
+        self.ui.layout.addWidget(widget_buttons)
         
         iconquit = QtGui.QIcon()
         iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -368,14 +311,16 @@ class DAQ_Logger(QObject):
         widget_hor = QtWidgets.QWidget()
         layout_hor = QtWidgets.QHBoxLayout()
         widget_hor.setLayout(layout_hor)
-        layout.addWidget(widget_hor)
+        self.ui.layout.addWidget(widget_hor)
 
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumWidth(300)
         layout_hor.addWidget(self.settings_tree)
-        layout_hor.addWidget(self.h5saver.settings_tree)
         self.h5saver.settings_tree.setMinimumWidth(300)
-        self.h5saver.settings.sigTreeStateChanged.connect(self.parameter_tree_changed) #trigger action from "do_save'  boolean
+        self.dblogger.settings_tree.setMinimumWidth(300)
+        layout_hor.addWidget(self.h5saver.settings_tree)
+        layout_hor.addWidget(self.dblogger.settings_tree)
+
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
@@ -383,7 +328,7 @@ class DAQ_Logger(QObject):
         # %% init and set the status bar
         self.ui.statusbar = QtWidgets.QStatusBar(self.dockarea)
         self.ui.statusbar.setMaximumHeight(25)
-        layout.addWidget(self.ui.statusbar)
+        self.ui.layout.addWidget(self.ui.statusbar)
         self.ui.log_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.log_message)
 
@@ -397,16 +342,18 @@ class DAQ_Logger(QObject):
 
         self.ui.statusbar.addPermanentWidget(self.ui.start_log_time)
         self.ui.statusbar.addPermanentWidget(self.ui.logging_state)
-        layout.addWidget(self.ui.statusbar)
+        self.ui.layout.addWidget(self.ui.statusbar)
 
 
 #       connecting
-        self.status_signal[str].connect(self.dashboard.add_log)
+        self.status_signal[str].connect(self.dashboard.add_status)
         self.ui.quit_button.clicked.connect(self.quit_fun)
 
         self.ui.start_button.clicked.connect(self.start_logging)
         self.ui.stop_button.clicked.connect(self.stop_logging)
         self.ui.startall_button.clicked.connect(self.start_all)
+
+        self.create_menu()
 
     def get_det_from_preset(self):
         preset_items_det = []
@@ -422,13 +369,10 @@ class DAQ_Logger(QObject):
             det.ui.grab_pb.click()
 
     def set_log_type(self, log_type):
-        if log_type not in self.log_types:
-            logger.exception('Invalid output for the logs')
-            raise IOError('Invalid output for the logs')
 
         self.settings.child(('log_type')).setValue(log_type)
 
-        self.h5saver.settings_tree.setVisible(log_type == 'H5 File')
+
 
     def show_file_attributes(self, type_info='dataset'):
         """
@@ -503,7 +447,7 @@ class DAQ_Logger(QObject):
 
         self.logger_thread = QThread()
 
-        log_acquisition = DAQ_Logging(self.settings, self.h5saver.settings, self.det_modules_log)
+        log_acquisition = DAQ_Logging(self.settings, self.logger, self.det_modules_log)
 
         log_acquisition.moveToThread(self.logger_thread)
 
@@ -540,7 +484,7 @@ class DAQ_Logger(QObject):
         else:
             status = 'Data Acquisition has been stopped due to overshoot'
 
-        self.update_status(status, log_type='log')
+        self.update_status(status)
         self.ui.log_message.setText('')
         self.ui.start_button.setEnabled(True)
 
@@ -561,10 +505,7 @@ class DAQ_Logger(QObject):
             update_status, save_scan, set_ini_positions
         """
         if status[0] == "Update_Status":
-            if len(status) > 2:
-                self.update_status(status[1], wait_time=self.wait_time, log_type=status[2])
-            else:
-                self.update_status(status[1], wait_time=self.wait_time)
+            self.update_status(status[1], wait_time=self.wait_time)
 
         elif status[0] == "Timeout":
             self.ui.log_message.setText('Timeout occurred')
@@ -597,7 +538,7 @@ class DAQ_Logging(QObject):
     """
     scan_data_tmp = pyqtSignal(OrderedDict)
     status_sig = pyqtSignal(list)
-    def __init__(self, settings=None, h5saver=None, det_modules_log=[]):
+    def __init__(self, settings=None, logger=None, det_modules_log=[]):
 
         """
             DAQ_Logging deal with the acquisition part of daq_scan.
@@ -618,11 +559,11 @@ class DAQ_Logging(QObject):
         self.grab_done_signals = [mod.grab_done_signal for mod in self.det_modules_log]
         self.det_modules_settings = [mod.settings for mod in self.det_modules_log]
 
-        self.h5saver = H5Saver()
-        self.h5saver.settings.restoreState(h5saver.saveState())
-        self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
-        self.is_h5_initialized = False
-
+        self.logger = logger
+        if isinstance(self.logger, H5Saver):
+            self.logger_type = "h5saver"
+        elif isinstance(self.logger, DbLoggerGUI):
+            self.logger_type = "dblogger"
     @pyqtSlot(list)
     def queue_command(self, command):
         """
@@ -642,7 +583,6 @@ class DAQ_Logging(QObject):
             start_logging, set_ini_positions, move_stages
         """
         if command[0] == "start_logging":
-            self.is_h5_initialized = False
             self.start_logging()
 
         elif command[0] == "stop_acquisition":
@@ -661,35 +601,39 @@ class DAQ_Logging(QObject):
         """
         try:
             det_name = datas['name']
-            det_group = self.h5saver.get_group_by_title(self.h5saver.raw_group, det_name)
-            time_array = self.h5saver.get_node(det_group, 'Logger_x_axis')
-            self.h5saver.append(time_array, np.array([datas['acq_time_s']]))
+            if self.logger_type == 'h5saver':
+                det_group = self.logger.get_group_by_title(self.logger.raw_group, det_name)
+                time_array = self.logger.get_node(det_group, 'Logger_x_axis')
+                time_array.append(np.array([datas['acq_time_s']]))
 
-            data_types = ['data0D', 'data1D']
-            if self.h5saver.settings.child(('save_2D')).value():
-                data_types.extend(['data2D', 'dataND'])
+                data_types = ['data0D', 'data1D']
+                if self.logger.settings.child(('save_2D')).value():
+                    data_types.extend(['data2D', 'dataND'])
 
-            for data_type in data_types:
-                if data_type in datas.keys() and len(datas[data_type]) != 0:
-                    if not self.h5saver.is_node_in_group(det_group, data_type):
-                        data_group = self.h5saver.add_data_group(det_group, data_type, metadata=dict(type='scan'))
-                    else:
-                        data_group = self.h5saver.get_node(det_group, utils.capitalize(data_type))
-                    for ind_channel, channel in enumerate(datas[data_type]):
-                        channel_group = self.h5saver.get_group_by_title(data_group, channel)
-                        if channel_group is None:
-                            channel_group = self.h5saver.add_CH_group(data_group, title=channel)
-                            data_array = self.h5saver.add_data(channel_group, datas[data_type][channel],
-                                                               scan_type='scan1D', enlargeable=True)
+                for data_type in data_types:
+                    if data_type in datas.keys() and len(datas[data_type]) != 0:
+                        if not self.logger.is_node_in_group(det_group, data_type):
+                            data_group = self.logger.add_data_group(det_group, data_type, metadata=dict(type='scan'))
                         else:
-                            data_array = self.h5saver.get_node(channel_group, 'Data')
-                        if data_type == 'data0D':
-                            self.h5saver.append(data_array, np.array([datas[data_type][channel]['data']]))
-                        else:
-                            self.h5saver.append(data_array, datas[data_type][channel]['data'])
+                            data_group = self.logger.get_node(det_group, utils.capitalize(data_type))
+                        for ind_channel, channel in enumerate(datas[data_type]):
+                            channel_group = self.logger.get_group_by_title(data_group, channel)
+                            if channel_group is None:
+                                channel_group = self.logger.add_CH_group(data_group, title=channel)
+                                data_array = self.logger.add_data(channel_group, datas[data_type][channel],
+                                                                   scan_type='scan1D', enlargeable=True)
+                            else:
+                                data_array = self.logger.get_node(channel_group, 'Data')
+                            if data_type == 'data0D':
+                                self.logger.append(data_array, np.array([datas[data_type][channel]['data']]))
+                            else:
+                                self.logger.append(data_array, datas[data_type][channel]['data'])
+                self.logger.h5_file.flush()
 
-            self.h5saver.h5_file.flush()
-            self.h5saver.settings.child(('N_saved')).setValue(self.h5saver.settings.child(('N_saved')).value()+1)
+            elif self.logger_type == 'dblogger':
+                self.logger.add_datas(datas)
+
+            self.logger.settings.child(('N_saved')).setValue(self.logger.settings.child(('N_saved')).value()+1)
 
         except Exception as e:
             logger.exception(str(e))
@@ -703,34 +647,19 @@ class DAQ_Logging(QObject):
 
         if self.stop_logging_flag:
             status = 'Data Acquisition has been stopped by user'
-            self.status_sig.emit(["Update_Status", status, 'log'])
-
-        self.h5saver.h5_file.flush()
+            self.status_sig.emit(["Update_Status", status])
+        if self.logger_type == 'h5saver':
+            self.logger.flush()
 
 
     def start_logging(self):
         try:
 
-            for det in self.det_modules_log:
-                if not self.h5saver.is_node_in_group(self.h5saver.raw_group, det.title):
-                    settings_str = b'<All_settings>'
-                    settings_str += custom_tree.parameter_to_xml_string(det.settings)
-                    for viewer in det.ui.viewers:
-                        if hasattr(det.ui.viewers[0], 'roi_manager'):
-                            settings_str += custom_tree.parameter_to_xml_string(det.ui.viewers[0].roi_manager.settings)
-                    settings_str += b'</All_settings>'
-
-                    det_group = self.h5saver.add_det_group(self.h5saver.raw_group, det.title, settings_str)
-                    self.h5saver.add_navigation_axis(np.array([0.0, ]),
-                          det_group, 'x_axis', enlargeable=True,
-                          title='Time axis', metadata=dict(label='Time axis', units='timestamp'))
-
-
             for sig in self.grab_done_signals:
                 sig.connect(self.do_save_continuous)
 
             self.stop_logging_flag = False
-            self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
+            self.status_sig.emit(["Update_Status", "Acquisition has started"])
             self.det_done_flag = False
 
             # for det in self.det_modules_log:
@@ -752,7 +681,7 @@ if __name__ == '__main__':
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_modes\\preset_logger.xml')
+    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_logger.xml')
     # QThread.msleep(4000)
 
     prog.load_log_module()

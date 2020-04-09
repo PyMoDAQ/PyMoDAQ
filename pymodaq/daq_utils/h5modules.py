@@ -16,6 +16,7 @@ from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
 from PyQt5 import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
 from pymodaq.version import get_version
 import datetime
 from dateutil import parser
@@ -55,7 +56,7 @@ data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'st
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
-logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 def check_mandatory_attrs(attr_name, attr):
     """for cross compatibility between different backends. If these attributes have binary value, then decode them
@@ -871,6 +872,17 @@ class H5Backend:
         node.attrs['backend'] = self.backend
         return node
 
+
+class H5LogHandler(logging.StreamHandler):
+    def __init__(self, h5saver):
+        super().__init__()
+        self.h5saver = h5saver
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.setFormatter(formatter)
+    def emit(self, record):
+        msg = self.format(record)
+        self.h5saver.add_log(msg)
+
 class H5Saver(H5Backend):
     """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
@@ -924,27 +936,26 @@ class H5Saver(H5Backend):
     status_sig = pyqtSignal(utils.ThreadCommand)
     new_file_sig = pyqtSignal(bool)
 
-    params = [{'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True},
-                {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': True},
-                {'title': 'Save raw datas only:', 'name': 'save_raw_only', 'type': 'bool', 'value': True, 'tooltip':
-                        'if True, will not save extracted ROIs used to do live plotting, only raw datas and the scan \
-                        result will be saved'},
-                {'title': 'Do Save:', 'name': 'do_save', 'type': 'bool', 'default': False, 'value': False},
-                {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
-                {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
-                {'title': 'show file content?:', 'name': 'show_file', 'type': 'bool', 'default': False, 'value': False},
-                {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data', 'filetype': False, 'readonly': True,},
-                {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
-                {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
-                {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data',
-                 'readonly': True, 'visible': False},
-                {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
-                {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
-                    {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
-                     'values': ['zlib', 'gzip']},
-                    {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0, 'max': 9},
-                ]},
-                ]
+    params = [{'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True}, ] + \
+             dashboard_submodules_params + \
+             [
+                 {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
+                 {'title': 'show file content?:', 'name': 'show_file', 'type': 'bool', 'default': False,
+                  'value': False},
+                 {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data',
+                  'filetype': False, 'readonly': True, },
+                 {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
+                 {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
+                 {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data',
+                  'readonly': True, 'visible': False},
+                 {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
+                 {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
+                     {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
+                      'values': ['zlib', 'gzip']},
+                     {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0,
+                      'max': 9},
+                 ]},
+             ]
 
     def __init__(self, save_type='scan', backend='tables'):
         """
@@ -1082,6 +1093,7 @@ class H5Saver(H5Backend):
 
         self.raw_group = self.get_set_group(self.root(), 'Raw_datas', title='Data from PyMoDAQ modules')
         self.get_set_logger(self.raw_group)
+
         if scan_group is not None:
             self.current_scan_group = self.get_set_group(self.raw_group, scan_group)
         else:
@@ -1361,6 +1373,9 @@ class H5Saver(H5Backend):
         else:
             self.logger_array = self.get_node(where, name=logger)
         return self.logger_array
+
+    def add_log(self, msg):
+        self.logger_array.append(msg)
 
     def add_data_group(self, where, group_data_type, title='', settings_as_xml='', metadata=dict([])):
         """Creates a group node at given location in the tree
@@ -1664,7 +1679,7 @@ class H5Saver(H5Backend):
         group = self.add_incremental_group('move', where, title, settings_as_xml, metadata)
         return group
 
-    def parameter_tree_changed(self,param,changes):
+    def parameter_tree_changed(self, param, changes):
         for param, change, data in changes:
             path = self.settings.childPath(param)
 
@@ -1699,10 +1714,13 @@ class H5Saver(H5Backend):
     def show_file_content(self):
         form = QtWidgets.QWidget()
         if not self.isopen():
-            if self.h5_file_path.exists():
-                self.analysis_prog = H5Browser(form, h5file=self.h5_file_path)
+            if self.h5_file_path is not None:
+                if self.h5_file_path.exists():
+                    self.analysis_prog = H5Browser(form, h5file=self.h5_file_path)
+                else:
+                    logger.warning('The h5 file path has not been defined yet')
             else:
-                raise FileExistsError('no File presents')
+                logger.warning('The h5 file path has not been defined yet')
         else:
             self.flush()
             self.analysis_prog = H5Browser(form, h5file=self.h5_file)

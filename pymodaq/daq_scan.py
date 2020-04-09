@@ -30,7 +30,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
 
-logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -792,7 +792,7 @@ class DAQ_Scan(QObject):
         self.create_menu()
 
 #        connecting
-        self.status_signal[str].connect(self.dashboard.add_log)
+        self.status_signal[str].connect(self.dashboard.add_status)
         self.ui.set_scan_pb.clicked.connect(self.set_scan)
         self.ui.quit_pb.clicked.connect(self.quit_fun)
 
@@ -863,7 +863,7 @@ class DAQ_Scan(QObject):
             widgnav = QtWidgets.QWidget()
             self.navigator = Navigator(widgnav)
 
-            self.navigator.status_signal[str].connect(self.add_log)
+            self.navigator.status_signal[str].connect(self.dashboard.add_status)
             self.navigator.settings.child('settings', 'Load h5').hide()
             self.navigator.loadaction.setVisible(False)
 
@@ -1015,20 +1015,17 @@ class DAQ_Scan(QObject):
             --------
             update_status, save_scan, set_ini_positions
         """
-        if status[0]=="Update_Status":
-            if len(status)>2:
-                self.update_status(status[1],wait_time=self.wait_time,log_type=status[2])
-            else:
-                self.update_status(status[1],wait_time=self.wait_time)
+        if status[0] == "Update_Status":
+            self.update_status(status[1], wait_time=self.wait_time)
 
-        elif status[0]=="Update_scan_index":
-            #status[1] = [ind_scan,ind_average]
-            self.ind_scan=status[1][0]
+        elif status[0] == "Update_scan_index":
+            # status[1] = [ind_scan,ind_average]
+            self.ind_scan = status[1][0]
             self.ui.indice_scan_sb.setValue(status[1][0])
             self.ind_average = status[1][1]
             self.ui.indice_average_sb.setValue(status[1][1])
 
-        elif status[0]=="Scan_done":
+        elif status[0] == "Scan_done":
             self.ui.scan_done_LED.set_as_true()
             self.save_scan()
             if not self.dashboard.overshoot:
@@ -1036,7 +1033,7 @@ class DAQ_Scan(QObject):
             self.ui.set_scan_pb.setEnabled(True)
             self.ui.set_ini_positions_pb.setEnabled(True)
             self.ui.start_scan_pb.setEnabled(True)
-        elif status[0]=="Timeout":
+        elif status[0] == "Timeout":
             self.ui.status_message.setText('Timeout occurred')
 
     def update_1D_graph(self,datas):

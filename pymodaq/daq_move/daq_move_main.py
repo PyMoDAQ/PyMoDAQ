@@ -19,7 +19,7 @@ import pymodaq_plugins.daq_move_plugins as plugins
 local_path = utils.get_set_local_dir()
 sys.path.append(local_path)
 
-logger = utils.set_logger(utils.get_module_name(__file__), __name__ == '__main__')
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 DAQ_Move_Stage_type = make_enum('daq_move')

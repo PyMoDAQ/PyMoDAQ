@@ -31,37 +31,37 @@ import datetime
 
 
 class Viewer2D(QtWidgets.QWidget):
-    data_to_export_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-    crosshair_dragged = pyqtSignal(float, float) #signal used to pass crosshair position to other modules in scaled axes units
+    data_to_export_signal = pyqtSignal(
+        OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+    crosshair_dragged = pyqtSignal(float,
+                                   float)  # signal used to pass crosshair position to other modules in scaled axes units
     sig_double_clicked = pyqtSignal(float, float)
     ROI_select_signal = pyqtSignal(QRectF)
     ROI_changed = pyqtSignal()
     ROI_changed_finished = pyqtSignal()
 
-    def __init__(self,parent=None,scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))):
-        super(Viewer2D,self).__init__()
-        #setting the gui
-        self.ui=Ui_Form()
-
+    def __init__(self, parent=None, scaling_options=dict(scaled_xaxis=dict(label="", units=None, offset=0, scaling=1),
+                                                         scaled_yaxis=dict(label="", units=None, offset=0, scaling=1))):
+        super(Viewer2D, self).__init__()
+        # setting the gui
+        self.ui = Ui_Form()
+        self.title = 'viewer2D'
         if parent is None:
             parent = QtWidgets.QWidget()
 
-
-
-        self.ui.setupUi(parent)#it's a widget here
-
+        self.ui.setupUi(parent)  # it's a widget here
 
         self.max_size_integrated = 200
         self.scaling_options = copy.deepcopy(scaling_options)
-        self.viewer_type='Data2D' #☺by default
-        self.title=""
-        self.parent=parent
+        self.viewer_type = 'Data2D'  # ☺by default
+        self.title = ""
+        self.parent = parent
         self.image = None
-        self.isdata=edict(blue=False,green=False,red=False)
-        self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
+        self.isdata = edict(blue=False, green=False, red=False)
+        self.color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
         self.image_widget = ImageWidget()
-        self.ui.plotitem = self.image_widget.plotitem # for backward compatibility
+        self.ui.plotitem = self.image_widget.plotitem  # for backward compatibility
         self.ui.splitter_VLeft.replaceWidget(0, self.ui.graphicsView)
 
         axis = self.ui.plotitem.getAxis('bottom')
@@ -70,15 +70,15 @@ class Viewer2D(QtWidgets.QWidget):
         axisl = self.ui.plotitem.getAxis('left')
         axisl.setLabel(text='', units='Pxls')
 
-        self.autolevels=False
+        self.autolevels = False
         self.ui.auto_levels_pb.clicked.connect(self.set_autolevels)
 
-        self.scaled_yaxis=AxisItem_Scaled('right')
-        self.scaled_xaxis=AxisItem_Scaled('top')
+        self.scaled_yaxis = AxisItem_Scaled('right')
+        self.scaled_xaxis = AxisItem_Scaled('top')
 
         self.image_widget.view.sig_double_clicked.connect(self.double_clicked)
-        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1,1))
-        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))
+        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1, 1))
+        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2, 2))
         self.scaled_xaxis.linkToView(self.image_widget.view)
         self.scaled_yaxis.linkToView(self.image_widget.view)
         self.set_scaling_axes(self.scaling_options)
@@ -198,7 +198,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.ROIs = OrderedDict([])
         self.ui.roiBtn.clicked.connect(self.roi_clicked)
 
-        self.data_to_export = OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
+        self.data_to_export = OrderedDict([])
 
         self._x_axis = None
         self._y_axis = None
@@ -412,15 +412,15 @@ class Viewer2D(QtWidgets.QWidget):
                     self.ui.RoiCurve_H[key].setData(y=np.mean(data,axis=0), x=xvals)
                     self.ui.RoiCurve_V[key].setData(y=yvals, x=np.mean(data,axis=1))
                     self.ui.RoiCurve_integrated[key].setData(y=self.data_integrated_plot[key][1,:], x=self.data_integrated_plot[key][0,:])
-                    self.data_to_export['data2D'][self.title+'_{:s}'.format(key)]=OrderedDict(data=data, type='roi',
+                    self.data_to_export['data2D'][self.title+'_{:s}'.format(key)]=OrderedDict(name=self.title, data=data, type='roi',
                         x_axis=dict(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
 
-                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)]=OrderedDict(data=np.mean(data,axis=0), type='roi',
+                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)]=OrderedDict(name=self.title, data=np.mean(data,axis=0), type='roi',
                         x_axis=dict(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']))
-                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)]=OrderedDict(data=np.mean(data,axis=1), type='roi',
+                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)]=OrderedDict(name=self.title, data=np.mean(data,axis=1), type='roi',
                         x_axis=dict(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
-                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)]=OrderedDict(data=np.sum(data), type='roi')
+                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)]=OrderedDict(name=self.title, data=np.sum(data), type='roi')
 
                     self.measure_data_dict["Lineout {:s}:".format(key)] = np.sum(data)
 
@@ -535,66 +535,67 @@ class Viewer2D(QtWidgets.QWidget):
         self.scaled_xaxis.linkedViewChanged(self.image_widget.view)
         self.scaled_yaxis.linkedViewChanged(self.image_widget.view)
 
-    def setImage(self,data_red=None,data_green=None,data_blue=None):
+    def setImage(self, data_red=None, data_green=None, data_blue=None):
         try:
             if data_red is not None:
-                if len(data_red.shape)>2:
-                    data_red=np.mean(data_red,axis=0)
+                if len(data_red.shape) > 2:
+                    data_red = np.mean(data_red, axis=0)
                 if self.ui.FlipUD_pb.isChecked():
-                    data_red=np.flipud(data_red)
+                    data_red = np.flipud(data_red)
                 if self.ui.FlipLR_pb.isChecked():
-                    data_red=np.fliplr(data_red)
+                    data_red = np.fliplr(data_red)
                 if self.ui.rotate_pb.isChecked():
                     data_red = np.transpose(data_red)
 
             if data_green is not None:
-                if len(data_green.shape)>2:
-                    data_green=np.mean(data_green,axis=0)
+                if len(data_green.shape) > 2:
+                    data_green = np.mean(data_green, axis=0)
                 if self.ui.FlipUD_pb.isChecked():
-                    data_green=np.flipud(data_green)
+                    data_green = np.flipud(data_green)
                 if self.ui.FlipLR_pb.isChecked():
-                    data_green=np.fliplr(data_green)
+                    data_green = np.fliplr(data_green)
                 if self.ui.rotate_pb.isChecked():
                     data_green = np.transpose(data_green)
 
             if data_blue is not None:
-                if len(data_blue.shape)>2:
-                    data_blue=np.mean(data_blue,axis=0)
+                if len(data_blue.shape) > 2:
+                    data_blue = np.mean(data_blue, axis=0)
                 if self.ui.FlipUD_pb.isChecked():
-                    data_blue=np.flipud(data_blue)
+                    data_blue = np.flipud(data_blue)
                 if self.ui.FlipLR_pb.isChecked():
-                    data_blue=np.fliplr(data_blue)
+                    data_blue = np.fliplr(data_blue)
                 if self.ui.rotate_pb.isChecked():
                     data_blue = np.transpose(data_blue)
 
-            red_flag= data_red is not None
-            self.isdata["red"]=red_flag
-            green_flag= data_green is not None
-            self.isdata["green"]=green_flag
-            blue_flag= data_blue is not None
-            self.isdata["blue"]=blue_flag
+            red_flag = data_red is not None
+            self.isdata["red"] = red_flag
+            green_flag = data_green is not None
+            self.isdata["green"] = green_flag
+            blue_flag = data_blue is not None
+            self.isdata["blue"] = blue_flag
 
-            self.data_to_export = OrderedDict(name=self.title,data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
-            self.image=edict(blue=data_blue,green=data_green,red=data_red)
+            self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(),
+                                              data2D=OrderedDict())
+            self.image = edict(blue=data_blue, green=data_green, red=data_red)
             if red_flag:
-                bounds=QRectF(0,0,data_red.shape[1],data_red.shape[0])
+                bounds = QRectF(0, 0, data_red.shape[1], data_red.shape[0])
             elif green_flag:
-                bounds=QRectF(0,0,data_green.shape[1],data_green.shape[0])
+                bounds = QRectF(0, 0, data_green.shape[1], data_green.shape[0])
             elif blue_flag:
-                bounds=QRectF(0,0,data_blue.shape[1],data_blue.shape[0])
-            self.ui.ROIselect.maxBounds=bounds
+                bounds = QRectF(0, 0, data_blue.shape[1], data_blue.shape[0])
+            self.ui.ROIselect.maxBounds = bounds
 
-            self.ui.img_red.setImage(data_red,autoLevels = self.autolevels)
-            self.ui.img_green.setImage(data_green,autoLevels = self.autolevels)
-            self.ui.img_blue.setImage(data_blue,autoLevels = self.autolevels)
+            self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
+            self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
+            self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
 
-            if self.ui.red_cb.isChecked() and red_flag==False: #turn it off if it was on but there is no data
+            if self.ui.red_cb.isChecked() and red_flag is False:  # turn it off if it was on but there is no data
                 self.ui.red_cb.setChecked(False)
             elif red_flag:
                 self.ui.red_cb.setChecked(True)
 
-            #self.ui.red_cb.setChecked(red_flag)
-            #self.ui.red_cb.setVisible(red_flag)
+            # self.ui.red_cb.setChecked(red_flag)
+            # self.ui.red_cb.setVisible(red_flag)
             self.ui.img_red.setVisible(self.ui.red_cb.isChecked())
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_red.setVisible(self.ui.red_cb.isChecked())
@@ -610,36 +611,35 @@ class Viewer2D(QtWidgets.QWidget):
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_green.setVisible(self.ui.green_cb.isChecked())
 
-
-            if self.ui.blue_cb.isChecked() and blue_flag==False: #turn it off if it was on but there is no data
+            if self.ui.blue_cb.isChecked() and blue_flag == False:  # turn it off if it was on but there is no data
                 self.ui.blue_cb.setChecked(False)
             elif blue_flag:
                 self.ui.blue_cb.setChecked(True)
-            #self.ui.blue_cb.setVisible(blue_flag)
-            #self.ui.blue_cb.setChecked(blue_flag)
+            # self.ui.blue_cb.setVisible(blue_flag)
+            # self.ui.blue_cb.setChecked(blue_flag)
             self.ui.img_blue.setVisible(self.ui.blue_cb.isChecked())
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_blue.setVisible(self.ui.blue_cb.isChecked())
 
-            self._x_axis=np.linspace(0,data_red.shape[1]-1,data_red.shape[1])
-            self._y_axis=np.linspace(0,data_red.shape[0]-1,data_red.shape[0])
-            self.x_axis_scaled,self.y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
+            self._x_axis = np.linspace(0, data_red.shape[1] - 1, data_red.shape[1])
+            self._y_axis = np.linspace(0, data_red.shape[0] - 1, data_red.shape[0])
+            self.x_axis_scaled, self.y_axis_scaled = self.scale_axis(self._x_axis, self._y_axis)
 
             ind = 0
             if red_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_red, type='raw',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = OrderedDict(data=data_red, type='raw',
                         x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
                 ind +=1
 
             if green_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_green, type='raw',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = OrderedDict(data=data_green, type='raw',
                         x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
             if blue_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_blue, type='raw',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = OrderedDict(data=data_blue, type='raw',
                         x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1

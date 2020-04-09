@@ -9,6 +9,7 @@ import numpy as np
 import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE
+import inspect
 
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
@@ -486,6 +487,16 @@ def check_vals_in_iterable(iterable1, iterable2):
 
 
 def get_set_local_dir(basename='pymodaq_local'):
+    """Defines, creates abd returns a local folder where configurations files will be saved
+
+    Parameters
+    ----------
+    basename: (str) how the configuration folder will be named
+
+    Returns
+    -------
+    Path: the local path
+    """
     if 'win32' in sys.platform:
         local_path = Path(os.environ['HOMEDRIVE']).joinpath(os.environ['HOMEPATH'], basename)
     else:
@@ -497,6 +508,19 @@ def get_set_local_dir(basename='pymodaq_local'):
 
 
 def get_set_config_path(config_name='config'):
+    """Creates a folder in the local config directory to store specific configuration files
+
+    Parameters
+    ----------
+    config_name: (str) name of the configuration folder
+
+    Returns
+    -------
+
+    See Also
+    --------
+    get_set_local_dir
+    """
     local_path = get_set_local_dir()
     path = local_path.joinpath(config_name)
     if not path.is_dir():
@@ -505,35 +529,49 @@ def get_set_config_path(config_name='config'):
 
 
 def get_set_preset_path():
+    """ creates and return the config folder path for preset files
+    """
     return get_set_config_path('preset_configs')
 
 
 def get_set_pid_path():
+    """ creates and return the config folder path for PID files
+    """
     return get_set_config_path('pid_configs')
 
 
 def get_set_log_path():
+    """ creates and return the config folder path for log files
+    """
     return get_set_config_path('log')
 
 
 def get_set_layout_path():
+    """ creates and return the config folder path for layout files
+    """
     return get_set_config_path('layout_configs')
 
 
 def get_set_overshoot_path():
+    """ creates and return the config folder path for overshoot files
+    """
     return get_set_config_path('overshoot_configs')
 
 
 def get_set_roi_path():
+    """ creates and return the config folder path for preset files
+    """
     return get_set_config_path('roi_configs')
 
 
-def get_module_name(module__file__):
-    path = Path(module__file__)
+def get_module_name(module__file__path):
+    """from the full path of a module extract its name"""
+    path = Path(module__file__path)
     return path.stem
 
 
-def set_logger(logger_name, add_handler=False):
+
+def set_logger(logger_name, add_handler=False, base_logger=False):
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -541,6 +579,7 @@ def set_logger(logger_name, add_handler=False):
     logger_name: (str) the name of the logger (usually it is the module name as returned by get_module_name
     add_handler (bool) if True adds a TimedRotatingFileHandler to the logger instance (should be True if logger set from
                 main app
+    base_logger: (bool) specify if this is the parent logger (usually where one defines the handler)
 
     Returns
     -------
@@ -549,17 +588,50 @@ def set_logger(logger_name, add_handler=False):
     --------
     get_module_name, logging.handlers.TimedRotatingFileHandler
     """
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.DEBUG)  #as a default, can then be cchanged in modules using logger.setLevel(level)
+    if not base_logger:
+        logger_name = f'pymodaq.{logger_name}'
 
+    logger = logging.getLogger(logger_name)
     log_path = get_set_config_path('log')
     if add_handler:
-        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq_log'), when='midnight')
+        logger.setLevel(logging.DEBUG)  #as a default, can then be cchanged in modules using logger.setLevel(level)
+        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
 
+def caller_name(skip=2):
+    """Get a name of a caller in the format module.class.method
+
+       `skip` specifies how many levels of stack to skip while getting caller
+       name. skip=1 means "who calls me", skip=2 "who calls my caller" etc.
+
+       An empty string is returned if skipped levels exceed stack height
+    """
+    stack = inspect.stack()
+    start = 0 + skip
+    if len(stack) < start + 1:
+        return ''
+    parentframe = stack[start][0]
+
+    name = []
+    module = inspect.getmodule(parentframe)
+    # `modname` can be None when frame is executed directly in console
+    # TODO(techtonik): consider using __main__
+    if module:
+        name.append(module.__name__)
+    # detect classname
+    if 'self' in parentframe.f_locals:
+        # I don't know any way to detect call from the object method
+        # XXX: there seems to be no way to detect static method call - it will
+        #      be just a function call
+        name.append(parentframe.f_locals['self'].__class__.__name__)
+    codename = parentframe.f_code.co_name
+    if codename != '<module>':  # top level usually
+        name.append(codename)  # function or a method
+    del parentframe
+    return ".".join(name)
 
 def zeros_aligned(n, align, dtype=np.uint32):
     """

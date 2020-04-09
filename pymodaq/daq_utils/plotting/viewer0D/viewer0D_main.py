@@ -19,43 +19,34 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         super(Viewer0D,self).__init__()
         if parent is None:
             parent=QtWidgets.QWidget()
-        self.ui=Ui_Form()
+
+        self.title = 'viewer0D'  # is changed when used from DAQ_Viewer
+        self.ui = Ui_Form()
         self.ui.setupUi(parent)
-        #self.dockarea=parent
-        #if dock is not None:
-        #    self.ui.viewer_dock = dock
-        #    self.ui.viewer_dock.setTitle("0DViewer")
-        #else:
-        #    self.ui.viewer_dock = Dock("0DViewer", size=(1, 1))     ## give this dock the minimum possible size
-        #    self.dockarea.addDock(self.ui.viewer_dock)
 
-        #self.ui.viewer_dock.addWidget(widget_viewer)
-        
-
-        self.ui.statusbar=QtWidgets.QStatusBar(parent)
+        self.ui.statusbar = QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(15)
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.ui.status_message=QtWidgets.QLabel()
+        self.ui.status_message = QtWidgets.QLabel()
         self.ui.status_message.setMaximumHeight(15)
         self.ui.statusbar.addWidget(self.ui.status_message)
-        
 
-        self.ui.xaxis_item=self.ui.Graph1D.plotItem.getAxis('bottom')
+        self.ui.xaxis_item = self.ui.Graph1D.plotItem.getAxis('bottom')
 
         self._labels = []
-        self.viewer_type='Data0D'
-        self.wait_time=1000
+        self.viewer_type = 'Data0D'
+        self.wait_time = 1000
 
-        self.plot_channels=None
-        self.plot_colors=['r', 'g','b',  'c', 'm', 'y', 'k',' w']
+        self.plot_channels = None
+        self.plot_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', ' w']
 
-        self.Nsamples=self.ui.Nhistory_sb.value()
+        self.Nsamples = self.ui.Nhistory_sb.value()
 
-        self.x_axis=np.linspace(0,self.Nsamples-1,self.Nsamples)
-        self.datas=[] #datas on each channel. list of 1D arrays 
-        self.legend=self.ui.Graph1D.plotItem.addLegend()
-        self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=None,data2D=None)
-        self.list_items=None
+        self.x_axis = np.linspace(0, self.Nsamples - 1, self.Nsamples)
+        self.datas = []  # datas on each channel. list of 1D arrays
+        self.legend = self.ui.Graph1D.plotItem.addLegend()
+        self.data_to_export = None
+        self.list_items = None
 
         ##Connecting buttons:
         self.ui.clear_pb.clicked.connect(self.clear_data)
@@ -84,7 +75,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
 
         """
         try:
-            self.data_to_export = OrderedDict(data0D=OrderedDict(),data1D=None,data2D=None)
+            self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=None, data2D=None)
             if self.plot_channels==None or len(self.plot_channels) != len(datas):
                 # if self.plot_channels!=None:
                 #     if len(self.plot_channels) != len(datas):
@@ -129,26 +120,27 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         """
         pass
 
-    def update_Graph1D(self,datas):
+    def update_Graph1D(self, datas):
         try:
-            data_tot=[]
-            L=len(self.datas[0])+1
-            if L>self.Nsamples:
-                self.x_axis+=1
+            data_tot = []
+            L = len(self.datas[0]) + 1
+            if L > self.Nsamples:
+                self.x_axis += 1
             else:
-                self.x_axis=np.linspace(0,L-1,L)
-            for ind_plot,data in enumerate(datas):
-                data_tmp=self.datas[ind_plot]
-                data_tmp=np.append(data_tmp,data)
+                self.x_axis = np.linspace(0, L - 1, L)
+            for ind_plot, data in enumerate(datas):
+                data_tmp = self.datas[ind_plot]
+                data_tmp = np.append(data_tmp, data)
 
-                if len(data_tmp)>self.Nsamples:
-                    data_tmp=data_tmp[L-self.Nsamples:]
+                if len(data_tmp) > self.Nsamples:
+                    data_tmp = data_tmp[L - self.Nsamples:]
 
                 data_tot.append(data_tmp)
 
-                self.plot_channels[ind_plot].setData(x=self.x_axis,y=data_tmp)
-                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)]=OrderedDict(data=data[0], type='raw')
-            self.datas=data_tot
+                self.plot_channels[ind_plot].setData(x=self.x_axis, y=data_tmp)
+                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)] = OrderedDict(name=self.title, data=data[0],
+                                                                                         type='raw')
+            self.datas = data_tot
 
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
             self.data_to_export_signal.emit(self.data_to_export)
