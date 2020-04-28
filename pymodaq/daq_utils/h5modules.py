@@ -26,26 +26,34 @@ import copy
 import importlib
 from packaging import version as version_mod
 
+logger = utils.set_logger(utils.get_module_name(__file__))
+backends_available = []
 
 #default backend
 is_tables = True
 try:
     import tables
-except:
+    backends_available.append('tables')
+except Exception as e:
+    logger.exception(str(e))
     is_tables = False
-is_h5py = True
 
+is_h5py = True
 #other possibility
 try:
     import h5py
-except:
+    backends_available.append('h5py')
+except Exception as e:
+    logger.exception(str(e))
     is_h5y = False
-is_h5pyd = True
 
+is_h5pyd = True
 #this one is to be used for remote reading/writing towards a HSDS server (or h5serv), see HDFGroup
 try:
     import h5pyd
-except:
+    backends_available.append('h5pyd')
+except Exception as e:
+    logger.exception(str(e))
     is_h5yd = False
 
 version = '0.0.1'
@@ -56,7 +64,6 @@ data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'st
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['', 'scan1D', 'scan2D']
 
-logger = utils.set_logger(utils.get_module_name(__file__))
 
 def check_mandatory_attrs(attr_name, attr):
     """for cross compatibility between different backends. If these attributes have binary value, then decode them
@@ -131,6 +138,14 @@ class Node(object):
             self._node = node
         self.backend = backend
         self._attrs = Attributes(self, backend)
+
+    def __str__(self):
+        # Get this class name
+        classname = self.__class__.__name__
+        # The title
+        title = self.attrs['TITLE']
+        return "%s (%s) %r" % \
+               (self.path, classname, title)
 
     @property
     def node(self):
@@ -274,8 +289,8 @@ class CARRAY(Node):
         """This provides more metainfo in addition to standard __str__"""
 
         return """%s
-    shape := %s
-    dtype := %s""" % (self, str(self.attrs['shape']), self.attrs['dtype'])
+                shape := %s
+                dtype := %s""" % (self, str(self.attrs['shape']), self.attrs['dtype'])
 
     def __getitem__(self, item):
         return self._array.__getitem__(item)
@@ -434,8 +449,10 @@ class H5Backend:
             return False
         if self.backend == 'tables':
             return bool(self._h5file.isopen)
-        else:
+        elif self.backend == 'h5py':
             return bool(self._h5file.id.valid)
+        else:
+            return self._h5file.id.http_conn is not None
 
     def close_file(self):
         """Flush data and close the h5file
@@ -448,17 +465,17 @@ class H5Backend:
         except Exception as e:
             print(e) #no big deal
 
-    def open_file(self, fullpathname, read_write='r', title='PyMoDAQ file', **kwargs):
+    def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', **kwargs):
         self.file_path = fullpathname
         if self.backend == 'tables':
-            self._h5file = self.h5module.open_file(fullpathname, read_write, title=title, **kwargs)
-            if read_write == 'w':
+            self._h5file = self.h5module.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
+            if mode == 'w':
                 self.root().attrs['pymodaq_version'] = get_version()
             return self._h5file
         else:
-            self._h5file = self.h5module.File(fullpathname, read_write, **kwargs)
+            self._h5file = self.h5module.File(str(fullpathname), mode=mode, **kwargs)
 
-            if read_write == 'w':
+            if mode == 'w':
                 self.root().attrs['TITLE'] = title
                 self.root().attrs['pymodaq_version'] = get_version()
             return self._h5file
@@ -817,7 +834,10 @@ class H5Backend:
                                                 filters=self.compression), self.backend)
         else:
             maxshape = (None, )
-            dt = self.h5module.vlen_dtype(dtype)
+            if self.backend == 'h5py':
+                dt = self.h5module.vlen_dtype(dtype)
+            else:
+                dt = h5pyd.special_dtype(dtype)
             if self.compression is not None:
                 if subdtype == 'string':
                     array = StringARRAY(self.get_node(where).node.create_dataset(name, (0,), dtype=dt,
@@ -938,7 +958,19 @@ class H5Saver(H5Backend):
 
     params = [{'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True}, ] + \
              dashboard_submodules_params + \
-             [
+             [{'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
+                 {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'values': backends_available, 'readonly': True},
+                 {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False, 'children': [
+                     {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str', 'value': 'http://hsds.sebastienweber.fr',
+                      'readonly': False},
+                     {'title': 'User:', 'name': 'user', 'type': 'str', 'value': 'pymodaq_user',
+                      'readonly': False},
+                     {'title': 'password:', 'name': 'password', 'type': 'str', 'value': 'pymodaq',
+                      'readonly': False},
+                     ]},
+                 ]},
+
+
                  {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
                  {'title': 'show file content?:', 'name': 'show_file', 'type': 'bool', 'default': False,
                   'value': False},
@@ -2336,19 +2368,8 @@ if __name__ == '__main__':
     #win.show()
     #QtWidgets.QApplication.processEvents()
     #sys.exit(app.exec_())
-
-    bck = H5Backend('tables')
-    title = 'this is a test file'
-    bck.open_file('h5file.h5', 'w', title)
-    g1 = bck.get_set_group(bck.root(), 'g1')
-    array_g1 = bck.create_carray(g1, 'array_g1', np.array([1, 2, 3, 4, 5, 6]))
-    g2 = bck.get_set_group('/', 'g2')
-    array_g2 = bck.create_carray(g2, 'array_g2', np.array([1, 2, 3, 4, 5, 6]))
-    g21 = bck.get_set_group(g2, 'g21')
-    g22 = bck.get_set_group('/g2', 'g22', title='group g22')
-    array_g22 = bck.create_carray(g22, 'array_g22', np.array([1, 2, 3, 4, 5, 6]))
-    nodes = ['/', 'g1', 'g2', 'g22', 'g21', 'array_g1', 'array_g22']
-    gps = []
-    for gr in bck.walk_nodes('/'):
-        gps.append(gr.name)
-    a=1
+    import h5pyd
+    print(h5pyd)
+    bck = H5Backend('h5pyd')
+    f = bck.open_file('/home/pymodaq_user/test.h5', mode='r')
+    print(f)

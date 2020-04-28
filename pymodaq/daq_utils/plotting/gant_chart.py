@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import QDateTime, pyqtSignal, QPointF, QObject
 import numpy as np
 import pyqtgraph as pg
-from pymodaq.daq_utils.plotting.viewer2D.viewer2d_basic import ImageWidget
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
 from pymodaq.daq_utils.plotting.roi_manager import ROIBrushable
 from datetime import datetime
 

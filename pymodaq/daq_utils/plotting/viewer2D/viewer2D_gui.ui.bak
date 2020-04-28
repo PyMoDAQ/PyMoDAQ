@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>966</width>
+    <width>956</width>
     <height>487</height>
    </rect>
   </property>
@@ -312,20 +312,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="z_label_adaptive">
-            <property name="text">
-             <string>z_adaptive</string>
-            </property>
-            <property name="icon">
-             <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/icons/Icon_Library/b_icon.png</normaloff>:/icons/Icon_Library/b_icon.png</iconset>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QCheckBox" name="red_cb">
             <property name="text">
              <string>Red</string>
@@ -343,13 +329,6 @@
            <widget class="QCheckBox" name="blue_cb">
             <property name="text">
              <string>Blue</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="adaptive_cb">
-            <property name="text">
-             <string>Adaptive</string>
             </property>
            </widget>
           </item>

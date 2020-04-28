@@ -2,7 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 import pytest
-
+from pathlib import PurePosixPath
 from PyQt5 import QtGui, QtWidgets, QtCore
 from pymodaq.version import get_version
 from pymodaq.daq_utils import daq_utils as utils
@@ -14,34 +14,45 @@ from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Bro
 import csv
 
 tested_backend = ['tables', 'h5py', 'h5pyd']
-tested_backend = ['tables', 'h5py']
+
 
 @pytest.fixture(scope="module")
 def session_path(tmp_path_factory):
     return tmp_path_factory.mktemp('h5data')
 
+
 def generate_random_data(shape, dtype=np.float):
     return (100 * np.random.rand(*shape)).astype(dtype=dtype)
+
 
 @pytest.fixture(params=tested_backend)
 def get_backend(request, tmp_path):
     bck = H5Backend(request.param)
     title = 'this is a test file'
-    bck.open_file(tmp_path.joinpath('h5file.h5'), 'w', title)
+    start_path = get_temp_path(tmp_path, request.param)
+    bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
     return bck
+
 
 @pytest.fixture(params=save_types)
 def get_save_type(request):
     return request.param
 
+
 @pytest.fixture(params=tested_backend)
 def get_h5saver(get_save_type, request, qtbot):
     return H5Saver(save_type=get_save_type, backend=request.param)
+
 
 @pytest.fixture(params=tested_backend)
 def get_h5saver_scan(request, qtbot):
     return H5Saver(save_type='scan', backend=request.param)
 
+def get_temp_path(tmp_path, backend='h5pyd'):
+    if backend == 'h5pyd':
+        return PurePosixPath('/home/pymodaq_user/test_backend/')
+    else:
+        return tmp_path
 
 class TestH5Backend:
 
@@ -49,9 +60,12 @@ class TestH5Backend:
     def test_file_open_close(self, tmp_path, backend):
         bck = H5Backend(backend)
         title = 'this is a test file'
-        h5_file = bck.open_file(tmp_path.joinpath('h5file.h5'), 'w', title)
-        assert tmp_path.joinpath('h5file.h5').exists()
-        assert tmp_path.joinpath('h5file.h5').is_file()
+        start_path = get_temp_path(tmp_path, backend)
+        h5_file = bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
+        if backend != 'h5pyd':
+            assert start_path.joinpath('h5file.h5').exists()
+            assert start_path.joinpath('h5file.h5').is_file()
+
         assert bck.isopen() is True
         assert bck.root().attrs['TITLE'] == title
         assert bck.root().attrs['pymodaq_version'] == get_version()
@@ -196,8 +210,8 @@ class TestH5Backend:
         assert carray1.attrs['CLASS'] == 'CARRAY'
         utils.check_vals_in_iterable(carray1.attrs['shape'], carray1_data.shape)
 
-        assert np.all(carray1.read() == carray1_data)
-        assert np.all(carray1[1, 2] == carray1_data[1, 2])
+        assert np.all(carray1.read() == pytest.approx(carray1_data))
+        assert np.all(carray1[1, 2] == pytest.approx(carray1_data[1, 2]))
         with pytest.raises(AttributeError):
             bck.append(carray1, carray1_data)
 
@@ -214,7 +228,7 @@ class TestH5Backend:
         # gzip and zlib filters are compatible, but zlib is used by pytables while gzip is used by h5py
         bck.define_compression(compression, comp_level)
         array1 = bck.create_carray(g1, 'carray1', obj=array_data)
-        assert np.all(array1.read() == array_data)
+        assert np.all(array1.read() == pytest.approx(array_data))
 
     def test_earray(self, get_backend):
         bck = get_backend
@@ -253,9 +267,9 @@ class TestH5Backend:
         array = bck.create_earray(g1, 'array', dtype=dtype, data_shape=array_shape)
         data = generate_random_data(array_shape, dtype)
         array.append(data)
-        assert np.all(array[-1, :, :] == data)
+        assert np.all(array[-1, :, :] == pytest.approx(data))
         array.append(data)
-        assert np.all(array[-1, :, :] == data)
+        assert np.all(array[-1, :, :] == pytest.approx(data))
 
 
     def test_vlarray(self, get_backend):

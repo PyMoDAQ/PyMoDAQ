@@ -451,7 +451,7 @@ class ROIScalableGroup(pTypes.GroupParameter):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2d_basic import ImageWidget
+    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
     from pyqtgraph import PlotWidget
     im = ImageWidget()
     im = PlotWidget()
