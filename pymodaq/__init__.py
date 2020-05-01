@@ -1,4 +1,4 @@
-try:
+try:  #in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
     from .daq_utils import daq_utils as utils
     logger = utils.set_logger(utils.get_module_name(__file__), True, True)
 except:

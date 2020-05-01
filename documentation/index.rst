@@ -6,7 +6,7 @@
 Welcome to PyMoDAQ's documentation!
 ===================================
 
-Announcement: Training session in Toulouse, France 22/23/24 Juin 2020:
+Announcement: Training session in Toulouse, France 13/13/14 Octobre 2020:
 
    .. _flyer:
 
