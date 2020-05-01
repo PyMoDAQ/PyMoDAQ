@@ -1,2 +1,2 @@
-numpy
 releases
+sphinx-csv-filter
