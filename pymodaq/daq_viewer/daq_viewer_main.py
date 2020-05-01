@@ -55,7 +55,7 @@ from pymodaq.daq_utils.gui_utils import DockArea
 
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-
+local_path = utils.get_set_local_dir()
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -454,14 +454,19 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 scaling options dictionnary.
 
         """
-        scaling_options=edict(scaled_xaxis=edict(label=self.settings.child('main_settings','axes','xaxis','xlabel').value(),
-                                    units=self.settings.child('main_settings','axes','xaxis','xunits').value(),
-                                    offset=self.settings.child('main_settings','axes','xaxis','xoffset').value(),
-                                    scaling=self.settings.child('main_settings','axes','xaxis','xscaling').value()),
-                    scaled_yaxis=edict(label=self.settings.child('main_settings','axes','yaxis','ylabel').value(),
-                                    units=self.settings.child('main_settings','axes','yaxis','yunits').value(),
-                                    offset=self.settings.child('main_settings','axes','yaxis','yoffset').value(),
-                                    scaling=self.settings.child('main_settings','axes','yaxis','yscaling').value()))
+        scaling_options = utils.ScalingOptions(
+            scaled_xaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
+                                          units=self.settings.child('main_settings', 'axes', 'xaxis', 'xunits').value(),
+                                          offset=self.settings.child('main_settings', 'axes', 'xaxis',
+                                                                     'xoffset').value(),
+                                          scaling=self.settings.child('main_settings', 'axes', 'xaxis',
+                                                                      'xscaling').value()),
+            scaled_yaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'yaxis', 'ylabel').value(),
+                                          units=self.settings.child('main_settings', 'axes', 'yaxis', 'yunits').value(),
+                                          offset=self.settings.child('main_settings', 'axes', 'yaxis',
+                                                                     'yoffset').value(),
+                                          scaling=self.settings.child('main_settings', 'axes', 'yaxis',
+                                                                      'yscaling').value()))
         return scaling_options
 
     def grab_data(self, grab_state=False, savepath=None, send_to_tcpip=False):

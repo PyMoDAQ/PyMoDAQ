@@ -331,7 +331,6 @@ class ThreadCommand(object):
         self.command = command
         self.attributes = attributes
 
-
 class Axis(dict):
     """
     Utility class defining an axis for pymodaq's viewers, attributes can be accessed as attributes or dictionary keys
@@ -346,10 +345,95 @@ class Axis(dict):
         label
         units
         """
-        self['data'] = data
+        if units is None:
+            units = ''
+        if label is None:
+            label = ''
+
+        if data is None or isinstance(data, np.ndarray):
+            self['data'] = data
+        else:
+            raise TypeError('data for the Axis class should be a ndarray')
+        if not isinstance(label, str):
+            raise TypeError('label for the Axis class should be a string')
         self['label'] = label
+        if not isinstance(units, str):
+            raise TypeError('units for the Axis class should be a string')
         self['units'] = units
 
+
+class DataToExport(OrderedDict):
+    def __init__(self, data=None, type='raw', subtype='linear', x_axis=Axis(), y_axis=Axis()):
+        """
+        Utility class defining a data being exported for pymodaq's viewers, attributes can be accessed as attributes
+        or dictionary keys
+        Parameters
+        ----------
+        data: (ndarray)
+        type: (str) either 'raw' or 'roi...'
+        subtype: (str) either 'linear' or 'spread'
+        x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
+         x positions of the spread points)
+        y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
+         x positions of the spread points)
+        """
+        if data is None or isinstance(data, np.ndarray):
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataToExport class should be a ndarray')
+
+        if not isinstance(type, str):
+            raise TypeError('type for the DataToExport class should be a string')
+        elif 'raw' not in type or 'roi' not in type:
+            raise ValueError('Invalid "type" for the DataToExport class')
+        self['type'] = type
+
+        if not isinstance(subtype, str):
+            raise TypeError('subtype for the DataToExport class should be a string')
+        elif subtype not in ('linear', 'spread'):
+            raise ValueError('Invalid "subtype" for the DataToExport class')
+        self['subtype'] = subtype
+
+        if not isinstance(x_axis, Axis):
+            raise TypeError('x_axis for the DataToExport class should be a Axis class')
+        self['x_axis'] = x_axis
+
+        if not isinstance(y_axis, Axis):
+            raise TypeError('y_axis for the DataToExport class should be a Axis class')
+        self['y_axis'] = y_axis
+
+class ScaledAxis(Axis):
+    def __init__(self, label='', units='', offset=0, scaling=1):
+        super().__init__(label=label, units=units)
+        if not (isinstance(offset, float) or isinstance(offset, int)):
+            raise TypeError('offset for the ScalingAxis class should be a float (or int)')
+        self['offset'] = offset
+        if not (isinstance(scaling, float) or isinstance(scaling, int)):
+            raise TypeError('scaling for the ScalingAxis class should be a non null float (or int)')
+        if scaling == 0 or scaling == 0.:
+            raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
+        self['scaling'] = scaling
+
+class ScalingOptions(dict):
+    def __init__(self, scaled_xaxis=ScaledAxis(), scaled_yaxis=ScaledAxis()):
+        assert isinstance(scaled_xaxis, ScaledAxis)
+        assert isinstance(scaled_yaxis, ScaledAxis)
+        self['scaled_xaxis'] = scaled_xaxis
+        self['scaled_yaxis'] = scaled_yaxis
+
+
+def rint(x):
+    """
+    almost same as numpy rint function but return an integer
+    Parameters
+    ----------
+    x: (float or integer)
+
+    Returns
+    -------
+    nearest integer
+    """
+    return int(np.rint(x))
 
 def elt_as_first_element(elt_list, match_word='Mock'):
     if elt_list != []:

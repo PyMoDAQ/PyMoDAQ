@@ -57,10 +57,10 @@ def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
         raise TypeError("points must be 1D sequence of points")
 
     tri = Triangulation(points)
-    data = np.zeros((len(tri.simplices),))
+    tri_data = np.zeros((len(tri.simplices),))
     for ind, pts in enumerate(tri.simplices):
-        data[ind] = np.mean(values[pts])
-
+        tri_data[ind] = np.mean(values[pts])
+    data = tri_data.copy()
     if lut is not None and not isinstance(lut, np.ndarray):
         lut = np.array(lut)
 
@@ -173,7 +173,7 @@ def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
         alpha = True
 
     profile()
-    return tri, imgData, alpha
+    return tri, tri_data, imgData, alpha
 
 
 def makePolygons(tri):
@@ -208,7 +208,7 @@ class TriangulationItem(ImageItem):
 
         self.qimage = None
         self.triangulation = None
-        self.values = None
+        self.tri_data = None
 
     def width(self):
         if self.image is None:
@@ -377,9 +377,57 @@ class TriangulationItem(ImageItem):
         # (most images are in row-major order)
 
 
-        self.triangulation, self.values, alpha = makeAlphaTriangles(image, lut=lut, levels=levels, useRGBA=True)
+        self.triangulation, self.tri_data, rgba_values, alpha = makeAlphaTriangles(image, lut=lut, levels=levels, useRGBA=True)
         polygons = makePolygons(self.triangulation)
-        self.qimage = dict(polygons=polygons, values=self.values, alpha=alpha)
+        self.qimage = dict(polygons=polygons, values=rgba_values, alpha=alpha)
+
+    def get_points_at(self, axis='x', val=0):
+        """
+        get all triangles values whose 'x' value is val or 'y' value is val
+        1) compute triangle centroids
+        2) set one of the coordinates as val
+        3) check if this new point is still in the corresponding triangle
+        4) if yes add point
+        Parameters
+        ----------
+        axis: (str) either x or y if the set coordinates is x or y
+        val: (float) the value of the x or y axis
+
+        Returns
+        -------
+        ndarray: barycenter coordinates and triangles data values
+        """
+        centroids = self.compute_centroids()
+        points_to_test = centroids.copy()
+        if axis == 'x':
+            points_to_test[:, 0] = val
+        elif axis == 'y':
+            points_to_test[:, 1] = val
+
+        simplex = self.triangulation.find_simplex(points_to_test)
+        good_indexes = np.where(simplex == np.linspace(0, len(simplex)-1, len(simplex), dtype=int))
+        return centroids[good_indexes[0]], self.tri_data[good_indexes[0]]
+
+    def compute_centroids(self):
+        return np.mean(self.triangulation.points[self.triangulation.simplices], axis=1)
+
+
+    def dataTransform(self):
+        """Return the transform that maps from this image's input array to its
+        local coordinate system.
+
+        This transform corrects for the transposition that occurs when image data
+        is interpreted in row-major order.
+        """
+        # Might eventually need to account for downsampling / clipping here
+        tr = QtGui.QTransform()
+        if self.flipud:
+            tr.scale(1, -1)
+        if self.fliplr:
+            tr.scale(-1, 1)
+        if self.rotate90:
+            tr.rotate(-90)
+        return tr
 
     def paint(self, p, *args):
         profile = debug.Profiler()

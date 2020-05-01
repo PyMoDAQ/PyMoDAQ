@@ -318,7 +318,7 @@
             </property>
             <property name="icon">
              <iconset resource="../../../QtDesigner_Ressources/QtDesigner_ressources.qrc">
-              <normaloff>:/icons/Icon_Library/b_icon.png</normaloff>:/icons/Icon_Library/b_icon.png</iconset>
+              <normaloff>:/icons/Icon_Library/grey_icon.png</normaloff>:/icons/Icon_Library/grey_icon.png</iconset>
             </property>
             <property name="flat">
              <bool>true</bool>

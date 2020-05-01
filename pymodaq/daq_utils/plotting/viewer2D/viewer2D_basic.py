@@ -72,12 +72,87 @@ class Viewer2DBasic(QObject):
         histo_layout.addWidget(self.histogram_adaptive)
         hsplitter.addWidget(self.histo_widget)
 
+class PlotCurveItem(pg.PlotCurveItem):
+
+    def __init__(self, *args, **kargs):
+        super().__init__(*args, **kargs)
+        self.flipud = False
+        self.fliplr = False
+        self.flipudbis = False
+
+    def paint(self, p, opt, widget):
+        if self.xData is None or len(self.xData) == 0:
+            return
+
+        x = None
+        y = None
+        path = self.getPath()
+
+        if self._exportOpts is not False:
+            aa = self._exportOpts.get('antialias', True)
+        else:
+            aa = self.opts['antialias']
+
+        p.setRenderHint(p.Antialiasing, aa)
+
+        if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
+            if self.fillPath is None:
+                if x is None:
+                    x, y = self.getData()
+                p2 = QtGui.QPainterPath(self.path)
+                p2.lineTo(x[-1], self.opts['fillLevel'])
+                p2.lineTo(x[0], self.opts['fillLevel'])
+                p2.lineTo(x[0], y[0])
+                p2.closeSubpath()
+                self.fillPath = p2
+
+            p.fillPath(self.fillPath, self.opts['brush'])
+
+        sp = pg.functions.mkPen(self.opts['shadowPen'])
+        cp = pg.functions.mkPen(self.opts['pen'])
+
+        self.setTransform(self.dataTransform())
+
+        if sp is not None and sp.style() != QtCore.Qt.NoPen:
+            p.setPen(sp)
+            p.drawPath(path)
+        p.setPen(cp)
+        p.drawPath(path)
+
+    def setOpts(self, update=True, **kargs):
+        if 'flipud' in kargs:
+            self.flipud = kargs['flipud']
+        if 'fliplr' in kargs:
+            self.fliplr = kargs['fliplr']
+        if 'flipudbis' in kargs:
+            self.flipudbis = kargs['flipudbis']
+        if update:
+            self.update()
+
+    def dataTransform(self):
+        """Return the transform that maps from this image's input array to its
+        local coordinate system.
+
+        This transform corrects for the transposition that occurs when image data
+        is interpreted in row-major order.
+        """
+        # Might eventually need to account for downsampling / clipping here
+        tr = QtGui.QTransform()
+        if self.flipudbis:
+            tr.scale(1, -1)
+        if self.flipud:
+            tr.scale(1, -1)
+        if self.fliplr:
+            tr.scale(-1, 1)
+        return tr
+
 class ImageItem(pg.ImageItem):
     def __init__(self, image=None, **kargs):
         super(ImageItem, self).__init__(image, **kargs)
         self.flipud = False
         self.fliplr = False
         self.rotate90 = False
+
 
     def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
         """Returns x and y arrays containing the histogram values for the current image.
@@ -134,6 +209,7 @@ class ImageItem(pg.ImageItem):
             self.axisOrder = val
         if 'flipud' in kargs:
             self.flipud = kargs['flipud']
+
         if 'fliplr' in kargs:
             self.fliplr = kargs['fliplr']
         if 'rotate90' in kargs:
@@ -168,16 +244,24 @@ class ImageItem(pg.ImageItem):
         """
         # Might eventually need to account for downsampling / clipping here
         tr = QtGui.QTransform()
-        if self.axisOrder == 'row-major':
-            # transpose
-            tr.scale(1, -1)
-            tr.rotate(-90)
+        # if self.axisOrder == 'row-major':
+        #     # transpose
+        #     tr.scale(1, -1)
+        #     tr.rotate(-90)
+        if self.flipud or self.fliplr or self.rotate90:
+            if self.rotate90:
+                tr.translate(self.height() / 2, self.width() / 2)
+            else:
+                tr.translate(self.width() / 2, self.height() / 2)
         if self.flipud:
             tr.scale(1, -1)
         if self.fliplr:
             tr.scale(-1, 1)
         if self.rotate90:
-            tr.rotate(-90)
+            tr.rotate(90)
+        if self.flipud or self.fliplr or self.rotate90:
+            tr.translate(-self.width() / 2, -self.height() / 2)
+
         return tr
 
     def inverseDataTransform(self):
@@ -213,7 +297,7 @@ class ImageItem(pg.ImageItem):
         self.setTransform(self.dataTransform())
 
         shape = self.image.shape[:2] if self.axisOrder == 'col-major' else self.image.shape[:2][::-1]
-        p.drawImage(QtCore.QRectF(0,0,*shape), self.qimage)
+        p.drawImage(QtCore.QRectF(0, 0, self.qimage.width(), self.qimage.height()), self.qimage)
 
         if self.border is not None:
             p.setPen(self.border)
