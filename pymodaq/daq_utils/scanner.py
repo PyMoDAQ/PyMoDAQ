@@ -300,7 +300,7 @@ class Scanner(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.daq_utils import DockArea
+    from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
     from pymodaq.daq_utils.plotting.navigator import Navigator

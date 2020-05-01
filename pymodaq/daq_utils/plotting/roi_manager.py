@@ -8,7 +8,7 @@ from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import select_file
+from pymodaq.daq_utils.gui_utils import select_file
 import numpy as np
 import copy
 
@@ -451,7 +451,7 @@ class ROIScalableGroup(pTypes.GroupParameter):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2d_basic import ImageWidget
+    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
     from pyqtgraph import PlotWidget
     im = ImageWidget()
     im = PlotWidget()

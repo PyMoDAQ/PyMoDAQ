@@ -9,14 +9,13 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
-from pymodaq.daq_utils.daq_utils import select_file
+from pymodaq.daq_utils.gui_utils import select_file
 
 #check if overshoot_configurations directory exists on the drive
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
-local_path = get_set_local_dir()
-roi_path = os.path.join(local_path, 'roi_config')
-if not os.path.isdir(roi_path):
-    os.makedirs(roi_path)
+from pymodaq.daq_utils.daq_utils import get_set_roi_path
+
+roi_path = get_set_roi_path()
+
 
 class ROISaver:
     def __init__(self, msgbox=False, det_modules=[]):

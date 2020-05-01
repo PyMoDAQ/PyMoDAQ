@@ -1,7 +1,7 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QSize, QTimer, QDateTime, QDate, QTime
 from pyqtgraph.dockarea import Dock
-from pymodaq.daq_utils.daq_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 import time
 from datetime import timedelta

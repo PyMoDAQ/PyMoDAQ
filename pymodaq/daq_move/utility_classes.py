@@ -1,24 +1,15 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QVariant, QSize
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
 # from enum import IntEnum
 from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended,\
-    message_to_bytes, send_scalar, send_string, get_scalar, get_int, get_string, send_list
-
-import socket
-import select
-import os
-import sys
-import numpy as np
-from collections import OrderedDict
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+import numpy as np
 
-
-comon_parameters=[{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
+comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
                   {'name': 'epsilon', 'type': 'float', 'value': 0.01},
                   {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
 
@@ -38,7 +29,7 @@ params = [
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
-             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
              {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
              {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
@@ -341,13 +332,13 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         --------
         utility_classes.DAQ_TCP_server
     """
-    params_client =[] #parameters of a client grabber
-    command_server=pyqtSignal(list)
+    params_client = []  # parameters of a client grabber
+    command_server = pyqtSignal(list)
 
-    message_list=["Quit", "Status","Done","Server Closed","Info","Infos", "Info_xml", "move_abs",
-                  'move_home', 'move_rel', 'check_position', 'stop_motion', 'position_is', 'move_done']
-    socket_types=["ACTUATOR"]
-    params=comon_parameters +  tcp_parameters
+    message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
+                    'move_home', 'move_rel', 'check_position', 'stop_motion', 'position_is', 'move_done']
+    socket_types = ["ACTUATOR"]
+    params = comon_parameters + tcp_parameters
 
 
     def __init__(self,parent=None,params_state=None):
@@ -359,7 +350,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         params_state
         """
         self.client_type = "ACTUATOR"
-        DAQ_Move_base.__init__(self, parent,params_state) #initialize base class with commom attributes and methods
+        DAQ_Move_base.__init__(self, parent, params_state)  # initialize base class with commom attributes and methods
         self.settings.child(('bounds')).hide()
         self.settings.child(('scaling')).hide()
         self.settings.child(('epsilon')).setValue(1)
@@ -367,36 +358,37 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
         TCPServer.__init__(self, self.client_type)
 
-    def command_to_from_client(self,command):
+    def command_to_from_client(self, command):
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client 'ACTUATOR' is connected then send it the command
 
             if command == 'position_is':
-                pos = get_scalar(sock)
+                pos = sock.get_scalar()
 
                 pos = self.get_position_with_scaling(pos)
                 self.current_position = pos
                 self.emit_status(ThreadCommand('check_position', [pos]))
 
             elif command == 'move_done':
-                pos = get_scalar(sock)
+                pos = sock.get_scalar()
                 pos = self.get_position_with_scaling(pos)
                 self.current_position = pos
                 self.emit_status(ThreadCommand('move_done', [pos]))
-
+            else:
+                self.send_command(sock, command)
 
     def commit_settings(self,param):
 
         if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
-            send_string(actuator_socket, 'set_info')
+            actuator_socket.send_string('set_info')
             path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'
 
-            send_list(actuator_socket, path)
+            actuator_socket.send_list(path)
 
             #send value
             data = custom_tree.parameter_to_xml_string(param)
-            send_string(actuator_socket, data)
+            actuator_socket.send_string(data)
 
     def ini_stage(self, controller=None):
         """
@@ -408,20 +400,20 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis
         """
-        self.status.update(edict(initialized=False,info="",x_axis=None,y_axis=None,controller=None))
+        self.status.update(edict(initialized=False, info="", x_axis=None, y_axis=None, controller=None))
         try:
             self.settings.child(('infos')).addChildren(self.params_client)
 
             self.init_server()
 
             self.status.info = 'TCP Server actuator'
-            self.status.initialized=True
-            self.status.controller=self.serversocket
+            self.status.initialized = True
+            self.status.controller = self.serversocket
             return self.status
 
         except Exception as e:
-            self.status.info=getLineInfo()+ str(e)
-            self.status.initialized=False
+            self.status.info = getLineInfo() + str(e)
+            self.status.initialized = False
             return self.status
 
     def close(self):
@@ -432,36 +424,36 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             --------
             utility_classes.DAQ_TCP_server.close_server
         """
-        self.listening=False
+        self.listening = False
         self.close_server()
 
-    def move_Abs(self,position):
+    def move_Abs(self, position):
         """
 
         """
-        position=self.check_bound(position)
-        self.target_position=position
+        position = self.check_bound(position)
+        self.target_position = position
 
-        position=self.set_position_with_scaling(position)
+        position = self.set_position_with_scaling(position)
 
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            send_string(sock, 'move_abs')
-            send_scalar(sock, position)
+            sock.send_string('move_abs')
+            sock.send_scalar(position)
 
             #self.poll_moving()
 
     def move_Rel(self, position):
-        position=self.check_bound(self.current_position+position)-self.current_position
-        self.target_position=position+self.current_position
+        position = self.check_bound(self.current_position + position) - self.current_position
+        self.target_position = position + self.current_position
 
-        position=self.set_position_relative_with_scaling(position)
+        position = self.set_position_relative_with_scaling(position)
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            send_string(sock, 'move_rel')
-            send_scalar(sock, position)
+            sock.send_string('move_rel')
+            sock.send_scalar(position)
 
-            #self.poll_moving()
+            # self.poll_moving()
 
     def move_Home(self):
         """
@@ -473,7 +465,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         """
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            send_string(sock, 'move_home')
+            sock.send_string('move_home')
 
     def check_position(self):
         """

@@ -1,27 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Automated scanning module functionalities for PyMoDAQ
-
-Contains all objects related to the DAQ_Scan module, to do automated scans, saving data...
-"""
-
 import sys
 import datetime
 import pickle
-import os
 import logging
+from pathlib import Path
 
-from pyqtgraph.dockarea import Dock
-from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.daq_utils.custom_parameter_tree import GroupParameterCustom
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
-from pymodaq.daq_utils.daq_utils import getLineInfo
+from pyqtgraph.dockarea import Dock
+from pyqtgraph.parametertree import Parameter, ParameterTree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+
+from pymodaq.daq_utils import daq_utils as utils
+
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.version import get_version
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.manage_preset import PresetManager
 from pymodaq.daq_utils.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.roi_saver import ROISaver
@@ -29,36 +26,25 @@ from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
-from pymodaq.daq_utils import daq_utils as utils
+
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 local_path = utils.get_set_local_dir()
 now = datetime.datetime.now()
-log_path = os.path.join(local_path,'logging')
-if not os.path.isdir(log_path):
-    os.makedirs(log_path)
+preset_path = utils.get_set_preset_path()
+log_path = utils.get_set_log_path()
+layout_path = utils.get_set_layout_path()
+overshoot_path = utils.get_set_overshoot_path()
+roi_path = utils.get_set_roi_path()
 
-layout_path = os.path.join(local_path,'layout')
-if not os.path.isdir(layout_path):
-    os.makedirs(layout_path)
 
-overshoot_path = os.path.join(local_path, 'overshoot_configurations')
-if not os.path.isdir(overshoot_path):
-    os.makedirs(overshoot_path)
-
-roi_path = os.path.join(local_path, 'roi_config')
-if not os.path.isdir(roi_path):
-    os.makedirs(roi_path)
-
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)																		   
-logging.basicConfig(filename=os.path.join(log_path,'dashboard_{}.log'.format(now.strftime('%Y%m%d_%H_%M_%S'))),level=logging.DEBUG)
 
 
 class DashBoard(QObject):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger """
-    log_signal = pyqtSignal(str)
+    status_signal = pyqtSignal(str)
 
     def __init__(self, dockarea):
         """
@@ -72,11 +58,13 @@ class DashBoard(QObject):
         self.wait_time = 1000
         self.scan_module = None
         self.database_module = None
+
         self.dockarea = dockarea
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
         self.mainwindow = dockarea.parent()
         self.title = ''
-        splash_path = os.path.join(os.path.split(__file__)[0], 'splash.png')
+        splash_path = './splash.png'
+
         splash = QtGui.QPixmap(splash_path)
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
         self.overshoot_manager = None
@@ -90,7 +78,7 @@ class DashBoard(QObject):
         self.setupUI()
 
     @pyqtSlot(str)
-    def add_log(self, txt):
+    def add_status(self, txt):
         """
             Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
 
@@ -105,7 +93,7 @@ class DashBoard(QObject):
             self.logger_list.addItem(new_item)
 
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
     def clear_move_det_controllers(self):
         """
@@ -129,16 +117,16 @@ class DashBoard(QObject):
                         module.quit_fun()
                 self.detector_modules = None
         except Exception as e:
-            self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
+            logger.exception(str(e))
 
     def load_scan_module(self):
         self.scan_module = DAQ_Scan(dockarea=self.dockarea, dashboard=self)
-        self.scan_module.log_signal.connect(self.add_log)
+        self.scan_module.status_signal.connect(self.add_status)
         self.actions_menu.setEnabled(False)
 
     def load_log_module(self):
         self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
-        self.log_module.log_signal.connect(self.add_log)
+        self.log_module.status_signal.connect(self.add_status)
         self.actions_menu.setEnabled(False)
 
     def create_menu(self, menubar):
@@ -149,8 +137,7 @@ class DashBoard(QObject):
 
         # %% create Settings menu
         self.file_menu = menubar.addMenu('File')
-        log_action = self.file_menu.addAction('Show log file')
-        log_action.triggered.connect(self.show_log)
+        self.file_menu.addAction('Show log file', self.show_log)
         self.file_menu.addSeparator()
         quit_action = self.file_menu.addAction('Quit')
         quit_action.triggered.connect(self.quit_fun)
@@ -180,12 +167,12 @@ class DashBoard(QObject):
         load_preset = self.preset_menu.addMenu('Load presets')
 
         slots = dict([])
-        for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'preset_modes'))):
-            if file.endswith(".xml"):
-                (filesplited, ext) = os.path.splitext(file)
-                slots[filesplited] = load_preset.addAction(filesplited)
-                slots[filesplited].triggered.connect(
-                    self.create_menu_slot(os.path.join(local_path, 'preset_modes', file)))
+        for ind_file, file in enumerate(preset_path.iterdir()):
+            if file.suffix == '.xml':
+                filestem = file.stem
+                slots[filestem] = load_preset.addAction(filestem)
+                slots[filestem].triggered.connect(
+                    self.create_menu_slot(preset_path.joinpath(file)))
 
         self.overshoot_menu = menubar.addMenu('Overshoot Modes')
         action_new_overshoot = self.overshoot_menu.addAction('New Overshoot')
@@ -198,12 +185,12 @@ class DashBoard(QObject):
         self.overshoot_menu.setEnabled(False)
 
         slots_over = dict([])
-        for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'overshoot_configurations'))):
-            if file.endswith(".xml"):
-                (filesplited, ext) = os.path.splitext(file)
-                slots_over[filesplited] = load_overshoot.addAction(filesplited)
-                slots_over[filesplited].triggered.connect(
-                    self.create_menu_slot_over(os.path.join(local_path, 'overshoot_configurations', file)))
+        for ind_file, file in enumerate(utils.get_set_overshoot_path().iterdir()):
+            if file.suffix == '.xml':
+                filestem = file.stem
+                slots_over[filestem] = load_overshoot.addAction(filestem)
+                slots_over[filestem].triggered.connect(
+                    self.create_menu_slot_over(utils.get_set_overshoot_path().joinpath(file)))
 
 
         self.roi_menu = menubar.addMenu('ROI Modes')
@@ -217,12 +204,12 @@ class DashBoard(QObject):
 
 
         slots = dict([])
-        for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'roi_config'))):
-            if file.endswith(".xml"):
-                (filesplited, ext) = os.path.splitext(file)
-                slots[filesplited] = load_roi.addAction(filesplited)
-                slots[filesplited].triggered.connect(
-                    self.create_menu_slot_roi(os.path.join(local_path, 'roi_config', file)))
+        for ind_file, file in enumerate(utils.get_set_roi_path().iterdir()):
+            if file.suffix == '.xml':
+                filestem = file.stem
+                slots[filestem] = load_roi.addAction(filestem)
+                slots[filestem].triggered.connect(
+                    self.create_menu_slot_roi(utils.get_set_roi_path.joinpath(file)))
 
         #actions menu
         self.actions_menu = menubar.addMenu('Actions')
@@ -254,32 +241,27 @@ class DashBoard(QObject):
     def create_roi_file(self):
         try:
             if self.preset_file is not None:
-                file = os.path.split(self.preset_file)[1]
-                file = os.path.splitext(file)[0]
-
-                self.roi_saver.set_new_roi(file)
+                self.roi_saver.set_new_roi(self.preset_file.stem)
                 self.create_menu(self.menubar)
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), log_type='log')
+            logger.exception(str(e))
 
 
     def create_overshoot(self):
         try:
             if self.preset_file is not None:
-                file = os.path.split(self.preset_file)[1]
-                file = os.path.splitext(file)[0]
-            self.overshoot_manager.set_new_overshoot(file)
-            self.create_menu(self.menubar)
+                self.overshoot_manager.set_new_overshoot(self.preset_file.stem)
+                self.create_menu(self.menubar)
         except Exception as e:
-            self.update_status(getLineInfo()+str(e), log_type='log')
+            logger.exception(str(e))
 
     def create_preset(self):
         try:
             self.preset_manager.set_new_preset()
             self.create_menu(self.menubar)
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
+            logger.exception(str(e))
 
     def load_layout_state(self, file=None):
         """
@@ -291,42 +273,43 @@ class DashBoard(QObject):
         """
         try:
             if file is None:
-                file = utils.select_file(save=False, ext='dock')
+                file = gutils.select_file(save=False, ext='dock')
             if file is not None:
                 with open(str(file), 'rb') as f:
                     dockstate = pickle.load(f)
                     self.dockarea.restoreState(dockstate)
-            file = os.path.split(file)[1]
+            file = file.name
             self.settings.child('loaded_files', 'layout_file').setValue(file)
-        except: pass
+        except Exception as e:
+            logger.exception(str(e))
 
     def modify_overshoot(self):
         try:
-            path = utils.select_file(start_path=os.path.join(local_path,'overshoot_configurations'), save=False, ext='xml')
+            path = gutils.select_file(start_path=utils.get_set_overshoot_path(), save=False, ext='xml')
             if path != '':
-                self.overshoot_manager.set_file_overshoot(str(path))
+                self.overshoot_manager.set_file_overshoot(path)
 
             else:  # cancel
                 pass
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
+            logger.exception(str(e))
 
     def modify_roi(self):
         try:
-            path = utils.select_file(start_path=os.path.join(local_path, 'roi_config'), save=False, ext='xml')
+            path = gutils.select_file(start_path=utils.get_set_roi_path(), save=False, ext='xml')
             if path != '':
-                self.roi_saver.set_file_roi(str(path))
+                self.roi_saver.set_file_roi(path)
 
             else:  # cancel
                 pass
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), log_type='log')
+            logger.exception(str(e))
 
     def modify_preset(self):
         try:
-            path = utils.select_file(start_path=os.path.join(local_path, 'preset_modes'), save=False, ext='xml')
+            path = gutils.select_file(start_path=preset_path, save=False, ext='xml')
             if path != '':
-                self.preset_manager.set_file_preset(str(path))
+                self.preset_manager.set_file_preset(path)
 
                 if self.detector_modules != []:
                     mssg = QtWidgets.QMessageBox()
@@ -338,7 +321,7 @@ class DashBoard(QObject):
             else:  # cancel
                 pass
         except Exception as e:
-            self.update_status(getLineInfo()+ str(e),log_type='log')
+            logger.exception(str(e))
 
     def quit_fun(self):
         """
@@ -379,20 +362,13 @@ class DashBoard(QObject):
                 QThread.msleep(1000)
                 QtWidgets.QApplication.processEvents()
 
-
-            #save scan settings related to the current preset
-            if self.preset_file is not None:
-                file = os.path.split(self.preset_file)[1]
-                # path = os.path.join(scan_conf_path, file)
-                # custom_tree.parameter_to_xml_file(self.settings, path)
-
             if hasattr(self, 'mainwindow'):
                 self.mainwindow.close()
 
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
-    def save_layout_state(self, file = None):
+    def save_layout_state(self, file=None):
         """
             Save the current layout state in the select_file obtained pathname file.
             Once done dump the pickle.
@@ -404,17 +380,16 @@ class DashBoard(QObject):
         try:
             dockstate = self.dockarea.saveState()
             if file is None:
-                file = utils.select_file(start_path=None, save=True, ext='dock')
+                file = gutils.select_file(start_path=None, save=True, ext='dock')
             if file is not None:
                 with open(str(file), 'wb') as f:
                     pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
-        except: pass
+        except Exception as e:
+            logger.exception(str(e))
 
     def save_layout_state_auto(self):
         if self.preset_file is not None:
-            file = os.path.split(self.preset_file)[1]
-            file = os.path.splitext(file)[0]
-            path = os.path.join(layout_path, file+'.dock')
+            path = layout_path.joinpath(self.preset_file.stem+'.dock')
             self.save_layout_state(path)
 
     def open_PID(self):
@@ -440,22 +415,27 @@ class DashBoard(QObject):
             --------
             custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
         """
-        if os.path.splitext(filename)[1] == '.xml':
+        move_modules = []
+        detector_modules = []
+        if not isinstance(filename, Path):
+            filename = Path(filename)
+
+        if filename.suffix == '.xml':
             self.preset_file = filename
             self.preset_manager.set_file_preset(filename, show=False)
             move_docks = []
             det_docks_settings = []
             det_docks_viewer = []
             move_forms = []
-            move_modules = []
-            detector_modules = []
 
-            ### set daq scan settings set in preset
-            try:
-                for child in self.preset_manager.preset_params.child(('saving_options')).children():
-                    self.h5saver.settings.child((child.name())).setValue(child.value())
-            except Exception as e:
-                self.update_status(getLineInfo()+str(e), 'log')
+
+            # ### set daq scan settings set in presets
+            # try:
+            #     for child in self.preset_manager.preset_params.child(('saving_options')).children():
+            #         if hasattr(self, 'h5saver'):
+            #             self.h5saver.settings.child((child.name())).setValue(child.value())
+            # except Exception as e:
+            #     logger.exception(str(e))
 
             ## set PID if checked in preset
             try:
@@ -469,15 +449,15 @@ class DashBoard(QObject):
                     move_modules.append(self.pid_controller)
 
             except Exception as e:
-                self.update_status(getLineInfo()+str(e), 'log')
+                logger.exception(str(e))
 
             #################################################################
             ###### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
-            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], custom_tree.GroupParameterCustom):
                 plugins += [{'type': 'move', 'value': child} for child in
                            self.preset_manager.preset_params.child(('Moves')).children()]
-            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], custom_tree.GroupParameterCustom):
                 plugins += [{'type': 'det', 'value': child} for child in
                             self.preset_manager.preset_params.child(('Detectors')).children()]
 
@@ -536,7 +516,7 @@ class DashBoard(QObject):
                         try:
                             if ind_plugin == 0:  # should be a master type plugin
                                 if plugin['status'] != "Master":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
+                                    logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
                                     move_modules[-1].ui.IniStage_pb.click()
                                     QtWidgets.QApplication.processEvents()
@@ -548,7 +528,7 @@ class DashBoard(QObject):
                                     master_controller = move_modules[-1].controller
                             else:
                                 if plugin['status'] != "Slave":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
+                                    logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
                                     move_modules[-1].controller = master_controller
                                     move_modules[-1].ui.IniStage_pb.click()
@@ -559,7 +539,7 @@ class DashBoard(QObject):
                                         QThread.msleep(4000)  # to let enough time for real hardware to init properly
                                     QtWidgets.QApplication.processEvents()
                         except Exception as e:
-                            self.update_status(getLineInfo() + str(e), 'log')
+                            logger.exception(str(e))
 
 
                     else:
@@ -589,7 +569,7 @@ class DashBoard(QObject):
                         try:
                             if ind_plugin == 0:  # should be a master type plugin
                                 if plugin['status'] != "Master":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
+                                    logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
                                     detector_modules[-1].ui.IniDet_pb.click()
                                     QtWidgets.QApplication.processEvents()
@@ -601,7 +581,7 @@ class DashBoard(QObject):
                                     master_controller = detector_modules[-1].controller
                             else:
                                 if plugin['status'] != "Slave":
-                                    raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
+                                    logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
                                     detector_modules[-1].controller = master_controller
                                     detector_modules[-1].ui.IniDet_pb.click()
@@ -612,43 +592,47 @@ class DashBoard(QObject):
                                         QThread.msleep(4000)  # to let enough time for real hardware to init properly
                                     QtWidgets.QApplication.processEvents()
                         except Exception as e:
-                            self.update_status(getLineInfo() + str(e), 'log')
+                            logger.exception(str(e))
 
                         detector_modules[-1].settings.child('main_settings', 'overshoot').show()
                         detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
 
             QtWidgets.QApplication.processEvents()
             # restore dock state if saved
-            file = os.path.split(self.preset_file)[1]
-            file = os.path.splitext(file)[0]
-            self.title = file
-            path = os.path.join(layout_path, file + '.dock')
-            if os.path.isfile(path):
+
+            self.title = self.preset_file.stem
+            path = layout_path.joinpath(self.title + '.dock')
+            if path.is_file():
                 self.load_layout_state(path)
 
-            self.mainwindow.setWindowTitle(f'PyMoDAQ Dashboard: {file}')
-
+            self.mainwindow.setWindowTitle(f'PyMoDAQ Dashboard: {self.title}')
 
             return move_modules, detector_modules
         else:
-            raise Exception('Invalid file selected')
+            logger.error('Invalid file selected')
+            return move_modules, detector_modules
 
     def set_roi_configuration(self, filename):
+        if not isinstance(filename, Path):
+            filename = Path(filename)
         try:
-            if os.path.splitext(filename)[1] == '.xml':
-                file = os.path.split(filename)[1]
+            if filename.suffix == '.xml':
+                file = filename.stem
                 self.settings.child('loaded_files', 'roi_file').setValue(file)
                 self.update_status('ROI configuration ({}) has been loaded'.format(file),
                                    log_type='log')
                 self.roi_saver.set_file_roi(filename, show=False)
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), self.wait_time, log_type='log')
+            logger.exception(str(e))
 
     def set_overshoot_configuration(self, filename):
         try:
-            if os.path.splitext(filename)[1] == '.xml':
-                file = os.path.split(filename)[1]
+            if not isinstance(filename, Path):
+                filename = Path(filename)
+
+            if filename.suffix == '.xml':
+                file = filename.stem
                 self.settings.child('loaded_files', 'overshoot_file').setValue(file)
                 self.update_status('Overshoot configuration ({}) has been loaded'.format(file),
                                    log_type='log')
@@ -672,7 +656,7 @@ class DashBoard(QObject):
                                     self.create_overshoot_fun(move_module, move_param.child(('position')).value()))
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), self.wait_time, log_type='log')
+            logger.exception(str(e))
 
     def create_overshoot_fun(self, move_module, position):
         return lambda: move_module.move_Abs(position)
@@ -698,9 +682,11 @@ class DashBoard(QObject):
 
             See Also
             --------
-            set_Mock_preset, set_canon_preset, set_file_preset, add_log, update_status
+            set_Mock_preset, set_canon_preset, set_file_preset, add_status, update_status
         """
         try:
+            if not isinstance(filename, Path):
+                filename = Path(filename)
             self.mainwindow.setVisible(False)
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(False)
@@ -708,70 +694,73 @@ class DashBoard(QObject):
             self.splash_sc.show()
             QtWidgets.QApplication.processEvents()
             self.splash_sc.raise_()
-            self.splash_sc.showMessage('Loading Modules, please wait',color = Qt.white)
+            self.splash_sc.showMessage('Loading Modules, please wait', color=Qt.white)
             QtWidgets.QApplication.processEvents()
             self.clear_move_det_controllers()
             QtWidgets.QApplication.processEvents()
 
 
             move_modules, detector_modules= self.set_file_preset(filename)
-            self.update_status('Preset mode ({}) has been loaded'.format(os.path.split(filename)[1]), log_type='log')
-            self.settings.child('loaded_files', 'preset_file').setValue(os.path.split(filename)[1])
-            self.move_modules = move_modules
-            self.detector_modules = detector_modules
-
-            #####################################################
-            self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules], move_modules=[move.title for move in move_modules])
-            #load overshoot if present
-            file = os.path.split(self.preset_file)[1]
-            path = os.path.join(overshoot_path, file)
-            if os.path.isfile(path):
-                self.set_overshoot_configuration(path)
-
-            self.roi_saver = ROISaver(det_modules=detector_modules)
-            #load roi saver if present
-            file = os.path.split(self.preset_file)[1]
-            path = os.path.join(roi_path, file)
-            if os.path.isfile(path):
-                self.set_roi_configuration(path)
-
-            #connecting to logger
-            for mov in move_modules:
-                mov.log_signal[str].connect(self.add_log)
-                mov.init_signal.connect(self.update_init_tree)
-            for det in detector_modules:
-                det.log_signal[str].connect(self.add_log)
-                det.init_signal.connect(self.update_init_tree)
-
-            self.splash_sc.close()
-            self.mainwindow.setVisible(True)
-            for area in self.dockarea.tempAreas:
-                area.window().setVisible(True)
-
-            self.file_menu.setEnabled(True)
-            self.settings_menu.setEnabled(True)
-            self.overshoot_menu.setEnabled(True)
-            self.actions_menu.setEnabled(True)
-            self.roi_menu.setEnabled(True)
-            self.update_init_tree()
+            if not(not move_modules and not detector_modules):
+                self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
+                self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
+                self.move_modules = move_modules
+                self.detector_modules = detector_modules
+    
+                #####################################################
+                self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],
+                                                          move_modules=[move.title for move in move_modules])
+                # load overshoot if present
+                file = filename.name
+                path = overshoot_path.joinpath(file)
+                if path.is_file():
+                    self.set_overshoot_configuration(path)
+    
+                self.roi_saver = ROISaver(det_modules=detector_modules)
+                #load roi saver if present
+                path = roi_path.joinpath(file)
+                if path.is_file():
+                    self.set_roi_configuration(path)
+    
+                #connecting to logger
+                for mov in move_modules:
+                    mov.status_signal[str].connect(self.add_status)
+                    mov.init_signal.connect(self.update_init_tree)
+                for det in detector_modules:
+                    det.status_signal[str].connect(self.add_status)
+                    det.init_signal.connect(self.update_init_tree)
+    
+                self.splash_sc.close()
+                self.mainwindow.setVisible(True)
+                for area in self.dockarea.tempAreas:
+                    area.window().setVisible(True)
+    
+                self.file_menu.setEnabled(True)
+                self.settings_menu.setEnabled(True)
+                self.overshoot_menu.setEnabled(True)
+                self.actions_menu.setEnabled(True)
+                self.roi_menu.setEnabled(True)
+                self.update_init_tree()
 
         except Exception as e:
-            self.update_status(getLineInfo() + str(e), self.wait_time, log_type='log')
+            logger.exception(str(e))
 
     def update_init_tree(self):
         for act in self.move_modules:
             if act.title not in custom_tree.iter_children(self.settings.child(('actuators')), []):
                 title = act.title
-                name = ''.join(title.split()) #remove empty spaces
-                self.settings.child(('actuators')).addChild({'title': title, 'name': name, 'type': 'led', 'value': False})
+                name = ''.join(title.split())  # remove empty spaces
+                self.settings.child(('actuators')).addChild(
+                    {'title': title, 'name': name, 'type': 'led', 'value': False})
             QtWidgets.QApplication.processEvents()
             self.settings.child('actuators', name).setValue(act.initialized_state)
 
         for act in self.detector_modules:
             if act.title not in custom_tree.iter_children(self.settings.child(('detectors')), []):
                 title = act.title
-                name = ''.join(title.split()) #remove empty spaces
-                self.settings.child(('detectors')).addChild({'title': title, 'name': name, 'type': 'led', 'value': False})
+                name = ''.join(title.split())  # remove empty spaces
+                self.settings.child(('detectors')).addChild(
+                    {'title': title, 'name': name, 'type': 'led', 'value': False})
             QtWidgets.QApplication.processEvents()
             self.settings.child('detectors', name).setValue(act.initialized_state)
 
@@ -795,7 +784,7 @@ class DashBoard(QObject):
 
     def show_log(self):
         import webbrowser
-        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
+        webbrowser.open(logger.handlers[0].baseFilename)
 
     def setupUI(self):
 
@@ -809,15 +798,18 @@ class DashBoard(QObject):
         self.logger_dock.addWidget(self.logger_list)
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
-        {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
-            {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'ROI file', 'name': 'roi_file', 'type': 'str', 'value': '', 'readonly': True},
-        ]},
-            {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
-            {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
-            ])
+            {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': 'DEBUG', 'values': ['DEBUG', 'INFO',
+                                                                                              'WARNING', 'ERROR',
+                                                                                              'CRITICAL']},
+            {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
+                {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},
+                {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '', 'readonly': True},
+                {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': '', 'readonly': True},
+                {'title': 'ROI file', 'name': 'roi_file', 'type': 'str', 'value': '', 'readonly': True},
+            ]},
+                {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
+                {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
+                ])
         self.init_tree.setParameters(self.settings, showTop=False)
         self.dockarea.addDock(self.logger_dock, 'top')
         self.logger_dock.setVisible(True)
@@ -829,7 +821,7 @@ class DashBoard(QObject):
         self.create_menu(self.menubar)
 
 #        connecting
-        self.log_signal[str].connect(self.add_log)
+        self.status_signal[str].connect(self.add_status)
 
 
         self.file_menu.setEnabled(True)
@@ -837,6 +829,43 @@ class DashBoard(QObject):
         self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)
+
+    def parameter_tree_changed(self, param, changes):
+        """
+            Foreach value changed, update :
+                * Viewer in case of **DAQ_type** parameter name
+                * visibility of button in case of **show_averaging** parameter name
+                * visibility of naverage in case of **live_averaging** parameter name
+                * scale of axis **else** (in 2D pymodaq type)
+
+            Once done emit the update settings signal to link the commit.
+
+            =============== =================================== ================================================================
+            **Parameters**    **Type**                           **Description**
+            *param*           instance of ppyqtgraph parameter   the parameter to be checked
+            *changes*         tuple list                         Contain the (param,changes,info) list listing the changes made
+            =============== =================================== ================================================================
+
+            See Also
+            --------
+            change_viewer, daq_utils.custom_parameter_tree.iter_children
+        """
+
+        for param, change, data in changes:
+            path = self.settings.childPath(param)
+            if path is not None:
+                childName = '.'.join(path)
+            else:
+                childName = param.name()
+            if change == 'childAdded':
+                pass
+            elif change == 'value':
+                if param.name() == 'log_level':
+                    logger.setLevel(getattr(logging, param.value().upper()))
+                #TODO set a proper logging scheme: https://docs.python.org/3/howto/logging.html
+            elif change == 'parent':
+                pass
+
 
     def show_about(self):
         self.splash_sc.setVisible(True)
@@ -906,7 +935,7 @@ class DashBoard(QObject):
         """
         try:
             if log_type is not None:
-                self.log_signal.emit(txt)
+                self.status_signal.emit(txt)
                 logging.info(txt)
         except Exception as e:
             pass
@@ -915,7 +944,7 @@ class DashBoard(QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = utils.DockArea()
+    area = gutils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

@@ -10,8 +10,7 @@ from easydict import EasyDict as edict
 
 import numpy as np
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
-from pymodaq.daq_utils.tcpip_utils import check_received_length, check_sended, message_to_bytes,\
-    get_int, get_list, send_string, send_list, get_array, get_string
+
 
 from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
@@ -46,7 +45,7 @@ params = [
         {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
          'value': False},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
-            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool', 'value': False},
+            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
@@ -135,7 +134,7 @@ class DAQ_Viewer_base(QObject):
         if  self.plugin_type == '2D' :
             self.emit_y_axis()
 
-    def emit_status(self,status):
+    def emit_status(self, status):
         """
             Emit the status signal from the given status.
 
@@ -284,7 +283,8 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     params_GRABBER = []  # parameters of a client grabber
     command_server = pyqtSignal(list)
 
-    message_list = ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D", "Status", "Done", "Server Closed", "Info",
+    message_list = ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D", "Send Data ND", "Status", "Done",
+                    "Server Closed", "Info",
                     "Infos",
                     "Info_xml", 'x_axis', 'y_axis']
     socket_types = ["GRABBER"]
@@ -315,15 +315,15 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
 
             if command == 'x_axis':
-                x_axis = dict(data=get_array(sock))
-                x_axis['label'] = get_string(sock)
-                x_axis['units'] = get_string(sock)
+                x_axis = dict(data=sock.get_array())
+                x_axis['label'] = sock.get_string()
+                x_axis['units'] = sock.get_string()
                 self.x_axis = x_axis.copy()
                 self.emit_x_axis()
             elif command == 'y_axis':
-                y_axis = dict(data=get_array(sock))
-                y_axis['label'] = get_string(sock)
-                y_axis['units'] = get_string(sock)
+                y_axis = dict(data=sock.get_array())
+                y_axis['label'] = sock.get_string()
+                y_axis['units'] = sock.get_string()
                 self.y_axis = y_axis.copy()
                 self.emit_y_axis()
 
@@ -360,22 +360,23 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         """
         self.send_command(sock, 'Done')
 
-        if len(data.shape) == 0:
-            Nrow = 1
-            Ncol = 0
-        elif len(data.shape) == 1:
-            Nrow = data.shape[0]
-            Ncol = 0
-        elif len(data.shape) == 2:
-            Nrow = data.shape[0]
-            Ncol = data.shape[1]
-        data_bytes = data.tobytes()
-        check_sended(sock, np.array([len(data_bytes)],
-                                    dtype='>i4').tobytes())  # first send length of data after reshaping as 1D bytes array
-        check_sended(sock, np.array([Nrow], dtype='>i4').tobytes())  # then send dimension of lines
-        check_sended(sock, np.array([Ncol], dtype='>i4').tobytes())  # then send dimensions of columns
-
-        check_sended(sock, data_bytes)  # then send data
+        sock.send_array(data)
+        # if len(data.shape) == 0:
+        #     Nrow = 1
+        #     Ncol = 0
+        # elif len(data.shape) == 1:
+        #     Nrow = data.shape[0]
+        #     Ncol = 0
+        # elif len(data.shape) == 2:
+        #     Nrow = data.shape[0]
+        #     Ncol = data.shape[1]
+        # data_bytes = data.tobytes()
+        # check_sended(sock, np.array([len(data_bytes)],
+        #                             dtype='>i4').tobytes())  # first send length of data after reshaping as 1D bytes array
+        # check_sended(sock, np.array([Nrow], dtype='>i4').tobytes())  # then send dimension of lines
+        # check_sended(sock, np.array([Ncol], dtype='>i4').tobytes())  # then send dimensions of columns
+        #
+        # check_sended(sock, data_bytes)  # then send data
 
     def read_data(self, sock):
         """
@@ -398,7 +399,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             check_received_length
         """
 
-        data_list = get_list(sock, 'array')
+        data_list = sock.get_list()
 
         return data_list
 
@@ -434,15 +435,15 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
             grabber_socket = \
             [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
-            send_string(grabber_socket, 'set_info')
+            grabber_socket.send_string('set_info')
 
             path = custom_tree.get_param_path(param)[
                    2:]  # get the path of this param as a list starting at parent 'infos'
-            send_list(grabber_socket, path)
+            grabber_socket.send_list(path)
 
             # send value
             data = custom_tree.parameter_to_xml_string(param)
-            send_string(grabber_socket, data)
+            grabber_socket.send_string(data)
 
     def ini_detector(self, controller=None):
         """

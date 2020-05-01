@@ -14,9 +14,9 @@ class Tree_layout(QObject):
     """
     status_sig=pyqtSignal(str)
 
-    def __init__(self,parent = None,col_counts=1,labels=None):
+    def __init__(self, parent=None, col_counts=1, labels=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Tree_layout,self).__init__()
+        super(Tree_layout, self).__init__()
 
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -31,6 +31,10 @@ class Tree_layout(QObject):
         self.ui.Open_Tree.clicked.connect(self.ui.Tree.expandAll)
         self.ui.Close_Tree.clicked.connect(self.ui.Tree.collapseAll)
         self.ui.Open_Tree_Selected.clicked.connect(self.open_Tree_selection)
+
+    @property
+    def treewidget(self):
+        return self.ui.Tree
 
     def setupUi(self):
         self.ui = QObject()
@@ -70,9 +74,7 @@ class Tree_layout(QObject):
     def open_Tree_selection(self):
         self.Tree_open_children(self.ui.Tree.selectedIndexes()[0])
 
-
-    
-    def Tree_open_children(self,item_index):
+    def Tree_open_children(self, item_index):
         try:
             if not(item_index.isValid()):
                 return
@@ -81,35 +83,34 @@ class Tree_layout(QObject):
         except Exception as e:
             self.status_sig.emit(str(e))
 
-    def Tree_open_parents(self,item_index):
+    def Tree_open_parents(self, item_index):
         try:
-            if not(item_index.isValid()):
+            if not (item_index.isValid()):
                 return
-            flag=True
-            empty=QtCore.QModelIndex()
-            parent=item_index
+            flag = True
+            empty = QtCore.QModelIndex()
+            parent = item_index
             while flag:
-                parent=parent.parent()
-                if parent!=empty:
+                parent = parent.parent()
+                if parent != empty:
                     self.ui.Tree.expand(parent)
                 else:
-                    flag=False
+                    flag = False
                     break
         except Exception as e:
             self.status_sig.emit(str(e))
 
-
-    def populate_Tree(self,data_dict):
+    def populate_Tree(self, data_dict):
         try:
-            parents=[]
+            parents = []
             for data in data_dict:
-                str_list=[str(data['name'])]
+                str_list = [str(data['name'])]
                 if 'filename' in data.keys():
                     str_list.append(data['filename'])
                 if 'info' in data.keys():
                     str_list.append(data['info'])
-                parent=QtWidgets.QTreeWidgetItem(str_list)
-                Items=self.populate_sub_tree(data['contents'])
+                parent = QtWidgets.QTreeWidgetItem(str_list)
+                Items = self.populate_sub_tree(data['contents'])
                 parent.addChildren(Items)
                 parents.append(parent)
 
@@ -117,19 +118,19 @@ class Tree_layout(QObject):
         except Exception as e:
             self.status_sig.emit(str(e))
 
-    def populate_sub_tree(self,datas):
+    def populate_sub_tree(self, datas):
         try:
-            parents=[]
+            parents = []
             for data in datas:
-                str_list=[str(data['name'])]
+                str_list = [str(data['name'])]
                 if 'filename' in data.keys():
                     str_list.append(data['filename'])
                 if 'info' in data.keys():
                     str_list.append(data['info'])
                 parent = QtWidgets.QTreeWidgetItem(str_list)
                 if 'contents' in data.keys():
-                    if type(data['contents'])==list:
-                        Items=self.populate_sub_tree(data['contents'])
+                    if type(data['contents']) == list:
+                        Items = self.populate_sub_tree(data['contents'])
                         parent.addChildren(Items)
                 parents.append(parent)
             return parents
@@ -146,7 +147,7 @@ class CustomTree(QtWidgets.QTreeWidget):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.daq_utils import h5tree_to_QTree
+    from pymodaq.daq_utils.gui_utils import h5tree_to_QTree
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = Tree_layout(Form,col_counts=2,labels=["Material","File"])
@@ -163,12 +164,12 @@ if __name__ == '__main__':
                                      dict(name='fiston2',contents=[dict(name='subfiston',contents='baby',filename='Cest pas normal')])]),
           dict(name='maman',contents=[dict(name='fistone',contents=[dict(name='subfistone',contents='baby')])])];
     prog.populate_Tree(data)
-    filename='C:\\Data\\2019\\20190220\\Dataset_20190220_004\\Dataset_20190220_004.h5'
-    import tables
-    h5_file = tables.open_file(filename, mode = "a")
-    for node in h5_file.walk_nodes():
-        print(node)
-    base_node = h5_file.root
-    base_tree_item, pixmap_items = h5tree_to_QTree(h5_file, base_node)
-    prog.ui.Tree.addTopLevelItem(base_tree_item)
+    # filename='C:\\Data\\2019\\20190220\\Dataset_20190220_004\\Dataset_20190220_004.h5'
+    # import tables
+    # h5_file = tables.open_file(filename, mode = "a")
+    # for node in h5_file.walk_nodes():
+    #     print(node)
+    # base_node = h5_file.root
+    # base_tree_item, pixmap_items = h5tree_to_QTree(h5_file, base_node)
+    # prog.ui.Tree.addTopLevelItem(base_tree_item)
     sys.exit(app.exec_())

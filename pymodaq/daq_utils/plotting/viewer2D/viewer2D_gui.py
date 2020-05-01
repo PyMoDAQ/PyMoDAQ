@@ -2,16 +2,18 @@
 
 # Form implementation generated from reading ui file 'viewer2D_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(956, 487)
+        Form.resize(966, 487)
         self.gridLayout = QtWidgets.QGridLayout(Form)
         self.gridLayout.setObjectName("gridLayout")
         self.verticalLayout = QtWidgets.QVBoxLayout()
@@ -153,6 +155,13 @@ class Ui_Form(object):
         self.z_label_blue.setFlat(True)
         self.z_label_blue.setObjectName("z_label_blue")
         self.horizontalLayout_2.addWidget(self.z_label_blue)
+        self.z_label_adaptive = QtWidgets.QPushButton(self.widget)
+        icon14 = QtGui.QIcon()
+        icon14.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/grey_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.z_label_adaptive.setIcon(icon14)
+        self.z_label_adaptive.setFlat(True)
+        self.z_label_adaptive.setObjectName("z_label_adaptive")
+        self.horizontalLayout_2.addWidget(self.z_label_adaptive)
         self.red_cb = QtWidgets.QCheckBox(self.widget)
         self.red_cb.setObjectName("red_cb")
         self.horizontalLayout_2.addWidget(self.red_cb)
@@ -162,6 +171,9 @@ class Ui_Form(object):
         self.blue_cb = QtWidgets.QCheckBox(self.widget)
         self.blue_cb.setObjectName("blue_cb")
         self.horizontalLayout_2.addWidget(self.blue_cb)
+        self.adaptive_cb = QtWidgets.QCheckBox(self.widget)
+        self.adaptive_cb.setObjectName("adaptive_cb")
+        self.horizontalLayout_2.addWidget(self.adaptive_cb)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
@@ -237,12 +249,14 @@ class Ui_Form(object):
         self.z_label_red.setText(_translate("Form", "z_red"))
         self.z_label_green.setText(_translate("Form", "z_green"))
         self.z_label_blue.setText(_translate("Form", "z_blue"))
+        self.z_label_adaptive.setText(_translate("Form", "z_adaptive"))
         self.red_cb.setText(_translate("Form", "Red"))
         self.green_cb.setText(_translate("Form", "Green"))
         self.blue_cb.setText(_translate("Form", "Blue"))
-
+        self.adaptive_cb.setText(_translate("Form", "Adaptive"))
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 if __name__ == "__main__":
     import sys
@@ -252,4 +266,3 @@ if __name__ == "__main__":
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
-

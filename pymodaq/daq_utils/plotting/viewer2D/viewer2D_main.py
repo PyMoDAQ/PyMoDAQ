@@ -13,7 +13,8 @@ Gradients.update(OrderedDict([
 
 #import pymodaq
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_gui import Ui_Form
-from pymodaq.daq_utils.plotting.viewer2D.viewer2d_basic import ImageWidget, ImageItem, AxisItem_Scaled
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget, ImageItem, AxisItem_Scaled, PlotCurveItem
+from pymodaq.daq_utils.plotting.viewer2D.triangulationitem import TriangulationItem
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -24,44 +25,46 @@ from easydict import EasyDict as edict
 import pickle
 import copy
 import os
-from pymodaq.daq_utils.daq_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea
 
 import  pymodaq.daq_utils.daq_utils as utils
 import datetime
 
 
+
+
 class Viewer2D(QtWidgets.QWidget):
-    data_to_export_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-    crosshair_dragged = pyqtSignal(float, float) #signal used to pass crosshair position to other modules in scaled axes units
+    data_to_export_signal = pyqtSignal(
+        OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+    crosshair_dragged = pyqtSignal(float,
+                                   float)  # signal used to pass crosshair position to other modules in scaled axes units
     sig_double_clicked = pyqtSignal(float, float)
     ROI_select_signal = pyqtSignal(QRectF)
     ROI_changed = pyqtSignal()
     ROI_changed_finished = pyqtSignal()
 
-    def __init__(self,parent=None,scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))):
-        super(Viewer2D,self).__init__()
-        #setting the gui
-        self.ui=Ui_Form()
-
+    def __init__(self, parent=None, scaling_options=utils.ScalingOptions(scaled_xaxis=utils.ScaledAxis(),
+                                                                   scaled_yaxis=utils.ScaledAxis())):
+        super().__init__()
+        # setting the gui
+        self.ui = Ui_Form()
+        self.title = 'viewer2D'
         if parent is None:
             parent = QtWidgets.QWidget()
 
-
-
-        self.ui.setupUi(parent)#it's a widget here
-
+        self.ui.setupUi(parent)  # it's a widget here
 
         self.max_size_integrated = 200
         self.scaling_options = copy.deepcopy(scaling_options)
-        self.viewer_type='Data2D' #☺by default
-        self.title=""
-        self.parent=parent
+        self.viewer_type = 'Data2D'  # ☺by default
+        self.title = ""
+        self.parent = parent
         self.image = None
-        self.isdata=edict(blue=False,green=False,red=False)
-        self.color_list=[(255,0,0),(0,255,0),(0,0,255),(14,207,189),(207,14,166),(207,204,14)]
+        self.isdata = edict(blue=False, green=False, red=False)
+        self.color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
         self.image_widget = ImageWidget()
-        self.ui.plotitem = self.image_widget.plotitem # for backward compatibility
+        self.ui.plotitem = self.image_widget.plotitem  # for backward compatibility
         self.ui.splitter_VLeft.replaceWidget(0, self.ui.graphicsView)
 
         axis = self.ui.plotitem.getAxis('bottom')
@@ -70,15 +73,15 @@ class Viewer2D(QtWidgets.QWidget):
         axisl = self.ui.plotitem.getAxis('left')
         axisl.setLabel(text='', units='Pxls')
 
-        self.autolevels=False
+        self.autolevels = False
         self.ui.auto_levels_pb.clicked.connect(self.set_autolevels)
 
-        self.scaled_yaxis=AxisItem_Scaled('right')
-        self.scaled_xaxis=AxisItem_Scaled('top')
+        self.scaled_yaxis = AxisItem_Scaled('right')
+        self.scaled_xaxis = AxisItem_Scaled('top')
 
         self.image_widget.view.sig_double_clicked.connect(self.double_clicked)
-        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1,1))
-        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))
+        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1, 1))
+        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2, 2))
         self.scaled_xaxis.linkToView(self.image_widget.view)
         self.scaled_yaxis.linkToView(self.image_widget.view)
         self.set_scaling_axes(self.scaling_options)
@@ -86,10 +89,12 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.img_red = ImageItem()
         self.ui.img_green = ImageItem()
         self.ui.img_blue = ImageItem()
+        self.ui.img_adaptive = TriangulationItem()
+
         #self.ui.img_red.sig_double_clicked.connect(self.double_clicked)
-        self.ui.img_red.setCompositionMode( QtGui.QPainter.CompositionMode_Plus  )
-        self.ui.img_green.setCompositionMode( QtGui.QPainter.CompositionMode_Plus  )
-        self.ui.img_blue.setCompositionMode( QtGui.QPainter.CompositionMode_Plus  )
+        self.ui.img_red.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+        self.ui.img_green.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+        self.ui.img_blue.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
         self.ui.img_red.setOpts(axisOrder='row-major')
         self.ui.img_green.setOpts(axisOrder='row-major')
         self.ui.img_blue.setOpts(axisOrder='row-major')
@@ -109,6 +114,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.image_widget.plotitem.addItem(self.ui.img_red)
         self.image_widget.plotitem.addItem(self.ui.img_green)
         self.image_widget.plotitem.addItem(self.ui.img_blue)
+        self.image_widget.plotitem.addItem(self.ui.img_adaptive)
         self.ui.graphicsView.setCentralItem(self.image_widget.plotitem)
 
         ##self.ui.graphicsView.setCentralItem(self.image_widget.plotitem)
@@ -121,34 +127,47 @@ class Viewer2D(QtWidgets.QWidget):
         #histograms
         histo_layout = QtWidgets.QHBoxLayout()
         self.ui.widget_histo.setLayout(histo_layout)
-        self.ui.histogram_red=pg.HistogramLUTWidget()
+
+        self.ui.histogram_red = pg.HistogramLUTWidget()
         self.ui.histogram_red.setImageItem(self.ui.img_red)
-        self.ui.histogram_green=pg.HistogramLUTWidget()
+
+        self.ui.histogram_green = pg.HistogramLUTWidget()
         self.ui.histogram_green.setImageItem(self.ui.img_green)
-        self.ui.histogram_blue=pg.HistogramLUTWidget()
+
+        self.ui.histogram_blue = pg.HistogramLUTWidget()
         self.ui.histogram_blue.setImageItem(self.ui.img_blue)
+
+        self.ui.histogram_adaptive = pg.HistogramLUTWidget()
+        self.ui.histogram_adaptive.setImageItem(self.ui.img_adaptive)
+
         histo_layout.addWidget(self.ui.histogram_red)
         histo_layout.addWidget(self.ui.histogram_green)
         histo_layout.addWidget(self.ui.histogram_blue)
+        histo_layout.addWidget(self.ui.histogram_adaptive)
 
-        Ntick=3
-        colors_red =[(int(r),0,0) for r in pg.np.linspace(0,255,Ntick)]
-        colors_green=[(0,int(g),0) for g in pg.np.linspace(0,255,Ntick)]
-        colors_blue=[(0,0,int(b)) for b in pg.np.linspace(0,255,Ntick)]
+        Ntick = 3
+        colors_red = [(int(r), 0, 0) for r in pg.np.linspace(0, 255, Ntick)]
+        colors_green = [(0, int(g), 0) for g in pg.np.linspace(0, 255, Ntick)]
+        colors_blue = [(0, 0, int(b)) for b in pg.np.linspace(0, 255, Ntick)]
+        colors_adaptive = [(int(b), int(b), int(b)) for b in pg.np.linspace(0, 255, Ntick)]
+
         cmap_red = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_red)
         cmap_green = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_green)
         cmap_blue = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_blue)
+        cmap_adaptive = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_adaptive)
+
         self.ui.histogram_red.gradient.setColorMap(cmap_red)
         self.ui.histogram_green.gradient.setColorMap(cmap_green)
         self.ui.histogram_blue.gradient.setColorMap(cmap_blue)
+        self.ui.histogram_adaptive.gradient.setColorMap(cmap_adaptive)
         self.ui.histogram_red.setVisible(False)
         self.ui.histogram_green.setVisible(False)
         self.ui.histogram_blue.setVisible(False)
+        self.ui.histogram_adaptive.setVisible(False)
         self.ui.Show_histogram.clicked.connect(self.show_hide_histogram)
 
-
-        #ROI selects an area and export its bounds as a signal
-        self.ui.ROIselect=pg.RectROI([0,0],[10,10],centered=True,sideScalers=True)
+        # ROI selects an area and export its bounds as a signal
+        self.ui.ROIselect = pg.RectROI([0, 0], [10, 10], centered=True, sideScalers=True)
         self.image_widget.plotitem.addItem(self.ui.ROIselect)
         self.ui.ROIselect.setVisible(False)
         self.ui.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
@@ -173,12 +192,25 @@ class Viewer2D(QtWidgets.QWidget):
 
         ##crosshair
         self.ui.crosshair=Crosshair(self.image_widget.plotitem)
-        self.ui.crosshair_H_blue = self.ui.Lineout_H.plot(pen="b")
-        self.ui.crosshair_H_green = self.ui.Lineout_H.plot(pen="g")
-        self.ui.crosshair_H_red = self.ui.Lineout_H.plot(pen="r")
-        self.ui.crosshair_V_blue = self.ui.Lineout_V.plot(pen="b")
-        self.ui.crosshair_V_green = self.ui.Lineout_V.plot(pen="g")
-        self.ui.crosshair_V_red = self.ui.Lineout_V.plot(pen="r")
+        self.ui.crosshair_H_blue = PlotCurveItem(pen='b')
+        self.ui.crosshair_H_green = PlotCurveItem(pen="g")
+        self.ui.crosshair_H_red = PlotCurveItem(pen="r")
+        self.ui.crosshair_H_adaptive = PlotCurveItem(pen=(128, 128, 128))
+        self.ui.crosshair_V_blue = PlotCurveItem(pen="b")
+        self.ui.crosshair_V_green = PlotCurveItem(pen="g")
+        self.ui.crosshair_V_red = PlotCurveItem(pen="r")
+        self.ui.crosshair_V_adaptive = PlotCurveItem(pen=(128, 128, 128))
+
+        self.ui.Lineout_H.plotItem.addItem(self.ui.crosshair_H_blue)
+        self.ui.Lineout_H.plotItem.addItem(self.ui.crosshair_H_red)
+        self.ui.Lineout_H.plotItem.addItem(self.ui.crosshair_H_green)
+        self.ui.Lineout_H.plotItem.addItem(self.ui.crosshair_H_adaptive)
+
+        self.ui.Lineout_V.plotItem.addItem(self.ui.crosshair_V_blue)
+        self.ui.Lineout_V.plotItem.addItem(self.ui.crosshair_V_red)
+        self.ui.Lineout_V.plotItem.addItem(self.ui.crosshair_V_green)
+        self.ui.Lineout_V.plotItem.addItem(self.ui.crosshair_V_adaptive)
+
 
 
         self.ui.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
@@ -186,9 +218,9 @@ class Viewer2D(QtWidgets.QWidget):
         self.crosshairClicked()
 
         #flipping
-        self.ui.FlipUD_pb.clicked.connect(self.update_image_flip)
-        self.ui.FlipLR_pb.clicked.connect(self.update_image_flip)
-        self.ui.rotate_pb.clicked.connect(self.update_image_flip)
+        self.ui.FlipUD_pb.clicked.connect(self.update_image_flipud)
+        self.ui.FlipLR_pb.clicked.connect(self.update_image_fliplr)
+        self.ui.rotate_pb.clicked.connect(self.update_image_rotate)
 
         ## ROI stuff
         self.ui.RoiCurve_H = edict()
@@ -198,7 +230,7 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.ROIs = OrderedDict([])
         self.ui.roiBtn.clicked.connect(self.roi_clicked)
 
-        self.data_to_export = OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
+        self.data_to_export = OrderedDict([])
 
         self._x_axis = None
         self._y_axis = None
@@ -256,40 +288,101 @@ class Viewer2D(QtWidgets.QWidget):
         # self.data_to_export["%02.0d" % newindex]=None
         self.roi_changed()
 
-    def crosshairChanged(self,indx=None,indy=None):
-        if self.image is None or self._x_axis is None or self._y_axis is None:
+    def crosshairChanged(self, posx=None, posy=None):
+        if self.image is None:
             return
-
         image = self.image
-        if indx is None or indy is None:
-            (posx,posy)=self.ui.crosshair.get_positions()
-            indx=utils.find_index(self._x_axis,posx)[0][0]
-            indy=utils.find_index(self._y_axis,posy)[0][0]
-        try:
+        if posx is None or posy is None:
+            (posx, posy) = self.ui.crosshair.get_positions()
+
+        if self.isdata["red"]:
+            indx, indy = self.mapfromview('red', posx, posy)
+            if not self.ui.rotate_pb.isChecked():
+                data_H_indexes = slice(None, None, 1)
+                data_V_indexes = slice(None, None, 1)
+                if self.ui.FlipLR_pb.isChecked():
+                    data_H_indexes = slice(None, None, -1)
+                if self.ui.FlipUD_pb.isChecked():
+                    data_V_indexes = slice(None, None, -1)
+                x_axis_scaled, y_axis_scaled = \
+                    self.scale_axis(np.linspace(0, self.ui.img_red.width() - 1, self.ui.img_red.width()),
+                                    np.linspace(0, self.ui.img_red.height() - 1, self.ui.img_red.height()))
+
+
+                H_indexes = (utils.rint(indy), data_H_indexes)
+                V_indexes = (data_V_indexes, utils.rint(indx))
+            else:
+                data_H_indexes = slice(None, None, -1)
+                data_V_indexes = slice(None, None, 1)
+                if self.ui.FlipLR_pb.isChecked():
+                    data_H_indexes = slice(None, None, 1)
+                if self.ui.FlipUD_pb.isChecked():
+                    data_V_indexes = slice(None, None, -1)
+                x_axis_scaled, y_axis_scaled = \
+                    self.scale_axis(np.linspace(0, self.ui.img_red.height()-1, self.ui.img_red.height()),
+                                    np.linspace(0, self.ui.img_red.width() - 1, self.ui.img_red.width()))
+                H_indexes = (data_H_indexes, utils.rint(indx))
+                V_indexes = (utils.rint(indy), data_V_indexes)
+
 
             if self.isdata["blue"]:
-                self.ui.crosshair_H_blue.setData(y=image["blue"][indy,:], x=self.x_axis_scaled)
+                self.ui.crosshair_H_blue.setData(y=image["blue"].__getitem__(H_indexes), x=x_axis_scaled)
             if self.isdata["green"]:
-                self.ui.crosshair_H_green.setData(y=image["green"][indy,:], x=self.x_axis_scaled)
+                self.ui.crosshair_H_green.setData(y=image["green"].__getitem__(H_indexes), x=x_axis_scaled)
             if self.isdata["red"]:
-                self.ui.crosshair_H_red.setData(y=image["red"][indy,:], x=self.x_axis_scaled)
+                self.ui.crosshair_H_red.setData(y=image["red"].__getitem__(H_indexes), x=x_axis_scaled)
+
 
             if self.isdata["blue"]:
-                self.ui.crosshair_V_blue.setData(y=self.y_axis_scaled, x=image["blue"][:,indx])
+                self.ui.crosshair_V_blue.setData(y=y_axis_scaled, x=image["blue"].__getitem__(V_indexes))
             if self.isdata["green"]:
-                self.ui.crosshair_V_green.setData(y=self.y_axis_scaled, x=image["green"][:,indx])
+                self.ui.crosshair_V_green.setData(y=y_axis_scaled, x=image["green"].__getitem__(V_indexes))
             if self.isdata["red"]:
-                self.ui.crosshair_V_red.setData(y=self.y_axis_scaled, x=image["red"][:,indx])
+                self.ui.crosshair_V_red.setData(y=y_axis_scaled, x=image["red"].__getitem__(V_indexes))
 
-        except Exception as e:
-            raise e
+        if self.isdata["adaptive"]:
+            if not self.ui.rotate_pb.isChecked():
+                data_H_indexes = slice(None, None, 1)
+                data_V_indexes = slice(None, None, 1)
+                if self.ui.FlipLR_pb.isChecked():
+                    data_H_indexes = slice(None, None, -1)
+                if self.ui.FlipUD_pb.isChecked():
+                    data_V_indexes = slice(None, None, -1)
+            else:
+                data_H_indexes = slice(None, None, -1)
+                data_V_indexes = slice(None, None, 1)
+                if self.ui.FlipLR_pb.isChecked():
+                    data_H_indexes = slice(None, None, 1)
+                if self.ui.FlipUD_pb.isChecked():
+                    data_V_indexes = slice(None, None, -1)
+
+            posx_adpative, posy_adpative = self.mapfromview('adaptive', posx, posy)
+            if self.ui.rotate_pb.isChecked():
+                points, data = self.ui.img_adaptive.get_points_at(axis='y', val=posy_adpative)
+                x_sorted_indexes = np.argsort(points[:, 0])
+                self.ui.crosshair_V_adaptive.setData(y=points[x_sorted_indexes, 0][data_H_indexes],
+                                                     x=data[x_sorted_indexes][data_H_indexes])
+                points, data = self.ui.img_adaptive.get_points_at(axis='x', val=posx_adpative)
+                y_sorted_indexes = np.argsort(points[:, 1])
+                self.ui.crosshair_H_adaptive.setData(x=points[y_sorted_indexes, 1][data_V_indexes],
+                                                     y=data[y_sorted_indexes][data_V_indexes])
+            else:
+                points, data = self.ui.img_adaptive.get_points_at(axis='y', val=posy_adpative)
+                x_sorted_indexes = np.argsort(points[:, 0])
+                self.ui.crosshair_H_adaptive.setData(x=points[x_sorted_indexes, 0][data_H_indexes],
+                                                     y=data[x_sorted_indexes][data_H_indexes])
+                points, data = self.ui.img_adaptive.get_points_at(axis='x', val=posx_adpative)
+                y_sorted_indexes = np.argsort(points[:, 1])
+                self.ui.crosshair_V_adaptive.setData(y=points[y_sorted_indexes, 1][data_V_indexes],
+                                                     x=data[y_sorted_indexes][data_V_indexes])
+
 
     def crosshairClicked(self):
         if self.ui.crosshair_pb.isChecked():
             self.ui.crosshair.setVisible(True)
             self.ui.x_label.setVisible(True)
             self.ui.y_label.setVisible(True)
-            range=self.image_widget.view.viewRange()
+            range = self.image_widget.view.viewRange()
             self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])),np.mean(np.array(range[0])))
 
             if self.isdata["blue"]:
@@ -304,6 +397,11 @@ class Viewer2D(QtWidgets.QWidget):
                 self.ui.z_label_red.setVisible(True)
                 self.ui.crosshair_H_red.setVisible(True)
                 self.ui.crosshair_V_red.setVisible(True)
+            if self.isdata["adaptive"]:
+                self.ui.z_label_adaptive.setVisible(True)
+                self.ui.crosshair_H_adaptive.setVisible(True)
+                self.ui.crosshair_V_adaptive.setVisible(True)
+
             self.update_crosshair_data(*self.ui.crosshair.get_positions())
             ##self.crosshairChanged()
         else:
@@ -320,6 +418,9 @@ class Viewer2D(QtWidgets.QWidget):
             self.ui.crosshair_V_blue.setVisible(False)
             self.ui.crosshair_V_green.setVisible(False)
             self.ui.crosshair_V_red.setVisible(False)
+            self.ui.z_label_adaptive.setVisible(False)
+            self.ui.crosshair_H_adaptive.setVisible(False)
+            self.ui.crosshair_V_adaptive.setVisible(False)
         QtWidgets.QApplication.processEvents()
         self.show_lineouts()
         #self.show_lineouts()
@@ -412,15 +513,15 @@ class Viewer2D(QtWidgets.QWidget):
                     self.ui.RoiCurve_H[key].setData(y=np.mean(data,axis=0), x=xvals)
                     self.ui.RoiCurve_V[key].setData(y=yvals, x=np.mean(data,axis=1))
                     self.ui.RoiCurve_integrated[key].setData(y=self.data_integrated_plot[key][1,:], x=self.data_integrated_plot[key][0,:])
-                    self.data_to_export['data2D'][self.title+'_{:s}'.format(key)]=OrderedDict(data=data, type='roi',
+                    self.data_to_export['data2D'][self.title+'_{:s}'.format(key)]=OrderedDict(name=self.title, data=data, type='roi',
                         x_axis=dict(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=dict(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
 
-                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)]=OrderedDict(data=np.mean(data,axis=0), type='roi',
+                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)]=OrderedDict(name=self.title, data=np.mean(data,axis=0), type='roi',
                         x_axis=dict(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']))
-                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)]=OrderedDict(data=np.mean(data,axis=1), type='roi',
+                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)]=OrderedDict(name=self.title, data=np.mean(data,axis=1), type='roi',
                         x_axis=dict(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
-                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)]=OrderedDict(data=np.sum(data), type='roi')
+                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)]=OrderedDict(name=self.title, data=np.sum(data), type='roi')
 
                     self.measure_data_dict["Lineout {:s}:".format(key)] = np.sum(data)
 
@@ -482,24 +583,7 @@ class Viewer2D(QtWidgets.QWidget):
         return (xaxis-self.scaling_options['scaled_xaxis']['offset'])/self.scaling_options['scaled_xaxis']['scaling'],\
                (yaxis-self.scaling_options['scaled_yaxis']['offset'])/self.scaling_options['scaled_yaxis']['scaling']
 
-    def select_file(self,start_path=None,save=True):
-        try:
-            if save:
-                fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .roi2D file name',start_path,"roi2D file (*.roi2D)")
-            else:
-                fname=QtWidgets.QFileDialog.getOpenFileName(None, 'Select a .roi2D file name',start_path,"roi2D file (*.roi2D)")
-            fname=fname[0]
-            if not( not(fname)): #execute if the user didn't cancel the file selection
-                (head,filename)=os.path.split(fname)
-                (filename,ext)=os.path.splitext(fname)
-                fname=os.path.join(head,filename+".roi2D")
-            return fname
-
-        except Exception as e:
-            pass
-
-
-
+  
     def selected_region_changed(self):
         if self.ui.ROIselect_pb.isChecked():
             pos=self.ui.ROIselect.pos()
@@ -535,66 +619,73 @@ class Viewer2D(QtWidgets.QWidget):
         self.scaled_xaxis.linkedViewChanged(self.image_widget.view)
         self.scaled_yaxis.linkedViewChanged(self.image_widget.view)
 
-    def setImage(self,data_red=None,data_green=None,data_blue=None):
+    def setImage(self, data_red=None, data_green=None, data_blue=None, data_adaptive=None):
         try:
-            if data_red is not None:
-                if len(data_red.shape)>2:
-                    data_red=np.mean(data_red,axis=0)
-                if self.ui.FlipUD_pb.isChecked():
-                    data_red=np.flipud(data_red)
-                if self.ui.FlipLR_pb.isChecked():
-                    data_red=np.fliplr(data_red)
-                if self.ui.rotate_pb.isChecked():
-                    data_red = np.transpose(data_red)
+            # if data_red is not None:
+            #     if len(data_red.shape) > 2:
+            #         data_red = np.mean(data_red, axis=0)
+            #     if self.ui.FlipUD_pb.isChecked():
+            #         data_red = np.flipud(data_red)
+            #     if self.ui.FlipLR_pb.isChecked():
+            #         data_red = np.fliplr(data_red)
+            #     if self.ui.rotate_pb.isChecked():
+            #         data_red = np.transpose(data_red)
+            #
+            # if data_green is not None:
+            #     if len(data_green.shape) > 2:
+            #         data_green = np.mean(data_green, axis=0)
+            #     if self.ui.FlipUD_pb.isChecked():
+            #         data_green = np.flipud(data_green)
+            #     if self.ui.FlipLR_pb.isChecked():
+            #         data_green = np.fliplr(data_green)
+            #     if self.ui.rotate_pb.isChecked():
+            #         data_green = np.transpose(data_green)
+            #
+            # if data_blue is not None:
+            #     if len(data_blue.shape) > 2:
+            #         data_blue = np.mean(data_blue, axis=0)
+            #     if self.ui.FlipUD_pb.isChecked():
+            #         data_blue = np.flipud(data_blue)
+            #     if self.ui.FlipLR_pb.isChecked():
+            #         data_blue = np.fliplr(data_blue)
+            #     if self.ui.rotate_pb.isChecked():
+            #         data_blue = np.transpose(data_blue)
 
-            if data_green is not None:
-                if len(data_green.shape)>2:
-                    data_green=np.mean(data_green,axis=0)
-                if self.ui.FlipUD_pb.isChecked():
-                    data_green=np.flipud(data_green)
-                if self.ui.FlipLR_pb.isChecked():
-                    data_green=np.fliplr(data_green)
-                if self.ui.rotate_pb.isChecked():
-                    data_green = np.transpose(data_green)
+            red_flag = data_red is not None
+            self.isdata["red"] = red_flag
+            green_flag = data_green is not None
+            self.isdata["green"] = green_flag
+            blue_flag = data_blue is not None
+            self.isdata["blue"] = blue_flag
+            adaptive_flag = data_adaptive is not None
+            self.isdata["adaptive"] = adaptive_flag
 
-            if data_blue is not None:
-                if len(data_blue.shape)>2:
-                    data_blue=np.mean(data_blue,axis=0)
-                if self.ui.FlipUD_pb.isChecked():
-                    data_blue=np.flipud(data_blue)
-                if self.ui.FlipLR_pb.isChecked():
-                    data_blue=np.fliplr(data_blue)
-                if self.ui.rotate_pb.isChecked():
-                    data_blue = np.transpose(data_blue)
+            self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(),
+                                              data2D=OrderedDict())
+            self.image = edict(blue=data_blue, green=data_green, red=data_red, adaptive=data_adaptive)
 
-            red_flag= data_red is not None
-            self.isdata["red"]=red_flag
-            green_flag= data_green is not None
-            self.isdata["green"]=green_flag
-            blue_flag= data_blue is not None
-            self.isdata["blue"]=blue_flag
 
-            self.data_to_export = OrderedDict(name=self.title,data0D=OrderedDict(),data1D=OrderedDict(),data2D=OrderedDict())
-            self.image=edict(blue=data_blue,green=data_green,red=data_red)
-            if red_flag:
-                bounds=QRectF(0,0,data_red.shape[1],data_red.shape[0])
-            elif green_flag:
-                bounds=QRectF(0,0,data_green.shape[1],data_green.shape[0])
-            elif blue_flag:
-                bounds=QRectF(0,0,data_blue.shape[1],data_blue.shape[0])
-            self.ui.ROIselect.maxBounds=bounds
+            self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
+            self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
+            self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
+            self.ui.img_adaptive.setImage(data_adaptive, autoLevels=self.autolevels)
 
-            self.ui.img_red.setImage(data_red,autoLevels = self.autolevels)
-            self.ui.img_green.setImage(data_green,autoLevels = self.autolevels)
-            self.ui.img_blue.setImage(data_blue,autoLevels = self.autolevels)
+            # if red_flag:
+            #     width, height = self.mapfromview('red', data_red.shape[1], data_red.shape[0])
+            #     bounds = QRectF(0, 0, width, height)
+            # elif green_flag:
+            #
+            #     bounds = QRectF(0, 0, data_green.shape[1], data_green.shape[0])
+            # elif blue_flag:
+            #     bounds = QRectF(0, 0, data_blue.shape[1], data_blue.shape[0])
+            # else:
+            #     bounds = self.ui.img_adaptive.boundingRect()
+            # self.ui.ROIselect.maxBounds = bounds
 
-            if self.ui.red_cb.isChecked() and red_flag==False: #turn it off if it was on but there is no data
+            if self.ui.red_cb.isChecked() and red_flag is False:  # turn it off if it was on but there is no data
                 self.ui.red_cb.setChecked(False)
             elif red_flag:
                 self.ui.red_cb.setChecked(True)
-
-            #self.ui.red_cb.setChecked(red_flag)
-            #self.ui.red_cb.setVisible(red_flag)
             self.ui.img_red.setVisible(self.ui.red_cb.isChecked())
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_red.setVisible(self.ui.red_cb.isChecked())
@@ -604,45 +695,67 @@ class Viewer2D(QtWidgets.QWidget):
                 self.ui.green_cb.setChecked(False)
             elif green_flag:
                 self.ui.green_cb.setChecked(True)
-            #self.ui.green_cb.setVisible(green_flag)
-            #self.ui.green_cb.setChecked(green_flag)
             self.ui.img_green.setVisible(self.ui.green_cb.isChecked())
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_green.setVisible(self.ui.green_cb.isChecked())
 
-
-            if self.ui.blue_cb.isChecked() and blue_flag==False: #turn it off if it was on but there is no data
+            if self.ui.blue_cb.isChecked() and blue_flag is False:  # turn it off if it was on but there is no data
                 self.ui.blue_cb.setChecked(False)
             elif blue_flag:
                 self.ui.blue_cb.setChecked(True)
-            #self.ui.blue_cb.setVisible(blue_flag)
-            #self.ui.blue_cb.setChecked(blue_flag)
             self.ui.img_blue.setVisible(self.ui.blue_cb.isChecked())
             if self.ui.Show_histogram.isChecked():
                 self.ui.histogram_blue.setVisible(self.ui.blue_cb.isChecked())
 
-            self._x_axis=np.linspace(0,data_red.shape[1]-1,data_red.shape[1])
-            self._y_axis=np.linspace(0,data_red.shape[0]-1,data_red.shape[0])
-            self.x_axis_scaled,self.y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
+            if self.ui.adaptive_cb.isChecked() and adaptive_flag is False:  # turn it off if it was on but there is no data
+                self.ui.adaptive_cb.setChecked(False)
+            elif adaptive_flag:
+                self.ui.adaptive_cb.setChecked(True)
+            self.ui.img_adaptive.setVisible(self.ui.adaptive_cb.isChecked())
+            if self.ui.Show_histogram.isChecked():
+                self.ui.histogram_adaptive.setVisible(self.ui.adaptive_cb.isChecked())
+
+            if data_red is not None:
+                self._x_axis = np.linspace(0, data_red.shape[1] - 1, data_red.shape[1])
+                self._y_axis = np.linspace(0, data_red.shape[0] - 1, data_red.shape[0])
+                self.x_axis_scaled, self.y_axis_scaled = self.scale_axis(self._x_axis, self._y_axis)
 
             ind = 0
             if red_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_red, type='raw',
-                        x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
-                ind +=1
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_red, type='raw',
+                        subtype='linear',
+                        x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
+                                          label=self.scaling_options['scaled_xaxis']['label']),
+                        y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
+                                          label=self.scaling_options['scaled_yaxis']['label']))
+                ind += 1
 
             if green_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_green, type='raw',
-                        x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_green, type='raw',
+                        subtype='linear',
+                        x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
+                                          label=self.scaling_options['scaled_xaxis']['label']),
+                        y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
+                                          label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
             if blue_flag:
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)]=OrderedDict(data=data_blue, type='raw',
-                        x_axis=dict(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'], label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=dict(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'], label=self.scaling_options['scaled_yaxis']['label']))
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_blue, type='raw',
+                        subtype='linear',
+                        x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
+                                          label=self.scaling_options['scaled_xaxis']['label']),
+                        y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
+                                          label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
+            if adaptive_flag:
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_adaptive[:, 2],
+                        type='raw', subtype='spread',
+                        x_axis=utils.Axis(data=data_adaptive[:, 0], units=self.scaling_options['scaled_xaxis']['units'],
+                                    label=self.scaling_options['scaled_xaxis']['label']),
+                        y_axis=utils.Axis(data=data_adaptive[:, 1], units=self.scaling_options['scaled_yaxis']['units'],
+                                    label=self.scaling_options['scaled_yaxis']['label']))
+                ind += 1
+
 
             if self.ui.roiBtn.isChecked():
                 self.roi_changed()
@@ -659,48 +772,71 @@ class Viewer2D(QtWidgets.QWidget):
         except Exception as e:
             print(e)
 
+    def mapfromview(self, graphitem, x, y):
+        """
+        get item coordinates from view coordinates
+        Parameters
+        ----------
+        graphitem: (str or GraphItem) either 'red', 'blue', 'green' or 'adaptive' referring to their corresponding
+            graphitem (self.ui.img_red)...
+        x: (float) x oordinate in the view reference frame
+        y: (float) y coordinate in the view refernece frame
+
+        Returns
+        -------
+        x: (float) coordinate in the item reference frame
+        y: (float) coordinate in the item reference frame
+        """
+        if isinstance(graphitem, str):
+            if not graphitem in ('red', 'blue', 'green', 'adaptive'):
+                return None
+            self.ui.img_adaptive
+            graphitem = getattr(self.ui, f'img_{graphitem}')
+        point = graphitem.mapFromView(QtCore.QPointF(x, y))
+        return point.x(), point.y()
+
+
     def setImageTemp(self,data_red=None,data_green=None,data_blue=None):
         """
         to plot temporary data, for instance when all pixels are not yet populated...
         """
 
+        # if data_red is not None:
+        #     if len(data_red.shape)>2:
+        #         data_red=np.mean(data_red,axis=0)
+        #     if self.ui.FlipUD_pb.isChecked():
+        #         data_red=np.flipud(data_red)
+        #     if self.ui.FlipLR_pb.isChecked():
+        #         data_red=np.fliplr(data_red)
+        #     if self.ui.rotate_pb.isChecked():
+        #         data_red=np.transpose(data_red)
+        # if data_green is not None:
+        #     if len(data_green.shape)>2:
+        #         data_green=np.mean(data_green,axis=0)
+        #     if self.ui.FlipUD_pb.isChecked():
+        #         data_green=np.flipud(data_green)
+        #     if self.ui.FlipLR_pb.isChecked():
+        #         data_green=np.fliplr(data_green)
+        #     if self.ui.rotate_pb.isChecked():
+        #         data_green = np.transpose(data_green)
+        # if data_blue is not None:
+        #     if len(data_blue.shape)>2:
+        #         data_blue=np.mean(data_blue,axis=0)
+        #     if self.ui.FlipUD_pb.isChecked():
+        #         data_blue=np.flipud(data_blue)
+        #     if self.ui.FlipLR_pb.isChecked():
+        #         data_blue=np.fliplr(data_blue)
+        #     if self.ui.rotate_pb.isChecked():
+        #         data_blue = np.transpose(data_blue)
+
         if data_red is not None:
-            if len(data_red.shape)>2:
-                data_red=np.mean(data_red,axis=0)
-            if self.ui.FlipUD_pb.isChecked():
-                data_red=np.flipud(data_red)
-            if self.ui.FlipLR_pb.isChecked():
-                data_red=np.fliplr(data_red)
-            if self.ui.rotate_pb.isChecked():
-                data_red=np.transpose(data_red)
+            self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
         if data_green is not None:
-            if len(data_green.shape)>2:
-                data_green=np.mean(data_green,axis=0)
-            if self.ui.FlipUD_pb.isChecked():
-                data_green=np.flipud(data_green)
-            if self.ui.FlipLR_pb.isChecked():
-                data_green=np.fliplr(data_green)
-            if self.ui.rotate_pb.isChecked():
-                data_green = np.transpose(data_green)
+            self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
         if data_blue is not None:
-            if len(data_blue.shape)>2:
-                data_blue=np.mean(data_blue,axis=0)
-            if self.ui.FlipUD_pb.isChecked():
-                data_blue=np.flipud(data_blue)
-            if self.ui.FlipLR_pb.isChecked():
-                data_blue=np.fliplr(data_blue)
-            if self.ui.rotate_pb.isChecked():
-                data_blue = np.transpose(data_blue)
+            self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
 
-
-        if data_red is not None:
-            self.ui.img_red.setImage(data_red,autoLevels = self.autolevels)
-        if data_green is not None:
-            self.ui.img_green.setImage(data_green,autoLevels = self.autolevels)
-        if data_blue is not None:
-            self.ui.img_blue.setImage(data_blue,autoLevels = self.autolevels)
-
-    def setObjectName(self,txt):
+    def setObjectName(self, txt):
         self.parent.setObjectName(txt)
 
 
@@ -715,7 +851,9 @@ class Viewer2D(QtWidgets.QWidget):
         if self.isdata["red"] and self.ui.red_cb.isChecked():
             self.ui.histogram_red.setVisible(self.ui.Show_histogram.isChecked())
             self.ui.histogram_red.setLevels(self.image.red.min(), self.image.red.max())
-
+        if self.isdata["adaptive"] and self.ui.adaptive_cb.isChecked():
+            self.ui.histogram_adaptive.setVisible(self.ui.Show_histogram.isChecked())
+            self.ui.histogram_adaptive.setLevels(self.image.adaptive.min(), self.image.adaptive.max())
         QtWidgets.QApplication.processEvents()
 
     def show_hide_iso(self):
@@ -732,7 +870,7 @@ class Viewer2D(QtWidgets.QWidget):
 
 
     def show_lineouts(self):
-        state=self.ui.roiBtn.isChecked() or self.ui.crosshair_pb.isChecked()
+        state = self.ui.roiBtn.isChecked() or self.ui.crosshair_pb.isChecked()
         if state:
             showLineout_H = True
             showLineout_V = True
@@ -775,11 +913,28 @@ class Viewer2D(QtWidgets.QWidget):
     def show_ROI_select(self):
         self.ui.ROIselect.setVisible(self.ui.ROIselect_pb.isChecked())
 
+    def update_image_flipud(self):
+        self.ui.img_red.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
+        self.ui.img_green.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
+        self.ui.img_blue.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
+        self.ui.img_adaptive.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
 
-    def update_image_flip(self):
-        self.setImageTemp(self.ui.img_red.image,self.ui.img_green.image,self.ui.img_blue.image)
+        self.ui.crosshair_V_adaptive.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
 
+    def update_image_fliplr(self):
+        self.ui.img_red.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
+        self.ui.img_green.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
+        self.ui.img_blue.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
+        self.ui.img_adaptive.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
 
+        self.ui.crosshair_H_adaptive.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
+
+    def update_image_rotate(self):
+        self.ui.img_red.setOpts(rotate90=self.ui.rotate_pb.isChecked())
+        self.ui.img_green.setOpts(rotate90=self.ui.rotate_pb.isChecked())
+        self.ui.img_blue.setOpts(rotate90=self.ui.rotate_pb.isChecked())
+        self.ui.img_adaptive.setOpts(rotate90=self.ui.rotate_pb.isChecked())
+        self.ui.crosshair_V_adaptive.setOpts(flipudbis=self.ui.rotate_pb.isChecked())
 
     def update_selection_area_visibility(self):
         bluestate=self.ui.blue_cb.isChecked()
@@ -794,32 +949,43 @@ class Viewer2D(QtWidgets.QWidget):
         self.ui.img_red.setVisible(redstate)
         #self.ui.histogram_red.setVisible(redstate)
 
-    def update_crosshair_data(self,posx,posy,name=""):
+    def update_crosshair_data(self, posx, posy, name=""):
         try:
-            (posx_scaled,posy_scaled)=self.scale_axis(posx,posy)
-            self.crosshair_dragged.emit(posx_scaled,posy_scaled)
-            x_axis_scaled,y_axis_scaled=self.scale_axis(self._x_axis,self._y_axis)
-            indx=utils.find_index(self._x_axis,posx)[0][0]
-            indy=utils.find_index(self._y_axis,posy)[0][0]
+            (posx_scaled, posy_scaled) = self.scale_axis(posx, posy)
+            self.crosshair_dragged.emit(posx_scaled, posy_scaled)
+            
+            # if self._x_axis is not None:
+            #     x_axis_scaled, y_axis_scaled = self.scale_axis(self._x_axis, self._y_axis)
+            #     indx = utils.find_index(self._x_axis, posx)[0][0]
+            #     indy = utils.find_index(self._y_axis, posy)[0][0]
+            # else: #case of adaptive data only
+            #     indx, indy = (posx_scaled, posy_scaled)
 
-            self.crosshairChanged(indx,indy)
+            self.crosshairChanged(posx, posy)
+
+
 
             if self.isdata["blue"]:
-                z_blue=self.image["blue"][indy,indx]
+                indx, indy = self.mapfromview('blue', posx, posy)
+                z_blue = self.image["blue"][utils.rint(indy), utils.rint(indx)]
                 self.ui.z_label_blue.setText("{:.6e}".format(z_blue))
             if self.isdata["green"]:
-                z_green=self.image["green"][indy,indx]
+                indx, indy = self.mapfromview('green', posx, posy)
+                z_green = self.image["green"][utils.rint(indy), utils.rint(indx)]
                 self.ui.z_label_green.setText("{:.6e}".format(z_green))
             if self.isdata["red"]:
-                z_red=self.image["red"][indy,indx]
+                indx, indy = self.mapfromview('red', posx, posy)
+                z_red = self.image["red"][utils.rint(indy), utils.rint(indx)]
                 self.ui.z_label_red.setText("{:.6e}".format(z_red))
-
+            if self.isdata["adaptive"]:
+                z_adaptive = self.ui.img_adaptive.get_val_at(self.mapfromview('adaptive', posx, posy))
+                self.ui.z_label_adaptive.setText("{:.6e}".format(z_adaptive))
 
             self.ui.x_label.setText("x={:.6e} ".format(posx_scaled))
             self.ui.y_label.setText("y={:.6e} ".format(posy_scaled))
 
         except Exception as e:
-            pass
+            print(e)
 
     def updateIsocurve(self):
         self.ui.iso.setLevel(self.ui.isoLine.value())
@@ -858,11 +1024,11 @@ class Viewer2D(QtWidgets.QWidget):
         units = ''
         if isinstance(y_axis, dict):
             if 'data' in y_axis:
-                ydata=y_axis['data']
+                ydata = y_axis['data']
             if 'label' in y_axis:
-                label=y_axis['label']
+                label = y_axis['label']
             if 'units' in y_axis:
-                units= y_axis['units']
+                units = y_axis['units']
         else:
             ydata=y_axis
         y_offset = np.min(ydata)
@@ -875,37 +1041,34 @@ class Viewer2D(QtWidgets.QWidget):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    Form=DockArea()
-    Form=QtWidgets.QWidget()
-    
-    prog = Viewer2D(Form);
-    prog.set_scaling_axes(scaling_options=dict(scaled_xaxis=dict(label="eV",units=None,offset=20,scaling=2),scaled_yaxis=dict(label="time",units='s',offset=-10,scaling=0.1)))
-    Nx=100;
-    Ny=200
+    Form = DockArea()
+    Form = QtWidgets.QWidget()
+
+    Nx = 100
+    Ny = 200
     data_random = pg.np.random.normal(size=(Ny, Nx))
-    x=pg.np.linspace(0,Nx-1,Nx)
-    y=pg.np.linspace(0,Ny-1,Ny)
-    from pymodaq.daq_utils.daq_utils import  gauss2D
-    data_red=data_random+3*gauss2D(x,0.2*Nx,Nx/5,y,0.3*Ny,Ny/5,1)
-    data_red = pg.gaussianFilter(data_red, (2, 2))
-    data_green=data_random+3*gauss2D(x,0.6*Nx,Nx/5,y,0.6*Ny,Ny/5,1)
-    data_green = pg.gaussianFilter(data_green, (2, 2))
-    data_blue=data_random+3*gauss2D(x,0.7*Nx,Nx/5,y,0.2*Ny,Ny/5,1)
+    x = pg.np.linspace(0, Nx - 1, Nx)
+    y = pg.np.linspace(0, Ny - 1, Ny)
+    from pymodaq.daq_utils.daq_utils import gauss2D
+
+    data_red =  3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)
+    #data_red = pg.gaussianFilter(data_red, (2, 2))
+    data_green =  3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+    #data_green = pg.gaussianFilter(data_green, (2, 2))
+    data_blue = data_random + 3 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
-    
-    prog.setImage(data_blue=data_blue,data_green=None,data_red=data_red)
-    
-    #prog.roi_manager.settings.child(('ROIs')).addNew('ElipseROI')
-    
-    #prog.ui.imag_blue.set
 
-    #prog.ui.img_blue.setScale(2)
-    #import hyperspy.api as hs
 
-    #filename='C:\\Users\\Weber\\Downloads\\CBEDs pour seb\\CBED position 3 laser 200mW 4s bin 1 exposure time 1.2 m STEM 3.dm4'
-    #cbed1=hs.load(filename)
-    #prog.setImage(cbed1.data)
 
-    
+    prog = Viewer2D(Form)
+    prog.set_scaling_axes(scaling_options=utils.ScalingOptions(
+        scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
+        scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
+    data = np.load('triangulation_data.npy')
+    #prog.setImage(data_red=data_red, data_blue=data_blue, data_adaptive=data)
+    prog.setImage(data_adaptive=data)
+    app.processEvents()
+    
+
     sys.exit(app.exec_())

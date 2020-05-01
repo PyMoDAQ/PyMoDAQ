@@ -9,7 +9,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
-from pymodaq.daq_utils.daq_utils import select_file
+from pymodaq.daq_utils.gui_utils import select_file
 
 
 class PresetScalableGroupMove(pTypes.GroupParameter):
@@ -101,11 +101,10 @@ registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
 
 
 #check if overshoot_configurations directory exists on the drive
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
-local_path = get_set_local_dir()
-overshoot_path= os.path.join(local_path, 'overshoot_configurations')
-if not os.path.isdir(overshoot_path):
-    os.makedirs(overshoot_path)
+from pymodaq.daq_utils.daq_utils import get_set_overshoot_path
+
+overshoot_path = get_set_overshoot_path()
+
 
 
 class OvershootManager:
@@ -135,7 +134,7 @@ class OvershootManager:
             else: #cancel
                 pass
 
-    def set_file_overshoot(self, filename,show=True):
+    def set_file_overshoot(self, filename, show=True):
         """
 
         """

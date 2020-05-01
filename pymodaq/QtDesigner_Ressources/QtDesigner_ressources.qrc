@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+	<file>Icon_Library/grey_icon.png</file>
     <file>Icon_Library/remove.png</file>
     <file>Icon_Library/HLM.ico</file>
     <file>Icon_Library/MeasurementStudio_32.png</file>

@@ -1,29 +1,22 @@
 from PyQt5 import QtWidgets
 import sys
 import os
-import random
 
-import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-
-from pymodaq.daq_utils.daq_utils import get_set_pid_path, select_file
-from pymodaq.daq_utils.h5saver import H5Saver
-import pymodaq.daq_utils.manage_preset_utils #to define specific parameters types
+import pymodaq.daq_utils.manage_preset_utils
+from pymodaq.daq_utils.gui_utils import select_file
+from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
 
 
 #check if preset_mode directory exists on the drive
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
-local_path = get_set_local_dir()
-
-pid_path = get_set_pid_path()
-
-preset_path = os.path.join(local_path, 'preset_modes')
-if not os.path.isdir(preset_path):
-    os.makedirs(preset_path)
-
+from pymodaq.daq_utils import daq_utils as utils
+pid_path = utils.get_set_pid_path()
+preset_path = utils.get_set_preset_path()
+overshoot_path = utils.get_set_overshoot_path()
+layout_path = utils.get_set_layout_path()
 
 class PresetManager:
     def __init__(self, msgbox=False):
@@ -200,13 +193,11 @@ class PresetManager:
 
             if not self.pid_type:
                 #check if overshoot configuration and layout configuration with same name exists => delete them if yes
-                overshoot_path = os.path.join(local_path, 'overshoot_configurations')
                 file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
                 file = os.path.join(overshoot_path, file + '.xml')
                 if os.path.isfile(file):
                     os.remove(file)
 
-                layout_path = os.path.join(local_path, 'layout')
                 file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
                 file = os.path.join(layout_path, file +'.dock')
                 if os.path.isfile(file):
