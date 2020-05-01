@@ -1,7 +1,5 @@
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import pyqtSignal, QObject, QVariant
+
 import sys
-import tables
 import traceback
 from collections import OrderedDict
 
@@ -9,15 +7,12 @@ import numpy as np
 import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE
-import inspect
 
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 
-from pyqtgraph import dockarea
 import enum
 import os
-import re
 import importlib
 import logging
 from logging.handlers import TimedRotatingFileHandler
