@@ -358,7 +358,7 @@ class Axis(dict):
 
 
 class DataToExport(OrderedDict):
-    def __init__(self, data=None, type='raw', subtype='linear', x_axis=Axis(), y_axis=Axis()):
+    def __init__(self, name='', data=None, type='raw', subtype='linear', x_axis=Axis(), y_axis=Axis()):
         """
         Utility class defining a data being exported for pymodaq's viewers, attributes can be accessed as attributes
         or dictionary keys
@@ -372,14 +372,16 @@ class DataToExport(OrderedDict):
         y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         """
-        if data is None or isinstance(data, np.ndarray):
+        if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
             self['data'] = data
         else:
-            raise TypeError('data for the DataToExport class should be a ndarray')
-
+            raise TypeError('data for the DataToExport class should be a scalar or a ndarray')
+        if not isinstance(name, str):
+            raise TypeError('name for the DataToExport class should be a string')
+        self['name'] = name
         if not isinstance(type, str):
             raise TypeError('type for the DataToExport class should be a string')
-        elif 'raw' not in type or 'roi' not in type:
+        elif not('raw' in type or 'roi' in type):
             raise ValueError('Invalid "type" for the DataToExport class')
         self['type'] = type
 

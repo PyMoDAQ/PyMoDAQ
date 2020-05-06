@@ -167,7 +167,7 @@ class ROIManager(QObject):
 
     roi_update_children = pyqtSignal(list)
 
-    color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
+    color_list = np.array([(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)])
 
     def __init__(self, viewer_widget=None, ROI_type='1D'):
         super().__init__()
@@ -330,13 +330,13 @@ class ROIManager(QObject):
         except:
             pass
         if isinstance(roi, LinearROI):
-            par.child(*('position','left')).setValue(pos[0])
-            par.child(*('position','right')).setValue(pos[1])
+            par.child(*('position', 'left')).setValue(pos[0])
+            par.child(*('position', 'right')).setValue(pos[1])
         if not isinstance(roi, LinearROI):
-            par.child(*('position','x')).setValue(pos[0])
-            par.child(*('position','y')).setValue(pos[1])
-            par.child(*('size','width')).setValue(size[0])
-            par.child(*('size','height')).setValue(size[1])
+            par.child(*('position', 'x')).setValue(pos[0])
+            par.child(*('position', 'y')).setValue(pos[1])
+            par.child(*('size', 'width')).setValue(size[0])
+            par.child(*('size', 'height')).setValue(size[1])
             par.child(('angle')).setValue(angle)
 
         self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
@@ -418,7 +418,8 @@ class ROIScalableGroup(pTypes.GroupParameter):
         children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False},]
         if self.roi_type == '2D':
             children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
-                            {'title': 'Use channel', 'name': 'use_channel', 'type': 'list', 'values': ['red', 'green', 'blue']},])
+                            {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
+                             'values': ['red', 'green', 'blue', 'spread']}, ])
         else:
             children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
 
@@ -426,7 +427,7 @@ class ROIScalableGroup(pTypes.GroupParameter):
         children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'values': functions,
                  'value': 'Sum', 'visible': self.roi_type == '1D'})
         children.extend([
-            {'name': 'Color', 'type': 'color', 'value': self.color_list[newindex]},])
+            {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])},])
         if self.roi_type == '2D':
             children.extend([{'name': 'position', 'type': 'group', 'children': [
                 {'name': 'x', 'type': 'float', 'value': 0, 'step': 1},

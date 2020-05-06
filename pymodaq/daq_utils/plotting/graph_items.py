@@ -1,187 +1,165 @@
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageItem
+from PyQt5 import QtCore, QtGui, Qt
+import pyqtgraph as pg
+from.plot_utils import makeAlphaTriangles, makePolygons
+
 import numpy as np
 from pyqtgraph import debug as debug
 from pyqtgraph import Point
 from pyqtgraph import functions as fn
 import collections
-from pymodaq.daq_utils.plotting import plot_utils as utils
-from PyQt5 import QtCore, QtGui, Qt
-from scipy.spatial import Delaunay as Triangulation
 
 
-def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
-    """
-    Convert an array of values into an ARGB array suitable for building QImages,
-    OpenGL textures, etc.
-
-    Returns the ARGB array (unsigned byte) and a boolean indicating whether
-    there is alpha channel data. This is a two stage process:
-        0) compute the polygons (triangles) from triangulation of the points
-        1) Rescale the data based on the values in the *levels* argument (min, max).
-        2) Determine the final output by passing the rescaled values through a
-           lookup table.
-
-    Both stages are optional.
-
-    ============== ==================================================================================
-    **Arguments:**
-    data           numpy array of int/float types. If
-    levels         List [min, max]; optionally rescale data before converting through the
-                   lookup table. The data is rescaled such that min->0 and max->*scale*::
-
-                      rescaled = (clip(data, min, max) - min) * (*scale* / (max - min))
-
-                   It is also possible to use a 2D (N,2) array of values for levels. In this case,
-                   it is assumed that each pair of min,max values in the levels array should be
-                   applied to a different subset of the input data (for example, the input data may
-                   already have RGB values and the levels are used to independently scale each
-                   channel). The use of this feature requires that levels.shape[0] == data.shape[-1].
-    scale          The maximum value to which data will be rescaled before being passed through the
-                   lookup table (or returned if there is no lookup table). By default this will
-                   be set to the length of the lookup table, or 255 if no lookup table is provided.
-    lut            Optional lookup table (array with dtype=ubyte).
-                   Values in data will be converted to color by indexing directly from lut.
-                   The output data shape will be input.shape + lut.shape[1:].
-                   Lookup tables can be built using ColorMap or GradientWidget.
-    useRGBA        If True, the data is returned in RGBA order (useful for building OpenGL textures).
-                   The default is False, which returns in ARGB order for use with QImage
-                   (Note that 'ARGB' is a term used by the Qt documentation; the *actual* order
-                   is BGRA).
-    ============== ==================================================================================
-    """
-    points = data[:, :2]
-    values = data[:, 2]
-
-    profile = debug.Profiler()
-    if points.ndim not in (2,):
-        raise TypeError("points must be 1D sequence of points")
-
-    tri = Triangulation(points)
-    tri_data = np.zeros((len(tri.simplices),))
-    for ind, pts in enumerate(tri.simplices):
-        tri_data[ind] = np.mean(values[pts])
-    data = tri_data.copy()
-    if lut is not None and not isinstance(lut, np.ndarray):
-        lut = np.array(lut)
-
-    if levels is None:
-        # automatically decide levels based on data dtype
-        if data.dtype.kind == 'u':
-            levels = np.array([0, 2 ** (data.itemsize * 8) - 1])
-        elif data.dtype.kind == 'i':
-            s = 2 ** (data.itemsize * 8 - 1)
-            levels = np.array([-s, s - 1])
-        elif data.dtype.kind == 'b':
-            levels = np.array([0, 1])
-        else:
-            raise Exception('levels argument is required for float input types')
-    if not isinstance(levels, np.ndarray):
-        levels = np.array(levels)
-    if levels.ndim == 1:
-        if levels.shape[0] != 2:
-            raise Exception('levels argument must have length 2')
-    elif levels.ndim == 2:
-        if lut is not None and lut.ndim > 1:
-            raise Exception('Cannot make ARGB data when both levels and lut have ndim > 2')
-        if levels.shape != (data.shape[-1], 2):
-            raise Exception('levels must have shape (data.shape[-1], 2)')
-    else:
-        raise Exception("levels argument must be 1D or 2D (got shape=%s)." % repr(levels.shape))
-
-    profile()
-
-    # Decide on maximum scaled value
-    if scale is None:
-        if lut is not None:
-            scale = lut.shape[0] - 1
-        else:
-            scale = 255.
-
-    # Decide on the dtype we want after scaling
-    if lut is None:
-        dtype = np.ubyte
-    else:
-        dtype = np.min_scalar_type(lut.shape[0] - 1)
-
-    # Apply levels if given
-    if levels is not None:
-        if isinstance(levels, np.ndarray) and levels.ndim == 2:
-            # we are going to rescale each channel independently
-            if levels.shape[0] != data.shape[-1]:
-                raise Exception(
-                    "When rescaling multi-channel data, there must be the same number of levels as channels (data.shape[-1] == levels.shape[0])")
-            newData = np.empty(data.shape, dtype=int)
-            for i in range(data.shape[-1]):
-                minVal, maxVal = levels[i]
-                if minVal == maxVal:
-                    maxVal += 1e-16
-                newData[..., i] = fn.rescaleData(data[..., i], scale / (maxVal - minVal), minVal, dtype=dtype)
-            data = newData
-        else:
-            # Apply level scaling unless it would have no effect on the data
-            minVal, maxVal = levels
-            if minVal != 0 or maxVal != scale:
-                if minVal == maxVal:
-                    maxVal += 1e-16
-                data = fn.rescaleData(data, scale / (maxVal - minVal), minVal, dtype=dtype)
-
-    profile()
-
-    # apply LUT if given
-    if lut is not None:
-        data = fn.applyLookupTable(data, lut)
-    else:
-        if data.dtype is not np.ubyte:
-            data = np.clip(data, 0, 255).astype(np.ubyte)
-
-    profile()
-
-    # this will be the final image array
-    imgData = np.empty((data.shape[0],) + (4,), dtype=np.ubyte)
-
-    profile()
-
-    # decide channel order
-    if useRGBA:
-        order = [0, 1, 2, 3]  # array comes out RGBA
-    else:
-        order = [2, 1, 0, 3]  # for some reason, the colors line up as BGR in the final image.
+class ImageItem(pg.ImageItem):
+    def __init__(self, image=None, **kargs):
+        super(ImageItem, self).__init__(image, **kargs)
+        self.flipud = False
+        self.fliplr = False
+        self.rotate90 = False
 
 
-    #TODO check this
-    # copy data into image array
-    if data.ndim == 1:
-        # This is tempting:
-        #   imgData[..., :3] = data[..., np.newaxis]
-        # ..but it turns out this is faster:
-        for i in range(3):
-            imgData[..., i] = data
-    elif data.shape[1] == 1:
-        for i in range(3):
-            imgData[..., i] = data[..., 0]
-    else:
-        for i in range(0, data.shape[1]):
-            imgData[..., i] = data[..., order[i]]
+    def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+        """Returns x and y arrays containing the histogram values for the current image.
+        For an explanation of the return format, see numpy.histogram().
 
-    profile()
+        The *step* argument causes pixels to be skipped when computing the histogram to save time.
+        If *step* is 'auto', then a step is chosen such that the analyzed data has
+        dimensions roughly *targetImageSize* for each axis.
 
-    # add opaque alpha channel if needed
-    if data.ndim == 1 or data.shape[1] == 3:
-        alpha = False
-        imgData[..., 3] = 255
-    else:
-        alpha = True
+        The *bins* argument and any extra keyword arguments are passed to
+        np.histogram(). If *bins* is 'auto', then a bin number is automatically
+        chosen based on the image characteristics:
 
-    profile()
-    return tri, tri_data, imgData, alpha
+        * Integer images will have approximately *targetHistogramSize* bins,
+          with each bin having an integer width.
+        * All other types will have *targetHistogramSize* bins.
 
+        This method is also used when automatically computing levels.
+        """
+        if self.image is None:
+            return None, None
+        if step == 'auto':
+            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
+                    int(np.ceil(self.image.shape[1] / targetImageSize)))
+        if np.isscalar(step):
+            step = (step, step)
+        stepData = self.image[::step[0], ::step[1]]
 
-def makePolygons(tri):
-    polygons = []
-    for seq in tri.points[tri.simplices]:
-        polygons.append(QtGui.QPolygonF([QtCore.QPointF(*s) for s in seq] + [QtCore.QPointF(*seq[0])]))
-    return polygons
+        if bins == 'auto':
+            try:
+                if stepData.dtype.kind in "ui":
+                    mn = stepData.min()
+                    mx = stepData.max()
+                    step = np.ceil((mx - mn) / 500.)
+                    bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
+                    if len(bins) == 0:
+                        bins = [mn, mx]
+            except:
+                bins = 500
+            else:
+                bins = 500
 
+        kwds['bins'] = bins
+        stepData = stepData[np.isfinite(stepData)]
+        hist = np.histogram(stepData, **kwds)
+
+        return hist[1][:-1], hist[0]
+
+    def setOpts(self, update=True, **kargs):
+        if 'axisOrder' in kargs:
+            val = kargs['axisOrder']
+            if val not in ('row-major', 'col-major'):
+                raise ValueError('axisOrder must be either "row-major" or "col-major"')
+            self.axisOrder = val
+        if 'flipud' in kargs:
+            self.flipud = kargs['flipud']
+
+        if 'fliplr' in kargs:
+            self.fliplr = kargs['fliplr']
+        if 'rotate90' in kargs:
+            self.rotate90 = kargs['rotate90']
+
+        if 'lut' in kargs:
+            self.setLookupTable(kargs['lut'], update=update)
+        if 'levels' in kargs:
+            self.setLevels(kargs['levels'], update=update)
+        #if 'clipLevel' in kargs:
+            #self.setClipLevel(kargs['clipLevel'])
+        if 'opacity' in kargs:
+            self.setOpacity(kargs['opacity'])
+        if 'compositionMode' in kargs:
+            self.setCompositionMode(kargs['compositionMode'])
+        if 'border' in kargs:
+            self.setBorder(kargs['border'])
+        if 'removable' in kargs:
+            self.removable = kargs['removable']
+            self.menu = None
+        if 'autoDownsample' in kargs:
+            self.setAutoDownsample(kargs['autoDownsample'])
+        if update:
+            self.update()
+
+    def dataTransform(self):
+        """Return the transform that maps from this image's input array to its
+        local coordinate system.
+
+        This transform corrects for the transposition that occurs when image data
+        is interpreted in row-major order.
+        """
+        # Might eventually need to account for downsampling / clipping here
+        tr = QtGui.QTransform()
+        # if self.axisOrder == 'row-major':
+        #     # transpose
+        #     tr.scale(1, -1)
+        #     tr.rotate(-90)
+        if self.flipud or self.fliplr or self.rotate90:
+            if self.rotate90:
+                tr.translate(self.height() / 2, self.width() / 2)
+            else:
+                tr.translate(self.width() / 2, self.height() / 2)
+        if self.flipud:
+            tr.scale(1, -1)
+        if self.fliplr:
+            tr.scale(-1, 1)
+        if self.rotate90:
+            tr.rotate(90)
+        if self.flipud or self.fliplr or self.rotate90:
+            tr.translate(-self.width() / 2, -self.height() / 2)
+
+        return tr
+
+    def inverseDataTransform(self):
+        """Return the transform that maps from this image's local coordinate
+        system to its input array.
+
+        See dataTransform() for more information.
+        """
+        tr = self.dataTransform()
+        tr.inverted()[0]
+        if self.axisOrder == 'row-major':
+            # transpose
+            tr.scale(1, -1)
+            tr.rotate(-90)
+        return tr
+
+    def paint(self, p, *args):
+        if self.image is None:
+            return
+        if self.qimage is None:
+            self.render()
+            if self.qimage is None:
+                return
+
+        if self.paintMode is not None:
+            p.setCompositionMode(self.paintMode)
+
+        self.setTransform(self.dataTransform())
+
+        shape = self.image.shape[:2] if self.axisOrder == 'col-major' else self.image.shape[:2][::-1]
+        p.drawImage(QtCore.QRectF(0, 0, self.qimage.width(), self.qimage.height()), self.qimage)
+
+        if self.border is not None:
+            p.setPen(self.border)
+            p.drawRect(self.boundingRect())
 
 class TriangulationItem(ImageItem):
     """
@@ -504,4 +482,78 @@ class TriangulationItem(ImageItem):
 
     def getPixmap(self):
         pass
+
+class PlotCurveItem(pg.PlotCurveItem):
+
+    def __init__(self, *args, **kargs):
+        super().__init__(*args, **kargs)
+        self.flipud = False
+        self.fliplr = False
+        self.flipudbis = False
+
+    def paint(self, p, opt, widget):
+        if self.xData is None or len(self.xData) == 0:
+            return
+
+        x = None
+        y = None
+        path = self.getPath()
+
+        if self._exportOpts is not False:
+            aa = self._exportOpts.get('antialias', True)
+        else:
+            aa = self.opts['antialias']
+
+        p.setRenderHint(p.Antialiasing, aa)
+
+        if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
+            if self.fillPath is None:
+                if x is None:
+                    x, y = self.getData()
+                p2 = QtGui.QPainterPath(self.path)
+                p2.lineTo(x[-1], self.opts['fillLevel'])
+                p2.lineTo(x[0], self.opts['fillLevel'])
+                p2.lineTo(x[0], y[0])
+                p2.closeSubpath()
+                self.fillPath = p2
+
+            p.fillPath(self.fillPath, self.opts['brush'])
+
+        sp = pg.functions.mkPen(self.opts['shadowPen'])
+        cp = pg.functions.mkPen(self.opts['pen'])
+
+        self.setTransform(self.dataTransform())
+
+        if sp is not None and sp.style() != QtCore.Qt.NoPen:
+            p.setPen(sp)
+            p.drawPath(path)
+        p.setPen(cp)
+        p.drawPath(path)
+
+    def setOpts(self, update=True, **kargs):
+        if 'flipud' in kargs:
+            self.flipud = kargs['flipud']
+        if 'fliplr' in kargs:
+            self.fliplr = kargs['fliplr']
+        if 'flipudbis' in kargs:
+            self.flipudbis = kargs['flipudbis']
+        if update:
+            self.update()
+
+    def dataTransform(self):
+        """Return the transform that maps from this image's input array to its
+        local coordinate system.
+
+        This transform corrects for the transposition that occurs when image data
+        is interpreted in row-major order.
+        """
+        # Might eventually need to account for downsampling / clipping here
+        tr = QtGui.QTransform()
+        if self.flipudbis:
+            tr.scale(1, -1)
+        if self.flipud:
+            tr.scale(1, -1)
+        if self.fliplr:
+            tr.scale(-1, 1)
+        return tr
 
