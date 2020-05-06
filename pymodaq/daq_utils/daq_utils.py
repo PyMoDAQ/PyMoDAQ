@@ -328,7 +328,7 @@ class ThreadCommand(object):
 
 class Axis(dict):
     """
-    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as attributes or dictionary keys
+    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
     """
 
     def __init__(self, data=None, label='', units=''):
@@ -356,26 +356,22 @@ class Axis(dict):
             raise TypeError('units for the Axis class should be a string')
         self['units'] = units
 
-
-class DataToExport(OrderedDict):
-    def __init__(self, name='', data=None, type='raw', subtype='linear', x_axis=Axis(), y_axis=Axis()):
+class Data(OrderedDict):
+    def __init__(self, name='', type='raw', subtype='linear', x_axis=Axis(),
+                 y_axis=Axis()):
         """
-        Utility class defining a data being exported for pymodaq's viewers, attributes can be accessed as attributes
-        or dictionary keys
+        Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
+        attributes can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
-        data: (ndarray)
-        type: (str) either 'raw' or 'roi...'
+        type: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
         subtype: (str) either 'linear' or 'spread'
         x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         """
-        if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
-            self['data'] = data
-        else:
-            raise TypeError('data for the DataToExport class should be a scalar or a ndarray')
+
         if not isinstance(name, str):
             raise TypeError('name for the DataToExport class should be a string')
         self['name'] = name
@@ -391,6 +387,7 @@ class DataToExport(OrderedDict):
             raise ValueError('Invalid "subtype" for the DataToExport class')
         self['subtype'] = subtype
 
+
         if not isinstance(x_axis, Axis):
             raise TypeError('x_axis for the DataToExport class should be a Axis class')
         self['x_axis'] = x_axis
@@ -398,6 +395,93 @@ class DataToExport(OrderedDict):
         if not isinstance(y_axis, Axis):
             raise TypeError('y_axis for the DataToExport class should be a Axis class')
         self['y_axis'] = y_axis
+
+class DataFromPlugins(Data):
+
+    def __init__(self, data=None, dim='', labels=[], nav_axes=[], nav_x_axis=Axis(), nav_y_axis=Axis(), **kwargs):
+        """
+        Parameters
+        ----------
+        dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
+
+
+        """
+        super().__init__(**kwargs)
+        self['labels'] = labels
+        if len(nav_axes) != 0:
+            self['nav_axes'] = nav_axes
+        if nav_x_axis['data'] is not None:
+            self['nav_x_axis'] = nav_x_axis
+        if nav_y_axis['data'] is not None:
+            self['nav_y_axis'] = nav_y_axis
+
+        iscorrect = True
+        if data is not None:
+            if isinstance(data, list):
+                for dat in data:
+                    if not isinstance(dat, np.ndarray):
+                        iscorrect = False
+            else:
+                iscorrect = False
+
+        if iscorrect:
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataFromPlugins class should be None or a list of numpy arrays')
+
+        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') or data is not None:
+            ndim = len(data[0].shape)
+            if ndim == 1:
+                if data[0].size == 1:
+                    dim = 'Data0D'
+                else:
+                    dim = 'Data1D'
+            elif ndim == 2:
+                dim = 'Data2D'
+            else:
+                dim = 'DataND'
+        self['dim'] = dim
+
+class DataToExport(Data):
+    def __init__(self, data=None, dim='', **kwargs):
+        """
+        Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary keys
+        Parameters
+        ----------
+        data: (ndarray or a scalar)
+        dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
+        """
+        super().__init__(**kwargs)
+        if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataToExport class should be a scalar or a ndarray')
+
+        iscorrect = True
+        if data is not None:
+            if not (isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int)):
+                iscorrect = False
+
+        if iscorrect:
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataToExport class should be a scalar or a numpy array')
+
+        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') or data is not None:
+            if isinstance(data, np.ndarray):
+                ndim = len(data.shape)
+                if ndim == 1:
+                    if data.size == 1:
+                        dim = 'Data0D'
+                    else:
+                        dim = 'Data1D'
+                elif ndim == 2:
+                    dim = 'Data2D'
+                else:
+                    dim = 'DataND'
+            else:
+                dim = 'Data0D'
+        self['dim'] = dim
 
 class ScaledAxis(Axis):
     def __init__(self, label='', units='', offset=0, scaling=1):

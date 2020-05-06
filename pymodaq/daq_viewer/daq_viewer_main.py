@@ -1881,58 +1881,35 @@ class DAQ_Detector(QObject):
             if self.DAQ_type == 'DAQ0D':
                 class_ = getattr(getattr(plugins_0D, 'daq_0Dviewer_' + self.detector_name),
                                  'DAQ_0DViewer_' + self.detector_name)
-                self.detector = class_(self, params_state)
-                self.detector.data_grabed_signal.connect(self.data_ready)
-                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.ini_detector(controller))
-                if status['x_axis'] is not None:
-                    x_axis = status['x_axis']
-                    self.status_sig.emit(ThreadCommand("x_axis", [x_axis]))
-                # status="Initialized"
 
             elif self.DAQ_type == 'DAQ1D':
                 class_ = getattr(getattr(plugins_1D, 'daq_1Dviewer_' + self.detector_name),
                                  'DAQ_1DViewer_' + self.detector_name)
                 self.detector = class_(self, params_state)
-                self.detector.data_grabed_signal.connect(self.data_ready)
-                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.ini_detector(controller))
-                if status['x_axis'] is not None:
-                    x_axis = status['x_axis']
-                    self.status_sig.emit(ThreadCommand("x_axis", [x_axis]))
-                # status="Initialized"
 
             elif self.DAQ_type == 'DAQ2D':
                 class_ = getattr(getattr(plugins_2D, 'daq_2Dviewer_' + self.detector_name),
                                  'DAQ_2DViewer_' + self.detector_name)
-                self.detector = class_(self, params_state)
-                self.detector.data_grabed_signal.connect(self.data_ready)
-                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.ini_detector(controller))
-                if status['x_axis'] is not None:
-                    x_axis = status['x_axis']
-                    self.status_sig.emit(ThreadCommand("x_axis", [x_axis]))
-                if status['y_axis'] is not None:
-                    y_axis = status['y_axis']
-                    self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
-                # status="Initialized"
 
             elif self.DAQ_type == 'DAQND':
                 class_ = getattr(getattr(plugins_ND, 'daq_NDviewer_' + self.detector_name),
                                  'DAQ_NDViewer_' + self.detector_name)
-                self.detector = class_(self, params_state)
-                self.detector.data_grabed_signal.connect(self.data_ready)
-                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                status.update(self.detector.ini_detector(controller))
-                if status['x_axis'] is not None:
-                    x_axis = status['x_axis']
-                    self.status_sig.emit(ThreadCommand("x_axis", [x_axis]))
-                if status['y_axis'] is not None:
-                    y_axis = status['y_axis']
-                    self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
-
             else:
                 raise Exception(self.detector_name + " unknown")
+
+            self.detector = class_(self, params_state)
+            status.update(self.detector.ini_detector(controller))
+
+            if status['x_axis'] is not None:
+                x_axis = status['x_axis']
+                self.status_sig.emit(ThreadCommand("x_axis", [x_axis]))
+            if status['y_axis'] is not None:
+                y_axis = status['y_axis']
+                self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
+
+
+            self.detector.data_grabed_signal.connect(self.data_ready)
+            self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
 
             self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
 
@@ -1942,11 +1919,11 @@ class DAQ_Detector(QObject):
             return status
 
     @pyqtSlot(list)
-    def emit_temp_data(self,datas):
+    def emit_temp_data(self, datas):
         self.data_detector_temp_sig.emit(datas)
 
     @pyqtSlot(list)
-    def data_ready(self,datas):
+    def data_ready(self, datas):
         """
             | Update the local datas attributes from the given datas parameter if the averaging has to be done software wise.
             |
@@ -1961,6 +1938,16 @@ class DAQ_Detector(QObject):
             --------
             daq_utils.ThreadCommand
         """
+
+        # datas validation check for backcompatibility with plugins not exporting new DataFromPlugins list of objects
+
+        for dat in datas:
+            if not isinstance(dat, utils.DataFromPlugins):
+                if 'type' in dat:
+                    dat['dim'] = dat['type']
+                    dat['type'] = 'raw'
+
+
         if not(self.hardware_averaging): #to execute if the averaging has to be done software wise
             self.ind_average += 1
             if self.ind_average == 1:
@@ -1968,11 +1955,13 @@ class DAQ_Detector(QObject):
             else:
                 try:
                     for indpannel, dic in enumerate(datas):
-                        self.datas[indpannel]['data'] = [((self.ind_average-1)*self.datas[indpannel]['data'][ind]+datas[indpannel]['data'][ind])/self.ind_average for ind in range(len(datas[indpannel]['data']))]
+                        self.datas[indpannel]['data'] =\
+                            [((self.ind_average-1)*self.datas[indpannel]['data'][ind]+datas[indpannel]['data'][ind])/
+                             self.ind_average for ind in range(len(datas[indpannel]['data']))]
 
-                    #self.datas=[((self.ind_average-1)*self.datas[indbis][data][ind]+datas[indbis][data][ind])/self.ind_average for ind in range(len(datas))]
                     if self.show_averaging:
                         self.emit_temp_data(self.datas)
+
                 except Exception as e:
                     logger.exception(str(e))
 
@@ -1987,7 +1976,7 @@ class DAQ_Detector(QObject):
             #self.status_sig.emit(["Update_Status","Grabing braked"])
             self.detector.stop()
 
-    def single(self, Naverage=1,savepath=None):
+    def single(self, Naverage=1, savepath=None):
         """
             Call the grab method with Naverage parameter as an attribute.
 

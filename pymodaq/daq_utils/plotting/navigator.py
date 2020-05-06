@@ -11,7 +11,8 @@ from pyqtgraph.dockarea import Dock, DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph import HistogramLUTWidget
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic, ImageItem
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic
+from pymodaq.daq_utils.plotting.graph_items import ImageItem
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5modules import H5Saver, browse_data, H5BrowserUtil
 from pymodaq.daq_utils import gui_utils as gutils
