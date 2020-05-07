@@ -1,5 +1,9 @@
 
 import sys
+from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import pyqtSignal, QObject, QVariant
+import sys
+
 import traceback
 from collections import OrderedDict
 
@@ -23,6 +27,7 @@ plot_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', ' w']
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
+
 
 
 class JsonConverter:
@@ -55,6 +60,36 @@ class JsonConverter:
                 return dic
         except:
             return jsonstring
+
+def decode_data(encoded_data):
+    """
+    Decode QbyteArrayData generated when drop items in table/tree/list view
+    Parameters
+    ----------
+    encoded_data: QByteArray
+                    Encoded data of the mime data to be dropped
+    Returns
+    -------
+    data: list
+            list of dict whose key is the QtRole in the Model, and the value a QVariant
+
+    """
+    data = []
+
+    ds = QtCore.QDataStream(encoded_data, QtCore.QIODevice.ReadOnly)
+    while not ds.atEnd():
+        row = ds.readInt32()
+        col = ds.readInt32()
+
+        map_items = ds.readInt32()
+        item = {}
+        for ind in range(map_items):
+            key = ds.readInt32()
+            value = QVariant()
+            ds >> value
+            item[QtCore.Qt.ItemDataRole(key)] = value
+        data.append(item)
+    return data
 
 
 ####################################
@@ -307,6 +342,32 @@ def getLineInfo():
     for t in traceback.format_tb(tb):
         res += t
     return res
+
+
+class ScanParameters(object):
+    def __init__(self, Nsteps=0,axis_1_indexes=[],axis_2_indexes=[],axis_1_unique=[],axis_2_unique=[],
+                 positions=[], axis_seq=[], axis_seq_indexes=[]):
+        super(ScanParameters, self).__init__()
+        self.positions = positions
+        self.axis_2D_1 = axis_1_unique
+        self.axis_2D_2 = axis_2_unique
+        self.axis_2D_1_indexes = axis_1_indexes
+        self.axis_2D_2_indexes = axis_2_indexes
+        self.axis_seq = axis_seq
+        self.axis_seq_indexes = axis_seq_indexes
+        self.Nsteps = Nsteps
+
+    def __repr__(self):
+        if self.axis_seq_indexes == []:
+            return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1), len(self.axis_2D_2))
+        else:
+            shape = ''
+            for ind, axis in enumerate(self.axis_seq):
+                if ind != len(self.axis_seq)-1:
+                    shape += '{:d}, '.format(len(axis))
+                else:
+                    shape += '{:d}'.format(len(axis))
+            return 'Scanner with {:d} positions and shape:({:s})'.format(self.Nsteps, shape)
 
 
 class ThreadCommand(object):
@@ -1129,6 +1190,65 @@ def set_scan_random(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1
     Nsteps = len(scan_parameters.positions)
     return ScanParameters(Nsteps, axis_1_indexes, axis_2_indexes, scan_parameters.axis_2D_1, scan_parameters.axis_2D_2,
                           positions_shuffled)
+
+
+def pos_above_stops(positions, steps, stops):
+    state =[]
+    for pos, step, stop in zip(positions, steps, stops):
+        if step >= 0:
+            state.append(pos>stop)
+        else:
+            state.append(pos<stop)
+    return state
+
+
+def set_scan_sequential(starts=[0.0, 10.0], stops=[10.0, 0.0], steps=[1.0, -1.0]):
+    """
+    Create a list of positions (one for each actuator == one for each element in starts list) that are sequential
+    Parameters
+    ----------
+    starts: list
+            list of starts of all selected actuators
+    stops: list
+                list of stops of all selected actuators
+    steps: list
+
+    Returns
+    -------
+    positions: list of list
+    """
+
+    axis_seq=[linspace_step(starts[ind],stops[ind],steps[ind]) for ind in range(len(starts))]
+
+
+    all_positions = [starts[:]]
+    positions = starts[:]
+    state = pos_above_stops(positions, steps, stops)
+    while  not state[0]:
+        if not np.any(np.array(state)):
+            positions[-1] += steps[-1]
+
+        else:
+            indexes_true = np.where(np.array(state))
+            positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
+            positions[indexes_true[-1][0]-1] += steps[indexes_true[-1][0]-1]
+
+        state = pos_above_stops(positions, steps, stops)
+        if not np.any(np.array(state)):
+            all_positions.append(positions[:])
+
+
+    axis_seq_indexes = []
+    for poss in all_positions:
+        indexes = []
+        for ind, pos in enumerate(poss):
+            indexes.append(np.where(axis_seq[ind]==pos)[0][0])
+        axis_seq_indexes.append(indexes)
+
+
+    Nsteps = len(all_positions)
+    return ScanParameters(Nsteps, positions=all_positions, axis_seq=axis_seq, axis_seq_indexes=axis_seq_indexes)
+
 
 
 #########################
