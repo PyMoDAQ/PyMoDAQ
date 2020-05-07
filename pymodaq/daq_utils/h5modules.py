@@ -903,7 +903,7 @@ class H5LogHandler(logging.StreamHandler):
         msg = self.format(record)
         self.h5saver.add_log(msg)
 
-class H5Saver(H5Backend):
+class H5Saver(H5Backend, QObject):
     """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
     on a UI (see :numref:`other_settings`) using the widget self.settings_tree. At the creation of a new file, a node
@@ -1001,7 +1001,8 @@ class H5Saver(H5Backend):
         --------
         https://github.com/HDFGroup/hsds
         """
-        super().__init__(backend)
+        H5Backend.__init__(self, backend)
+        QObject.__init__(self)
 
         if save_type not in save_types:
             raise InvalidSave('Invalid saving type')

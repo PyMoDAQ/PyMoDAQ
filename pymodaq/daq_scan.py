@@ -208,7 +208,7 @@ class DAQ_Scan(QObject):
         save live data and adds metadata to write that the scan is done
         """
         try:
-            self.h5saver.current_scan_group._v_attrs['scan_done'] = True
+            self.h5saver.current_scan_group.attrs['scan_done'] = True
             self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
             #create Live scan node (may be empty if no possible live data could be plotted) but mandatory for
             # incrementing scan index, otherwise current scan is overwritten
@@ -255,7 +255,7 @@ class DAQ_Scan(QObject):
                     string = gutils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
                 else:
                     string = gutils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
-                live_group._v_attrs['pixmap1D'] = string
+                live_group.attrs['pixmap1D'] = string
 
 
 
@@ -305,7 +305,7 @@ class DAQ_Scan(QObject):
                     string = gutils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
                 else:
                     string = gutils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
-                live_group._v_attrs['pixmap2D'] = string
+                live_group.attrs['pixmap2D'] = string
 
             if self.navigator is not None:
                 self.navigator.update_2Dscans()
@@ -342,7 +342,7 @@ class DAQ_Scan(QObject):
             custom_tree.parameter_to_xml_string
         """
 
-        attr = node._v_attrs
+        attr = node.attrs
         if type_info == 'dataset_info':
             attr['type'] = 'dataset'
             params = self.dataset_attributes
@@ -430,9 +430,10 @@ class DAQ_Scan(QObject):
             --------
             show_file_attributes
         """
-        date=QDateTime(QDate.currentDate(),QTime.currentTime())
-        self.scan_attributes.child('scan_info','date_time').setValue(date)
-        self.scan_attributes.child('scan_info','author').setValue(self.dataset_attributes.child('dataset_info','author').value())
+        date = QDateTime(QDate.currentDate(), QTime.currentTime())
+        self.scan_attributes.child('scan_info', 'date_time').setValue(date)
+        self.scan_attributes.child('scan_info', 'author').setValue(
+            self.dataset_attributes.child('dataset_info', 'author').value())
         res = self.show_file_attributes('scan')
         return res
 
@@ -445,7 +446,7 @@ class DAQ_Scan(QObject):
             --------
             show_file_attributes
         """
-        date = QDateTime(QDate.currentDate(),QTime.currentTime())
+        date = QDateTime(QDate.currentDate(), QTime.currentTime())
         self.dataset_attributes.child('dataset_info', 'date_time').setValue(date)
         res = self.show_file_attributes('dataset')
         return res
@@ -511,7 +512,7 @@ class DAQ_Scan(QObject):
     def create_new_file(self, new_file):
         self.h5saver.init_file(update_h5=new_file)
         res = self.update_file_settings(new_file)
-        self.h5saver.current_scan_group._v_attrs['scan_done'] = False
+        self.h5saver.current_scan_group.attrs['scan_done'] = False
         if new_file:
             self.ui.start_scan_pb.setEnabled(False)
             self.ui.stop_scan_pb.setEnabled(False)
@@ -737,7 +738,7 @@ class DAQ_Scan(QObject):
         self.ui.scan2D_graph.ui.rotate_pb.setVisible(False)
         self.ui.move_to_crosshair_cb = QtWidgets.QCheckBox("Move at doubleClicked")
 
-        self.ui.scan2D_graph.ui.horizontalLayout_2.addWidget(self.ui.move_to_crosshair_cb)
+        self.ui.scan2D_graph.ui.buttons_layout.addWidget(self.ui.move_to_crosshair_cb)
         self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
 
         # %% init and set the status bar
@@ -788,7 +789,7 @@ class DAQ_Scan(QObject):
         settings_layout.addWidget(self.scanner.settings_tree, 1, 1, 1, 1)
 
         #params about dataset attributes and scan attibutes
-        date = QDateTime(QDate.currentDate(),QTime.currentTime())
+        date = QDateTime(QDate.currentDate(), QTime.currentTime())
         params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children':[
                             {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': 'Sebastien Weber'},
                             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
@@ -1325,8 +1326,8 @@ class DAQ_Scan(QObject):
 
             #set attributes to the current group, such as scan_type....
             self.scan_attributes.child('scan_info','scan_type').setValue(self.scanner.settings.child('scan_options','scan_type').value())
-            self.scan_attributes.child('scan_info','scan_name').setValue(self.h5saver.current_scan_group._v_name)
-            self.scan_attributes.child('scan_info','description').setValue(self.h5saver.current_scan_group._v_attrs['description'])
+            self.scan_attributes.child('scan_info','scan_name').setValue(self.h5saver.current_scan_group.name)
+            self.scan_attributes.child('scan_info','description').setValue(self.h5saver.current_scan_group.attrs['description'])
             res = self.set_metadata_about_current_scan()
             self.save_metadata(self.h5saver.current_scan_group,'scan_info')
             return res
@@ -1884,7 +1885,7 @@ if __name__ == '__main__':
 
     #win.setVisible(False)
     prog = DashBoard(area)
-    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_modes\\preset_default.xml')
+    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_default.xml')
     # QThread.msleep(4000)
 
     prog.load_scan_module()

@@ -603,7 +603,8 @@ class DAQ_Move(Ui_Form, QObject):
 
         elif status.command == "ini_stage":
             #status.attributes[0]=edict(initialized=bool,info="", controller=)
-            self.update_status("Stage initialized: {:} info: {:}".format(status.attributes[0]['initialized'],status.attributes[0]['info']),wait_time=self.wait_time,log_type='log')
+            self.update_status("Stage initialized: {:} info: {:}".format(status.attributes[0]['initialized'],
+                                    status.attributes[0]['info']), wait_time=self.wait_time)
             if status.attributes[0]['initialized']:
                 self.controller = status.attributes[0]['controller']
                 self.set_enabled_move_buttons(enable=True)
@@ -615,9 +616,9 @@ class DAQ_Move(Ui_Form, QObject):
                 self.get_position()
             self.init_signal.emit(self.initialized_state)
 
-        elif status.command=="close":
+        elif status.command =="close":
             try:
-                self.update_status(status.attributes[0],wait_time=self.wait_time)
+                self.update_status(status.attributes[0], wait_time=self.wait_time)
                 self.stage_thread.exit()
                 self.stage_thread.wait()
                 finished = self.stage_thread.isFinished()

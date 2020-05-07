@@ -23,7 +23,9 @@ from logging.handlers import TimedRotatingFileHandler
 import inspect
 import json
 
-plot_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', ' w']
+
+plot_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
+
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
@@ -387,6 +389,8 @@ class ThreadCommand(object):
         self.command = command
         self.attributes = attributes
 
+
+
 class Axis(dict):
     """
     Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
@@ -418,15 +422,14 @@ class Axis(dict):
         self['units'] = units
 
 class Data(OrderedDict):
-    def __init__(self, name='', type='raw', subtype='linear', x_axis=Axis(),
-                 y_axis=Axis()):
+    def __init__(self, name='', type='raw', subtype='uniform', x_axis=Axis(), y_axis=Axis()):
         """
         Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
         attributes can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
         type: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
-        subtype: (str) either 'linear' or 'spread'
+        subtype: (str) either 'uniform' or 'spread'
         x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
@@ -444,18 +447,28 @@ class Data(OrderedDict):
 
         if not isinstance(subtype, str):
             raise TypeError('subtype for the DataToExport class should be a string')
-        elif subtype not in ('linear', 'spread'):
+        elif subtype not in ('uniform', 'spread'):
             raise ValueError('Invalid "subtype" for the DataToExport class')
         self['subtype'] = subtype
 
 
         if not isinstance(x_axis, Axis):
-            raise TypeError('x_axis for the DataToExport class should be a Axis class')
-        self['x_axis'] = x_axis
+            if isinstance(x_axis, np.ndarray):
+                x_axis = Axis(data=x_axis)
+            else:
+                raise TypeError('x_axis for the DataToExport class should be a Axis class')
+            self['x_axis'] = x_axis
+        elif x_axis['data'] is not None:
+            self['x_axis'] = x_axis
 
         if not isinstance(y_axis, Axis):
-            raise TypeError('y_axis for the DataToExport class should be a Axis class')
-        self['y_axis'] = y_axis
+            if isinstance(y_axis, np.ndarray):
+                y_axis = Axis(data=y_axis)
+            else:
+                raise TypeError('y_axis for the DataToExport class should be a Axis class')
+            self['y_axis'] = y_axis
+        elif y_axis['data'] is not None:
+            self['y_axis'] = y_axis
 
 class DataFromPlugins(Data):
 
@@ -490,7 +503,7 @@ class DataFromPlugins(Data):
         else:
             raise TypeError('data for the DataFromPlugins class should be None or a list of numpy arrays')
 
-        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') or data is not None:
+        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') and data is not None:
             ndim = len(data[0].shape)
             if ndim == 1:
                 if data[0].size == 1:
@@ -563,6 +576,14 @@ class ScalingOptions(dict):
         self['scaled_xaxis'] = scaled_xaxis
         self['scaled_yaxis'] = scaled_yaxis
 
+def recursive_find_files_extension(ini_path, ext, paths=[]):
+    with os.scandir(ini_path) as it:
+        for entry in it:
+            if os.path.splitext(entry.name)[1][1:] == ext and entry.is_file():
+                paths.append(entry.path)
+            elif entry.is_dir():
+                recursive_find_files_extension(entry.path, ext, paths)
+    return paths
 
 def rint(x):
     """

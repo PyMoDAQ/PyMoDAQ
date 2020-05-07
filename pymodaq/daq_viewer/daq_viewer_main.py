@@ -376,36 +376,36 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                               self.h5saver_continuous.raw_group, 'x_axis', enlargeable=True,
                               title='Time axis', metadata=dict(label='Time axis', units='second'))
 
-                data_types = ['data0D', 'data1D']
+                data_dims = ['data0D', 'data1D']
                 if self.h5saver_continuous.settings.child(('save_2D')).value():
-                    data_types.extend(['data2D', 'dataND'])
+                    data_dims.extend(['data2D', 'dataND'])
 
-                for data_type in data_types:
-                    if data_type in datas.keys() and len(datas[data_type]) != 0:
-                        if not self.h5saver_continuous.is_node_in_group(self.continuous_group, data_type):
-                            self.channel_arrays[data_type] = OrderedDict([])
+                for data_dim in data_dims:
+                    if data_dim in datas.keys() and len(datas[data_dim]) != 0:
+                        if not self.h5saver_continuous.is_node_in_group(self.continuous_group, data_dim):
+                            self.channel_arrays[data_dim] = OrderedDict([])
 
-                            data_group=self.h5saver_continuous.add_data_group(self.continuous_group, data_type)
-                            for ind_channel, channel in enumerate(datas[data_type]): #list of OrderedDict
+                            data_group=self.h5saver_continuous.add_data_group(self.continuous_group, data_dim)
+                            for ind_channel, channel in enumerate(datas[data_dim]): #list of OrderedDict
 
                                 channel_group = self.h5saver_continuous.add_CH_group(data_group, title=channel)
-                                self.channel_arrays[data_type]['parent'] = channel_group
-                                self.channel_arrays[data_type][channel] = self.h5saver_continuous.add_data(channel_group,
-                                        datas[data_type][channel], scan_type='scan1D', enlargeable = True)
+                                self.channel_arrays[data_dim]['parent'] = channel_group
+                                self.channel_arrays[data_dim][channel] = self.h5saver_continuous.add_data(channel_group,
+                                        datas[data_dim][channel], scan_type='scan1D', enlargeable = True)
                 self.is_continuous_initialized = True
 
             dt=np.array([time.perf_counter()-self.ini_time])
             self.h5saver_continuous.append(self.time_array, dt)
 
-            data_types = ['data0D', 'data1D']
+            data_dims = ['data0D', 'data1D']
             if self.h5saver_continuous.settings.child(('save_2D')).value():
-                data_types.extend(['data2D', 'dataND'])
+                data_dims.extend(['data2D', 'dataND'])
 
-            for data_type in data_types:
-                if data_type in datas.keys() and len(datas[data_type]) != 0:
-                    for ind_channel, channel in enumerate(datas[data_type]):
-                        self.h5saver_continuous.append(self.channel_arrays[data_type][channel],
-                                                  datas[data_type][channel]['data'])
+            for data_dim in data_dims:
+                if data_dim in datas.keys() and len(datas[data_dim]) != 0:
+                    for ind_channel, channel in enumerate(datas[data_dim]):
+                        self.h5saver_continuous.append(self.channel_arrays[data_dim][channel],
+                                                  datas[data_dim][channel]['data'])
 
             self.h5saver_continuous.h5_file.flush()
             self.h5saver_continuous.settings.child(('N_saved')).setValue(self.h5saver_continuous.settings.child(('N_saved')).value()+1)
@@ -906,29 +906,29 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 logger.exception(str(e))
         try:
             self.channel_arrays = OrderedDict([])
-            data_types = ['data1D'] #we don't recrod 0D data in this mode (only in continuous)
+            data_dims = ['data1D'] #we don't recrod 0D data in this mode (only in continuous)
             if h5saver.settings.child(('save_2D')).value():
-                data_types.extend(['data2D', 'dataND'])
-            for data_type in data_types:
-                if datas[data_type] is not None:
-                    if data_type in datas.keys() and len(datas[data_type]) != 0:
-                        if not h5saver.is_node_in_group(det_group, data_type):
-                            self.channel_arrays[data_type] = OrderedDict([])
+                data_dims.extend(['data2D', 'dataND'])
+            for data_dim in data_dims:
+                if datas[data_dim] is not None:
+                    if data_dim in datas.keys() and len(datas[data_dim]) != 0:
+                        if not h5saver.is_node_in_group(det_group, data_dim):
+                            self.channel_arrays[data_dim] = OrderedDict([])
 
-                            data_group = h5saver.add_data_group(det_group, data_type)
-                            for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
+                            data_group = h5saver.add_data_group(det_group, data_dim)
+                            for ind_channel, channel in enumerate(datas[data_dim]):  # list of OrderedDict
 
                                 channel_group = h5saver.add_CH_group(data_group, title=channel)
 
 
 
-                                self.channel_arrays[data_type]['parent'] = channel_group
-                                self.channel_arrays[data_type][channel] = h5saver.add_data(channel_group, datas[data_type][channel], scan_type='', enlargeable=False)
+                                self.channel_arrays[data_dim]['parent'] = channel_group
+                                self.channel_arrays[data_dim][channel] = h5saver.add_data(channel_group, datas[data_dim][channel], scan_type='', enlargeable=False)
 
-                                if data_type == 'data2D' and 'Data2D' in self.viewer_types:
+                                if data_dim == 'data2D' and 'Data2D' in self.viewer_types:
                                     ind_viewer = self.viewer_types.index('Data2D')
                                     string = gutils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
-                                    self.channel_arrays[data_type][channel].attrs['pixmap2D'] = string
+                                    self.channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
             logger.exception(str(e))
 
@@ -1087,10 +1087,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.ui.viewers[ind].title = data['name']
             if data['name'] != '':
                 self.ui.viewer_docks[ind].setTitle(self.title + ' ' + data['name'])
-            if data['type'].lower() != 'datand':
+            if data['dim'].lower() != 'datand':
                 self.set_xy_axis(data, ind)
 
-            if data['type'] == 'Data0D':
+            if data['dim'] == 'Data0D':
                 if 'labels' in data.keys():
                     self.ui.viewers[ind].labels = data['labels']
                 if temp:
@@ -1098,7 +1098,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 else:
                     self.ui.viewers[ind].show_data(data['data'])
 
-            elif data['type'] == 'Data1D':
+            elif data['dim'] == 'Data1D':
                 if 'labels' in data.keys():
                     self.ui.viewers[ind].labels = data['labels']
                 if temp:
@@ -1106,7 +1106,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 else:
                     self.ui.viewers[ind].show_data(data['data'])
 
-            elif data['type'] == 'Data2D':
+            elif data['dim'] == 'Data2D':
                 if temp:
                     self.ui.viewers[ind].setImageTemp(*data['data'])
                 else:
@@ -1212,9 +1212,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                                                data2D=None, dataND=None)  # to be populated from the results in the viewers
         Npannels = len(datas)
         self.process_overshoot(datas)
-        data_types = [data['type'] for data in datas]
-        if data_types != self.viewer_types:
-            self.update_viewer_pannels(data_types)
+        data_dims = [data['dim'] for data in datas]
+        if data_dims != self.viewer_types:
+            self.update_viewer_pannels(data_dims)
         if self.ui.take_bkg_cb.isChecked():
             self.ui.take_bkg_cb.setChecked(False)
             self.bkg = datas
@@ -1269,21 +1269,25 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 if 'external_h5' in data.keys():
                     self.data_to_save_export['external_h5'] = data.pop('external_h5')
                 data_tmp = copy.deepcopy(data)
-                data_type = data_tmp.pop('type')
-                if data_type.lower() != 'datand':
+                data_dim = data_tmp['dim']
+                if data_dim.lower() != 'datand':
                     self.set_xy_axis(data_tmp, ind_data)
                 data_arrays = data_tmp.pop('data')
 
                 for ind_sub_data, dat in enumerate(data_arrays):
-                    subdata_tmp = copy.deepcopy(data_tmp)
-                    subdata_tmp.update(OrderedDict(name=self.title, data=dat, type='raw'))
-                    if data_type.lower() == 'data0d':
+                    if 'name' in data_tmp:
+                        data_tmp.pop('name')
+                    if 'labels' in data_tmp:
+                        data_tmp.pop('labels')
+                    subdata_tmp = utils.DataToExport(name=self.title, data=dat, **data_tmp)
+
+                    if data_dim.lower() == 'data0d':
                         data0D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
-                    elif data_type.lower() == 'data1d':
+                    elif data_dim.lower() == 'data1d':
                         data1D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
-                    elif data_type.lower() == 'data2d':
+                    elif data_dim.lower() == 'data2d':
                         data2D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
-                    elif data_type.lower() == 'datand':
+                    elif data_dim.lower() == 'datand':
                         dataND['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
 
             self.data_to_save_export['data0D'] = data0D
@@ -1643,17 +1647,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         import webbrowser
         webbrowser.open(logger.handlers[0].baseFilename)
 
-    def update_viewer_pannels(self, data_types=['Data0D']):
-        Nviewers = len(data_types)
+    def update_viewer_pannels(self, data_dims=['Data0D']):
+        Nviewers = len(data_dims)
 
         self.settings.child('main_settings', 'Nviewers').setValue(Nviewers)
         DAQ_type = self.settings.child('main_settings', 'DAQ_type').value()
 
         #check if viewers are compatible with new data type
         N = 0
-        for ind, data_type in enumerate(data_types):
+        for ind, data_dim in enumerate(data_dims):
             if len(self.viewer_types) > ind:
-                if data_type == self.viewer_types[ind]:
+                if data_dim == self.viewer_types[ind]:
                     N += 1
                 else:
                     break
@@ -1668,19 +1672,19 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             dock = self.ui.viewer_docks.pop()
             dock.close()
             QtWidgets.QApplication.processEvents()
-        ##for ind,data_type in enumerate(data_types):
+        ##for ind,data_dim in enumerate(data_dims):
         ind_loop = 0
         Nviewers_init = len(self.ui.viewers)
-        while len(self.ui.viewers) < len(data_types):
-            data_type = data_types[Nviewers_init+ind_loop]
+        while len(self.ui.viewers) < len(data_dims):
+            data_dim = data_dims[Nviewers_init+ind_loop]
             ind_loop += 1
-            if data_type == "Data0D":
+            if data_dim == "Data0D":
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer0D(self.viewer_widgets[-1]))
-            elif data_type == "Data1D":
+            elif data_dim == "Data1D":
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer1D(self.viewer_widgets[-1]))
-            elif data_type == "Data2D":
+            elif data_dim == "Data2D":
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())

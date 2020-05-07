@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
 import sys
-
+import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
 
 import numpy as np
@@ -16,9 +16,9 @@ class Viewer0D(QtWidgets.QWidget,QObject):
 
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Viewer0D,self).__init__()
+        super(Viewer0D, self).__init__()
         if parent is None:
-            parent=QtWidgets.QWidget()
+            parent = QtWidgets.QWidget()
 
         self.title = 'viewer0D'  # is changed when used from DAQ_Viewer
         self.ui = Ui_Form()
@@ -38,7 +38,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         self.wait_time = 1000
 
         self.plot_channels = None
-        self.plot_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', ' w']
+        self.plot_colors = utils.plot_colors
 
         self.Nsamples = self.ui.Nhistory_sb.value()
 

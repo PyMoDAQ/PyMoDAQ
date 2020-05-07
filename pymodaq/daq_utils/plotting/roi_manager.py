@@ -8,6 +8,7 @@ from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.daq_utils import plot_colors
 from pymodaq.daq_utils.gui_utils import select_file
 import numpy as np
 import copy
@@ -167,7 +168,7 @@ class ROIManager(QObject):
 
     roi_update_children = pyqtSignal(list)
 
-    color_list = np.array([(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)])
+    color_list = np.array(plot_colors)
 
     def __init__(self, viewer_widget=None, ROI_type='1D'):
         super().__init__()
@@ -179,20 +180,20 @@ class ROIManager(QObject):
 
     def setupUI(self):
 
-        vlayout =QtWidgets.QVBoxLayout()
+        vlayout = QtWidgets.QVBoxLayout()
         self.roiwidget.setLayout(vlayout)
 
         horwidget = QtWidgets.QWidget()
-        horlayout =QtWidgets.QHBoxLayout()
+        horlayout = QtWidgets.QHBoxLayout()
         horwidget.setLayout(horlayout)
-        self.save_ROI_pb =QtWidgets.QPushButton('Save ROIs')
-        self.load_ROI_pb =QtWidgets.QPushButton('Load ROIs')
+        self.save_ROI_pb = QtWidgets.QPushButton('Save ROIs')
+        self.load_ROI_pb = QtWidgets.QPushButton('Load ROIs')
         horlayout.addWidget(self.save_ROI_pb)
         horlayout.addWidget(self.load_ROI_pb)
 
         vlayout.addWidget(horwidget)
 
-        self.roitree= ParameterTree()
+        self.roitree = ParameterTree()
         vlayout.addWidget(self.roitree)
         self.roiwidget.setMinimumWidth(300)
         self.roiwidget.setMaximumWidth(300)

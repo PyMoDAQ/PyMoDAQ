@@ -363,7 +363,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
             for ind,data in enumerate(datas):
-                self.data_to_export['data1D']['CH{:03d}'.format(ind)] = OrderedDict()
+                self.data_to_export['data1D']['CH{:03d}'.format(ind)] = utils.DataToExport()
 
 
 
@@ -423,7 +423,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         if len(data_lo) != 0:
             for ind, key in enumerate(self.lo_items):
                 self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
-                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = OrderedDict(name=self.title,
+                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = utils.DataToExport(name=self.title,
                                                                                           data=data_lo[ind], type='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
@@ -441,7 +441,8 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         ind_offset = len(self.data_to_export['data0D'])
         for ind, res in enumerate(data_meas):
             self.measure_data_dict["Meas.{}:".format(ind)] = res
-            self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] = OrderedDict(name=self.title, data=res, type='roi')
+            self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] =\
+                utils.DataToExport(name=self.title, data=res, type='roi')
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)
@@ -475,10 +476,9 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
                 if self.ui.zoom_pb.isChecked():
                     self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
-                x_axis = dict(data=self.x_axis, units=self.axis_settings['units'], label=self.axis_settings['label'])
-                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(OrderedDict(name=self.title, data=data,
-                                                                                              x_axis=x_axis,
-                                                                                              type='raw'))  # to be saved or exported
+                x_axis = utils.Axis(data=self.x_axis, units=self.axis_settings['units'], label=self.axis_settings['label'])
+                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(
+                    OrderedDict(name=self.title, data=data, x_axis=x_axis, type='raw'))  # to be saved or exported
 
 
             if not self.ui.Do_math_pb.isChecked(): #otherwise math is done and then data is exported

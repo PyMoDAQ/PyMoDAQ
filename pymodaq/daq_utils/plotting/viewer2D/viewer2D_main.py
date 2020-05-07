@@ -71,7 +71,7 @@ class Viewer2D(QObject):
         self.raw_data = None
         self.image_widget = None
         self.isdata = edict(blue=False, green=False, red=False)
-        self.color_list = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
+        self.color_list = utils.plot_colors
 
         self.data_to_export = OrderedDict([])
 
@@ -319,9 +319,9 @@ class Viewer2D(QObject):
 
         buttons_widget = QtWidgets.QWidget()
         buttons_widget.setMaximumHeight(40)
-        buttons_layout = QtWidgets.QHBoxLayout()
-        buttons_widget.setLayout(buttons_layout)
-        self.setupButtons(buttons_layout)
+        self.ui.buttons_layout = QtWidgets.QHBoxLayout()
+        buttons_widget.setLayout(self.ui.buttons_layout)
+        self.setupButtons(self.ui.buttons_layout)
         vertical_layout.addWidget(buttons_widget)
 
         graphs_widget = QtWidgets.QWidget()
@@ -597,7 +597,7 @@ class Viewer2D(QObject):
 
 
                 if color_source == "red" or color_source == "green" or color_source == "blue":
-                    subtype = 'linear'
+                    subtype = 'uniform'
                     data, coords = self.roi_manager.ROIs[key].getArrayRegion(
                         self.transform_image(self.raw_data[color_source]),
                         img_source, axes, returnMappedCoords=True)
@@ -871,7 +871,7 @@ class Viewer2D(QObject):
             if red_flag:
                 self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_red, type='raw',
-                        subtype='linear',
+                        subtype='uniform',
                         x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
@@ -881,7 +881,7 @@ class Viewer2D(QObject):
             if green_flag:
                 self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_green, type='raw',
-                        subtype='linear',
+                        subtype='uniform',
                         x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
@@ -891,7 +891,7 @@ class Viewer2D(QObject):
             if blue_flag:
                 self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_blue, type='raw',
-                        subtype='linear',
+                        subtype='uniform',
                         x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
