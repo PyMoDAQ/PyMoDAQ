@@ -1643,6 +1643,37 @@ class TableViewParameterItem(WidgetParameterItemcustom):
         w.sigChanged = w.valueChanged
         return w
 
+    def optsChanged(self, param, opts):
+        """
+            | Called when any options are changed that are not name, value, default, or limits.
+            |
+            | If widget is a SpinBox, pass options straight through.
+            | So that only the display label is shown when visible option is toggled.
+
+            =============== ================================== ==============================
+            **Parameters**    **Type**                           **Description**
+            *param*           instance of pyqtgraph parameter    the parameter to check
+            *opts*            string list                        the associated options list
+            =============== ================================== ==============================
+
+            See Also
+            --------
+            optsChanged
+        """
+        #print "opts changed:", opts
+        ParameterItem.optsChanged(self, param, opts)
+
+        if 'readonly' in opts:
+            self.updateDefaultBtn()
+            if isinstance(self.widget, (QtWidgets.QCheckBox,ColorButton.ColorButton)):
+                self.widget.setEnabled(not opts['readonly'])
+
+        if 'delegate' in opts:
+            styledItemDelegate = QtWidgets.QStyledItemDelegate()
+            styledItemDelegate.setItemEditorFactory(opts['delegate']())
+            self.widget.setItemDelegate(styledItemDelegate)
+
+
 class TableViewCustom(QtWidgets.QTableView):
     """
         ============== ===========================
@@ -1664,24 +1695,14 @@ class TableViewCustom(QtWidgets.QTableView):
 
     def get_table_value(self):
         """
-            Get the contents of the self coursed table.
 
-            Returns
-            -------
-            data : ordered dictionnary
-                The getted values dictionnary.
         """
         return self.model()
 
 
     def set_table_value(self,data_model):
         """
-            Set the data values dictionnary to the custom table.
 
-            =============== ====================== ================================================
-            **Parameters**    **Type**               **Description**
-            *data_dict*       ordered dictionnary    the contents to be stored in the custom table
-            =============== ====================== ================================================
         """
         try:
             self.setModel(data_model)

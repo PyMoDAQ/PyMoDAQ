@@ -92,7 +92,7 @@ class TableModel(QtCore.QAbstractTableModel):
         f = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
 
         if self.editable[index.column()]:
-            f|= Qt.ItemIsEditable
+            f |= Qt.ItemIsEditable
 
         if not index.isValid():
             f |= Qt.ItemIsDropEnabled
@@ -103,12 +103,12 @@ class TableModel(QtCore.QAbstractTableModel):
 
     def validate_data(self, row, col, value):
         """
-        to be subclassed in order to validate ranges of values
+        to be subclassed in order to validate ranges of values for the cell defined by index
         Parameters
         ----------
-        row
-        col
-        value
+        index: (QModelIndex)
+        value: (str or float or int or ...)
+
 
         Returns
         -------
@@ -119,7 +119,7 @@ class TableModel(QtCore.QAbstractTableModel):
     def setData(self, index, value, role):
         if index.isValid():
             if role == Qt.EditRole:
-                if self.validate_data(index.row, index.column(), value):
+                if self.validate_data(index.row(), index.column(), value):
                     if index.column() != 0:
                         self._data[index.row()][index.column()] = value
                         self.dataChanged.emit(index, index, [role])
@@ -154,7 +154,9 @@ class TableModel(QtCore.QAbstractTableModel):
         self.endRemoveRows()
         return True
 
-class ItemEditorFactory(QtWidgets.QItemEditorFactory):  # http://doc.qt.io/qt-5/qstyleditemdelegate.html#subclassing-qstyleditemdelegate    It is possible for a custom delegate to provide editors without the use of an editor item factory. In this case, the following virtual functions must be reimplemented:
+
+
+class SpinBoxDelegate(QtWidgets.QItemEditorFactory):  # http://doc.qt.io/qt-5/qstyleditemdelegate.html#subclassing-qstyleditemdelegate    It is possible for a custom delegate to provide editors without the use of an editor item factory. In this case, the following virtual functions must be reimplemented:
     """
     TO implement custom widget editor for cells in a tableview
     """
@@ -165,6 +167,7 @@ class ItemEditorFactory(QtWidgets.QItemEditorFactory):  # http://doc.qt.io/qt-5/
         if userType == QVariant.Double:
             doubleSpinBox = QtWidgets.QDoubleSpinBox(parent)
             doubleSpinBox.setDecimals(4)
+            doubleSpinBox.setMaximum(-10000000)
             doubleSpinBox.setMaximum(10000000)  # The default maximum value is 99.99.所以要设置一下
             return doubleSpinBox
         else:
@@ -177,7 +180,7 @@ if __name__ == '__main__':
     w = QtWidgets.QMainWindow()
     table = TableView(w)
     styledItemDelegate = QtWidgets.QStyledItemDelegate()
-    styledItemDelegate.setItemEditorFactory(ItemEditorFactory())
+    styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
     table.setItemDelegate(styledItemDelegate)
 
     table.setModel(TableModel([[name, 0., 1., 0.1] for name in ['X_axis', 'Y_axis', 'theta_axis']],

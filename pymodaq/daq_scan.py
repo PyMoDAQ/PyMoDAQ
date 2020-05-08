@@ -19,6 +19,7 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed afte
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
 
+import pymodaq.daq_utils.scanner
 from pymodaq.daq_utils.daq_utils import getLineInfo
 from pymodaq.daq_utils import exceptions
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
@@ -535,19 +536,21 @@ class DAQ_Scan(QObject):
             self.scan_data_2D = []
             self.scan_data_2D_average = []
 
-
-            scan_path=Path(self.h5saver.settings.child(('current_scan_path')).value())
-            current_filename=self.h5saver.settings.child(('current_scan_name')).value()
+            scan_path = Path(self.h5saver.settings.child(('current_scan_path')).value())
+            current_filename = self.h5saver.settings.child(('current_scan_name')).value()
             # set the moves positions according to data from user
-            move_names_scan=self.settings.child('Move_Detectors', 'Moves').value()['selected'] #selected move modules names
-            move_names=[mod.title for mod in self.move_modules] # names of all move modules initialized
-            self.move_modules_scan=[] #list of move modules used for this scan
+            move_names_scan = self.settings.child('Move_Detectors', 'Moves').value()[
+                'selected']  # selected move modules names
+            move_names = [mod.title for mod in self.move_modules]  # names of all move modules initialized
+            self.move_modules_scan = []  # list of move modules used for this scan
             for name in move_names_scan:
-                self.move_modules_scan.append(self.move_modules[move_names.index(name)])#create list of modules used for this current scan
+                self.move_modules_scan.append(
+                    self.move_modules[move_names.index(name)])  # create list of modules used for this current scan
 
-            det_names_scan=self.settings.child('Move_Detectors', 'Detectors').value()['selected']# names of all selected detector modules initialized
-            det_names=[mod.title for mod in self.detector_modules]
-            self.det_modules_scan=[]#list of detector modules used for this scan
+            det_names_scan = self.settings.child('Move_Detectors', 'Detectors').value()[
+                'selected']  # names of all selected detector modules initialized
+            det_names = [mod.title for mod in self.detector_modules]
+            self.det_modules_scan = []  # list of detector modules used for this scan
             for name in det_names_scan:
                 self.det_modules_scan.append(self.detector_modules[det_names.index(name)])
 
@@ -782,7 +785,7 @@ class DAQ_Scan(QObject):
 
         self.settings_tree.setParameters(self.settings, showTop=False)
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-        self.scan_parameters=utils.ScanParameters()#contains information about scan to be done, such as Nsteps, x_axis...
+        self.scan_parameters= pymodaq.daq_utils.scanner.ScanParameters()#contains information about scan to be done, such as Nsteps, x_axis...
 
 
         self.scanner = Scanner()
@@ -1448,18 +1451,18 @@ class DAQ_Scan_Acquisition(QObject):
     """
     scan_data_tmp=pyqtSignal(OrderedDict)
     status_sig = pyqtSignal(list)
-    def __init__(self,settings=None,scan_settings = None, h5saver=None,
-                 scan_moves=[],scan_saves=[],
+    def __init__(self, settings=None, scan_settings = None, h5saver=None,
+                 scan_moves=[], scan_saves=[],
                  move_modules_commands = [],
                  detector_modules_commands = [],
-                 move_done_signals = [] ,
+                 move_done_signals = [],
                  grab_done_signals = [],
                  det_averaging = [],
                  move_modules_name = [],
                  det_modules_name = [],
                  move_modules_settings = [],
                  det_modules_settings = [],
-                 scan_parameters = utils.ScanParameters()):
+                 scan_parameters = pymodaq.daq_utils.scanner.ScanParameters()):
 
         """
             DAQ_Scan_Acquisition deal with the acquisition part of daq_scan.

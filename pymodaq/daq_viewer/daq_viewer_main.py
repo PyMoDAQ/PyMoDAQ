@@ -8,6 +8,8 @@ Created on Wed Jan 10 16:54:14 2018
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 import sys
+
+import pymodaq.daq_utils.scanner
 from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
 import copy
 
@@ -1334,7 +1336,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.scanner.settings.child('scan_options', 'scan_type').hide()
             self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').setValue('Linear')
             #self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').hide()
-            self.scanner.scan_params_signal[daq_utils.ScanParameters].connect(self.update_from_scanner)
+            self.scanner.scan_params_signal[pymodaq.daq_utils.scanner.ScanParameters].connect(self.update_from_scanner)
             QtWidgets.QApplication.processEvents()
             self.scanner.set_scan()
 
@@ -1619,7 +1621,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     def update_com(self):
         self.command_detector.emit(ThreadCommand('update_com', []))
 
-    @pyqtSlot(daq_utils.ScanParameters)
+    @pyqtSlot(pymodaq.daq_utils.scanner.ScanParameters)
     def update_from_scanner(self, scan_parameters):
         self.command_detector.emit(ThreadCommand('update_scanner', [scan_parameters]))
 
