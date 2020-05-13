@@ -46,7 +46,7 @@ class MyStyle(QtWidgets.QProxyStyle):
 
 class TableModel(QtCore.QAbstractTableModel):
     
-    def __init__(self, data, header, editable=True, parent = None):
+    def __init__(self, data, header, editable=True, parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__(parent)
         self._data = data #stored data as a list of list
@@ -64,6 +64,9 @@ class TableModel(QtCore.QAbstractTableModel):
 
     def get_data(self, row, col):
         return self._data[row][col]
+
+    def get_data_all(self):
+        return self._data
 
     def data(self, index, role):
         if index.isValid():

@@ -1,4 +1,5 @@
 import sys
+import json
 from collections import OrderedDict
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
@@ -18,7 +19,7 @@ from pymodaq.daq_utils.exceptions import ScannerException
 scan_types = ['Scan1D', 'Scan2D', 'Sequential']
 scan_subtypes = dict(Scan1D=['Linear', 'Adaptive', 'Linear back to start', 'Random'],
                      Scan2D=['Spiral', 'Linear', 'Adaptive', 'back&forth', 'Random'],
-                     Sequential=['Linear', 'Adaptive'])
+                     Sequential=['Linear',])
 
 
 class ScanInfo:
@@ -38,13 +39,17 @@ class ScanInfo:
         self.axes_indexes = axes_indexes
         self.axes_unique = axes_unique
 
+    def __repr__(self):
+        return f'[ScanInfo with {self.Nsteps} positions of shape {self.positions.shape})'
+
 
 class ScanParameters:
     """
     Utility class to define and store information about scans to be done
     """
 
-    def __init__(self, scan_type='Scan1D', scan_subtype='Linear', starts=[], stops=[], steps=[], positions=None):
+    def __init__(self, scan_type='Scan1D', scan_subtype='Linear', starts=None, stops=None, steps=None,
+                 positions=None, vectors=None):
         """
 
         Parameters
@@ -56,17 +61,32 @@ class ScanParameters:
         steps: (list of floats) list of steps position of each axis
         positions: (ndarray) containing the positions already calculated from some method. If not None, this is used to
                 define the scan_info (otherwise one use the starts, stops and steps)
+        vectors: (list of QVectors) defining all the segments to be scanned (specific to 1D scan using PolyLines ROI selection)
+
+
+        See Also
+        --------
+        daq_utils.plotting.scan_selector
         """
+
         if scan_type not in scan_types:
             raise ValueError(f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(scan_types)}')
-        if scan_subtype not in scan_subtypes:
+        if scan_subtype not in scan_subtypes[scan_type]:
             raise ValueError(
                 f'Chosen scan_subtype value ({scan_subtype}) is not possible. Should be among : {str(scan_subtypes[scan_type])}')
         self.scan_type = scan_type
         self.scan_subtype = scan_subtype
-        self.starts = starts
-        self.stops = stops
+
+        if positions is not None:
+            self.starts = np.min(positions, axis=0)
+            self.stops = np.max(positions, axis=0)
+        else:
+            self.starts = starts
+            self.stops = stops
+
         self.steps = steps
+
+        self.vectors = vectors
 
         self.scan_info = ScanInfo(Nsteps=0, positions=positions)
 
@@ -82,107 +102,93 @@ class ScanParameters:
         elif item == 'axes_unique':
             return self.scan_info.axes_unique
 
+    @classmethod
+    def get_info_from_positions(cls, positions):
+        if len(positions.shape) == 1:
+            positions = np.expand_dims(positions, 1)
+        axes_unique = []
+        for ax in positions.T:
+            axes_unique.append(np.unique(ax))
+        axes_indexes = np.zeros_like(positions, dtype=np.int)
+        for ind in range(positions.shape[0]):
+            for ind_pos, pos in enumerate(positions[ind]):
+                axes_indexes[ind, ind_pos] = utils.find_index(axes_unique[ind_pos], pos)[0][0]
+
+        return ScanInfo(Nsteps=positions.shape[0], axes_unique=axes_unique,
+                                  axes_indexes=axes_indexes, positions=positions)
 
     def set_scan(self):
 
-        if self.positions is not None:
-            axes_unique = []
-            for ax in self.positions:
-                axes_unique.append(np.unique(ax))
-            axes_indexes = np.zeros_like(self.positions)
-            for ind in range(self.positions.shape[0]):
-                for ind_pos, pos in enumerate(self.positions[ind]):
-                    axes_indexes[ind, ind_pos] = utils.find_index(axes_unique[ind_pos], pos)[0][0]
+        if self.scan_type == "Scan1D":
+            if self.positions is not None:
+                positions = self.positions
+            else:
+                positions = utils.linspace_step(self.starts[0], self.stops[0], self.steps[0])
 
-            self.scan_info = ScanInfo(Nsteps=self.positions.shape[0], axes_unique=axes_unique,
-                                      axes_indexes=axes_indexes, positions=self.positions)
+            if self.scan_subtype == "Linear":
+                self.scan_info = self.get_info_from_positions(positions)
 
-        else:
-            #TODO
-            if self.scan_type == "Scan1D":
+            elif self.scan_subtype == 'Linear back to start':
+                positions = np.insert(positions, range(1, len(positions)+1), positions[0], axis=0)
+                self.scan_info = self.get_info_from_positions(positions)
 
-                if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_selection').value() == 'Manual':
-                    steps_x = utils.linspace_step(start, stop, step)
-                    steps_y = steps_x
-                else:  # from ROI
-                    viewer = self.scan_selector.scan_selector_source
-                    positions = self.scan_selector.scan_selector.getArrayIndexes(spacing=step)
+            elif self.scan_subtype == 'Random':
+                np.random.shuffle(positions)
+                self.scan_info = self.get_info_from_positions(positions)
 
-                    steps_x, steps_y = zip(*positions)
-                    steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
+            elif self.scan_subtype == 'Adaptive':
+                # return an "empty" ScanInfo as positions will be "set" during the scan (for the moment not compâtible with
+                # ROI selection
+                self.scan_info = ScanInfo(Nsteps=0, positions=np.array([]), axes_unique=[np.array([])],
+                              axes_indexes=np.array([]))
+            else:
+                raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
-                if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value() == "Linear":
-                    scan_parameters.axis_2D_1 = steps_x
-                    scan_parameters.axis_2D_2 = steps_y
+        elif self.scan_type == "Scan2D":
 
+            if self.scan_subtype == 'Spiral':
+                positions = set_scan_spiral(self.starts, self.stops, self.steps)
+                self.scan_info = self.get_info_from_positions(positions)
 
-                elif self.settings.child('scan_options', 'scan1D_settings',
-                                         'scan1D_type').value() == 'Linear back to start':
-                    stepss_x = []
-                    stepss_y = []
-                    for stepx in steps_x:
-                        stepss_x.extend([stepx, start])
-                    for stepy in steps_y:
-                        stepss_y.extend([stepy, start])
-                    scan_parameters.axis_2D_1 = np.array(stepss_x)
-                    scan_parameters.axis_2D_2 = np.array(stepss_y)
-                elif self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value() == 'Random':
-                    positions = list(zip(steps_x, steps_y))
-                    np.random.shuffle(positions)
-                    x, y = zip(*positions)
-                    scan_parameters.axis_2D_1 = list(x)
-                    scan_parameters.axis_2D_2 = list(y)
+            elif self.scan_subtype == 'back&forth':
+                positions = set_scan_linear(self.starts, self.stops, self.steps, back_and_force=True)
+                self.scan_info = self.get_info_from_positions(positions)
 
-                scan_parameters.positions = list(
-                    itertools.zip_longest(scan_parameters.axis_2D_1, scan_parameters.axis_2D_2, fillvalue=None))
+            elif self.scan_subtype == 'Linear':
+                positions = set_scan_linear(self.starts, self.stops, self.steps, back_and_force=False)
+                self.scan_info = self.get_info_from_positions(positions)
 
-                scan_parameters.Nsteps = len(scan_parameters.positions)
+            elif self.scan_subtype == 'Random':
+                positions = set_scan_random(self.starts, self.stops, self.steps)
+                self.scan_info = self.get_info_from_positions(positions)
 
-            elif self.settings.child('scan_options', 'scan_type').value() == "Scan2D":
+            elif self.scan_subtype == 'Adaptive':
+                # return an "empty" ScanInfo as positions will be "set" during the scan
+                self.scan_info = ScanInfo(Nsteps=0, positions=np.array([]), axes_unique=[np.array([])],
+                              axes_indexes=np.array([]))
+            else:
+                raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
-                start_axis1 = self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').value()
-                start_axis2 = self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').value()
+        elif self.scan_type == "Sequential":
+            if self.scan_subtype == 'Linear':
+                positions = set_scan_sequential(self.starts, self.stops, self.steps)
+                self.scan_info = self.get_info_from_positions(positions)
+            else:
+                raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
-                if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Spiral':
-
-                    Rstep_2d = self.settings.child('scan_options', 'scan2D_settings', 'Rstep_2d').value()
-                    Rmax = self.settings.child('scan_options', 'scan2D_settings', 'Rmax_2d').value()
-                    scan_parameters = set_scan_spiral(start_axis1, start_axis2, Rmax, Rstep_2d)
-
-                else:
-                    stop_axis1 = self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').value()
-                    step_axis1 = self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value()
-                    stop_axis2 = self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').value()
-                    step_axis2 = self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()
-                    if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'back&forth':
-                        scan_parameters = set_scan_linear(start_axis1, start_axis2,
-                                                          stop_axis1, stop_axis2, step_axis1, step_axis2,
-                                                          back_and_force=True)
-
-                    elif self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Linear':
-                        scan_parameters = set_scan_linear(
-                            start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
-
-                    elif self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Random':
-                        scan_parameters = set_scan_random(start_axis1, start_axis2,
-                                                          stop_axis1, stop_axis2, step_axis1, step_axis2)
-
-
-            elif self.settings.child('scan_options', 'scan_type').value() == "Sequential":
-                starts = [self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))]
-                stops = [self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))]
-                steps = [self.table_model.get_data(ind, 3) for ind in range(self.table_model.rowCount(None))]
-                scan_parameters = set_scan_sequential(starts, stops, steps)
-
-            self.settings.child('scan_options', 'Nsteps').setValue(scan_parameters.Nsteps)
-            self.scan_params_signal.emit(scan_parameters)
-            return scan_parameters
+        return self.scan_info
 
     def __repr__(self):
-        if self.scan_subtype != 'Adaptive':
-            return f'[{self.scan_type}/{self.scan_subtype}] scanner with {self.scan_info.Nsteps} positions)'
+        if self.vectors is not None:
+            bounds = f'bounds as vectors: {self.vectors} and curvilinear step: {self.steps}'
         else:
-            return f'[{self.scan_type}/{self.scan_subtype}] scanner with unknown (yet) positions to reach'
+            bounds = f' bounds (starts/stops/steps): {self.starts}/{self.stops}/{self.steps})'
+
+        if self.scan_subtype != 'Adaptive':
+            return f'[{self.scan_type}/{self.scan_subtype}] scanner with {self.scan_info.Nsteps} positions and ' + bounds
+        else:
+            return f'[{self.scan_type}/{self.scan_subtype}] scanner with unknown (yet) positions to reach and ' + bounds
+
 
 class Scanner(QObject):
     scan_params_signal = pyqtSignal(ScanParameters)
@@ -201,9 +207,9 @@ class Scanner(QObject):
                     {'title': 'Selection:', 'name': 'scan1D_selection', 'type': 'list',
                      'values': ['Manual', 'FromROI PolyLines']},
                     {'title': 'From module:', 'name': 'scan1D_roi_module', 'type': 'list', 'values': [], 'visible': False},
-                    {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': 0.},
-                    {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': 10.},
-                    {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': 1.}
+                    {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': -2.},
+                    {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': 3.},
+                    {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': 0.5}
                 ]},
                 {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
                     {'title': 'Scan type:', 'name': 'scan2D_type', 'type': 'list',
@@ -215,12 +221,15 @@ class Scanner(QObject):
                     {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
                     {'title': 'Start Ax1:', 'name': 'start_2d_axis1', 'type': 'float', 'value': 0., 'visible': True},
                     {'title': 'Start Ax2:', 'name': 'start_2d_axis2', 'type': 'float', 'value': 10., 'visible': True},
-                    {'title': 'stop Ax1:', 'name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible': False},
-                    {'title': 'stop Ax2:', 'name': 'stop_2d_axis2', 'type': 'float', 'value': 40., 'visible': False},
-                    {'title': 'Step Ax1:', 'name': 'step_2d_axis1', 'type': 'float', 'value': 1., 'visible': False},
-                    {'title': 'Step Ax2:', 'name': 'step_2d_axis2', 'type': 'float', 'value': 5., 'visible': False},
-                    {'title': 'Rstep:', 'name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible': True},
-                    {'title': 'Rmax:', 'name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible': True}
+                    {'title': 'Step Ax1:', 'name': 'step_2d_axis1', 'type': 'float', 'value': 1., 'visible': True},
+                    {'title': 'Step Ax2:', 'name': 'step_2d_axis2', 'type': 'float', 'value': 5., 'visible': True},
+                    {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1, 'value': 20.,
+                     'visible': True},
+                    {'title': 'Stop Ax1:', 'name': 'stop_2d_axis1', 'type': 'float', 'value': 10., 'visible': True,
+                     'readonly': True,},
+                    {'title': 'Stop Ax2:', 'name': 'stop_2d_axis2', 'type': 'float', 'value': 40., 'visible': True,
+                     'readonly': True,},
+
                 ]},
                 {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
                     {'title': 'Scan type:', 'name': 'scanseq_type', 'type': 'list',
@@ -251,7 +260,7 @@ class Scanner(QObject):
         self.setupUI()
 
         self.scan_selector = ScanSelector(scanner_items, scan_type)
-        self.settings.child('scan_options', 'scan1D_settings').setValue(scan_type)
+        self.settings.child('scan_options', 'scan_type').setValue(scan_type)
         #self.scan_selector.settings.child('scan_options', 'scan_type').hide()
         self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
 
@@ -261,26 +270,41 @@ class Scanner(QObject):
             limits=self.scan_selector.sources_names)
         self.table_model = None
 
+        if actuators != []:
+            self.actuators = actuators
+        else:
+            stypes = scan_types[:]
+            stypes.pop(stypes.index('Sequential'))
+            self.settings.child('scan_options', 'scan_type').setLimits(stypes)
+            self.settings.child('scan_options', 'scan_type').setValue(stypes[0])
+
         self.scan_selector.widget.setVisible(False)
         self.scan_selector.show_scan_selector(visible=False)
         self.settings.child('scan_options', 'seq_settings', 'load_seq').sigActivated.connect(self.load_sequence_xml)
         self.settings.child('scan_options', 'seq_settings', 'save_seq').sigActivated.connect(self.save_sequence_xml)
-        if actuators != []:
-            self.actuators = actuators
 
         self.set_scan()
+        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
     def load_sequence_xml(self):
         fname = gutils.select_file(start_path=None, save=False, ext='xml')
         if fname is not None:
-            new_par = custom_tree.XML_file_to_parameter(fname)
-            self.settings.child('scan_options', 'seq_settings').restoreState(new_par.saveSate())
-
+            # with open(fname, 'r') as f:
+            #     data = json.load(f)
+            #     self.table_model = TableModel(data)
+            par = custom_tree.XML_file_to_parameter(fname)
+            self.settings.child('scan_options', 'seq_settings').restoreState(Parameter.create(name='seq_settings', type='group', children=par).saveState())
+            self.table_model = self.settings.child('scan_options', 'seq_settings', 'seq_table').value()
+            self.set_scan()
 
     def save_sequence_xml(self):
-        fname = gutils.select_file(start_path=None, save=True, ext='xml')
-        if fname is not None:
+        fname = gutils.select_file(start_path=None, save=True, ext='json')
+        if fname is not None and fname != '':
+            with open(fname, 'w') as f:
+                json.dump(self.table_model.get_data_all(), f)
+            fname = str(fname) + '.xml'
             custom_tree.parameter_to_xml_file(self.settings.child('scan_options', 'seq_settings'), fname)
+
 
     @property
     def actuators(self):
@@ -292,9 +316,7 @@ class Scanner(QObject):
         self.update_model()
 
     def update_model(self):
-        self.table_model = TableModelScanner([[name, 0., 1., 0.1] for name in self._actuators],
-                              header=['Actuator', 'Start', 'Stop', 'Step'],
-                              editable=[False, True, True, True])
+        self.table_model = TableModelScanner([[name, 0., 1., 0.1] for name in self._actuators],)
         self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
 
         self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -345,12 +367,12 @@ class Scanner(QObject):
 
             elif change == 'value':
                 if param.name() == 'scan_type':
-                    self.scan_selector.settings.child('scan_options', 'scan_type').setValue(data)
+
                     if data == 'Scan1D':
                         self.settings.child('scan_options', 'scan1D_settings').show()
                         self.settings.child('scan_options', 'scan2D_settings').hide()
                         self.settings.child('scan_options', 'seq_settings').hide()
-                        self.settings_tree.setMaximumHeight(300)
+                        self.settings_tree.setMaximumHeight(500)
                         if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_selection').value() == 'Manual':
                             self.scan_selector.show_scan_selector(visible=False)
                         else:
@@ -359,20 +381,22 @@ class Scanner(QObject):
                         self.settings.child('scan_options', 'scan1D_settings').hide()
                         self.settings.child('scan_options', 'scan2D_settings').show()
                         self.settings.child('scan_options', 'seq_settings').hide()
-                        self.settings_tree.setMaximumHeight(300)
+                        self.settings_tree.setMaximumHeight(500)
                         if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_selection').value() == 'Manual':
                             self.scan_selector.show_scan_selector(visible=False)
                         else:
                             self.scan_selector.show_scan_selector(visible=True)
-                        self.update_scan_type(self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type'))
-                        self.update_scan_2D_positions()
+                            self.update_scan_2D_positions()
+                        self.update_scan2D_type(param)
+
 
                     elif data == 'Sequential':
                         self.settings.child('scan_options', 'scan1D_settings').hide()
                         self.settings.child('scan_options', 'scan2D_settings').hide()
                         self.settings.child('scan_options', 'seq_settings').show()
+                        self.update_model()
                         self.settings_tree.setMaximumHeight(600)
-
+                    self.scan_selector.settings.child('scan_options', 'scan_type').setValue(data)
 
                 elif param.name() == 'scan1D_roi_module' or param.name() == 'scan2D_roi_module':
                     self.scan_selector.settings.child('scan_options', 'sources').setValue(param.value())
@@ -380,14 +404,16 @@ class Scanner(QObject):
                 elif param.name() == 'scan1D_selection':
                     if param.value() == 'Manual':
                         self.scan_selector.show_scan_selector(visible=False)
-                        self.settings.child('scan_options', 'scan1D_settings','scan1D_roi_module').hide()
+                        self.settings.child('scan_options', 'scan1D_settings', 'scan1D_roi_module').hide()
                         self.settings.child('scan_options', 'scan1D_settings', 'start_1D').show()
                         self.settings.child('scan_options', 'scan1D_settings', 'stop_1D').show()
+                        self.settings.child('scan_options', 'scan1D_settings', 'step_1D').setOpts(title='Step:')
                     else:
                         self.scan_selector.show_scan_selector(visible=True)
-                        self.settings.child('scan_options','scan1D_settings','scan1D_roi_module').show()
+                        self.settings.child('scan_options', 'scan1D_settings', 'scan1D_roi_module').show()
                         self.settings.child('scan_options', 'scan1D_settings', 'start_1D').hide()
                         self.settings.child('scan_options', 'scan1D_settings', 'stop_1D').hide()
+                        self.settings.child('scan_options', 'scan1D_settings', 'step_1D').setOpts(title='Curvilinear Step:')
 
                 elif param.name() == 'scan2D_selection':
                     if param.value() == 'Manual':
@@ -397,10 +423,14 @@ class Scanner(QObject):
                         self.scan_selector.show_scan_selector(visible=True)
                         self.settings.child('scan_options', 'scan2D_settings', 'scan2D_roi_module').show()
 
-                    self.update_scan_type(self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type'))
+                    self.update_scan2D_type(param)
 
-                elif param.name() == 'scan2D_type':
-                    self.update_scan_type(self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type'))
+                elif param.name() in custom_tree.iter_children(self.settings.child('scan_options', 'scan2D_settings'), []):
+                    self.update_scan2D_type(param)
+                    self.set_scan()
+
+                elif param.name() == 'Nsteps':
+                    pass #just do nothing (otherwise set_scan will be fired, see below)
 
                 else:
                     try:
@@ -418,97 +448,65 @@ class Scanner(QObject):
         self.settings_tree = ParameterTree()
         self.settings = Parameter.create(name='Scanner_Settings', title='Scanner Settings', type='group', children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
-        self.settings_tree.setMaximumHeight(300)
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+        self.settings_tree.setMaximumHeight(500)
+
         self.settings.child('scan_options', 'calculate_positions').sigActivated.connect(self.set_scan)
         #layout.addWidget(self.settings_tree)
 
     def set_scan(self):
 
         if self.settings.child('scan_options', 'scan_type').value() == "Scan1D":
-            scan_parameters = ScanParameters(scan_type="Scan1D",
-                        scan_subtype=self.settings.child('scan_options', 'sscan_type', 'scanseq_type').value())
-
-            start = self.settings.child('scan_options', 'scan1D_settings', 'start_1D').value()
-            stop = self.settings.child('scan_options', 'scan1D_settings', 'stop_1D').value()
-            step = self.settings.child('scan_options', 'scan1D_settings', 'step_1D').value()
-    
             if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_selection').value() == 'Manual':
-                steps_x = utils.linspace_step(start, stop, step)
-                steps_y = steps_x
+                start = self.settings.child('scan_options', 'scan1D_settings', 'start_1D').value()
+                stop = self.settings.child('scan_options', 'scan1D_settings', 'stop_1D').value()
+                step = self.settings.child('scan_options', 'scan1D_settings', 'step_1D').value()
+                self.scan_parameters = ScanParameters(scan_type="Scan1D",
+                        scan_subtype=self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value(),
+                        starts=[start], stops=[stop], steps=[step])
+
             else:  # from ROI
                 viewer = self.scan_selector.scan_selector_source
-                positions = self.scan_selector.scan_selector.getArrayIndexes(spacing=step)
-    
+                vectors = self.scan_selector.scan_selector.get_vectors()
+
+                positions = self.scan_selector.scan_selector.getArrayIndexes(
+                    spacing=self.settings.child('scan_options', 'scan1D_settings', 'step_1D').value())
                 steps_x, steps_y = zip(*positions)
                 steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
+                positions = np.transpose(np.array([steps_x, steps_y]))
+                self.scan_parameters = ScanParameters(scan_type="Scan1D",
+                                                 scan_subtype=self.settings.child('scan_options', 'scan1D_settings',
+                                                                                  'scan1D_type').value(),
+                                                 steps=[self.settings.child('scan_options', 'scan1D_settings',
+                                                                          'step_1D').value()],
+                                                 positions=positions, vectors=vectors)
 
-            if self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value() == "Linear":
-                scan_parameters.axis_2D_1 = steps_x
-                scan_parameters.axis_2D_2 = steps_y
-    
-    
-            elif self.settings.child('scan_options', 'scan1D_settings',
-                                             'scan1D_type').value() == 'Linear back to start':
-                stepss_x = []
-                stepss_y = []
-                for stepx in steps_x:
-                    stepss_x.extend([stepx, start])
-                for stepy in steps_y:
-                    stepss_y.extend([stepy, start])
-                scan_parameters.axis_2D_1 = np.array(stepss_x)
-                scan_parameters.axis_2D_2 = np.array(stepss_y)
-            elif self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value() == 'Random':
-                positions = list(zip(steps_x, steps_y))
-                np.random.shuffle(positions)
-                x, y = zip(*positions)
-                scan_parameters.axis_2D_1 = list(x)
-                scan_parameters.axis_2D_2 = list(y)
 
-            scan_parameters.positions = list(
-                itertools.zip_longest(scan_parameters.axis_2D_1, scan_parameters.axis_2D_2, fillvalue=None))
-    
-            scan_parameters.Nsteps = len(scan_parameters.positions)
+
 
         elif self.settings.child('scan_options', 'scan_type').value() == "Scan2D":
-
-            start_axis1 = self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').value()
-            start_axis2 = self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').value()
-    
-            if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Spiral':
-    
-                Rstep_2d = self.settings.child('scan_options', 'scan2D_settings', 'Rstep_2d').value()
-                Rmax = self.settings.child('scan_options', 'scan2D_settings', 'Rmax_2d').value()
-                scan_parameters = set_scan_spiral(start_axis1, start_axis2, Rmax, Rstep_2d)
-
-            else:
-                stop_axis1 = self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').value()
-                step_axis1 = self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value()
-                stop_axis2 = self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').value()
-                step_axis2 = self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()
-                if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'back&forth':
-                    scan_parameters = set_scan_linear(start_axis1, start_axis2,
-                                                      stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=True)
-    
-                elif self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Linear':
-                    scan_parameters = set_scan_linear(
-                        start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False)
-    
-                elif self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Random':
-                    scan_parameters = set_scan_random(start_axis1, start_axis2,
-                                                      stop_axis1, stop_axis2, step_axis1, step_axis2)
-
+            starts = [self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').value(),
+                      self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').value()]
+            stops = [self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').value(),
+                     self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').value()]
+            steps = [self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value(),
+                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()]
+            self.scan_parameters = ScanParameters(scan_type="Scan2D",
+                                             scan_subtype=self.settings.child('scan_options', 'scan2D_settings',
+                                                                              'scan2D_type').value(),
+                                             starts=starts, stops=stops, steps=steps)
 
         elif self.settings.child('scan_options', 'scan_type').value() == "Sequential":
             starts = [self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))]
             stops = [self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))]
             steps = [self.table_model.get_data(ind, 3) for ind in range(self.table_model.rowCount(None))]
-            scan_parameters = set_scan_sequential(starts, stops, steps)
+            self.scan_parameters = ScanParameters(scan_type="Sequential",
+                                             scan_subtype=self.settings.child('scan_options', 'seq_settings',
+                                                                              'scanseq_type').value(),
+                                             starts=starts, stops=stops, steps=steps)
 
-
-        self.settings.child('scan_options', 'Nsteps').setValue(scan_parameters.Nsteps)
-        self.scan_params_signal.emit(scan_parameters)
-        return scan_parameters
+        self.settings.child('scan_options', 'Nsteps').setValue(self.scan_parameters.Nsteps)
+        self.scan_params_signal.emit(self.scan_parameters)
+        return self.scan_parameters
 
     def update_scan_2D_positions(self):
         try:
@@ -516,22 +514,31 @@ class Scanner(QObject):
             pos_dl = self.scan_selector.scan_selector.pos()
             pos_ur = self.scan_selector.scan_selector.pos()+self.scan_selector.scan_selector.size()
             pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
-            pos_ur_scaled= viewer.scale_axis(pos_ur[0], pos_ur[1])
+            pos_ur_scaled = viewer.scale_axis(pos_ur[0], pos_ur[1])
 
             if self.settings.child('scan_options','scan2D_settings', 'scan2D_type').value() == 'Spiral':
-                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(np.mean((pos_dl_scaled[0],pos_ur_scaled[0])))
-                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(np.mean((pos_dl_scaled[1],pos_ur_scaled[1])))
-                self.settings.child('scan_options', 'scan2D_settings', 'Rmax_2d').setValue(np.min((np.abs((pos_ur_scaled[0]-pos_dl_scaled[0])/2),(pos_ur_scaled[1]-pos_dl_scaled[1])/2)))
+                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(
+                    np.mean((pos_dl_scaled[0], pos_ur_scaled[0])))
+                self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(
+                    np.mean((pos_dl_scaled[1], pos_ur_scaled[1])))
+
+                nsteps = 2 * np.min((np.abs((pos_ur_scaled[0]-pos_dl_scaled[0])/2) /
+                                    self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value(),
+                                    np.abs((pos_ur_scaled[1]-pos_dl_scaled[1])/2) /
+                                    self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
+
+                self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').setValue(nsteps)
 
             else:
                 self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(pos_dl_scaled[0])
                 self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(pos_dl_scaled[1])
                 self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
                 self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(pos_ur_scaled[1])
+
         except Exception as e:
             raise ScannerException(str(e))
 
-    def update_scan_type(self, param):
+    def update_scan2D_type(self, param):
         """
             Update the scan type from the given parameter.
 
@@ -545,19 +552,67 @@ class Scanner(QObject):
             update_status
         """
         try:
-            state=param.value()=='Spiral'
-            self.settings.child('scan_options','scan2D_settings','stop_2d_axis1').setOpts(visible=not state,value=self.settings.child('scan_options','scan2D_settings','stop_2d_axis1').value())
-            self.settings.child('scan_options','scan2D_settings','stop_2d_axis2').setOpts(visible=not state,value=self.settings.child('scan_options','scan2D_settings','stop_2d_axis2').value())
-            self.settings.child('scan_options','scan2D_settings','step_2d_axis1').setOpts(visible=not state,value=self.settings.child('scan_options','scan2D_settings','step_2d_axis1').value())
-            self.settings.child('scan_options','scan2D_settings','step_2d_axis2').setOpts(visible=not state,value=self.settings.child('scan_options','scan2D_settings','step_2d_axis2').value())
-            self.settings.child('scan_options','scan2D_settings','Rstep_2d').setOpts(visible=state,value=self.settings.child('scan_options','scan2D_settings','Rstep_2d').value())
-            self.settings.child('scan_options','scan2D_settings','Rmax_2d').setOpts(visible=state,value=self.settings.child('scan_options','scan2D_settings','Rstep_2d').value())
+            if self.settings.child('scan_options', 'scan2D_settings',
+                                   'scan2D_type').value() == 'Spiral':
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'start_2d_axis1').setOpts(title='Center Ax1')
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'start_2d_axis2').setOpts(title='Center Ax2')
+
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'stop_2d_axis1').setOpts(title='Rmax Ax1', readonly=True,
+                                                             tip='Read only for Spiral scan type, set the step and Npts/axis')
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'stop_2d_axis2').setOpts(title='Rmax Ax2', readonly=True,
+                                                             tip='Read only for Spiral scan type, set the step and Npts/axis')
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'npts_by_axis').show()
+
+
+                # do some checks and set stops values
+                self.settings.sigTreeStateChanged.disconnect()
+                if param.name() == 'step_2d_axis1':
+                    if param.value() < 0:
+                        param.setValue(-param.value())
+
+
+                if param.name() == 'step_2d_axis2':
+                    if param.value() < 0:
+                        param.setValue(-param.value())
+
+                self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(
+                    np.rint(self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) *
+                    np.abs(self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value()))
+
+                self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(
+                    np.rint(self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) *
+                    np.abs(self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
+                QtWidgets.QApplication.processEvents()
+                self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+            else:
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'start_2d_axis1').setOpts(title='Start Ax1')
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'start_2d_axis2').setOpts(title='Start Ax2')
+
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'stop_2d_axis1').setOpts(title='Stop Ax1', readonly=False,
+                                                             tip='Set the stop positions')
+                self.settings.child('scan_options', 'scan2D_settings',
+                                    'stop_2d_axis2').setOpts(title='StopAx2', readonly=False,
+                                                             tip='Set the stop positions')
+                self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').hide()
         except Exception as e:
             raise ScannerException(str(e))
 
 class TableModelScanner(TableModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, data, **kwargs):
+        header = ['Actuator', 'Start', 'Stop', 'Step']
+        editable = [False, True, True, True]
+        super().__init__(data, header, editable=editable, **kwargs)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__} from module {self.__class__.__module__}'
 
     def validate_data(self, row, col, value):
         """
@@ -594,48 +649,40 @@ class TableModelScanner(TableModel):
         return True
 
 
-def set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False,
-                    oversteps=10000):
+
+def set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=10000):
     """
         Set a linear scan
     Parameters
     ----------
-    start_axis1
-    start_axis2
-    stop_axis1
-    stop_axis2
-    step_axis1
-    step_axis2
+    starts
+    stops
+    steps
     back_and_force: (bool) if True insert between two steps a position back to start (to be used as a reference in the scan analysis)
     oversteps: (int) maximum number of calculated steps (stops the steps calculation if over the first power of 2 greater than oversteps)
 
     Returns
     -------
-    ScanParameters instance
+    positions (ndarray)
 
     See Also
     --------
     ScanParameters
     """
+    starts = np.array(starts)
+    stops = np.array(stops)
+    steps = np.array(steps)
 
-    scan_type = 'Scan2D'
-    scan_subtype = 'Linear'
-
-    if np.abs(step_axis1) < 1e-12 or \
-            np.abs(step_axis2) < 1e-12 or \
-            np.sign(stop_axis1 - start_axis1) != np.sign(step_axis1) or \
-            np.sign(stop_axis2 - start_axis2) != np.sign(step_axis2) or \
-            start_axis1 == stop_axis1 or \
-            start_axis2 == stop_axis2:
-        return ScanParameters(1, np.array([0]), np.array([0]), np.array([start_axis1]),
-                              np.array([start_axis2]), [np.array([start_axis1]), np.array([start_axis2])],
-                              scan_type=scan_type, scan_subtype=scan_subtype)
+    if np.any(np.abs(steps) < 1e-12) or \
+            np.any(np.sign(stops - starts) != np.sign(steps)) or \
+            np.any(starts == stops):
+        return np.array([starts])
 
     else:
-        axis_1_unique = linspace_step(start_axis1, stop_axis1, step_axis1)
+        axis_1_unique = linspace_step(starts[0], stops[0], steps[0])
         len1 = len(axis_1_unique)
 
-        axis_2_unique = linspace_step(start_axis2, stop_axis2, step_axis2)
+        axis_2_unique = linspace_step(starts[1], stops[1], steps[1])
         len2 = len(axis_2_unique)
         # if number of steps is over oversteps, reduce both axis in the same ratio
         if len1 * len2 > oversteps:
@@ -643,117 +690,88 @@ def set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1
             axis_2_unique = axis_2_unique[:int(np.ceil(np.sqrt(oversteps * len2 / len1)))]
 
         positions = []
-        axis_1_indexes = []
-        axis_2_indexes = []
-        axis_1 = []
-        axis_2 = []
         for ind_x, pos1 in enumerate(axis_1_unique):
             if back_and_force:
                 for ind_y, pos2 in enumerate(axis_2_unique):
                     if not odd_even(ind_x):
                         positions.append([pos1, pos2])
-                        axis_1.append(pos1)
-                        axis_2.append(pos2)
-                        axis_1_indexes.append(ind_x)
-                        axis_2_indexes.append(ind_y)
                     else:
                         positions.append([pos1, axis_2_unique[len(axis_2_unique) - ind_y - 1]])
-                        axis_1.append(pos1)
-                        axis_2.append(axis_2_unique[len(axis_2_unique) - ind_y - 1])
-                        axis_1_indexes.append(ind_x)
-                        axis_2_indexes.append(len(axis_2_unique) - ind_y - 1)
             else:
                 for ind_y, pos2 in enumerate(axis_2_unique):
-                    axis_1.append(pos1)
-                    axis_2.append(pos2)
                     positions.append([pos1, pos2])
-                    axis_1_indexes.append(ind_x)
-                    axis_2_indexes.append(ind_y)
 
-        Nsteps = len(positions)
-        return ScanParameters(Nsteps, np.array(axis_1_indexes), np.array(axis_2_indexes), axis_1_unique, axis_2_unique,
-                              positions,
-                              scan_type=scan_type, scan_subtype=scan_subtype)
+        return np.array(positions)
 
 
-def set_scan_random(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, oversteps=10000):
+def set_scan_random(starts, stops, steps, oversteps=10000):
     """
 
     Parameters
     ----------
-    start_axis1
-    start_axis2
-    stop_axis1
-    stop_axis2
-    step_axis1
-    step_axis2
+    starts
+    stops
+    steps
+    oversteps
 
     Returns
     -------
 
     """
-    scan_type = 'Scan2D'
-    scan_subtype = 'Random'
-    if np.abs(step_axis1) < 1e-12 or \
-            np.abs(step_axis2) < 1e-12 or \
-            np.sign(stop_axis1 - start_axis1) != np.sign(step_axis1) or \
-            np.sign(stop_axis2 - start_axis2) != np.sign(step_axis2) or \
-            start_axis1 == stop_axis1 or \
-            start_axis2 == stop_axis2:
-        return ScanParameters(1, np.array([0]), np.array([0]), np.array([start_axis1]),
-                              np.array([start_axis2]), [np.array([start_axis1]), np.array([start_axis2])],
-                              scan_type=scan_type, scan_subtype=scan_subtype)
 
-    scan_parameters = set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2,
-                                      back_and_force=False, oversteps=oversteps)
+    positions = set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=oversteps)
+    np.random.shuffle(positions)
+    return positions
 
 
-    positions_shuffled = scan_parameters.positions[:]
-    np.random.shuffle(positions_shuffled)
-    axis_1_indexes = []
-    axis_2_indexes = []
-
-    for pos in positions_shuffled:
-        axis_1_indexes.append(np.where(scan_parameters.axis_2D_1 == pos[0])[0][0])
-        axis_2_indexes.append(np.where(scan_parameters.axis_2D_2 == pos[1])[0][0])
-
-    Nsteps = len(scan_parameters.positions)
-    return ScanParameters(Nsteps, axis_1_indexes, axis_2_indexes, scan_parameters.axis_2D_1, scan_parameters.axis_2D_2,
-                          positions_shuffled,
-                              scan_type=scan_type, scan_subtype=scan_subtype)
-
-
-def set_scan_spiral(start_axis1, start_axis2, rmax, rstep, oversteps=10000):
-    """
+def set_scan_spiral(starts, rmaxs, rsteps, nsteps=None, oversteps=10000):
+    """Calculate the positions to describe a spiral type scan, starting from a center position and spiraling out from it
 
     Parameters
     ----------
-    start_axis1
-    start_axis2
-    rmax
-    rstep
+    starts: (sequence like) containing the center positions of the scan
+    rmaxs: (sequence like) containing the maximum radius (ellipse axes) in each direction
+    rsteps: (sequence like) containing the step size for each axis
+    nsteps: (int) If not None, this is used together with rsteps to calculate rmaxs
     oversteps: (int) maximum number of calculated steps (stops the steps calculation if over the first power of 2 greater than oversteps)
 
     Returns
     -------
-    ScanParameters instance
+    ndarray of all positions for each axis
 
     See Also
     --------
     ScanParameters
     """
-    scan_type = 'Scan2D'
-    scan_subtype = 'Spiral'
-    if rmax == 0 or np.abs(rmax) < 1e-12 or np.abs(rstep) < 1e-12:
-        return ScanParameters(1, np.array([0]), np.array([0]), np.array([start_axis1]),
-                              np.array([start_axis2]), [np.array([start_axis1]), np.array([start_axis2])],
-                              scan_type=scan_type, scan_subtype=scan_subtype)
+    if np.isscalar(rmaxs):
+        rmaxs = np.ones(starts.shape) * rmaxs
+    else:
+        rmaxs = np.array(rmaxs)
+    if np.isscalar(rsteps):
+        rsteps = np.ones(starts.shape) * rsteps
+    else:
+        rsteps = np.array(rsteps)
+
+    starts = np.array(starts)
+
+    if nsteps is not None:
+        rmaxs = np.rint(nsteps / 2) * rsteps
+
+    if np.any(np.array(rmaxs) == 0) or np.any(np.abs(rmaxs) < 1e-12) or np.any(np.abs(rsteps) < 1e-12):
+        positions = np.array([starts])
+        return positions
 
     ind = 0
     flag = True
     oversteps = greater2n(oversteps)  # make sure the position matrix is still a square
 
-    Nlin = np.trunc(rmax / rstep)
+    Nlin = np.trunc(rmaxs / rsteps)
+    if not np.all(Nlin == Nlin[0]):
+        raise ScannerException(f'For Spiral 2D scans both axis should have same length, here: {Nlin.shape}')
+    else:
+        Nlin = Nlin[0]
+
+
     axis_1_indexes = [0]
     axis_2_indexes = [0]
     while flag:
@@ -779,32 +797,12 @@ def set_scan_spiral(start_axis1, start_axis2, rmax, rstep, oversteps=10000):
                     break
         ind += 1
 
-    axis_1_indexes = np.array(axis_1_indexes, dtype=int)
-    axis_2_indexes = np.array(axis_2_indexes, dtype=int)
-
-    axis_1_unique = np.unique(axis_1_indexes)
-    axis_1_unique = axis_1_unique.astype(float)
-    axis_2_unique = np.unique(axis_2_indexes)
-    axis_2_unique = axis_2_unique.astype(float)
-    axis_1 = np.zeros_like(axis_1_indexes, dtype=float)
-    axis_2 = np.zeros_like(axis_2_indexes, dtype=float)
-
     positions = []
-    for ind in range(len(axis_1)):
-        axis_1[ind] = axis_1_indexes[ind] * rstep + start_axis1
-        axis_2[ind] = axis_2_indexes[ind] * rstep + start_axis2
-        positions.append([axis_1[ind], axis_2[ind]])
+    for ind in range(len(axis_1_indexes)):
+        positions.append(np.array([axis_1_indexes[ind] * rsteps[0] + starts[0],
+                                   axis_2_indexes[ind] * rsteps[1] + starts[1]]))
 
-    for ind in range(len(axis_1_unique)):
-        axis_1_unique[ind] = axis_1_unique[ind] * rstep + start_axis1
-        axis_2_unique[ind] = axis_2_unique[ind] * rstep + start_axis2
-
-    axis_1_indexes = axis_1_indexes - np.min(axis_1_indexes)
-    axis_2_indexes = axis_2_indexes - np.min(axis_2_indexes)
-
-    Nsteps = len(positions)
-    return ScanParameters(Nsteps, axis_1_indexes, axis_2_indexes, axis_1_unique, axis_2_unique, positions,
-                              scan_type=scan_type, scan_subtype=scan_subtype)
+    return np.array(positions)
 
 
 def pos_above_stops(positions, steps, stops):
@@ -817,27 +815,21 @@ def pos_above_stops(positions, steps, stops):
     return state
 
 
-def set_scan_sequential(starts=[0.0, 10.0], stops=[10.0, 0.0], steps=[1.0, -1.0]):
+def set_scan_sequential(starts, stops, steps):
     """
     Create a list of positions (one for each actuator == one for each element in starts list) that are sequential
     Parameters
     ----------
-    starts: list
+    starts: (sequence like)
             list of starts of all selected actuators
-    stops: list
+    stops: (sequence like)
                 list of stops of all selected actuators
-    steps: list
+    steps: (sequence like)
 
     Returns
     -------
-    positions: list of list
+    positions: (ndarray)
     """
-
-    scan_type = 'Sequential'
-    scan_subtype = 'Linear'
-
-    axis_seq = [linspace_step(starts[ind], stops[ind], steps[ind]) for ind in range(len(starts))]
-
 
     all_positions = [starts[:]]
     positions = starts[:]
@@ -855,89 +847,84 @@ def set_scan_sequential(starts=[0.0, 10.0], stops=[10.0, 0.0], steps=[1.0, -1.0]
         if not np.any(np.array(state)):
             all_positions.append(positions[:])
 
+    return np.array(all_positions)
 
 
-    axis_seq_indexes = []
-    for poss in all_positions:
-        indexes = []
-        for ind, pos in enumerate(poss):
-            indexes.append(find_index(axis_seq[ind], pos)[0][0])
-        axis_seq_indexes.append(indexes)
-
-
-    Nsteps = len(all_positions)
-    return ScanParameters(Nsteps, positions=all_positions, axis_seq=axis_seq, axis_seq_indexes=axis_seq_indexes,
-                              scan_type=scan_type, scan_subtype=scan_subtype))
-
-#Parameter only
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    prog = Scanner(actuators=['Xaxis', 'Yaxis', 'Theta Axis'])
+    from PyQt5.QtCore import QThread
+    from pymodaq.daq_utils.gui_utils import DockArea
+    from pyqtgraph.dockarea import Dock
+    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+    from pymodaq.daq_utils.plotting.navigator import Navigator
+    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+
+    class UI():
+        def __init__(self):
+            pass
+
+
+    class FakeDaqScan:
+
+        def __init__(self, area):
+            self.area = area
+            self.detector_modules = None
+            self.ui = UI()
+            self.dock = Dock('2D scan', size=(500, 300), closable=False)
+
+            form = QtWidgets.QWidget()
+            self.ui.scan2D_graph = Viewer2D(form)
+            self.dock.addWidget(form)
+            self.area.addDock(self.dock)
+
+    def get_scan_params(param):
+        print(param)
+        print(param.scan_info.positions)
+
+    #
+    # ####simple sequential scan test
+    # prog = Scanner(actuators=['Xaxis', 'Yaxis', 'Theta Axis'])
+    # prog.settings_tree.show()
+    # #prog.actuators = ['xxx', 'yyy']
+    # prog.scan_params_signal.connect(get_scan_params)
+
+
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('pymodaq main')
+    fake = FakeDaqScan(area)
+
+    prog = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D', parent_scan=fake)
+    prog.ui.IniDet_pb.click()
+    QThread.msleep(1000)
+    QtWidgets.QApplication.processEvents()
+    prog2 = Navigator()
+    widgnav = QtWidgets.QWidget()
+    prog2 = Navigator(widgnav)
+    nav_dock = Dock('Navigator')
+    nav_dock.addWidget(widgnav)
+    area.addDock(nav_dock)
+    QThread.msleep(1000)
+    QtWidgets.QApplication.processEvents()
+
+
+    fake.detector_modules=[prog, prog2]
+    items = OrderedDict()
+    items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
+                           names=[view.title for view in prog.ui.viewers],
+                           )
+    items['Navigator'] = dict(viewers=[prog2.viewer],
+                             names=['Navigator'])
+    items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
+                             names=["DaqScan"])
+
+
+
+    prog = Scanner(items, actuators=['Xaxis', 'Yaxis', 'Theta Axis'])
     prog.settings_tree.show()
-    prog.actuators = ['xxx', 'yyy']
-
+    prog.scan_params_signal.connect(get_scan_params)
+    win.show()
     sys.exit(app.exec_())
-
-# if __name__ == '__main__':
-#     from pymodaq.daq_utils.daq_utils import DockArea
-#     from pyqtgraph.dockarea import Dock
-#     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-#     from pymodaq.daq_utils.plotting.navigator import Navigator
-#     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-#     class UI():
-#         def __init__(self):
-#             pass
-#
-#
-#     class FakeDaqScan():
-#
-#         def __init__(self, area):
-#             self.area = area
-#             self.detector_modules = None
-#             self.ui = UI()
-#             self.dock = Dock('2D scan', size=(500, 300), closable=False)
-#
-#             form = QtWidgets.QWidget()
-#             self.ui.scan2D_graph = Viewer2D(form)
-#             self.dock.addWidget(form)
-#             self.area.addDock(self.dock)
-#
-#     app = QtWidgets.QApplication(sys.argv)
-#     win = QtWidgets.QMainWindow()
-#     area = DockArea()
-#
-#     win.setCentralWidget(area)
-#     win.resize(1000, 500)
-#     win.setWindowTitle('pymodaq main')
-#     fake = FakeDaqScan(area)
-#
-#     prog = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D', parent_scan=fake)
-#     prog.ui.IniDet_pb.click()
-#     QThread.msleep(1000)
-#     QtWidgets.QApplication.processEvents()
-#     prog2 = Navigator()
-#     widgnav = QtWidgets.QWidget()
-#     prog2 = Navigator(widgnav)
-#     nav_dock = Dock('Navigator')
-#     nav_dock.addWidget(widgnav)
-#     area.addDock(nav_dock)
-#     QThread.msleep(1000)
-#     QtWidgets.QApplication.processEvents()
-#
-#
-#     fake.detector_modules=[prog, prog2]
-#     items = OrderedDict()
-#     items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
-#                            names=[view.title for view in prog.ui.viewers],
-#                            )
-#     items['Navigator'] = dict(viewers=[prog2.viewer],
-#                              names=['Navigator'])
-#     items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
-#                              names=["DaqScan"])
-#
-#
-#
-#     prog = Scanner(items)
-#     prog.settings_tree.show()
-#     win.show()
-#     sys.exit(app.exec_())

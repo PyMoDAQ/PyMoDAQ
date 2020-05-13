@@ -2,6 +2,70 @@ from PyQt5 import QtGui, QtCore
 import pyqtgraph as pg
 import numpy as np
 from scipy.spatial import Delaunay as Triangulation
+import copy
+
+class QVector(QtCore.QLineF):
+    def __init__(self, *elt):
+        super().__init__(*elt)
+
+    def __add__(self, qvect):
+        v = QVector(self.x1() + qvect.x1(), self.y1() + qvect.y1(), self.x2() + qvect.x2(), self.y2() + qvect.y2())
+        return v
+
+    def __sub__(self, qvect):
+        v = QVector(self.x1() - qvect.x1(), self.y1() - qvect.y1(), self.x2() - qvect.x2(), self.y2() - qvect.y2())
+        return v
+
+    def __mul__(self, coeff=float(1)):
+        v = QVector(coeff * self.x1(), coeff * self.y1(), coeff * self.x2(), coeff * self.y2())
+        return v
+
+    def copy(self):
+        vec = QVector()
+        vec.setPoints(copy.copy(self.p1()), copy.copy(self.p2()))
+        return vec
+
+    def vectorize(self):
+        v = QVector(QtCore.QPointF(0, 0), self.p2() - self.p1())
+        return v
+
+    def unitVector(self):
+        vec = self * (1 / self.length())
+        return vec
+
+    def normalVector(self):
+        vec = self.vectorize()
+        vec = QVector(0, 0, -vec.p2().y(), vec.p2().x())
+        return vec
+
+    def normalVector_not_vectorized(self):
+        vec = self.vectorize()
+        vec = QVector(0, 0, -vec.p2().y(), vec.p2().x())
+        vec.translate(self.p1())
+        return vec
+
+    def dot(self, qvect):
+        """
+        scalar product
+        """
+        v1 = self.vectorize()
+        v2 = qvect.vectorize()
+        prod = v1.x2() * v2.x2() + v1.y2() * v2.y2()
+        return prod
+
+    def prod(self, qvect):
+        """
+        vectoriel product length along z
+        """
+        v1 = self.vectorize()
+        v2 = qvect.vectorize()
+        prod = v1.x2() * v2.y2() - v1.y2() * v2.x2()
+        return prod
+
+    def translate_to(self, point=QtCore.QPointF(0, 0)):
+        vec = self + QVector(self.p1(), point)
+        return vec
+
 
 class AxisItem_Scaled(pg.AxisItem):
     """

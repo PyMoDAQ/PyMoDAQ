@@ -6,15 +6,16 @@ Created on Mon Dec  4 10:59:53 2017
 
 """
 import sys
-import PyQt5
+import json
+import importlib
 from PyQt5 import QtWidgets,QtGui
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.Parameter import registerParameterType
-#from PyMoDAQ.daq_utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
-from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear, make_enum
+
+from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 from collections import OrderedDict
 from decimal import Decimal as D
 
@@ -69,24 +70,6 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         -------
         XML element : parent_elt
             XML element with subelements from Parameter object
-
-        Examples
-        -------
-        >>> from pyqtgraph.parametertree import Parameter, ParameterItem
-        >>> import xml.etree.ElementTree as ET
-        >>> params = [{title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'children': [
-                        {'title': 'Scan type:','name': 'scan2D_type', 'type': 'list', 'values': ['Spiral','Linear', 'back&forth'],'value': 'Spiral'},
-                        {'title': 'Rstep:','name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible':True},
-                        {'title': 'Rmax:','name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible':True}
-                        ]}]
-        >>> settings=Parameter.create(name='Settings', type='group', children=params)
-        >>> param_type=settings.type()
-        >>> base_elt=ET.Element(settings.name(),title=str(settings.opts['title']),type=param_type)
-
-        >>> XML_elt=walk_parameters_to_xml(param=settings)
-        >>> tree=ET.ElementTree(XML_elt)
-        >>> tree.write('settings.xml')
-
 
         See Also
         --------
@@ -161,6 +144,14 @@ def add_text_to_elt(elt, param):
         else:
             val = param.value()
         text = str(val)
+    elif param_type == 'table_view':
+        try:
+            data = dict(classname=param.value().__class__.__name__,
+                        module=param.value().__class__.__module__,
+                        data=param.value().get_data_all())
+            text = json.dumps(data)
+        except:
+            text = ''
     else:
         text = str(param.value())
     elt.text = text
@@ -486,6 +477,11 @@ def set_txt_from_elt(el, param_dict):
             param_value = eval(val_text)
         except:
             param_value = val_text  # for back compatibility
+    elif param_type == 'table_view':
+        data_dict = json.loads(val_text)
+        mod = importlib.import_module(data_dict['module'])
+        _cls = getattr(mod, data_dict['classname'])
+        param_value = _cls(data_dict['data'])
     else:
         param_value = val_text
     param_dict.update(dict(value=param_value))
@@ -741,6 +737,9 @@ class SpinBoxCustom(SpinBox.SpinBox):
                 self.opts[k] = opts[k]
             elif k in self.opts:
                 self.opts[k] = opts[k]
+            elif 'tip' in k:
+                self.opts[k] = opts[k]
+                self.setToolTip(opts[k])
 
             elif k == 'show_pb':
                 pass
@@ -1218,11 +1217,14 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
 
         if 'readonly' in opts:
             self.updateDefaultBtn()
-            if isinstance(self.widget, (QtWidgets.QCheckBox,ColorButton.ColorButton)):
+            if isinstance(self.widget, (QtWidgets.QCheckBox, ColorButton.ColorButton)):
                 self.widget.setEnabled(not opts['readonly'])
 
         if 'minutes_increment' in opts:
             self.widget.setMinuteIncrement(opts['minutes_increment'])
+
+        if 'tip' in opts:
+            self.displayLabel.setToolTip(opts['tip'])
 
         ## If widget is a SpinBox, pass options straight through
         if isinstance(self.widget, SpinBoxCustom):
@@ -1233,6 +1235,10 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 opts['suffix'] = opts['units']
             self.widget.setOpts(**opts)
             self.updateDisplayLabel()
+
+        if 'title' in opts:
+            self.setText(0, opts['title']) #void QTreeWidgetItem::setText(int column, const QString &text)
+
 
 
 
@@ -1384,11 +1390,11 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
             limitsChanged, custom_parameter_tree.ItemSelect.setValue
         """
         if type(self.param.opts['limits']) == list:
-            text,ok = QtWidgets.QInputDialog.getText(None,"Enter a value to add to the parameter",
-                                             "String value:", QtWidgets.QLineEdit.Normal);
-            if ok and not (text==""):
+            text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
+                                                      "String value:", QtWidgets.QLineEdit.Normal);
+            if ok and not (text == ""):
                 self.param.opts['limits'].append(text)
-                self.limitsChanged(self.param,self.param.opts['limits'])
+                self.limitsChanged(self.param, self.param.opts['limits'])
                 self.param.setValue(text)
 
     def optsChanged(self, param, opts):
@@ -1424,8 +1430,9 @@ class ListParameter_custom(pTypes.ListParameter):
     """
     itemClass = ListParameterItem_custom
     sigActivated = pyqtSignal(object)
+
     def __init__(self, **opts):
-        super(ListParameter_custom,self).__init__( **opts)
+        super(ListParameter_custom, self).__init__(**opts)
 
 
     def activate(self):
@@ -1437,28 +1444,23 @@ class ListParameter_custom(pTypes.ListParameter):
 registerParameterType('list', ListParameter_custom, override=True)
 
 
-
-
-
 class Combo_pb(QtWidgets.QWidget):
 
-    def __init__(self,items=[]):
+    def __init__(self, items=[]):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Combo_pb,self).__init__()
-        self.items=items
+        super(Combo_pb, self).__init__()
+        self.items = items
         self.initUI()
-        self.count=self.combo.count
+        self.count = self.combo.count
 
     def initUI(self):
         """
             Init the User Interface.
         """
-
-
-        self.hor_layout=QtWidgets.QHBoxLayout()
-        self.combo=QtWidgets.QComboBox()
+        self.hor_layout = QtWidgets.QHBoxLayout()
+        self.combo = QtWidgets.QComboBox()
         self.combo.addItems(self.items)
-        self.add_pb=QtWidgets.QPushButton()
+        self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -1466,7 +1468,7 @@ class Combo_pb(QtWidgets.QWidget):
         self.hor_layout.addWidget(self.combo)
         self.hor_layout.addWidget(self.add_pb)
         self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0,0,0,0);
+        self.hor_layout.setContentsMargins(0, 0, 0, 0);
         self.add_pb.setMaximumWidth(25)
         self.setLayout(self.hor_layout)
 

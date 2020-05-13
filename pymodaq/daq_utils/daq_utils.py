@@ -10,7 +10,6 @@ import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE
 
-from pymodaq.daq_utils.scanner import set_scan_spiral
 
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE

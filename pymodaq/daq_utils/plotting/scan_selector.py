@@ -9,29 +9,38 @@ from pyqtgraph import gaussianFilter, ROI, RectROI, PolyLineROI, Point
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree
-from pyqtgraph.dockarea import DockArea, Dock
-from easydict import EasyDict as edict
+from pyqtgraph.dockarea import Dock
+from pymodaq.daq_utils.gui_utils import DockArea
+from pymodaq.daq_utils.plotting.plot_utils import QVector
+
 
 class PolyLineROI_custom(PolyLineROI):
-    def __init__(self,*args,**kwargs):
-        super(PolyLineROI_custom,self).__init__(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(PolyLineROI_custom, self).__init__(*args, **kwargs)
 
     def get_vertex(self):
         return [h['item'].pos() for h in self.handles]
 
+    def get_vectors(self):
+        imgPts = self.get_vertex()
+        d = []
+        for i in range(len(imgPts) - 1):
+            d.append(QVector(imgPts[i], Point(imgPts[i + 1])))
+        return d
+
     def getArrayIndexes(self, spacing=1, **kwds):
         imgPts = self.get_vertex()
-        positions=[]
+        positions = []
         for i in range(len(imgPts) - 1):
             d = Point(imgPts[i + 1] - imgPts[i])
             o = Point(imgPts[i])
-            vect=Point(d.norm())
-            Npts=0
-            while Npts*spacing < d.length():
-
-                positions.append(((o+Npts*spacing*vect).x(),(o+Npts*spacing*vect).y()))
-                Npts+=1
-
+            vect = Point(d.norm())
+            Npts = 0
+            while Npts * spacing < d.length():
+                positions.append(((o + Npts * spacing * vect).x(), (o + Npts * spacing * vect).y()))
+                Npts += 1
+        #add_last point not taken into account
+        positions.append((imgPts[-1].x(), imgPts[-1].y()))
         return positions
 
 
@@ -124,7 +133,7 @@ class ScanSelector(QObject):
         self.settings_tree = ParameterTree()
         layout.addWidget(self.settings_tree,10)
         self.settings_tree.setMinimumWidth(300)
-        self.settings=Parameter.create(name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
 
         self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
@@ -140,7 +149,7 @@ class ScanSelector(QObject):
         #self.widget.show()
         self.widget.setWindowTitle('Scan Selector')
 
-    def source_changed(self,param,changes):
+    def source_changed(self, param, changes):
         for param, change, data in changes:
             path = self.settings.childPath(param)
             if path is not None:
@@ -152,7 +161,7 @@ class ScanSelector(QObject):
 
             elif change == 'value':
                 if param.name() == 'sources' and param.value() is not None:
-                    viewer_names= self._viewers_items[param.value()]['names']
+                    viewer_names = self._viewers_items[param.value()]['names']
                     self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
                     if len(viewer_names) == 1:
                         self.settings.child('scan_options', 'viewers').hide()
@@ -198,7 +207,7 @@ class ScanSelector(QObject):
 
         self.remove_scan_selector()
         if scan_area_type == 'Rect':
-            self.scan_selector = RectROI([0,0],[10,10])
+            self.scan_selector = RectROI([0, 0], [10, 10])
 
         elif scan_area_type == 'PolyLines':
             self.scan_selector = PolyLineROI_custom([(0, 0), [10, 10]])
@@ -209,8 +218,7 @@ class ScanSelector(QObject):
 
             self.scan_selector.sigRegionChangeFinished.emit(self.scan_selector)
 
-
-    def show_scan_selector(self,visible=True):
+    def show_scan_selector(self, visible=True):
         self.scan_selector.setVisible(visible)
 
     def update_scan(self, roi):

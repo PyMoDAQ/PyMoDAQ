@@ -55,6 +55,7 @@ class DashBoard(QObject):
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__()
+        logger.info('Initializing Dashboard')
         self.wait_time = 1000
         self.scan_module = None
         self.database_module = None
@@ -784,7 +785,7 @@ class DashBoard(QObject):
 
     def show_log(self):
         import webbrowser
-        webbrowser.open(logger.handlers[0].baseFilename)
+        webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
     def setupUI(self):
 
