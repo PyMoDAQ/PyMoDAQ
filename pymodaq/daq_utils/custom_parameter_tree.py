@@ -446,48 +446,45 @@ def set_txt_from_elt(el, param_dict):
     """
     val_text = el.text
     param_type = el.get('type')
-
-    if param_type == 'float':
-        param_value = float(val_text)
-    elif param_type == 'int':
-        param_value = int(val_text)
-    elif param_type == 'slide':
-        param_value = float(val_text)
-    elif param_type == 'itemselect':
-        if val_text == 'None':
-            param_value = dict(all_items=[], selected=[])
-        else:
-            param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
-    elif param_type == 'bool':
-        param_value = bool(int(val_text))
-    elif param_type == 'bool_push':
-        param_value = bool(int(val_text))
-    elif 'led' in param_type:  #covers 'led' and 'led_push'types
-        param_value = bool(val_text)
-    elif param_type == 'date_time':
-        param_value = eval(val_text)
-    elif param_type == 'date':
-        param_value = eval(val_text)
-    elif param_type == 'table':
-        param_value = eval(val_text)
-    elif param_type == 'color':
-        param_value = QtGui.QColor(*eval(val_text))
-    elif param_type == 'list':
-        try:
+    if val_text is not None:
+        if param_type == 'float':
+            param_value = float(val_text)
+        elif param_type == 'int':
+            param_value = int(float(val_text))
+        elif param_type == 'slide':
+            param_value = float(val_text)
+        elif param_type == 'itemselect':
+            if val_text == 'None':
+                param_value = dict(all_items=[], selected=[])
+            else:
+                param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
+        elif param_type == 'bool':
+            param_value = bool(int(val_text))
+        elif param_type == 'bool_push':
+            param_value = bool(int(val_text))
+        elif 'led' in param_type:  #covers 'led' and 'led_push'types
+            param_value = bool(val_text)
+        elif param_type == 'date_time':
             param_value = eval(val_text)
-        except:
-            param_value = val_text  # for back compatibility
-    elif param_type == 'table_view':
-        data_dict = json.loads(val_text)
-        mod = importlib.import_module(data_dict['module'])
-        _cls = getattr(mod, data_dict['classname'])
-        param_value = _cls(data_dict['data'])
-    else:
-        param_value = val_text
-    param_dict.update(dict(value=param_value))
-
-    # if param_type == 'list':
-    #     param_dict.update(dict(values=[param_value]))
+        elif param_type == 'date':
+            param_value = eval(val_text)
+        elif param_type == 'table':
+            param_value = eval(val_text)
+        elif param_type == 'color':
+            param_value = QtGui.QColor(*eval(val_text))
+        elif param_type == 'list':
+            try:
+                param_value = eval(val_text)
+            except:
+                param_value = val_text  # for back compatibility
+        elif param_type == 'table_view':
+            data_dict = json.loads(val_text)
+            mod = importlib.import_module(data_dict['module'])
+            _cls = getattr(mod, data_dict['classname'])
+            param_value = _cls(data_dict['data'])
+        else:
+            param_value = val_text
+        param_dict.update(dict(value=param_value))
 
 
 
@@ -1601,8 +1598,8 @@ class TableParameter(Parameter):
 
 registerParameterType('table', TableParameter, override=True)
 
-class TableViewParameterItem(WidgetParameterItemcustom):
 
+class TableViewParameterItem(WidgetParameterItemcustom):
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
         self.hideWidget = False
@@ -1613,9 +1610,6 @@ class TableViewParameterItem(WidgetParameterItemcustom):
         """
             Check for changement in the Widget tree.
         """
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
-        #WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
@@ -1636,7 +1630,12 @@ class TableViewParameterItem(WidgetParameterItemcustom):
             --------
             Table_custom
         """
-        w = TableViewCustom()
+        menu = False
+        if 'menu' in self.param.opts:
+            menu = self.param.opts['menu']
+
+
+        w = TableViewCustom(menu=menu)
 
         w.setMaximumHeight(200)
         #self.table.setReadOnly(self.param.opts.get('readonly', False))
@@ -1675,6 +1674,12 @@ class TableViewParameterItem(WidgetParameterItemcustom):
             styledItemDelegate.setItemEditorFactory(opts['delegate']())
             self.widget.setItemDelegate(styledItemDelegate)
 
+        if 'menu' in opts:
+            self.widget.setmenu(opts['menu'])
+
+
+
+
 
 class TableViewCustom(QtWidgets.QTableView):
     """
@@ -1686,10 +1691,35 @@ class TableViewCustom(QtWidgets.QTableView):
     """
 
     valueChanged = pyqtSignal(list)
+    add_data_signal = pyqtSignal(int)
+    remove_row_signal = pyqtSignal(int)
+    load_data_signal = pyqtSignal()
+    save_data_signal = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, menu=False):
         super().__init__()
+        self.setmenu(menu)
 
+    def setmenu(self, status):
+        if status:
+            self.menu = QtWidgets.QMenu()
+            self.menu.addAction('Add new', self.add)
+            self.menu.addAction('Remove selected row', self.remove)
+            self.menu.addAction('Clear all', self.clear)
+            self.menu.addSeparator()
+            self.menu.addAction('Load as txt', lambda: self.load_data_signal.emit())
+            self.menu.addAction('Save as txt', lambda: self.save_data_signal.emit())
+        else:
+            self.menu = None
+
+    def clear(self):
+        self.model().clear()
+
+    def add(self):
+        self.add_data_signal.emit(self.currentIndex().row())
+
+    def remove(self):
+        self.remove_row_signal.emit(self.currentIndex().row())
 
 
     def data_has_changed(self, topleft, bottomright, roles):
@@ -1712,6 +1742,10 @@ class TableViewCustom(QtWidgets.QTableView):
         except Exception as e:
             pass
 
+    def contextMenuEvent(self, event):
+        if self.menu is not None:
+            self.menu.exec(event.globalPos())
+
 class TableViewParameter(Parameter):
     """
         =============== =================================
@@ -1721,9 +1755,6 @@ class TableViewParameter(Parameter):
         =============== =================================
     """
     itemClass = TableViewParameterItem
-    """Editable string; displayed as large text box in the tree."""
-    # def __init(self):
-    #     super(TableParameter,self).__init__()
 
     def setValue(self, value):
         self.opts['value'] = value

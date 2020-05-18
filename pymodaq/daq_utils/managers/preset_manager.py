@@ -3,9 +3,9 @@ import sys
 import os
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-import pymodaq.daq_utils.manage_preset_utils
-from pymodaq.daq_utils.gui_utils import select_file
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing
+from pymodaq.daq_utils.managers import preset_manager_utils
+from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
@@ -37,7 +37,7 @@ class PresetManager:
                 self.set_new_preset()
 
             elif msgBox.clickedButton() == modify_button:
-                path = select_file(start_path=preset_path,save=False, ext='xml')
+                path = gui_utils.select_file(start_path=preset_path,save=False, ext='xml')
                 if path != '':
                     self.set_file_preset(str(path))
             else: #cancel
@@ -175,7 +175,7 @@ class PresetManager:
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Fill in information about this preset')
+        dialog.setWindowTitle('Fill in information about this managers')
         res = dialog.exec()
 
         if self.pid_type:
@@ -184,7 +184,7 @@ class PresetManager:
             path = preset_path
 
         if res == dialog.Accepted:
-            # save preset parameters in a xml file
+            # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
             custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(path,

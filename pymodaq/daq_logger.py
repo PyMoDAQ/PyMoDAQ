@@ -381,16 +381,16 @@ class DAQ_Logger(QObject):
             In case of :
                 * *scan* : Set parameters showing top false
                 * *dataset* : Set parameters showing top false
-                * *preset* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save preset parameters in a xml file).
+                * *managers* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save managers parameters in a xml file).
 
-            Finally, in case of accepted preset type info, save the preset parameters in a xml file.
+            Finally, in case of accepted managers type info, save the managers parameters in a xml file.
 
             =============== =========== ====================================
             **Parameters**    **Type**    **Description**
             *type_info*       string      The file type information between
                                             * scan
                                             * dataset
-                                            * preset
+                                            * managers
             =============== =========== ====================================
 
             See Also

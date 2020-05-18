@@ -174,11 +174,11 @@ class OvershootManager:
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Fill in information about this preset')
+        dialog.setWindowTitle('Fill in information about this managers')
         res = dialog.exec()
 
         if res == dialog.Accepted:
-            # save preset parameters in a xml file
+            # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
             custom_tree.parameter_to_xml_file(self.overshoot_params, os.path.join(overshoot_path,

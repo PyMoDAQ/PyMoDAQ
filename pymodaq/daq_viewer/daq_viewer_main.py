@@ -161,7 +161,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.statusbar=QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(25)
         self.ui.settings_layout.addWidget(self.ui.statusbar)
-        self.ui.status_message=QtWidgets.QLabel()
+        self.ui.status_message = QtWidgets.QLabel()
         self.ui.status_message.setMaximumHeight(25)
         self.ui.statusbar.addWidget(self.ui.status_message)
 
@@ -260,7 +260,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         self.set_setting_tree() #to activate parameters of default Mock detector
 
-        # set preset options
+        # set managers options
         if preset is not None:
             for preset_dict in preset:
                 #fo instance preset_dict=edict(object='Stage_type_combo',method='setCurrentIndex',value=1)

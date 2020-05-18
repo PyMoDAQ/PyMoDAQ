@@ -19,9 +19,9 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.version import get_version
-from pymodaq.daq_utils.manage_preset import PresetManager
-from pymodaq.daq_utils.overshoot_manager import OvershootManager
-from pymodaq.daq_utils.roi_saver import ROISaver
+from pymodaq.daq_utils.managers.preset_manager import PresetManager
+from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
+from pymodaq.daq_utils.plotting.roi_saver import ROISaver
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
@@ -159,10 +159,10 @@ class DashBoard(QObject):
         action_show_log.toggled.connect(self.logger_dock.setVisible)
 
         self.preset_menu = menubar.addMenu('Preset Modes')
-        action_new_preset = self.preset_menu.addAction('New preset')
-        # action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
+        action_new_preset = self.preset_menu.addAction('New managers')
+        # action.triggered.connect(lambda: self.show_file_attributes(type_info='managers'))
         action_new_preset.triggered.connect(self.create_preset)
-        action_modify_preset = self.preset_menu.addAction('Modify preset')
+        action_modify_preset = self.preset_menu.addAction('Modify managers')
         action_modify_preset.triggered.connect(self.modify_preset)
         self.preset_menu.addSeparator()
         load_preset = self.preset_menu.addMenu('Load presets')
@@ -177,7 +177,7 @@ class DashBoard(QObject):
 
         self.overshoot_menu = menubar.addMenu('Overshoot Modes')
         action_new_overshoot = self.overshoot_menu.addAction('New Overshoot')
-        # action.triggered.connect(lambda: self.show_file_attributes(type_info='preset'))
+        # action.triggered.connect(lambda: self.show_file_attributes(type_info='managers'))
         action_new_overshoot.triggered.connect(self.create_overshoot)
         action_modify_overshoot = self.overshoot_menu.addAction('Modify Overshoot')
         action_modify_overshoot.triggered.connect(self.modify_overshoot)
@@ -399,7 +399,7 @@ class DashBoard(QObject):
 
     def set_file_preset(self, filename):
         """
-            Set a file preset from the converted xml file given by the filename parameter.
+            Set a file managers from the converted xml file given by the filename parameter.
 
 
             =============== =========== ===================================================
@@ -438,7 +438,7 @@ class DashBoard(QObject):
             # except Exception as e:
             #     logger.exception(str(e))
 
-            ## set PID if checked in preset
+            ## set PID if checked in managers
             try:
                 if self.preset_manager.preset_params.child(('use_pid')).value():
                     self.open_PID()
@@ -664,11 +664,11 @@ class DashBoard(QObject):
 
     def set_preset_mode(self, filename):
         """
-            | Set the preset mode from the given filename.
+            | Set the managers mode from the given filename.
             |
-            | In case of "mock" or "canon" move, set the corresponding preset calling set_(*)_preset procedure.
+            | In case of "mock" or "canon" move, set the corresponding managers calling set_(*)_preset procedure.
             |
-            | Else set the preset file using set_file_preset function.
+            | Else set the managers file using set_file_preset function.
             | Once done connect the move and detector modules to logger to recipe/transmit informations.
 
             Finally update DAQ_scan_settings tree with :
@@ -678,7 +678,7 @@ class DashBoard(QObject):
 
             =============== =========== =============================================
             **Parameters**    **Type**    **Description**
-            *filename*        string      the name of the preset file to be treated
+            *filename*        string      the name of the managers file to be treated
             =============== =========== =============================================
 
             See Also
@@ -879,16 +879,16 @@ class DashBoard(QObject):
             In case of :
                 * *scan* : Set parameters showing top false
                 * *dataset* : Set parameters showing top false
-                * *preset* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save preset parameters in a xml file).
+                * *managers* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save managers parameters in a xml file).
 
-            Finally, in case of accepted preset type info, save the preset parameters in a xml file.
+            Finally, in case of accepted managers type info, save the managers parameters in a xml file.
 
             =============== =========== ====================================
             **Parameters**    **Type**    **Description**
             *type_info*       string      The file type information between
                                             * scan
                                             * dataset
-                                            * preset
+                                            * managers
             =============== =========== ====================================
 
             See Also

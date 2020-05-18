@@ -52,7 +52,7 @@ class ScanSelector(QObject):
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Sources:', 'name': 'sources', 'type': 'list',},
             {'title': 'Viewers:', 'name': 'viewers', 'type': 'list', },
-            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D'], 'value': 'Scan2D'},
+            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Tabular', 'Scan2D'], 'value': 'Scan2D'},
             ]},
         {'title': 'Scan Area', 'name': 'scan_area', 'type': 'group', 'children': [
             {'title': 'ROI select:', 'name': 'ROIselect', 'type': 'group', 'visible': True, 'children': [
@@ -73,9 +73,9 @@ class ScanSelector(QObject):
         viewer_items: dict where the keys are the titles of the sources while the values are dict with keys
                         viewers: list of plotitems
                         names: list of viewer titles
-        scan_type: (str) either 'Scan1D' correspondign to a polyline ROI or 'Scan2D' for a rect Roi
+        scan_type: (str) either 'Tabular' corresponding to a polyline ROI or 'Scan2D' for a rect Roi
         positions: list
-                        in case of 'Scan1D', should be a sequence of 2 floats sequence [(x1,y1),(x2,y2),(x3,y3),...]
+                        in case of 'Tabular', should be a sequence of 2 floats sequence [(x1,y1),(x2,y2),(x3,y3),...]
                         in case of 'Scan2D', should be a sequence of 4 floats (x, y , w, h)
         """
         super(ScanSelector, self).__init__()
@@ -173,7 +173,7 @@ class ScanSelector(QObject):
                 if param.name() == 'scan_type':
 
 
-                    if param.value() == 'Scan1D':
+                    if param.value() == 'Tabular':
                         self.settings.child('scan_area', 'ROIselect').hide()
                         self.settings.child('scan_area', 'coordinates').show()
                         self.remove_scan_selector()
@@ -199,7 +199,7 @@ class ScanSelector(QObject):
     pyqtSlot(str)
     def update_scan_area_type(self):
 
-        if self.settings.child('scan_options', 'scan_type').value() == 'Scan1D':
+        if self.settings.child('scan_options', 'scan_type').value() == 'Tabular':
             scan_area_type = 'PolyLines'
         else:
             scan_area_type = 'Rect'
@@ -276,18 +276,17 @@ if __name__ == '__main__':
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
 
-
-    fake.detector_modules=[prog, prog2]
-    items=OrderedDict()
-    items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
-                           names=[view.title for view in prog.ui.viewers],
-                           )
+    fake.detector_modules = [prog, prog2]
+    items = OrderedDict()
+    items[prog.title] = dict(viewers=[view for view in prog.ui.viewers],
+                             names=[view.title for view in prog.ui.viewers],
+                             )
     items[prog2.title] = dict(viewers=[view for view in prog2.ui.viewers],
-                             names=[view.title for view in prog2.ui.viewers])
+                              names=[view.title for view in prog2.ui.viewers])
     items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
-                             names=["DaqScan"])
+                            names=["DaqScan"])
 
-    selector = ScanSelector(items,scan_type='Scan1D', positions=[(10,-10),(4,4),(80,50)])
+    selector = ScanSelector(items, scan_type='Tabular', positions=[(10, -10), (4, 4), (80, 50)])
 
     win.show()
     sys.exit(app.exec_())

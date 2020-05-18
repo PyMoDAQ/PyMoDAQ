@@ -1,14 +1,14 @@
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-from pyqtgraph.parametertree.Parameter import registerParameterType
 import random
-from pymodaq_plugins import daq_move_plugins as movehardware
-from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
-from pymodaq.daq_move.utility_classes import params as daq_move_params
 
-from pymodaq_plugins.daq_viewer_plugins import plugins_2D, plugins_1D, plugins_0D, plugins_ND
+from pyqtgraph.parametertree import parameterTypes as pTypes
+
+from pymodaq.daq_move.utility_classes import params as daq_move_params
+from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
+
+from pymodaq_plugins import daq_move_plugins as movehardware
+from pyqtgraph.parametertree.Parameter import registerParameterType
 from pymodaq.daq_utils.daq_utils import make_enum
+from pymodaq_plugins.daq_viewer_plugins import plugins_0D, plugins_1D, plugins_2D, plugins_ND
 
 DAQ_Move_Stage_type = make_enum('daq_move')
 DAQ_0DViewer_Det_type = make_enum('daq_0Dviewer')
@@ -16,7 +16,8 @@ DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
 DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
 DAQ_NDViewer_Det_type = make_enum('daq_NDviewer')
 
-class PresetScalableGroupMove( pTypes.GroupParameter):
+
+class PresetScalableGroupMove(pTypes.GroupParameter):
     """
         |
 
@@ -80,6 +81,7 @@ class PresetScalableGroupMove( pTypes.GroupParameter):
 
         self.addChild(child)
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
+
 
 class PresetScalableGroupDet( pTypes.GroupParameter):
     """

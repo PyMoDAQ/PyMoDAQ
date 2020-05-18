@@ -1,18 +1,17 @@
 import os
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import logging
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.gui_utils import DockArea
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.qled import QLED
-from pymodaq.daq_utils.manage_preset import PresetManager
+from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pyqtgraph.dockarea import Dock
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, get_set_local_dir, set_logger, get_module_name
+from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name
 import importlib
 from simple_pid import PID
 import time
@@ -359,7 +358,7 @@ class DAQ_PID(QObject):
 
     def set_file_preset(self,model):
         """
-            Set a file preset from the converted xml file given by the filename parameter.
+            Set a file managers from the converted xml file given by the filename parameter.
 
 
             =============== =========== ===================================================
@@ -593,7 +592,7 @@ class DAQ_PID(QObject):
             self.model_class = getattr(model, model_name)(self)
 
 
-            #try to get corresponding preset file
+            #try to get corresponding managers file
             filename = os.path.join(get_set_pid_path(), model_name + '.xml')
             if os.path.isfile(filename):
                 self.actuator_modules,  self.detector_modules = self.set_file_preset(model_name)

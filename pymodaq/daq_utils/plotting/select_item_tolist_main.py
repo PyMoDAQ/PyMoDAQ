@@ -37,7 +37,7 @@ from PyMoDAQ.DAQ_Utils.DAQ_enums import Items_Lockin_SR830
 
 #    def ini_items(self,items_tot):
 #        self.item_list=items_tot['all_items']
-#        self.preset_items=items_tot['preset']
+#        self.preset_items=items_tot['managers']
 #        self.ui.items_cb.clear()
 #        self.ui.item_list.clear()
 #        self.ui.all_items_list.clear()
@@ -47,7 +47,7 @@ from PyMoDAQ.DAQ_Utils.DAQ_enums import Items_Lockin_SR830
 #        self.items=self.all_items_func()
             
 #    def get_value(self):
-#        return dict(all_items=self.item_list,preset=self.items)
+#        return dict(all_items=self.item_list,managers=self.items)
 
 #    def add_item(self):
         
@@ -159,7 +159,7 @@ class Select_item_tolist_simpler(QtWidgets.QWidget):
 
     def ini_items(self,items_tot):
         self.all_items=items_tot['all_items']
-        self.preset_items=items_tot['preset']
+        self.preset_items=items_tot['managers']
         self.all_items_list.clear()
         self.current_items_list.clear()
         self.all_items_list.addItems(self.all_items)

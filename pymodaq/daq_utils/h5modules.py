@@ -16,6 +16,7 @@ from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
 from PyQt5 import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.scanner import scan_types as stypes
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
 from pymodaq.version import get_version
 import datetime
@@ -62,7 +63,8 @@ group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'exter
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings']
 data_dimensions = ['0D', '1D', '2D', 'ND']
-scan_types = ['', 'scan1D', 'scan2D']
+scan_types = ['']
+scan_types.extend(stypes)
 
 
 def check_mandatory_attrs(attr_name, attr):
@@ -443,6 +445,10 @@ class H5Backend:
     @property
     def h5file(self):
         return self._h5file
+
+    @h5file.setter
+    def h5file(self, file):
+        self._h5file = file
 
     def isopen(self):
         if self._h5file is None:
@@ -1455,7 +1461,8 @@ class H5Saver(H5Backend, QObject):
             if False the created array is a carray type
         """
         if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
-            raise NameError('Invalid navigation axis name')
+            if 'axis' not in axis: # case of sequential scans where axes are labelled with indexes
+                raise NameError('Invalid navigation axis name')
 
         array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis',
                                data_shape=data.shape,
@@ -1596,7 +1603,7 @@ class H5Saver(H5Backend, QObject):
             raise InvalidDataType('Invalid data type')
         if scan_type != '':
             scan_type = utils.uncapitalize(scan_type)
-        if scan_type not in scan_types:
+        if scan_type.lower() not in [s.lower() for s in scan_types]:
             raise InvalidScanType('Invalid scan type')
         if enlargeable:
             if data_shape == (1,):
@@ -1749,14 +1756,14 @@ class H5Saver(H5Backend, QObject):
         if not self.isopen():
             if self.h5_file_path is not None:
                 if self.h5_file_path.exists():
-                    self.analysis_prog = H5Browser(form, h5file=self.h5_file_path)
+                    self.analysis_prog = H5Browser(form, h5file_path=self.h5_file_path)
                 else:
                     logger.warning('The h5 file path has not been defined yet')
             else:
                 logger.warning('The h5 file path has not been defined yet')
         else:
             self.flush()
-            self.analysis_prog = H5Browser(form, h5file=self.h5_file)
+            self.analysis_prog = H5Browser(form, h5file=self.h5file)
         form.show()
 
 def find_scan_node(scan_node):
@@ -1975,12 +1982,13 @@ class H5Browser(QObject):
     data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
     status_signal = pyqtSignal(str)
 
-    def __init__(self, parent, h5file_path=None, backend='tables'):
+    def __init__(self, parent, h5file=None, h5file_path=None, backend='tables'):
         """
 
         Parameters
         ----------
         parent: QtWidgets container, either a QWidget or a QMainWindow
+        h5file: h5file instance (exact type depends on the backend)
         h5file_path: (str or Path) if specified load the corresponding file, otherwise open a select file dialog
         backend: (str) eitre 'tables, 'h5py' or 'h5pyd'
 
@@ -2011,14 +2019,15 @@ class H5Browser(QObject):
 
         #construct the h5 interface and load the file (or open a select file message)
         self.h5utils = H5BrowserUtil(backend=self.backend)
-        if h5file_path is None:
-            h5file_path = select_file(h5file_path, save=False, ext=['h5', 'hdf5'])
+        if h5file is None:
+            if h5file_path is None:
+                h5file_path = select_file(h5file_path, save=False, ext=['h5', 'hdf5'])
+            self.h5utils.open_file(h5file_path, 'a')
+        else:
+            self.h5utils.h5file = h5file
 
-        self.h5utils.open_file(h5file_path, 'a')
         self.check_version()
-
         self.populate_tree()
-
         self.ui.h5file_tree.ui.Open_Tree.click()
 
     def check_version(self):
@@ -2363,14 +2372,9 @@ def browse_data(fname=None, ret_all=False):
     return None, '', ''
 
 if __name__ == '__main__':
-    #app = QtWidgets.QApplication(sys.argv)
-    #win = QtWidgets.QMainWindow()
-    #prog = H5Browser(win, h5file_path='C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5')
-    #win.show()
-    #QtWidgets.QApplication.processEvents()
-    #sys.exit(app.exec_())
-    import h5pyd
-    print(h5pyd)
-    bck = H5Backend('h5pyd')
-    f = bck.open_file('/home/pymodaq_user/test.h5', mode='r')
-    print(f)
+    app = QtWidgets.QApplication(sys.argv)
+    win = QtWidgets.QMainWindow()
+    prog = H5Browser(win)
+    win.show()
+    QtWidgets.QApplication.processEvents()
+    sys.exit(app.exec_())

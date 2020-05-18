@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
 import sys
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_GUI_dock import Ui_Form
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
@@ -7,14 +7,10 @@ from collections import OrderedDict
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as customparameter
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
-from pymodaq.daq_utils.plotting.roi_manager import ROIManager
-import os
-import pickle
+from pymodaq.daq_utils.managers.roi_manager import ROIManager
 import datetime
 
 class Viewer1D(QtWidgets.QWidget,QObject):

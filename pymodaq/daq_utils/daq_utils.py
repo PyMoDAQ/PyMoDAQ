@@ -88,7 +88,7 @@ def decode_data(encoded_data):
             key = ds.readInt32()
             value = QVariant()
             ds >> value
-            item[QtCore.Qt.ItemDataRole(key)] = value
+            item[QtCore.Qt.ItemDataRole(key)] = value.value()
         data.append(item)
     return data
 
@@ -762,7 +762,7 @@ def get_set_config_path(config_name='config'):
 
 
 def get_set_preset_path():
-    """ creates and return the config folder path for preset files
+    """ creates and return the config folder path for managers files
     """
     return get_set_config_path('preset_configs')
 
@@ -792,7 +792,7 @@ def get_set_overshoot_path():
 
 
 def get_set_roi_path():
-    """ creates and return the config folder path for preset files
+    """ creates and return the config folder path for managers files
     """
     return get_set_config_path('roi_configs')
 

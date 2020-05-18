@@ -554,10 +554,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.set_signals_pb_2D_bis.setToolTip('Change navigation/signal axes')
         self.ui.set_signals_pb_2D_bis.setIcon(icon)
 
-        self.ui.navigator1D.ui.horizontalLayout.insertWidget(0,self.ui.set_signals_pb_1D)
-        self.ui.navigator2D.ui.horizontalLayout_2.insertWidget(0,self.ui.set_signals_pb_2D)
+        self.ui.navigator1D.ui.horizontalLayout.insertWidget(0, self.ui.set_signals_pb_1D)
+        self.ui.navigator2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D)
         self.ui.viewer1D.ui.horizontalLayout.insertWidget(0, self.ui.set_signals_pb_1D_bis)
-        self.ui.viewer2D.ui.horizontalLayout_2.insertWidget(0, self.ui.set_signals_pb_2D_bis)
+        self.ui.viewer2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D_bis)
 
         main_layout.addWidget(Vsplitter)
 
@@ -570,11 +570,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.navigator1D.parent.setVisible(False)
         self.ui.viewer2D.parent.setVisible(True)
 
-
-    def show_data_temp(self,datas,nav_axes=None, **kwargs):
+    def show_data_temp(self, datas, nav_axes=None, **kwargs):
         """
         """
-        self.show_data(datas,temp_data=True,nav_axes=nav_axes, **kwargs)
+        self.show_data(datas, temp_data=True, nav_axes=nav_axes, **kwargs)
 
 
     def show_data(self,datas, temp_data=False, nav_axes=None, **kwargs):
@@ -590,9 +589,9 @@ class ViewerND(QtWidgets.QWidget, QObject):
         try:
             if self.data_axes is not None:
                 if datas.ndim != len(self.data_axes) or self.axes_nav != nav_axes:
-                    self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the preset to nav_axes
+                    self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the managers to nav_axes
             else:
-                self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the preset to nav_axes
+                self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the managers to nav_axes
 
             #self.datas=hs.signals.BaseSignal(datas)
             self.datas = Signal(datas)
@@ -603,7 +602,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             self.set_data(self.datas, temp_data=temp_data, **kwargs)
 
         except Exception as e:
-            self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
+            self.update_status(utils.getLineInfo() + str(e), self.wait_time, 'log')
 
 
     def signal_axes_selection(self):

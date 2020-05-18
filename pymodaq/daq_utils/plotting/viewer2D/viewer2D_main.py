@@ -1,12 +1,11 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QPushButton, QLabel, QCheckBox
 from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF, QLocale
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QRectF, QPointF
 import sys
 from collections import OrderedDict
-from pymodaq.daq_utils.plotting.roi_manager import ROIManager
+from pymodaq.daq_utils.managers.roi_manager import ROIManager
 import pyqtgraph as pg
-from pyqtgraph.Point import Point
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 Gradients.update(OrderedDict([
             ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
@@ -14,21 +13,14 @@ Gradients.update(OrderedDict([
             ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}),]))
 
 #import pymodaq
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_gui import Ui_Form
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
 from pymodaq.daq_utils.plotting.plot_utils import AxisItem_Scaled
 from pymodaq.daq_utils.plotting.graph_items import ImageItem, PlotCurveItem, TriangulationItem
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 
-import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree
-
 import numpy as np
 from easydict import EasyDict as edict
-import pickle
 import copy
-import os
 from pymodaq.daq_utils.gui_utils import DockArea
 
 import  pymodaq.daq_utils.daq_utils as utils
@@ -70,7 +62,7 @@ class Viewer2D(QObject):
 
         self.raw_data = None
         self.image_widget = None
-        self.isdata = edict(blue=False, green=False, red=False)
+        self.isdata = edict(blue=False, green=False, red=False, spread=False)
         self.color_list = utils.plot_colors
 
         self.data_to_export = OrderedDict([])
