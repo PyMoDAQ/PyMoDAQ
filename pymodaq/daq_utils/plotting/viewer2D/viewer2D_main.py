@@ -589,7 +589,7 @@ class Viewer2D(QObject):
 
 
                 if color_source == "red" or color_source == "green" or color_source == "blue":
-                    subtype = 'uniform'
+                    distribution = 'uniform'
                     data, coords = self.roi_manager.ROIs[key].getArrayRegion(
                         self.transform_image(self.raw_data[color_source]),
                         img_source, axes, returnMappedCoords=True)
@@ -598,7 +598,7 @@ class Viewer2D(QObject):
                         yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])), data.shape[0])
 
                 else:
-                    subtype = 'spread'
+                    distribution = 'spread'
                     roi = self.roi_manager.ROIs[key]
                     xvals = []
                     yvals = []
@@ -650,23 +650,23 @@ class Viewer2D(QObject):
                                                              x=self.data_integrated_plot[key][0, :])
 
                     self.data_to_export['data2D'][self.title+'_{:s}'.format(key)] = \
-                        utils.DataToExport(name=self.title, data=data, type='roi', subtype=subtype,
+                        utils.DataToExport(name=self.title, data=data, source='roi', distribution=distribution,
                         x_axis=utils.Axis(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'],
                                           label=self.scaling_options['scaled_yaxis']['label']))
 
                     self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)] = \
-                        utils.DataToExport(name=self.title, data=data_H, type='roi', subtype=subtype,
+                        utils.DataToExport(name=self.title, data=data_H, source='roi', distribution=distribution,
                         x_axis=utils.Axis(data=data_H_axis, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']))
                     self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)] = \
-                        utils.DataToExport(name=self.title, data=data_V, type='roi', subtype=subtype,
+                        utils.DataToExport(name=self.title, data=data_V, source='roi', distribution=distribution,
                         x_axis=utils.Axis(data=data_V_axis, units=self.scaling_options['scaled_yaxis']['units'],
                                           label=self.scaling_options['scaled_yaxis']['label']))
 
                     self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)] = \
-                        utils.DataToExport(name=self.title, data=np.sum(data), type='roi', subtype=subtype,)
+                        utils.DataToExport(name=self.title, data=np.sum(data), source='roi', distribution=distribution,)
 
                     self.measure_data_dict["Lineout {:s}:".format(key)] = np.sum(data)
 
@@ -862,8 +862,8 @@ class Viewer2D(QObject):
             ind = 0
             if red_flag:
                 self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_red, type='raw',
-                        subtype='uniform',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_red, source='raw',
+                        distribution='uniform',
                         x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
@@ -872,8 +872,8 @@ class Viewer2D(QObject):
 
             if green_flag:
                 self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_green, type='raw',
-                        subtype='uniform',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_green, source='raw',
+                        distribution='uniform',
                         x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
@@ -882,8 +882,8 @@ class Viewer2D(QObject):
 
             if blue_flag:
                 self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_blue, type='raw',
-                        subtype='uniform',
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_blue, source='raw',
+                        distribution='uniform',
                         x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
                                           label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
@@ -892,7 +892,7 @@ class Viewer2D(QObject):
             if spread_flag:
                 self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_spread[:, 2],
-                        type='raw', subtype='spread',
+                        source='raw', distribution='spread',
                         x_axis=utils.Axis(data=data_spread[:, 0], units=self.scaling_options['scaled_xaxis']['units'],
                                     label=self.scaling_options['scaled_xaxis']['label']),
                         y_axis=utils.Axis(data=data_spread[:, 1], units=self.scaling_options['scaled_yaxis']['units'],
@@ -1137,16 +1137,19 @@ class Viewer2D(QObject):
         units = ''
         if isinstance(x_axis, dict):
             if 'data' in x_axis:
-                xdata=x_axis['data']
+                xdata = x_axis['data']
             if 'label' in x_axis:
-                label=x_axis['label']
+                label = x_axis['label']
             if 'units' in x_axis:
-                units= x_axis['units']
+                units = x_axis['units']
         else:
-            xdata=x_axis
+            xdata = x_axis
 
         x_offset = np.min(xdata)
-        x_scaling = xdata[1] - xdata[0]
+        if len(xdata) > 1:
+            x_scaling = xdata[1] - xdata[0]
+        else:
+            x_scaling = 1
         self.scaling_options['scaled_xaxis'].update(dict(offset=x_offset, scaling=x_scaling, label=label, units=units))
         self.set_scaling_axes(self.scaling_options)
 

@@ -1374,14 +1374,15 @@ class H5Saver(H5Backend, QObject):
         if file_path is None:
             file_path = select_file(base_path, save=False, ext='h5')
 
-        if not isinstance(file_path, Path):
-            file_path = Path(file_path)
+        if not (file_path is None or file_path == ''):
+            if not isinstance(file_path, Path):
+                file_path = Path(file_path)
 
-        if 'h5' not in file_path.suffix:
-            raise IOError('Invalid file type, should be a h5 file')
+            if 'h5' not in file_path.suffix:
+                raise IOError('Invalid file type, should be a h5 file')
 
-        self.init_file(addhoc_file_path=file_path)
-        self.file_loaded = True
+            self.init_file(addhoc_file_path=file_path)
+            self.file_loaded = True
 
     def save_file(self, filename=None):
         if filename is None:
@@ -1461,7 +1462,7 @@ class H5Saver(H5Backend, QObject):
             if False the created array is a carray type
         """
         if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
-            if 'axis' not in axis: # case of sequential scans where axes are labelled with indexes
+            if 'axis' not in axis: # this take care of the case of sequential scans where axes are labelled with indexes
                 raise NameError('Invalid navigation axis name')
 
         array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis',
@@ -1939,29 +1940,29 @@ class H5BrowserUtil(H5Backend):
 
                         if 'scan_type' in node.attrs.attrs_name:
                             scan_type = node.attrs['scan_type'].lower()
-                            if scan_type == 'scan1d' or scan_type == 'scan2d':
-                                scan_node, nav_children = find_scan_node(node)
-                                tmp_nav_axes = ['x_axis', 'y_axis']
-                                if scan_type == 'scan1d' or scan_type == 'scan2d':
-                                    nav_axes = []
-                                    for ind_ax, ax in enumerate(tmp_nav_axes):
-                                        for axis_node in nav_children:
-                                            if ax in axis_node.name:
-                                                nav_axes.append(ind_ax)
-                                                axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
-                                                if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
-                                                    ind_ax]:  # could happen in case of linear back to start type of scan
-                                                    tmp_ax = []
-                                                    for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                                        tmp_ax.extend([ix, ix])
-                                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
+                            #if scan_type == 'scan1d' or scan_type == 'scan2d':
+                            scan_node, nav_children = find_scan_node(node)
+                            nav_axes = []
+                            for axis_node in nav_children:
+                                nav_axes.append(axis_node.attrs['nav_index'])
+                                axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.unique(axis_node.read()),
+                                                                       nav_index=nav_axes[-1])
+                                if nav_axes[-1] < len(data.shape):
+                                    if axes[f'nav_{nav_axes[-1]:02d}']['data'].shape[0] != data.shape[nav_axes[-1]]:  # could happen in case of linear back to start type of scan
+                                        tmp_ax = []
+                                        for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
+                                            tmp_ax.extend([ix, ix])
+                                            axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.array(tmp_ax),
+                                                                                   nav_index=nav_axes[-1])
 
-                                                if 'units' in axis_node.attrs.attrs_name:
-                                                    axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs[
-                                                        'units']
-                                                if 'label' in axis_node.attrs.attrs_name:
-                                                    axes['nav_{:s}'.format(ax)]['label'] = axis_node.attrs[
-                                                        'label']
+                                if 'units' in axis_node.attrs.attrs_name:
+                                    axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
+                                        'units']
+                                if 'label' in axis_node.attrs.attrs_name:
+                                    axes[f'nav_{nav_axes[-1]:02d}']['label'] = axis_node.attrs[
+                                        'label']
+
+
                     elif 'axis' in node.attrs['type']:
                         axis_node = node
                         axes['y_axis'] = Axis(data=axis_node.read())
@@ -2264,7 +2265,12 @@ class H5Browser(QObject):
             if 'ARRAY' in node.attrs['CLASS']:
                 data, axes, nav_axes = self.h5utils.get_h5_data(self.current_node_path)
                 if isinstance(data, np.ndarray):
-                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, **deepcopy(axes))
+                    if 'distribution' in node.attrs.attrs_name:
+                        distribution = node.attrs['distribution']
+                    else:
+                        distribution = 'uniform'
+                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, distribution=distribution,
+                                               **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
                     if not(not data):

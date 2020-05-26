@@ -342,6 +342,9 @@ class Scanner(QObject):
 
     @property
     def actuators(self):
+        """
+        Returns as a list the name of the actuators selected to describe the actual scan
+        """
         return self._actuators
 
     @actuators.setter
@@ -594,7 +597,7 @@ class Scanner(QObject):
 
                 if self.settings.child('scan_options', 'tabular_settings', 'tabular_subtype').value() == 'Linear':
                     positions = self.scan_selector.scan_selector.getArrayIndexes(
-                        spacing=self.settings.child('scan_options', 'scan1D_settings', 'step_1D').value())
+                        spacing=self.settings.child('scan_options', 'tabular_settings', 'tabular_step').value())
                 elif self.settings.child('scan_options', 'tabular_settings', 'tabular_subtype').value() == 'Adaptive':
                     positions = self.scan_selector.scan_selector.get_vertex()
 

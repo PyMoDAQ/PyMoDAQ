@@ -382,7 +382,7 @@ class Axis(dict):
     Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
     """
 
-    def __init__(self, data=None, label='', units=''):
+    def __init__(self, data=None, label='', units='', **kwargs):
         """
 
         Parameters
@@ -406,16 +406,17 @@ class Axis(dict):
         if not isinstance(units, str):
             raise TypeError('units for the Axis class should be a string')
         self['units'] = units
+        self.update(kwargs)
 
 class Data(OrderedDict):
-    def __init__(self, name='', type='raw', subtype='uniform', x_axis=Axis(), y_axis=Axis()):
+    def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis()):
         """
         Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
         attributes can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
-        type: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
-        subtype: (str) either 'uniform' or 'spread'
+        source: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
+        distribution: (str) either 'uniform' or 'spread'
         x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
@@ -425,17 +426,17 @@ class Data(OrderedDict):
         if not isinstance(name, str):
             raise TypeError('name for the DataToExport class should be a string')
         self['name'] = name
-        if not isinstance(type, str):
-            raise TypeError('type for the DataToExport class should be a string')
-        elif not('raw' in type or 'roi' in type):
-            raise ValueError('Invalid "type" for the DataToExport class')
-        self['type'] = type
+        if not isinstance(source, str):
+            raise TypeError('source for the DataToExport class should be a string')
+        elif not('raw' in source or 'roi' in source):
+            raise ValueError('Invalid "source" for the DataToExport class')
+        self['source'] = source
 
-        if not isinstance(subtype, str):
-            raise TypeError('subtype for the DataToExport class should be a string')
-        elif subtype not in ('uniform', 'spread'):
-            raise ValueError('Invalid "subtype" for the DataToExport class')
-        self['subtype'] = subtype
+        if not isinstance(distribution, str):
+            raise TypeError('distribution for the DataToExport class should be a string')
+        elif distribution not in ('uniform', 'spread'):
+            raise ValueError('Invalid "distribution" for the DataToExport class')
+        self['distribution'] = distribution
 
 
         if not isinstance(x_axis, Axis):

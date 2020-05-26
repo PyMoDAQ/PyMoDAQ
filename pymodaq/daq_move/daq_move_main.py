@@ -88,45 +88,42 @@ class DAQ_Move(Ui_Form, QObject):
         self.ui = Ui_Form()
         self.ui.setupUi(parent)
         self.ui.Moveto_pb_bis_2.setVisible(False)
-        self.parent=parent
-        #self.parent.close_signal.connect(self.quit_fun) #need a drived class to handle this, see form_custom in daq_utils but that was bugging
+        self.parent = parent
         self.ui.title_label.setText(title)
-        self.title=title
-        self.ui.statusbar=QtWidgets.QStatusBar(parent)
+        self.title = title
+        self.ui.statusbar = QtWidgets.QStatusBar(parent)
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
         self.ui.statusbar.setMaximumHeight(20)
 
         self.send_to_tcpip = False
         self.tcpclient_thread = None
 
-        self.wait_time=1000
+        self.wait_time = 1000
         self.ui.Ini_state_LED
-        self.parent=parent
-        self.ui.Ini_state_LED.clickable=False
+
+        self.ui.Ini_state_LED.clickable = False
         self.ui.Ini_state_LED.set_as_false()
-        self.ui.Move_Done_LED.clickable=False
+        self.ui.Move_Done_LED.clickable = False
         self.ui.Move_Done_LED.set_as_false()
-        self.initialized_state=False
+        self.initialized_state = False
         self.ui.Current_position_sb.setReadOnly(False)
-        self.move_done_bool=False
+        self.move_done_bool = False
 
         ############IMPORTANT############################
-        self.controller=None #the hardware controller/set after initialization and to be used by other modules
+        self.controller = None  # the hardware controller/set after initialization and to be used by other modules
         #################################################
 
-
-        self.current_position=0;
-        self.target_position=0;
-        self.wait_position_flag=True
+        self.current_position = 0
+        self.target_position = 0
+        self.wait_position_flag = True
 
         self.ui.Current_position_sb.setValue(self.current_position)
         self.set_enabled_move_buttons(enable=False)
         self.ui.groupBox.hide()
-        self.parent.resize(150,200)
-
+        self.parent.resize(150, 200)
 
         ##Setting stages types
-        self.stage_types=DAQ_Move_Stage_type.names('daq_move')
+        self.stage_types = DAQ_Move_Stage_type.names('daq_move')
         self.ui.Stage_type_combo.clear()
         self.ui.Stage_type_combo.addItems(self.stage_types)
 
@@ -136,14 +133,14 @@ class DAQ_Move(Ui_Form, QObject):
         self.ui.verticalLayout_2.addWidget(self.ui.settings_tree)
         self.ui.settings_tree.setMinimumWidth(300)
 
-        self.settings=Parameter.create(name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
 
         #connecting from tree
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
         self.ui.settings_tree.setVisible(False)
         self.set_setting_tree()
-        self.settings.child('main_settings','controller_ID').setValue(controller_ID)
+        self.settings.child('main_settings', 'controller_ID').setValue(controller_ID)
 
         QtWidgets.QApplication.processEvents()
         ##Connecting buttons:
@@ -153,7 +150,7 @@ class DAQ_Move(Ui_Form, QObject):
         self.ui.Quit_pb.clicked.connect(self.quit_fun)
         self.ui.IniStage_pb.clicked.connect(self.ini_stage_fun)
 
-        self.update_status("Ready",wait_time=self.wait_time)
+        self.update_status("Ready", wait_time=self.wait_time)
         self.ui.Move_Abs_pb.clicked.connect(lambda: self.move_Abs(self.ui.Abs_position_sb.value()))
         self.ui.Move_Rel_plus_pb.clicked.connect(lambda: self.move_Rel(self.ui.Rel_position_sb.value()))
         self.ui.Move_Rel_minus_pb.clicked.connect(lambda: self.move_Rel(-self.ui.Rel_position_sb.value()))
@@ -170,11 +167,11 @@ class DAQ_Move(Ui_Form, QObject):
         # set managers options
         if preset is not None:
             for preset_dict in preset:
-                #fo instance preset_dict=dict(object='Stage_type_combo',method='setCurrentIndex',value=1)
-                if hasattr(self.ui,preset_dict['object']):
-                    obj=getattr(self.ui,preset_dict['object'])
-                    if hasattr(obj,preset_dict['method']):
-                        setattr(obj,preset_dict['method'],preset_dict['value'])
+                # fo instance preset_dict=dict(object='Stage_type_combo',method='setCurrentIndex',value=1)
+                if hasattr(self.ui, preset_dict['object']):
+                    obj = getattr(self.ui, preset_dict['object'])
+                    if hasattr(obj, preset_dict['method']):
+                        setattr(obj, preset_dict['method'], preset_dict['value'])
             QtWidgets.QApplication.processEvents()
         #initialize the controller if init=True
         if init:

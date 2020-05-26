@@ -358,11 +358,14 @@ class TableModel(QtCore.QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                return self.header[section]
+                if section > len(self.header):
+                    return QVariant()
+                else:
+                    return self.header[section]
             else:
                 return section
         else:
-            return QtCore.QVariant()
+            return QVariant()
 
     def flags(self, index):
 

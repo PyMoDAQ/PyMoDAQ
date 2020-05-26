@@ -2,7 +2,7 @@ from collections import OrderedDict
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
 from PyQt5 import QtGui, QtWidgets, QtCore
 import time
-
+import numpy as np
 from pymodaq.daq_utils import daq_utils as utils
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -33,7 +33,11 @@ class ModulesManager(QObject):
                   {'title': 'Data1D list:', 'name': 'det_data_list1D', 'type': 'itemselect'},
                   {'title': 'Data2D list:', 'name': 'det_data_list2D', 'type': 'itemselect'},
                   {'title': 'DataND list:', 'name': 'det_data_listND', 'type': 'itemselect'},
-              ]}
+              ]},
+              {'title': 'Actuators positions', 'name': 'actuators_positions', 'type': 'group', 'children': [
+                  {'title': "Test actuators", 'name': 'test_actuator', 'type': 'action'},
+                  {'title': 'Positions:', 'name': 'positions_list', 'type': 'itemselect'},
+              ]},
              ]
 
     def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10000):
@@ -48,6 +52,8 @@ class ModulesManager(QObject):
 
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
+        self.move_done_positions = OrderedDict()
+        self.move_done_flag = False
 
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         self.settings_tree = ParameterTree()
@@ -57,6 +63,7 @@ class ModulesManager(QObject):
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
         
         self.settings.child('data_dimensions', 'probe_data').sigActivated.connect(self.get_det_data_list)
+        self.settings.child('actuators_positions', 'test_actuator').sigActivated.connect(self.test_move_actuators)
 
         self._detectors = []
         self._actuators = []
@@ -69,6 +76,8 @@ class ModulesManager(QObject):
 
     @classmethod
     def get_names(cls, modules):
+        if not hasattr(modules, '__iter__'):
+            modules = [modules]
         return [mod.title for mod in modules]
 
     def get_mods_from_names(self, names, mod='det'):
@@ -108,6 +117,15 @@ class ModulesManager(QObject):
     @property
     def actuators(self):
         return self.get_mods_from_names(self.selected_actuators_name, mod='act')
+
+    @property
+    def Ndetectors(self):
+        return len(self.detectors)
+
+    @property
+    def Nactuators(self):
+        return len(self.actuators)
+
 
     @property
     def detectors_name(self):
@@ -153,11 +171,7 @@ class ModulesManager(QObject):
                 pass
 
     def get_det_data_list(self):
-        self.grab_done_signals = [mod.grab_done_signal for mod in self.detectors]
-        self.det_commands_signal = [mod.command_detector for mod in self.detectors]
-
-        for sig in self.grab_done_signals:
-            sig.connect(self.det_done)
+        self.connect_detectors()
 
         datas = self.grab_datas()
 
@@ -185,11 +199,7 @@ class ModulesManager(QObject):
         self.settings.child('data_dimensions', 'det_data_listND').setValue(
             dict(all_items=data_listND, selected=[]))
 
-        try:
-            for sig in self.grab_done_signals:
-                sig.disconnect(self.det_done)
-        except Exception as e:
-            logger.error(str(e))
+        self.connect_detectors(False)
 
     def grab_datas(self):
         self.det_done_datas = OrderedDict()
@@ -197,8 +207,8 @@ class ModulesManager(QObject):
         self.settings.child(('det_done')).setValue(self.det_done_flag)
         tzero = time.perf_counter()
 
-        for ind_det in range(len(self.det_commands_signal)):
-            self.det_commands_signal[ind_det].emit(utils.ThreadCommand("single", [1]))
+        for sig in [mod.command_detector for mod in self.detectors]:
+            sig.emit(utils.ThreadCommand("single", [1]))
 
         while not self.det_done_flag:
             #wait for grab done signals to end
@@ -212,10 +222,100 @@ class ModulesManager(QObject):
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
 
+    def connect_actuators(self, connect=True):
+        if connect:
+            for sig in [mod.move_done_signal for mod in self.actuators]:
+                sig.connect(self.move_done)
+        else:
+            try:
+                for sig in [mod.move_done_signal for mod in self.actuators]:
+                    sig.disconnect(self.move_done)
+            except Exception as e:
+                logger.error(str(e))
+
+    def connect_detectors(self, connect=True):
+        if connect:
+            for sig in [mod.grab_done_signal for mod in self.detectors]:
+                sig.connect(self.det_done)
+        else:
+            try:
+                for sig in [mod.grab_done_signal for mod in self.detectors]:
+                    sig.disconnect(self.det_done)
+            except Exception as e:
+                logger.error(str(e))
+
+    def test_move_actuators(self):
+        positions = dict()
+        for act in self.get_names(self.actuators):
+            pos, done = QtWidgets.QInputDialog.getDouble(None, f'Enter a target position for actuator {act}',
+                                                   'Position:')
+            if not done:
+                pos = 0.
+            positions[act] = pos
+
+        self.connect_actuators()
+
+        positions = self.move_actuators(positions)
+
+        self.settings.child('actuators_positions',
+                            'positions_list').setValue(dict(all_items=[f'{k}: {positions[k]}' for k in positions],
+                                                            selected=[]))
+
+        self.connect_actuators(False)
 
 
 
-    @pyqtSlot(OrderedDict)  # edict(name=self.title,data0D=None,data1D=None,data2D=None)
+    def move_actuators(self, positions):
+        self.move_done_positions = OrderedDict()
+        self.move_done_flag = False
+        self.settings.child(('move_done')).setValue(self.move_done_flag)
+
+        if not hasattr(positions, '__iter__'):
+            positions = [positions]
+
+
+        if len(positions) == self.Nactuators:
+            if isinstance(positions, dict):
+                for k in positions:
+                    act = self.get_mod_from_name(k, 'act')
+                    if act is not None:
+                        act.command_stage.emit(utils.ThreadCommand(command="move_Abs", attributes=[positions[k]]))
+            else:
+                for ind, act in enumerate(self.actuators):
+                    act.command_stage.emit(utils.ThreadCommand(command="move_Abs", attributes=[positions[ind]]))
+
+        else:
+            logger.error('Invalid number of positions compared to selected actuators')
+            return self.move_done_positions
+
+        tzero = time.perf_counter()
+
+        while not self.move_done_flag:
+            QtWidgets.QApplication.processEvents()
+            if time.perf_counter()-tzero > self.timeout:
+                self.timeout_signal.emit(True)
+                logger.error('Timeout Fired during waiting for data to be acquired')
+                break
+
+        self.move_done_signal.emit(self.move_done_positions)
+        return self.move_done_positions
+
+    pyqtSlot(str, float)
+    def move_done(self, name, position):
+        """
+        """
+        try:
+            if name not in list(self.move_done_positions.keys()):
+                self.move_done_positions[name] = position
+
+            if len(self.move_done_positions.items()) == len(self.actuators):
+                self.move_done_flag = True
+                self.settings.child(('move_done')).setValue(self.move_done_flag)
+        except Exception as e:
+            logger.exception(str(e))
+
+
+    @pyqtSlot(OrderedDict)
     def det_done(self, data):
         try:
             if data['name'] not in list(self.det_done_datas.keys()):
@@ -233,6 +333,7 @@ if __name__ == '__main__':
     from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+    from pymodaq.daq_move.daq_move_main import DAQ_Move
 
 
     win = QtWidgets.QMainWindow()
@@ -245,15 +346,31 @@ if __name__ == '__main__':
     prog2 = DAQ_Viewer(area, title="Testing1D", DAQ_type='DAQ1D')
     prog3 = DAQ_Viewer(area, title="Testing0D", DAQ_type='DAQ0D')
 
+    act1_widget = QtWidgets.QWidget()
+    act2_widget = QtWidgets.QWidget()
+    act1 = DAQ_Move(act1_widget, title='X_axis')
+    act2 = DAQ_Move(act2_widget, title='Y_axis')
+
     QThread.msleep(1000)
     prog.ui.IniDet_pb.click()
     prog2.ui.IniDet_pb.click()
     prog3.ui.IniDet_pb.click()
 
+    dock1 = Dock('actuator 1')
+    dock1.addWidget(act1_widget)
+    area.addDock(dock1)
+
+    dock2 = Dock('actuator 2')
+    dock2.addWidget(act2_widget)
+    area.addDock(dock2)
+
+    act1.ui.IniStage_pb.click()
+    act2.ui.IniStage_pb.click()
+
     QtWidgets.QApplication.processEvents()
     win.show()
 
-    manager = ModulesManager(actuators=[], detectors=[prog, prog2, prog3], selected_detectors=[prog2])
+    manager = ModulesManager(actuators=[act1, act2], detectors=[prog, prog2, prog3], selected_detectors=[prog2])
     manager.settings_tree.show()
 
     sys.exit(app.exec_())

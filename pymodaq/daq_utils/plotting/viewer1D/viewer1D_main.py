@@ -420,7 +420,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             for ind, key in enumerate(self.lo_items):
                 self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
                 self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = utils.DataToExport(name=self.title,
-                                                                                          data=data_lo[ind], type='roi')
+                                                                                          data=data_lo[ind], source='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
 
@@ -438,7 +438,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         for ind, res in enumerate(data_meas):
             self.measure_data_dict["Meas.{}:".format(ind)] = res
             self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] =\
-                utils.DataToExport(name=self.title, data=res, type='roi')
+                utils.DataToExport(name=self.title, data=res, source='roi')
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)
@@ -474,7 +474,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                     self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
                 x_axis = utils.Axis(data=self.x_axis, units=self.axis_settings['units'], label=self.axis_settings['label'])
                 self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(
-                    OrderedDict(name=self.title, data=data, x_axis=x_axis, type='raw'))  # to be saved or exported
+                    OrderedDict(name=self.title, data=data, x_axis=x_axis, source='raw'))  # to be saved or exported
 
 
             if not self.ui.Do_math_pb.isChecked(): #otherwise math is done and then data is exported

@@ -681,7 +681,7 @@ if __name__ == '__main__':
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_logger.xml')
+    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_default.xml')
     # QThread.msleep(4000)
 
     prog.load_log_module()

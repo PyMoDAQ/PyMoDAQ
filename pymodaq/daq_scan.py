@@ -21,6 +21,7 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer
 from pymodaq.daq_utils import exceptions
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.qled import QLED
@@ -216,14 +217,19 @@ class DAQ_Scan(QObject):
         save live data and adds metadata to write that the scan is done
         """
         try:
+            scan_type = self.scanner.scan_parameters.scan_type
+
             self.h5saver.current_scan_group.attrs['scan_done'] = True
             self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
             #create Live scan node (may be empty if no possible live data could be plotted) but mandatory for
             # incrementing scan index, otherwise current scan is overwritten
-            if '1D' in self.scanner.settings.child('scan_options', 'scan_type').value():
+            if scan_type == 'Scan1D' or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2):
                 live_group = self.h5saver.add_live_scan_group(self.h5saver.current_scan_group, '1D', title='',
                                                               settings_as_xml='', metadata=dict([]))
-            elif '2D' in self.scanner.settings.child('scan_options', 'scan_type').value():
+            elif scan_type == 'Scan2D' or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
                 live_group = self.h5saver.add_live_scan_group(self.h5saver.current_scan_group, '2D', title='',
                                                               settings_as_xml='', metadata=dict([]))
 
@@ -234,15 +240,22 @@ class DAQ_Scan(QObject):
                     datas = OrderedDict([])
                     for ind in range(self.scan_data_1D.shape[1]):
                         datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
-                        datas['Scan_Data_{:03d}'.format(ind)]['data'] = self.scan_data_1D[:,ind]
-                        datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(data=self.scan_x_axis,
+                        datas['Scan_Data_{:03d}'.format(ind)]['data'] = self.scan_data_1D[:, ind]
+
+                        if scan_type == 'Scan1D' or \
+                                (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1):
+                            datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(data=self.scan_x_axis,
                                 units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
                                 label=self.modules_manager.actuators[0].title)
+                        else:
+                            datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(data=self.scan_x_axis,
+                                units='',
+                                label='Scan indexes')
 
 
                     for ind_channel, channel in enumerate(datas):  # list of OrderedDict
                         channel_group = self.h5saver.add_CH_group(live_group, title=channel)
-                        self.h5saver.add_data_live_scan(channel_group, datas['Scan_Data_{:03d}'.format(ind_channel)] ,
+                        self.h5saver.add_data_live_scan(channel_group, datas['Scan_Data_{:03d}'.format(ind_channel)],
                                              scan_type='scan1D')
 
                 else:
@@ -250,9 +263,15 @@ class DAQ_Scan(QObject):
                     for ind in range(self.scan_data_1D.shape[1]):
                         averaged_datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
                         averaged_datas['Scan_Data_{:03d}'.format(ind)]['data'] = self.scan_data_1D_average[:, ind]
-                        averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(data=self.scan_x_axis,
-                                 units=self.modules_manager.actuators[0].settings.child('move_settings','units').value(),
-                                 label=self.modules_manager.actuators[0].title)
+                        if scan_type == 'Scan1D' or \
+                                (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1):
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(data=self.scan_x_axis,
+                                units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
+                                label=self.modules_manager.actuators[0].title)
+                        else:
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(data=self.scan_x_axis,
+                                units='',
+                                label='Scan indexes')
 
                     for ind_channel, channel in enumerate(averaged_datas):  # list of OrderedDict
                         channel_group = self.h5saver.add_CH_group(live_group, title=channel)
@@ -278,7 +297,7 @@ class DAQ_Scan(QObject):
                     datas = OrderedDict([])
                     for ind, data2D in enumerate(self.scan_data_2D):
                         datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
-                        datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D
+                        datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D.T
                         datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(data=self.ui.scan2D_graph.x_axis,
                                 units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
                                 label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'],)
@@ -295,7 +314,7 @@ class DAQ_Scan(QObject):
                     averaged_datas = OrderedDict([])
                     for ind, data2D in enumerate(self.scan_data_2D_average):
                         averaged_datas['Scan_Data_Average_{:03d}'.format(ind)] = OrderedDict([])
-                        averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['data'] = data2D
+                        averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['data'] = data2D.T
                         averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['x_axis'] = dict(data=self.ui.scan2D_graph.x_axis,
                                 units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
                                 label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'],)
@@ -529,9 +548,6 @@ class DAQ_Scan(QObject):
             self.scan_data_2D = []
             self.scan_data_2D_average = []
 
-            # names of all selected detector modules initialized
-            self.modules_manager.detectors = self.modules_manager.detectors
-
             self.scanner.set_scan()
 
             if len(self.modules_manager.actuators) < self.scanner.scan_parameters.Naxes:
@@ -616,6 +632,7 @@ class DAQ_Scan(QObject):
 
         self.ui.settings_layout.addWidget(widget_buttons)
         self.ui.splitter.addWidget(sett_widget)
+
         ###################TAB########################################
         self.ui.tabWidget = QtWidgets.QTabWidget()
 
@@ -650,14 +667,35 @@ class DAQ_Scan(QObject):
         self.ui.scan_dock.float()
 
         #%% init the 1D viewer
-        self.ui.scan1D_graph_widget = QtWidgets.QWidget()
-        self.ui.scan1D_graph = Viewer1D(self.ui.scan1D_graph_widget)
+        self.ui.scan1D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
         self.ui.scan1D_layout.addWidget(self.ui.scan1D_graph_widget)
 
-        #%% init the 2D viewer
-        self.ui.scan2D_graph_widget=QtWidgets.QWidget()
-        self.ui.scan2D_graph=Viewer2D(self.ui.scan2D_graph_widget)
+        scan1D_widget = QtWidgets.QWidget()
+        self.ui.scan1D_graph = Viewer1D(scan1D_widget)
+        self.ui.scan1D_graph_widget.addWidget(scan1D_widget)
+
+        #this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
+        # impossible to plot in usual 1D or 2D graphs
+        scan1D_subgraph_widget = QtWidgets.QWidget()
+        self.ui.scan1D_subgraph = Viewer1DBasic(scan1D_subgraph_widget)
+        self.ui.scan1D_graph_widget.addWidget(scan1D_subgraph_widget)
+        self.ui.scan1D_subgraph.show(False)
+
+        # %% init the 2D viewer
+        self.ui.scan2D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
         self.ui.scan2D_layout.addWidget(self.ui.scan2D_graph_widget)
+
+        scan2D_graph_widget = QtWidgets.QWidget()
+        self.ui.scan2D_graph = Viewer2D(scan2D_graph_widget)
+        self.ui.scan2D_graph_widget.addWidget(scan2D_graph_widget)
+
+        #this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
+        # impossible to plot in usual 1D or 2D graphs
+        scan2D_subgraph_widget = QtWidgets.QWidget()
+        self.ui.scan2D_subgraph = Viewer1DBasic(scan2D_subgraph_widget)
+        self.ui.scan2D_graph_widget.addWidget(scan2D_subgraph_widget)
+        self.ui.scan2D_subgraph.show(False)
+
         self.ui.scan2D_graph.ui.Show_histogram.setChecked(False)
         self.ui.scan2D_graph.ui.histogram_blue.setVisible(False)
         self.ui.scan2D_graph.ui.histogram_green.setVisible(False)
@@ -713,6 +751,7 @@ class DAQ_Scan(QObject):
         self.ui.toolbox.addItem(self.settings_tree, 'General Settings')
         self.ui.toolbox.addItem(self.h5saver.settings_tree, 'Save Settings')
         self.ui.toolbox.addItem(self.scanner.settings_tree, 'Scanner Settings')
+        self.ui.toolbox.setCurrentIndex(2)
 
         self.h5saver.settings_tree.setMinimumWidth(300)
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
@@ -748,7 +787,6 @@ class DAQ_Scan(QObject):
         self.create_menu()
 
 #        connecting
-        self.status_signal[str].connect(self.dashboard.add_status)
         self.ui.set_scan_pb.clicked.connect(self.set_scan)
         self.ui.quit_pb.clicked.connect(self.quit_fun)
 
@@ -886,10 +924,9 @@ class DAQ_Scan(QObject):
 
             #mandatory to deal with multithreads
             if self.scan_thread is not None:
-                self.scan_thread.scan_acquisition.timer.stop()
                 self.command_DAQ_signal.disconnect()
                 if self.scan_thread.isRunning():
-                    self.scan_thread.exit()
+                    self.scan_thread.terminate()
                     while not self.scan_thread.isFinished():
                         QThread.msleep(100)
                     self.scan_thread = None
@@ -897,17 +934,7 @@ class DAQ_Scan(QObject):
             self.scan_thread = QThread()
 
             scan_acquisition = DAQ_Scan_Acquisition(self.settings, self.scanner.settings, self.h5saver.settings,
-                            [mod.command_stage for mod in self.modules_manager.actuators],
-                            [mod.command_detector for mod in self.modules_manager.detectors],
-                            [mod.move_done_signal for mod in self.modules_manager.actuators],
-                            [mod.grab_done_signal for mod in self.modules_manager.detectors],
-                            [mod.settings.child('main_settings', 'Naverage').value() for mod in self.modules_manager.detectors],
-                            move_modules_names,
-                            detector_modules_names,
-                            [mod.settings for mod in self.modules_manager.actuators],
-                            [mod.settings for mod in self.modules_manager.detectors],
-                            self.scanner.scan_parameters
-                            )
+                                                    self.modules_manager, self.scanner.scan_parameters)
 
             scan_acquisition.moveToThread(self.scan_thread)
             self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
@@ -989,7 +1016,7 @@ class DAQ_Scan(QObject):
         elif status[0] == "Timeout":
             self.ui.status_message.setText('Timeout occurred')
 
-    def update_1D_graph(self, datas):
+    def update_1D_graph(self, datas, display_as_sequence=False):
         """
             Update the 1D graphic window in the Graphic Interface with the given datas.
 
@@ -1012,31 +1039,31 @@ class DAQ_Scan(QObject):
             update_status
         """
         try:
+            scan_type = self.scanner.scan_parameters.scan_type
             self.scan_y_axis = np.array([])
             if not self.plot_1D_ini: #init the datas
                 self.plot_1D_ini = True
-                if self.scanner.settings.child('scan_options', 'scan1D_settings',
-                                               'scan1D_selection').value() == 'Manual':
+                if not display_as_sequence:
+                    self.ui.scan1D_subgraph.show(False)
                     if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
                         self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
                     else:
                         self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
 
-                else: #in case of PolyLines scans, impossible to plot linearly so just use the scan index
-                    if self.scanner.scan_parameters.scan_subtype != 'Linear back to start':
-                        self.scan_x_axis = np.linspace(0, len(self.scanner.scan_parameters.positions)-1,
-                                                       len(self.scanner.scan_parameters.positions))
-                    else:
-                        self.scan_x_axis = np.linspace(0, int(len(self.scanner.scan_parameters.positions)/2-1),
-                                                       int(len(self.scanner.scan_parameters.positions)/2))
+                else:
+                    self.ui.scan1D_subgraph.show()
+                    self.scan_x_axis = np.linspace(0, len(self.scanner.scan_parameters.positions)-1,
+                                                   len(self.scanner.scan_parameters.positions))
+                    self.ui.scan1D_subgraph.show_data(
+                            [positions for positions in self.scanner.scan_parameters.positions.T])
+                    self.ui.scan1D_subgraph.update_labels(self.scanner.actuators)
+                    self.ui.scan1D_subgraph.set_axis_label(axis_settings=dict(orientation='bottom',
+                                            label='Scan index', units=''))
 
                 self.scan_data_1D = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
                     self.scan_data_1D_average = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
 
-                self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='bottom',
-                                                                       label=self.modules_manager.actuators[0].title,
-                                    units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value()))
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left',
                                             label=self.settings.child('scan_options', 'plot_from').value(), units=''))
 
@@ -1064,9 +1091,17 @@ class DAQ_Scan(QObject):
             x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
             data_sorted = list(self.scan_data_1D.T)
             data_sorted = [data[indices] for data in data_sorted]
-            x_axis = dict(data=x_axis_sorted,
-                          label=self.modules_manager.actuators[0].title,
-                          units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value())
+
+            if not display_as_sequence:
+                x_axis = utils.Axis(data=x_axis_sorted,
+                                    label=self.modules_manager.actuators[0].title,
+                                    units=self.modules_manager.actuators[0].settings.child('move_settings',
+                                                                                           'units').value())
+            else:
+                x_axis = utils.Axis(data=x_axis_sorted,
+                                    label='Scan index',
+                                    units='')
+
             self.ui.scan1D_graph.x_axis = x_axis
             self.ui.scan1D_graph.show_data(data_sorted)
 
@@ -1079,7 +1114,7 @@ class DAQ_Scan(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def update_2D_graph(self,datas):
+    def update_2D_graph(self, datas, display_as_sequence=False):
         """
             Update the 2D graphic window in the Graphic Interface with the given datas (if not none).
 
@@ -1104,9 +1139,11 @@ class DAQ_Scan(QObject):
             update_status
         """
         try:
-
-            if "2D" in self.scanner.scan_parameters.scan_type:    #scan2D type cartography
+            scan_type = self.scanner.scan_parameters.scan_type
+            if scan_type == 'Scan2D' or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
                 if not self.plot_2D_ini:#init the data
+                    self.ui.scan1D_subgraph.show(False)
                     self.plot_2D_ini = True
                     self.scan_x_axis = self.scanner.scan_parameters.axes_unique[0]
                     self.scan_y_axis = self.scanner.scan_parameters.axes_unique[1]
@@ -1134,10 +1171,6 @@ class DAQ_Scan(QObject):
                                                                len(self.scanner.scan_parameters.axis_2D_1)))
                                                      for ind in range(min((3, len(datas))))]
 
-                pos_axis_1 = self.scan_positions[0][1]
-                pos_axis_2 = self.scan_positions[1][1]
-                #self.scan_data_2D_to_save[self.ind_scan,:]=np.concatenate((np.array([pos_axis_1,pos_axis_2]),np.array(datas['datas'][:])))
-
                 ind_pos_axis_1 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 0]
                 ind_pos_axis_2 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 1]
                 for ind_plot in range(min((3, len(datas)))):
@@ -1157,20 +1190,38 @@ class DAQ_Scan(QObject):
             else: # scan 1D with concatenation of vectors making a 2D image
                 if not self.plot_2D_ini: #init the data
                     self.plot_2D_ini = True
+                    if display_as_sequence:
+                        self.ui.scan2D_subgraph.show(True)
+                        self.ui.scan2D_subgraph.show_data(
+                            [positions for positions in self.scanner.scan_parameters.positions.T])
+                        self.ui.scan2D_subgraph.update_labels(self.scanner.actuators)
 
                     data = datas[list(datas.keys())[0]]
                     Ny = len(data[list(data.keys())[0]])
 
                     self.scan_y_axis = np.array([])
-                    if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                        self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
-                    else:
-                        self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
 
-                    Nx = len(self.scan_x_axis)
-                    self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis,
-                                units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
-                                label=self.modules_manager.actuators[0].title)
+                    Nx = len(self.scanner.scan_parameters.positions)
+                    if not display_as_sequence:
+
+                        if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
+                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
+                        else:
+                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
+
+                        x_axis = utils.Axis(data=self.scan_x_axis,
+                                            label=self.modules_manager.actuators[0].title,
+                                            units=self.modules_manager.actuators[0].settings.child('move_settings',
+                                                                                                   'units').value())
+
+                    else:
+                        x_axis = utils.Axis(data=self.scan_x_axis,
+                                            label='Scan index',
+                                            units='')
+                        self.scan_x_axis = np.linspace(0, Nx-1, Nx)
+
+                    self.ui.scan2D_graph.x_axis = x_axis
+                    self.ui.scan2D_subgraph.x_axis = x_axis
 
                     det_names = [det.title for det in self.detector_modules]
                     ind_plot_det = det_names.index(self.settings.child('scan_options', 'plot_from').value())
@@ -1212,21 +1263,23 @@ class DAQ_Scan(QObject):
                                      + datas[key]['data'])/(self.ind_average+1)
 
                 else:
-                    x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
-                    ind_scan = utils.find_index(x_axis_sorted, self.scan_positions[0][1])[0][0]
+                    if not display_as_sequence:
+                        ind_pos_axis = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 0]
+                    else:
+                        ind_pos_axis = self.ind_scan
+
                     for ind_plot, key in enumerate(datas.keys()):
                         if ind_plot >= 3:
                             break
-                        self.scan_data_2D[ind_plot][:, ind_scan] = datas[key]['data']
+                        self.scan_data_2D[ind_plot][:, ind_pos_axis] = datas[key]['data']
                         if self.settings.child('scan_options', 'scan_average').value() > 1:
-                            self.scan_data_2D_average[ind_plot][:, ind_scan] = \
-                                (self.ind_average*self.scan_data_2D_average[ind_plot][:, ind_scan]+datas[key]['data'])\
+                            self.scan_data_2D_average[ind_plot][:, self.ind_scan] = \
+                                (self.ind_average*self.scan_data_2D_average[ind_plot][:, ind_pos_axis]+datas[key]['data'])\
                                 / (self.ind_average+1)
 
                 self.ui.scan2D_graph.setImage(*self.scan_data_2D)
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
                     self.ui.average2D_graph.setImage(*self.scan_data_2D_average)
-
 
         except Exception as e:
             logger.exception(str(e))
@@ -1281,26 +1334,32 @@ class DAQ_Scan(QObject):
             --------
             update_2D_graph, update_1D_graph, update_status
         """
-        #datas=edict(positions=self.scan_read_positions,datas=self.scan_read_datas)
-        self.scan_positions=datas['positions']
-        scan_type = utils.capitalize(self.scanner.settings.child('scan_options', 'scan_type').value())
+
+        self.scan_positions = datas['positions']
+        scan_type = utils.capitalize(self.scanner.scan_parameters.scan_type)
+
+        display_as_sequence = (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or\
+                              (scan_type == 'Tabular' and not self.scanner.scan_parameters.Naxes == 1)
 
         try:
+            if scan_type == 'Scan1D' or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or\
+                    scan_type == 'Tabular':
 
-
-            if scan_type == 'Scan1D':
                 if 'data0D' in datas['datas'].keys():
-                    if not( datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
-                        self.update_1D_graph(datas['datas']['data0D'])
+                    if not(datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
+                        self.update_1D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence)
                     else:
                         self.scan_data_1D = []
                 if 'data1D' in datas['datas'].keys():
                     if not(datas['datas']['data1D'] is None or datas['datas']['data1D'] == OrderedDict()):
-                        self.update_2D_graph(datas['datas']['data1D'])
+                        self.update_2D_graph(datas['datas']['data1D'], display_as_sequence=display_as_sequence)
                     else:
                         self.scan_data_2D = []
 
-            elif scan_type == 'Scan2D': #means 2D cartography type scan
+            elif scan_type == 'Scan2D' or\
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2): #means 2D cartography type scan
                 if 'data0D' in datas['datas'].keys():
                     if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
                         self.update_2D_graph(datas['datas']['data0D'])
@@ -1340,17 +1399,7 @@ class DAQ_Scan_Acquisition(QObject):
     scan_data_tmp = pyqtSignal(OrderedDict)
     status_sig = pyqtSignal(list)
 
-    def __init__(self, settings=None, scan_settings=None, h5saver=None,
-                 move_modules_commands=[],
-                 detector_modules_commands=[],
-                 move_done_signals=[],
-                 grab_done_signals=[],
-                 det_averaging=[],
-                 move_modules_name=[],
-                 det_modules_name=[],
-                 move_modules_settings=[],
-                 det_modules_settings=[],
-                 scan_parameters=None):
+    def __init__(self, settings=None, scan_settings=None, h5saver=None, modules_manager=None, scan_parameters=None):
 
         """
             DAQ_Scan_Acquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
@@ -1369,15 +1418,9 @@ class DAQ_Scan_Acquisition(QObject):
         self.scan_parameters = scan_parameters
         self.isadaptive = self.scan_parameters.scan_subtype == 'Adaptive'
 
-        self.detector_modules_names = det_modules_name
-        self.move_modules_names = move_modules_name
-        self.move_modules_commands = move_modules_commands
-        self.detector_modules_commands = detector_modules_commands
-        self.grab_done_signals = grab_done_signals
-        self.move_done_signals = move_done_signals
-        self.det_averaging = det_averaging
-        self.move_modules_settings = move_modules_settings
-        self.det_modules_settings = det_modules_settings
+        self.modules_manager = modules_manager
+        self.modules_manager.timeout_signal.connect(self.timeout)
+        self.timeout_scan_flag = False
 
         self.scan_x_axis = None
         self.scan_y_axis = None
@@ -1386,17 +1429,14 @@ class DAQ_Scan_Acquisition(QObject):
         self.scan_y_axis_unique = None
         self.scan_z_axis_unique = None
         self.scan_shape = None
-        self.Nscan_steps = scan_parameters.Nsteps
+
         self.scan_read_positions = []
         self.scan_read_datas = []
         self.move_done_flag = False
         self.det_done_flag = False
-        self.timeout_scan_flag = False
-        self.timer = QTimer()
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.timeout)
-        self.move_done_positions = OrderedDict()
+
         self.det_done_datas = OrderedDict()
+
         self.h5saver = H5Saver()
         self.h5saver.settings.restoreState(h5saver.saveState())
         self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
@@ -1406,12 +1446,12 @@ class DAQ_Scan_Acquisition(QObject):
         self.channel_arrays = OrderedDict([])
 
         # save settings from move modules
-        for ind_move, move_name in enumerate(self.move_modules_names):
+        for ind_move in range(self.modules_manager.Nactuators):
             move_group_name = 'Move{:03d}'.format(ind_move)
             self.h5_move_groups.append(self.h5saver.get_node(self.h5saver.current_scan_group, move_group_name))
 
         # save settings from detector modules
-        for ind_det, det_name in enumerate(self.detector_modules_names):
+        for ind_det in range(self.modules_manager.Ndetectors):
             det_group_name = 'Detector{:03d}'.format(ind_det)
             self.h5_det_groups.append(self.h5saver.get_node(self.h5saver.current_scan_group, det_group_name))
 
@@ -1443,7 +1483,7 @@ class DAQ_Scan_Acquisition(QObject):
             self.set_ini_positions()
 
         elif command[0] == "move_stages":
-            self.move_stages(command[1])
+            self.modules_manager.move_actuators(command[1])
 
     def set_ini_positions(self):
         """
@@ -1457,46 +1497,16 @@ class DAQ_Scan_Acquisition(QObject):
             DAQ_Move_main.daq_move.move_Abs
         """
         try:
-            for ind_move, pos in enumerate(self.scan_parameters.positions[0]):  # move all activated modules to specified positions
-                self.move_modules_commands[ind_move].emit(utils.ThreadCommand(command="move_Abs", attributes=[pos]))
+            self.modules_manager.move_actuators(list(self.scan_parameters.positions[0]))
 
         except Exception as e:
             logger.exception(str(e))
-            #self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
-    pyqtSlot(str, float)
-    def move_done(self,name,position):
-        """
-            | Update the move_done_positions attribute if needed.
-            | If position attribute is setted, for all move modules launched, update scan_read_positions with a [modulename, position] list.
-
-            ============== ============ =================
-            **Parameters**    **Type**    **Description**
-            *name*            string     the module name
-            *position*        float      ???
-            ============== ============ =================
-        """
-        try:
-            if name not in list(self.move_done_positions.keys()):
-                self.move_done_positions[name] = position
-
-            if len(self.move_done_positions.items()) == len(self.move_modules_names):
-
-                list_tmp = []
-                for name_tmp in self.move_modules_names:
-                    list_tmp.append([name_tmp, self.move_done_positions[name_tmp]])
-                self.scan_read_positions = list_tmp
-
-                self.move_done_flag = True
-                # print(self.scan_read_positions[-1])
-        except Exception as e:
-            logger.exception(str(e))
-            #self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def init_data(self):
         self.channel_arrays = OrderedDict([])
-        for ind_det, det_name in enumerate(self.detector_modules_names):
-            datas = self.det_done_datas[det_name]
+        for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
+            datas = self.modules_manager.det_done_datas[det_name]
             det_group = self.h5_det_groups[ind_det]
             self.channel_arrays[det_name] = OrderedDict([])
             data_types = ['data0D', 'data1D']
@@ -1507,108 +1517,94 @@ class DAQ_Scan_Acquisition(QObject):
                 if data_type in datas.keys():
                     if datas[data_type] is not None:
                         if len(datas[data_type]) != 0:
-                            data_raw_roi = [datas[data_type][key]['type'] for key in datas[data_type]]
+                            data_raw_roi = [datas[data_type][key]['source'] for key in datas[data_type]]
                             if not (self.h5saver.settings.child(('save_raw_only')).value() and 'raw' not in data_raw_roi):
                                 if not self.h5saver.is_node_in_group(det_group, data_type):
                                     self.channel_arrays[det_name][data_type] = OrderedDict([])
 
                                     data_group = self.h5saver.add_data_group(det_group, data_type)
                                     for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
-                                        if not(self.h5saver.settings.child(('save_raw_only')).value() and datas[data_type][channel]['type'] != 'raw'):
+                                        if not(self.h5saver.settings.child(('save_raw_only')).value()
+                                               and datas[data_type][channel]['source'] != 'raw'):
                                             channel_group = self.h5saver.add_CH_group(data_group, title=channel)
                                             self.channel_arrays[det_name][data_type]['parent'] = channel_group
-                                            self.channel_arrays[det_name][data_type][channel] = self.h5saver.add_data(channel_group,
-                                                        datas[data_type][channel],
-                                                        scan_type=self.scan_settings.child('scan_options', 'scan_type').value(),
+                                            data_tmp = datas[data_type][channel]
+                                            if self.scan_parameters.scan_type == 'Tabular' or self.isadaptive:
+                                                data_tmp['distribution'] = 'spread'
+                                            self.channel_arrays[det_name][data_type][channel] = \
+                                                self.h5saver.add_data(channel_group,
+                                                        data_tmp,
+                                                        scan_type=self.scan_settings.child('scan_options',
+                                                                                           'scan_type').value(),
                                                         scan_shape=self.scan_shape, init=True, add_scan_dim=True)
             pass
 
-    pyqtSlot(OrderedDict) #edict(name=self.title,data0D=None,data1D=None,data2D=None)
-    def det_done(self,data):
+    def det_done(self, det_done_datas):
         """
             | Initialize 0D/1D/2D datas from given data parameter.
             | Update h5_file group and array.
-            | Save 0D/1D/2D datas.
-
-            =============== ============================== ======================================
-            **Parameters**    **Type**                      **Description**
-            *data*          Double precision float array   The initializing data of the detector
-            =============== ============================== ======================================
+            | Save 0D/1D/2D... datas.
+        Parameters
+        ----------
+        det_done_datas: (OrderedDict) on the form OrderedDict
+                    (det0=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),
+                     det1=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),...)
         """
         try:
-            if data['name'] not in list(self.det_done_datas.keys()):
-                self.det_done_datas[data['name']] = data
-            if len(self.det_done_datas.items()) == len(self.detector_modules_names): #all detectors returned
+            self.scan_read_datas = det_done_datas[
+                self.settings.child('scan_options', 'plot_from').value()].copy()
 
-                self.scan_read_datas = self.det_done_datas[
-                    self.settings.child('scan_options', 'plot_from').value()].copy()
+            if self.ind_scan == 0 and self.ind_average == 0:#first occurence=> initialize the channels
+                self.init_data()
 
-                if self.ind_scan == 0 and self.ind_average == 0:#first occurence=> initialize the channels
-                    self.init_data()
-
+            if self.scan_parameters.scan_type == 'Tabular':
+                indexes = np.array([self.ind_scan])
+            else:
                 indexes = self.scan_parameters.axes_indexes[self.ind_scan]
 
-                if self.Naverage > 1:
-                    indexes.append(self.ind_average)
+            if self.Naverage > 1:
+                indexes.append(self.ind_average)
 
-                indexes = tuple(indexes)
+            indexes = tuple(indexes)
 
-                for ind_det, det_name in enumerate(self.detector_modules_names):
-                    datas = self.det_done_datas[det_name]
+            for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
+                datas = det_done_datas[det_name]
 
-                    data_types = ['data0D', 'data1D']
-                    if self.h5saver.settings.child(('save_2D')).value():
-                        data_types.extend(['data2D', 'dataND'])
+                data_types = ['data0D', 'data1D']
+                if self.h5saver.settings.child(('save_2D')).value():
+                    data_types.extend(['data2D', 'dataND'])
 
-                    for data_type in data_types:
-                        if data_type in datas.keys():
-                            if datas[data_type] is not None:
-                                if len(datas[data_type]) != 0:
-                                    for ind_channel, channel in enumerate(datas[data_type]):
-                                        if not (self.h5saver.settings.child(('save_raw_only')).value() and
-                                                datas[data_type][channel]['type'] != 'raw'):
-                                            self.channel_arrays[det_name][data_type][channel].__setitem__(indexes,
-                                                  value=self.det_done_datas[det_name][data_type][channel]['data'])
+                for data_type in data_types:
+                    if data_type in datas.keys():
+                        if datas[data_type] is not None:
+                            if len(datas[data_type]) != 0:
+                                for ind_channel, channel in enumerate(datas[data_type]):
+                                    if not (self.h5saver.settings.child(('save_raw_only')).value() and
+                                            datas[data_type][channel]['source'] != 'raw'):
+                                        self.channel_arrays[det_name][data_type][channel].__setitem__(indexes,
+                                              value=det_done_datas[det_name][data_type][channel]['data'])
 
-                self.det_done_flag = True
+            self.det_done_flag = True
 
-                self.scan_data_tmp.emit(OrderedDict(positions=self.scan_read_positions, datas=self.scan_read_datas))
+            self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
+                                                datas=self.scan_read_datas))
         except Exception as e:
             logger.exception(str(e))
             #self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
     def timeout(self):
         """
-            Send the status signal *'Time out during acquisition'* and stop the timer.
+            Send the status signal *'Time out during acquisition'*.
         """
         self.timeout_scan_flag = True
-        self.timer.stop()
-        self.status_sig.emit(["Update_Status","Timeout during acquisition",'log'])
+        self.status_sig.emit(["Update_Status", "Timeout during acquisition", 'log'])
         self.status_sig.emit(["Timeout"])
-
-    def move_stages(self, positions):
-        """
-            Move all the activated modules to the specified positions.
-
-            =============== ============ =============================================
-            **Parameters**    **Type**    **Description**
-            *positions*       tuple list  The list of the positions related to indices
-            =============== ============ =============================================
-
-            See Also
-            --------
-            DAQ_Move_main.daq_move.move_Abs, move_done, det_done, wait_for_move_done, wait_for_det_done, det_done
-        """
-        for ind_move, pos in enumerate(positions): #move all activated modules to specified positions
-            self.move_modules_commands[ind_move].emit(utils.ThreadCommand(command="move_Abs", attributes=[pos]))
 
     def start_acquisition(self):
         try:
 
-            for sig in self.move_done_signals:
-                sig.connect(self.move_done)
-            for sig in self.grab_done_signals:
-                sig.connect(self.det_done)
+            self.modules_manager.connect_actuators()
+            self.modules_manager.connect_detectors()
 
             self.scan_read_positions = []
             self.scan_read_datas = []
@@ -1627,8 +1623,9 @@ class DAQ_Scan_Acquisition(QObject):
                     self.scan_x_axis_unique = self.scan_parameters.axes_unique[0]
 
                 if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_x_axis'):
-                    x_axis_meta = dict(units=self.move_modules_settings[0].child('move_settings', 'units').value(),
-                                       label=self.move_modules_names[0])
+                    x_axis_meta = dict(units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
+                                       label=self.modules_manager.get_names(self.modules_manager.actuators)[0],
+                                       nav_index=0)
                     self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_x_axis,
                                                 self.h5saver.current_scan_group, axis='x_axis',
                                                 metadata=x_axis_meta, enlargeable=self.isadaptive))
@@ -1650,8 +1647,9 @@ class DAQ_Scan_Acquisition(QObject):
                         self.scan_y_axis_unique = self.scan_parameters.axes_unique[1]
 
                     if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_y_axis'):
-                        y_axis_meta = dict(units=self.move_modules_settings[1].child('move_settings', 'units').value(),
-                                           label=self.move_modules_names[1])
+                        y_axis_meta = dict(units=self.modules_manager.actuators[1].settings.child('move_settings', 'units').value(),
+                                       label=self.modules_manager.get_names(self.modules_manager.actuators)[1],
+                                       nav_index=1)
                         self.h5saver.add_navigation_axis(self.scan_y_axis, self.h5saver.current_scan_group,
                                                          axis='y_axis', metadata=y_axis_meta, enlargeable=self.isadaptive)
                     if not self.isadaptive:
@@ -1664,25 +1662,27 @@ class DAQ_Scan_Acquisition(QObject):
                 self.scan_shape = [len(ax) for ax in self.scan_parameters.axes_unique]
                 for ind in range(Naxes):
                     if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_{:02d}_axis'.format(ind)):
-                        axis_meta = dict(units=self.move_modules_settings[ind].child('move_settings', 'units').value(),
-                                         label=self.move_modules_names[ind])
+                        axis_meta = dict(units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
+                                         label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
+                                         nav_index=ind)
                         self.h5saver.add_navigation_axis(self.scan_parameters.axes_unique[ind],
                                                          self.h5saver.current_scan_group,
-                                                         axis=f'_{ind:02d}_axis', metadata=axis_meta)
+                                                         axis=f'{ind:02d}_axis', metadata=axis_meta)
 
             elif scan_type == 'Tabular':
                 """Creates axes labelled by the index within the sequence"""
                 if not self.isadaptive:
-                    self.scan_shape = [self.scan_parameters.Nsteps, Naxes]
+                    self.scan_shape = [self.scan_parameters.Nsteps, ]
                 else:
                     self.scan_shape = [0, Naxes]
 
                 for ind in range(Naxes):
                     if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, 'scan_{:02d}_axis'.format(ind)):
-                        axis_meta = dict(units=self.move_modules_settings[ind].child('move_settings', 'units').value(),
-                                         label=self.move_modules_names[ind])
+                        axis_meta = dict(units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
+                                         label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
+                                         nav_index=ind)
                         self.h5saver.add_navigation_axis(self.scan_parameters.positions[:, ind],
-                                                         self.h5saver.current_scan_group, axis=f'_{ind:02d}_axis',
+                                                         self.h5saver.current_scan_group, axis=f'{ind:02d}_axis',
                                                          metadata=axis_meta, enlargeable=self.isadaptive)
 
             if self.Naverage > 1:
@@ -1701,55 +1701,39 @@ class DAQ_Scan_Acquisition(QObject):
 
             self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
             self.ind_scan = -1
-
+            self.timeout_scan_flag = False
             for ind_average in range(self.Naverage):
                 self.ind_average = ind_average
 
                 while True:
                     self.ind_scan += 1
                     if not self.isadaptive:
-                        if self.ind_scan > len(self.scan_parameters.positions):
+                        if self.ind_scan >= len(self.scan_parameters.positions):
                             break
                         positions = self.scan_parameters.positions[self.ind_scan]  # move motors of modules
                     else:
                         positions = learner.ask(1)[0][-1]  #next points to probe
 
                     self.status_sig.emit(["Update_scan_index", [self.ind_scan, ind_average]])
-                    if self.stop_scan_flag or self.timeout_scan_flag:
-                        break
-                    self.move_done_positions = OrderedDict()
-                    self.move_done_flag = False
-                    for ind_move, pos in enumerate(positions):  # move all activated modules to specified positions
-                        self.move_modules_commands[ind_move].emit(
-                            utils.ThreadCommand(command="move_Abs", attributes=[pos]))
-
-                    self.wait_for_move_done()
 
                     if self.stop_scan_flag or self.timeout_scan_flag:
-                        if self.stop_scan_flag:
-                            status = 'Data Acquisition has been stopped by user'
-                            self.status_sig.emit(["Update_Status", status, 'log'])
                         break
-                    self.det_done_flag = False
-                    self.det_done_datas = OrderedDict()
-                    for ind_det in range(len(self.detector_modules_names)):
-                        self.detector_modules_commands[ind_det].emit(utils.ThreadCommand("single",
-                                                                                         [self.det_averaging[ind_det]]))
-                    self.wait_for_det_done()
+
+                    self.modules_manager.move_actuators(positions)
+
+                    self.det_done(self.modules_manager.grab_datas())
+
                     if self.isadaptive:
                         #TODO add a signal selector on UI to pick which signal should be used
-                        learner.tell(positions, self.det_done_datas['????'])
+                        learner.tell(positions, self.modules_manager.det_done_datas['????'])
 
             self.h5saver.h5_file.flush()
-            for sig in self.move_done_signals:
-                sig.disconnect(self.move_done)
-            for sig in self.grab_done_signals:
-                sig.disconnect(self.det_done)
+            self.modules_manager.connect_actuators(False)
+            self.modules_manager.connect_detectors(False)
 
             self.status_sig.emit(["Update_Status", "Acquisition has finished", 'log'])
             self.status_sig.emit(["Scan_done"])
 
-            self.timer.stop()
         except Exception as e:
             logger.exception(str(e))
             #self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
@@ -1761,12 +1745,7 @@ class DAQ_Scan_Acquisition(QObject):
             #wait for grab done signals to end
             QtWidgets.QApplication.processEvents()
 
-    def wait_for_move_done(self):
-        self.timeout_scan_flag = False
-        self.timer.start(self.settings.child('time_flow', 'timeout').value())
-        while not(self.move_done_flag or self.timeout_scan_flag):
-            #wait for move done signals to end
-            QtWidgets.QApplication.processEvents()
+
 
 
 if __name__ == '__main__':
