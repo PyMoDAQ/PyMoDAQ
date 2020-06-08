@@ -541,7 +541,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             else:
                 self.detector_name = self.ui.Detector_type_combo.currentText()
 
-                detector = DAQ_Detector(self.settings, self.detector_name)
+                detector = DAQ_Detector(self.title, self.settings, self.detector_name)
                 self.detector_thread = QThread()
                 detector.moveToThread(self.detector_thread)
 
@@ -1752,11 +1752,11 @@ class DAQ_Detector(QObject):
     data_detector_sig = pyqtSignal(list)
     data_detector_temp_sig = pyqtSignal(list)
 
-    def __init__(self, settings_parameter, detector_name):
-        super(DAQ_Detector, self).__init__()
+    def __init__(self, title, settings_parameter, detector_name):
+        super().__init__()
         self.waiting_for_data = False
         self.controller = None
-
+        self.logger = utils.set_logger(f'{logger.name}.{title}.detector')
         self.detector_name = detector_name
         self.detector = None
         self.controller_adress = None
@@ -1983,7 +1983,7 @@ class DAQ_Detector(QObject):
             #self.status_sig.emit(["Update_Status","Grabing braked"])
             self.detector.stop()
 
-    def single(self, Naverage=1):
+    def single(self, Naverage=1, args_as_dict={}):
         """
             Call the grab method with Naverage parameter as an attribute.
 
@@ -1998,12 +1998,12 @@ class DAQ_Detector(QObject):
             daq_utils.ThreadCommand, grab
         """
         try:
-            self.grab_data(Naverage, live=False)
+            self.grab_data(Naverage, live=False, **args_as_dict)
 
         except Exception as e:
             self.logger.exception(str(e))
 
-    def grab_data(self, Naverage=1, live=True):
+    def grab_data(self, Naverage=1, live=True, **kwargs):
         """
             | Update status with 'Start Grabing' Update_status sub command of the Thread command.
             | Process events and grab naverage is needed.
@@ -2034,7 +2034,7 @@ class DAQ_Detector(QObject):
                     if not self.waiting_for_data:
                         self.waiting_for_data = True
                         QThread.msleep(self.wait_time)
-                        self.detector.grab_data(Naverage, live=live)
+                        self.detector.grab_data(Naverage, live=live, **kwargs)
                     QtWidgets.QApplication.processEvents()
                     if self.single_grab:
                         if self.hardware_averaging:

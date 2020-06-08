@@ -76,7 +76,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         """
         try:
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=None, data2D=None)
-            if self.plot_channels==None or len(self.plot_channels) != len(datas):
+            if self.plot_channels == None or len(self.plot_channels) != len(datas):
                 # if self.plot_channels!=None:
                 #     if len(self.plot_channels) != len(datas):
                 #         for channel in self.plot_channels:
@@ -86,11 +86,11 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 if self.labels == [] or len(self.labels) != len(datas):
                     self._labels = ["CH{}".format(ind) for ind in range(len(datas))]
 
-                self.plot_channels=[]
-                self.datas=[]
+                self.plot_channels = []
+                self.datas = []
                 self.ui.values_list.clear()
                 self.ui.values_list.addItems(['{:.06e}'.format(data[0]) for data in datas])
-                self.list_items=[self.ui.values_list.item(ind) for ind in range(self.ui.values_list.count())]
+                self.list_items = [self.ui.values_list.item(ind) for ind in range(self.ui.values_list.count())]
                 for ind in range(len(datas)):
                     self.datas.append(np.array([]))
                     #channel=self.ui.Graph1D.plot(np.array([]))

@@ -711,7 +711,14 @@ class Scanner(QObject):
 
 
 class TableModelTabular(gutils.TableModel):
-    def __init__(self, data, axes_name, **kwargs):
+    def __init__(self, data, axes_name=None, **kwargs):
+        if axes_name is None:
+            if 'header' in kwargs: #when saved as XML the header will be saved and restored here
+                axes_name = [h for h in kwargs['header']]
+                kwargs.pop('header')
+            else:
+                raise Exception('Invalid header')
+
         header = [name for name in axes_name]
         editable = [True for name in axes_name]
         super().__init__(data, header, editable=editable, **kwargs)
@@ -762,6 +769,8 @@ class TableModelTabular(gutils.TableModel):
 class TableModelSequential(gutils.TableModel):
     def __init__(self, data, **kwargs):
         header = ['Actuator', 'Start', 'Stop', 'Step']
+        if 'header' in kwargs:
+            kwargs.pop('header')
         editable = [False, True, True, True]
         super().__init__(data, header, editable=editable, **kwargs)
 

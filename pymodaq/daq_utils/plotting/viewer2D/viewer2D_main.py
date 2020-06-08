@@ -262,7 +262,7 @@ class Viewer2D(QObject):
 
     def setupCrosshair(self):
         ##crosshair
-        self.ui.crosshair=Crosshair(self.image_widget.plotitem)
+        self.ui.crosshair = Crosshair(self.image_widget.plotitem)
         self.ui.crosshair_H_blue = PlotCurveItem(pen='b')
         self.ui.crosshair_H_green = PlotCurveItem(pen="g")
         self.ui.crosshair_H_red = PlotCurveItem(pen="r")
@@ -1153,6 +1153,14 @@ class Viewer2D(QObject):
         self.scaling_options['scaled_xaxis'].update(dict(offset=x_offset, scaling=x_scaling, label=label, units=units))
         self.set_scaling_axes(self.scaling_options)
 
+    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='pxls')):
+        if axis_settings['orientation'] == 'bottom':
+            axis = 'scaled_xaxis'
+        else:
+            axis = 'scaled_yaxis'
+        self.scaling_options[axis].update(axis_settings)
+        self.set_scaling_axes(self.scaling_options)
+
     @property
     def y_axis(self):
         return self.y_axis_scaled
@@ -1171,7 +1179,10 @@ class Viewer2D(QObject):
         else:
             ydata=y_axis
         y_offset = np.min(ydata)
-        y_scaling = ydata[1] - ydata[0]
+        if len(ydata) > 1:
+            y_scaling = ydata[1] - ydata[0]
+        else:
+            y_scaling = 1
         self.scaling_options['scaled_yaxis'].update(dict(offset=y_offset, scaling=y_scaling, label=label, units=units))
         self.set_scaling_axes(self.scaling_options)
 

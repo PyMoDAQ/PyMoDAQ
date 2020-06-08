@@ -1122,6 +1122,11 @@ def find_index(x, threshold):
         out.append((ix, x[ix]))
     return out
 
+def find_common_index(x, y, x0, y0):
+    vals = x + 1j * y
+    val = x0 + 1j * y0
+    ind = int(np.argmin(np.abs(vals - val)))
+    return ind, x[ind], y[ind]
 
 def gauss1D(x, x0, dx, n=1):
     """

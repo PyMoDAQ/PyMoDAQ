@@ -159,10 +159,10 @@ class DashBoard(QObject):
         action_show_log.toggled.connect(self.logger_dock.setVisible)
 
         self.preset_menu = menubar.addMenu('Preset Modes')
-        action_new_preset = self.preset_menu.addAction('New managers')
+        action_new_preset = self.preset_menu.addAction('New Preset')
         # action.triggered.connect(lambda: self.show_file_attributes(type_info='managers'))
         action_new_preset.triggered.connect(self.create_preset)
-        action_modify_preset = self.preset_menu.addAction('Modify managers')
+        action_modify_preset = self.preset_menu.addAction('Modify Preset')
         action_modify_preset.triggered.connect(self.modify_preset)
         self.preset_menu.addSeparator()
         load_preset = self.preset_menu.addMenu('Load presets')

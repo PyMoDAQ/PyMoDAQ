@@ -1284,11 +1284,3 @@ if __name__=='__main__':
 
     signal_t=signal.transpose(signal_axes=[1])
     print(signal_t)
-
-
-    pass
-
-
-        
-        
-        

@@ -345,14 +345,13 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         if self.legend is not None:
             self.viewer.plotwidget.removeItem(self.legend)
 
-
-    def set_axis_label(self,axis_settings=dict(orientation='bottom',label='x axis',units='pxls')):
-        axis=self.viewer.plotwidget.plotItem.getAxis(axis_settings['orientation'])
+    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='pxls')):
+        axis = self.viewer.plotwidget.plotItem.getAxis(axis_settings['orientation'])
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
         self.axis_settings = axis_settings
 
     @pyqtSlot(list)
-    def show_data(self, datas, labels=None, x_axis=None ):
+    def show_data(self, datas, labels=None, x_axis=None):
         try:
             self.datas = datas
             self.update_labels(self.labels)
@@ -360,8 +359,6 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
             for ind,data in enumerate(datas):
                 self.data_to_export['data1D']['CH{:03d}'.format(ind)] = utils.DataToExport()
-
-
 
             if self.plot_channels == [] or self.plot_channels is None: #initialize data and plots
                 self.ini_data_plots(len(datas))
@@ -382,8 +379,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                 self.update_measurement_module()
 
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time)
-
+            self.update_status(str(e), wait_time=self.wait_time)
 
     @pyqtSlot(list)
     def show_data_temp(self, datas):

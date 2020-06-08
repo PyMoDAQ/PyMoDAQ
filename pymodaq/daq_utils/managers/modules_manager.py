@@ -201,14 +201,17 @@ class ModulesManager(QObject):
 
         self.connect_detectors(False)
 
-    def grab_datas(self):
+    def get_selected_probed_data(self, dim='0D'):
+        return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
+
+    def grab_datas(self, **kwargs):
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
         self.settings.child(('det_done')).setValue(self.det_done_flag)
         tzero = time.perf_counter()
 
         for sig in [mod.command_detector for mod in self.detectors]:
-            sig.emit(utils.ThreadCommand("single", [1]))
+            sig.emit(utils.ThreadCommand("single", [1, kwargs]))
 
         while not self.det_done_flag:
             #wait for grab done signals to end
@@ -222,25 +225,30 @@ class ModulesManager(QObject):
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
 
-    def connect_actuators(self, connect=True):
+    def connect_actuators(self, connect=True, slot=None):
+        if slot is None:
+            slot = self.move_done
         if connect:
             for sig in [mod.move_done_signal for mod in self.actuators]:
-                sig.connect(self.move_done)
+                sig.connect(slot)
         else:
             try:
                 for sig in [mod.move_done_signal for mod in self.actuators]:
-                    sig.disconnect(self.move_done)
+                    sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
 
-    def connect_detectors(self, connect=True):
+    def connect_detectors(self, connect=True, slot=None):
+        if slot is None:
+            slot = self.det_done
+
         if connect:
             for sig in [mod.grab_done_signal for mod in self.detectors]:
-                sig.connect(self.det_done)
+                sig.connect(slot)
         else:
             try:
                 for sig in [mod.grab_done_signal for mod in self.detectors]:
-                    sig.disconnect(self.det_done)
+                    sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
 
@@ -299,6 +307,13 @@ class ModulesManager(QObject):
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
+
+    def order_positions(self, positions_as_dict):
+        actuators = self.selected_actuators_name
+        pos = []
+        for act in actuators:
+            pos.append(positions_as_dict[act])
+        return pos
 
     pyqtSlot(str, float)
     def move_done(self, name, position):

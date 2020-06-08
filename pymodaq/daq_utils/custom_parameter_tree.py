@@ -144,11 +144,16 @@ def add_text_to_elt(elt, param):
         else:
             val = param.value()
         text = str(val)
+    elif param_type == 'date_time':
+        text = str(param.value().toSecsSinceEpoch())
+    elif param_type == 'date':
+        text = str(QDateTime(param.value()).toSecsSinceEpoch())
     elif param_type == 'table_view':
         try:
             data = dict(classname=param.value().__class__.__name__,
                         module=param.value().__class__.__module__,
-                        data=param.value().get_data_all())
+                        data=param.value().get_data_all(),
+                        header=param.value().header)
             text = json.dumps(data)
         except:
             text = ''
@@ -465,9 +470,9 @@ def set_txt_from_elt(el, param_dict):
         elif 'led' in param_type:  #covers 'led' and 'led_push'types
             param_value = bool(val_text)
         elif param_type == 'date_time':
-            param_value = eval(val_text)
+            param_value = QDateTime.fromSecsSinceEpoch(int(val_text))
         elif param_type == 'date':
-            param_value = eval(val_text)
+            param_value = QDateTime.fromSecsSinceEpoch(int(val_text)).date()
         elif param_type == 'table':
             param_value = eval(val_text)
         elif param_type == 'color':
@@ -481,7 +486,7 @@ def set_txt_from_elt(el, param_dict):
             data_dict = json.loads(val_text)
             mod = importlib.import_module(data_dict['module'])
             _cls = getattr(mod, data_dict['classname'])
-            param_value = _cls(data_dict['data'])
+            param_value = _cls(data_dict['data'], header=data_dict['header'])
         else:
             param_value = val_text
         param_dict.update(dict(value=param_value))

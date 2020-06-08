@@ -9,9 +9,29 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class Viewer1DBasic(QObject):
-    """this plots 1D data on a plotwidget. one linear region to select data
+    """this plots 1D data on a plotwidget. one linear region to select data, one infinite line to select point
     """
-    def __init__(self, parent=None):
+    roi_region_signal = pyqtSignal(tuple)
+    roi_line_signal = pyqtSignal(float)
+
+    def __init__(self, parent=None, show_region=False, show_line=False):
+        """
+
+        Parameters
+        ----------
+        parent
+
+        Attributes
+        ----------
+        parent: (QWidget)
+        roi_region: (pyqtgraph LinerrRegionItem)
+        roi_line: (pyqtgraph InfiniteLine graphitem)
+        Properties
+        ----------
+        labels: (list of str)
+        x_axis: (Axis or dict)
+
+        """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__()
         if parent is None:
@@ -31,6 +51,9 @@ class Viewer1DBasic(QObject):
         self.legend = None
         self.setup_ui()
 
+        self.show_roi_region(show_region)
+        self.show_roi_line(show_line)
+
     def show(self, state=True):
         self.parent.setVisible(state)
 
@@ -41,6 +64,24 @@ class Viewer1DBasic(QObject):
         vboxlayout.addWidget(self.plotwidget)
 
         self.legend = self.plotwidget.addLegend()
+        self.roi_region = pg.LinearRegionItem()
+        self.roi_line = pg.InfiniteLine(movable=True)
+        self.plotwidget.plotItem.addItem(self.roi_region)
+        self.plotwidget.plotItem.addItem(self.roi_line)
+        self.roi_region.sigRegionChanged.connect(self.update_region)
+        self.roi_line.sigPositionChanged.connect(self.update_line)
+
+    def show_roi_region(self, show=True):
+        self.roi_region.setVisible(show)
+
+    def show_roi_line(self, show=True):
+        self.roi_line.setVisible(show)
+
+    def update_region(self, item):
+        self.roi_region_signal.emit(item.getRegion())
+
+    def update_line(self, item):
+        self.roi_line_signal.emit(item.getPos()[0])
 
     @property
     def labels(self):
@@ -149,11 +190,20 @@ class Viewer1DBasic(QObject):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
+
+    def print_region(xx):
+        print(xx)
+
+    def print_line(x):
+        print(x)
+
     Form = QtWidgets.QWidget()
     prog = Viewer1DBasic(Form)
-
+    #prog.show_roi_region()
+    prog.show_roi_line()
+    prog.roi_region_signal.connect(print_region)
+    prog.roi_line_signal.connect(print_line)
     from pymodaq.daq_utils.daq_utils import gauss1D
-
     x = np.linspace(0, 200, 201)
     y1 = gauss1D(x, 75, 25)
     y2 = gauss1D(x, 120, 50, 2)
@@ -167,6 +217,8 @@ if __name__ == '__main__':
     ydata_expodec += 0.1 * np.random.rand(len(x))
 
     prog.show_data([y1, y2, ydata_expodec])
+
+
     Form.show()
     prog.x_axis
     prog.update_labels(labels=['sig0', 'tralala', 'ouhaouh'])

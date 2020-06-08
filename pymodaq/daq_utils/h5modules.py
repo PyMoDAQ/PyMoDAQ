@@ -4,6 +4,7 @@ from collections import OrderedDict
 import warnings
 import logging
 from copy import deepcopy
+import PyQt5  #mandatory for some parameter from Xml
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -1471,13 +1472,18 @@ class H5Saver(H5Backend, QObject):
                                metadata=metadata)
         return array
 
-    def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title=''):
-        shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
+    def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title='', scan_subtype=''):
+        isadaptive = scan_subtype == 'Adaptive'
+        if not isadaptive:
+            shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
                                                           remove_scan_dimension=True)
+        else:
+            shape, dimension, size = data_dict['data'].shape, '0D', 1
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
                                     title=title,
                                     data_shape=shape,
                                     data_dimension=dimension, scan_type=scan_type,
+                                    scan_subtype=scan_subtype,
                                     array_to_save=data_dict['data'])
         if 'x_axis' in data_dict:
             if not isinstance(data_dict['x_axis'], dict):
@@ -1501,7 +1507,8 @@ class H5Saver(H5Backend, QObject):
                                    enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
 
-    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_shape=[], title='', enlargeable=False,
+    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_subtype='',
+                 scan_shape=[], title='', enlargeable=False,
                  init=False, add_scan_dim=False, metadata=dict([])):
         """save data within the hdf5 file together with axes data (if any) and metadata, node name will be 'Data'
         Parameters
@@ -1510,7 +1517,8 @@ class H5Saver(H5Backend, QObject):
         data_dict: (dict) dictionnary containing the data to save and all the axis and metadata
             mandatory key: 'data': (ndarray) data to save
             other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....)
-        scan_type: (str) either '', 'scan1D' or 'scan2D'
+        scan_type: (str) either '', 'scan1D' or 'scan2D' or Tabular or sequential
+        scan_subtype: (str) see scanner module
         scan_shape: (iterable) the shape of the scan dimensions
         title: (str) the title attribute of the array node
         enlargeable: (bool) if False, data are save as a CARRAY, otherwise as a EARRAY (for ragged data, see add_sting_array)
@@ -1553,13 +1561,15 @@ class H5Saver(H5Backend, QObject):
         tmp_data_dict.update(metadata)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
                                     title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension,
-                                    scan_type=scan_type, scan_shape=scan_shape, array_to_save=array_to_save,
+                                    scan_type=scan_type, scan_subtype=scan_subtype, scan_shape=scan_shape,
+                                    array_to_save=array_to_save,
                                     init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
 
         self.flush()
         return data_array
 
-    def add_array(self, where, name, data_type, data_shape=None, data_dimension=None, scan_type='', scan_shape=[],
+    def add_array(self, where, name, data_type, data_shape=None, data_dimension=None, scan_type='', scan_subtype='',
+                  scan_shape=[],
                   title='', array_to_save=None, array_type=None, enlargeable=False, metadata=dict([]),
                   init=False, add_scan_dim=False):
         """save data arrays on the hdf5 file together with metadata
@@ -1622,6 +1632,7 @@ class H5Saver(H5Backend, QObject):
         self.set_attr(array, 'type', data_type)
         self.set_attr(array, 'data_dimension', data_dimension)
         self.set_attr(array, 'scan_type', scan_type)
+        self.set_attr(array, 'scan_subtype', scan_subtype)
 
         for metadat in metadata:
             self.set_attr(array, metadat, metadata[metadat])
@@ -1886,14 +1897,11 @@ class H5BrowserUtil(H5Backend):
         """
         node = self.get_node(node_path)
         data = None
+        is_spread = False
         if 'ARRAY' in node.attrs['CLASS']:
             data = node.read()
             nav_axes = []
             axes = dict([])
-            x_axis = None
-            y_axis = None
-            nav_x_axis = None
-            nav_y_axis = None
             if isinstance(data, np.ndarray):
                 data = np.squeeze(data)
                 if 'type' in node.attrs.attrs_name:
@@ -1905,7 +1913,9 @@ class H5BrowserUtil(H5Backend):
                             data_dim = node.attrs['data_type']
                         else:
                             data_dim = node.attrs['data_dimension']
-
+                        if 'scan_subtype' in node.attrs.attrs_name:
+                            if node.attrs['scan_subtype'].lower() == 'adaptive':
+                                is_spread = True
                         tmp_axes = ['x_axis', 'y_axis']
                         for ax in tmp_axes:
                             if capitalize(ax) in children:
@@ -1925,13 +1935,16 @@ class H5BrowserUtil(H5Backend):
                                 if 'Nav_{:s}'.format(ax) in children:
                                     nav_axes.append(ind_ax)
                                     axis_node = self.get_node(parent_path + '/Nav_{:s}'.format(ax))
-                                    axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
-                                    if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
-                                        ind_ax]:  # could happen in case of linear back to start type of scan
-                                        tmp_ax = []
-                                        for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                            tmp_ax.extend([ix, ix])
-                                            axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
+                                    if is_spread:
+                                        axes['nav_{:s}'.format(ax)] = Axis(data=axis_node.read())
+                                    else:
+                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
+                                        if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
+                                            ind_ax]:  # could happen in case of linear back to start type of scan
+                                            tmp_ax = []
+                                            for ix in axes['nav_{:s}'.format(ax)]['data']:
+                                                tmp_ax.extend([ix, ix])
+                                                axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
 
                                     if 'units' in axis_node.attrs.attrs_name:
                                         axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs['units']
@@ -1943,26 +1956,47 @@ class H5BrowserUtil(H5Backend):
                             #if scan_type == 'scan1d' or scan_type == 'scan2d':
                             scan_node, nav_children = find_scan_node(node)
                             nav_axes = []
-                            for axis_node in nav_children:
-                                nav_axes.append(axis_node.attrs['nav_index'])
-                                axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.unique(axis_node.read()),
-                                                                       nav_index=nav_axes[-1])
-                                if nav_axes[-1] < len(data.shape):
-                                    if axes[f'nav_{nav_axes[-1]:02d}']['data'].shape[0] != data.shape[nav_axes[-1]]:  # could happen in case of linear back to start type of scan
-                                        tmp_ax = []
-                                        for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
-                                            tmp_ax.extend([ix, ix])
-                                            axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.array(tmp_ax),
-                                                                                   nav_index=nav_axes[-1])
+                            if scan_type == 'tabular' or is_spread:
+                                datas = []
+                                labels = []
+                                all_units = []
+                                for axis_node in nav_children:
+                                    npts = axis_node.attrs['shape'][0]
+                                    datas.append(axis_node.read())
+                                    labels.append(axis_node.attrs['label'])
+                                    all_units.append(axis_node.attrs['units'])
 
-                                if 'units' in axis_node.attrs.attrs_name:
-                                    axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
-                                        'units']
-                                if 'label' in axis_node.attrs.attrs_name:
-                                    axes[f'nav_{nav_axes[-1]:02d}']['label'] = axis_node.attrs[
-                                        'label']
+                                nav_axes.append(0)
+                                axes[f'nav_x_axis'] = Axis(data=np.linspace(0, npts-1, npts),
+                                                           nav_index=nav_axes[-1],
+                                                           units='',
+                                                           label='Scan index',
+                                                           labels=labels,
+                                                           datas=datas,
+                                                           all_units=all_units)
+                            else :
+                                for axis_node in nav_children:
+                                    nav_axes.append(axis_node.attrs['nav_index'])
+                                    if is_spread:
+                                        axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=axis_node.read(),
+                                                                               nav_index=nav_axes[-1])
+                                    else:
+                                        axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.unique(axis_node.read()),
+                                                                           nav_index=nav_axes[-1])
+                                        if nav_axes[-1] < len(data.shape):
+                                            if axes[f'nav_{nav_axes[-1]:02d}']['data'].shape[0] != data.shape[nav_axes[-1]]:  # could happen in case of linear back to start type of scan
+                                                tmp_ax = []
+                                                for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
+                                                    tmp_ax.extend([ix, ix])
+                                                    axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.array(tmp_ax),
+                                                                                           nav_index=nav_axes[-1])
 
-
+                                    if 'units' in axis_node.attrs.attrs_name:
+                                        axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
+                                            'units']
+                                    if 'label' in axis_node.attrs.attrs_name:
+                                        axes[f'nav_{nav_axes[-1]:02d}']['label'] = axis_node.attrs[
+                                            'label']
                     elif 'axis' in node.attrs['type']:
                         axis_node = node
                         axes['y_axis'] = Axis(data=axis_node.read())
@@ -1973,10 +2007,10 @@ class H5BrowserUtil(H5Backend):
                         axes['x_axis'] = Axis(data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
                                               units='pxls',
                                               label='')
-                return data, axes, nav_axes
+                return data, axes, nav_axes, is_spread
 
             elif isinstance(data, list):
-                return data, [], []
+                return data, [], [], is_spread
 
 class H5Browser(QObject):
     """UI used to explore h5 files, plot and export subdatas"""
@@ -2263,14 +2297,14 @@ class H5Browser(QObject):
             node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
             if 'ARRAY' in node.attrs['CLASS']:
-                data, axes, nav_axes = self.h5utils.get_h5_data(self.current_node_path)
+                data, axes, nav_axes, is_spread = self.h5utils.get_h5_data(self.current_node_path)
                 if isinstance(data, np.ndarray):
-                    if 'distribution' in node.attrs.attrs_name:
-                        distribution = node.attrs['distribution']
+                    if 'scan_type' in node.attrs.attrs_name:
+                        scan_type = node.attrs['scan_type']
                     else:
-                        distribution = 'uniform'
-                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, distribution=distribution,
-                                               **deepcopy(axes))
+                        scan_type = ''
+                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, is_spread=is_spread,
+                                               scan_type=scan_type, **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
                     if not(not data):
