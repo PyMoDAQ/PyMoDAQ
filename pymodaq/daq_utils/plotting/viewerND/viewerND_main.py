@@ -333,15 +333,18 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 if self.is_spread:
                     self.ui.spread_viewer_2D.parent.setVisible(data_spread.shape[1] == 3)
                     self.ui.spread_viewer_1D.parent.setVisible(data_spread.shape[1] == 2)
-                    if temp_data:
-                        self.ui.spread_viewer_2D.setImageTemp(data_spread=data_spread)
-                    else:
+                    if data_spread.shape[1] == 3:
                         self.ui.spread_viewer_2D.setImage(data_spread=data_spread)
                         if len(labels) > 1 and len(units) > 1:
                             self.ui.spread_viewer_2D.set_axis_label(dict(orientation='bottom', label=labels[0],
                                                                          units=units[0]))
                             self.ui.spread_viewer_2D.set_axis_label(dict(orientation='left', label=labels[1],
                                                                          units=units[1]))
+                    else:
+                        self.ui.spread_viewer_1D.show_data([data_spread[:, 1]], labels=['data'],
+                                                           x_axis=data_spread[:, 0])
+                        self.ui.spread_viewer_1D.set_axis_label(dict(orientation='bottom',
+                                                                     label=labels[0], units=units[0]))
 
                 if temp_data:
                     self.ui.navigator1D.show_data_temp(navigator_data)
@@ -551,7 +554,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.viewer1D.viewer.plotwidget.plotItem.addItem(self.ROI1D)
         self.ui.combomath = QtWidgets.QComboBox()
         self.ui.combomath.addItems(['Sum', 'Mean', 'Half-life'])
-        self.ui.viewer1D.ui.horizontalLayout.insertWidget(4, self.ui.combomath)
+        self.ui.viewer1D.ui.button_widget.layout().insertWidget(4, self.ui.combomath)
         self.ui.combomath.currentIndexChanged.connect(self.update_Navigator)
 
         self.ROI1D.sigRegionChangeFinished.connect(self.update_Navigator)
@@ -625,9 +628,9 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.set_signals_pb_2D_bis.setToolTip('Change navigation/signal axes')
         self.ui.set_signals_pb_2D_bis.setIcon(icon)
 
-        self.ui.navigator1D.ui.horizontalLayout.insertWidget(0, self.ui.set_signals_pb_1D)
+        self.ui.navigator1D.ui.button_widget.layout().insertWidget(0, self.ui.set_signals_pb_1D)
         self.ui.navigator2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D)
-        self.ui.viewer1D.ui.horizontalLayout.insertWidget(0, self.ui.set_signals_pb_1D_bis)
+        self.ui.viewer1D.ui.button_widget.layout().insertWidget(0, self.ui.set_signals_pb_1D_bis)
         self.ui.viewer2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D_bis)
 
         main_layout.addWidget(vsplitter)
@@ -815,8 +818,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
             if 'datas' in nav_axes[0]:
                 datas = nav_axes[0]['datas']
                 xaxis = datas[0]
-                yaxis = datas[1]
-                ind_scan = utils.find_common_index(xaxis, yaxis, posx, posy)
+                if len(datas) > 1:
+                    yaxis = datas[1]
+                    ind_scan = utils.find_common_index(xaxis, yaxis, posx, posy)
+                else:
+                    ind_scan = utils.find_index(xaxis, posx)[0]
 
                 self.ui.navigator1D.ui.crosshair.set_crosshair_position(ind_scan[0])
 

@@ -1069,26 +1069,31 @@ class DAQ_Scan(QObject):
             self.scan_y_axis = np.array([])
             if not self.plot_1D_ini: #init the datas
                 self.plot_1D_ini = True
-                if not display_as_sequence:
-                    self.ui.scan1D_subgraph.show(False)
-                    if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                        self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
-                    else:
-                        self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
+                if isadaptive:
+                    self.scan_data_1D = np.expand_dims(np.array([datas[key]['data'] for key in datas]), 0)
 
                 else:
-                    self.ui.scan1D_subgraph.show()
-                    self.scan_x_axis = np.linspace(0, len(self.scanner.scan_parameters.positions)-1,
-                                                   len(self.scanner.scan_parameters.positions))
-                    self.ui.scan1D_subgraph.show_data(
-                            [positions for positions in self.scanner.scan_parameters.positions.T])
-                    self.ui.scan1D_subgraph.update_labels(self.scanner.actuators)
-                    self.ui.scan1D_subgraph.set_axis_label(axis_settings=dict(orientation='bottom',
-                                            label='Scan index', units=''))
 
-                self.scan_data_1D = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
-                if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    self.scan_data_1D_average = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
+                    if not display_as_sequence:
+                        self.ui.scan1D_subgraph.show(False)
+                        if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
+                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
+                        else:
+                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
+
+                    else:
+                        self.ui.scan1D_subgraph.show()
+                        self.scan_x_axis = np.linspace(0, len(self.scanner.scan_parameters.positions)-1,
+                                                       len(self.scanner.scan_parameters.positions))
+                        self.ui.scan1D_subgraph.show_data(
+                                [positions for positions in self.scanner.scan_parameters.positions.T])
+                        self.ui.scan1D_subgraph.update_labels(self.scanner.actuators)
+                        self.ui.scan1D_subgraph.set_axis_label(axis_settings=dict(orientation='bottom',
+                                                label='Scan index', units=''))
+
+                    self.scan_data_1D = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
+                    if self.settings.child('scan_options', 'scan_average').value() > 1:
+                        self.scan_data_1D_average = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
 
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left',
                                             label=self.settings.child('scan_options', 'plot_from').value(), units=''))
@@ -1098,20 +1103,25 @@ class DAQ_Scan(QObject):
             #self.scan_data_1D[self.ind_scan, :] =np.random.rand((1))* np.array([np.exp(-(self.scan_x_axis[self.ind_scan]-50)**2/20**2),np.exp(-(self.scan_x_axis[self.ind_scan]-50)**6/10**6)]) # np.array(list(datas.values()))
             #self.scan_data_1D[self.ind_scan, :] =  np.array(list(datas.values()))
 
-            if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                if not utils.odd_even(self.ind_scan):
-                    self.scan_data_1D[int(self.ind_scan / 2), :] = np.array([datas[key]['data'] for key in datas])
-                    if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.scan_data_1D_average[self.ind_scan, :] =\
-                            (self.ind_average * self.scan_data_1D_average[int(self.ind_scan / 2), :] +
-                                    self.scan_data_1D[int(self.ind_scan / 2), :]) / (self.ind_average + 1)
-
+            if isadaptive:
+                if self.ind_scan != 0:
+                    self.scan_data_1D = np.vstack((self.scan_data_1D, np.array([datas[key]['data'] for key in datas])))
+                self.scan_x_axis = np.array(self.scan_positions)
             else:
-                self.scan_data_1D[self.ind_scan, :] = np.array([datas[key]['data'] for key in datas])
-                if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    self.scan_data_1D_average[self.ind_scan, :] = \
-                        (self.ind_average * self.scan_data_1D_average[self.ind_scan, :] +
-                         self.scan_data_1D[self.ind_scan, :]) / (self.ind_average+1)
+                if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
+                    if not utils.odd_even(self.ind_scan):
+                        self.scan_data_1D[int(self.ind_scan / 2), :] = np.array([datas[key]['data'] for key in datas])
+                        if self.settings.child('scan_options', 'scan_average').value() > 1:
+                            self.scan_data_1D_average[self.ind_scan, :] =\
+                                (self.ind_average * self.scan_data_1D_average[int(self.ind_scan / 2), :] +
+                                        self.scan_data_1D[int(self.ind_scan / 2), :]) / (self.ind_average + 1)
+
+                else:
+                    self.scan_data_1D[self.ind_scan, :] = np.array([datas[key]['data'] for key in datas])
+                    if self.settings.child('scan_options', 'scan_average').value() > 1:
+                        self.scan_data_1D_average[self.ind_scan, :] = \
+                            (self.ind_average * self.scan_data_1D_average[self.ind_scan, :] +
+                             self.scan_data_1D[self.ind_scan, :]) / (self.ind_average+1)
 
 
             x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
@@ -1669,15 +1679,15 @@ class DAQ_Scan_Acquisition(QObject):
             self.scan_read_positions = []
             self.scan_read_datas = []
             self.stop_scan_flag = False
-            Naxes = self.scan_parameters.positions.shape[1]
+            Naxes = self.scan_parameters.Naxes
             scan_type = self.scan_parameters.scan_type
             self.navigation_axes = []
 
             if scan_type == 'Scan1D' or scan_type == 'Scan2D':
                 """creates the X_axis and Y_axis valid only for 1D or 2D scans """
                 if self.isadaptive:
-                    self.scan_x_axis = np.array([0.0,])
-                    self.scan_x_axis_unique = np.array([0.0,])
+                    self.scan_x_axis = np.array([0.0, ])
+                    self.scan_x_axis_unique = np.array([0.0, ])
                 else:
                     self.scan_x_axis = self.scan_parameters.positions[:, 0]
                     self.scan_x_axis_unique = self.scan_parameters.axes_unique[0]
@@ -1780,7 +1790,7 @@ class DAQ_Scan_Acquisition(QObject):
                             break
                         positions = self.scan_parameters.positions[self.ind_scan]  # move motors of modules
                     else:
-                        positions = learner.ask(1)[0][-1]  #next points to probe
+                        positions = learner.ask(1)[0][-1]  #next point to probe
 
                     self.status_sig.emit(["Update_scan_index", [self.ind_scan, ind_average]])
 
@@ -1792,6 +1802,8 @@ class DAQ_Scan_Acquisition(QObject):
                     self.det_done(self.modules_manager.grab_datas(positions=positions), positions)
 
                     if self.isadaptive:
+                        if not self.scan_parameters.scan_type == 'Scan2D':
+                            positions = positions[0]
                         det_channel = self.modules_manager.get_selected_probed_data()
                         det, channel = det_channel[0].split('/')
                         learner.tell(positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])

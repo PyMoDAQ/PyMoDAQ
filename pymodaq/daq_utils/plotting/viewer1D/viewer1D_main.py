@@ -1,7 +1,9 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, Qt
+from PyQt5.QtWidgets import QPushButton, QLabel
+from PyQt5.QtGui import QIcon, QPixmap
 import sys
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_GUI_dock import Ui_Form
+
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 from collections import OrderedDict
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
@@ -68,43 +70,49 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         # and value is the result of a given lineout or measurement
 
     def setupUI(self):
-        self.ui = Ui_Form()
-        self.ui.setupUi(self.parent)
 
+        self.ui = QObject()
+
+        self.parent.setLayout(QtWidgets.QVBoxLayout())
+        splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
+
+        self.ui.statusbar = QtWidgets.QStatusBar()
+        self.ui.statusbar.setMaximumHeight(15)
+
+        self.parent.layout().addWidget(splitter_hor)
+        self.parent.layout().addWidget(self.ui.statusbar)
+
+
+
+        graph_widget = QtWidgets.QWidget()
+        graph_widget.setLayout(QtWidgets.QVBoxLayout())
+
+        splitter_hor.addWidget(graph_widget)
+        splitter_hor.addWidget(self.roi_manager.roiwidget)
+
+        self.ui.button_widget = QtWidgets.QWidget()
+        self.ui.button_widget.setLayout(QtWidgets.QHBoxLayout())
+        self.ui.button_widget.setMaximumHeight(50)
+
+        splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
+
+        graph_widget.layout().addWidget(self.ui.button_widget)
+        graph_widget.layout().addWidget(splitter_ver)
+
+        self.ui.Graph_Lineouts = pg.PlotWidget()
 
         widg = QtWidgets.QWidget()
         self.viewer = Viewer1DBasic(widg)
-        self.ui.verticalLayout.addWidget(widg)
+        splitter_ver.addWidget(widg)
+        splitter_ver.addWidget(self.ui.Graph_Lineouts)
         self.ui.Graph1D = self.viewer #for backcompatibility
-
         self.roi_manager.viewer_widget = self.viewer.plotwidget
+
+        self.setup_buttons(self.ui.button_widget)
+        self.setup_zoom()
 
         self.legend = None
         self.axis_settings = dict(orientation='bottom', label='x axis', units='pxls')
-        # creating the settings widget of the viewer (ROI...)
-
-        self.ui.splitter_2.replaceWidget(1, self.roi_manager.roiwidget)
-        self.ui.statusbar = QtWidgets.QStatusBar(self.parent)
-        self.ui.statusbar.setMaximumHeight(15)
-        self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-
-        # create and set the zoom widget
-        # self.ui.zoom_widget=Dock("1DViewer zoom", size=(300, 100), closable=True)
-        self.ui.zoom_widget = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout()
-
-        self.ui.Graph_zoom = pg.PlotWidget()
-        layout.addWidget(self.ui.Graph_zoom)
-        self.ui.zoom_widget.setLayout(layout)
-
-        self.ui.zoom_region = pg.LinearRegionItem()
-        self.ui.zoom_region.setZValue(-10)
-        self.ui.zoom_region.setBrush('r')
-        self.ui.zoom_region.setOpacity(0.2)
-        self.ui.Graph_zoom.addItem(self.ui.zoom_region)
-        self.zoom_plot = []
-        # self.dockarea.addDock(self.ui.zoom_widget)
-        self.ui.zoom_widget.setVisible(False)
 
         self.ui.xaxis_item = self.viewer.plotwidget.plotItem.getAxis('bottom')
         self.ui.Graph_Lineouts.hide()
@@ -126,6 +134,65 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         self.ui.Do_math_pb.clicked.connect(self.do_math_fun)
         self.ui.do_measurements_pb.clicked.connect(self.open_measurement_module)
         self.ui.zoom_pb.clicked.connect(self.enable_zoom)
+        self.ui.scatter.clicked.connect(self.do_scatter)
+
+    def setup_buttons(self, button_widget):
+        buttons_layout = button_widget.layout()
+
+        self.ui.zoom_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Zoom_to_Selection.png")), '')
+        self.ui.zoom_pb.setCheckable(True)
+        buttons_layout.addWidget(self.ui.zoom_pb)
+
+        self.ui.Do_math_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Calculator.png")), '')
+        self.ui.Do_math_pb.setCheckable(True)
+        buttons_layout.addWidget(self.ui.Do_math_pb)
+
+        self.ui.do_measurements_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/MeasurementStudio_32.png")), '')
+        self.ui.do_measurements_pb.setCheckable(True)
+        buttons_layout.addWidget(self.ui.do_measurements_pb)
+
+        self.ui.crosshair_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/reset.png")), '')
+        self.ui.crosshair_pb.setCheckable(True)
+        buttons_layout.addWidget(self.ui.crosshair_pb)
+
+        self.ui.aspect_ratio_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/zoomReset.png")), '')
+        self.ui.aspect_ratio_pb.setCheckable(True)
+        buttons_layout.addWidget(self.ui.aspect_ratio_pb)
+
+        self.ui.scatter = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Marker.png")), '')
+        self.ui.scatter.setCheckable(True)
+        buttons_layout.addWidget(self.ui.scatter)
+
+        self.ui.x_label = QLabel('x:')
+        buttons_layout.addWidget(self.ui.x_label)
+
+        self.ui.y_label = QLabel('y:')
+        buttons_layout.addWidget(self.ui.y_label)
+
+        buttons_layout.addStretch()
+
+    def setup_zoom(self):
+        # create and set the zoom widget
+        # self.ui.zoom_widget=Dock("1DViewer zoom", size=(300, 100), closable=True)
+        self.ui.zoom_widget = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout()
+
+        self.ui.Graph_zoom = pg.PlotWidget()
+        layout.addWidget(self.ui.Graph_zoom)
+        self.ui.zoom_widget.setLayout(layout)
+
+        self.ui.zoom_region = pg.LinearRegionItem()
+        self.ui.zoom_region.setZValue(-10)
+        self.ui.zoom_region.setBrush('r')
+        self.ui.zoom_region.setOpacity(0.2)
+        self.ui.Graph_zoom.addItem(self.ui.zoom_region)
+        self.zoom_plot = []
+        # self.dockarea.addDock(self.ui.zoom_widget)
+        self.ui.zoom_widget.setVisible(False)
+
+    def do_scatter(self):
+        self.update_graph1D(self.datas)
+        
 
     def update_lineouts(self):
         try:
@@ -458,13 +525,29 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         # self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
         try:
 
+            pens = []
+            symbolBrushs = []
+            symbolSize = 5
+            for ind, ch in enumerate(self.plot_channels):
+                if self.ui.scatter.isChecked():
+                    pens.append(None)
+                    symbol = 'o'
+                    symbolBrushs.append(self.plot_colors[ind])
+                else:
+                    pens.append(self.plot_colors[ind])
+                    symbol = None
+
+                    symbolBrushs.append(None)
+
             for ind_plot, data in enumerate(datas):
                 if self.x_axis is None:
                     self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
                 elif len(self.x_axis) != len(data):
                     self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
 
-                self.plot_channels[ind_plot].setData(x=self.x_axis, y=data)
+                self.plot_channels[ind_plot].setData(x=self.x_axis, y=data, pen=pens[ind_plot], symbol=symbol,
+                                                     symbolBrush=symbolBrushs[ind_plot], symbolSize=symbolSize,
+                                                     pxMode=True)
 
                 if self.ui.zoom_pb.isChecked():
                     self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)

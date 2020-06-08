@@ -147,7 +147,7 @@ class ScanParameters:
 
             elif self.scan_subtype == 'Adaptive':
                 # return an "empty" ScanInfo as positions will be "set" during the scan
-                self.scan_info = ScanInfo(Nsteps=0, positions=np.array([]), axes_unique=[np.array([])],
+                self.scan_info = ScanInfo(Nsteps=0, positions=np.array([0, 1]), axes_unique=[np.array([])],
                               axes_indexes=np.array([]))
 
             else:
