@@ -8,6 +8,9 @@ class QVector(QtCore.QLineF):
     def __init__(self, *elt):
         super().__init__(*elt)
 
+    def __repr__(self):
+        return f"PyMoDAQ's QVector({self.x1()}, {self.y1()}, {self.x2()}, {self.y2()})"
+
     def __add__(self, qvect):
         v = QVector(self.x1() + qvect.x1(), self.y1() + qvect.y1(), self.x2() + qvect.x2(), self.y2() + qvect.y2())
         return v
@@ -28,6 +31,9 @@ class QVector(QtCore.QLineF):
     def vectorize(self):
         v = QVector(QtCore.QPointF(0, 0), self.p2() - self.p1())
         return v
+
+    def norm(self):
+        return self.length()
 
     def unitVector(self):
         vec = self * (1 / self.length())

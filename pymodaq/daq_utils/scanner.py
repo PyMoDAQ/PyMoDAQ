@@ -9,7 +9,7 @@ from pymodaq.daq_utils.daq_utils import linspace_step, odd_even, greater2n, find
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.gui_utils as gutils
-
+from pymodaq.daq_utils.plotting.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.exceptions import ScannerException
@@ -33,7 +33,7 @@ except:
     logger.info('adaptive module is not present, no adaptive scan possible')
 
 class ScanInfo:
-    def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None):
+    def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, **kwargs):
         """
 
         Parameters
@@ -48,6 +48,8 @@ class ScanInfo:
         self.positions = positions
         self.axes_indexes = axes_indexes
         self.axes_unique = axes_unique
+        for k in kwargs:
+            setattr(self, k, kwargs[k])
 
     def __repr__(self):
         return f'[ScanInfo with {self.Nsteps} positions of shape {self.positions.shape})'
@@ -108,6 +110,9 @@ class ScanParameters:
             return self.scan_info.axes_indexes
         elif item == 'axes_unique':
             return self.scan_info.axes_unique
+        else:
+            if hasattr(self.scan_info, item):
+                return getattr(self.scan_info, item)
 
     @classmethod
     def get_info_from_positions(cls, positions):
@@ -192,8 +197,17 @@ class ScanParameters:
                 self.scan_info = self.get_info_from_positions(self.positions)
             elif self.scan_subtype == 'Adaptive':
                 # return an "empty" ScanInfo as positions will be "set" during the scan
+                #but adds some usefull info such as total length and list of vectors
+                vectors = []
+                length = 0.
+
+                for ind in range(len(self.starts)):
+                    vectors.append(QVector(self.starts[ind][0], self.starts[ind][1],
+                                           self.stops[ind][0], self.stops[ind][1]))
+                    length += vectors[-1].norm()
+
                 self.scan_info = ScanInfo(Nsteps=0, positions=np.zeros([0, self.Naxes]), axes_unique=[np.array([])],
-                                          axes_indexes=np.array([]))
+                                          axes_indexes=np.array([]), vectors=vectors, length=length)
             else:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
         return self.scan_info
