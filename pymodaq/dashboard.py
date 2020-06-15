@@ -863,7 +863,6 @@ class DashBoard(QObject):
             elif change == 'value':
                 if param.name() == 'log_level':
                     logger.setLevel(getattr(logging, param.value().upper()))
-                #TODO set a proper logging scheme: https://docs.python.org/3/howto/logging.html
             elif change == 'parent':
                 pass
 

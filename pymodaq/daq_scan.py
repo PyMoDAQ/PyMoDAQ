@@ -30,15 +30,20 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.h5modules import H5Saver
-import time
-
-
 
 logger = utils.set_logger(utils.get_module_name(__file__))
+
 try:
     import adaptive
+    from adaptive.learner import learner1D
+    from adaptive.learner import learner2D
+
+    adaptive_losses = dict(
+        loss1D=['default', 'curvature', 'uniform'],
+        loss2D=['default', 'resolution', 'uniform', 'triangle'])
+
 except:
-    logger.info('adaptive module is not present, no adaptive scan possible')
+    logger.info('Adaptive module is not present, no adaptive scan possible')
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
@@ -90,6 +95,7 @@ class DAQ_Scan(QObject):
         self.scan_data_1D_average = np.array([])
         self.scan_data_2D = []
         self.scan_data_2D_average = []
+        self.curvilinear_values = []
         self.ind_scan = 0
         self.ind_average = 0
         self.scan_positions = []
@@ -107,7 +113,7 @@ class DAQ_Scan(QObject):
         self.h5saver.settings.child(('custom_name')).hide()
         self.h5saver.new_file_sig.connect(self.create_new_file)
         self.h5arrays = OrderedDict([])
-        self.scanner = Scanner(actuators=self.move_modules)
+        self.scanner = Scanner(actuators=self.move_modules, adaptive_losses=adaptive_losses)
         self.scan_parameters = None
 
         self.modules_manager = ModulesManager()
@@ -228,11 +234,12 @@ class DAQ_Scan(QObject):
             # incrementing scan index, otherwise current scan is overwritten
             if scan_type == 'Scan1D' or\
                     (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or\
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2):
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or\
+                    scan_type == 'Tabular':
                 live_group = self.h5saver.add_live_scan_group(self.h5saver.current_scan_group, '1D', title='',
                                                               settings_as_xml='', metadata=dict([]))
-            elif scan_type == 'Scan2D' or\
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
+            else:  # scan_type == 'Scan2D' or\
+                #  (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
                 live_group = self.h5saver.add_live_scan_group(self.h5saver.current_scan_group, '2D', title='',
                                                               settings_as_xml='', metadata=dict([]))
 
@@ -566,10 +573,10 @@ class DAQ_Scan(QObject):
 
             self.scanner.set_scan()
 
-            if len(self.modules_manager.actuators) < self.scanner.scan_parameters.Naxes:
+            if len(self.modules_manager.actuators) != self.scanner.scan_parameters.Naxes:
                 msgBox = QtWidgets.QMessageBox(parent=None)
                 msgBox.setWindowTitle("Error")
-                msgBox.setText("There are not enough selected move modules")
+                msgBox.setText("There are not enough or too much selected move modules for this scan")
                 ret = msgBox.exec()
                 return
 
@@ -913,6 +920,7 @@ class DAQ_Scan(QObject):
         self.plot_2D_ini = False
         self.plot_1D_ini = False
         self.scan_positions = []
+        self.curvilinear_values = []
         res = self.set_scan()
         if res:
 
@@ -1116,7 +1124,10 @@ class DAQ_Scan(QObject):
                 if not display_as_sequence:
                     self.scan_x_axis = np.array(self.scan_positions)
                 else:
-                    self.scan_x_axis = np.linspace(0, len(self.scan_positions)-1,
+                    if isadaptive:
+                        self.scan_x_axis = np.array(self.curvilinear_values)
+                    else:
+                        self.scan_x_axis = np.linspace(0, len(self.scan_positions)-1,
                                                        len(self.scan_positions))
             else:
                 if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
@@ -1145,9 +1156,10 @@ class DAQ_Scan(QObject):
                                     units=self.modules_manager.actuators[0].settings.child('move_settings',
                                                                                            'units').value())
             else:
-                x_axis = utils.Axis(data=x_axis_sorted,
-                                    label='Scan index',
-                                    units='')
+                if isadaptive:
+                    x_axis = utils.Axis(data=x_axis_sorted, label='Curvilinear value', units='')
+                else:
+                    x_axis = utils.Axis(data=x_axis_sorted, label='Scan index', units='')
 
             self.ui.scan1D_graph.x_axis = x_axis
             self.ui.scan1D_graph.show_data(data_sorted)
@@ -1408,6 +1420,9 @@ class DAQ_Scan(QObject):
                               (scan_type == 'Tabular' and not self.scanner.scan_parameters.Naxes == 1)
         isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
 
+        if 'curvilinear' in datas:
+            self.curvilinear_values.append(datas['curvilinear'])
+
         try:
             if scan_type == 'Scan1D' or\
                     (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or\
@@ -1491,6 +1506,8 @@ class DAQ_Scan_Acquisition(QObject):
         self.modules_manager = modules_manager
         self.modules_manager.timeout_signal.connect(self.timeout)
         self.timeout_scan_flag = False
+
+        self.curvilinear = None #used for adaptive/Tabular scan mode
 
         self.scan_x_axis = None
         self.scan_y_axis = None
@@ -1668,7 +1685,8 @@ class DAQ_Scan_Acquisition(QObject):
             self.det_done_flag = True
 
             self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
-                                                datas=self.scan_read_datas))
+                                                datas=self.scan_read_datas,
+                                                curvilinear=self.curvilinear))
         except Exception as e:
             logger.exception(str(e))
             #self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
@@ -1786,17 +1804,42 @@ class DAQ_Scan_Acquisition(QObject):
                 self.scan_shape.append(self.Naverage)
 
             if self.isadaptive:
-                if self.scan_parameters.scan_type == 'Scan1D':
-                    learner = adaptive.learner.learner1D.Learner1D(None, bounds=[self.scan_parameters.starts[0],
-                                                                                 self.scan_parameters.stops[0]])
-                elif self.scan_parameters.scan_type == 'Tabular':
-                    # algo will give normalized curvilinear positions
-                    learner = adaptive.learner.learner1D.Learner1D(None, bounds=[0, len(self.scan_parameters.starts)])
+                """
+                adaptive_losses = dict(
+                loss1D=['default', 'curvature', 'uniform'],
+                loss2D=['default', 'resolution', 'uniform', 'triangle'])
+                """
+                if self.scan_parameters.scan_type == 'Scan1D' or self.scan_parameters.scan_type == 'Tabular':
+                    if self.scan_parameters.adaptive_loss == 'curvature':
+                        loss = adaptive.learner.learner1D.curvature_loss_function()
+                    elif self.scan_parameters.adaptive_loss == 'uniform':
+                        loss = adaptive.learner.learner1D.uniform_loss
+                    else:
+                        loss = adaptive.learner.learner1D.default_loss
+                    if self.scan_parameters.scan_type == 'Scan1D':
+                        bounds = [self.scan_parameters.starts[0], self.scan_parameters.stops[0]]
+                    else:
+                        length = 0.
+                        for vec in self.scan_parameters.vectors:
+                            length += vec.norm()
+                        bounds = [0., length]
+
+                    learner = adaptive.learner.learner1D.Learner1D(None, bounds=bounds,
+                                                                   loss_per_interval=loss)
+
 
                 elif self.scan_parameters.scan_type == 'Scan2D':
-                    loss = adaptive.learner.learner2D.resolution_loss_function(
-                        min_distance=self.scan_parameters.steps[0]/100,
-                        max_distance=self.scan_parameters.steps[1]/100)
+                    if self.scan_parameters.adaptive_loss == 'resolution':
+                        loss = adaptive.learner.learner2D.resolution_loss_function(
+                            min_distance=self.scan_parameters.steps[0]/100,
+                            max_distance=self.scan_parameters.steps[1]/100)
+                    elif self.scan_parameters.adaptive_loss == 'uniform':
+                        loss = adaptive.learner.learner2D.uniform_loss
+                    elif self.scan_parameters.adaptive_loss == 'triangle':
+                        loss = adaptive.learner.learner2D.triangle_loss
+                    else:
+                        loss = adaptive.learner.learner2D.default_loss
+
                     learner = adaptive.learner.learner2D.Learner2D(None,
                                                                    bounds=[b for b in zip(self.scan_parameters.starts,
                                                                                           self.scan_parameters.stops)],
@@ -1820,12 +1863,15 @@ class DAQ_Scan_Acquisition(QObject):
                     else:
                         positions = learner.ask(1)[0][-1]  #next point to probe
                         if self.scan_parameters.scan_type == 'Tabular': #translate normalized curvilinear position to real coordinates
-                            curvilinear = positions
-                            if curvilinear == len(self.scan_parameters.starts):
-                                frac_curvilinear, ind_vector = 1.0, len(self.scan_parameters.starts)-1
-                            else:
-                                frac_curvilinear, ind_vector = np.modf(positions)
-                            vec = self.scan_parameters.vectors[int(ind_vector)]
+                            self.curvilinear = positions
+                            length = 0.
+                            for v in self.scan_parameters.vectors:
+                                length += v.norm()
+                                if length >= self.curvilinear:
+                                    vec = v
+                                    frac_curvilinear = (self.curvilinear - (length - v.norm())) / v.norm()
+                                    break
+
                             position = (vec.vectorize()*frac_curvilinear).translate_to(vec.p1()).p2()
                             positions = [position.x(), position.y()]
 
@@ -1839,13 +1885,17 @@ class DAQ_Scan_Acquisition(QObject):
                     self.det_done(self.modules_manager.grab_datas(positions=positions), positions)
 
                     if self.isadaptive:
-                        if self.scan_parameters.scan_type == 'Tabular':
-                            self.curvilinear_array.append(np.array([curvilinear]))
-                        if not self.scan_parameters.scan_type == 'Scan2D':
-                            positions = positions[0]
                         det_channel = self.modules_manager.get_selected_probed_data()
                         det, channel = det_channel[0].split('/')
-                        learner.tell(positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])
+                        if self.scan_parameters.scan_type == 'Tabular':
+                            self.curvilinear_array.append(np.array([self.curvilinear]))
+                            new_positions = self.curvilinear
+                        elif self.scan_parameters.scan_type == 'Scan1D':
+                            new_positions = positions[0]
+                        else:
+                            new_positions = positions[:]
+
+                        learner.tell(new_positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])
 
             self.h5saver.h5_file.flush()
             self.modules_manager.connect_actuators(False)

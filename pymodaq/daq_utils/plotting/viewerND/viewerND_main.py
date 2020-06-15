@@ -324,9 +324,17 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     else:
                         navigator_data = [self.nav_axes_dicts[0]['data']]
                     if self.is_spread:
-                        data_spread = self.nav_axes_dicts[0]['datas'][:]
+                        if self.scan_type.lower() == 'tabular':
+                            data_spread = []
+                            for ind_label, lab in enumerate(labels):
+                                if 'curvilinear' in lab.lower():
+                                    data_spread = [self.nav_axes_dicts[0]['datas'][ind]]
+                        else:
+                            data_spread = self.nav_axes_dicts[0]['datas'][:]
+
                         data_spread.append(self.get_nav_data(datas_transposed, ROI_bounds_1D, ROI_bounds_2D)[0])
                         data_spread = np.vstack(data_spread).T
+
                 else:
                     navigator_data = self.get_nav_data(datas_transposed, ROI_bounds_1D, ROI_bounds_2D)
 
@@ -341,10 +349,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
                             self.ui.spread_viewer_2D.set_axis_label(dict(orientation='left', label=labels[1],
                                                                          units=units[1]))
                     else:
-                        self.ui.spread_viewer_1D.show_data([data_spread[:, 1]], labels=['data'],
-                                                           x_axis=data_spread[:, 0])
+                        ind_sorted = np.argsort(data_spread[:, 0])
+                        self.ui.spread_viewer_1D.show_data([data_spread[:, 1][ind_sorted]], labels=['data'],
+                                                           x_axis=data_spread[:, 0][ind_sorted])
                         self.ui.spread_viewer_1D.set_axis_label(dict(orientation='bottom',
-                                                                     label=labels[0], units=units[0]))
+                                                                     label='Curvilinear value', units=''))
 
                 if temp_data:
                     self.ui.navigator1D.show_data_temp(navigator_data)
@@ -679,7 +688,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                  'readonly': True},
             )
 
-    def show_data(self, datas, temp_data=False, nav_axes=None, is_spread='uniform', scan_type='', **kwargs):
+    def show_data(self, datas, temp_data=False, nav_axes=None, is_spread=False, scan_type='', **kwargs):
         """Display datas as a hyperspaced dataset
         only one numpy ndarray should be used
         """
