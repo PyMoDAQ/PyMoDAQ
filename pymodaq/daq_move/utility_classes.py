@@ -48,7 +48,7 @@ class DAQ_Move_base(QObject):
     Parameters
     ----------
     parent : DAQ_Move_stage instance (see daq_viewer_main module)
-    params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the preset)
+    params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the managers)
 
 
     :ivar Move_Done_signal: pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
@@ -63,7 +63,7 @@ class DAQ_Move_base(QObject):
                     on the GUI settings will be transferred to this attribute. It stores at all times the current state of the hardware/plugin
 
     :ivar params: class level attribute. List of dict used to create a Parameter object. Its definition on the class level enable
-                  the automatic update of the GUI settings when changing plugins (even in preset mode creation). To be populated
+                  the automatic update of the GUI settings when changing plugins (even in managers mode creation). To be populated
                   on the plugin level as the base class does't represents a real hardware
 
     :ivar is_multiaxes: class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define

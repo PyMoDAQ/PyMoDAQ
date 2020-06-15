@@ -1,5 +1,7 @@
-
+from PyQt5 import QtCore
+from PyQt5.QtCore import QVariant
 import sys
+
 import traceback
 from collections import OrderedDict
 
@@ -7,6 +9,7 @@ import numpy as np
 import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE
+
 
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
@@ -19,10 +22,13 @@ from logging.handlers import TimedRotatingFileHandler
 import inspect
 import json
 
-plot_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', ' w']
+
+plot_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
+
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
+
 
 
 class JsonConverter:
@@ -55,6 +61,36 @@ class JsonConverter:
                 return dic
         except:
             return jsonstring
+
+def decode_data(encoded_data):
+    """
+    Decode QbyteArrayData generated when drop items in table/tree/list view
+    Parameters
+    ----------
+    encoded_data: QByteArray
+                    Encoded data of the mime data to be dropped
+    Returns
+    -------
+    data: list
+            list of dict whose key is the QtRole in the Model, and the value a QVariant
+
+    """
+    data = []
+
+    ds = QtCore.QDataStream(encoded_data, QtCore.QIODevice.ReadOnly)
+    while not ds.atEnd():
+        row = ds.readInt32()
+        col = ds.readInt32()
+
+        map_items = ds.readInt32()
+        item = {}
+        for ind in range(map_items):
+            key = ds.readInt32()
+            value = QVariant()
+            ds >> value
+            item[QtCore.Qt.ItemDataRole(key)] = value.value()
+        data.append(item)
+    return data
 
 
 ####################################
@@ -309,6 +345,19 @@ def getLineInfo():
     return res
 
 
+    def __repr__(self):
+        if self.axis_seq_indexes == []:
+            return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1), len(self.axis_2D_2))
+        else:
+            shape = ''
+            for ind, axis in enumerate(self.axis_seq):
+                if ind != len(self.axis_seq)-1:
+                    shape += '{:d}, '.format(len(axis))
+                else:
+                    shape += '{:d}'.format(len(axis))
+            return 'Scanner with {:d} positions and shape:({:s})'.format(self.Nsteps, shape)
+
+
 class ThreadCommand(object):
     """ | Micro class managing the thread commands.
         |
@@ -326,12 +375,14 @@ class ThreadCommand(object):
         self.command = command
         self.attributes = attributes
 
+
+
 class Axis(dict):
     """
-    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as attributes or dictionary keys
+    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
     """
 
-    def __init__(self, data=None, label='', units=''):
+    def __init__(self, data=None, label='', units='', **kwargs):
         """
 
         Parameters
@@ -355,47 +406,143 @@ class Axis(dict):
         if not isinstance(units, str):
             raise TypeError('units for the Axis class should be a string')
         self['units'] = units
+        self.update(kwargs)
 
-
-class DataToExport(OrderedDict):
-    def __init__(self, data=None, type='raw', subtype='linear', x_axis=Axis(), y_axis=Axis()):
+class Data(OrderedDict):
+    def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis()):
         """
-        Utility class defining a data being exported for pymodaq's viewers, attributes can be accessed as attributes
-        or dictionary keys
+        Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
+        attributes can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
-        data: (ndarray)
-        type: (str) either 'raw' or 'roi...'
-        subtype: (str) either 'linear' or 'spread'
+        source: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
+        distribution: (str) either 'uniform' or 'spread'
         x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
          x positions of the spread points)
         """
-        if data is None or isinstance(data, np.ndarray):
-            self['data'] = data
-        else:
-            raise TypeError('data for the DataToExport class should be a ndarray')
 
-        if not isinstance(type, str):
-            raise TypeError('type for the DataToExport class should be a string')
-        elif 'raw' not in type or 'roi' not in type:
-            raise ValueError('Invalid "type" for the DataToExport class')
-        self['type'] = type
+        if not isinstance(name, str):
+            raise TypeError('name for the DataToExport class should be a string')
+        self['name'] = name
+        if not isinstance(source, str):
+            raise TypeError('source for the DataToExport class should be a string')
+        elif not('raw' in source or 'roi' in source):
+            raise ValueError('Invalid "source" for the DataToExport class')
+        self['source'] = source
 
-        if not isinstance(subtype, str):
-            raise TypeError('subtype for the DataToExport class should be a string')
-        elif subtype not in ('linear', 'spread'):
-            raise ValueError('Invalid "subtype" for the DataToExport class')
-        self['subtype'] = subtype
+        if not isinstance(distribution, str):
+            raise TypeError('distribution for the DataToExport class should be a string')
+        elif distribution not in ('uniform', 'spread'):
+            raise ValueError('Invalid "distribution" for the DataToExport class')
+        self['distribution'] = distribution
+
 
         if not isinstance(x_axis, Axis):
-            raise TypeError('x_axis for the DataToExport class should be a Axis class')
-        self['x_axis'] = x_axis
+            if isinstance(x_axis, np.ndarray):
+                x_axis = Axis(data=x_axis)
+            else:
+                raise TypeError('x_axis for the DataToExport class should be a Axis class')
+            self['x_axis'] = x_axis
+        elif x_axis['data'] is not None:
+            self['x_axis'] = x_axis
 
         if not isinstance(y_axis, Axis):
-            raise TypeError('y_axis for the DataToExport class should be a Axis class')
-        self['y_axis'] = y_axis
+            if isinstance(y_axis, np.ndarray):
+                y_axis = Axis(data=y_axis)
+            else:
+                raise TypeError('y_axis for the DataToExport class should be a Axis class')
+            self['y_axis'] = y_axis
+        elif y_axis['data'] is not None:
+            self['y_axis'] = y_axis
+
+class DataFromPlugins(Data):
+
+    def __init__(self, data=None, dim='', labels=[], nav_axes=[], nav_x_axis=Axis(), nav_y_axis=Axis(), **kwargs):
+        """
+        Parameters
+        ----------
+        dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
+
+
+        """
+        super().__init__(**kwargs)
+        self['labels'] = labels
+        if len(nav_axes) != 0:
+            self['nav_axes'] = nav_axes
+        if nav_x_axis['data'] is not None:
+            self['nav_x_axis'] = nav_x_axis
+        if nav_y_axis['data'] is not None:
+            self['nav_y_axis'] = nav_y_axis
+
+        iscorrect = True
+        if data is not None:
+            if isinstance(data, list):
+                for dat in data:
+                    if not isinstance(dat, np.ndarray):
+                        iscorrect = False
+            else:
+                iscorrect = False
+
+        if iscorrect:
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataFromPlugins class should be None or a list of numpy arrays')
+
+        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') and data is not None:
+            ndim = len(data[0].shape)
+            if ndim == 1:
+                if data[0].size == 1:
+                    dim = 'Data0D'
+                else:
+                    dim = 'Data1D'
+            elif ndim == 2:
+                dim = 'Data2D'
+            else:
+                dim = 'DataND'
+        self['dim'] = dim
+
+class DataToExport(Data):
+    def __init__(self, data=None, dim='', **kwargs):
+        """
+        Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary keys
+        Parameters
+        ----------
+        data: (ndarray or a scalar)
+        dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
+        """
+        super().__init__(**kwargs)
+        if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataToExport class should be a scalar or a ndarray')
+
+        iscorrect = True
+        if data is not None:
+            if not (isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int)):
+                iscorrect = False
+
+        if iscorrect:
+            self['data'] = data
+        else:
+            raise TypeError('data for the DataToExport class should be a scalar or a numpy array')
+
+        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') or data is not None:
+            if isinstance(data, np.ndarray):
+                ndim = len(data.shape)
+                if ndim == 1:
+                    if data.size == 1:
+                        dim = 'Data0D'
+                    else:
+                        dim = 'Data1D'
+                elif ndim == 2:
+                    dim = 'Data2D'
+                else:
+                    dim = 'DataND'
+            else:
+                dim = 'Data0D'
+        self['dim'] = dim
 
 class ScaledAxis(Axis):
     def __init__(self, label='', units='', offset=0, scaling=1):
@@ -416,6 +563,14 @@ class ScalingOptions(dict):
         self['scaled_xaxis'] = scaled_xaxis
         self['scaled_yaxis'] = scaled_yaxis
 
+def recursive_find_files_extension(ini_path, ext, paths=[]):
+    with os.scandir(ini_path) as it:
+        for entry in it:
+            if os.path.splitext(entry.name)[1][1:] == ext and entry.is_file():
+                paths.append(entry.path)
+            elif entry.is_dir():
+                recursive_find_files_extension(entry.path, ext, paths)
+    return paths
 
 def rint(x):
     """
@@ -608,7 +763,7 @@ def get_set_config_path(config_name='config'):
 
 
 def get_set_preset_path():
-    """ creates and return the config folder path for preset files
+    """ creates and return the config folder path for managers files
     """
     return get_set_config_path('preset_configs')
 
@@ -638,7 +793,7 @@ def get_set_overshoot_path():
 
 
 def get_set_roi_path():
-    """ creates and return the config folder path for preset files
+    """ creates and return the config folder path for managers files
     """
     return get_set_config_path('roi_configs')
 
@@ -809,242 +964,6 @@ def set_param_from_param(param_old, param_new):
         #    print(str(e))
 
 
-####################
-##Scan utilities
-
-
-class ScanParameters(object):
-    """
-    Utility class to store information about 1D or 2D scans
-    """
-
-    def __init__(self, Nsteps=0, axis_1_indexes=[], axis_2_indexes=[], axis_1_unique=[], axis_2_unique=[],
-                 positions=[]):
-        """
-
-        Parameters
-        ----------
-        Nsteps: (int) Number of steps of the scan
-        axis_1_indexes: (ndarray) 1D array of Nsteps length where each element is the index of the corresponding axis
-                    position within the scan
-        axis_2_indexes: (ndarray)
-        axis_1_unique: (ndarray) 1D array of unique positions of axis 1 in increasing order
-        axis_2_unique: (ndarray)
-        positions: (list of list) list of Nsteps elements where each elements is itself a list of positions for all
-                defined axes (and actuators)
-        """
-        super(ScanParameters, self).__init__()
-        self.positions = positions
-        self.axis_2D_1 = axis_1_unique
-        self.axis_2D_2 = axis_2_unique
-        self.axis_2D_1_indexes = axis_1_indexes
-        self.axis_2D_2_indexes = axis_2_indexes
-        self.Nsteps = Nsteps
-
-    def __repr__(self):
-        return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1),
-                                                                           len(self.axis_2D_2))
-
-
-def set_scan_spiral(start_axis1, start_axis2, rmax, rstep, oversteps=10000):
-    """
-
-    Parameters
-    ----------
-    start_axis1
-    start_axis2
-    rmax
-    rstep
-    oversteps: (int) maximum number of calculated steps (stops the steps calculation if over the first power of 2 greater than oversteps)
-
-    Returns
-    -------
-    ScanParameters instance
-
-    See Also
-    --------
-    ScanParameters
-    """
-    if rmax == 0 or np.abs(rmax) < 1e-12 or np.abs(rstep) < 1e-12:
-        return ScanParameters(1, np.array([0]), np.array([0]), np.array([start_axis1]),
-                              np.array([start_axis2]), [np.array([start_axis1]), np.array([start_axis2])])
-
-    ind = 0
-    flag = True
-    oversteps = greater2n(oversteps)  # make sure the position matrix is still a square
-
-    Nlin = np.trunc(rmax / rstep)
-    axis_1_indexes = [0]
-    axis_2_indexes = [0]
-    while flag:
-        if odd_even(ind):
-            step = 1
-        else:
-            step = -1
-        if flag:
-
-            for ind_step in range(ind):
-                axis_1_indexes.append(axis_1_indexes[-1] + step)
-                axis_2_indexes.append(axis_2_indexes[-1])
-                if len(axis_1_indexes) >= (2 * Nlin + 1) ** 2 or len(axis_1_indexes) >= oversteps:
-                    flag = False
-                    break
-        if flag:
-            for ind_step in range(ind):
-
-                axis_1_indexes.append(axis_1_indexes[-1])
-                axis_2_indexes.append(axis_2_indexes[-1] + step)
-                if len(axis_1_indexes) >= (2 * Nlin + 1) ** 2 or len(axis_1_indexes) >= oversteps:
-                    flag = False
-                    break
-        ind += 1
-
-    axis_1_indexes = np.array(axis_1_indexes, dtype=int)
-    axis_2_indexes = np.array(axis_2_indexes, dtype=int)
-
-    axis_1_unique = np.unique(axis_1_indexes)
-    axis_1_unique = axis_1_unique.astype(float)
-    axis_2_unique = np.unique(axis_2_indexes)
-    axis_2_unique = axis_2_unique.astype(float)
-    axis_1 = np.zeros_like(axis_1_indexes, dtype=float)
-    axis_2 = np.zeros_like(axis_2_indexes, dtype=float)
-
-    positions = []
-    for ind in range(len(axis_1)):
-        axis_1[ind] = axis_1_indexes[ind] * rstep + start_axis1
-        axis_2[ind] = axis_2_indexes[ind] * rstep + start_axis2
-        positions.append([axis_1[ind], axis_2[ind]])
-
-    for ind in range(len(axis_1_unique)):
-        axis_1_unique[ind] = axis_1_unique[ind] * rstep + start_axis1
-        axis_2_unique[ind] = axis_2_unique[ind] * rstep + start_axis2
-
-    axis_1_indexes = axis_1_indexes - np.min(axis_1_indexes)
-    axis_2_indexes = axis_2_indexes - np.min(axis_2_indexes)
-
-    Nsteps = len(positions)
-    return ScanParameters(Nsteps, axis_1_indexes, axis_2_indexes, axis_1_unique, axis_2_unique, positions)
-
-
-def set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, back_and_force=False,
-                    oversteps=10000):
-    """
-        Set a linear scan
-    Parameters
-    ----------
-    start_axis1
-    start_axis2
-    stop_axis1
-    stop_axis2
-    step_axis1
-    step_axis2
-    back_and_force: (bool) if True insert between two steps a position back to start (to be used as a reference in the scan analysis)
-    oversteps: (int) maximum number of calculated steps (stops the steps calculation if over the first power of 2 greater than oversteps)
-
-    Returns
-    -------
-    ScanParameters instance
-
-    See Also
-    --------
-    ScanParameters
-    """
-
-    if np.abs(step_axis1) < 1e-12 or \
-            np.abs(step_axis2) < 1e-12 or \
-            np.sign(stop_axis1 - start_axis1) != np.sign(step_axis1) or \
-            np.sign(stop_axis2 - start_axis2) != np.sign(step_axis2) or \
-            start_axis1 == stop_axis1 or \
-            start_axis2 == stop_axis2:
-        return ScanParameters(1, np.array([0]), np.array([0]), np.array([start_axis1]),
-                              np.array([start_axis2]), [np.array([start_axis1]), np.array([start_axis2])])
-
-    else:
-        axis_1_unique = linspace_step(start_axis1, stop_axis1, step_axis1)
-        len1 = len(axis_1_unique)
-
-        axis_2_unique = linspace_step(start_axis2, stop_axis2, step_axis2)
-        len2 = len(axis_2_unique)
-        # if number of steps is over oversteps, reduce both axis in the same ratio
-        if len1 * len2 > oversteps:
-            axis_1_unique = axis_1_unique[:int(np.ceil(np.sqrt(oversteps * len1 / len2)))]
-            axis_2_unique = axis_2_unique[:int(np.ceil(np.sqrt(oversteps * len2 / len1)))]
-
-        positions = []
-        axis_1_indexes = []
-        axis_2_indexes = []
-        axis_1 = []
-        axis_2 = []
-        for ind_x, pos1 in enumerate(axis_1_unique):
-            if back_and_force:
-                for ind_y, pos2 in enumerate(axis_2_unique):
-                    if not odd_even(ind_x):
-                        positions.append([pos1, pos2])
-                        axis_1.append(pos1)
-                        axis_2.append(pos2)
-                        axis_1_indexes.append(ind_x)
-                        axis_2_indexes.append(ind_y)
-                    else:
-                        positions.append([pos1, axis_2_unique[len(axis_2_unique) - ind_y - 1]])
-                        axis_1.append(pos1)
-                        axis_2.append(axis_2_unique[len(axis_2_unique) - ind_y - 1])
-                        axis_1_indexes.append(ind_x)
-                        axis_2_indexes.append(len(axis_2_unique) - ind_y - 1)
-            else:
-                for ind_y, pos2 in enumerate(axis_2_unique):
-                    axis_1.append(pos1)
-                    axis_2.append(pos2)
-                    positions.append([pos1, pos2])
-                    axis_1_indexes.append(ind_x)
-                    axis_2_indexes.append(ind_y)
-
-        Nsteps = len(positions)
-        return ScanParameters(Nsteps, np.array(axis_1_indexes), np.array(axis_2_indexes), axis_1_unique, axis_2_unique,
-                              positions)
-
-
-def set_scan_random(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2, oversteps=10000):
-    """
-
-    Parameters
-    ----------
-    start_axis1
-    start_axis2
-    stop_axis1
-    stop_axis2
-    step_axis1
-    step_axis2
-
-    Returns
-    -------
-
-    """
-    if np.abs(step_axis1) < 1e-12 or \
-            np.abs(step_axis2) < 1e-12 or \
-            np.sign(stop_axis1 - start_axis1) != np.sign(step_axis1) or \
-            np.sign(stop_axis2 - start_axis2) != np.sign(step_axis2) or \
-            start_axis1 == stop_axis1 or \
-            start_axis2 == stop_axis2:
-        return ScanParameters(1, np.array([0]), np.array([0]), np.array([start_axis1]),
-                              np.array([start_axis2]), [np.array([start_axis1]), np.array([start_axis2])])
-
-    scan_parameters = set_scan_linear(start_axis1, start_axis2, stop_axis1, stop_axis2, step_axis1, step_axis2,
-                                      back_and_force=False, oversteps=oversteps)
-
-    positions_shuffled = scan_parameters.positions[:]
-    np.random.shuffle(positions_shuffled)
-    axis_1_indexes = []
-    axis_2_indexes = []
-
-    for pos in positions_shuffled:
-        axis_1_indexes.append(np.where(scan_parameters.axis_2D_1 == pos[0])[0][0])
-        axis_2_indexes.append(np.where(scan_parameters.axis_2D_2 == pos[1])[0][0])
-
-    Nsteps = len(scan_parameters.positions)
-    return ScanParameters(Nsteps, axis_1_indexes, axis_2_indexes, scan_parameters.axis_2D_1, scan_parameters.axis_2D_2,
-                          positions_shuffled)
-
-
 #########################
 ##File management
 
@@ -1203,6 +1122,11 @@ def find_index(x, threshold):
         out.append((ix, x[ix]))
     return out
 
+def find_common_index(x, y, x0, y0):
+    vals = x + 1j * y
+    val = x0 + 1j * y0
+    ind = int(np.argmin(np.abs(vals - val)))
+    return ind, x[ind], y[ind]
 
 def gauss1D(x, x0, dx, n=1):
     """

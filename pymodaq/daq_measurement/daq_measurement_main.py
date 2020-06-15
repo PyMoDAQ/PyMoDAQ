@@ -4,7 +4,7 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSi
 import sys
 from pymodaq.daq_measurement.daq_measurement_GUI import Ui_Form
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.fourier_filterer import FourierFilterer
+from pymodaq.daq_utils.math_utils import FourierFilterer
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
 import pyqtgraph as pg

@@ -6,15 +6,16 @@ Created on Mon Dec  4 10:59:53 2017
 
 """
 import sys
-import PyQt5
+import json
+import importlib
 from PyQt5 import QtWidgets,QtGui
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from pyqtgraph.parametertree import Parameter, ParameterItem
+from pyqtgraph.parametertree import Parameter, ParameterItem, ParameterTree
 from pyqtgraph.parametertree.Parameter import registerParameterType
-#from PyMoDAQ.daq_utils.plotting.select_item_tolist_main import Select_item_tolist_simpler
-from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear, make_enum
+
+from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 from collections import OrderedDict
 from decimal import Decimal as D
 
@@ -24,6 +25,16 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 import numpy as np
 import os
+
+
+def get_widget_from_tree(parameter_tree, widget_instance):
+    widgets = []
+    for item in parameter_tree.listAllItems():
+        if hasattr(item, 'widget'):
+            if isinstance(item.widget, widget_instance):
+                widgets.append(item.widget)
+    return widgets
+
 
 def get_param_path(param):
     """
@@ -59,24 +70,6 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         -------
         XML element : parent_elt
             XML element with subelements from Parameter object
-
-        Examples
-        -------
-        >>> from pyqtgraph.parametertree import Parameter, ParameterItem
-        >>> import xml.etree.ElementTree as ET
-        >>> params = [{title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'children': [
-                        {'title': 'Scan type:','name': 'scan2D_type', 'type': 'list', 'values': ['Spiral','Linear', 'back&forth'],'value': 'Spiral'},
-                        {'title': 'Rstep:','name': 'Rstep_2d', 'type': 'float', 'value': 1., 'visible':True},
-                        {'title': 'Rmax:','name': 'Rmax_2d', 'type': 'float', 'value': 10., 'visible':True}
-                        ]}]
-        >>> settings=Parameter.create(name='Settings', type='group', children=params)
-        >>> param_type=settings.type()
-        >>> base_elt=ET.Element(settings.name(),title=str(settings.opts['title']),type=param_type)
-
-        >>> XML_elt=walk_parameters_to_xml(param=settings)
-        >>> tree=ET.ElementTree(XML_elt)
-        >>> tree.write('settings.xml')
-
 
         See Also
         --------
@@ -151,6 +144,19 @@ def add_text_to_elt(elt, param):
         else:
             val = param.value()
         text = str(val)
+    elif param_type == 'date_time':
+        text = str(param.value().toSecsSinceEpoch())
+    elif param_type == 'date':
+        text = str(QDateTime(param.value()).toSecsSinceEpoch())
+    elif param_type == 'table_view':
+        try:
+            data = dict(classname=param.value().__class__.__name__,
+                        module=param.value().__class__.__module__,
+                        data=param.value().get_data_all(),
+                        header=param.value().header)
+            text = json.dumps(data)
+        except:
+            text = ''
     else:
         text = str(param.value())
     elt.text = text
@@ -445,43 +451,45 @@ def set_txt_from_elt(el, param_dict):
     """
     val_text = el.text
     param_type = el.get('type')
-
-    if param_type == 'float':
-        param_value = float(val_text)
-    elif param_type == 'int':
-        param_value = int(val_text)
-    elif param_type == 'slide':
-        param_value = float(val_text)
-    elif param_type == 'itemselect':
-        if val_text == 'None':
-            param_value = dict(all_items=[], selected=[])
-        else:
-            param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
-    elif param_type == 'bool':
-        param_value = bool(int(val_text))
-    elif param_type == 'bool_push':
-        param_value = bool(int(val_text))
-    elif 'led' in param_type:  #covers 'led' and 'led_push'types
-        param_value = bool(val_text)
-    elif param_type == 'date_time':
-        param_value = eval(val_text)
-    elif param_type == 'date':
-        param_value = eval(val_text)
-    elif param_type == 'table':
-        param_value = eval(val_text)
-    elif param_type == 'color':
-        param_value = QtGui.QColor(*eval(val_text))
-    elif param_type == 'list':
-        try:
+    if val_text is not None:
+        if param_type == 'float':
+            param_value = float(val_text)
+        elif param_type == 'int':
+            param_value = int(float(val_text))
+        elif param_type == 'slide':
+            param_value = float(val_text)
+        elif param_type == 'itemselect':
+            if val_text == 'None':
+                param_value = dict(all_items=[], selected=[])
+            else:
+                param_value = dict(all_items=eval(el.get('all_items', val_text)), selected=eval(val_text))
+        elif param_type == 'bool':
+            param_value = bool(int(val_text))
+        elif param_type == 'bool_push':
+            param_value = bool(int(val_text))
+        elif 'led' in param_type:  #covers 'led' and 'led_push'types
+            param_value = bool(val_text)
+        elif param_type == 'date_time':
+            param_value = QDateTime.fromSecsSinceEpoch(int(val_text))
+        elif param_type == 'date':
+            param_value = QDateTime.fromSecsSinceEpoch(int(val_text)).date()
+        elif param_type == 'table':
             param_value = eval(val_text)
-        except:
-            param_value = val_text  # for back compatibility
-    else:
-        param_value = val_text
-    param_dict.update(dict(value=param_value))
-
-    # if param_type == 'list':
-    #     param_dict.update(dict(values=[param_value]))
+        elif param_type == 'color':
+            param_value = QtGui.QColor(*eval(val_text))
+        elif param_type == 'list':
+            try:
+                param_value = eval(val_text)
+            except:
+                param_value = val_text  # for back compatibility
+        elif param_type == 'table_view':
+            data_dict = json.loads(val_text)
+            mod = importlib.import_module(data_dict['module'])
+            _cls = getattr(mod, data_dict['classname'])
+            param_value = _cls(data_dict['data'], header=data_dict['header'])
+        else:
+            param_value = val_text
+        param_dict.update(dict(value=param_value))
 
 
 
@@ -731,6 +739,9 @@ class SpinBoxCustom(SpinBox.SpinBox):
                 self.opts[k] = opts[k]
             elif k in self.opts:
                 self.opts[k] = opts[k]
+            elif 'tip' in k:
+                self.opts[k] = opts[k]
+                self.setToolTip(opts[k])
 
             elif k == 'show_pb':
                 pass
@@ -1208,11 +1219,14 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
 
         if 'readonly' in opts:
             self.updateDefaultBtn()
-            if isinstance(self.widget, (QtWidgets.QCheckBox,ColorButton.ColorButton)):
+            if isinstance(self.widget, (QtWidgets.QCheckBox, ColorButton.ColorButton)):
                 self.widget.setEnabled(not opts['readonly'])
 
         if 'minutes_increment' in opts:
             self.widget.setMinuteIncrement(opts['minutes_increment'])
+
+        if 'tip' in opts:
+            self.displayLabel.setToolTip(opts['tip'])
 
         ## If widget is a SpinBox, pass options straight through
         if isinstance(self.widget, SpinBoxCustom):
@@ -1223,6 +1237,10 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 opts['suffix'] = opts['units']
             self.widget.setOpts(**opts)
             self.updateDisplayLabel()
+
+        if 'title' in opts:
+            self.setText(0, opts['title']) #void QTreeWidgetItem::setText(int column, const QString &text)
+
 
 
 
@@ -1374,11 +1392,11 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
             limitsChanged, custom_parameter_tree.ItemSelect.setValue
         """
         if type(self.param.opts['limits']) == list:
-            text,ok = QtWidgets.QInputDialog.getText(None,"Enter a value to add to the parameter",
-                                             "String value:", QtWidgets.QLineEdit.Normal);
-            if ok and not (text==""):
+            text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
+                                                      "String value:", QtWidgets.QLineEdit.Normal);
+            if ok and not (text == ""):
                 self.param.opts['limits'].append(text)
-                self.limitsChanged(self.param,self.param.opts['limits'])
+                self.limitsChanged(self.param, self.param.opts['limits'])
                 self.param.setValue(text)
 
     def optsChanged(self, param, opts):
@@ -1414,8 +1432,9 @@ class ListParameter_custom(pTypes.ListParameter):
     """
     itemClass = ListParameterItem_custom
     sigActivated = pyqtSignal(object)
+
     def __init__(self, **opts):
-        super(ListParameter_custom,self).__init__( **opts)
+        super(ListParameter_custom, self).__init__(**opts)
 
 
     def activate(self):
@@ -1427,28 +1446,23 @@ class ListParameter_custom(pTypes.ListParameter):
 registerParameterType('list', ListParameter_custom, override=True)
 
 
-
-
-
 class Combo_pb(QtWidgets.QWidget):
 
-    def __init__(self,items=[]):
+    def __init__(self, items=[]):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Combo_pb,self).__init__()
-        self.items=items
+        super(Combo_pb, self).__init__()
+        self.items = items
         self.initUI()
-        self.count=self.combo.count
+        self.count = self.combo.count
 
     def initUI(self):
         """
             Init the User Interface.
         """
-
-
-        self.hor_layout=QtWidgets.QHBoxLayout()
-        self.combo=QtWidgets.QComboBox()
+        self.hor_layout = QtWidgets.QHBoxLayout()
+        self.combo = QtWidgets.QComboBox()
         self.combo.addItems(self.items)
-        self.add_pb=QtWidgets.QPushButton()
+        self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -1456,12 +1470,12 @@ class Combo_pb(QtWidgets.QWidget):
         self.hor_layout.addWidget(self.combo)
         self.hor_layout.addWidget(self.add_pb)
         self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0,0,0,0);
+        self.hor_layout.setContentsMargins(0, 0, 0, 0);
         self.add_pb.setMaximumWidth(25)
         self.setLayout(self.hor_layout)
 
 
-class TableParameterItem(pTypes.WidgetParameterItem):
+class TableParameterItem(WidgetParameterItemcustom):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
@@ -1589,8 +1603,8 @@ class TableParameter(Parameter):
 
 registerParameterType('table', TableParameter, override=True)
 
-class TableViewParameterItem(pTypes.WidgetParameterItem):
 
+class TableViewParameterItem(WidgetParameterItemcustom):
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
         self.hideWidget = False
@@ -1601,9 +1615,6 @@ class TableViewParameterItem(pTypes.WidgetParameterItem):
         """
             Check for changement in the Widget tree.
         """
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
-        #WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
@@ -1624,7 +1635,12 @@ class TableViewParameterItem(pTypes.WidgetParameterItem):
             --------
             Table_custom
         """
-        w = TableViewCustom()
+        menu = False
+        if 'menu' in self.param.opts:
+            menu = self.param.opts['menu']
+
+
+        w = TableViewCustom(menu=menu)
 
         w.setMaximumHeight(200)
         #self.table.setReadOnly(self.param.opts.get('readonly', False))
@@ -1632,6 +1648,43 @@ class TableViewParameterItem(pTypes.WidgetParameterItem):
         w.setValue = w.set_table_value
         w.sigChanged = w.valueChanged
         return w
+
+    def optsChanged(self, param, opts):
+        """
+            | Called when any options are changed that are not name, value, default, or limits.
+            |
+            | If widget is a SpinBox, pass options straight through.
+            | So that only the display label is shown when visible option is toggled.
+
+            =============== ================================== ==============================
+            **Parameters**    **Type**                           **Description**
+            *param*           instance of pyqtgraph parameter    the parameter to check
+            *opts*            string list                        the associated options list
+            =============== ================================== ==============================
+
+            See Also
+            --------
+            optsChanged
+        """
+        #print "opts changed:", opts
+        ParameterItem.optsChanged(self, param, opts)
+
+        if 'readonly' in opts:
+            self.updateDefaultBtn()
+            if isinstance(self.widget, (QtWidgets.QCheckBox,ColorButton.ColorButton)):
+                self.widget.setEnabled(not opts['readonly'])
+
+        if 'delegate' in opts:
+            styledItemDelegate = QtWidgets.QStyledItemDelegate()
+            styledItemDelegate.setItemEditorFactory(opts['delegate']())
+            self.widget.setItemDelegate(styledItemDelegate)
+
+        if 'menu' in opts:
+            self.widget.setmenu(opts['menu'])
+
+
+
+
 
 class TableViewCustom(QtWidgets.QTableView):
     """
@@ -1643,10 +1696,35 @@ class TableViewCustom(QtWidgets.QTableView):
     """
 
     valueChanged = pyqtSignal(list)
+    add_data_signal = pyqtSignal(int)
+    remove_row_signal = pyqtSignal(int)
+    load_data_signal = pyqtSignal()
+    save_data_signal = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, menu=False):
         super().__init__()
+        self.setmenu(menu)
 
+    def setmenu(self, status):
+        if status:
+            self.menu = QtWidgets.QMenu()
+            self.menu.addAction('Add new', self.add)
+            self.menu.addAction('Remove selected row', self.remove)
+            self.menu.addAction('Clear all', self.clear)
+            self.menu.addSeparator()
+            self.menu.addAction('Load as txt', lambda: self.load_data_signal.emit())
+            self.menu.addAction('Save as txt', lambda: self.save_data_signal.emit())
+        else:
+            self.menu = None
+
+    def clear(self):
+        self.model().clear()
+
+    def add(self):
+        self.add_data_signal.emit(self.currentIndex().row())
+
+    def remove(self):
+        self.remove_row_signal.emit(self.currentIndex().row())
 
 
     def data_has_changed(self, topleft, bottomright, roles):
@@ -1654,30 +1732,24 @@ class TableViewCustom(QtWidgets.QTableView):
 
     def get_table_value(self):
         """
-            Get the contents of the self coursed table.
 
-            Returns
-            -------
-            data : ordered dictionnary
-                The getted values dictionnary.
         """
         return self.model()
 
 
     def set_table_value(self,data_model):
         """
-            Set the data values dictionnary to the custom table.
 
-            =============== ====================== ================================================
-            **Parameters**    **Type**               **Description**
-            *data_dict*       ordered dictionnary    the contents to be stored in the custom table
-            =============== ====================== ================================================
         """
         try:
             self.setModel(data_model)
             self.model().dataChanged.connect(self.data_has_changed)
         except Exception as e:
             pass
+
+    def contextMenuEvent(self, event):
+        if self.menu is not None:
+            self.menu.exec(event.globalPos())
 
 class TableViewParameter(Parameter):
     """
@@ -1688,9 +1760,6 @@ class TableViewParameter(Parameter):
         =============== =================================
     """
     itemClass = TableViewParameterItem
-    """Editable string; displayed as large text box in the tree."""
-    # def __init(self):
-    #     super(TableParameter,self).__init__()
 
     def setValue(self, value):
         self.opts['value'] = value

@@ -19,7 +19,7 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
 
 from pymodaq.daq_utils.daq_utils import getLineInfo
-
+from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
@@ -27,12 +27,6 @@ from pymodaq.daq_utils.h5modules import H5Saver, H5LogHandler
 from pymodaq.daq_utils.db.db_logger.db_logger import DbLoggerGUI, DBLogHandler
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-
-
-
-
-
-
 
 class DAQ_Logger(QObject):
     """
@@ -43,13 +37,6 @@ class DAQ_Logger(QObject):
 
     params = [
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Detectors', 'name': 'detectors', 'type': 'group', 'children': [
-            {'name': 'Detectors', 'type': 'itemselect'},
-        ]},
-        {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
-            {'title': 'Wait time (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0},
-            {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
-        ]},
     ]
 
     def __init__(self, dockarea=None, dashboard=None):
@@ -77,6 +64,8 @@ class DAQ_Logger(QObject):
         self.logger = None #should be a reference either to self.h5saver or self.dblogger depending the choice of the user
         self.h5saver = H5Saver(save_type='logger')
         self.dblogger = DbLoggerGUI(self.dashboard.preset_file.stem)
+
+        self.modules_manager = ModulesManager()
 
         self.setupUI()
         self.setup_modules(self.dashboard.title)
@@ -156,7 +145,7 @@ class DAQ_Logger(QObject):
             if items_det != []:
                 preset_items_det = items_det
 
-            self.settings.child('detectors', 'Detectors').setValue(dict(all_items=items_det, selected=preset_items_det))
+            self.modules_manager.set_detectors(self.detector_modules, preset_items_det)
 
         except Exception as e:
             logger.exception(str(e))
@@ -186,9 +175,9 @@ class DAQ_Logger(QObject):
         settings_str += b'</All_settings>'
 
         if self.settings.child(('log_type')).value() == 'H5 File':
-            self.logger.settings.child(('base_name')).setValue('Data')
+            self.logger.settings.child(('base_name')).setValue('DataLogging')
             self.h5saver.init_file(update_h5=True, metadata=dict(settings=settings_str))
-            logger.addhandler(H5LogHandler(self.h5saver))
+            logger.addHandler(H5LogHandler(self.h5saver))
             self.h5saver.h5_file.flush()
 
         elif self.settings.child(('log_type')).value() == 'SQL DataBase':
@@ -210,46 +199,46 @@ class DAQ_Logger(QObject):
         """
         status = self.set_continuous_save()
         if status:
-            det_names_scan = self.settings.child('detectors', 'Detectors').value()[
-                'selected']  # names of all selected detector modules initialized
-            det_names = [mod.title for mod in self.detector_modules]
-            self.det_modules_log = []  # list of detector modules used for this scan
-            for name in det_names_scan:
-                self.det_modules_log.append(self.detector_modules[det_names.index(name)])
+            det_modules_log = self.modules_manager.detectors
+            if det_modules_log != []:
+                #check if the modules are initialized
+                for module in det_modules_log:
+                    if not module.initialized_state:
+                        logger.error(f'module {module.title} is not initialized')
+                        return False
 
-            #check if the modules are initialized
-            for module in self.det_modules_log:
-                if not module.initialized_state:
-                    logger.error(f'module {module.title} is not initialized')
-                    return False
+                #create the detectors in the chosen logger
+                for det in det_modules_log:
+                    settings_str = b'<All_settings>'
+                    settings_str += custom_tree.parameter_to_xml_string(det.settings)
+                    for viewer in det.ui.viewers:
+                        if hasattr(viewer, 'roi_manager'):
+                            settings_str += custom_tree.parameter_to_xml_string(viewer.roi_manager.settings)
+                    settings_str += b'</All_settings>'
 
-            #create the detectors in the chosen logger
-            for det in self.det_modules_log:
-                settings_str = b'<All_settings>'
-                settings_str += custom_tree.parameter_to_xml_string(det.settings)
-                for viewer in det.ui.viewers:
-                    if hasattr(det.ui.viewers[0], 'roi_manager'):
-                        settings_str += custom_tree.parameter_to_xml_string(det.ui.viewers[0].roi_manager.settings)
-                settings_str += b'</All_settings>'
+                    if self.settings.child(('log_type')).value() == 'H5 File':
+                        if det.title not in self.h5saver.raw_group.children_name():
+                            det_group = self.h5saver.add_det_group(self.h5saver.raw_group, det.title, settings_str)
+                            self.h5saver.add_navigation_axis(np.array([0.0, ]),
+                                  det_group, 'time_axis', enlargeable=True,
+                                  title='Time axis', metadata=dict(label='Time axis', units='timestamp', nav_index=0))
 
-                if self.settings.child(('log_type')).value() == 'H5 File':
-                    if det.title not in self.h5saver.raw_group.children_name():
-                        det_group = self.h5saver.add_det_group(self.h5saver.raw_group, det.title, settings_str)
-                        self.h5saver.add_navigation_axis(np.array([0.0, ]),
-                              det_group, 'x_axis', enlargeable=True,
-                              title='Time axis', metadata=dict(label='Time axis', units='timestamp'))
+                    elif self.settings.child(('log_type')).value() == 'SQL DataBase':
+                        self.logger.add_detectors([dict(name=det.title, xml_settings=settings_str)])
 
-                elif self.settings.child(('log_type')).value() == 'SQL DataBase':
-                    self.logger.add_detectors([dict(name=det.title, xml_settings=settings_str)])
-
-            self.ui.start_button.setEnabled(True)
-            self.ui.stop_button.setEnabled(True)
-            return True
+                self.ui.start_button.setEnabled(True)
+                self.ui.stop_button.setEnabled(True)
+                return True
+            else:
+                self.update_status('Cannot start logging... No detectors selected')
+                self.ui.start_button.setEnabled(False)
+                self.ui.stop_button.setEnabled(True)
+                return False
 
         else:
             self.update_status('Cannot start logging... check connections')
             self.ui.start_button.setEnabled(False)
-            self.ui.stop_button.setEnabled(False)
+            self.ui.stop_button.setEnabled(True)
             return False
 
     def show_log(self):
@@ -276,7 +265,7 @@ class DAQ_Logger(QObject):
 
         iconstart = QtGui.QIcon()
         iconstart.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.start_button = QtWidgets.QPushButton(iconstart,'')
+        self.ui.start_button = QtWidgets.QPushButton(iconstart, '')
         self.ui.start_button.setToolTip('Start logging into h5file or database')
 
         iconstop = QtGui.QIcon()
@@ -302,7 +291,7 @@ class DAQ_Logger(QObject):
 
 
         #%% create logger dock and make it a floating window
-        self.ui.logger_dock = Dock("Scan", size=(1, 1), autoOrientation=False)     ## give this dock the minimum possible size
+        self.ui.logger_dock = Dock("Logger", size=(1, 1), autoOrientation=False)     ## give this dock the minimum possible size
         self.ui.logger_dock.setOrientation('vertical')
         self.ui.logger_dock.addWidget(widget_settings)
         self.dockarea.addDock(self.ui.logger_dock, 'left')
@@ -310,12 +299,24 @@ class DAQ_Logger(QObject):
 
         widget_hor = QtWidgets.QWidget()
         layout_hor = QtWidgets.QHBoxLayout()
+
+        main_sett_widget = QtWidgets.QWidget()
+        main_sett_widget.setLayout(QtWidgets.QVBoxLayout())
+
         widget_hor.setLayout(layout_hor)
         self.ui.layout.addWidget(widget_hor)
 
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumWidth(300)
-        layout_hor.addWidget(self.settings_tree)
+        layout_hor.addWidget(main_sett_widget)
+        main_sett_widget.layout().addWidget(self.settings_tree)
+        main_sett_widget.layout().addWidget(self.modules_manager.settings_tree)
+
+        self.modules_manager.settings.child('modules', 'actuators').hide()
+        self.modules_manager.settings.child(('data_dimensions')).hide()
+        self.modules_manager.settings.child(('actuators_positions')).hide()
+
+
         self.h5saver.settings_tree.setMinimumWidth(300)
         self.dblogger.settings_tree.setMinimumWidth(300)
         layout_hor.addWidget(self.h5saver.settings_tree)
@@ -355,16 +356,9 @@ class DAQ_Logger(QObject):
 
         self.create_menu()
 
-    def get_det_from_preset(self):
-        preset_items_det = []
-        for det in self.settings.child('detectors', 'Detectors').value()['selected']:
-            for module in self.detector_modules:
-                if module.title == det:
-                    preset_items_det.append(module)
-        return preset_items_det
 
     def start_all(self):
-        preset_items_det = self.get_det_from_preset()
+        preset_items_det = self.modules_manager.detectors
         for det in preset_items_det:
             det.ui.grab_pb.click()
 
@@ -381,16 +375,16 @@ class DAQ_Logger(QObject):
             In case of :
                 * *scan* : Set parameters showing top false
                 * *dataset* : Set parameters showing top false
-                * *preset* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save preset parameters in a xml file).
+                * *managers* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save managers parameters in a xml file).
 
-            Finally, in case of accepted preset type info, save the preset parameters in a xml file.
+            Finally, in case of accepted managers type info, save the managers parameters in a xml file.
 
             =============== =========== ====================================
             **Parameters**    **Type**    **Description**
             *type_info*       string      The file type information between
                                             * scan
                                             * dataset
-                                            * preset
+                                            * managers
             =============== =========== ====================================
 
             See Also
@@ -447,7 +441,7 @@ class DAQ_Logger(QObject):
 
         self.logger_thread = QThread()
 
-        log_acquisition = DAQ_Logging(self.settings, self.logger, self.det_modules_log)
+        log_acquisition = DAQ_Logging(self.settings, self.logger, self.modules_manager)
 
         log_acquisition.moveToThread(self.logger_thread)
 
@@ -472,20 +466,17 @@ class DAQ_Logger(QObject):
             --------
             set_ini_positions
         """
-        preset_items_det = self.get_det_from_preset()
+        preset_items_det = self.modules_manager.detectors
         for det in preset_items_det:
             det.ui.stop_pb.click()
-
-        self.ui.log_message.setText('Stopping acquisition')
         self.command_DAQ_signal.emit(["stop_acquisition"])
 
         if not self.dashboard.overshoot:
-            status = 'Data Acquisition has been stopped by user'
+            status = 'Data Logging has been stopped by user'
         else:
-            status = 'Data Acquisition has been stopped due to overshoot'
+            status = 'Data Logging has been stopped due to overshoot'
 
         self.update_status(status)
-        self.ui.log_message.setText('')
         self.ui.start_button.setEnabled(True)
 
     @pyqtSlot(list)
@@ -538,7 +529,7 @@ class DAQ_Logging(QObject):
     """
     scan_data_tmp = pyqtSignal(OrderedDict)
     status_sig = pyqtSignal(list)
-    def __init__(self, settings=None, logger=None, det_modules_log=[]):
+    def __init__(self, settings=None, logger=None, modules_manager=[]):
 
         """
             DAQ_Logging deal with the acquisition part of daq_scan.
@@ -554,16 +545,14 @@ class DAQ_Logging(QObject):
         self.settings = settings
         self.ini_time = 0
         self.ind_log = 0
-        self.det_modules_log = det_modules_log
-        self.detector_modules_names = [mod.title for mod in self.det_modules_log]
-        self.grab_done_signals = [mod.grab_done_signal for mod in self.det_modules_log]
-        self.det_modules_settings = [mod.settings for mod in self.det_modules_log]
+        self.modules_manager = modules_manager
 
         self.logger = logger
         if isinstance(self.logger, H5Saver):
             self.logger_type = "h5saver"
         elif isinstance(self.logger, DbLoggerGUI):
             self.logger_type = "dblogger"
+
     @pyqtSlot(list)
     def queue_command(self, command):
         """
@@ -603,7 +592,7 @@ class DAQ_Logging(QObject):
             det_name = datas['name']
             if self.logger_type == 'h5saver':
                 det_group = self.logger.get_group_by_title(self.logger.raw_group, det_name)
-                time_array = self.logger.get_node(det_group, 'Logger_x_axis')
+                time_array = self.logger.get_node(det_group, 'Logger_time_axis')
                 time_array.append(np.array([datas['acq_time_s']]))
 
                 data_types = ['data0D', 'data1D']
@@ -625,9 +614,9 @@ class DAQ_Logging(QObject):
                             else:
                                 data_array = self.logger.get_node(channel_group, 'Data')
                             if data_type == 'data0D':
-                                self.logger.append(data_array, np.array([datas[data_type][channel]['data']]))
+                                data_array.append(np.array([datas[data_type][channel]['data']]))
                             else:
-                                self.logger.append(data_array, datas[data_type][channel]['data'])
+                                data_array.append(datas[data_type][channel]['data'])
                 self.logger.h5_file.flush()
 
             elif self.logger_type == 'dblogger':
@@ -640,8 +629,7 @@ class DAQ_Logging(QObject):
 
     def stop_logging(self):
         try:
-            for sig in self.grab_done_signals:
-                sig.disconnect(self.do_save_continuous)
+            self.modules_manager.connect_detectors(connect=False, slot=self.do_save_continuous)
         except Exception as e:
             logger.exception(str(e))
 
@@ -654,16 +642,10 @@ class DAQ_Logging(QObject):
 
     def start_logging(self):
         try:
-
-            for sig in self.grab_done_signals:
-                sig.connect(self.do_save_continuous)
-
+            self.modules_manager.connect_detectors(slot=self.do_save_continuous)
             self.stop_logging_flag = False
             self.status_sig.emit(["Update_Status", "Acquisition has started"])
-            self.det_done_flag = False
 
-            # for det in self.det_modules_log:
-            #     det.ui.grab_pb.click()
 
         except Exception as e:
             logger.exception(str(e))
@@ -681,7 +663,7 @@ if __name__ == '__main__':
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_logger.xml')
+    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_default.xml')
     # QThread.msleep(4000)
 
     prog.load_log_module()

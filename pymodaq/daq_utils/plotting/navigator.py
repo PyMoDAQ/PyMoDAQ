@@ -11,7 +11,8 @@ from pyqtgraph.dockarea import Dock, DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph import HistogramLUTWidget
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic, ImageItem
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic
+from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5modules import H5Saver, browse_data, H5BrowserUtil
 from pymodaq.daq_utils import gui_utils as gutils
@@ -47,9 +48,9 @@ class Navigator(QObject):
         self.viewer = None
         self.overlays = []  # %list of imageItem items displaying 2D scans info
         self.h5module_path = h5file_path
-        self.h5module = None
+        self.h5module = H5BrowserUtil()
+
         if h5file_path is not None:
-            self.h5module = H5BrowserUtil()
             self.h5module.open_file(h5file_path, 'a')
             self.settings.child('settings', 'filepath').setValue(h5file_path)
             self.settings.child('settings', 'Load h5').hide()
@@ -187,7 +188,6 @@ class Navigator(QObject):
             if self.h5module is not None:
                 if self.h5module.isopen:
                     self.h5module.close_file()
-            self.h5module = H5BrowserUtil()
             self.h5module.open_file(self.h5module_path, 'a')
             self.list_2Dscans()
 
@@ -238,24 +238,46 @@ class Navigator(QObject):
                                             flag = True
 
                                 if flag:
-                                    im = ImageItem()
+                                    isadaptive = 'adaptive' in node.attrs['scan_subtype'].lower()
+                                    if isadaptive:
+                                        im = TriangulationItem()
+                                    else:
+                                        im = ImageItem()
                                     im.setOpacity(1)
                                     # im.setOpts(axisOrder='row-major')
                                     self.viewer.image_widget.plotitem.addItem(im)
                                     im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-                                    im.setImage(node.read().T)
+
 
                                     if 'Scan' in param.name():
-                                        x_axis = np.unique(h5module.get_node(h5module.get_node(data['path']).parent_node, utils.capitalize('scan_x_axis')).read())
-                                        y_axis = np.unique(h5module.get_node(h5module.get_node(data['path']).parent_node, utils.capitalize('scan_y_axis')).read())
+                                        if isadaptive:
+                                            x_axis = h5module.get_node(h5module.get_node(data['path']).parent_node,
+                                                                  utils.capitalize('scan_x_axis')).read()
+                                            y_axis = h5module.get_node(h5module.get_node(data['path']).parent_node,
+                                                                  utils.capitalize('scan_y_axis')).read()
+                                        else:
+                                            x_axis = np.unique(
+                                                h5module.get_node(h5module.get_node(data['path']).parent_node,
+                                                                  utils.capitalize('scan_x_axis')).read())
+                                            y_axis = np.unique(
+                                                h5module.get_node(h5module.get_node(data['path']).parent_node,
+                                                                  utils.capitalize('scan_y_axis')).read())
                                     else:
-                                        x_axis = np.unique(h5module.get_node(h5module.get_node(data['path']).parent_node, utils.capitalize('x_axis')).read())
-                                        y_axis = np.unique(h5module.get_node(h5module.get_node(data['path']).parent_node, utils.capitalize('y_axis')).read())
+                                        x_axis = np.unique(
+                                            h5module.get_node(h5module.get_node(data['path']).parent_node,
+                                                              utils.capitalize('x_axis')).read())
+                                        y_axis = np.unique(
+                                            h5module.get_node(h5module.get_node(data['path']).parent_node,
+                                                              utils.capitalize('y_axis')).read())
+                                    if not isadaptive:
+                                        rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
+                                                                 (np.max(x_axis)-np.min(x_axis)),
+                                                                 (np.max(y_axis)-np.min(y_axis)))
+                                        im.setOpts(rescale=rect)
+                                        im.setImage(node.read())
+                                    else:
+                                        im.setImage(np.vstack((x_axis, y_axis, node.read())).T)
 
-
-                                    dx = x_axis[1]-x_axis[0]
-                                    dy = y_axis[1]-y_axis[0]
-                                    im.setRect(QtCore.QRectF(np.min(x_axis),np.min(y_axis),np.max(x_axis)-np.min(x_axis)+dx,np.max(y_axis)-np.min(y_axis)+dy))
                                     if ind == 0:
                                         #im.setLookupTable(colors_red)
                                         self.viewer.histogram_red.setImageItem(im)
@@ -275,7 +297,7 @@ class Navigator(QObject):
                                     self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), ind), image=im))
 
                                     ind += 1
-                            self.viewer.image_widget.view.autoRange()
+                            #self.viewer.image_widget.view.autoRange()
                         except Exception as e:
                             self.update_status(utils.getLineInfo()+str(e), status_time=self.status_time, log_type='log')
 
@@ -410,7 +432,7 @@ class Navigator(QObject):
         try:
             if not self.h5module.isopen:
                 self.h5module.open_file(self.h5module.filename, 'a')
-            scans = self.h5module.get_h5file_scans(self.h5module)
+            scans = self.h5module.get_h5file_scans(self.h5module.root())
             #settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
             params=[]
             children = [child.name() for child in self.settings.child(('scans')).children()]
@@ -431,7 +453,8 @@ class Navigator(QObject):
             self.update_status(utils.getLineInfo() + str(e), status_time=self.status_time, log_type='log')
 
     def update_h5file(self, h5file):
-        self.h5module = h5file
+        if self.h5module is not None:
+            self.h5module.h5file = h5file
         self.update_2Dscans()
 
     def update_status(self, txt, status_time=0, log_type=None):

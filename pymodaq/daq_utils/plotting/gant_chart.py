@@ -4,8 +4,7 @@ from PyQt5.QtCore import QDateTime, pyqtSignal, QPointF, QObject
 import numpy as np
 import pyqtgraph as pg
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
-from pymodaq.daq_utils.plotting.roi_manager import ROIBrushable
-from datetime import datetime
+from pymodaq.daq_utils.managers.roi_manager import ROIBrushable
 
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 pos = []

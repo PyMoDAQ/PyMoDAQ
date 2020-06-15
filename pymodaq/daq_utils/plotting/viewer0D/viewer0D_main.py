@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
 import sys
-
+import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
 
 import numpy as np
@@ -16,9 +16,9 @@ class Viewer0D(QtWidgets.QWidget,QObject):
 
         """
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Viewer0D,self).__init__()
+        super(Viewer0D, self).__init__()
         if parent is None:
-            parent=QtWidgets.QWidget()
+            parent = QtWidgets.QWidget()
 
         self.title = 'viewer0D'  # is changed when used from DAQ_Viewer
         self.ui = Ui_Form()
@@ -38,7 +38,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         self.wait_time = 1000
 
         self.plot_channels = None
-        self.plot_colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k', ' w']
+        self.plot_colors = utils.plot_colors
 
         self.Nsamples = self.ui.Nhistory_sb.value()
 
@@ -76,7 +76,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
         """
         try:
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=None, data2D=None)
-            if self.plot_channels==None or len(self.plot_channels) != len(datas):
+            if self.plot_channels == None or len(self.plot_channels) != len(datas):
                 # if self.plot_channels!=None:
                 #     if len(self.plot_channels) != len(datas):
                 #         for channel in self.plot_channels:
@@ -86,11 +86,11 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 if self.labels == [] or len(self.labels) != len(datas):
                     self._labels = ["CH{}".format(ind) for ind in range(len(datas))]
 
-                self.plot_channels=[]
-                self.datas=[]
+                self.plot_channels = []
+                self.datas = []
                 self.ui.values_list.clear()
                 self.ui.values_list.addItems(['{:.06e}'.format(data[0]) for data in datas])
-                self.list_items=[self.ui.values_list.item(ind) for ind in range(self.ui.values_list.count())]
+                self.list_items = [self.ui.values_list.item(ind) for ind in range(self.ui.values_list.count())]
                 for ind in range(len(datas)):
                     self.datas.append(np.array([]))
                     #channel=self.ui.Graph1D.plot(np.array([]))
@@ -139,7 +139,7 @@ class Viewer0D(QtWidgets.QWidget,QObject):
 
                 self.plot_channels[ind_plot].setData(x=self.x_axis, y=data_tmp)
                 self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)] = OrderedDict(name=self.title, data=data[0],
-                                                                                         type='raw')
+                                                                                         source='raw')
             self.datas = data_tot
 
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()

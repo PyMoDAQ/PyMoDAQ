@@ -183,6 +183,7 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
 
         self.settings = Parameter.create(title='DB settings', name='db_settings', type='group',
                                          children=self.params)
+        self.settings.child(('do_save')).hide()
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumHeight(310)
         self.settings_tree.setParameters(self.settings, showTop=False)

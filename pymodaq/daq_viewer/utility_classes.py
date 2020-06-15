@@ -12,7 +12,8 @@ import numpy as np
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
 
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand, ScanParameters, getLineInfo
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.daq_utils.scanner import ScanParameters
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
@@ -81,7 +82,6 @@ params = [
         ]}
     ]}
 ]
-
 
 class DAQ_Viewer_base(QObject):
     """

@@ -9,29 +9,38 @@ from pyqtgraph import gaussianFilter, ROI, RectROI, PolyLineROI, Point
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree
-from pyqtgraph.dockarea import DockArea, Dock
-from easydict import EasyDict as edict
+from pyqtgraph.dockarea import Dock
+from pymodaq.daq_utils.gui_utils import DockArea
+from pymodaq.daq_utils.plotting.plot_utils import QVector
+
 
 class PolyLineROI_custom(PolyLineROI):
-    def __init__(self,*args,**kwargs):
-        super(PolyLineROI_custom,self).__init__(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(PolyLineROI_custom, self).__init__(*args, **kwargs)
 
     def get_vertex(self):
         return [h['item'].pos() for h in self.handles]
 
+    def get_vectors(self):
+        imgPts = self.get_vertex()
+        d = []
+        for i in range(len(imgPts) - 1):
+            d.append(QVector(imgPts[i], Point(imgPts[i + 1])))
+        return d
+
     def getArrayIndexes(self, spacing=1, **kwds):
         imgPts = self.get_vertex()
-        positions=[]
+        positions = []
         for i in range(len(imgPts) - 1):
             d = Point(imgPts[i + 1] - imgPts[i])
             o = Point(imgPts[i])
-            vect=Point(d.norm())
-            Npts=0
-            while Npts*spacing < d.length():
-
-                positions.append(((o+Npts*spacing*vect).x(),(o+Npts*spacing*vect).y()))
-                Npts+=1
-
+            vect = Point(d.norm())
+            Npts = 0
+            while Npts * spacing < d.length():
+                positions.append(((o + Npts * spacing * vect).x(), (o + Npts * spacing * vect).y()))
+                Npts += 1
+        #add_last point not taken into account
+        positions.append((imgPts[-1].x(), imgPts[-1].y()))
         return positions
 
 
@@ -43,7 +52,7 @@ class ScanSelector(QObject):
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Sources:', 'name': 'sources', 'type': 'list',},
             {'title': 'Viewers:', 'name': 'viewers', 'type': 'list', },
-            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Scan1D', 'Scan2D'], 'value': 'Scan2D'},
+            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Tabular', 'Scan2D'], 'value': 'Scan2D'},
             ]},
         {'title': 'Scan Area', 'name': 'scan_area', 'type': 'group', 'children': [
             {'title': 'ROI select:', 'name': 'ROIselect', 'type': 'group', 'visible': True, 'children': [
@@ -64,9 +73,9 @@ class ScanSelector(QObject):
         viewer_items: dict where the keys are the titles of the sources while the values are dict with keys
                         viewers: list of plotitems
                         names: list of viewer titles
-        scan_type: (str) either 'Scan1D' correspondign to a polyline ROI or 'Scan2D' for a rect Roi
+        scan_type: (str) either 'Tabular' corresponding to a polyline ROI or 'Scan2D' for a rect Roi
         positions: list
-                        in case of 'Scan1D', should be a sequence of 2 floats sequence [(x1,y1),(x2,y2),(x3,y3),...]
+                        in case of 'Tabular', should be a sequence of 2 floats sequence [(x1,y1),(x2,y2),(x3,y3),...]
                         in case of 'Scan2D', should be a sequence of 4 floats (x, y , w, h)
         """
         super(ScanSelector, self).__init__()
@@ -124,7 +133,7 @@ class ScanSelector(QObject):
         self.settings_tree = ParameterTree()
         layout.addWidget(self.settings_tree,10)
         self.settings_tree.setMinimumWidth(300)
-        self.settings=Parameter.create(name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
 
         self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
@@ -140,7 +149,7 @@ class ScanSelector(QObject):
         #self.widget.show()
         self.widget.setWindowTitle('Scan Selector')
 
-    def source_changed(self,param,changes):
+    def source_changed(self, param, changes):
         for param, change, data in changes:
             path = self.settings.childPath(param)
             if path is not None:
@@ -152,7 +161,7 @@ class ScanSelector(QObject):
 
             elif change == 'value':
                 if param.name() == 'sources' and param.value() is not None:
-                    viewer_names= self._viewers_items[param.value()]['names']
+                    viewer_names = self._viewers_items[param.value()]['names']
                     self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
                     if len(viewer_names) == 1:
                         self.settings.child('scan_options', 'viewers').hide()
@@ -164,7 +173,7 @@ class ScanSelector(QObject):
                 if param.name() == 'scan_type':
 
 
-                    if param.value() == 'Scan1D':
+                    if param.value() == 'Tabular':
                         self.settings.child('scan_area', 'ROIselect').hide()
                         self.settings.child('scan_area', 'coordinates').show()
                         self.remove_scan_selector()
@@ -190,7 +199,7 @@ class ScanSelector(QObject):
     pyqtSlot(str)
     def update_scan_area_type(self):
 
-        if self.settings.child('scan_options', 'scan_type').value() == 'Scan1D':
+        if self.settings.child('scan_options', 'scan_type').value() == 'Tabular':
             scan_area_type = 'PolyLines'
         else:
             scan_area_type = 'Rect'
@@ -198,7 +207,7 @@ class ScanSelector(QObject):
 
         self.remove_scan_selector()
         if scan_area_type == 'Rect':
-            self.scan_selector = RectROI([0,0],[10,10])
+            self.scan_selector = RectROI([0, 0], [10, 10])
 
         elif scan_area_type == 'PolyLines':
             self.scan_selector = PolyLineROI_custom([(0, 0), [10, 10]])
@@ -209,8 +218,7 @@ class ScanSelector(QObject):
 
             self.scan_selector.sigRegionChangeFinished.emit(self.scan_selector)
 
-
-    def show_scan_selector(self,visible=True):
+    def show_scan_selector(self, visible=True):
         self.scan_selector.setVisible(visible)
 
     def update_scan(self, roi):
@@ -268,18 +276,17 @@ if __name__ == '__main__':
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
 
-
-    fake.detector_modules=[prog, prog2]
-    items=OrderedDict()
-    items[prog.title]=dict(viewers=[view for view in prog.ui.viewers],
-                           names=[view.title for view in prog.ui.viewers],
-                           )
+    fake.detector_modules = [prog, prog2]
+    items = OrderedDict()
+    items[prog.title] = dict(viewers=[view for view in prog.ui.viewers],
+                             names=[view.title for view in prog.ui.viewers],
+                             )
     items[prog2.title] = dict(viewers=[view for view in prog2.ui.viewers],
-                             names=[view.title for view in prog2.ui.viewers])
+                              names=[view.title for view in prog2.ui.viewers])
     items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
-                             names=["DaqScan"])
+                            names=["DaqScan"])
 
-    selector = ScanSelector(items,scan_type='Scan1D', positions=[(10,-10),(4,4),(80,50)])
+    selector = ScanSelector(items, scan_type='Tabular', positions=[(10, -10), (4, 4), (80, 50)])
 
     win.show()
     sys.exit(app.exec_())

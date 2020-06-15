@@ -4,6 +4,7 @@ from collections import OrderedDict
 import warnings
 import logging
 from copy import deepcopy
+import PyQt5  #mandatory for some parameter from Xml
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -16,6 +17,7 @@ from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
 from PyQt5 import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.scanner import scan_types as stypes
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
 from pymodaq.version import get_version
 import datetime
@@ -62,7 +64,8 @@ group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'exter
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings']
 data_dimensions = ['0D', '1D', '2D', 'ND']
-scan_types = ['', 'scan1D', 'scan2D']
+scan_types = ['']
+scan_types.extend(stypes)
 
 
 def check_mandatory_attrs(attr_name, attr):
@@ -443,6 +446,11 @@ class H5Backend:
     @property
     def h5file(self):
         return self._h5file
+
+    @h5file.setter
+    def h5file(self, file):
+        self.file_path = file.filename
+        self._h5file = file
 
     def isopen(self):
         if self._h5file is None:
@@ -903,7 +911,7 @@ class H5LogHandler(logging.StreamHandler):
         msg = self.format(record)
         self.h5saver.add_log(msg)
 
-class H5Saver(H5Backend):
+class H5Saver(H5Backend, QObject):
     """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
     on a UI (see :numref:`other_settings`) using the widget self.settings_tree. At the creation of a new file, a node
@@ -1001,7 +1009,8 @@ class H5Saver(H5Backend):
         --------
         https://github.com/HDFGroup/hsds
         """
-        super().__init__(backend)
+        H5Backend.__init__(self, backend)
+        QObject.__init__(self)
 
         if save_type not in save_types:
             raise InvalidSave('Invalid saving type')
@@ -1367,14 +1376,15 @@ class H5Saver(H5Backend):
         if file_path is None:
             file_path = select_file(base_path, save=False, ext='h5')
 
-        if not isinstance(file_path, Path):
-            file_path = Path(file_path)
+        if not (file_path is None or file_path == ''):
+            if not isinstance(file_path, Path):
+                file_path = Path(file_path)
 
-        if 'h5' not in file_path.suffix:
-            raise IOError('Invalid file type, should be a h5 file')
+            if 'h5' not in file_path.suffix:
+                raise IOError('Invalid file type, should be a h5 file')
 
-        self.init_file(addhoc_file_path=file_path)
-        self.file_loaded = True
+            self.init_file(addhoc_file_path=file_path)
+            self.file_loaded = True
 
     def save_file(self, filename=None):
         if filename is None:
@@ -1454,7 +1464,8 @@ class H5Saver(H5Backend):
             if False the created array is a carray type
         """
         if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
-            raise NameError('Invalid navigation axis name')
+            if 'axis' not in axis: # this take care of the case of sequential scans where axes are labelled with indexes
+                raise NameError('Invalid navigation axis name')
 
         array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis',
                                data_shape=data.shape,
@@ -1462,13 +1473,18 @@ class H5Saver(H5Backend):
                                metadata=metadata)
         return array
 
-    def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title=''):
-        shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
+    def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title='', scan_subtype=''):
+        isadaptive = scan_subtype == 'Adaptive'
+        if not isadaptive:
+            shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
                                                           remove_scan_dimension=True)
+        else:
+            shape, dimension, size = data_dict['data'].shape, '0D', 1
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
                                     title=title,
                                     data_shape=shape,
                                     data_dimension=dimension, scan_type=scan_type,
+                                    scan_subtype=scan_subtype,
                                     array_to_save=data_dict['data'])
         if 'x_axis' in data_dict:
             if not isinstance(data_dict['x_axis'], dict):
@@ -1492,7 +1508,8 @@ class H5Saver(H5Backend):
                                    enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
 
-    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_shape=[], title='', enlargeable=False,
+    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_subtype='',
+                 scan_shape=[], title='', enlargeable=False,
                  init=False, add_scan_dim=False, metadata=dict([])):
         """save data within the hdf5 file together with axes data (if any) and metadata, node name will be 'Data'
         Parameters
@@ -1501,7 +1518,8 @@ class H5Saver(H5Backend):
         data_dict: (dict) dictionnary containing the data to save and all the axis and metadata
             mandatory key: 'data': (ndarray) data to save
             other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....)
-        scan_type: (str) either '', 'scan1D' or 'scan2D'
+        scan_type: (str) either '', 'scan1D' or 'scan2D' or Tabular or sequential
+        scan_subtype: (str) see scanner module
         scan_shape: (iterable) the shape of the scan dimensions
         title: (str) the title attribute of the array node
         enlargeable: (bool) if False, data are save as a CARRAY, otherwise as a EARRAY (for ragged data, see add_sting_array)
@@ -1544,13 +1562,15 @@ class H5Saver(H5Backend):
         tmp_data_dict.update(metadata)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
                                     title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension,
-                                    scan_type=scan_type, scan_shape=scan_shape, array_to_save=array_to_save,
+                                    scan_type=scan_type, scan_subtype=scan_subtype, scan_shape=scan_shape,
+                                    array_to_save=array_to_save,
                                     init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
 
         self.flush()
         return data_array
 
-    def add_array(self, where, name, data_type, data_shape=None, data_dimension=None, scan_type='', scan_shape=[],
+    def add_array(self, where, name, data_type, data_shape=None, data_dimension=None, scan_type='', scan_subtype='',
+                  scan_shape=[],
                   title='', array_to_save=None, array_type=None, enlargeable=False, metadata=dict([]),
                   init=False, add_scan_dim=False):
         """save data arrays on the hdf5 file together with metadata
@@ -1595,7 +1615,7 @@ class H5Saver(H5Backend):
             raise InvalidDataType('Invalid data type')
         if scan_type != '':
             scan_type = utils.uncapitalize(scan_type)
-        if scan_type not in scan_types:
+        if scan_type.lower() not in [s.lower() for s in scan_types]:
             raise InvalidScanType('Invalid scan type')
         if enlargeable:
             if data_shape == (1,):
@@ -1613,6 +1633,7 @@ class H5Saver(H5Backend):
         self.set_attr(array, 'type', data_type)
         self.set_attr(array, 'data_dimension', data_dimension)
         self.set_attr(array, 'scan_type', scan_type)
+        self.set_attr(array, 'scan_subtype', scan_subtype)
 
         for metadat in metadata:
             self.set_attr(array, metadat, metadata[metadat])
@@ -1748,14 +1769,14 @@ class H5Saver(H5Backend):
         if not self.isopen():
             if self.h5_file_path is not None:
                 if self.h5_file_path.exists():
-                    self.analysis_prog = H5Browser(form, h5file=self.h5_file_path)
+                    self.analysis_prog = H5Browser(form, h5file_path=self.h5_file_path)
                 else:
                     logger.warning('The h5 file path has not been defined yet')
             else:
                 logger.warning('The h5 file path has not been defined yet')
         else:
             self.flush()
-            self.analysis_prog = H5Browser(form, h5file=self.h5_file)
+            self.analysis_prog = H5Browser(form, h5file=self.h5file)
         form.show()
 
 def find_scan_node(scan_node):
@@ -1877,14 +1898,11 @@ class H5BrowserUtil(H5Backend):
         """
         node = self.get_node(node_path)
         data = None
+        is_spread = False
         if 'ARRAY' in node.attrs['CLASS']:
             data = node.read()
             nav_axes = []
             axes = dict([])
-            x_axis = None
-            y_axis = None
-            nav_x_axis = None
-            nav_y_axis = None
             if isinstance(data, np.ndarray):
                 data = np.squeeze(data)
                 if 'type' in node.attrs.attrs_name:
@@ -1896,7 +1914,9 @@ class H5BrowserUtil(H5Backend):
                             data_dim = node.attrs['data_type']
                         else:
                             data_dim = node.attrs['data_dimension']
-
+                        if 'scan_subtype' in node.attrs.attrs_name:
+                            if node.attrs['scan_subtype'].lower() == 'adaptive':
+                                is_spread = True
                         tmp_axes = ['x_axis', 'y_axis']
                         for ax in tmp_axes:
                             if capitalize(ax) in children:
@@ -1916,13 +1936,16 @@ class H5BrowserUtil(H5Backend):
                                 if 'Nav_{:s}'.format(ax) in children:
                                     nav_axes.append(ind_ax)
                                     axis_node = self.get_node(parent_path + '/Nav_{:s}'.format(ax))
-                                    axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
-                                    if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
-                                        ind_ax]:  # could happen in case of linear back to start type of scan
-                                        tmp_ax = []
-                                        for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                            tmp_ax.extend([ix, ix])
-                                            axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
+                                    if is_spread:
+                                        axes['nav_{:s}'.format(ax)] = Axis(data=axis_node.read())
+                                    else:
+                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
+                                        if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
+                                            ind_ax]:  # could happen in case of linear back to start type of scan
+                                            tmp_ax = []
+                                            for ix in axes['nav_{:s}'.format(ax)]['data']:
+                                                tmp_ax.extend([ix, ix])
+                                                axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
 
                                     if 'units' in axis_node.attrs.attrs_name:
                                         axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs['units']
@@ -1931,29 +1954,50 @@ class H5BrowserUtil(H5Backend):
 
                         if 'scan_type' in node.attrs.attrs_name:
                             scan_type = node.attrs['scan_type'].lower()
-                            if scan_type == 'scan1d' or scan_type == 'scan2d':
-                                scan_node, nav_children = find_scan_node(node)
-                                tmp_nav_axes = ['x_axis', 'y_axis']
-                                if scan_type == 'scan1d' or scan_type == 'scan2d':
-                                    nav_axes = []
-                                    for ind_ax, ax in enumerate(tmp_nav_axes):
-                                        for axis_node in nav_children:
-                                            if ax in axis_node.name:
-                                                nav_axes.append(ind_ax)
-                                                axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
-                                                if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
-                                                    ind_ax]:  # could happen in case of linear back to start type of scan
-                                                    tmp_ax = []
-                                                    for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                                        tmp_ax.extend([ix, ix])
-                                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
+                            #if scan_type == 'scan1d' or scan_type == 'scan2d':
+                            scan_node, nav_children = find_scan_node(node)
+                            nav_axes = []
+                            if scan_type == 'tabular' or is_spread:
+                                datas = []
+                                labels = []
+                                all_units = []
+                                for axis_node in nav_children:
+                                    npts = axis_node.attrs['shape'][0]
+                                    datas.append(axis_node.read())
+                                    labels.append(axis_node.attrs['label'])
+                                    all_units.append(axis_node.attrs['units'])
 
-                                                if 'units' in axis_node.attrs.attrs_name:
-                                                    axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs[
-                                                        'units']
-                                                if 'label' in axis_node.attrs.attrs_name:
-                                                    axes['nav_{:s}'.format(ax)]['label'] = axis_node.attrs[
-                                                        'label']
+                                nav_axes.append(0)
+                                axes[f'nav_x_axis'] = Axis(data=np.linspace(0, npts-1, npts),
+                                                           nav_index=nav_axes[-1],
+                                                           units='',
+                                                           label='Scan index',
+                                                           labels=labels,
+                                                           datas=datas,
+                                                           all_units=all_units)
+                            else :
+                                for axis_node in nav_children:
+                                    nav_axes.append(axis_node.attrs['nav_index'])
+                                    if is_spread:
+                                        axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=axis_node.read(),
+                                                                               nav_index=nav_axes[-1])
+                                    else:
+                                        axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.unique(axis_node.read()),
+                                                                           nav_index=nav_axes[-1])
+                                        if nav_axes[-1] < len(data.shape):
+                                            if axes[f'nav_{nav_axes[-1]:02d}']['data'].shape[0] != data.shape[nav_axes[-1]]:  # could happen in case of linear back to start type of scan
+                                                tmp_ax = []
+                                                for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
+                                                    tmp_ax.extend([ix, ix])
+                                                    axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.array(tmp_ax),
+                                                                                           nav_index=nav_axes[-1])
+
+                                    if 'units' in axis_node.attrs.attrs_name:
+                                        axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
+                                            'units']
+                                    if 'label' in axis_node.attrs.attrs_name:
+                                        axes[f'nav_{nav_axes[-1]:02d}']['label'] = axis_node.attrs[
+                                            'label']
                     elif 'axis' in node.attrs['type']:
                         axis_node = node
                         axes['y_axis'] = Axis(data=axis_node.read())
@@ -1964,22 +2008,23 @@ class H5BrowserUtil(H5Backend):
                         axes['x_axis'] = Axis(data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
                                               units='pxls',
                                               label='')
-                return data, axes, nav_axes
+                return data, axes, nav_axes, is_spread
 
             elif isinstance(data, list):
-                return data, [], []
+                return data, [], [], is_spread
 
 class H5Browser(QObject):
     """UI used to explore h5 files, plot and export subdatas"""
     data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
     status_signal = pyqtSignal(str)
 
-    def __init__(self, parent, h5file_path=None, backend='tables'):
+    def __init__(self, parent, h5file=None, h5file_path=None, backend='tables'):
         """
 
         Parameters
         ----------
         parent: QtWidgets container, either a QWidget or a QMainWindow
+        h5file: h5file instance (exact type depends on the backend)
         h5file_path: (str or Path) if specified load the corresponding file, otherwise open a select file dialog
         backend: (str) eitre 'tables, 'h5py' or 'h5pyd'
 
@@ -2010,14 +2055,15 @@ class H5Browser(QObject):
 
         #construct the h5 interface and load the file (or open a select file message)
         self.h5utils = H5BrowserUtil(backend=self.backend)
-        if h5file_path is None:
-            h5file_path = select_file(h5file_path, save=False, ext=['h5', 'hdf5'])
+        if h5file is None:
+            if h5file_path is None:
+                h5file_path = select_file(h5file_path, save=False, ext=['h5', 'hdf5'])
+            self.h5utils.open_file(h5file_path, 'a')
+        else:
+            self.h5utils.h5file = h5file
 
-        self.h5utils.open_file(h5file_path, 'a')
         self.check_version()
-
         self.populate_tree()
-
         self.ui.h5file_tree.ui.Open_Tree.click()
 
     def check_version(self):
@@ -2252,9 +2298,14 @@ class H5Browser(QObject):
             node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
             if 'ARRAY' in node.attrs['CLASS']:
-                data, axes, nav_axes = self.h5utils.get_h5_data(self.current_node_path)
+                data, axes, nav_axes, is_spread = self.h5utils.get_h5_data(self.current_node_path)
                 if isinstance(data, np.ndarray):
-                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, **deepcopy(axes))
+                    if 'scan_type' in node.attrs.attrs_name:
+                        scan_type = node.attrs['scan_type']
+                    else:
+                        scan_type = ''
+                    self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, is_spread=is_spread,
+                                               scan_type=scan_type, **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
                     if not(not data):
@@ -2362,14 +2413,9 @@ def browse_data(fname=None, ret_all=False):
     return None, '', ''
 
 if __name__ == '__main__':
-    #app = QtWidgets.QApplication(sys.argv)
-    #win = QtWidgets.QMainWindow()
-    #prog = H5Browser(win, h5file_path='C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\test\\daq_utils_test\\data\\data_test_tables.h5')
-    #win.show()
-    #QtWidgets.QApplication.processEvents()
-    #sys.exit(app.exec_())
-    import h5pyd
-    print(h5pyd)
-    bck = H5Backend('h5pyd')
-    f = bck.open_file('/home/pymodaq_user/test.h5', mode='r')
-    print(f)
+    app = QtWidgets.QApplication(sys.argv)
+    win = QtWidgets.QMainWindow()
+    prog = H5Browser(win)
+    win.show()
+    QtWidgets.QApplication.processEvents()
+    sys.exit(app.exec_())
