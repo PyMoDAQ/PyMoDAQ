@@ -1,7 +1,7 @@
 PyMoDAQ
 #######
 
-.. figure:: http://pymodaq.cnrs.fr/_static/splash.png
+.. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut
 
 
@@ -11,24 +11,25 @@ It simplifies the interaction with detector and actuator hardware to go straight
 It has two purposes:
 
 * First, to provide a complete interface to perform automated measurements or logging data without having to write a user/interface for each
-  new experiment, this is under the :ref:`Dashboard_module` environment and its two extensions.
-* Second, to provide various tools (modules) to easily build a :ref:`custom_app`
+  new experiment, this is under the *Dashboard_module* environment and its two extensions.
+* Second, to provide various tools (modules) to easily build *custom apps*
 
 It is divided in three main modules:
 
-* :ref:`Dashboard_module` : This is the module that will initialize actuators and detectors given the need of your
+* **Dashboard_module** : This is the module that will initialize actuators and detectors given the need of your
   particular experiment. You configure the dashboard using an interface for quick launch of various configurations.
-* :ref:`DAQ_Logger_module` : This module lets you log data from one or many detectors defined in the dashboard. You can log data
+* **DAQ_Logger_module** : This module lets you log data from one or many detectors defined in the dashboard. You can log data
   in a binary hierarchical hdf5 file or towards a sql database
-* :ref:`DAQ_Scan_module` : This module lets you configure automated data acquisition from one or many detectors defined
+* **DAQ_Scan_module** : This module lets you configure automated data acquisition from one or many detectors defined
   in the dashboard as a function or one or more actuators defined also in the dashboard.
 
 The detectors and the actuators are represented and manipulated using two generic modules:
 
-* :ref:`DAQ_Move_module` : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.
-* :ref:`DAQ_Viewer_module` : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.
+* **DAQ_Move_module** : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.
+* **DAQ_Viewer_module** : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.
 
 and many others to simplify any application development.
+
 Published under the CeCILL-B FREE SOFTWARE LICENSE
 
 GitHub repo: https://github.com/CEMES-CNRS
