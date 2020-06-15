@@ -15,6 +15,7 @@ class ImageItem(pg.ImageItem):
         self.flipud = False
         self.fliplr = False
         self.rotate90 = False
+        self.rescale = None
 
 
     def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
@@ -70,6 +71,9 @@ class ImageItem(pg.ImageItem):
             if val not in ('row-major', 'col-major'):
                 raise ValueError('axisOrder must be either "row-major" or "col-major"')
             self.axisOrder = val
+        if 'rescale' in kargs:
+            self.rescale = kargs['rescale']
+
         if 'flipud' in kargs:
             self.flipud = kargs['flipud']
 
@@ -98,6 +102,12 @@ class ImageItem(pg.ImageItem):
         if update:
             self.update()
 
+    def setRect(self, rect):
+        """Scale and translate the image to fit within rect (must be a QRect or QRectF)."""
+        self.resetTransform()
+        self.translate(rect.left(), rect.top())
+        self.scale(rect.width() / self.width(), rect.height() / self.height())
+
     def dataTransform(self):
         """Return the transform that maps from this image's input array to its
         local coordinate system.
@@ -111,6 +121,7 @@ class ImageItem(pg.ImageItem):
         #     # transpose
         #     tr.scale(1, -1)
         #     tr.rotate(-90)
+
         if self.flipud or self.fliplr or self.rotate90:
             if self.rotate90:
                 tr.translate(self.height() / 2, self.width() / 2)
@@ -156,6 +167,9 @@ class ImageItem(pg.ImageItem):
 
         shape = self.image.shape[:2] if self.axisOrder == 'col-major' else self.image.shape[:2][::-1]
         p.drawImage(QtCore.QRectF(0, 0, self.qimage.width(), self.qimage.height()), self.qimage)
+        if self.rescale is not None:
+            self.translate(self.rescale.left(), self.rescale.top())
+            self.scale(self.rescale.width() / self.width(), self.rescale.height() / self.height())
 
         if self.border is not None:
             p.setPen(self.border)
@@ -423,7 +437,7 @@ class TriangulationItem(ImageItem):
         self.setTransform(self.dataTransform())
 
         for pol, color in zip(self.qimage['polygons'], self.qimage['values']):
-            p.setPen(fn.mkPen(255, 255, 255, 150, width=0.75))
+            p.setPen(fn.mkPen(255, 255, 255, 100, width=0.75))
             p.setBrush(fn.mkBrush(*color))
             p.drawPolygon(pol)
 

@@ -890,7 +890,7 @@ class DAQ_Scan(QObject):
             widgnav = QtWidgets.QWidget()
             self.navigator = Navigator(widgnav)
 
-            self.navigator.status_signal[str].connect(self.dashboard.add_status)
+            self.navigator.log_signal[str].connect(self.dashboard.add_status)
             self.navigator.settings.child('settings', 'Load h5').hide()
             self.navigator.loadaction.setVisible(False)
 

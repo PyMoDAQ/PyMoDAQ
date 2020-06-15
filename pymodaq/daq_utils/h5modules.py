@@ -449,6 +449,7 @@ class H5Backend:
 
     @h5file.setter
     def h5file(self, file):
+        self.file_path = file.filename
         self._h5file = file
 
     def isopen(self):
