@@ -457,11 +457,8 @@ class TriangulationItem(ImageItem):
         if self.image is None:
             return None, None
         if step == 'auto':
-            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
-                    int(np.ceil(self.image.shape[1] / targetImageSize)))
-        if np.isscalar(step):
-            step = (step, step)
-        stepData = self.image[::step[0], ::step[1]]
+            step = int(np.ceil(self.image.shape[0] / targetImageSize))
+        stepData = self.image[::step, 2:]
 
         if bins == 'auto':
             if stepData.dtype.kind in "ui":

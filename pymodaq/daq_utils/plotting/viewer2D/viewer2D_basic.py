@@ -14,7 +14,7 @@ class Viewer2DBasic(QObject):
         super(Viewer2DBasic, self).__init__()
         #setting the gui
         if parent is None:
-            parent=QtWidgets.QWidget()
+            parent = QtWidgets.QWidget()
         self.parent = parent
         self.scaling_options = edict(scaled_xaxis=edict(label="",units=None,offset=0,scaling=1),scaled_yaxis=edict(label="",units=None,offset=0,scaling=1))
         self.setupUI()
@@ -79,7 +79,7 @@ class ImageWidget(pg.GraphicsLayoutWidget):
     def __init__(self, parent = None, *args_plotitem, **kwargs_plotitem):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(ImageWidget, self).__init__(parent)
-        self.setupUI( *args_plotitem, **kwargs_plotitem)
+        self.setupUI(*args_plotitem, **kwargs_plotitem)
 
     def setupUI(self,  *args_plotitem, **kwargs_plotitem):
         layout = QtWidgets.QGridLayout()

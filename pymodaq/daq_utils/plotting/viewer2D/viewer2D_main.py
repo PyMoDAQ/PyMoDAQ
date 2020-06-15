@@ -746,7 +746,7 @@ class Viewer2D(QObject):
         self.ui.histogram_green.region.setVisible(not self.autolevels)
         self.ui.histogram_blue.region.setVisible(not self.autolevels)
 
-    def set_scaling_axes(self,scaling_options=None):
+    def set_scaling_axes(self, scaling_options=None):
         """
         metod used to update the scaling of the right and top axes in order to translate pixels to real coordinates
         scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))
