@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ Viewer &mdash; PyMoDAQ 2.2 pre- documentation</title>
+  <title>DAQ Viewer &mdash; PyMoDAQ 2.0.1 documentation</title>
   
 
   
@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="../../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="DashBoard" href="DashBoard.html" />
+    <link rel="next" title="Data Viewers" href="data_viewers.html" />
     <link rel="prev" title="DAQ Move" href="DAQ_Move.html" /> 
 </head>
 
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                2.2
+                2.0
               </div>
             
           
@@ -92,20 +92,20 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ’s overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Modules</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="Main_Modules.html">Main Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="DashBoard.html">DashBoard</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Logger.html">DAQ Logger</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Move.html">DAQ Move</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Viewer</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#settings">Settings</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="DashBoard.html">DashBoard</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DAQ_Logger.html">DAQ Logger</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
@@ -197,20 +197,20 @@ plugins, see <a class="reference internal" href="Plugins.html#plugin-doc"><span 
 <div class="section" id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p>This module has a generic interface comprised of a dockable panel related to the settings and one or more viewers
-specific of the type of data to be acquired (see <a class="reference internal" href="data_viewers.html#data-viewers"><span class="std std-ref">Data Viewers</span></a>. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 8</span></a> displays a typical
+specific of the type of data to be acquired (see <a class="reference internal" href="data_viewers.html#data-viewers"><span class="std std-ref">Data Viewers</span></a>. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 19</span></a> displays a typical
 DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id1">
 <span id="figure-daq-viewer"></span><img alt="Viewer panel" src="../../_images/DAQ_Viewer_pannel.png" />
-<p class="caption"><span class="caption-number">Fig. 8 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 19 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="settings">
 <h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
 <p>The settings panel is comprised of 2 sections, the top one displays buttons to select a given hardware
 (<em>DAQ type</em> and <em>Detector</em>), initialize it, grab and save data. The bottom one,
-<a class="reference internal" href="#figure-daq-viewer-settings"><span class="std std-numref">Fig. 9</span></a>, is a Tree type parameter
+<a class="reference internal" href="#figure-daq-viewer-settings"><span class="std std-numref">Fig. 20</span></a>, is a Tree type parameter
 list displaying the viewer main settings (<a class="reference internal" href="#viewer-settings"><span class="std std-ref">Main settings</span></a>) and specific settings of the chosen hardware
 (see <a class="reference internal" href="Plugins.html#hardware-settings"><span class="std std-ref">Hardware Settings</span></a>).</p>
 <div class="section" id="hardware-initialization">
@@ -249,7 +249,7 @@ detector currently activated.</p>
 <div></div></blockquote>
 <div class="figure align-default" id="id2">
 <span id="figure-daq-viewer-settings"></span><img alt="settings" src="../../_images/settings.png" />
-<p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 20 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 <ul class="simple">
 <li><p><strong>DAQ type</strong>: readonly string recalling the DAQ type used</p></li>
@@ -280,7 +280,7 @@ to both x and y axis of the detector. Redundant with the plugin data export feat
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="DashBoard.html" class="btn btn-neutral float-right" title="DashBoard" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="data_viewers.html" class="btn btn-neutral float-right" title="Data Viewers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="DAQ_Move.html" class="btn btn-neutral float-left" title="DAQ Move" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

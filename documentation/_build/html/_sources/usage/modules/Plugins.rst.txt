@@ -167,40 +167,43 @@ to display data and eventually save them. For this PyMoDAQ use two types of sign
 
 They both *emit* the same type of signal but will trigger different behaviour from the viewer module. The first is to be
 used to send temporary data to update the plotting but without triggering anything else (so that the DAQ_Scan still awaits
-for data completion before moving on). It is also used in the initialisation of the plugin in order to preset the type and number of data viewers
-displayed by the viewer module. The second signal is to be used once data are fully ready to be send back to the user interface
+for data completion before moving on). It is also used in the initialisation of the plugin in order to preset the type
+and number of data viewers displayed by the viewer module. The second signal is to be used once data are fully ready to
+be send back to the user interface
 and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an example of emission of data:
 
 .. code-block:: python
 
     from pymodaq.daq_utils.daq_utils import Axis
-    x_axis = dict(label='Wavelength', units= "nm", data = vector_X)
+    from pymodaq.daq_utils.daq_utils import DataFromPlugins
+    x_axis = Axis(label='Wavelength', units= "nm", data = vector_X)
     y_axis = Axis(data=vector_Y)
-    self.data_grabed_signal.emit([OrderedDict(name='Camera',data=[data2D_0, data2D_1,...], type='Data2D',
+    self.data_grabed_signal.emit([DataFromPlugins(name='Camera',data=[data2D_0, data2D_1,...], dim='Data2D',
                                         x_axis=x_axis,y_axis=y_axis),
-                                  OrderedDict(name='Spectrum',data=[data1D_0, data1D_1,...], type='Data1D',
+                                  DataFromPlugins(name='Spectrum',data=[data1D_0, data1D_1,...], dim='Data1D',
                                         x_axis=x_axis, labels=['label0', 'label1', ...]),
-                                  OrderedDict(name='Current',data=[data0D_0, data0D_1,...], type='Data0D'),
-                                  OrderedDict(name='Datacube',data=[dataND_0, dataND_1,...], type='DataND',
+                                  DataFromPlugins(name='Current',data=[data0D_0, data0D_1,...], dim='Data0D'),
+                                  DataFromPlugins(name='Datacube',data=[dataND_0, dataND_1,...], dim='DataND',
                                         nav_axes=[0,2]), nav_x_axis=...])
 
-Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each ``OrderedDict``
-in the emitted list. The type of data viewer will be determined by the *type* key value while its name will be set to the *name* key value.
-The *data* key value is also a list of numpy arrays, their shape should be adequate with the *type* key of the dictionary.
+Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each ``DataFromPlugins``
+in the emitted list. The type of data viewer will be determined by the *dim* key value while its name will be set to the *name* key value.
+The *data* key value is also a list of numpy arrays, their shape should be adequate with the *dim* key of the dictionary. (in fact the
+*dim* key could be omitted as the ``DataFromPlugins`` class check its values or assess it from the data numpy array shape.
 Each array will generate one channel within the corresponding viewer. Here is the detailed list of the possible keys:
 
 * ``name``: will display the corresponding value on the viewer dock
-* ``type``: will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)
+* ``dim``: (either 'Data0D', 'Data1D', 'Data2D' or 'DataND') will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)
 * ``data``: list of numpy array. Each array shape should correspond to the *type*
 * ``labels``: list of string, one for each numpy array within the ``data`` field. Will be displayed on 0DViewer and 1DViewer
-* ``x_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
+* ``x_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
   (see code above and the Axis object in the daq_utils module)
-* ``y_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
+* ``y_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
   (see code above and the Axis object in the daq_utils module)
 * ``nav_axes``: in case of a ND data viewer, will be the index of the navigation axis, see :ref:`NDviewer`
-* ``nav_x_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
+* ``nav_x_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
   (see code above and the Axis object in the daq_utils module)
-* ``nav_y_axis``: dictionnary or **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
+* ``nav_y_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
   (see code above and the Axis object in the daq_utils module)
 
 

@@ -11,7 +11,6 @@ from collections import OrderedDict
 import numpy as np
 from pathlib import Path
 import os
-import logging
 
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -610,10 +609,6 @@ class DAQ_Scan(QObject):
             logger.exception(str(e))
             self.ui.start_scan_pb.setEnabled(False)
             self.ui.stop_scan_pb.setEnabled(False)
-
-    def show_log(self):
-        import webbrowser
-        webbrowser.open(logging.getLoggerClass().root.handlers[0].baseFilename)
 
     def setupUI(self):
         self.ui = QObject()
@@ -1470,7 +1465,7 @@ class DAQ_Scan(QObject):
         """
         self.ui.statusbar.showMessage(txt, wait_time)
         self.status_signal.emit(txt)
-        logging.info(txt)
+        logger.info(txt)
 
 
 

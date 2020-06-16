@@ -126,29 +126,8 @@ file can be selected here in order to add to it *comments*
   * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
 
 
-.. _scanner_paragrah:
-
-Scanner Settings
-++++++++++++++++
-
-Bottom rigt tree (see :numref:`other_settings`):
-
-
-* **Scan type**: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
-scan as a function of two actuators. Ohter options to come: *batch scan* (list of single scans to perform in a row)
-*point scan* (list of positions to scan from), *sequential scan* (sequence of scans)
-
-* **Scan 1D settings**
-    * **scan type**: either *linear* (usual scan) or *back to start* (the actuator comes back to the initial position
-      after each linear step, for a reference measurement for instance). More to come if needed
-    * **Start**: Initial position of the selected actuator (in selected actuator controller unit)
-    * **Stop**: Last position of the scan (in selected actuator controller unit)
-    * **Step**: Step size of the step (in selected actuator controller unit)
-* **Scan 2D settings**
-    * **Scan type**: either *linear* (scan line by line), *linear back and forth* (scan line by line
-      but in reverse direction each 2 lines) or *spiral* (start from the center and scan as a spiral)
-    * **Start, Stop, Step**: for each axes (each actuators)
-    * **Rmax, Rstep**: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.
+Scanner
+*******
 
    .. _other_settings:
 
@@ -158,7 +137,6 @@ scan as a function of two actuators. Ohter options to come: *batch scan* (list o
    Other Scan Settings
 
 .. :download:`png <other_settings.png>`
-
 
 Live data
 *********
@@ -223,37 +201,7 @@ So at maximum, 2D dimensionality can be represented. In order to see live data f
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
 to perform using the ROI features of the data viewers (see :ref:`data_viewers`)
 
-.. _scan_selector_paragraph:
 
-Scan Selector
--------------
-
-Scans can be specified manually using the *Scanner Settings* (explained above). However, in the case of a scan using 2
-*DAQ_Move* modules, it could be more convenient to select an area using a rectangular ROI within a 2D viewer. Various
-such viewers can be used. For instance, the viewer of a camera (if one think of a camera in a microscope to select an
-area to cartography) or even the *DAQ_Scan* 2D viewer. Sometimes it could also be interesting to do linear sections within
-a 2D phase space (let's say defined by the ranges of 2 *DAQ_Moves*). This defines complex 1D scans within a 2D area,
-difficult to set manually. :numref:`scan_selector` displays such sections within the DAQ_Scan viewer where a previous
-2D scan has been recorded. The user just have to choose the correct *selection* mode in the
-*scanner settings*, see :numref:`scan_selector_settings`, and select on which 2D viewer to display the ROI (*From Module* option).
-
-
-   .. _scan_selector:
-
-.. figure:: /image/DAQ_Scan/scan_selector.png
-   :alt: scan_selector
-
-   An example of 1D complex sections selected within a 2D area
-
-
-
-   .. _scan_selector_settings:
-
-.. figure:: /image/DAQ_Scan/scan_selector_settings.png
-   :alt: scan_selector
-
-   In the scanner settings, the selection entry gives the choice between *Manual* selection of from *PolyLines*
-   (in the case of 1D scans) or *From ROI* in the case of 2D scans.
 
 
 .. _navigator_paragrah:

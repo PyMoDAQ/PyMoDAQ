@@ -123,12 +123,11 @@ class DashBoard(QObject):
     def load_scan_module(self):
         self.scan_module = DAQ_Scan(dockarea=self.dockarea, dashboard=self)
         self.scan_module.status_signal.connect(self.add_status)
-        self.actions_menu.setEnabled(False)
+
 
     def load_log_module(self):
         self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
         self.log_module.status_signal.connect(self.add_status)
-        self.actions_menu.setEnabled(False)
 
     def create_menu(self, menubar):
         """
@@ -210,7 +209,7 @@ class DashBoard(QObject):
                 filestem = file.stem
                 slots[filestem] = load_roi.addAction(filestem)
                 slots[filestem].triggered.connect(
-                    self.create_menu_slot_roi(utils.get_set_roi_path.joinpath(file)))
+                    self.create_menu_slot_roi(utils.get_set_roi_path().joinpath(file)))
 
         #actions menu
         self.actions_menu = menubar.addMenu('Actions')
@@ -380,6 +379,8 @@ class DashBoard(QObject):
         """
         try:
             dockstate = self.dockarea.saveState()
+            if 'float' in dockstate:
+                dockstate['float'] = []
             if file is None:
                 file = gutils.select_file(start_path=None, save=True, ext='dock')
             if file is not None:

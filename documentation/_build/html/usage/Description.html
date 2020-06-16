@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Modules &mdash; PyMoDAQ 2.2 pre- documentation</title>
+  <title>Modules &mdash; PyMoDAQ 2.0.1 documentation</title>
   
 
   
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                2.2
+                2.0
               </div>
             
           
@@ -92,7 +92,7 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Features.html">PyMoDAQ’s overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Modules</a><ul>
@@ -174,34 +174,34 @@
             
   <div class="section" id="modules">
 <h1>Modules<a class="headerlink" href="#modules" title="Permalink to this headline">¶</a></h1>
+<p>The following is a detailed explanation of PyMoDAQ’s main modules and all utility ones that are used by PyMoDAQ but
+that could also be used for other applications (see for instance the <em>h5module</em>, a backend of 3 hdf5 python library:
+pytables, h5py and h5pyd).</p>
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="modules/Main_Modules.html">Main Modules</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="modules/DAQ_Move.html">DAQ Move</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#introduction">Introduction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#hardware-initialization">Hardware initialization</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#positioning">Positioning</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#advanced-positioning">Advanced positioning</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#settings">Settings</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="modules/DAQ_Viewer.html">DAQ Viewer</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Viewer.html#introduction">Introduction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Viewer.html#settings">Settings</a></li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="modules/DashBoard.html">DashBoard</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="modules/DashBoard.html#introduction">Introduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/DashBoard.html#preset-manager">Preset manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/DashBoard.html#overshoot-manager">Overshoot manager</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DashBoard.html#roi-manager">ROI manager</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/DashBoard.html#multiple-hardware-from-one-controller">Multiple hardware from one controller</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="modules/DAQ_Scan.html">DAQ Scan</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Scan.html#introduction">Introduction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Scan.html#main-control-window">Main Control Window</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Scan.html#scan-selector">Scan Selector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Scan.html#main-control-window">Main Control Window</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#scan-flow">Scan Flow</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#settings">Settings</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#scan-options">Scan options</a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#saving-settings">Saving Settings</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#scanner">Scanner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#live-data">Live data</a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Scan.html#navigator">Navigator</a></li>
 </ul>
 </li>
@@ -210,6 +210,30 @@
 <li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Logger.html#main-control-window">Main Control Window</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Logger.html#h5-saving">H5 saving</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Logger.html#sql-database-saving">SQL Database saving</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/DAQ_Move.html">DAQ Move</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#hardware-initialization">Hardware initialization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#positioning">Positioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#advanced-positioning">Advanced positioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Move.html#settings">Settings</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Move.html#multiaxes-controller">Multiaxes controller</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Move.html#bounds">Bounds</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Move.html#scaling">Scaling</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Move.html#other-settings">Other settings</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/DAQ_Viewer.html">DAQ Viewer</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Viewer.html#introduction">Introduction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Viewer.html#settings">Settings</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Viewer.html#hardware-initialization">Hardware initialization</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Viewer.html#data-acquisition">Data Acquisition</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Viewer.html#main-settings">Main settings</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -251,13 +275,21 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="modules/Utility_Modules.html">Utility Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#scanner">Scanner</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#scan1d">Scan1D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#scan2d">Scan2D</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#sequential">Sequential</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#tabular">Tabular</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#adaptive">Adaptive</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#scan-selector">Scan Selector</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#h5browser">H5Browser</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#h5saver">H5Saver</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#preset-manager">Preset manager</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#overshoot-manager">Overshoot manager</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#roi-manager">ROI manager</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#daq-measurement">DAQ_Measurement</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#scanner">Scanner</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#navigator">Navigator</a></li>
 </ul>
 </li>

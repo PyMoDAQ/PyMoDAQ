@@ -78,7 +78,7 @@ Changelog
 Please see :doc:`the changelog </changelog>`.
 
 .. toctree::
-   :maxdepth: 5
+   :maxdepth: 6
    :caption: Contents:
 
    usage/Features

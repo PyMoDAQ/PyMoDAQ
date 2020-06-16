@@ -116,7 +116,7 @@ class ROISaver:
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Fill in information about this managers')
+        dialog.setWindowTitle('Fill in information about this manager')
         res = dialog.exec()
 
         if res == dialog.Accepted:

@@ -230,7 +230,7 @@ class ROIManager(QObject):
 
 
                 elif par.child(('type')).value() == '2D':
-                    roi_type=par.child(('roi_type')).value()
+                    roi_type = par.child(('roi_type')).value()
                     xrange = self.viewer_widget.plotItem.vb.viewRange()[0]
                     yrange = self.viewer_widget.plotItem.vb.viewRange()[1]
                     width = np.max(((xrange[1]-xrange[0])/10, 2))
@@ -317,14 +317,14 @@ class ROIManager(QObject):
 
     @pyqtSlot(int)
     def update_roi_tree(self,index):
-        roi=self.ROIs['ROI_%02.0d'%index]
+        roi = self.ROIs['ROI_%02.0d' % index]
         par = self.settings.child(*('ROIs', 'ROI_%02.0d' % index))
         if isinstance(roi, LinearROI):
             pos = roi.getRegion()
         else:
-            pos=roi.pos()
-            size=roi.size()
-            angle=roi.angle()
+            pos = roi.pos()
+            size = roi.size()
+            angle = roi.angle()
 
         try:
             self.settings.sigTreeStateChanged.disconnect()

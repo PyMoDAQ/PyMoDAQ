@@ -4,12 +4,14 @@
 Changelog
 =========
 
+
 * :feature:`0` DAQ_Scan: possibility to load a dataset h5file in order to pursue scans within a given dataset (mostly in
   case of program crashing, so preventing the automated new dataset file creation at program load)
 * :bug:`0` patch to allow the 'values' key in the def of a group Parameter so that scalable groups can have programmatic
   entries, see DAQ_0DViewer_NIDAQmx params for instance
 * :release:`1.6.4 <2019-11-12>`
-* :bug:`0` cleaning of various little bugs
+* :support:`0` Changed the getLineInfo output for the logging to obtain exact location of the exception
+* :bug:`0` Small bugs cleaning for more stability of the code
 * :release:`1.6.3 <2019-10-14>`
 * :bug:`14` Logger node was not saved properly from daq_scan
 * :feature:`13` Added axes labels and units within h5 browser when looking at live scan registered data

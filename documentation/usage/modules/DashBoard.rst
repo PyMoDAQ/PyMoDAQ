@@ -7,7 +7,8 @@ This module is the heart of PyMoDAQ, it will:
 
 * Help you declare the list of actuators and detectors to be used for a given experiment (:ref:`preset_manager`)
 * Setup automatic data acquisition of detectors as a function of one or more actuators using its DAQ_Scan extension
-* Log data into advanced binary file or distant database using using its DAQ_Logger extension
+* Log data into advanced binary file or distant database using its DAQ_Logger extension
+
 
 The flow of this module is as follow:
 

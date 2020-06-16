@@ -10,7 +10,7 @@ Installation
 
 .. highlight:: console
 
-Overview
+Preamble
 --------
 PyMoDAQ is written in `Python`__ and uses Python 3.5+. It uses the `PyQt5`__ library and the excellent `pyqtgraph`__ package
 for its user interface. For PyMoDAQ to run smoothly, you need a Python distribution to be installed. Here are some advices.
@@ -58,10 +58,10 @@ will probably prefer using shortcuts on the desktop. Here is how to do it (Thank
 * On the *Start in* field ("Démarrer dans" in french and in the figure), enter the path to the condabin folder of your miniconda or
   anaconda distribution, for instance: ``C:\Miniconda3\condabin``
 * On the *Target* field, ("Cible" in french and in the figure), enter this string:
-  ``C:\Windows\System32\cmd.exe /k conda activate my_env & python -m pymodaq.daq_scan.daq_scan_main``. This means that
-  yout shortcut will open the windows's command line, then execute your environment activation (*conda activate my_env* bit),
-  then finally execute and start **Python**, opening the correct pymodaq file (here *daq_scan_main.py*,
-  starting the DAQ_Scan module, *python -m pymodaq.daq_scan.daq_scan_main* bit)
+  ``C:\Windows\System32\cmd.exe /k conda activate my_env & python -m pymodaq.dashboard``. This means that
+  your shortcut will open the windows's command line, then execute your environment activation (*conda activate my_env* bit),
+  then finally execute and start **Python**, opening the correct pymodaq file (here *dashboard.py*,
+  starting the Dashboard module, *python -m pymodaq.dashboard* bit)
 * You're done!
 * Do it again for each PyMoDAQ's module you want (to get the correct python file and it's path, see :ref:`run_module`).
 

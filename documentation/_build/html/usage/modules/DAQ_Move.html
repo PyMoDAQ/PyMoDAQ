@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>DAQ Move &mdash; PyMoDAQ 2.2 pre- documentation</title>
+  <title>DAQ Move &mdash; PyMoDAQ 2.0.1 documentation</title>
   
 
   
@@ -39,7 +39,7 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="DAQ Viewer" href="DAQ_Viewer.html" />
-    <link rel="prev" title="Main Modules" href="Main_Modules.html" /> 
+    <link rel="prev" title="DAQ Logger" href="DAQ_Logger.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -66,7 +66,7 @@
             
             
               <div class="version">
-                2.2
+                2.0
               </div>
             
           
@@ -92,11 +92,14 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ’s overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Modules</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="Main_Modules.html">Main Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="DashBoard.html">DashBoard</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DAQ_Logger.html">DAQ Logger</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">DAQ Move</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#hardware-initialization">Hardware initialization</a></li>
@@ -106,9 +109,6 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="DAQ_Viewer.html">DAQ Viewer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DashBoard.html">DashBoard</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DAQ_Scan.html">DAQ Scan</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DAQ_Logger.html">DAQ Logger</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
@@ -200,13 +200,13 @@ actuator displaying a <em>position</em> and accepting absolute or relative <em>p
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p>This module has a generic interface in the form of a dockable panel containing the interface for initialization,
 the manual control of the actuator <em>position</em> and a side tree like interface displaying all the settings.
-<a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 5</span></a> shows the minimal interface of the module (in order to take minimal place in the DAQ_Scan
+<a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 16</span></a> shows the minimal interface of the module (in order to take minimal place in the DAQ_Scan
 dashboard)</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id2">
 <span id="daq-move-gui-base"></span><img alt="daq_move_gui_base" src="../../_images/daq_move_gui_base.png" />
-<p class="caption"><span class="caption-number">Fig. 5 </span><span class="caption-text">Minimal DAQ_Move user interface</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 16 </span><span class="caption-text">Minimal DAQ_Move user interface</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="hardware-initialization">
@@ -220,18 +220,18 @@ dashboard)</p>
 <div class="section" id="positioning">
 <h2>Positioning<a class="headerlink" href="#positioning" title="Permalink to this headline">¶</a></h2>
 <p>Once the hardware initialized, the actual <em>position</em> is displayed on the <em>Current position</em> display
-(bottom of <a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 5</span></a>) while the absolute <em>position</em> can be set using the top spinbox
+(bottom of <a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 16</span></a>) while the absolute <em>position</em> can be set using the top spinbox
 and apply it using the <a class="reference internal" href="../../_images/green_arrow.png"><img alt="green_arrow" src="../../_images/green_arrow.png" style="width: 20pt; height: 20pt;" /></a> button.</p>
 </div>
 <div class="section" id="advanced-positioning">
 <h2>Advanced positioning<a class="headerlink" href="#advanced-positioning" title="Permalink to this headline">¶</a></h2>
 <p>More options can be displayed in order to precisely control the actuator by pressing the <a class="reference internal" href="../../_images/plus_button.png"><img alt="plus_button" src="../../_images/plus_button.png" style="width: 20pt; height: 20pt;" /></a> button.
-The user interface will then look like <a class="reference internal" href="#daq-move-gui-rel"><span class="std std-numref">Fig. 6</span></a>.</p>
+The user interface will then look like <a class="reference internal" href="#daq-move-gui-rel"><span class="std std-numref">Fig. 17</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id3">
 <span id="daq-move-gui-rel"></span><img alt="daq_move_gui_rel" src="../../_images/daq_move_gui_rel.png" />
-<p class="caption"><span class="caption-number">Fig. 6 </span><span class="caption-text">DAQ_Move user interface with controls</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 17 </span><span class="caption-text">DAQ_Move user interface with controls</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
 <p>The two new displayed spinbox relate to Absolute positioning (redundant with the one on the top)  and
 Relative one.</p>
@@ -248,12 +248,12 @@ Relative one.</p>
 <h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
 <p>The hardware and module settings can be displayed in order to initialize correctly the actuator and add other
 options by pressing the <a class="reference internal" href="../../_images/settings_button.png"><img alt="settings" src="../../_images/settings_button.png" style="width: 20pt; height: 20pt;" /></a> button. The user interface will then look like
-<a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 7</span></a>.</p>
+<a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 18</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id4">
 <span id="daq-move-gui-settings"></span><img alt="daq_move_gui_settings" src="../../_images/daq_move_gui_settings.png" />
-<p class="caption"><span class="caption-number">Fig. 7 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 18 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 <p>In the settings tree, there is two sections. The first relates to <em>Main settings</em> (not much there for
 the moment apart for the selected stage type and <em>Controller ID</em> that is related to multiaxes controller.
@@ -266,7 +266,7 @@ this particular case the controller should not be initialized multiple times. On
 refered to as <em>Master</em> and the other ones will be referred to as <em>Slave</em>. They will share the same controller
 address represented in the settings tree by the <em>Controller ID</em> entry. These settings will be activated
 within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
-in <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 7</span></a>).</p>
+in <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 18</span></a>).</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Controller</span> <span class="pre">ID</span></code>: unique identifier of the controller driving the stage</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">Multiaxes</span></code>: boolean</p></li>
@@ -317,7 +317,7 @@ However if the set precision is too small, the actuator may never reached it and
         <a href="DAQ_Viewer.html" class="btn btn-neutral float-right" title="DAQ Viewer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="Main_Modules.html" class="btn btn-neutral float-left" title="Main Modules" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="DAQ_Logger.html" class="btn btn-neutral float-left" title="DAQ Logger" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

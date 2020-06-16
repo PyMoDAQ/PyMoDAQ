@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 2.2 pre- documentation</title>
+  <title>pymodaq.daq_move.utility_classes &mdash; PyMoDAQ 2.0.1 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                2.2
+                2.0
               </div>
             
           
@@ -90,7 +90,7 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../usage/Features.html">PyMoDAQ features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage/Features.html">PyMoDAQ’s overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../usage/Description.html">Modules</a></li>
@@ -163,26 +163,17 @@
             
   <h1>Source code for pymodaq.daq_move.utility_classes</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">PyQt5</span> <span class="kn">import</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtWidgets</span>
-<span class="kn">from</span> <span class="nn">PyQt5.QtCore</span> <span class="kn">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">pyqtSlot</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">pyqtSignal</span><span class="p">,</span> <span class="n">QLocale</span><span class="p">,</span> <span class="n">QVariant</span><span class="p">,</span> <span class="n">QSize</span>
+<span class="kn">from</span> <span class="nn">PyQt5.QtCore</span> <span class="kn">import</span> <span class="n">QObject</span><span class="p">,</span> <span class="n">pyqtSlot</span><span class="p">,</span> <span class="n">QThread</span><span class="p">,</span> <span class="n">pyqtSignal</span>
 <span class="c1"># from enum import IntEnum</span>
 <span class="kn">from</span> <span class="nn">easydict</span> <span class="kn">import</span> <span class="n">EasyDict</span> <span class="k">as</span> <span class="n">edict</span>
 <span class="kn">from</span> <span class="nn">pyqtgraph.parametertree</span> <span class="kn">import</span> <span class="n">Parameter</span><span class="p">,</span> <span class="n">ParameterTree</span>
 <span class="kn">import</span> <span class="nn">pyqtgraph.parametertree.parameterTypes</span> <span class="k">as</span> <span class="nn">pTypes</span>
 <span class="kn">import</span> <span class="nn">pymodaq.daq_utils.custom_parameter_tree</span> <span class="k">as</span> <span class="nn">custom_tree</span>
 <span class="kn">from</span> <span class="nn">pymodaq.daq_utils.daq_utils</span> <span class="kn">import</span> <span class="n">ThreadCommand</span><span class="p">,</span> <span class="n">getLineInfo</span>
-<span class="kn">from</span> <span class="nn">pymodaq.daq_utils.tcpip_utils</span> <span class="kn">import</span> <span class="n">check_received_length</span><span class="p">,</span> <span class="n">check_sended</span><span class="p">,</span>\
-    <span class="n">message_to_bytes</span><span class="p">,</span> <span class="n">send_scalar</span><span class="p">,</span> <span class="n">send_string</span><span class="p">,</span> <span class="n">get_scalar</span><span class="p">,</span> <span class="n">get_int</span><span class="p">,</span> <span class="n">get_string</span><span class="p">,</span> <span class="n">send_list</span>
-
-<span class="kn">import</span> <span class="nn">socket</span>
-<span class="kn">import</span> <span class="nn">select</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
 <span class="kn">from</span> <span class="nn">pymodaq.daq_utils.tcp_server_client</span> <span class="kn">import</span> <span class="n">TCPServer</span><span class="p">,</span> <span class="n">tcp_parameters</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
-
-<span class="n">comon_parameters</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Units:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span> <span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
+<span class="n">comon_parameters</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Units:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span> <span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
                   <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;epsilon&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">},</span>
                   <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Timeout (ms):&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;timeout&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">},</span>
 
@@ -202,7 +193,7 @@
         <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Controller ID:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;controller_ID&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;default&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">},</span>
         <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;TCP/IP options:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;tcpip&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;visible&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
          <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
-             <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Connect to server:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;connect_server&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;bool&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
+             <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Connect to server:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;connect_server&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;bool_push&#39;</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;Connect&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
              <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Connected?:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;tcp_connected&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;led&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">},</span>
              <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;IP address:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;ip_address&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;str&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="s1">&#39;10.47.0.11&#39;</span><span class="p">},</span>
              <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Port:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;port&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">6341</span><span class="p">},</span>
@@ -221,7 +212,7 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    parent : DAQ_Move_stage instance (see daq_viewer_main module)</span>
-<span class="sd">    params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the preset)</span>
+<span class="sd">    params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the managers)</span>
 
 
 <span class="sd">    :ivar Move_Done_signal: pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target</span>
@@ -236,7 +227,7 @@
 <span class="sd">                    on the GUI settings will be transferred to this attribute. It stores at all times the current state of the hardware/plugin</span>
 
 <span class="sd">    :ivar params: class level attribute. List of dict used to create a Parameter object. Its definition on the class level enable</span>
-<span class="sd">                  the automatic update of the GUI settings when changing plugins (even in preset mode creation). To be populated</span>
+<span class="sd">                  the automatic update of the GUI settings when changing plugins (even in managers mode creation). To be populated</span>
 <span class="sd">                  on the plugin level as the base class does&#39;t represents a real hardware</span>
 
 <span class="sd">    :ivar is_multiaxes: class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define</span>
@@ -505,13 +496,13 @@
 <span class="sd">        --------</span>
 <span class="sd">        utility_classes.DAQ_TCP_server</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">params_client</span> <span class="o">=</span><span class="p">[]</span> <span class="c1">#parameters of a client grabber</span>
-    <span class="n">command_server</span><span class="o">=</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">params_client</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># parameters of a client grabber</span>
+    <span class="n">command_server</span> <span class="o">=</span> <span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
 
-    <span class="n">message_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Quit&quot;</span><span class="p">,</span> <span class="s2">&quot;Status&quot;</span><span class="p">,</span><span class="s2">&quot;Done&quot;</span><span class="p">,</span><span class="s2">&quot;Server Closed&quot;</span><span class="p">,</span><span class="s2">&quot;Info&quot;</span><span class="p">,</span><span class="s2">&quot;Infos&quot;</span><span class="p">,</span> <span class="s2">&quot;Info_xml&quot;</span><span class="p">,</span> <span class="s2">&quot;move_abs&quot;</span><span class="p">,</span>
-                  <span class="s1">&#39;move_home&#39;</span><span class="p">,</span> <span class="s1">&#39;move_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;check_position&#39;</span><span class="p">,</span> <span class="s1">&#39;stop_motion&#39;</span><span class="p">,</span> <span class="s1">&#39;position_is&#39;</span><span class="p">,</span> <span class="s1">&#39;move_done&#39;</span><span class="p">]</span>
-    <span class="n">socket_types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;ACTUATOR&quot;</span><span class="p">]</span>
-    <span class="n">params</span><span class="o">=</span><span class="n">comon_parameters</span> <span class="o">+</span>  <span class="n">tcp_parameters</span>
+    <span class="n">message_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Quit&quot;</span><span class="p">,</span> <span class="s2">&quot;Status&quot;</span><span class="p">,</span> <span class="s2">&quot;Done&quot;</span><span class="p">,</span> <span class="s2">&quot;Server Closed&quot;</span><span class="p">,</span> <span class="s2">&quot;Info&quot;</span><span class="p">,</span> <span class="s2">&quot;Infos&quot;</span><span class="p">,</span> <span class="s2">&quot;Info_xml&quot;</span><span class="p">,</span> <span class="s2">&quot;move_abs&quot;</span><span class="p">,</span>
+                    <span class="s1">&#39;move_home&#39;</span><span class="p">,</span> <span class="s1">&#39;move_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;check_position&#39;</span><span class="p">,</span> <span class="s1">&#39;stop_motion&#39;</span><span class="p">,</span> <span class="s1">&#39;position_is&#39;</span><span class="p">,</span> <span class="s1">&#39;move_done&#39;</span><span class="p">]</span>
+    <span class="n">socket_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;ACTUATOR&quot;</span><span class="p">]</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">comon_parameters</span> <span class="o">+</span> <span class="n">tcp_parameters</span>
 
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">params_state</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -523,7 +514,7 @@
 <span class="sd">        params_state</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">client_type</span> <span class="o">=</span> <span class="s2">&quot;ACTUATOR&quot;</span>
-        <span class="n">DAQ_Move_base</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span><span class="n">params_state</span><span class="p">)</span> <span class="c1">#initialize base class with commom attributes and methods</span>
+        <span class="n">DAQ_Move_base</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span> <span class="n">params_state</span><span class="p">)</span>  <span class="c1"># initialize base class with commom attributes and methods</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;bounds&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;scaling&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">hide</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;epsilon&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -531,36 +522,37 @@
 
         <span class="n">TCPServer</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">client_type</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">command_to_from_client</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">command</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">command_to_from_client</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">):</span>
         <span class="n">sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_socket_within_connected_clients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sock</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># if client &#39;ACTUATOR&#39; is connected then send it the command</span>
 
             <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="s1">&#39;position_is&#39;</span><span class="p">:</span>
-                <span class="n">pos</span> <span class="o">=</span> <span class="n">get_scalar</span><span class="p">(</span><span class="n">sock</span><span class="p">)</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">get_scalar</span><span class="p">()</span>
 
                 <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_position_with_scaling</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">current_position</span> <span class="o">=</span> <span class="n">pos</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">emit_status</span><span class="p">(</span><span class="n">ThreadCommand</span><span class="p">(</span><span class="s1">&#39;check_position&#39;</span><span class="p">,</span> <span class="p">[</span><span class="n">pos</span><span class="p">]))</span>
 
             <span class="k">elif</span> <span class="n">command</span> <span class="o">==</span> <span class="s1">&#39;move_done&#39;</span><span class="p">:</span>
-                <span class="n">pos</span> <span class="o">=</span> <span class="n">get_scalar</span><span class="p">(</span><span class="n">sock</span><span class="p">)</span>
+                <span class="n">pos</span> <span class="o">=</span> <span class="n">sock</span><span class="o">.</span><span class="n">get_scalar</span><span class="p">()</span>
                 <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_position_with_scaling</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">current_position</span> <span class="o">=</span> <span class="n">pos</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">emit_status</span><span class="p">(</span><span class="n">ThreadCommand</span><span class="p">(</span><span class="s1">&#39;move_done&#39;</span><span class="p">,</span> <span class="p">[</span><span class="n">pos</span><span class="p">]))</span>
-
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">send_command</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">command</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">commit_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">param</span><span class="p">):</span>
 
         <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">name</span><span class="p">()</span> <span class="ow">in</span> <span class="n">custom_tree</span><span class="o">.</span><span class="n">iter_children</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;infos&#39;</span><span class="p">)),</span> <span class="p">[]):</span>
             <span class="n">actuator_socket</span> <span class="o">=</span> <span class="p">[</span><span class="n">client</span><span class="p">[</span><span class="s1">&#39;socket&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">client</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">connected_clients</span> <span class="k">if</span> <span class="n">client</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;ACTUATOR&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">send_string</span><span class="p">(</span><span class="n">actuator_socket</span><span class="p">,</span> <span class="s1">&#39;set_info&#39;</span><span class="p">)</span>
+            <span class="n">actuator_socket</span><span class="o">.</span><span class="n">send_string</span><span class="p">(</span><span class="s1">&#39;set_info&#39;</span><span class="p">)</span>
             <span class="n">path</span> <span class="o">=</span> <span class="n">custom_tree</span><span class="o">.</span><span class="n">get_param_path</span><span class="p">(</span><span class="n">param</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span><span class="c1">#get the path of this param as a list starting at parent &#39;infos&#39;</span>
 
-            <span class="n">send_list</span><span class="p">(</span><span class="n">actuator_socket</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+            <span class="n">actuator_socket</span><span class="o">.</span><span class="n">send_list</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
             <span class="c1">#send value</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">custom_tree</span><span class="o">.</span><span class="n">parameter_to_xml_string</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
-            <span class="n">send_string</span><span class="p">(</span><span class="n">actuator_socket</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">actuator_socket</span><span class="o">.</span><span class="n">send_string</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">ini_stage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -572,20 +564,20 @@
 <span class="sd">            --------</span>
 <span class="sd">            utility_classes.DAQ_TCP_server.init_server, get_xaxis, get_yaxis</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">edict</span><span class="p">(</span><span class="n">initialized</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span><span class="n">info</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="n">x_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">y_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">controller</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">edict</span><span class="p">(</span><span class="n">initialized</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">x_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">y_axis</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">controller</span><span class="o">=</span><span class="kc">None</span><span class="p">))</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">child</span><span class="p">((</span><span class="s1">&#39;infos&#39;</span><span class="p">))</span><span class="o">.</span><span class="n">addChildren</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">params_client</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">init_server</span><span class="p">()</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="s1">&#39;TCP Server actuator&#39;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">initialized</span><span class="o">=</span><span class="kc">True</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">controller</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">serversocket</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">controller</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serversocket</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span>
 
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">info</span><span class="o">=</span><span class="n">getLineInfo</span><span class="p">()</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">initialized</span><span class="o">=</span><span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="n">getLineInfo</span><span class="p">()</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="o">.</span><span class="n">initialized</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span>
 
     <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -596,36 +588,36 @@
 <span class="sd">            --------</span>
 <span class="sd">            utility_classes.DAQ_TCP_server.close_server</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">listening</span><span class="o">=</span><span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">listening</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close_server</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">move_Abs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">position</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">move_Abs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">check_bound</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">target_position</span><span class="o">=</span><span class="n">position</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_bound</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_position</span> <span class="o">=</span> <span class="n">position</span>
 
-        <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">set_position_with_scaling</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_position_with_scaling</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
 
         <span class="n">sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_socket_within_connected_clients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sock</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># if client self.client_type is connected then send it the command</span>
-            <span class="n">send_string</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="s1">&#39;move_abs&#39;</span><span class="p">)</span>
-            <span class="n">send_scalar</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">position</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">send_string</span><span class="p">(</span><span class="s1">&#39;move_abs&#39;</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">send_scalar</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
 
             <span class="c1">#self.poll_moving()</span>
 
     <span class="k">def</span> <span class="nf">move_Rel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">):</span>
-        <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">check_bound</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_position</span><span class="o">+</span><span class="n">position</span><span class="p">)</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">current_position</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">target_position</span><span class="o">=</span><span class="n">position</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">current_position</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_bound</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_position</span> <span class="o">+</span> <span class="n">position</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_position</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_position</span> <span class="o">=</span> <span class="n">position</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_position</span>
 
-        <span class="n">position</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">set_position_relative_with_scaling</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_position_relative_with_scaling</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
         <span class="n">sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_socket_within_connected_clients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sock</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># if client self.client_type is connected then send it the command</span>
-            <span class="n">send_string</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="s1">&#39;move_rel&#39;</span><span class="p">)</span>
-            <span class="n">send_scalar</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="n">position</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">send_string</span><span class="p">(</span><span class="s1">&#39;move_rel&#39;</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">send_scalar</span><span class="p">(</span><span class="n">position</span><span class="p">)</span>
 
-            <span class="c1">#self.poll_moving()</span>
+            <span class="c1"># self.poll_moving()</span>
 
     <span class="k">def</span> <span class="nf">move_Home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -637,7 +629,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_socket_within_connected_clients</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">client_type</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">sock</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># if client self.client_type is connected then send it the command</span>
-            <span class="n">send_string</span><span class="p">(</span><span class="n">sock</span><span class="p">,</span> <span class="s1">&#39;move_home&#39;</span><span class="p">)</span>
+            <span class="n">sock</span><span class="o">.</span><span class="n">send_string</span><span class="p">(</span><span class="s1">&#39;move_home&#39;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">check_position</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>

@@ -89,6 +89,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
 
         splitter_hor.addWidget(graph_widget)
         splitter_hor.addWidget(self.roi_manager.roiwidget)
+        self.roi_manager.roiwidget.hide()
 
         self.ui.button_widget = QtWidgets.QWidget()
         self.ui.button_widget.setLayout(QtWidgets.QHBoxLayout())
@@ -232,7 +233,11 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             item = self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
             item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(index))
             item_param.child(('use_channel')).setOpts(limits=self.labels)
-            item_param.child(('use_channel')).setValue(self.labels[0])
+            if len(self.labels) == 0:
+                lab = ''
+            else:
+                lab = self.labels[0]
+            item_param.child(('use_channel')).setValue(lab)
             item.sigRegionChanged.connect(self.update_lineouts)
             item.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
             for child in customparameter.iter_children_params(item_param, childlist=[]):
@@ -240,7 +245,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
                     child.sigValueChanged.connect(self.update_lineouts)
 
 
-            item_lo=self.ui.Graph_Lineouts.plot()
+            item_lo = self.ui.Graph_Lineouts.plot()
             item_lo.setPen(item_param.child(('Color')).value())
             self.lo_items['ROI_{:02d}'.format(index)] = item_lo
             self.lo_data = OrderedDict([])
@@ -455,11 +460,11 @@ class Viewer1D(QtWidgets.QWidget,QObject):
         """
         try:
             self.update_labels(self.labels)
-            self.datas=datas
+            self.datas = datas
 
-            if self.plot_channels==None: #initialize data and plots
+            if self.plot_channels == None:  # initialize data and plots
                 self.ini_data_plots(len(datas))
-            elif len(self.plot_channels)!=len(datas):
+            elif len(self.plot_channels) != len(datas):
                 self.remove_plots()
                 self.ini_data_plots(len(datas))
 

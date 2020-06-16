@@ -717,6 +717,8 @@ class Scanner(QObject):
             update_status
         """
         try:
+            self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').show()
+            self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').show()
             scan_subtype = self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value()
             self.settings.child('scan_options', 'scan2D_settings', 'scan2D_loss').show(scan_subtype == 'Adaptive')
             if scan_subtype == 'Adaptive':
