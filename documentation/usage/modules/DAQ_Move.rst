@@ -6,15 +6,14 @@ DAQ Move
 This module is to be used to control any actuator hardware. An actuator is, in a general sense, any parameter
 that one can control and may vary during an experiment.  The default actuator
 is a Mock one (a kind of software based
-actuator displaying a *position* and accepting absolute or relative *positioning*.
+actuator displaying a *position* and accepting absolute or relative *positioning*).
 
 Introduction
 ------------
 
 This module has a generic interface in the form of a dockable panel containing the interface for initialization,
 the manual control of the actuator *position* and a side tree like interface displaying all the settings.
-:numref:`daq_move_gui_base` shows the minimal interface of the module (in order to take minimal place in the DAQ_Scan
-dashboard)
+:numref:`daq_move_gui_base` shows the minimal interface of the module (in order to take minimal place in the Dashboard)
 
 
    .. _daq_move_gui_base:
@@ -67,13 +66,13 @@ Hardware initialization
 
 * ``Stage``: list of available hardware plugins of the DAQ_Move type.
 * ``Ini. Stage``: Initialize the hardware with the given settings (see :ref:`plugin_doc` for details on how to set hardware settings.)
-* ``Quit``: De-initialize the hardware and quit the application
+* ``Quit``: De-initialize the hardware and quit the module
 
 
 Positioning
 -----------
 
-Once the hardware initialized, the actual *position* is displayed on the *Current position* display
+Once the hardware is initialized, the actual *position* is displayed on the *Current position* display
 (bottom of :numref:`daq_move_gui_base`) while the absolute *position* can be set using the top spinbox
 and apply it using the |green_arrow| button.
 
@@ -145,8 +144,8 @@ in :numref:`daq_move_gui_settings`).
 * ``Axis``: identifier defined in the plugin script
 
 See :download:`daq_move_Template.py <daq_move_Template.py>` for a detailed example. These settings are
-really valid only when the module is used within the DAQ_Scan framework that deals with multiple modules
-at the same time.
+really valid only when the module is used within the Dashboard framework that deals with multiple modules
+at the same time as configured in the :ref:`preset_manager` interface.
 
 Bounds
 ^^^^^^

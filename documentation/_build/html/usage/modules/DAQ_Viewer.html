@@ -110,10 +110,10 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
-<li class="toctree-l2"><a class="reference internal" href="Plugins.html">Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Utility_Modules.html">Utility Modules</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../Description.html#plugins">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Feedback.html">Who use it?</a></li>
@@ -197,27 +197,27 @@ plugins, see <a class="reference internal" href="Plugins.html#plugin-doc"><span 
 <div class="section" id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p>This module has a generic interface comprised of a dockable panel related to the settings and one or more viewers
-specific of the type of data to be acquired (see <a class="reference internal" href="data_viewers.html#data-viewers"><span class="std std-ref">Data Viewers</span></a>. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 19</span></a> displays a typical
+specific of the type of data to be acquired (see <a class="reference internal" href="data_viewers.html#data-viewers"><span class="std std-ref">Data Viewers</span></a>. For instance, <a class="reference internal" href="#figure-daq-viewer"><span class="std std-numref">Fig. 21</span></a> displays a typical
 DAQ_Viewer GUI with a settings dockable panel (left) and a 2D viewer on the right panel.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id1">
 <span id="figure-daq-viewer"></span><img alt="Viewer panel" src="../../_images/DAQ_Viewer_pannel.png" />
-<p class="caption"><span class="caption-number">Fig. 19 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 21 </span><span class="caption-text">Typical DAQ_Viewer GUI with a dockable panel for settings (left) and a 2D viewer on the right panel.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="settings">
 <h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
 <p>The settings panel is comprised of 2 sections, the top one displays buttons to select a given hardware
 (<em>DAQ type</em> and <em>Detector</em>), initialize it, grab and save data. The bottom one,
-<a class="reference internal" href="#figure-daq-viewer-settings"><span class="std std-numref">Fig. 20</span></a>, is a Tree type parameter
+<a class="reference internal" href="#figure-daq-viewer-settings"><span class="std std-numref">Fig. 22</span></a>, is a Tree type parameter
 list displaying the viewer main settings (<a class="reference internal" href="#viewer-settings"><span class="std std-ref">Main settings</span></a>) and specific settings of the chosen hardware
 (see <a class="reference internal" href="Plugins.html#hardware-settings"><span class="std std-ref">Hardware Settings</span></a>).</p>
 <div class="section" id="hardware-initialization">
 <h3>Hardware initialization<a class="headerlink" href="#hardware-initialization" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">DAQ_type</span></code>: either <em>DAQ0D</em>, <em>DAQ1D</em> or <em>DAQ2D</em> respectively for scalar detectors (powermeter for instance),
-vector detectors (spectrometer for instance) and image like detectors.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DAQ_type</span></code>: either <em>DAQ0D</em>, <em>DAQ1D</em>, <em>DAQ2D</em> or <em>DAQND</em> respectively for scalar detectors (powermeter for instance),
+vector detectors (spectrometer for instance), image like detectors and rare hyperdimensional detectors.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Detector</span></code>: list of available hardware plugins of the DAQ_type type.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Det</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</p></li>
@@ -231,7 +231,7 @@ vector detectors (spectrometer for instance) and image like detectors.</p></li>
 <li><p><a class="reference internal" href="../../_images/SaveAs.png"><img alt="save" src="../../_images/SaveAs.png" style="width: 10pt; height: 10pt;" /></a>: Save current data</p></li>
 <li><p><a class="reference internal" href="../../_images/Snap&amp;Save.png"><img alt="snap&amp;save" src="../../_images/Snap&amp;Save.png" style="width: 10pt; height: 10pt;" /></a>: Do a new snap and then save the data</p></li>
 <li><p><a class="reference internal" href="../../_images/Open.png"><img alt="open" src="../../_images/Open.png" style="width: 10pt; height: 10pt;" /></a>: Load data previously saved with the save button</p></li>
-<li><p><a class="reference internal" href="../../_images/HLM.png"><img alt="showsettings" src="../../_images/HLM.png" style="width: 10pt; height: 10pt;" /></a>: Display or hide the settings Tree</p></li>
+<li><p><a class="reference internal" href="../../_images/HLM.png"><img alt="showsettings" src="../../_images/HLM.png" style="width: 10pt; height: 10pt;" /></a>: Display or hide some settings</p></li>
 <li><p><a class="reference internal" href="../../_images/Refresh2.png"><img alt="refresh" src="../../_images/Refresh2.png" style="width: 10pt; height: 10pt;" /></a>: try to refresh the hardware, for instance the list of COM ports</p></li>
 <li><p><a class="reference internal" href="../../_images/take_bkg.png"><img alt="take_bkg" src="../../_images/take_bkg.png" style="width: 30pt; height: 15pt;" /></a>: do a specific snap where the data will be saved as a background</p></li>
 <li><p><a class="reference internal" href="../../_images/do_bkg.png"><img alt="do_bkg" src="../../_images/do_bkg.png" style="width: 30pt; height: 15pt;" /></a>: use the background previously saved to correct the displayed (only displayed, saved data are still raw data) datas.</p></li>
@@ -249,7 +249,7 @@ detector currently activated.</p>
 <div></div></blockquote>
 <div class="figure align-default" id="id2">
 <span id="figure-daq-viewer-settings"></span><img alt="settings" src="../../_images/settings.png" />
-<p class="caption"><span class="caption-number">Fig. 20 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 22 </span><span class="caption-text">Typical DAQ_Viewer <em>Main settings</em>.</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 <ul class="simple">
 <li><p><strong>DAQ type</strong>: readonly string recalling the DAQ type used</p></li>

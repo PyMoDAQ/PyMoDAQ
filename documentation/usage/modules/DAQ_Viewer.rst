@@ -38,8 +38,8 @@ list displaying the viewer main settings (:ref:`viewer_settings`) and specific s
 Hardware initialization
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``DAQ_type``: either *DAQ0D*, *DAQ1D* or *DAQ2D* respectively for scalar detectors (powermeter for instance),
-  vector detectors (spectrometer for instance) and image like detectors.
+* ``DAQ_type``: either *DAQ0D*, *DAQ1D*, *DAQ2D* or *DAQND* respectively for scalar detectors (powermeter for instance),
+  vector detectors (spectrometer for instance), image like detectors and rare hyperdimensional detectors.
 * ``Detector``: list of available hardware plugins of the DAQ_type type.
 * ``Ini. Det``: Initialize the hardware with the given settings (see :ref:`plugin_doc` for details on how to set hardware settings.)
 * ``Quit``: De-initialize the hardware and quit the application
@@ -97,7 +97,7 @@ Data Acquisition
 * |save|: Save current data
 * |snap&save|: Do a new snap and then save the data
 * |open|: Load data previously saved with the save button
-* |showsettings|: Display or hide the settings Tree
+* |showsettings|: Display or hide some settings
 * |refresh|: try to refresh the hardware, for instance the list of COM ports
 * |take_bkg|: do a specific snap where the data will be saved as a background
 * |do_bkg|: use the background previously saved to correct the displayed (only displayed, saved data are still raw data) datas.

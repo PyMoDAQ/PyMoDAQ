@@ -660,15 +660,15 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.49497475"
-     inkscape:cx="816.90882"
-     inkscape:cy="957.84362"
+     inkscape:zoom="1.4"
+     inkscape:cx="962.56872"
+     inkscape:cy="601.73891"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:snap-global="false"
      inkscape:window-width="1920"
-     inkscape:window-height="1137"
+     inkscape:window-height="1017"
      inkscape:window-x="1912"
      inkscape:window-y="-8"
      inkscape:window-maximized="1" />
@@ -680,7 +680,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -2747,7 +2747,7 @@
            id="rect821-6-1"
            style="line-height:0.5;text-align:center;text-anchor:middle" /></flowRegion><flowPara
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:0.5;font-family:Calibri;-inkscape-font-specification:Calibri;text-align:center;text-anchor:middle"
-         id="flowPara823-79-9">Load Submodule</flowPara></flowRoot>    <flowRoot
+         id="flowPara823-79-9">Load Extension</flowPara></flowRoot>    <flowRoot
        transform="matrix(0.22901568,0.13249964,-0.13249964,0.22901568,279.05264,143.53266)"
        style="font-style:normal;font-weight:normal;font-size:40px;line-height:0.5;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none"
        id="flowRoot817-6-2-9"
@@ -2763,5 +2763,5 @@
            id="rect821-6-1-0"
            style="line-height:0.5;text-align:center;text-anchor:middle" /></flowRegion><flowPara
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:0.5;font-family:Calibri;-inkscape-font-specification:Calibri;text-align:center;text-anchor:middle"
-         id="flowPara823-79-9-5">Load Submodule</flowPara></flowRoot>  </g>
+         id="flowPara823-79-9-5">Load Extension</flowPara></flowRoot>  </g>
 </svg>

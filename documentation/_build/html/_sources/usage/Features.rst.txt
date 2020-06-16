@@ -12,8 +12,10 @@ PyMoDAQ is an advanced user interface to control instruments (casually called De
 called Moves for historical reasons). Each of these will have their own interface called :ref:`DAQ_Viewer_module` and
 :ref:`DAQ_Move_module` that are always the same (only some specifics about communication with the controller will differ),
 so that a PyMoDAQ's user will always find a known environment independent of the kind of instruments it controls. These
-detectors and actuators are grouped together in the :ref:`Dashboard_module` and can then be controlled manually by the user: acquisition of images, spectra... for various
-positions of the actuators (see :numref:`overview`). The Dashboard has functionalities to fully configure all its detectors and actuators and
+detectors and actuators are grouped together in the :ref:`Dashboard_module` and can then be controlled manually by
+the user: acquisition of images, spectra... for various
+positions of the actuators (see :numref:`overview`). The Dashboard has functionalities to fully configure
+all its detectors and actuators and
 save the configuration in a file that will, at startup, load and initialize all modules. Then
 Dashboard's extensions can be used to perform advanced and automated tasks on the detectors and actuators
 (see :numref:`overview_submodules`):
@@ -39,7 +41,7 @@ Dashboard's extensions can be used to perform advanced and automated tasks on th
 .. figure:: /image/overview_submodules.png
    :alt: overview
 
-   PyMoDAQ's Dashboard and its submodules: DAQ_Scan for automated acquisitions and DAQ_Logger for data logging.
+   PyMoDAQ's Dashboard and its extensions: DAQ_Scan for automated acquisitions and DAQ_Logger for data logging.
 
 
 

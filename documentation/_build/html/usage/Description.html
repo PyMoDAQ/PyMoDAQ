@@ -99,8 +99,19 @@
 <li class="toctree-l2"><a class="reference internal" href="modules/Main_Modules.html">Main Modules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/data_viewers.html">Data Viewers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="saving.html">Saving datas</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html">Plugins</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html">Utility Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#plugins">Plugins</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#list-of-plugins">List of plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#naming-convention">Naming convention:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#daq-viewer-plugin-template">DAQ Viewer plugin template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#hardware-averaging">Hardware averaging:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#how-to-contribute">How to contribute?</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="CustomApp.html">Custom Application</a></li>
@@ -175,7 +186,7 @@
   <div class="section" id="modules">
 <h1>Modules<a class="headerlink" href="#modules" title="Permalink to this headline">¶</a></h1>
 <p>The following is a detailed explanation of PyMoDAQ’s main modules and all utility ones that are used by PyMoDAQ but
-that could also be used for other applications (see for instance the <em>h5module</em>, a backend of 3 hdf5 python library:
+that could also be used for other applications (see for instance the <a class="reference internal" href="api/API_Utility_Modules.html#h5backendclassdescr"><span class="std std-ref">H5Backend</span></a>, a backend of 3 hdf5 python library:
 pytables, h5py and h5pyd).</p>
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
@@ -194,8 +205,9 @@ pytables, h5py and h5pyd).</p>
 <li class="toctree-l3"><a class="reference internal" href="modules/DAQ_Scan.html#main-control-window">Main Control Window</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#scan-flow">Scan Flow</a></li>
 <li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#settings">Settings</a><ul>
-<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#scan-options">Scan options</a></li>
-<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#saving-settings">Saving Settings</a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#module-manager">Module Manager</a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#general-settings">General Settings</a></li>
+<li class="toctree-l5"><a class="reference internal" href="modules/DAQ_Scan.html#save-settings">Save Settings</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="modules/DAQ_Scan.html#scanner">Scanner</a></li>
@@ -255,24 +267,6 @@ pytables, h5py and h5pyd).</p>
 <li class="toctree-l2"><a class="reference internal" href="saving.html#exploring-datas">Exploring datas</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html">Plugins</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#list-of-plugins">List of plugins</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#naming-convention">Naming convention:</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="modules/Plugins.html#emission-of-data">Emission of data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/Plugins.html#data-ready">Data ready?</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/Plugins.html#synchronous-example">Synchronous example:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/Plugins.html#asynchronous-example">Asynchronous example:</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#hardware-averaging">Hardware averaging:</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#how-to-contribute">How to contribute?</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="modules/Utility_Modules.html">Utility Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#introduction">Introduction</a></li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#scanner">Scanner</a><ul>
@@ -282,6 +276,7 @@ pytables, h5py and h5pyd).</p>
 <li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#tabular">Tabular</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#adaptive">Adaptive</a></li>
 <li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#scan-selector">Scan Selector</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/Utility_Modules.html#module-manager">Module Manager</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#h5browser">H5Browser</a></li>
@@ -293,6 +288,29 @@ pytables, h5py and h5pyd).</p>
 <li class="toctree-l2"><a class="reference internal" href="modules/Utility_Modules.html#navigator">Navigator</a></li>
 </ul>
 </li>
+</ul>
+</div>
+</div>
+<div class="section" id="plugins">
+<span id="plugin-doc"></span><h1>Plugins<a class="headerlink" href="#plugins" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#list-of-plugins">List of plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#naming-convention">Naming convention:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#emission-of-data">Emission of data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#data-ready">Data ready?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#synchronous-example">Synchronous example:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/Plugins.html#asynchronous-example">Asynchronous example:</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#hardware-averaging">Hardware averaging:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/Plugins.html#how-to-contribute">How to contribute?</a></li>
 </ul>
 </div>
 </div>

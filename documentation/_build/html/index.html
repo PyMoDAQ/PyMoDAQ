@@ -95,6 +95,7 @@
 <li class="toctree-l1"><a class="reference internal" href="usage/Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/How_to_start.html">How to Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Description.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Description.html#plugins">Plugins</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/tcpip.html">TCP/IP communication</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usage/Feedback.html">Who use it?</a></li>
@@ -252,8 +253,9 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/DAQ_Scan.html#main-control-window">Main Control Window</a><ul>
 <li class="toctree-l5"><a class="reference internal" href="usage/modules/DAQ_Scan.html#scan-flow">Scan Flow</a></li>
 <li class="toctree-l5"><a class="reference internal" href="usage/modules/DAQ_Scan.html#settings">Settings</a><ul>
-<li class="toctree-l6"><a class="reference internal" href="usage/modules/DAQ_Scan.html#scan-options">Scan options</a></li>
-<li class="toctree-l6"><a class="reference internal" href="usage/modules/DAQ_Scan.html#saving-settings">Saving Settings</a></li>
+<li class="toctree-l6"><a class="reference internal" href="usage/modules/DAQ_Scan.html#module-manager">Module Manager</a></li>
+<li class="toctree-l6"><a class="reference internal" href="usage/modules/DAQ_Scan.html#general-settings">General Settings</a></li>
+<li class="toctree-l6"><a class="reference internal" href="usage/modules/DAQ_Scan.html#save-settings">Save Settings</a></li>
 </ul>
 </li>
 <li class="toctree-l5"><a class="reference internal" href="usage/modules/DAQ_Scan.html#scanner">Scanner</a></li>
@@ -313,24 +315,6 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l3"><a class="reference internal" href="usage/saving.html#exploring-datas">Exploring datas</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html">Plugins</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#installation">Installation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#list-of-plugins">List of plugins</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#naming-convention">Naming convention:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#emission-of-data">Emission of data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#data-ready">Data ready?</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#synchronous-example">Synchronous example:</a></li>
-<li class="toctree-l4"><a class="reference internal" href="usage/modules/Plugins.html#asynchronous-example">Asynchronous example:</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-averaging">Hardware averaging:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#how-to-contribute">How to contribute?</a></li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="usage/modules/Utility_Modules.html">Utility Modules</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#introduction">Introduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#scanner">Scanner</a><ul>
@@ -340,6 +324,7 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/Utility_Modules.html#tabular">Tabular</a></li>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/Utility_Modules.html#adaptive">Adaptive</a></li>
 <li class="toctree-l4"><a class="reference internal" href="usage/modules/Utility_Modules.html#scan-selector">Scan Selector</a></li>
+<li class="toctree-l4"><a class="reference internal" href="usage/modules/Utility_Modules.html#module-manager">Module Manager</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#h5browser">H5Browser</a></li>
@@ -351,6 +336,24 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 <li class="toctree-l3"><a class="reference internal" href="usage/modules/Utility_Modules.html#navigator">Navigator</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage/Description.html#plugins">Plugins</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#list-of-plugins">List of plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#naming-convention">Naming convention:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#hardware-settings">Hardware Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#daq-move-plugin-template">DAQ Move plugin template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#emission-of-data">Emission of data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#data-ready">Data ready?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#synchronous-example">Synchronous example:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/modules/Plugins.html#asynchronous-example">Asynchronous example:</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#hardware-averaging">Hardware averaging:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#hardware-needed-files">Hardware needed files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage/modules/Plugins.html#how-to-contribute">How to contribute?</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="usage/CustomApp.html">Custom Application</a><ul class="simple">
@@ -392,7 +395,8 @@ In that way, you’re also helping in its promotion and amelioration.</p>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/api/API_Utility_Modules.html">Utility Modules</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Utility_Modules.html#h5saver-module">h5saver module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Utility_Modules.html#h5backend">H5Backend</a></li>
+<li class="toctree-l3"><a class="reference internal" href="usage/api/API_Utility_Modules.html#h5saver">H5Saver</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="usage/api/API_Utility_Library.html">Utility Libraries</a><ul>

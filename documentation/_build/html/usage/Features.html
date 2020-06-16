@@ -177,15 +177,17 @@
 called Moves for historical reasons). Each of these will have their own interface called <a class="reference internal" href="modules/DAQ_Viewer.html#daq-viewer-module"><span class="std std-ref">DAQ Viewer</span></a> and
 <a class="reference internal" href="modules/DAQ_Move.html#daq-move-module"><span class="std std-ref">DAQ Move</span></a> that are always the same (only some specifics about communication with the controller will differ),
 so that a PyMoDAQ’s user will always find a known environment independent of the kind of instruments it controls. These
-detectors and actuators are grouped together in the <a class="reference internal" href="modules/DashBoard.html#dashboard-module"><span class="std std-ref">DashBoard</span></a> and can then be controlled manually by the user: acquisition of images, spectra… for various
-positions of the actuators (see <a class="reference internal" href="#overview"><span class="std std-numref">Fig. 2</span></a>). The Dashboard has functionalities to fully configure all its detectors and actuators and
+detectors and actuators are grouped together in the <a class="reference internal" href="modules/DashBoard.html#dashboard-module"><span class="std std-ref">DashBoard</span></a> and can then be controlled manually by
+the user: acquisition of images, spectra… for various
+positions of the actuators (see <a class="reference internal" href="#overview"><span class="std std-numref">Fig. 2</span></a>). The Dashboard has functionalities to fully configure
+all its detectors and actuators and
 save the configuration in a file that will, at startup, load and initialize all modules. Then
 Dashboard’s extensions can be used to perform advanced and automated tasks on the detectors and actuators
 (see <a class="reference internal" href="#overview-submodules"><span class="std std-numref">Fig. 3</span></a>):</p>
 <ul>
 <li><p>The first of these extensions is called <a class="reference internal" href="modules/DAQ_Scan.html#daq-scan-module"><span class="std std-ref">DAQ Scan</span></a> and is used to perform automated and synchronized data
 acquisition as a function of multiple actuators <em>positions</em>. Many kind of <em>scans</em> are possible: 1Ds, 2Ds, NDs, set of
-points and many ways to perform each of these among which <a class="reference internal" href="modules/DAQ_Scan.html#adaptive-scans"><span class="std std-ref">Adaptive</span></a> scan modes have been recently developed
+points and many ways to perform each of these among which <a class="reference internal" href="modules/Utility_Modules.html#adaptive-scans"><span class="std std-ref">Adaptive</span></a> scan modes have been recently developed
 (from version 2.0.1).</p></li>
 <li><p>The second one is the <span class="xref std std-ref">DAQ_Logger</span>. It is a layer between all the detectors within the dashboard and various ways
 to log data acquired from these detectors. As of now, one can log to :</p>
@@ -207,7 +209,7 @@ your data on the database from a web application such as <a class="reference ext
 </ul>
 <div class="figure align-default" id="id5">
 <span id="overview-submodules"></span><img alt="overview" src="../_images/overview_submodules.png" />
-<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">PyMoDAQ’s Dashboard and its submodules: DAQ_Scan for automated acquisitions and DAQ_Logger for data logging.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 3 </span><span class="caption-text">PyMoDAQ’s Dashboard and its extensions: DAQ_Scan for automated acquisitions and DAQ_Logger for data logging.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
 </div>
 <p>Here is a poster of PyMoDAQ features (to be updated).</p>
 <blockquote>

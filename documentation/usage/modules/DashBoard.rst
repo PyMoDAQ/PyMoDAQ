@@ -16,14 +16,14 @@ The flow of this module is as follow:
 * Define/load/modify eventual overshoots (see :ref:`overshoot_manager`)
 * Define/load/modify eventual ROI (Region of interests) selections (see :ref:`roi_manager`)
 * Use the actuators and detectors manually to drive your experiment
-* Select an action to perform: automated scan (DAQ_Scan) or log data (DAQ_Logger)
+* Select an action to perform: automated scan (DAQ_Scan) and/or log data (DAQ_Logger)
 
 
 Introduction
 ------------
 
 This module has one main window,
-the dashboard (:numref:`daq_scan_dashboard`) where a log and all declared actuators and detector
+the dashboard (:numref:`daq_scan_dashboard`) where a log and all declared actuators and detectors
 will be loaded as instances of DAQ_Move and DAQ_Viewer.
 The dashboard gives you full control for manual adjustments
 of each actuator, checking their impact on live data from the detectors. Once all is set, one can move on to

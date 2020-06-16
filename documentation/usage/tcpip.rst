@@ -174,5 +174,9 @@ Custom client: how to?
         check_sended(socket, data_bytes)
 
 
-Pretty easy, isn't it !!!
+Pretty easy, isn't it?
+
+Well, if it isn't you can have a look in the example folder where a Labview based TCP client has been
+programed. It emulates all the rules stated above, and if you are a Labview user, you're lucky ;-) but should really
+think on moving on to python with PyMoDAQ...
 

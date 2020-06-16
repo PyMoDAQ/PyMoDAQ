@@ -6,16 +6,17 @@ DAQ Scan
 This module is an extension of the DashBoard but is the heart of PyMoDAQ, it will:
 
 * setup automatic data acquisition of detectors as a function of one or more actuators
-* save datas in hierarchical binary files (compatible with the :ref:`H5Browser_module`)
+* save datas in hierarchical hdf5 binary files (compatible with the :ref:`H5Browser_module` used to display/explore
+  data)
 
 The flow of this module is as follow:
 
 * at startup you have to define/load a preset (see :ref:`preset_manager`) in the Dashboard
 * Select DAQ_Scan in the actions menu
 * A dataset will be declared the first time you set a scan. A dataset is equivalent to a single saved file
-  containing multiple scans.  One can see a dataset as a set of scans related to single *subject of test*.
+  containing multiple scans.  One can see a dataset as a series of scans related to single *subject/sample to be characterized*.
 * Metadata can be saved for each dataset and then for each scan and be later retrieved from the saved file
-  (see :ref:`saving_doc`)
+  (see :ref:`saving_doc` and :ref:`H5Browser_module`)
 * Performs multiple scans exploring all the parameters needed for your experiment
 
 
@@ -59,16 +60,23 @@ The top of the settings panel is comprised of buttons to set, start and stop a s
     :height: 20pt
 
 * |quit|: will shut down all modules and quit the application (redundant with: *File/Quit* menu)
-* **Set Scan**: take into account the selected scan options and valid them or not. Gives also the number
-  of steps for the currently set scan.
+* **Set Scan**: take into account the selected scanner settings and valid them or not.
 * **Init. Positions**: will move all selected actuators to their initial positions as defined by the currently set scan.
 * |start|: will start the currently set scan (first it will set it then start it)
 * |stop|: stop the currently running scan.
 
 Settings
 ********
-The settings tree as shown on :numref:`daq_scan_main` is actually divided in three subtrees that contain everything
+The settings tree as shown on :numref:`daq_scan_main` is actually divided in a few subtrees that contain everything
 needed to define a given scan, save data and plot live information.
+
+
+Module Manager
+++++++++++++++
+
+The leftmost tree is the user interface of the module manager (see :ref:`module_manager` for details). It allows the user
+to select the actuators and detectors for the next scan (see :numref:`list_modules`). This interface is also used for the
+DAQ_Logger extension.
 
    .. _list_modules:
 
@@ -79,64 +87,58 @@ needed to define a given scan, save data and plot live information.
 
 .. :download:`png <list_modules.png>`
 
-Scan options
-++++++++++++
+General Settings
++++++++++++++++
 
-Leftmost Tree comprised of:
-
-* Loaded preset files: configuration (preset), overshoot and layout if any
-* **Moves/Detectors** (see :numref:`list_modules`):
-
-  * **Moves**: list of all declared *DAQ_Move* modules (and present on the dashboard). One can select
-    one or more modules for the current scan.
-  * **Detectors** list of all declared *DAQ_Viewer* modules (and present on the dashboard). One can select
-    one or more modules for the current scan.
-
+The General Settings are comprised of (see :numref:`general_settings_fig`):
 
 * **Time Flow**
 
-  * **Wait time**: extra time the application wait before moving on to the next DAQ_Move step. Enable
+  * **Wait time**: extra time the application wait before moving on to the next scan step. Enable
     rough cadencing if needed
-  * **timeout**: raise a timeout if one of the selected modules is longer than timeout to respond
+  * **timeout**: raise a timeout if one of the scan step (moving or detecting) is taking a longer time than timeout to respond
 
-* **Scan options** (see :numref:`other_settings`):
+* **Scan options** :
 
   * **N average**: Select how many set scans to perform. Save all individual scans and its average
   * **Plot From**: select the detector from which data will be taken in order to plot live data
 
-Saving Settings
+
+   .. _general_settings_fig:
+
+.. figure:: /image/DAQ_Scan/general_settings.png
+   :alt: list_modules
+
+   General settings for the DAQ_Scan module
+
+
+Save Settings
 +++++++++++++++
 
-Top right tree (see :numref:`other_settings`):
+The Save Settings (see :numref:`save_settings_fig`) is the user interface of the :ref:`h5saver_module`, it is a general
+interface to save the scans in hierarchical hdf5 file (it is also used in the DAQ_Logger extension):
 
-* **Save 2D datas**: if not selected, 2D datas will **not** be saved but only lineouts or integrated area (only in
-order to save memory space, but dangerous as you loose the possibility to get back initial raw data.
-* **Base path**: The folder where all datasets and scans will be saved, for instance: ``C:\Data``
-* **Base name**: the name given to the scans you are going to do (default is *Scan*)
-* **current path**: generated path to save infos on current scan, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Scan000``
-* **current scan name**: indexed name from *base name*, for instance: ``Scan000``. Any scan from the current h5
-file can be selected here in order to add to it *comments*
-* **comments**: Other comments to add to the scan. Metadata can be entered before the scan but these
-*comments* can be added after, once one know if the scan is interesting or not for instance
-* **h5 file**: complete path of the current h5 file, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Dataset_20181226_000.h5``
+   .. _save_settings_fig:
 
-* **Compression options**: by default data are compressed to mid level
+.. figure:: /image/DAQ_Scan/save_settings.png
+   :alt: list_modules
 
-  * **compression library**: see *pytables* package or *HDF5* documentation for details
-  * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
+   Save settings for the DAQ_Scan extension
 
 
 Scanner
 *******
 
-   .. _other_settings:
+Finally all specifics of the upcoming scan are configured using the :ref:`scanner_paragrah` module interface as seen on
+:numref:`scan2D_fig2` in the case of an adaptive Scan2D scan configuration.
 
-.. figure:: /image/DAQ_Scan/other_settings.png
-   :alt: other_settings
+  .. _scan2D_fig2:
 
-   Other Scan Settings
+.. figure:: /image/managers/scanner_widget.png
+   :alt: scanner_fig
 
-.. :download:`png <other_settings.png>`
+   The Scanner user interface set on a *Scan2D* scan type and an *adaptive* scan subtype and its particular settings.
+
 
 Live data
 *********
@@ -145,7 +147,7 @@ For a data acquisition system to be efficient, live data must be plotted in orde
 experiment behaviour and check if something is wrong or successfull without the need to perform
 full data analysis. For this PyMoDAQ live data display will show all datas exported
 by the setting **plot from** (defining which DAQ_Viewer module exports data). The total dimensionality of the datas + the scan dimensions
-(1 for scan1D and 2 for Scan2D) should not exceed 2.
+(1 for scan1D and 2 for Scan2D) should not exceed 2 (this means one cannot plot more complex plots than 2D intensity plots).
 
    .. _det1D:
 
@@ -213,9 +215,9 @@ From version 1.4.0, a new module has been added: the Navigator (daq_utils.plotti
 dealing with 2D scans such as XY
 cartography. As such, it is not displayed by default. It consists of a tree like structure displaying all
 currently saved 2D scans (in the current dataset) and a viewer where selected scans can be displayed at their respective
-locations. It can be set using the *Settings* menu, *Show Navigator* option. :numref:`navigator` shows the DAQ_scan module
-with activated Navigator and a few scans. This navigator can also be used as a *ScanSelector* viewer to quickly explore
-a 2D area.
+locations. It can be displayed using the *Settings* menu, *Show Navigator* option. :numref:`navigator` shows the DAQ_scan extension
+with activated Navigator and a few scans. This navigator can also be used as a :ref:`scan_selector_paragraph` viewer to
+quickly explore and select areas to scan on a 2D phase space.
 
    .. _navigator:
 

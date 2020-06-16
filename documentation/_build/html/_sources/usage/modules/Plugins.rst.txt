@@ -1,14 +1,3 @@
-.. _plugin_doc:
-
-Plugins
-=======
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-
-
 Any new hardware has to be included in PyMoDAQ as a python plugin. This is a script containing a python object following a particular template and behaviour and inheriting from a base class.
 Plugins are articulated given their type: Moves or Viewers and for the last their main dimensionality: **0D**, **1D** or **2D**.
 It is recommended to start from the *template* plugins (daq_move_Template, daq_NDviewer_Template, see below)

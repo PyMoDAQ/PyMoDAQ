@@ -10,7 +10,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Plugins &mdash; PyMoDAQ 2.0.1 documentation</title>
+  <title>Installation &mdash; PyMoDAQ 2.0.1 documentation</title>
   
 
   
@@ -38,8 +38,8 @@
   <link rel="stylesheet" href="../../static/style.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
-    <link rel="next" title="Utility Modules" href="Utility_Modules.html" />
-    <link rel="prev" title="Saving datas" href="../saving.html" /> 
+    <link rel="next" title="Custom Application" href="../CustomApp.html" />
+    <link rel="prev" title="Utility Modules" href="Utility_Modules.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -95,29 +95,23 @@
 <li class="toctree-l1"><a class="reference internal" href="../Features.html">PyMoDAQ’s overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../Installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../How_to_start.html">How to Start</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../Description.html">Modules</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="Main_Modules.html">Main Modules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="data_viewers.html">Data Viewers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../saving.html">Saving datas</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Plugins</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#list-of-plugins">List of plugins</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#naming-convention">Naming convention:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#hardware-settings">Hardware Settings</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#daq-move-plugin-template">DAQ Move plugin template</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#emission-of-data">Emission of data</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#data-ready">Data ready?</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#synchronous-example">Synchronous example:</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#asynchronous-example">Asynchronous example:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../Description.html">Modules</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../Description.html#plugins">Plugins</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#list-of-plugins">List of plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#naming-convention">Naming convention:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hardware-settings">Hardware Settings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#daq-move-plugin-template">DAQ Move plugin template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#daq-viewer-plugin-template">DAQ Viewer plugin template</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#emission-of-data">Emission of data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-ready">Data ready?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#synchronous-example">Synchronous example:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#asynchronous-example">Asynchronous example:</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="#hardware-averaging">Hardware averaging:</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#hardware-needed-files">Hardware needed files</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#how-to-contribute">How to contribute?</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="Utility_Modules.html">Utility Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hardware-averaging">Hardware averaging:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hardware-needed-files">Hardware needed files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-contribute">How to contribute?</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../CustomApp.html">Custom Application</a></li>
@@ -172,7 +166,7 @@
         
           <li><a href="../Description.html">Modules</a> &raquo;</li>
         
-      <li>Plugins</li>
+      <li>Installation</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -191,23 +185,19 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="plugins">
-<span id="plugin-doc"></span><h1>Plugins<a class="headerlink" href="#plugins" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-</div>
-<p>Any new hardware has to be included in PyMoDAQ as a python plugin. This is a script containing a python object following a particular template and behaviour and inheriting from a base class.
+  <p>Any new hardware has to be included in PyMoDAQ as a python plugin. This is a script containing a python object following a particular template and behaviour and inheriting from a base class.
 Plugins are articulated given their type: Moves or Viewers and for the last their main dimensionality: <strong>0D</strong>, <strong>1D</strong> or <strong>2D</strong>.
 It is recommended to start from the <em>template</em> plugins (daq_move_Template, daq_NDviewer_Template, see below)
 and then check from other examples (pymodaq_plugins <a class="reference external" href="https://github.com/CEMES-CNRS/pymodaq_plugins">repository</a>) the proper way of writing a plugin. You will find below some information on the <strong>how to</strong>
 but comparison with existing ones will be beneficial.</p>
 <div class="section" id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
 <p>All plugins are located in the <strong>pymodaq_plugins</strong> repository on github. This constitutes a python package that will be
 installed together with PyMoDAQ (or manually install it if you don’t want the up to date version). PyMoDAQ will therefore
 call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>site_packages</em> location in python distribution.</p>
 </div>
 <div class="section" id="list-of-plugins">
-<h2>List of plugins<a class="headerlink" href="#list-of-plugins" title="Permalink to this headline">¶</a></h2>
+<h1>List of plugins<a class="headerlink" href="#list-of-plugins" title="Permalink to this headline">¶</a></h1>
 <table class="docutils align-default" id="id9">
 <caption><span class="caption-number">Table 1 </span><span class="caption-text">Plugins list</span><a class="headerlink" href="#id9" title="Permalink to this table">¶</a></caption>
 <colgroup>
@@ -417,7 +407,7 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 <p>See up-to-date database: <a class="reference external" href="https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg">https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg</a></p>
 </div>
 <div class="section" id="naming-convention">
-<h2>Naming convention:<a class="headerlink" href="#naming-convention" title="Permalink to this headline">¶</a></h2>
+<h1>Naming convention:<a class="headerlink" href="#naming-convention" title="Permalink to this headline">¶</a></h1>
 <p>For the plugin to be properly recognised by PyMoDAQ, its location and name must follow these rules:</p>
 <ul class="simple">
 <li><p>An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)</p></li>
@@ -429,18 +419,18 @@ call the plugins from the <em>pymodaq_plugins</em> package installed on the <em>
 </ul>
 </div>
 <div class="section" id="hardware-settings">
-<span id="id2"></span><h2>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h2>
+<span id="id2"></span><h1>Hardware Settings<a class="headerlink" href="#hardware-settings" title="Permalink to this headline">¶</a></h1>
 <p>An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
-These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a>.
+These settings will appear on the UI as a tree of parameters with a title and different types, see <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 41</span></a>.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object <code class="docutils literal notranslate"><span class="pre">self.settings</span></code>.
 This object inherits from on the <code class="docutils literal notranslate"><span class="pre">Parameter</span></code> object defined in <a class="reference external" href="http://www.pyqtgraph.org/documentation/parametertree/index.html">pyqtgraph</a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id10">
 <span id="figure-settings"></span><img alt="Settings example" src="../../_images/settings_example.png" />
-<p class="caption"><span class="caption-number">Fig. 30 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 41 </span><span class="caption-text">Typical hardware settings represented as a tree structure (here from the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin)</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
 </div>
-<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a>:</p>
+<p>Here is an example of such a list of dictionaries corresponding to <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 41</span></a>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">[{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Dll library:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;andor_lib&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;browsepath&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">libpath</span><span class="p">},</span>
  <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera Settings:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_settings&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;expanded&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;children&#39;</span><span class="p">:</span> <span class="p">[</span>
      <span class="p">{</span><span class="s1">&#39;title&#39;</span><span class="p">:</span> <span class="s1">&#39;Camera SN:&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;camera_serialnumber&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;int&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;readonly&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
@@ -455,11 +445,11 @@ This object inherits from on the <code class="docutils literal notranslate"><spa
 </div>
 <p>The list of available types of parameters <a href="#id4"><span class="problematic" id="id5">:module:`custom_parameter_tree`</span></a> (defined in <code class="docutils literal notranslate"><span class="pre">pymodaq.daq_utils.custom_parameter_tree.py</span></code>) is:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a> is of type group</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">group</span></code> : “camera settings” on <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 41</span></a> is of type group</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">int</span></code> : settable integer (SpinBox_Custom object)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">float</span></code> : settable float (SpinBox_Custom object)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">str</span></code> : a QLineEdit object (see Qt5 documentation)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 30</span></a> is a combo box</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">list</span></code> : “Readout Modes” <a class="reference internal" href="#figure-settings"><span class="std std-numref">Fig. 41</span></a> is a combo box</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">bool</span></code> : checkable boolean</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">led</span></code> : checkable boolean in the form of a green (True) of red (False) led</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">date_time</span></code> : a QDateTime object (see Qt5 documentation)</p></li>
@@ -499,21 +489,21 @@ The <code class="docutils literal notranslate"><span class="pre">param</span></c
 </div>
 </div>
 <div class="section" id="daq-move-plugin-template">
-<h2>DAQ Move plugin template<a class="headerlink" href="#daq-move-plugin-template" title="Permalink to this headline">¶</a></h2>
+<h1>DAQ Move plugin template<a class="headerlink" href="#daq-move-plugin-template" title="Permalink to this headline">¶</a></h1>
 <p>An actuator plugin is a python class inheriting from a base class. Let’s say you want to create the <em>template</em> plugin.
 You will first create a <code class="docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\pymodaq_plugins\daq_move_plugins</span></code> folder.
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_Move_Template</span></code>.</p>
 <p>See <a class="reference download internal" download="" href="../../_downloads/3edbed0b9c935d78d3e29f17a42436c0/daq_move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed template.</p>
 </div>
 <div class="section" id="daq-viewer-plugin-template">
-<span id="viewer-plugins"></span><h2>DAQ Viewer plugin template<a class="headerlink" href="#daq-viewer-plugin-template" title="Permalink to this headline">¶</a></h2>
+<span id="viewer-plugins"></span><h1>DAQ Viewer plugin template<a class="headerlink" href="#daq-viewer-plugin-template" title="Permalink to this headline">¶</a></h1>
 <p>A detector plugin is a python class inheriting from a base class. Let’s say you want to create the <em>template</em> plugin.
 You will first create a <code class="docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code> file in the <code class="docutils literal notranslate"><span class="pre">\pymodaq_plugins\daq_viewer_plugins\plugins_ND\</span></code>
 folder (with N=0, 1 or 2 depending the data dimensionality of your detector).
 The plugin class will be called <code class="docutils literal notranslate"><span class="pre">DAQ_NDViewer_Template</span></code>.</p>
 <p>See <a class="reference download internal" download="" href="../../_downloads/e463332e556bbc141377f89434d56107/daq_NDviewer_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_NDviewer_Template.py</span></code></a> for a detailed template.</p>
 <div class="section" id="emission-of-data">
-<span id="data-emission"></span><h3>Emission of data<a class="headerlink" href="#emission-of-data" title="Permalink to this headline">¶</a></h3>
+<span id="data-emission"></span><h2>Emission of data<a class="headerlink" href="#emission-of-data" title="Permalink to this headline">¶</a></h2>
 <p>When data are ready (see <a class="reference internal" href="#data-ready"><span class="std std-ref">Data ready?</span></a> to know about that), the plugin has to notify the viewer module in order
 to display data and eventually save them. For this PyMoDAQ use two types of signals (see pyqtsignal documentation for details):</p>
 <ul class="simple">
@@ -561,7 +551,7 @@ Each array will generate one channel within the corresponding viewer. Here is th
 </ul>
 </div>
 <div class="section" id="data-ready">
-<span id="id6"></span><h3>Data ready?<a class="headerlink" href="#data-ready" title="Permalink to this headline">¶</a></h3>
+<span id="id6"></span><h2>Data ready?<a class="headerlink" href="#data-ready" title="Permalink to this headline">¶</a></h2>
 <p>One difficulty with these viewer plugins is to determine when data is ready to be read from the controller and then
 to be send to the user interface for plotting and saving. There are a few solutions:</p>
 <ul class="simple">
@@ -574,7 +564,7 @@ nicest/hardest solution is to use callbacks (if the controller provides one) and
 </ul>
 </div>
 <div class="section" id="synchronous-example">
-<h3>Synchronous example:<a class="headerlink" href="#synchronous-example" title="Permalink to this headline">¶</a></h3>
+<h2>Synchronous example:<a class="headerlink" href="#synchronous-example" title="Permalink to this headline">¶</a></h2>
 <p>The code below illustrates the poll method using a loop:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">poll_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -599,7 +589,7 @@ nicest/hardest solution is to use callbacks (if the controller provides one) and
 </div>
 </div>
 <div class="section" id="asynchronous-example">
-<h3>Asynchronous example:<a class="headerlink" href="#asynchronous-example" title="Permalink to this headline">¶</a></h3>
+<h2>Asynchronous example:<a class="headerlink" href="#asynchronous-example" title="Permalink to this headline">¶</a></h2>
 <p>The code below is derived from <em>daq_Andor_SDK2</em> (in <em>andor</em> hardware folder) and shows how to create a thread waiting for data ready and triggering the emission of data</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DAQ_AndorSDK2</span><span class="p">(</span><span class="n">DAQ_Viewer_base</span><span class="p">):</span>
 
@@ -655,7 +645,7 @@ nicest/hardest solution is to use callbacks (if the controller provides one) and
 </div>
 </div>
 <div class="section" id="hardware-averaging">
-<span id="id7"></span><h2>Hardware averaging:<a class="headerlink" href="#hardware-averaging" title="Permalink to this headline">¶</a></h2>
+<span id="id7"></span><h1>Hardware averaging:<a class="headerlink" href="#hardware-averaging" title="Permalink to this headline">¶</a></h1>
 <p>By default, if averaging of data is needed the Viewer module will take care of it software wise. However, if the hardware
 controller provides an efficient method to do it (that will save time) then you should set the class field
 <code class="docutils literal notranslate"><span class="pre">hardware_averaging</span></code> to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
@@ -669,7 +659,7 @@ controller provides an efficient method to do it (that will save time) then you 
 </div>
 </div>
 <div class="section" id="hardware-needed-files">
-<h2>Hardware needed files<a class="headerlink" href="#hardware-needed-files" title="Permalink to this headline">¶</a></h2>
+<h1>Hardware needed files<a class="headerlink" href="#hardware-needed-files" title="Permalink to this headline">¶</a></h1>
 <p>If you are using/referring to custom python wrappers/dlls… within your plugin and need a place where to copy them
 in PyMoDAQ, then use the <code class="docutils literal notranslate"><span class="pre">\pymodaq_plugins\hardware</span></code> folder. For instance, the <code class="docutils literal notranslate"><span class="pre">daq_2Dviewer_AndorCCD</span></code> plugin need various files stored
 in the <code class="docutils literal notranslate"><span class="pre">andor</span></code> folder (on github repository). I would therefore copy it as <code class="docutils literal notranslate"><span class="pre">\pymodaq_plugins\hardware\andor</span></code>
@@ -681,7 +671,7 @@ and call whatever module I need within (meaning there is a __init__.py file in t
 </div>
 </div>
 <div class="section" id="how-to-contribute">
-<h2>How to contribute?<a class="headerlink" href="#how-to-contribute" title="Permalink to this headline">¶</a></h2>
+<h1>How to contribute?<a class="headerlink" href="#how-to-contribute" title="Permalink to this headline">¶</a></h1>
 <p>If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
 to do so!!), you will have to follow the rules as stated above. However, the best practice would be to <em>fork</em>
 pymodaq_plugins repository. On windows, you can use
@@ -689,7 +679,6 @@ pymodaq_plugins repository. On windows, you can use
 the command line where you <em>cd</em> within the forked package. This command will install the package but
 any change you apply on the local folder will be applied on the package. Once you’re ready with a working plugin, you can then
 <em>push</em> your branch that will be merged with the main branch after validation.</p>
-</div>
 </div>
 
 
@@ -700,10 +689,10 @@ any change you apply on the local folder will be applied on the package. Once yo
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="Utility_Modules.html" class="btn btn-neutral float-right" title="Utility Modules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="../CustomApp.html" class="btn btn-neutral float-right" title="Custom Application" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../saving.html" class="btn btn-neutral float-left" title="Saving datas" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="Utility_Modules.html" class="btn btn-neutral float-left" title="Utility Modules" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

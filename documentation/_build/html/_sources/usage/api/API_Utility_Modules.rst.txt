@@ -5,12 +5,19 @@ Utility Modules
 
 .. autosummary::
 
+.. _H5BackendClassDescr:
+
+H5Backend
+---------
+The H5Backend is a wrapper around three hdf5 python packages: pytables, h5py and h5pyd. It allows seemless integration
+of any of these with PyMoDAQ features
+
 .. _H5SaverClassDescr:
 
-h5saver module
---------------
+H5Saver
+-------
 
-This module is a help to save data in a hierachical hdf5 binary file through the **pytables** package. Using the ``H5Saver``
+This module is a help to save data in a hierachical hdf5 binary file through the H5Backend object . Using the ``H5Saver``
 object will make sure you can explore your datas with the H5Browser. The object can be used to: punctually save one set
 of data such as with the DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save multiple acquisition such as with the DAQ_Scan
 (see :ref:`daq_scan_saving`) or save on the fly with enlargeable arrays such as the :ref:`continuous_saving` mode of the DAQ_Viewer.

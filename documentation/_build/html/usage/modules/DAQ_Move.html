@@ -195,18 +195,17 @@
 <p>This module is to be used to control any actuator hardware. An actuator is, in a general sense, any parameter
 that one can control and may vary during an experiment.  The default actuator
 is a Mock one (a kind of software based
-actuator displaying a <em>position</em> and accepting absolute or relative <em>positioning</em>.</p>
+actuator displaying a <em>position</em> and accepting absolute or relative <em>positioning</em>).</p>
 <div class="section" id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
 <p>This module has a generic interface in the form of a dockable panel containing the interface for initialization,
 the manual control of the actuator <em>position</em> and a side tree like interface displaying all the settings.
-<a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 16</span></a> shows the minimal interface of the module (in order to take minimal place in the DAQ_Scan
-dashboard)</p>
+<a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 18</span></a> shows the minimal interface of the module (in order to take minimal place in the Dashboard)</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id2">
 <span id="daq-move-gui-base"></span><img alt="daq_move_gui_base" src="../../_images/daq_move_gui_base.png" />
-<p class="caption"><span class="caption-number">Fig. 16 </span><span class="caption-text">Minimal DAQ_Move user interface</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 18 </span><span class="caption-text">Minimal DAQ_Move user interface</span><a class="headerlink" href="#id2" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="hardware-initialization">
@@ -214,24 +213,24 @@ dashboard)</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Stage</span></code>: list of available hardware plugins of the DAQ_Move type.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">Ini.</span> <span class="pre">Stage</span></code>: Initialize the hardware with the given settings (see <a class="reference internal" href="Plugins.html#plugin-doc"><span class="std std-ref">Plugins</span></a> for details on how to set hardware settings.)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the application</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Quit</span></code>: De-initialize the hardware and quit the module</p></li>
 </ul>
 </div>
 <div class="section" id="positioning">
 <h2>Positioning<a class="headerlink" href="#positioning" title="Permalink to this headline">¶</a></h2>
-<p>Once the hardware initialized, the actual <em>position</em> is displayed on the <em>Current position</em> display
-(bottom of <a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 16</span></a>) while the absolute <em>position</em> can be set using the top spinbox
+<p>Once the hardware is initialized, the actual <em>position</em> is displayed on the <em>Current position</em> display
+(bottom of <a class="reference internal" href="#daq-move-gui-base"><span class="std std-numref">Fig. 18</span></a>) while the absolute <em>position</em> can be set using the top spinbox
 and apply it using the <a class="reference internal" href="../../_images/green_arrow.png"><img alt="green_arrow" src="../../_images/green_arrow.png" style="width: 20pt; height: 20pt;" /></a> button.</p>
 </div>
 <div class="section" id="advanced-positioning">
 <h2>Advanced positioning<a class="headerlink" href="#advanced-positioning" title="Permalink to this headline">¶</a></h2>
 <p>More options can be displayed in order to precisely control the actuator by pressing the <a class="reference internal" href="../../_images/plus_button.png"><img alt="plus_button" src="../../_images/plus_button.png" style="width: 20pt; height: 20pt;" /></a> button.
-The user interface will then look like <a class="reference internal" href="#daq-move-gui-rel"><span class="std std-numref">Fig. 17</span></a>.</p>
+The user interface will then look like <a class="reference internal" href="#daq-move-gui-rel"><span class="std std-numref">Fig. 19</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id3">
 <span id="daq-move-gui-rel"></span><img alt="daq_move_gui_rel" src="../../_images/daq_move_gui_rel.png" />
-<p class="caption"><span class="caption-number">Fig. 17 </span><span class="caption-text">DAQ_Move user interface with controls</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 19 </span><span class="caption-text">DAQ_Move user interface with controls</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
 <p>The two new displayed spinbox relate to Absolute positioning (redundant with the one on the top)  and
 Relative one.</p>
@@ -248,12 +247,12 @@ Relative one.</p>
 <h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
 <p>The hardware and module settings can be displayed in order to initialize correctly the actuator and add other
 options by pressing the <a class="reference internal" href="../../_images/settings_button.png"><img alt="settings" src="../../_images/settings_button.png" style="width: 20pt; height: 20pt;" /></a> button. The user interface will then look like
-<a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 18</span></a>.</p>
+<a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 20</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id4">
 <span id="daq-move-gui-settings"></span><img alt="daq_move_gui_settings" src="../../_images/daq_move_gui_settings.png" />
-<p class="caption"><span class="caption-number">Fig. 18 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 20 </span><span class="caption-text">Full DAQ_Move user interface with controls and settings</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
 <p>In the settings tree, there is two sections. The first relates to <em>Main settings</em> (not much there for
 the moment apart for the selected stage type and <em>Controller ID</em> that is related to multiaxes controller.
@@ -266,7 +265,7 @@ this particular case the controller should not be initialized multiple times. On
 refered to as <em>Master</em> and the other ones will be referred to as <em>Slave</em>. They will share the same controller
 address represented in the settings tree by the <em>Controller ID</em> entry. These settings will be activated
 within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
-in <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 18</span></a>).</p>
+in <a class="reference internal" href="#daq-move-gui-settings"><span class="std std-numref">Fig. 20</span></a>).</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">Controller</span> <span class="pre">ID</span></code>: unique identifier of the controller driving the stage</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is</span> <span class="pre">Multiaxes</span></code>: boolean</p></li>
@@ -274,8 +273,8 @@ in <a class="reference internal" href="#daq-move-gui-settings"><span class="std 
 <li><p><code class="docutils literal notranslate"><span class="pre">Axis</span></code>: identifier defined in the plugin script</p></li>
 </ul>
 <p>See <a class="reference download internal" download="" href="../../_downloads/3edbed0b9c935d78d3e29f17a42436c0/daq_move_Template.py"><code class="xref download docutils literal notranslate"><span class="pre">daq_move_Template.py</span></code></a> for a detailed example. These settings are
-really valid only when the module is used within the DAQ_Scan framework that deals with multiple modules
-at the same time.</p>
+really valid only when the module is used within the Dashboard framework that deals with multiple modules
+at the same time as configured in the <a class="reference internal" href="Utility_Modules.html#preset-manager"><span class="std std-ref">Preset manager</span></a> interface.</p>
 </div>
 <div class="section" id="bounds">
 <h3>Bounds<a class="headerlink" href="#bounds" title="Permalink to this headline">¶</a></h3>

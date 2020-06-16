@@ -193,16 +193,17 @@
 <p>This module is an extension of the DashBoard but is the heart of PyMoDAQ, it will:</p>
 <ul class="simple">
 <li><p>setup automatic data acquisition of detectors as a function of one or more actuators</p></li>
-<li><p>save datas in hierarchical binary files (compatible with the <a class="reference internal" href="Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a>)</p></li>
+<li><p>save datas in hierarchical hdf5 binary files (compatible with the <a class="reference internal" href="Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a> used to display/explore
+data)</p></li>
 </ul>
 <p>The flow of this module is as follow:</p>
 <ul class="simple">
 <li><p>at startup you have to define/load a preset (see <a class="reference internal" href="Utility_Modules.html#preset-manager"><span class="std std-ref">Preset manager</span></a>) in the Dashboard</p></li>
 <li><p>Select DAQ_Scan in the actions menu</p></li>
 <li><p>A dataset will be declared the first time you set a scan. A dataset is equivalent to a single saved file
-containing multiple scans.  One can see a dataset as a set of scans related to single <em>subject of test</em>.</p></li>
+containing multiple scans.  One can see a dataset as a series of scans related to single <em>subject/sample to be characterized</em>.</p></li>
 <li><p>Metadata can be saved for each dataset and then for each scan and be later retrieved from the saved file
-(see <a class="reference internal" href="../saving.html#saving-doc"><span class="std std-ref">Saving datas</span></a>)</p></li>
+(see <a class="reference internal" href="../saving.html#saving-doc"><span class="std std-ref">Saving datas</span></a> and <a class="reference internal" href="Utility_Modules.html#h5browser-module"><span class="std std-ref">H5Browser</span></a>)</p></li>
 <li><p>Performs multiple scans exploring all the parameters needed for your experiment</p></li>
 </ul>
 <div class="section" id="introduction">
@@ -227,8 +228,7 @@ display live data taken during a scan.</p>
 <p>The top of the settings panel is comprised of buttons to set, start and stop a scan as well as quit the application.</p>
 <ul class="simple">
 <li><p><a class="reference internal" href="../../_images/quit.png"><img alt="quit" src="../../_images/quit.png" style="width: 60pt; height: 20pt;" /></a>: will shut down all modules and quit the application (redundant with: <em>File/Quit</em> menu)</p></li>
-<li><p><strong>Set Scan</strong>: take into account the selected scan options and valid them or not. Gives also the number
-of steps for the currently set scan.</p></li>
+<li><p><strong>Set Scan</strong>: take into account the selected scanner settings and valid them or not.</p></li>
 <li><p><strong>Init. Positions</strong>: will move all selected actuators to their initial positions as defined by the currently set scan.</p></li>
 <li><p><a class="reference internal" href="../../_images/start_scan.png"><img alt="start" src="../../_images/start_scan.png" style="width: 60pt; height: 20pt;" /></a>: will start the currently set scan (first it will set it then start it)</p></li>
 <li><p><a class="reference internal" href="../../_images/stop_scan.png"><img alt="stop" src="../../_images/stop_scan.png" style="width: 60pt; height: 20pt;" /></a>: stop the currently running scan.</p></li>
@@ -236,74 +236,66 @@ of steps for the currently set scan.</p></li>
 </div>
 <div class="section" id="settings">
 <h3>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h3>
-<p>The settings tree as shown on <a class="reference internal" href="#daq-scan-main"><span class="std std-numref">Fig. 8</span></a> is actually divided in three subtrees that contain everything
+<p>The settings tree as shown on <a class="reference internal" href="#daq-scan-main"><span class="std std-numref">Fig. 8</span></a> is actually divided in a few subtrees that contain everything
 needed to define a given scan, save data and plot live information.</p>
+<div class="section" id="module-manager">
+<h4>Module Manager<a class="headerlink" href="#module-manager" title="Permalink to this headline">¶</a></h4>
+<p>The leftmost tree is the user interface of the module manager (see <span class="xref std std-ref">module_manager</span> for details). It allows the user
+to select the actuators and detectors for the next scan (see <a class="reference internal" href="#list-modules"><span class="std std-numref">Fig. 9</span></a>). This interface is also used for the
+DAQ_Logger extension.</p>
 <blockquote>
 <div></div></blockquote>
 <div class="figure align-default" id="id3">
 <span id="list-modules"></span><img alt="list_modules" src="../../_images/list_modules.png" />
 <p class="caption"><span class="caption-number">Fig. 9 </span><span class="caption-text">List of declared modules from a preset</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
 </div>
-<div class="section" id="scan-options">
-<h4>Scan options<a class="headerlink" href="#scan-options" title="Permalink to this headline">¶</a></h4>
-<p>Leftmost Tree comprised of:</p>
-<ul class="simple">
-<li><p>Loaded preset files: configuration (preset), overshoot and layout if any</p></li>
-<li><p><strong>Moves/Detectors</strong> (see <a class="reference internal" href="#list-modules"><span class="std std-numref">Fig. 9</span></a>):</p>
+</div>
+<div class="section" id="general-settings">
+<h4>General Settings<a class="headerlink" href="#general-settings" title="Permalink to this headline">¶</a></h4>
+<p>The General Settings are comprised of (see <a class="reference internal" href="#general-settings-fig"><span class="std std-numref">Fig. 10</span></a>):</p>
 <ul>
-<li><p><strong>Moves</strong>: list of all declared <em>DAQ_Move</em> modules (and present on the dashboard). One can select
-one or more modules for the current scan.</p></li>
-<li><p><strong>Detectors</strong> list of all declared <em>DAQ_Viewer</em> modules (and present on the dashboard). One can select
-one or more modules for the current scan.</p></li>
-</ul>
-</li>
 <li><p><strong>Time Flow</strong></p>
-<ul>
-<li><p><strong>Wait time</strong>: extra time the application wait before moving on to the next DAQ_Move step. Enable
+<ul class="simple">
+<li><p><strong>Wait time</strong>: extra time the application wait before moving on to the next scan step. Enable
 rough cadencing if needed</p></li>
-<li><p><strong>timeout</strong>: raise a timeout if one of the selected modules is longer than timeout to respond</p></li>
+<li><p><strong>timeout</strong>: raise a timeout if one of the scan step (moving or detecting) is taking a longer time than timeout to respond</p></li>
 </ul>
 </li>
-<li><p><strong>Scan options</strong> (see <a class="reference internal" href="#other-settings"><span class="std std-numref">Fig. 10</span></a>):</p>
-<ul>
+<li><p><strong>Scan options</strong> :</p>
+<ul class="simple">
 <li><p><strong>N average</strong>: Select how many set scans to perform. Save all individual scans and its average</p></li>
 <li><p><strong>Plot From</strong>: select the detector from which data will be taken in order to plot live data</p></li>
 </ul>
+<blockquote>
+<div></div></blockquote>
 </li>
 </ul>
+<div class="figure align-default" id="id4">
+<span id="general-settings-fig"></span><img alt="list_modules" src="../../_images/general_settings.png" />
+<p class="caption"><span class="caption-number">Fig. 10 </span><span class="caption-text">General settings for the DAQ_Scan module</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
 </div>
-<div class="section" id="saving-settings">
-<h4>Saving Settings<a class="headerlink" href="#saving-settings" title="Permalink to this headline">¶</a></h4>
-<p>Top right tree (see <a class="reference internal" href="#other-settings"><span class="std std-numref">Fig. 10</span></a>):</p>
-<ul class="simple">
-<li><p><strong>Save 2D datas</strong>: if not selected, 2D datas will <strong>not</strong> be saved but only lineouts or integrated area (only in</p></li>
-</ul>
-<p>order to save memory space, but dangerous as you loose the possibility to get back initial raw data.
-* <strong>Base path</strong>: The folder where all datasets and scans will be saved, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Data</span></code>
-* <strong>Base name</strong>: the name given to the scans you are going to do (default is <em>Scan</em>)
-* <strong>current path</strong>: generated path to save infos on current scan, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Data\2018\20181226\Dataset_20181226_000\Scan000</span></code>
-* <strong>current scan name</strong>: indexed name from <em>base name</em>, for instance: <code class="docutils literal notranslate"><span class="pre">Scan000</span></code>. Any scan from the current h5
-file can be selected here in order to add to it <em>comments</em>
-* <strong>comments</strong>: Other comments to add to the scan. Metadata can be entered before the scan but these
-<em>comments</em> can be added after, once one know if the scan is interesting or not for instance
-* <strong>h5 file</strong>: complete path of the current h5 file, for instance: <code class="docutils literal notranslate"><span class="pre">C:\Data\2018\20181226\Dataset_20181226_000\Dataset_20181226_000.h5</span></code></p>
-<ul class="simple">
-<li><p><strong>Compression options</strong>: by default data are compressed to mid level</p>
-<ul>
-<li><p><strong>compression library</strong>: see <em>pytables</em> package or <em>HDF5</em> documentation for details</p></li>
-<li><p><strong>Compression level</strong>: integer between 0 (no compression) and 9 (maximum compression)</p></li>
-</ul>
-</li>
-</ul>
+</div>
+<div class="section" id="save-settings">
+<h4>Save Settings<a class="headerlink" href="#save-settings" title="Permalink to this headline">¶</a></h4>
+<p>The Save Settings (see <a class="reference internal" href="#save-settings-fig"><span class="std std-numref">Fig. 11</span></a>) is the user interface of the <a class="reference internal" href="Utility_Modules.html#h5saver-module"><span class="std std-ref">H5Saver</span></a>, it is a general
+interface to save the scans in hierarchical hdf5 file (it is also used in the DAQ_Logger extension):</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure align-default" id="id5">
+<span id="save-settings-fig"></span><img alt="list_modules" src="../../_images/save_settings1.png" />
+<p class="caption"><span class="caption-number">Fig. 11 </span><span class="caption-text">Save settings for the DAQ_Scan extension</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</div>
 </div>
 </div>
 <div class="section" id="scanner">
 <h3>Scanner<a class="headerlink" href="#scanner" title="Permalink to this headline">¶</a></h3>
+<p>Finally all specifics of the upcoming scan are configured using the <a class="reference internal" href="Utility_Modules.html#scanner-paragrah"><span class="std std-ref">Scanner</span></a> module interface as seen on
+<a class="reference internal" href="#scan2d-fig2"><span class="std std-numref">Fig. 12</span></a> in the case of an adaptive Scan2D scan configuration.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id4">
-<span id="other-settings"></span><img alt="other_settings" src="../../_images/other_settings.png" />
-<p class="caption"><span class="caption-number">Fig. 10 </span><span class="caption-text">Other Scan Settings</span><a class="headerlink" href="#id4" title="Permalink to this image">¶</a></p>
+<div class="figure align-default" id="id6">
+<span id="scan2d-fig2"></span><img alt="scanner_fig" src="../../_images/scanner_widget.png" />
+<p class="caption"><span class="caption-number">Fig. 12 </span><span class="caption-text">The Scanner user interface set on a <em>Scan2D</em> scan type and an <em>adaptive</em> scan subtype and its particular settings.</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="live-data">
@@ -312,54 +304,54 @@ file can be selected here in order to add to it <em>comments</em>
 experiment behaviour and check if something is wrong or successfull without the need to perform
 full data analysis. For this PyMoDAQ live data display will show all datas exported
 by the setting <strong>plot from</strong> (defining which DAQ_Viewer module exports data). The total dimensionality of the datas + the scan dimensions
-(1 for scan1D and 2 for Scan2D) should not exceed 2.</p>
+(1 for scan1D and 2 for Scan2D) should not exceed 2 (this means one cannot plot more complex plots than 2D intensity plots).</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id5">
+<div class="figure align-default" id="id7">
 <span id="det1d"></span><img alt="1Ddetector" src="../../_images/1Ddetector.png" />
-<p class="caption"><span class="caption-number">Fig. 11 </span><span class="caption-text">An example of a 1D detector having 2 channels. 0D data are generated as well from the integration of channel CH0
-within the cyan region of interest (ROI_00).</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 13 </span><span class="caption-text">An example of a 1D detector having 2 channels. 0D data are generated as well from the integration of channel CH0
+within the cyan region of interest (ROI_00).</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
 </div>
-<p>For instance, if the chosen detector is a 1D one, see <a class="reference internal" href="#det1d"><span class="std std-numref">Fig. 11</span></a>. Such a detector can generate various
+<p>For instance, if the chosen detector is a 1D one, see <a class="reference internal" href="#det1d"><span class="std std-numref">Fig. 13</span></a>. Such a detector can generate various
 type of live data. It will export the raw 1D data and integrated 0D data within the declared ROI, then:</p>
 <ul>
 <li><p>if the scan is 1D:</p>
 <ul class="simple">
 <li><p>exported 0D datas will be displayed on the <em>1D Plot</em> tab as a line as a function of the actuator
-<em>position</em>, see <a class="reference internal" href="#scan1d-0d"><span class="std std-numref">Fig. 12</span></a>.</p></li>
+<em>position</em>, see <a class="reference internal" href="#scan1d-0d"><span class="std std-numref">Fig. 14</span></a>.</p></li>
 <li><p>exported 1D datas will be displayed on the <em>2D Plot</em> tab as color levels as a function of the
-actuator <em>position</em>, see <a class="reference internal" href="#scan1d-1d"><span class="std std-numref">Fig. 13</span></a>.</p></li>
-</ul>
-<blockquote>
-<div></div></blockquote>
-</li>
-</ul>
-<div class="figure align-default" id="id6">
-<span id="scan1d-0d"></span><img alt="scan1D_0D" src="../../_images/scan1D_0D.png" />
-<p class="caption"><span class="caption-number">Fig. 12 </span><span class="caption-text">An example of a detector exporting 0D live data plotted as a function of the actuator <em>position</em></span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
-<div class="legend">
-</div>
-</div>
-<div class="figure align-default" id="id7">
-<span id="scan1d-1d"></span><img alt="scan1D_1D" src="../../_images/scan1D_1D.png" />
-<p class="caption"><span class="caption-number">Fig. 13 </span><span class="caption-text">An example of a detector exporting 1D live data plotted as a function of the actuator <em>position</em>. Channel
-CH0 is plotted in red while channel CH1 is plotted in green.</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
-</div>
-<ul>
-<li><p>if the scan is 2D:</p>
-<ul class="simple">
-<li><p>exported 0D datas will be displayed on the <em>2D Plot</em> tab as a pixel map where each pixel coordinates
-represents a scan coordinate. The color and intensity of the pixels refer to channels and data
-values, see <a class="reference internal" href="#scan2d-0d"><span class="std std-numref">Fig. 14</span></a> for a <em>spiral</em> 2D scan.</p></li>
+actuator <em>position</em>, see <a class="reference internal" href="#scan1d-1d"><span class="std std-numref">Fig. 15</span></a>.</p></li>
 </ul>
 <blockquote>
 <div></div></blockquote>
 </li>
 </ul>
 <div class="figure align-default" id="id8">
+<span id="scan1d-0d"></span><img alt="scan1D_0D" src="../../_images/scan1D_0D.png" />
+<p class="caption"><span class="caption-number">Fig. 14 </span><span class="caption-text">An example of a detector exporting 0D live data plotted as a function of the actuator <em>position</em></span><a class="headerlink" href="#id8" title="Permalink to this image">¶</a></p>
+<div class="legend">
+</div>
+</div>
+<div class="figure align-default" id="id9">
+<span id="scan1d-1d"></span><img alt="scan1D_1D" src="../../_images/scan1D_1D.png" />
+<p class="caption"><span class="caption-number">Fig. 15 </span><span class="caption-text">An example of a detector exporting 1D live data plotted as a function of the actuator <em>position</em>. Channel
+CH0 is plotted in red while channel CH1 is plotted in green.</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
+</div>
+<ul>
+<li><p>if the scan is 2D:</p>
+<ul class="simple">
+<li><p>exported 0D datas will be displayed on the <em>2D Plot</em> tab as a pixel map where each pixel coordinates
+represents a scan coordinate. The color and intensity of the pixels refer to channels and data
+values, see <a class="reference internal" href="#scan2d-0d"><span class="std std-numref">Fig. 16</span></a> for a <em>spiral</em> 2D scan.</p></li>
+</ul>
+<blockquote>
+<div></div></blockquote>
+</li>
+</ul>
+<div class="figure align-default" id="id10">
 <span id="scan2d-0d"></span><img alt="scan2D_0D" src="../../_images/scan2D_0D.png" />
-<p class="caption"><span class="caption-number">Fig. 14 </span><span class="caption-text">An example of a detector exporting 0D live data plotted as a function of the 2 actuators’s
-<em>position</em>. Integrated region of channel CH0 is plotted in red.</span><a class="headerlink" href="#id8" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 16 </span><span class="caption-text">An example of a detector exporting 0D live data plotted as a function of the 2 actuators’s
+<em>position</em>. Integrated region of channel CH0 is plotted in red.</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
 </div>
 <p>So at maximum, 2D dimensionality can be represented. In order to see live data from 2D detectors, one
 should therefore export lineouts from ROIs or integrate data. All these operations are extremely simple
@@ -372,14 +364,14 @@ to perform using the ROI features of the data viewers (see <a class="reference i
 dealing with 2D scans such as XY
 cartography. As such, it is not displayed by default. It consists of a tree like structure displaying all
 currently saved 2D scans (in the current dataset) and a viewer where selected scans can be displayed at their respective
-locations. It can be set using the <em>Settings</em> menu, <em>Show Navigator</em> option. <a class="reference internal" href="#id1"><span class="std std-numref">Fig. 15</span></a> shows the DAQ_scan module
-with activated Navigator and a few scans. This navigator can also be used as a <em>ScanSelector</em> viewer to quickly explore
-a 2D area.</p>
+locations. It can be displayed using the <em>Settings</em> menu, <em>Show Navigator</em> option. <a class="reference internal" href="#id1"><span class="std std-numref">Fig. 17</span></a> shows the DAQ_scan extension
+with activated Navigator and a few scans. This navigator can also be used as a <a class="reference internal" href="Utility_Modules.html#scan-selector-paragraph"><span class="std std-ref">Scan Selector</span></a> viewer to
+quickly explore and select areas to scan on a 2D phase space.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id9">
+<div class="figure align-default" id="id11">
 <span id="id1"></span><img alt="navigator" src="../../_images/navigator.png" />
-<p class="caption"><span class="caption-number">Fig. 15 </span><span class="caption-text">An example of dataset displaying several 2D scans at their respective locations (up and right axis)</span><a class="headerlink" href="#id9" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 17 </span><span class="caption-text">An example of dataset displaying several 2D scans at their respective locations (up and right axis)</span><a class="headerlink" href="#id11" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>

@@ -21,29 +21,36 @@ Scanner
 
 The *Scanner* module is an object dealing with configuration of scan modes and is mainly used by the DAQ_Scan extension.
 It features a graphical interface, see :numref:`scan2D_fig`, allowing the configuration of the scan type and all its
-particular settings see below:
+particular settings. The **Scan type** sets the type of scan, **Scan1D** for a scan as a function of only one actuator,
+**Scan2D** for a scan as a function of two actuators, **Sequential** for scans as a function of 1, 2...N actuators and
+**Tabular** for a list of points coordinates in any number of actuator phase space. All specific features of these scan
+types are described below:
 
 Scan1D
 ++++++
 
-* **Scan type**: set the type of scan, 1D for a scan as a function of only one actuator, 2D for a
-scan as a function of two actuators. Other options to come: *batch scan* (list of single scans to perform in a row)
-*point scan* (list of positions to scan from), *sequential scan* (sequence of scans)
+* **scan type**: either *Linear* (usual uniform 1D scan), *Back to start* (the actuator comes back to the initial position
+  after each linear step, for a referenced measurement for instance), *Random* same as *Linear* except the
+  predetermined positions are sampled randomly and from version 2.0.1 *Adaptive* that features no predetermined
+  positions. These will be determined by an algorithm influenced by the signal returned from a detector on the
+  previously sampled positions
+* **Start**: Initial position of the selected actuator (in selected actuator controller unit)
+* **Stop**: Last position of the scan (in selected actuator controller unit)
+* **Step**: Step size of the step (in selected actuator controller unit)
 
-* **Scan 1D settings**
-    * **scan type**: either *linear* (usual scan) or *back to start* (the actuator comes back to the initial position
-      after each linear step, for a reference measurement for instance). More to come if needed
-    * **Start**: Initial position of the selected actuator (in selected actuator controller unit)
-    * **Stop**: Last position of the scan (in selected actuator controller unit)
-    * **Step**: Step size of the step (in selected actuator controller unit)
-* **Scan 2D settings**
-    * **Scan type**: either *linear* (scan line by line), *linear back and forth* (scan line by line
-      but in reverse direction each 2 lines) or *spiral* (start from the center and scan as a spiral)
-    * **Start, Stop, Step**: for each axes (each actuators)
-    * **Rmax, Rstep**: in case of spiral scan only. Rmax is the maximum radius of the spiral and Rstep is the radius increment.
+For the special case of the Adaptive mode, one more feature is available: the *Loss type**. It modifies the algorithm
+behaviour (see :ref:`adaptive_scans`)
 
 Scan2D
 ++++++
+
+* **Scan type**: either *linear* (scan line by line), *linear back and forth* (scan line by line
+  but in reverse direction each 2 lines), *spiral* (start from the center and scan as a spiral), *Random* (random
+  sampling of the *linear* case) and *Adaptive* (see :ref:`adaptive_scans`)
+* **Start, Stop, Step**: for each axes (each actuators)
+* **Rmax, Rstep, Npts/axis**: in case of spiral scan only. Rmax is the maximum radius of the spiral (calculated),
+  and Npts/axis is the number of points for both axis (total number of points is therefore Npts/axis²).
+* **Selection**: see :ref:`scan_selector_paragraph`
 
   .. _scan2D_fig:
 
@@ -107,6 +114,30 @@ difficult to set manually. :numref:`scan_selector` displays such sections within
    (in the case of 1D scans) or *From ROI* in the case of 2D scans.
 
 
+
+.. :download:`png <list_modules.png>`
+
+
+  .. _module_manager:
+
+Module Manager
+++++++++++++++
+
+This module is made so that selecting actuators and detectors for a given action is made easy. On top of it, there are
+features to test communication and retrieve infos on exported datas (mandatory fro the adaptive scan mode) or positioning.
+Internally, it also features a clean
+way to synchronize detectors and actuators that should be set together within a single action (such as a scan step).
+
+   .. _module_manager_fig:
+
+.. figure:: /image/DAQ_Scan/list_modules.png
+   :alt: list_modules
+
+   User interface of the module manager listing detectors and actuators that can be selected for a given action.
+
+
+
+
 .. _H5Browser_module:
 
 H5Browser
@@ -139,7 +170,32 @@ object will make sure you can explore your datas with the H5Browser. The object 
 of data such as with the DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save multiple acquisition such as with the DAQ_Scan
 (see :ref:`daq_scan_saving`) or save on the fly with enlargeable arrays such as the :ref:`continuous_saving` mode of the DAQ_Viewer.
 
-See :ref:`H5SaverClassDescr` for a detailled description
+   .. _save_settings_fig2:
+
+.. figure:: /image/DAQ_Scan/save_settings.png
+   :alt: list_modules
+
+   User interface of the H5Saver module
+
+On the possible saving options, you'll find (see :numref:`save_settings_fig2`):
+
+
+* **Save 2D datas and above**: if not selected, 2D datas (and above) will **not** be saved but only lineouts or
+  integrated area (this is only in order to save memory space, but is dangerous as you loose the possibility to get back
+  initial raw data. Save raw datas should be unselected in that case)
+* **Save raw datas only**: if selected, only data exported form the detector plugins will be saved, not the data
+  generated from ROIs or lineouts.
+* **Backend**: you can chose among any of the three hdf5 backend (*tables* is recommended and by default)
+* **Show File Content?**: if clicked, the :ref:`H5Browser_module` will open to display content of the current hdf5 file
+* **Base path**: The folder where all datasets and scans will be saved, for instance: ``C:\Data``
+* **Base name**: the name given to the scans you are going to do (default is *Scan*)
+* **current Scan**: indexed name from *base name*, for instance: ``Scan000``
+* **h5 file**: complete path of the current h5 file, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Dataset_20181226_000.h5``
+* **Compression options**: by default data are compressed to mid level
+  * **compression library**: see *pytables* package or *HDF5* documentation for details
+  * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
+
+
 
 .. _preset_manager:
 
