@@ -235,7 +235,7 @@ class Scanner(QObject):
                 {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': scan_types,
                          'value': scan_types[0]},
                {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
-                    {'title': 'Scan type:', 'name': 'scan1D_type', 'type': 'list',
+                    {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
                      'values': scan_subtypes['Scan1D'], 'value': scan_subtypes['Scan1D'][0],
                      'tip': 'For adaptive, an algo will '
                      'determine the positions to check within the scan bounds. The defined step will be set as the'
@@ -247,7 +247,7 @@ class Scanner(QObject):
                     {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': 0.5}
                 ]},
                 {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
-                    {'title': 'Scan type:', 'name': 'scan2D_type', 'type': 'list',
+                    {'title': 'Scan subtype:', 'name': 'scan2D_type', 'type': 'list',
                      'values': scan_subtypes['Scan2D'], 'value': scan_subtypes['Scan2D'][0],
                      'tip': 'For adaptive, an algo will '
                      'determine the positions to check within the scan bounds. The defined step will be set as the'
@@ -269,7 +269,7 @@ class Scanner(QObject):
 
                 ]},
                 {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
-                    {'title': 'Scan type:', 'name': 'scanseq_type', 'type': 'list',
+                    {'title': 'Scan subtype:', 'name': 'scanseq_type', 'type': 'list',
                      'values': scan_subtypes['Sequential'], 'value': scan_subtypes['Sequential'][0], 'tip': 'For adaptive, an algo will '
                      'determine the positions to check within the scan bounds. The defined step will be set as the'
                      'biggest feature size the algo should reach.'},

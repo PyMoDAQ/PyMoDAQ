@@ -1923,6 +1923,7 @@ if __name__ == '__main__':
     win.setWindowTitle('PyMoDAQ Dashboard')
 
     #win.setVisible(False)
+
     prog = DashBoard(area)
     prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_adaptive.xml')
     # QThread.msleep(4000)
