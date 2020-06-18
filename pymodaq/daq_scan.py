@@ -42,6 +42,7 @@ try:
         loss2D=['default', 'resolution', 'uniform', 'triangle'])
 
 except:
+    adaptive_losses = None
     logger.info('Adaptive module is not present, no adaptive scan possible')
 
 

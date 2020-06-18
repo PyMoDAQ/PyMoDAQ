@@ -55,7 +55,7 @@ try:
     import h5pyd
     backends_available.append('h5pyd')
 except Exception as e:
-    logger.exception(str(e))
+    logger.warning(str(e))
     is_h5yd = False
 
 version = '0.0.1'

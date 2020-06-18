@@ -82,7 +82,7 @@ setup(
         #'pyqt5',
         'tables',
         'pymodaq_plugins>=1.2.3',
-        'pymodaq_pid_models',
+        'pymodaq_pid_models>=0.0.2',
 	    'simple_pid',
         'python-dateutil'
         ],

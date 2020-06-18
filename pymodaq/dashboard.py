@@ -35,6 +35,7 @@ now = datetime.datetime.now()
 preset_path = utils.get_set_preset_path()
 log_path = utils.get_set_log_path()
 layout_path = utils.get_set_layout_path()
+layout_path = utils.get_set_layout_path()
 overshoot_path = utils.get_set_overshoot_path()
 roi_path = utils.get_set_roi_path()
 

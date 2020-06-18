@@ -24,9 +24,15 @@ from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver, H5LogHandler
-from pymodaq.daq_utils.db.db_logger.db_logger import DbLoggerGUI, DBLogHandler
-
 logger = utils.set_logger(utils.get_module_name(__file__))
+try:
+    import sqlalchemy
+    from pymodaq.daq_utils.db.db_logger.db_logger import DbLoggerGUI, DBLogHandler
+    is_sql = True
+except Exception as e:
+    is_sql = False
+    logger.warning(str(e))
+
 
 class DAQ_Logger(QObject):
     """
@@ -59,12 +65,16 @@ class DAQ_Logger(QObject):
         self.logger_thread = None
         self.detector_modules = self.dashboard.detector_modules
         self.det_modules_log = []
-        self.log_types = ['None', 'H5 File', 'SQL DataBase']
+        self.log_types = ['None', 'H5 File']
+        if is_sql:
+            self.log_types.append('SQL DataBase')
 
         self.logger = None #should be a reference either to self.h5saver or self.dblogger depending the choice of the user
         self.h5saver = H5Saver(save_type='logger')
-        self.dblogger = DbLoggerGUI(self.dashboard.preset_file.stem)
-
+        if is_sql:
+            self.dblogger = DbLoggerGUI(self.dashboard.preset_file.stem)
+        else:
+            self.dblogger = None
         self.modules_manager = ModulesManager()
 
         self.setupUI()

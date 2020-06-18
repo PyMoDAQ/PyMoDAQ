@@ -1017,6 +1017,7 @@ class PIDRunner(QObject):
         self.running = False
         self.status_sig.emit(["Update_Status", 'PID loop exiting', 'log'])
 
+
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
