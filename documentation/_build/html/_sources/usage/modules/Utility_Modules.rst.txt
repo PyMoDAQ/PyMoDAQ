@@ -81,7 +81,15 @@ Scan2D
 
 The possible settings are visible on :numref:`scan2D_fig` and described below:
 
-* **Scan subtype**: either *linear* (scan line by line), *linear back and forth* (scan line by line
+  .. _scan2D_fig:
+
+.. figure:: /image/managers/scanner_widget.png
+   :alt: scanner_fig
+
+   The Scanner user interface set on a *Scan2D* scan type and a *Spiral* scan subtype and its particular settings.
+
+
+* **Scan subtype**: See :numref:`scan2D_subtypes` either *linear* (scan line by line), *linear back and forth* (scan line by line
   but in reverse direction each 2 lines), *spiral* (start from the center and scan as a spiral), *Random* (random
   sampling of the *linear* case) and *Adaptive* (see :ref:`adaptive_scans`)
 * **Start, Stop, Step**: for each axes (each actuators)
@@ -89,12 +97,14 @@ The possible settings are visible on :numref:`scan2D_fig` and described below:
   and Npts/axis is the number of points for both axis (total number of points is therefore Npts/axis²).
 * **Selection**: see :ref:`scan_selector_paragraph`
 
-  .. _scan2D_fig:
 
-.. figure:: /image/managers/scanner_widget.png
-   :alt: scanner_fig
+  .. _scan2D_subtypes:
 
-   The Scanner user interface set on a *Scan2D* scan type and a *Spiral* scan subtype and its particular settings.
+.. figure:: /image/daq_scan/scan2D_subtypes.png
+   :alt: scannersubtypes_fig
+
+   The main Scan2D subtypes: Linear, Back and Forth and Spiral.
+
 
 
 

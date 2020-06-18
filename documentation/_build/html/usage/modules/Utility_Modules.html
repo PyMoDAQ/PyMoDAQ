@@ -256,8 +256,14 @@ behaviour (see <a class="reference internal" href="#adaptive-scans"><span class=
 <div class="section" id="scan2d">
 <h3>Scan2D<a class="headerlink" href="#scan2d" title="Permalink to this headline">¶</a></h3>
 <p>The possible settings are visible on <a class="reference internal" href="#scan2d-fig"><span class="std std-numref">Fig. 34</span></a> and described below:</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure align-default" id="id13">
+<span id="scan2d-fig"></span><img alt="scanner_fig" src="../../_images/scanner_widget.png" />
+<p class="caption"><span class="caption-number">Fig. 34 </span><span class="caption-text">The Scanner user interface set on a <em>Scan2D</em> scan type and a <em>Spiral</em> scan subtype and its particular settings.</span><a class="headerlink" href="#id13" title="Permalink to this image">¶</a></p>
+</div>
 <ul class="simple">
-<li><p><strong>Scan subtype</strong>: either <em>linear</em> (scan line by line), <em>linear back and forth</em> (scan line by line
+<li><p><strong>Scan subtype</strong>: See <a class="reference internal" href="#scan2d-subtypes"><span class="std std-numref">Fig. 35</span></a> either <em>linear</em> (scan line by line), <em>linear back and forth</em> (scan line by line
 but in reverse direction each 2 lines), <em>spiral</em> (start from the center and scan as a spiral), <em>Random</em> (random
 sampling of the <em>linear</em> case) and <em>Adaptive</em> (see <a class="reference internal" href="#adaptive-scans"><span class="std std-ref">Adaptive</span></a>)</p></li>
 <li><p><strong>Start, Stop, Step</strong>: for each axes (each actuators)</p></li>
@@ -266,18 +272,18 @@ and Npts/axis is the number of points for both axis (total number of points is t
 <li><p><strong>Selection</strong>: see <a class="reference internal" href="#scan-selector-paragraph"><span class="std std-ref">Scan Selector</span></a></p>
 </li>
 </ul>
-<div class="figure align-default" id="id13">
-<span id="scan2d-fig"></span><img alt="scanner_fig" src="../../_images/scanner_widget.png" />
-<p class="caption"><span class="caption-number">Fig. 34 </span><span class="caption-text">The Scanner user interface set on a <em>Scan2D</em> scan type and a <em>Spiral</em> scan subtype and its particular settings.</span><a class="headerlink" href="#id13" title="Permalink to this image">¶</a></p>
+<div class="figure align-default" id="id14">
+<span id="scan2d-subtypes"></span><img alt="scannersubtypes_fig" src="../../_images/scan2D_subtypes.png" />
+<p class="caption"><span class="caption-number">Fig. 35 </span><span class="caption-text">The main Scan2D subtypes: Linear, Back and Forth and Spiral.</span><a class="headerlink" href="#id14" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="sequential">
 <h3>Sequential<a class="headerlink" href="#sequential" title="Permalink to this headline">¶</a></h3>
-<p>The possible settings are visible on <a class="reference internal" href="#scan-seq-fig"><span class="std std-numref">Fig. 35</span></a> and described below:</p>
+<p>The possible settings are visible on <a class="reference internal" href="#scan-seq-fig"><span class="std std-numref">Fig. 36</span></a> and described below:</p>
 <ul class="simple">
 <li><p><strong>Scan subtype</strong>: only <em>linear</em> this means the scan have a sequence of Scan1D of the last specified actuator
-(on <a class="reference internal" href="#scan-seq-fig"><span class="std std-numref">Fig. 35</span></a>, it is <em>Xaxis</em>) for all positions of the last but end actuator (here <em>Yaxis</em>) and so on. So on
-<a class="reference internal" href="#scan-seq-fig"><span class="std std-numref">Fig. 35</span></a> there will be 11 steps for <em>Xaxis</em> times 11 steps for <em>Yaxis</em> times 10 steps for <em>Theta axis</em>
+(on <a class="reference internal" href="#scan-seq-fig"><span class="std std-numref">Fig. 36</span></a>, it is <em>Xaxis</em>) for all positions of the last but end actuator (here <em>Yaxis</em>) and so on. So on
+<a class="reference internal" href="#scan-seq-fig"><span class="std std-numref">Fig. 36</span></a> there will be 11 steps for <em>Xaxis</em> times 11 steps for <em>Yaxis</em> times 10 steps for <em>Theta axis</em>
 so in total 11x11x10=1210 total steps for this 3 dimensions scan.</p></li>
 </ul>
 <div class="admonition note">
@@ -286,9 +292,9 @@ so in total 11x11x10=1210 total steps for this 3 dimensions scan.</p></li>
 subtype is available. If 2 actuators are selected, then the Sequential scan is identical to the <em>Scan2D</em> scan but
 where only the <em>linear</em> subtype is available.</p>
 </div>
-<div class="figure align-default" id="id14">
+<div class="figure align-default" id="id15">
 <span id="scan-seq-fig"></span><img alt="scanner_fig" src="../../_images/scanner_widget_sequential.png" />
-<p class="caption"><span class="caption-number">Fig. 35 </span><span class="caption-text">The Scanner user interface set on a <em>Sequential</em> scan type with a sequence of three actuators</span><a class="headerlink" href="#id14" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 36 </span><span class="caption-text">The Scanner user interface set on a <em>Sequential</em> scan type with a sequence of three actuators</span><a class="headerlink" href="#id15" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="tabular">
@@ -297,7 +303,7 @@ where only the <em>linear</em> subtype is available.</p>
 <div class="section" id="tabular-linear-manual-case">
 <h4>Tabular Linear/Manual case<a class="headerlink" href="#tabular-linear-manual-case" title="Permalink to this headline">¶</a></h4>
 <p>In the Linear/Manual case, the module will
-move actuators on each positions and grab datas. On <a class="reference internal" href="#scan-tabular-fig"><span class="std std-numref">Fig. 36</span></a>, a list of 79 positions has been set.
+move actuators on each positions and grab datas. On <a class="reference internal" href="#scan-tabular-fig"><span class="std std-numref">Fig. 37</span></a>, a list of 79 positions has been set.
 By right clicking on the table, a context manager pops up and gives the possibility to:</p>
 <ul class="simple">
 <li><p>add one more position in the list</p></li>
@@ -309,38 +315,38 @@ By right clicking on the table, a context manager pops up and gives the possibil
 <p>One can also drag and drop elements of the list at a different index in the list.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id15">
+<div class="figure align-default" id="id16">
 <span id="scan-tabular-fig"></span><img alt="scanner_fig" src="../../_images/scanner_widget_tabular.png" />
-<p class="caption"><span class="caption-number">Fig. 36 </span><span class="caption-text">The Scanner user interface set on a <em>Tabular</em> scan type with a list of points for 2 actuators. A context menu with
-other options is also visible (right click on the table to show it)</span><a class="headerlink" href="#id15" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 37 </span><span class="caption-text">The Scanner user interface set on a <em>Tabular</em> scan type with a list of points for 2 actuators. A context menu with
+other options is also visible (right click on the table to show it)</span><a class="headerlink" href="#id16" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="tabular-linear-polylines-case">
 <h4>Tabular Linear/Polylines case<a class="headerlink" href="#tabular-linear-polylines-case" title="Permalink to this headline">¶</a></h4>
 <p>In the particular case of 2 selected actuators, it could be more interesting to draw the positions for the tabular scan.
-One possibility is to draw segments on a 2D viewer (see <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 37</span></a>) and positions will be points along
+One possibility is to draw segments on a 2D viewer (see <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 38</span></a>) and positions will be points along
 these segments (it will be a kind of 1D cuts within a 2D phase space). A new setting, <em>Curvilinear step</em>  appears. The
 positions will be points starting from the start of the first segment and then step along them by the value of this setting.
-That gives, for <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 37</span></a>, 40 points defined along the segments.</p>
+That gives, for <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 38</span></a>, 40 points defined along the segments.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id16">
+<div class="figure align-default" id="id17">
 <span id="scan-selector"></span><img alt="scan_selector" src="../../_images/scan_selector.png" />
-<p class="caption"><span class="caption-number">Fig. 37 </span><span class="caption-text">An example of 1D complex sections selected within a 2D area</span><a class="headerlink" href="#id16" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 38 </span><span class="caption-text">An example of 1D complex sections selected within a 2D area</span><a class="headerlink" href="#id17" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="tabular-adaptive-case">
 <h4>Tabular Adaptive case<a class="headerlink" href="#tabular-adaptive-case" title="Permalink to this headline">¶</a></h4>
 <p><strong>Valid for 1 or 2 selected actuators</strong>. The tabular adaptive case will be similar to scan1D adaptive mode, except that one
 adaptive Scan1D will be done for each segments defined by the list of positions in the table. For instance,
-<a class="reference internal" href="#scan-tabular-adaptive-fig"><span class="std std-numref">Fig. 38</span></a> shows a list of 4 positions defining 4 segments in a 2D space. The adaptive scan will
-be done on/along these 4 segments. Positions can be set manually or from a <em>Polylines</em> selection as seen on <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 37</span></a>.</p>
+<a class="reference internal" href="#scan-tabular-adaptive-fig"><span class="std std-numref">Fig. 39</span></a> shows a list of 4 positions defining 4 segments in a 2D space. The adaptive scan will
+be done on/along these 4 segments. Positions can be set manually or from a <em>Polylines</em> selection as seen on <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 38</span></a>.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id17">
+<div class="figure align-default" id="id18">
 <span id="scan-tabular-adaptive-fig"></span><img alt="scanner_fig" src="../../_images/scanner_widget_tabular_adaptive.png" />
-<p class="caption"><span class="caption-number">Fig. 38 </span><span class="caption-text">The Scanner user interface set on a <em>Tabular</em> scan type with a list of points for 2 actuators. A context menu with
-other options is also visible (right click on the table to show it)</span><a class="headerlink" href="#id17" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 39 </span><span class="caption-text">The Scanner user interface set on a <em>Tabular</em> scan type with a list of points for 2 actuators. A context menu with
+other options is also visible (right click on the table to show it)</span><a class="headerlink" href="#id18" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>
@@ -381,15 +387,15 @@ to understand all the possibilities.</p>
 such viewers can be used. For instance, the viewer of a camera (if one think of a camera in a microscope to select an
 area to cartography) or even the <em>DAQ_Scan</em> 2D viewer. Sometimes it could also be interesting to do linear sections within
 a 2D phase space (let’s say defined by the ranges of 2 <em>DAQ_Moves</em>). This defines complex tabular type scan within a 2D area,
-difficult to set manually. <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 37</span></a> displays such sections within the DAQ_Scan viewer where a previous
+difficult to set manually. <a class="reference internal" href="#scan-selector"><span class="std std-numref">Fig. 38</span></a> displays such sections within the DAQ_Scan viewer where a previous
 2D scan has been recorded. The user just have to choose the correct <em>selection</em> mode in the
-<em>scanner settings</em>, see <a class="reference internal" href="#scan-selector-settings"><span class="std std-numref">Fig. 39</span></a>, and select on which 2D viewer to display the ROI (<em>From Module</em> option).</p>
+<em>scanner settings</em>, see <a class="reference internal" href="#scan-selector-settings"><span class="std std-numref">Fig. 40</span></a>, and select on which 2D viewer to display the ROI (<em>From Module</em> option).</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id18">
+<div class="figure align-default" id="id19">
 <span id="scan-selector-settings"></span><img alt="scan_selector" src="../../_images/scan_selector_settings.png" />
-<p class="caption"><span class="caption-number">Fig. 39 </span><span class="caption-text">In the scanner settings, the selection entry gives the choice between <em>Manual</em> selection of from <em>PolyLines</em>
-(in the case of 1D scans) or <em>From ROI</em> in the case of 2D scans.</span><a class="headerlink" href="#id18" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 40 </span><span class="caption-text">In the scanner settings, the selection entry gives the choice between <em>Manual</em> selection of from <em>PolyLines</em>
+(in the case of 1D scans) or <em>From ROI</em> in the case of 2D scans.</span><a class="headerlink" href="#id19" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="id7">
@@ -400,24 +406,24 @@ Internally, it also features a clean
 way to synchronize detectors and actuators that should be set together within a single action (such as a scan step).</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id19">
+<div class="figure align-default" id="id20">
 <span id="module-manager-fig"></span><img alt="list_modules" src="../../_images/list_modules.png" />
-<p class="caption"><span class="caption-number">Fig. 40 </span><span class="caption-text">User interface of the module manager listing detectors and actuators that can be selected for a given action.</span><a class="headerlink" href="#id19" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 41 </span><span class="caption-text">User interface of the module manager listing detectors and actuators that can be selected for a given action.</span><a class="headerlink" href="#id20" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 </div>
 <div class="section" id="h5browser">
 <span id="h5browser-module"></span><h2>H5Browser<a class="headerlink" href="#h5browser" title="Permalink to this headline">¶</a></h2>
 <p>The h5 browser is an object that helps browsing of datas and metadatas. It asks you to select a h5 file
-and then display a window such as <a class="reference internal" href="#figure-h5browser"><span class="std std-numref">Fig. 41</span></a>. Depending the element of the file you are
+and then display a window such as <a class="reference internal" href="#figure-h5browser"><span class="std std-numref">Fig. 42</span></a>. Depending the element of the file you are
 selecting in the h5 file tree, various metadata can be displayed, such as <em>scan settings</em> or
 <em>module settings</em> at the time of saving. When double clicking on data type entries in the tree, the
 data viewer (type <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a> that can display data dimensionality up to 4)</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id20">
+<div class="figure align-default" id="id21">
 <span id="figure-h5browser"></span><img alt="h5 browser" src="../../_images/h5browser.png" />
-<p class="caption"><span class="caption-number">Fig. 41 </span><span class="caption-text">h5 browser to explore saved datas</span><a class="headerlink" href="#id20" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 42 </span><span class="caption-text">h5 browser to explore saved datas</span><a class="headerlink" href="#id21" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="h5saver">
@@ -428,11 +434,11 @@ of data such as with the DAQ_Viewer (see <a class="reference internal" href="../
 (see <a class="reference internal" href="../saving.html#daq-scan-saving"><span class="std std-ref">From DAQ_Scan</span></a>) or save on the fly with enlargeable arrays such as the <a class="reference internal" href="../saving.html#continuous-saving"><span class="std std-ref">Continuous Saving</span></a> mode of the DAQ_Viewer.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id21">
+<div class="figure align-default" id="id22">
 <span id="save-settings-fig2"></span><img alt="list_modules" src="../../_images/save_settings1.png" />
-<p class="caption"><span class="caption-number">Fig. 42 </span><span class="caption-text">User interface of the H5Saver module</span><a class="headerlink" href="#id21" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 43 </span><span class="caption-text">User interface of the H5Saver module</span><a class="headerlink" href="#id22" title="Permalink to this image">¶</a></p>
 </div>
-<p>On the possible saving options, you’ll find (see <a class="reference internal" href="#save-settings-fig2"><span class="std std-numref">Fig. 42</span></a>):</p>
+<p>On the possible saving options, you’ll find (see <a class="reference internal" href="#save-settings-fig2"><span class="std std-numref">Fig. 43</span></a>):</p>
 <ul class="simple">
 <li><p><strong>Save 2D datas and above</strong>: if not selected, 2D datas (and above) will <strong>not</strong> be saved but only lineouts or
 integrated area (this is only in order to save memory space, but is dangerous as you loose the possibility to get back
@@ -453,14 +459,14 @@ generated from ROIs or lineouts.</p></li>
 <div class="section" id="preset-manager">
 <span id="id8"></span><h2>Preset manager<a class="headerlink" href="#preset-manager" title="Permalink to this headline">¶</a></h2>
 <p>The <em>Preset manager</em> is an object that helps to generate, modify and save preset configurations of <a class="reference internal" href="DashBoard.html#dashboard-module"><span class="std std-ref">DashBoard</span></a>.
-A preset is a set of actuators and detectors represented in a tree like structure, see <a class="reference internal" href="#preset-fig"><span class="std std-numref">Fig. 43</span></a>, as well as
+A preset is a set of actuators and detectors represented in a tree like structure, see <a class="reference internal" href="#preset-fig"><span class="std std-numref">Fig. 44</span></a>, as well as
 saving options if the <em>DAQ_Scan</em> extension is to be used.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id22">
+<div class="figure align-default" id="id23">
 <span id="preset-fig"></span><img alt="preset_fig" src="../../_images/preset_fig.png" />
-<p class="caption"><span class="caption-number">Fig. 43 </span><span class="caption-text">An example of a preset creation named <em>preset_adaptive</em> containing 3 DAQ_Move modules and 3 detector
-modules and just about to select a fourth detector from the list of all available detector plugins.</span><a class="headerlink" href="#id22" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 44 </span><span class="caption-text">An example of a preset creation named <em>preset_adaptive</em> containing 3 DAQ_Move modules and 3 detector
+modules and just about to select a fourth detector from the list of all available detector plugins.</span><a class="headerlink" href="#id23" title="Permalink to this image">¶</a></p>
 </div>
 <p>Each added module load on the fly its settings so that one can set them to our need, for instance COM
 port selection, channel activation, exposure time… Every time a preset is created, it is then <em>loadable</em>.
@@ -471,29 +477,29 @@ dashboard.</p>
 <span id="id9"></span><h2>Overshoot manager<a class="headerlink" href="#overshoot-manager" title="Permalink to this headline">¶</a></h2>
 <p>The <em>Overshoot</em> manager is used to configure <strong>safety actions</strong> (for instance the absolute positioning of one or more
 actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module) gets
-out of range with respect to some predefined bounds, see <a class="reference internal" href="#overshoot-manager-fig"><span class="std std-numref">Fig. 44</span></a>. It is configurable in the framework of the Dashboard module,
+out of range with respect to some predefined bounds, see <a class="reference internal" href="#overshoot-manager-fig"><span class="std std-numref">Fig. 45</span></a>. It is configurable in the framework of the Dashboard module,
 when actuators and detectors have been activated. A file containing its configuration will be saved (with a name derived
 from the preset configuration name and will automatically be loaded with its preset if existing on disk)</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id23">
+<div class="figure align-default" id="id24">
 <span id="overshoot-manager-fig"></span><img alt="overshoot_fig" src="../../_images/overshoot_fig.png" />
-<p class="caption"><span class="caption-number">Fig. 44 </span><span class="caption-text">An example of an overshoot creation named <em>overshoot_default</em> (and corresponding xml file)
-containing one listening detector and 2 actuators to be activated.</span><a class="headerlink" href="#id23" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 45 </span><span class="caption-text">An example of an overshoot creation named <em>overshoot_default</em> (and corresponding xml file)
+containing one listening detector and 2 actuators to be activated.</span><a class="headerlink" href="#id24" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="roi-manager">
 <span id="id10"></span><h2>ROI manager<a class="headerlink" href="#roi-manager" title="Permalink to this headline">¶</a></h2>
 <p>The <em>ROI</em> manager is used to save and load in one click all ROIs or Lineouts defined in the current detector’s viewers,
-see <a class="reference internal" href="#roi-manager-fig"><span class="std std-numref">Fig. 45</span></a>.
+see <a class="reference internal" href="#roi-manager-fig"><span class="std std-numref">Fig. 46</span></a>.
 The file name will be derived from the preset configuration file, so that at start up, it will automatically be loaded,
 and ROIs and Lineouts will be restored.</p>
 <blockquote>
 <div></div></blockquote>
-<div class="figure align-default" id="id24">
+<div class="figure align-default" id="id25">
 <span id="roi-manager-fig"></span><img alt="roi_manager_fig" src="../../_images/roi_manager.png" />
-<p class="caption"><span class="caption-number">Fig. 45 </span><span class="caption-text">An example of ROI manager modification named from the preset <em>preset_adaptive</em> (and corresponding xml file)
-containing all ROIs and lineouts defined on the detectors’s viewers.</span><a class="headerlink" href="#id24" title="Permalink to this image">¶</a></p>
+<p class="caption"><span class="caption-number">Fig. 46 </span><span class="caption-text">An example of ROI manager modification named from the preset <em>preset_adaptive</em> (and corresponding xml file)
+containing all ROIs and lineouts defined on the detectors’s viewers.</span><a class="headerlink" href="#id25" title="Permalink to this image">¶</a></p>
 </div>
 </div>
 <div class="section" id="daq-measurement">
