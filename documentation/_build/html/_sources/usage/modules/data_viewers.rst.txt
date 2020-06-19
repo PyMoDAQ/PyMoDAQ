@@ -77,8 +77,10 @@ in order to show the data within the pixel pointed by the crosshair.
 
    ND viewer data display
 
-ND viewer is used by the H5Browser to display data saved with PyMoDAQ, a few metadata attributes written in the h5file nodes
-(see :ref:`daq_scan_saving`)
+ND viewer is mostly used by the H5Browser (and sometimes by the DAQ_Viewer) to display data saved with PyMoDAQ,
+a few metadata attributes written in the h5file nodes (see :ref:`daq_scan_saving`)
 tells the NDViewer how to display acquired scans. If, for some reasons, you want to display your 4D data in another way (that is changing
 which dimension is navigation and which is signal), you can press the |axes| button on the top viewer and change the navigation
 axes on the popup window it opened.
+
+

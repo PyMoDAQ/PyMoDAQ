@@ -408,8 +408,16 @@ class Axis(dict):
         self['units'] = units
         self.update(kwargs)
 
+class NavAxis(Axis):
+    def __init__(self, data=None, label='', units='', nav_index=-1, **kwargs):
+        super().__init__(data=None, label='', units='', **kwargs)
+
+        if nav_index < 0:
+            raise ValueError('nav_index should be a positive integer representing the index of this axis among all'
+                             'navigation axes')
+
 class Data(OrderedDict):
-    def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis()):
+    def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis(), **kwargs):
         """
         Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
         attributes can be accessed as dictionary keys. Should be subclassed from for real datas
@@ -456,6 +464,9 @@ class Data(OrderedDict):
             self['y_axis'] = y_axis
         elif y_axis['data'] is not None:
             self['y_axis'] = y_axis
+
+        for k in kwargs:
+            self[k] = kwargs[k]
 
 class DataFromPlugins(Data):
 
@@ -805,7 +816,7 @@ def get_module_name(module__file__path):
 
 
 
-def set_logger(logger_name, add_handler=False, base_logger=False):
+def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False):
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -833,6 +844,11 @@ def set_logger(logger_name, add_handler=False, base_logger=False):
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+    if add_to_console:
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
     return logger
 
 def caller_name(skip=2):

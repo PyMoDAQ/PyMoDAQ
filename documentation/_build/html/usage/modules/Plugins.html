@@ -526,7 +526,8 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
                                     <span class="n">x_axis</span><span class="o">=</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;label0&#39;</span><span class="p">,</span> <span class="s1">&#39;label1&#39;</span><span class="p">,</span> <span class="o">...</span><span class="p">]),</span>
                               <span class="n">DataFromPlugins</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Current&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">data0D_0</span><span class="p">,</span> <span class="n">data0D_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;Data0D&#39;</span><span class="p">),</span>
                               <span class="n">DataFromPlugins</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;Datacube&#39;</span><span class="p">,</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">dataND_0</span><span class="p">,</span> <span class="n">dataND_1</span><span class="p">,</span><span class="o">...</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="s1">&#39;DataND&#39;</span><span class="p">,</span>
-                                    <span class="n">nav_axes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span> <span class="n">nav_x_axis</span><span class="o">=...</span><span class="p">])</span>
+                                    <span class="n">nav_axes</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">]),</span>
+                                    <span class="n">nav_x_axis</span><span class="o">=</span><span class="n">NavAxis</span><span class="p">(</span><span class="n">data</span><span class="o">=..</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Xaxis&#39;</span><span class="p">,</span> <span class="n">units</span><span class="o">=</span> <span class="s2">&quot;µm&quot;</span><span class="p">,</span> <span class="n">nav_index</span><span class="o">=</span><span class="mi">0</span><span class="p">])</span>
 </pre></div>
 </div>
 <p>Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each <code class="docutils literal notranslate"><span class="pre">DataFromPlugins</span></code>
@@ -544,11 +545,29 @@ Each array will generate one channel within the corresponding viewer. Here is th
 <li><p><code class="docutils literal notranslate"><span class="pre">y_axis</span></code>: <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the viewer
 (see code above and the Axis object in the daq_utils module)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">nav_axes</span></code>: in case of a ND data viewer, will be the index of the navigation axis, see <a class="reference internal" href="data_viewers.html#ndviewer"><span class="std std-ref">ND Viewer</span></a></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">nav_x_axis</span></code>: <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the NDViewer, concerning the navigation viewer
-(see code above and the Axis object in the daq_utils module)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">nav_y_axis</span></code>: <strong>Axis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the NDViewer, concerning the navigation viewer
-(see code above and the Axis object in the daq_utils module)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nav_x_axis</span></code>: <strong>NavAxis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the NDViewer, concerning the navigation viewer
+(see code above, the NavAxis object in the daq_utils module and the paragraph below)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nav_y_axis</span></code>: <strong>NavAxis</strong> instance containing various fields to set the axis <em>label</em>, <em>units</em> and <em>data</em> on the NDViewer, concerning the navigation viewer
+(see code above, the NavAxis object in the daq_utils module and the paragraph below)</p></li>
 </ul>
+<p>To export properly ND datas, the DataFromPlugins object must have 2 other arguments set (compared to 0D, 1D or 2D datas):</p>
+<ul class="simple">
+<li><p>nav_axes: it is a tuple of integers telling which dimensions of the data numpy array is to be considered as navigation
+axis. The first integer of the tuple will be used as the <em>xaxis</em> in the viewers (1D or 2D) while the second will be
+used as the <em>yaxis</em> in the viewers.</p></li>
+<li><p>the navigation axis objects (optional): these are arguments starting by <em>nav</em> (the <em>_x_axis</em> or <em>_y_axis</em> or whatever
+part is just there to clarify the meaning for the reader of the code) and are instances of <strong>NavAxis</strong>. A
+<strong>NavAxis</strong> is similar to the <strong>Axis</strong> object but <strong>have an important supplementary argument</strong> that is <em>nav_index</em>.
+This one will be used to sort all navigation axes. An index of 0 means this particular NavAxis will be used to display
+properties of the <em>xaxis</em> on the viewers</p></li>
+</ul>
+<p><a class="reference internal" href="#figure-viewernd"><span class="std std-numref">Fig. 48</span></a> highlights how these arguments will change the behaviour of the NDviewer.</p>
+<blockquote>
+<div></div></blockquote>
+<div class="figure align-default" id="id11">
+<span id="figure-viewernd"></span><img alt="NavAxis stuff" src="../../_images/viewerND_axes.png" />
+<p class="caption"><span class="caption-number">Fig. 48 </span><span class="caption-text">An example of 3D datas with 2 navigation axes and how these will be displayed by the NDviewer.</span><a class="headerlink" href="#id11" title="Permalink to this image">¶</a></p>
+</div>
 </div>
 <div class="section" id="data-ready">
 <span id="id6"></span><h2>Data ready?<a class="headerlink" href="#data-ready" title="Permalink to this headline">¶</a></h2>

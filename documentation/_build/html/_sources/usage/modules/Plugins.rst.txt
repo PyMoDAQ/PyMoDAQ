@@ -173,7 +173,8 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
                                         x_axis=x_axis, labels=['label0', 'label1', ...]),
                                   DataFromPlugins(name='Current',data=[data0D_0, data0D_1,...], dim='Data0D'),
                                   DataFromPlugins(name='Datacube',data=[dataND_0, dataND_1,...], dim='DataND',
-                                        nav_axes=[0,2]), nav_x_axis=...])
+                                        nav_axes=[0,2]),
+                                        nav_x_axis=NavAxis(data=.., label='Xaxis', units= "µm", nav_index=0])
 
 Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each ``DataFromPlugins``
 in the emitted list. The type of data viewer will be determined by the *dim* key value while its name will be set to the *name* key value.
@@ -190,10 +191,32 @@ Each array will generate one channel within the corresponding viewer. Here is th
 * ``y_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
   (see code above and the Axis object in the daq_utils module)
 * ``nav_axes``: in case of a ND data viewer, will be the index of the navigation axis, see :ref:`NDviewer`
-* ``nav_x_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
-  (see code above and the Axis object in the daq_utils module)
-* ``nav_y_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
-  (see code above and the Axis object in the daq_utils module)
+* ``nav_x_axis``: **NavAxis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
+  (see code above, the NavAxis object in the daq_utils module and the paragraph below)
+* ``nav_y_axis``: **NavAxis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
+  (see code above, the NavAxis object in the daq_utils module and the paragraph below)
+
+To export properly ND datas, the DataFromPlugins object must have 2 other arguments set (compared to 0D, 1D or 2D datas):
+
+* nav_axes: it is a tuple of integers telling which dimensions of the data numpy array is to be considered as navigation
+  axis. The first integer of the tuple will be used as the *xaxis* in the viewers (1D or 2D) while the second will be
+  used as the *yaxis* in the viewers.
+* the navigation axis objects (optional): these are arguments starting by *nav* (the *_x_axis* or *_y_axis* or whatever
+  part is just there to clarify the meaning for the reader of the code) and are instances of **NavAxis**. A
+  **NavAxis** is similar to the **Axis** object but **have an important supplementary argument** that is *nav_index*.
+  This one will be used to sort all navigation axes. An index of 0 means this particular NavAxis will be used to display
+  properties of the *xaxis* on the viewers
+
+:numref:`figure_viewerND` highlights how these arguments will change the behaviour of the NDviewer.
+
+
+   .. _figure_viewerND:
+
+.. figure:: /image/DAQ_Viewer/viewerND_axes.png
+   :alt: NavAxis stuff
+
+   An example of 3D datas with 2 navigation axes and how these will be displayed by the NDviewer.
+
 
 
 .. _data_ready:

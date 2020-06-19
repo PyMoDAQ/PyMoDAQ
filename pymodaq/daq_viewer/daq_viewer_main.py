@@ -337,7 +337,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
-                self.ui.viewers[-1].status_signal.connect(self.log_messages)
             self.detector_types = DAQ_2DViewer_Det_type.names('daq_NDviewer')
 
         self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
@@ -1132,10 +1131,15 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 if 'y_axis' in data.keys():
                     kwargs['y_axis'] = data['y_axis']
 
-                if temp:
-                    self.ui.viewers[ind].show_data_temp(data['data'], nav_axes=nav_axes, **kwargs)
+                if isinstance(data['data'], list):
+                    dat = data['data'][0]
                 else:
-                    self.ui.viewers[ind].show_data(data['data'], nav_axes=nav_axes, **kwargs)
+                    dat = data['data']
+
+                if temp:
+                    self.ui.viewers[ind].show_data_temp(dat, nav_axes=nav_axes, **kwargs)
+                else:
+                    self.ui.viewers[ind].show_data(dat, nav_axes=nav_axes, **kwargs)
 
     def set_enabled_grab_buttons(self, enable=False):
         """
