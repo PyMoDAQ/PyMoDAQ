@@ -320,8 +320,8 @@ Documentation from Andor SDK concerning the WaitForAcquisition method of the dll
 
 .. _hardware_averaging:
 
-Hardware averaging:
--------------------
+Hardware averaging
+******************
 
 By default, if averaging of data is needed the Viewer module will take care of it software wise. However, if the hardware
 controller provides an efficient method to do it (that will save time) then you should set the class field

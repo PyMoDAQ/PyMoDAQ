@@ -23,6 +23,9 @@ navigator_path = os.path.join(local_path, 'navigator_temp_files')
 if not os.path.isdir(navigator_path):
     os.makedirs(navigator_path)
 
+logger = utils.set_logger(utils.get_module_name(__file__))
+
+
 Ntick = 128
 colors_red = np.array([(int(r), 0, 0) for r in np.linspace(0, 255, Ntick)])
 colors_green = np.array([(0, int(g), 0) for g in np.linspace(0, 255, Ntick)])
@@ -151,7 +154,7 @@ class Navigator(QObject):
                 child.sigValueChanged.emit(child, child.value())
 
         except Exception as e:
-            self.update_status(utils.getLineInfo() + str(e), status_time=self.status_time, log_type='log')
+            logger.exception(str(e))
 
     def load_image(self):
         #image_filepath = str(utils.select_file(start_path=None, save=False, ext='h5'))
@@ -186,7 +189,7 @@ class Navigator(QObject):
         if self.h5module_path != '':
             self.settings.child('settings', 'filepath').setValue(self.h5module_path)
             if self.h5module is not None:
-                if self.h5module.isopen:
+                if self.h5module.isopen():
                     self.h5module.close_file()
             self.h5module.open_file(self.h5module_path, 'a')
             self.list_2Dscans()
@@ -299,7 +302,7 @@ class Navigator(QObject):
                                     ind += 1
                             #self.viewer.image_widget.view.autoRange()
                         except Exception as e:
-                            self.update_status(utils.getLineInfo()+str(e), status_time=self.status_time, log_type='log')
+                            logger.exception(str(e))
 
                     else:
                         for overlay in self.overlays[:]:
@@ -375,7 +378,7 @@ class Navigator(QObject):
         splitter.addWidget(sett_widget)
         splitter.addWidget(self.viewer.parent)
 
-    def show_image(self,data):
+    def show_image(self, data):
         """
 
         Parameters
@@ -387,54 +390,69 @@ class Navigator(QObject):
             scan_path, current_filename, dataset_path = H5Saver.set_current_scan_path(navigator_path, base_name='Scan', update_h5=True, next_scan_index=self.next_scan_index,
                                   create_scan_folder=False)
             self.h5module = H5BrowserUtil()
-            self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name+".h5")),'w')
-            h5group = self.h5module.root()
-            data2D_group = self.h5module.get_set_group(h5group, 'Data2D')
-            data2D_group.attrs.type = 'data2D'
+            self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name+".h5")), 'w')
+
         else:
             scan_path, current_filename, dataset_path = H5Saver.set_current_scan_path(navigator_path, base_name='Scan',
-                                                                                    update_h5=False, next_scan_index=self.next_scan_index,
-                                                                                    create_scan_folder=False)
-            if not self.h5module.isopen:
+                                                                update_h5=False, next_scan_index=self.next_scan_index,
+                                                                create_scan_folder=False)
+            if not self.h5module.isopen():
                 self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name+".h5")), 'a')
+
+        h5group = self.h5module.root()
+        data2D_group = self.h5module.get_set_group(h5group, 'Data2D')
+        data2D_group.attrs.type = 'data2D'
+
         self.next_scan_index += 1
         curr_group = self.h5module.get_set_group('/Data2D', current_filename)
-        curr_group.attrs['pixmap2D'] = data['pixmap2D']
+        live_group = self.h5module.get_set_group(curr_group, 'Live_scan_2D')
+        live_group.attrs['pixmap2D'] = data['pixmap2D']
 
-        xarray = self.h5module.create_carray(curr_group, "scan_x_axis_unique", obj=data['x_axis'],
+
+
+        xdata = data['x_axis']
+        if isinstance(xdata, dict):
+            xdata = xdata['data']
+        xarray = self.h5module.create_carray(curr_group, "Scan_x_axis", obj=xdata,
                                              title=current_filename)
-        xarray.attrs['type'] = 'signal_axis'
-        xarray.attrs['data_type'] = '1D'
+        xarray.attrs['type'] = 'navigation_axis'
+        xarray.attrs['data_dimension'] = '1D'
+        xarray.attrs['nav_index'] = 0
 
-        yarray = self.h5module.create_carray(curr_group, "scan_y_axis_unique", obj=data['y_axis'],
+        ydata = data['y_axis']
+        if isinstance(ydata, dict):
+            ydata = ydata['data']
+        yarray = self.h5module.create_carray(curr_group, "Scan_y_axis", obj=ydata,
                                              title=current_filename)
-        yarray.attrs['type'] = 'signal_axis'
-        yarray.attrs['data_type'] = '1D'
-
+        yarray.attrs['type'] = 'navigation_axis'
+        yarray.attrs['data_dimension'] = '1D'
+        yarray.attrs['nav_index'] = 1
 
         for ind_channel, name in enumerate(data['names']):
             try:
-                channel_group = self.h5module.get_set_group(curr_group, name)
+                channel_group = self.h5module.get_set_group(live_group, name)
                 channel_group.attrs.Channel_name = name
                 array = self.h5module.create_carray(channel_group, current_filename + '_' + name,
                                                   obj=data['data'][ind_channel],
                                                   title='data',)
                 array.attrs['type'] = 'data'
-                array.attrs['data_type'] = '0D'
+                array.attrs['data_dimension'] = '0D'
                 array.attrs['data_name'] = name
-                array.attrs['scan_type'] = 'Scan2D'
+                array.attrs['scan_type'] = 'scan2D'
+                array.attrs['scan_subtype'] = ''
             except Exception as e:
-                self.update_status(utils.getLineInfo()+str(e), status_time=self.status_time, log_type='log')
+                logger.exception(str(e))
+
 
         self.update_2Dscans()
 
     def update_2Dscans(self):
         try:
-            if not self.h5module.isopen:
+            if not self.h5module.isopen():
                 self.h5module.open_file(self.h5module.filename, 'a')
             scans = self.h5module.get_h5file_scans(self.h5module.root())
-            #settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
-            params=[]
+            # settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
+            params = []
             children = [child.name() for child in self.settings.child(('scans')).children()]
             for scan in scans:
                 if scan['scan_name'] not in children:
@@ -450,7 +468,8 @@ class Navigator(QObject):
                     child.sigValueChanged.emit(child, child.value())
 
         except Exception as e:
-            self.update_status(utils.getLineInfo() + str(e), status_time=self.status_time, log_type='log')
+            logger.exception(str(e))
+
 
     def update_h5file(self, h5file):
         if self.h5module is not None:
@@ -470,10 +489,9 @@ class Navigator(QObject):
         """
         try:
             self.ui.statusbar.showMessage(txt, status_time)
-            if log_type is not None:
-                self.log_signal.emit(self.title + ': ' + txt)
+            logger.info(txt)
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
 
 

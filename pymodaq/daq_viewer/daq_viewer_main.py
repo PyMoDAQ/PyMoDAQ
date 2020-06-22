@@ -1318,15 +1318,15 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def show_scanner(self):
+    def show_scanner(self, show=True):
         if self.scanner is None:
             items = OrderedDict([])
             if self.navigator is not None:
                 items['Navigator'] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
-            viewers_title = [view.title for view in self.ui.viewers if view.viewer_type=='Data2D']
+            viewers_title = [view.title for view in self.ui.viewers if view.viewer_type == 'Data2D']
             if len(viewers_title) > 0:
-                items[self.title] = dict(viewers=[view for view in self.ui.viewers if view.viewer_type=='Data2D'],
-                                         names= viewers_title)
+                items[self.title] = dict(viewers=[view for view in self.ui.viewers if view.viewer_type == 'Data2D'],
+                                         names=viewers_title)
 
             self.scanner = Scanner(items, scan_type='Scan2D')
             self.scanner.settings_tree.setMinimumHeight(300)
@@ -1339,14 +1339,16 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
             QtWidgets.QApplication.processEvents()
             self.scanner.settings.child('scan_options', 'scan_type').setValue('Scan2D')
-            self.scanner.settings.child('scan_options', 'scan_type').hide()
+            #self.scanner.settings.child('scan_options', 'scan_type').hide()
             self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').setValue('Linear')
             #self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').hide()
             self.scanner.scan_params_signal[pymodaq.daq_utils.scanner.ScanParameters].connect(self.update_from_scanner)
             QtWidgets.QApplication.processEvents()
             self.scanner.set_scan()
 
-    def show_navigator(self):
+        self.scanner.settings_tree.setVisible(show)
+
+    def show_navigator(self, show=True):
         if self.navigator is None:
             self.nav_dock = Dock('Navigator')
             self.widgnav = QtWidgets.QWidget()
@@ -1354,7 +1356,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.nav_dock.addWidget(self.widgnav)
             self.dockarea.addDock(self.nav_dock)
             self.nav_dock.float()
-            self.navigator.status_signal[str].connect(self.update_status)
             self.navigator.settings.child('settings', 'Load h5').hide()
             self.navigator.loadaction.setVisible(False)
             self.navigator.sig_double_clicked.connect(self.move_at_navigator)
@@ -1365,6 +1366,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 if 'Navigator' not in items:
                     items['Navigator'] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
                     self.scanner.viewers_items = items
+
+        self.widgnav.setVisible(show)
 
     @pyqtSlot(float, float)
     def move_at_navigator(self, posx, posy):
@@ -1447,7 +1450,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.save_new()
 
     @pyqtSlot(ThreadCommand)
-    def thread_status(self,status): # general function to get datas/infos from all threads back to the main
+    def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
         """
             General function to get datas/infos from all threads back to the main.
 
@@ -1498,7 +1501,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.detector_thread.wait()
                 finished=self.detector_thread.isFinished()
                 if finished:
-                    delattr(self,'detector_thread')
+                    delattr(self, 'detector_thread')
                 else:
                     self.update_status('thread is locked?!', self.wait_time, 'log')
             except Exception as e:
@@ -1586,7 +1589,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.logger.exception(str(e))
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-        elif status.command=='raise_timeout':
+        elif status.command == 'raise_timeout':
             self.raise_timeout()
 
         elif status.command == 'show_splash':
@@ -1615,11 +1618,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.lcd.setvalues(status.attributes[0])
 
         elif status.command == 'show_navigator':
-            self.show_navigator()
+            show = True
+            if len(status.attributes) != 0:
+                show = status.attributes[0]
+            self.show_navigator(show)
             QtWidgets.QApplication.processEvents()
 
         elif status.command == 'show_scanner':
-            self.show_scanner()
+            show = True
+            if len(status.attributes) != 0:
+                show = status.attributes[0]
+            self.show_scanner(show)
             QtWidgets.QApplication.processEvents()
 
         self.custom_sig.emit(status) #to be used if needed in custom application connected to this module
@@ -1909,6 +1918,8 @@ class DAQ_Detector(QObject):
                 raise Exception(self.detector_name + " unknown")
 
             self.detector = class_(self, params_state)
+            self.detector.data_grabed_signal.connect(self.data_ready)
+            self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
             status.update(self.detector.ini_detector(controller))
 
             if status['x_axis'] is not None:
@@ -1919,8 +1930,7 @@ class DAQ_Detector(QObject):
                 self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
 
 
-            self.detector.data_grabed_signal.connect(self.data_ready)
-            self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
+
 
             self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
 
