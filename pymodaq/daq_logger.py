@@ -328,9 +328,11 @@ class DAQ_Logger(QObject):
 
 
         self.h5saver.settings_tree.setMinimumWidth(300)
-        self.dblogger.settings_tree.setMinimumWidth(300)
         layout_hor.addWidget(self.h5saver.settings_tree)
-        layout_hor.addWidget(self.dblogger.settings_tree)
+
+        if is_sql:
+            self.dblogger.settings_tree.setMinimumWidth(300)
+            layout_hor.addWidget(self.dblogger.settings_tree)
 
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
