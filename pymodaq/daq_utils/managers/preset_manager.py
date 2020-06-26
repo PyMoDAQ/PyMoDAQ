@@ -9,7 +9,7 @@ from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
-
+from pathlib import Path
 
 #check if preset_mode directory exists on the drive
 from pymodaq.daq_utils import daq_utils as utils
@@ -18,14 +18,24 @@ preset_path = utils.get_set_preset_path()
 overshoot_path = utils.get_set_overshoot_path()
 layout_path = utils.get_set_layout_path()
 
-class PresetManager:
-    def __init__(self, msgbox=False):
+logger = utils.set_logger(utils.get_module_name(__file__))
 
+class PresetManager:
+    def __init__(self, msgbox=False, path=None, extra_params=[], param_options=[]):
+
+        if path is None:
+            path = preset_path
+        else:
+            assert isinstance(path, Path)
+
+        self.extra_params = extra_params
+        self.param_options = param_options
+        self.preset_path = path
         self.preset_params = None
         self.pid_type = False
         if msgbox:
             msgBox = QtWidgets.QMessageBox()
-            msgBox.setText("Preset Manager?");
+            msgBox.setText("Preset Manager?")
             msgBox.setInformativeText("What do you want to do?");
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
             new_button=msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
@@ -37,7 +47,7 @@ class PresetManager:
                 self.set_new_preset()
 
             elif msgBox.clickedButton() == modify_button:
-                path = gui_utils.select_file(start_path=preset_path,save=False, ext='xml')
+                path = gui_utils.select_file(start_path=self.preset_path, save=False, ext='xml')
                 if path != '':
                     self.set_file_preset(str(path))
             else: #cancel
@@ -56,7 +66,7 @@ class PresetManager:
 
     def set_PID_preset(self, pid_model):
         self.pid_type = True
-        filename = os.path.join(get_set_pid_path(), pid_model + '.xml')
+        filename = os.path.join(utils.get_set_pid_path(), pid_model + '.xml')
         if os.path.isfile(filename):
             children = custom_tree.XML_file_to_parameter(filename)
             self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
@@ -113,7 +123,8 @@ class PresetManager:
         params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors',
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
-        self.preset_params=Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)
+        self.preset_params = Parameter.create(title='Preset', name='Preset', type='group',
+                                              children=param+self.extra_params+params_move+params_det)
         self.preset_params.child('saving_options', 'save_type').hide()
         self.preset_params.child('saving_options', 'save_2D').hide()
         self.preset_params.child('saving_options', 'do_save').hide()
@@ -123,8 +134,12 @@ class PresetManager:
         self.preset_params.child('saving_options', 'current_scan_name').hide()
         self.preset_params.child('saving_options', 'current_scan_path').hide()
         self.preset_params.child('saving_options', 'current_h5_file').hide()
-
-
+        try:
+            for option in self.param_options:
+                if 'path' in option and 'options_dict' in option:
+                    self.preset_params.child(option['path']).setOpts(**option['options_dict'])
+        except Exception as e:
+            logger.exception(str(e))
 
         self.preset_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
@@ -175,13 +190,13 @@ class PresetManager:
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Fill in information about this managers')
+        dialog.setWindowTitle('Fill in information about this manager')
         res = dialog.exec()
 
         if self.pid_type:
             path = pid_path
         else:
-            path = preset_path
+            path = self.preset_path
 
         if res == dialog.Accepted:
             # save managers parameters in a xml file

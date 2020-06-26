@@ -2378,7 +2378,7 @@ def browse_data(fname=None, ret_all=False):
             warnings.warn('This is not a PyMODAQ h5 file, there could be issues', Warning)
 
         form = QtWidgets.QWidget()
-        browser = H5Browser(form, fname)
+        browser = H5Browser(form, h5file_path=fname)
 
         dialog = QtWidgets.QDialog()
         dialog.setWindowTitle('Select a data node in the tree')

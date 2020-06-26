@@ -46,6 +46,8 @@ class DashBoard(QObject):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger """
     status_signal = pyqtSignal(str)
+    preset_loaded_signal = pyqtSignal(bool)
+    new_preset_created = pyqtSignal()
 
     def __init__(self, dockarea):
         """
@@ -57,6 +59,8 @@ class DashBoard(QObject):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__()
         logger.info('Initializing Dashboard')
+        self.extra_params = []
+        self.preset_path = preset_path
         self.wait_time = 1000
         self.scan_module = None
         self.database_module = None
@@ -65,9 +69,9 @@ class DashBoard(QObject):
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
         self.mainwindow = dockarea.parent()
         self.title = ''
-        splash_path = './splash.png'
+        splash_path = Path(__file__).parent.joinpath('splash.png')
 
-        splash = QtGui.QPixmap(splash_path)
+        splash = QtGui.QPixmap(str(splash_path))
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
         self.overshoot_manager = None
         self.preset_manager = None
@@ -78,6 +82,16 @@ class DashBoard(QObject):
         self.move_modules = []
         self.detector_modules = []
         self.setupUI()
+
+    def set_preset_path(self, path):
+        self.preset_path = path
+        self.set_extra_preset_params(self.extra_params)
+        self.create_menu(self.menubar)
+
+    def set_extra_preset_params(self, params, param_options=[]):
+        self.extra_params = params
+        self.preset_manager = PresetManager(path=self.preset_path, extra_params=params, param_options=param_options)
+
 
     @pyqtSlot(str)
     def add_status(self, txt):
@@ -168,12 +182,12 @@ class DashBoard(QObject):
         load_preset = self.preset_menu.addMenu('Load presets')
 
         slots = dict([])
-        for ind_file, file in enumerate(preset_path.iterdir()):
+        for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots[filestem] = load_preset.addAction(filestem)
                 slots[filestem].triggered.connect(
-                    self.create_menu_slot(preset_path.joinpath(file)))
+                    self.create_menu_slot(self.preset_path.joinpath(file)))
 
         self.overshoot_menu = menubar.addMenu('Overshoot Modes')
         action_new_overshoot = self.overshoot_menu.addAction('New Overshoot')
@@ -261,6 +275,7 @@ class DashBoard(QObject):
         try:
             self.preset_manager.set_new_preset()
             self.create_menu(self.menubar)
+            self.new_preset_created.emit()
         except Exception as e:
             logger.exception(str(e))
 
@@ -308,7 +323,7 @@ class DashBoard(QObject):
 
     def modify_preset(self):
         try:
-            path = gutils.select_file(start_path=preset_path, save=False, ext='xml')
+            path = gutils.select_file(start_path=self.preset_path, save=False, ext='xml')
             if path != '':
                 self.preset_manager.set_file_preset(path)
 
@@ -745,6 +760,8 @@ class DashBoard(QObject):
                 self.roi_menu.setEnabled(True)
                 self.update_init_tree()
 
+                self.preset_loaded_signal.emit(True)
+
         except Exception as e:
             logger.exception(str(e))
 
@@ -755,8 +772,8 @@ class DashBoard(QObject):
                 name = ''.join(title.split())  # remove empty spaces
                 self.settings.child(('actuators')).addChild(
                     {'title': title, 'name': name, 'type': 'led', 'value': False})
-            QtWidgets.QApplication.processEvents()
-            self.settings.child('actuators', name).setValue(act.initialized_state)
+                QtWidgets.QApplication.processEvents()
+                self.settings.child('actuators', name).setValue(act.initialized_state)
 
         for act in self.detector_modules:
             if act.title not in custom_tree.iter_children(self.settings.child(('detectors')), []):
@@ -764,8 +781,8 @@ class DashBoard(QObject):
                 name = ''.join(title.split())  # remove empty spaces
                 self.settings.child(('detectors')).addChild(
                     {'title': title, 'name': name, 'type': 'led', 'value': False})
-            QtWidgets.QApplication.processEvents()
-            self.settings.child('detectors', name).setValue(act.initialized_state)
+                QtWidgets.QApplication.processEvents()
+                self.settings.child('detectors', name).setValue(act.initialized_state)
 
 
     pyqtSlot(bool)
@@ -817,10 +834,10 @@ class DashBoard(QObject):
         self.dockarea.addDock(self.logger_dock, 'top')
         self.logger_dock.setVisible(True)
 
-        self.preset_manager = PresetManager()
+        self.preset_manager = PresetManager(path=self.preset_path, extra_params=self.extra_params)
 
         #creating the menubar
-        self.menubar=self.mainwindow.menuBar()
+        self.menubar = self.mainwindow.menuBar()
         self.create_menu(self.menubar)
 
 #        connecting

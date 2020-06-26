@@ -3,7 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEvent, QBuffer, QIODevi
 from PyQt5 import QtGui, QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
-from pyqtgraph.dockarea import DockArea
+from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow
 
 from pymodaq.daq_utils import daq_utils as utils
 
@@ -198,6 +198,17 @@ class DockArea(DockArea, QObject):
         self.addDock(dock, position, neighbor)
         self.dock_signal.emit()
 
+    def addTempArea(self):
+        if self.home is None:
+            area = DockArea(temporary=True, home=self)
+            self.tempAreas.append(area)
+            win = TempAreaWindow(area)
+            area.win = win
+            win.show()
+        else:
+            area = self.home.addTempArea()
+        #print "added temp area", area, area.window()
+        return area
 
 def set_enable_recursive(children, enable=False):
     """Apply the enable state on all children widgets, do it recursively
