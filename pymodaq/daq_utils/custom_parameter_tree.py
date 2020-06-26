@@ -341,7 +341,7 @@ def parameter_to_xml_string(param):
     xml_elt = walk_parameters_to_xml(param=param)
     return ET.tostring(xml_elt)
 
-def parameter_to_xml_file(param,filename):
+def parameter_to_xml_file(param, filename):
     """
         Convert the given parameter to XML element and update the given XML file.
 
@@ -532,7 +532,7 @@ def XML_file_to_parameter(file_name):
     tree = ET.parse(file_name)
 
     root = tree.getroot()
-    params = walk_xml_to_parameter(params=[],XML_elt=root)
+    params = walk_xml_to_parameter(params=[], XML_elt=root)
     return params
 
 def XML_string_to_parameter(xml_string):
