@@ -796,6 +796,10 @@ def get_set_layout_path():
     """
     return get_set_config_path('layout_configs')
 
+def get_set_remote_path():
+    """ creates and return the config folder path for remote (shortcuts or joystick) files
+    """
+    return get_set_config_path('remote_configs')
 
 def get_set_overshoot_path():
     """ creates and return the config folder path for overshoot files
