@@ -30,7 +30,7 @@ are also recorded.
 
    .. _single_data:
 
-.. figure:: /image/DAQ_Viewer/single_data.png
+.. figure:: /image/DAQ_Viewer/single_data.PNG
    :alt: single_data
 
    h5 file content containing saved data from a DAQ_Viewer detector (see :numref:`det1D`)
@@ -52,7 +52,7 @@ When the *continuous saving* parameter is set, new parameters are appearing on t
 
    .. _figure_continuous:
 
-.. figure:: /image/DAQ_Viewer/continuous_saving.png
+.. figure:: /image/DAQ_Viewer/continuous_saving.PNG
    :alt: continuous
 
    Continuous Saving options
@@ -73,7 +73,7 @@ formed from a *base name* followed by the date of the day and the time at which 
 
    .. _figure_continuous_struct:
 
-.. figure:: /image/DAQ_Viewer/continuous_data_structure.png
+.. figure:: /image/DAQ_Viewer/continuous_data_structure.PNG
    :alt: continuous
 
    Continuous Saving options
@@ -96,7 +96,7 @@ and metadata is used by the H5Browser to display the info to the user.
 
    .. _figure_h5browser_data:
 
-.. figure:: /image/Utils/h5browser_datas.png
+.. figure:: /image/Utils/h5browser_datas.PNG
    :alt: h5 browser
 
    h5 browser and arrows to explain how each data or metadata is being displayed

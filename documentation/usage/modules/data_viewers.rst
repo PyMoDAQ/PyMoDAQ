@@ -71,7 +71,7 @@ in order to show the data within the pixel pointed by the crosshair.
 
    .. _figure_NDviewer:
 
-.. figure:: /image/Utils/figure_NDviewer.png
+.. figure:: /image/Utils/figure_NDviewer.PNG
    :alt: figure_NDviewer
 
    ND viewer data display

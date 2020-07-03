@@ -13,7 +13,7 @@ interface build using only PyMoDAQ's building blocks. The corresponding script t
 
   .. _custom_app_fig:
 
-.. figure:: /image/custom_app.png
+.. figure:: /image/custom_app.PNG
    :alt: dashboard
 
    A custom application build using PyMoDAQ's modules.

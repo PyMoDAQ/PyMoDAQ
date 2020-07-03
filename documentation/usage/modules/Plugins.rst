@@ -50,7 +50,7 @@ __ http://www.pyqtgraph.org/documentation/parametertree/index.html
 
    .. _figure_settings:
 
-.. figure:: /image/settings_example.png
+.. figure:: /image/settings_example.PNG
    :alt: Settings example
 
    Typical hardware settings represented as a tree structure (here from the ``daq_2Dviewer_AndorCCD`` plugin)

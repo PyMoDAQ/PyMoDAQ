@@ -32,7 +32,7 @@ different actions.
 
   .. _daq_scan_dashboard:
 
-.. figure:: /image/dashboard.png
+.. figure:: /image/dashboard.PNG
    :alt: dashboard
 
    DAQ_Scan dashboard containing all declared modules and log.

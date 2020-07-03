@@ -82,11 +82,11 @@ Data Acquisition
     :width: 30pt
     :height: 15pt
 
-.. |save_sett| image:: /image/DAQ_Viewer/save_settings.png
+.. |save_sett| image:: /image/DAQ_Viewer/save_settings.PNG
     :width: 30pt
     :height: 15pt
 
-.. |load_sett| image:: /image/DAQ_Viewer/open_settings.png
+.. |load_sett| image:: /image/DAQ_Viewer/open_settings.PNG
     :width: 30pt
     :height: 15pt
 
@@ -117,7 +117,7 @@ detector currently activated.
 
    .. _figure_DAQ_Viewer_settings:
 
-.. figure:: /image/DAQ_Viewer/settings.png
+.. figure:: /image/DAQ_Viewer/settings.PNG
    :alt: settings
 
    Typical DAQ_Viewer *Main settings*.

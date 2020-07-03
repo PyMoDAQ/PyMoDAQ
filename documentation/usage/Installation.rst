@@ -76,7 +76,7 @@ will probably prefer using shortcuts on the desktop. Here is how to do it (Thank
 
    .. _shortcut_prop:
 
-.. figure:: /image/installation/shortcut_prop.png
+.. figure:: /image/installation/shortcut_prop.PNG
    :alt: shortcut properties
 
    Shortcut properties

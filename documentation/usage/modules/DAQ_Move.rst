@@ -18,46 +18,46 @@ the manual control of the actuator *position* and a side tree like interface dis
 
    .. _daq_move_gui_base:
 
-.. figure:: /image/DAQ_Move/daq_move_gui_base.png
+.. figure:: /image/DAQ_Move/daq_move_gui_base.PNG
    :alt: daq_move_gui_base
 
    Minimal DAQ_Move user interface
 
 .. :download:`png <daq_move_gui_base.png>`
 
-.. |green_arrow| image:: /image/DAQ_Move/green_arrow.png
+.. |green_arrow| image:: /image/DAQ_Move/green_arrow.PNG
     :width: 20pt
     :height: 20pt
 
-.. |plus_button| image:: /image/DAQ_Move/plus_button.png
+.. |plus_button| image:: /image/DAQ_Move/plus_button.PNG
     :width: 20pt
     :height: 20pt
 
-.. |settings| image:: /image/DAQ_move/settings_button.png
+.. |settings| image:: /image/DAQ_move/settings_button.PNG
     :width: 20pt
     :height: 20pt
 
-.. |move_rel| image:: /image/DAQ_move/move_rel.png
+.. |move_rel| image:: /image/DAQ_move/move_rel.PNG
     :width: 60pt
     :height: 20pt
 
-.. |move_rel_m| image:: /image/DAQ_move/move_rel_m.png
+.. |move_rel_m| image:: /image/DAQ_move/move_rel_m.PNG
     :width: 60pt
     :height: 20pt
 
-.. |home| image:: /image/DAQ_move/home.png
+.. |home| image:: /image/DAQ_move/home.PNG
     :width: 60pt
     :height: 20pt
 
-.. |stop| image:: /image/DAQ_move/stop.png
+.. |stop| image:: /image/DAQ_move/stop.PNG
     :width: 60pt
     :height: 20pt
 
-.. |where| image:: /image/DAQ_move/where.png
+.. |where| image:: /image/DAQ_move/where.PNG
     :width: 60pt
     :height: 20pt
 
-.. |abs| image:: /image/DAQ_move/abs.png
+.. |abs| image:: /image/DAQ_move/abs.PNG
     :width: 60pt
     :height: 20pt
 
@@ -85,7 +85,7 @@ The user interface will then look like :numref:`daq_move_gui_rel`.
 
    .. _daq_move_gui_rel:
 
-.. figure:: /image/DAQ_Move/daq_move_gui_rel.png
+.. figure:: /image/DAQ_Move/daq_move_gui_rel.PNG
    :alt: daq_move_gui_rel
 
    DAQ_Move user interface with controls
@@ -114,7 +114,7 @@ options by pressing the |settings| button. The user interface will then look lik
 
    .. _daq_move_gui_settings:
 
-.. figure:: /image/DAQ_Move/daq_move_gui_settings.png
+.. figure:: /image/DAQ_Move/daq_move_gui_settings.PNG
    :alt: daq_move_gui_settings
 
    Full DAQ_Move user interface with controls and settings

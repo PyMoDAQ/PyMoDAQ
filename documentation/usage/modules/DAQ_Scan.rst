@@ -106,7 +106,7 @@ The General Settings are comprised of (see :numref:`general_settings_fig`):
 
    .. _general_settings_fig:
 
-.. figure:: /image/DAQ_Scan/general_settings.png
+.. figure:: /image/DAQ_Scan/general_settings.PNG
    :alt: list_modules
 
    General settings for the DAQ_Scan module
@@ -120,7 +120,7 @@ interface to save the scans in hierarchical hdf5 file (it is also used in the DA
 
    .. _save_settings_fig:
 
-.. figure:: /image/DAQ_Scan/save_settings.png
+.. figure:: /image/DAQ_Scan/save_settings.PNG
    :alt: list_modules
 
    Save settings for the DAQ_Scan extension
@@ -134,7 +134,7 @@ Finally all specifics of the upcoming scan are configured using the :ref:`scanne
 
   .. _scan2D_fig2:
 
-.. figure:: /image/managers/scanner_widget.png
+.. figure:: /image/managers/scanner_widget.PNG
    :alt: scanner_fig
 
    The Scanner user interface set on a *Scan2D* scan type and an *adaptive* scan subtype and its particular settings.
@@ -151,7 +151,7 @@ by the setting **plot from** (defining which DAQ_Viewer module exports data). Th
 
    .. _det1D:
 
-.. figure:: /image/DAQ_Scan/1Ddetector.png
+.. figure:: /image/DAQ_Scan/1Ddetector.PNG
    :alt: 1Ddetector
 
    An example of a 1D detector having 2 channels. 0D data are generated as well from the integration of channel CH0
@@ -170,7 +170,7 @@ type of live data. It will export the raw 1D data and integrated 0D data within 
 
    .. _scan1D_0D:
 
-.. figure:: /image/DAQ_Scan/scan1D_0D.png
+.. figure:: /image/DAQ_Scan/scan1D_0D.PNG
    :alt: scan1D_0D
 
    An example of a detector exporting 0D live data plotted as a function of the actuator *position*
@@ -178,7 +178,7 @@ type of live data. It will export the raw 1D data and integrated 0D data within 
 
    .. _scan1D_1D:
 
-.. figure:: /image/DAQ_Scan/scan1D_1D.png
+.. figure:: /image/DAQ_Scan/scan1D_1D.PNG
    :alt: scan1D_1D
 
    An example of a detector exporting 1D live data plotted as a function of the actuator *position*. Channel
@@ -193,7 +193,7 @@ type of live data. It will export the raw 1D data and integrated 0D data within 
 
    .. _scan2D_0D:
 
-.. figure:: /image/DAQ_Scan/scan2D_0D.png
+.. figure:: /image/DAQ_Scan/scan2D_0D.PNG
    :alt: scan2D_0D
 
    An example of a detector exporting 0D live data plotted as a function of the 2 actuators's
@@ -221,7 +221,7 @@ quickly explore and select areas to scan on a 2D phase space.
 
    .. _navigator:
 
-.. figure:: /image/DAQ_Scan/navigator.png
+.. figure:: /image/DAQ_Scan/navigator.PNG
    :alt: navigator
 
    An example of dataset displaying several 2D scans at their respective locations (up and right axis)

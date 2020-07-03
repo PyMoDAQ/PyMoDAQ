@@ -31,7 +31,7 @@ The module manager is an object used to deal with:
 
   .. _module_managerfig:
 
-.. figure:: /image/managers/module_manager.png
+.. figure:: /image/managers/module_manager.PNG
    :alt: module_manager_fig
 
    The Module Manager user interface with selectable detectors and actuators, with probed data feature and actuators testing.
@@ -69,7 +69,7 @@ behaviour (see :ref:`adaptive_scans`)
 
   .. _scan1D_fig:
 
-.. figure:: /image/managers/scanner_widget_1D.png
+.. figure:: /image/managers/scanner_widget_1D.PNG
    :alt: scanner_fig
 
    The Scanner user interface set on a *Scan1D* scan type and the visible list of scan subtype.
@@ -83,7 +83,7 @@ The possible settings are visible on :numref:`scan2D_fig` and described below:
 
   .. _scan2D_fig:
 
-.. figure:: /image/managers/scanner_widget.png
+.. figure:: /image/managers/scanner_widget.PNG
    :alt: scanner_fig
 
    The Scanner user interface set on a *Scan2D* scan type and a *Spiral* scan subtype and its particular settings.
@@ -127,7 +127,7 @@ The possible settings are visible on :numref:`scan_seq_fig` and described below:
 
   .. _scan_seq_fig:
 
-.. figure:: /image/managers/scanner_widget_sequential.png
+.. figure:: /image/managers/scanner_widget_sequential.PNG
    :alt: scanner_fig
 
    The Scanner user interface set on a *Sequential* scan type with a sequence of three actuators
@@ -154,7 +154,7 @@ One can also drag and drop elements of the list at a different index in the list
 
   .. _scan_tabular_fig:
 
-.. figure:: /image/managers/scanner_widget_tabular.png
+.. figure:: /image/managers/scanner_widget_tabular.PNG
    :alt: scanner_fig
 
    The Scanner user interface set on a *Tabular* scan type with a list of points for 2 actuators. A context menu with
@@ -171,7 +171,7 @@ That gives, for :numref:`scan_selector`, 40 points defined along the segments.
 
    .. _scan_selector:
 
-.. figure:: /image/DAQ_Scan/scan_selector.png
+.. figure:: /image/DAQ_Scan/scan_selector.PNG
    :alt: scan_selector
 
    An example of 1D complex sections selected within a 2D area
@@ -187,7 +187,7 @@ be done on/along these 4 segments. Positions can be set manually or from a *Poly
 
   .. _scan_tabular_adaptive_fig:
 
-.. figure:: /image/managers/scanner_widget_tabular_adaptive.png
+.. figure:: /image/managers/scanner_widget_tabular_adaptive.PNG
    :alt: scanner_fig
 
    The Scanner user interface set on a *Tabular* scan type with a list of points for 2 actuators. A context menu with
@@ -276,7 +276,7 @@ way to synchronize detectors and actuators that should be set together within a 
 
    .. _module_manager_fig:
 
-.. figure:: /image/DAQ_Scan/list_modules.png
+.. figure:: /image/DAQ_Scan/list_modules.PNG
    :alt: list_modules
 
    User interface of the module manager listing detectors and actuators that can be selected for a given action.
@@ -298,7 +298,7 @@ data viewer (type :ref:`NDviewer` that can display data dimensionality up to 4)
 
    .. _figure_h5browser:
 
-.. figure:: /image/Utils/h5browser.png
+.. figure:: /image/Utils/h5browser.PNG
    :alt: h5 browser
 
    h5 browser to explore saved datas
@@ -318,7 +318,7 @@ of data such as with the DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save 
 
    .. _save_settings_fig2:
 
-.. figure:: /image/DAQ_Scan/save_settings.png
+.. figure:: /image/DAQ_Scan/save_settings.PNG
    :alt: list_modules
 
    User interface of the H5Saver module
@@ -397,7 +397,7 @@ and ROIs and Lineouts will be restored.
 
   .. _roi_manager_fig:
 
-.. figure:: /image/managers/roi_manager.png
+.. figure:: /image/managers/roi_manager.PNG
    :alt: roi_manager_fig
 
    An example of ROI manager modification named from the preset *preset_adaptive* (and corresponding xml file)
