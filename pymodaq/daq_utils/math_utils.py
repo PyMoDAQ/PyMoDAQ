@@ -291,7 +291,7 @@ class LSqEllipse:
         return self.center, self.width, self.height, self.phi
 
 
-def make_test_ellipse(center=[1,1], width=1, height=.6, phi=3.14/5):
+def make_test_ellipse(center=[1, 1], width=1, height=.6, phi=3.14/5):
     """Generate Elliptical data with noise
 
     Args

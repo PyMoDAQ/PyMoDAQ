@@ -88,7 +88,7 @@ DAQ_Logger extension.
 .. :download:`png <list_modules.png>`
 
 General Settings
-+++++++++++++++
+++++++++++++++++
 
 The General Settings are comprised of (see :numref:`general_settings_fig`):
 

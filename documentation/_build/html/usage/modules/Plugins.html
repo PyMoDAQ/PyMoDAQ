@@ -107,9 +107,9 @@
 <li class="toctree-l3"><a class="reference internal" href="#data-ready">Data ready?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#synchronous-example">Synchronous example:</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#asynchronous-example">Asynchronous example:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hardware-averaging">Hardware averaging</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#hardware-averaging">Hardware averaging:</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#hardware-needed-files">Hardware needed files</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#how-to-contribute">How to contribute?</a></li>
 </ul>
@@ -662,9 +662,8 @@ nicest/hardest solution is to use callbacks (if the controller provides one) and
 </div>
 </div></blockquote>
 </div>
-</div>
 <div class="section" id="hardware-averaging">
-<span id="id7"></span><h1>Hardware averaging:<a class="headerlink" href="#hardware-averaging" title="Permalink to this headline">¶</a></h1>
+<span id="id7"></span><h2>Hardware averaging<a class="headerlink" href="#hardware-averaging" title="Permalink to this headline">¶</a></h2>
 <p>By default, if averaging of data is needed the Viewer module will take care of it software wise. However, if the hardware
 controller provides an efficient method to do it (that will save time) then you should set the class field
 <code class="docutils literal notranslate"><span class="pre">hardware_averaging</span></code> to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
@@ -675,6 +674,7 @@ controller provides an efficient method to do it (that will save time) then you 
     <span class="n">hardware_averaging</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1">#will use the accumulate acquisition mode if averaging</span>
     <span class="c1">#is True else averaging is done software wise</span>
 </pre></div>
+</div>
 </div>
 </div>
 <div class="section" id="hardware-needed-files">

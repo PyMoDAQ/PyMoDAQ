@@ -153,6 +153,9 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
     def __init__(self):
         super().__init__()
         self.setupUI()
+
+        self.selection = None
+
         pygame.init()
         pygame.joystick.init()
         joystick_count = pygame.joystick.get_count()
@@ -164,17 +167,39 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
     def timerEvent(self, event):
         for event in pygame.event.get():  # User did something.
             if 'joy' in event.dict:
-                self.joystick_ID.setValue(event.joy)
+                self.settings.child(('joystickID')).setValue(event.joy)
+                self.selection = dict(joy=event.joy)
             if event.type == pygame.QUIT:  # If user clicked close.
-                done = True  # Flag that we are done so we exit this loop.
+                self.reject()
             elif event.type == pygame.JOYBUTTONDOWN:
-                self.button_ID.setValue(event.button)
-            elif event.type == pygame.JOYAXISMOTION :
-                self.axis_ID.setValue(event.axis)
-                self.axis_value.setValue(event.value)
+                self.settings.child(('buttonID')).show(True)
+                self.settings.child(('axisID')).show(False)
+                self.settings.child(('hatID')).show(False)
+                self.settings.child(('axis_value')).show(False)
+                self.settings.child(('hat_value1')).show(False)
+                self.settings.child(('hat_value2')).show(False)
+                self.settings.child(('buttonID')).setValue(event.button)
+                self.selection.update(dict(button=event.button))
+            elif event.type == pygame.JOYAXISMOTION:
+                self.settings.child(('buttonID')).show(False)
+                self.settings.child(('axisID')).show(True)
+                self.settings.child(('hatID')).show(False)
+                self.settings.child(('axis_value')).show(True)
+                self.settings.child(('axisID')).setValue(event.axis)
+                self.settings.child(('axis_value')).setValue(event.value)
+                self.settings.child(('hat_value1')).show(False)
+                self.settings.child(('hat_value2')).show(False)
+                self.selection.update(dict(axis=event.axis, value=event.value))
             elif event.type == pygame.JOYHATMOTION:
-                pass
-
+                self.settings.child(('buttonID')).show(False)
+                self.settings.child(('axisID')).show(False)
+                self.settings.child(('hatID')).show(True)
+                self.settings.child(('axis_value')).show(True)
+                self.settings.child(('hat_value1')).show(True)
+                self.settings.child(('hat_value2')).show(True)
+                self.settings.child(('hat_value1')).setValue(event.value[0])
+                self.settings.child(('hat_value2')).setValue(event.value[1])
+                self.selection.update(dict(hat=event.hat, value=event.value))
 
     def setupUI(self):
         layout = QtWidgets.QVBoxLayout()
@@ -182,47 +207,21 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
         label = QtWidgets.QLabel('Press a button or move an axis on the Joystick:')
         layout.addWidget(label)
 
-        horwidget1 = QtWidgets.QWidget()
-        layout.addWidget(horwidget1)
-        hor_layout = QtWidgets.QHBoxLayout()
-        horwidget1.setLayout(hor_layout)
+        params = [{'title': 'Joystick ID', 'name': 'joystickID', 'type': 'int', 'value': -1},
+                  {'title': 'Button ID', 'name': 'buttonID', 'type': 'int', 'value': -1, 'visible': False},
+                  {'title': 'Axis ID', 'name': 'axisID', 'type': 'int', 'value': -1, 'visible': False},
+                  {'title': 'Value:', 'name': 'axis_value', 'type': 'float', 'value': 0., 'visible': False},
+                  {'title': 'Hat ID', 'name': 'hatID', 'type': 'int', 'value': -1, 'visible': False},
+                  {'title': 'Value:', 'name': 'hat_value1', 'type': 'int', 'value': 0, 'visible': False},
+                  {'title': 'Value:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False},]
 
+        self.settings = Parameter.create(name='settings', type='group', children=params)
+        self.settings_tree = ParameterTree()
+        # tree.setMinimumWidth(400)
+        #self.settings_tree.setMinimumHeight(500)
+        self.settings_tree.setParameters(self.settings, showTop=False)
 
-        self.joystick_ID = custom_tree.SpinBoxCustom()
-        self.joystick_ID.setValue(-1)
-        self.joystick_ID.setReadOnly(True)
-        hor_layout.addWidget(QtWidgets.QLabel('Joystick ID:'))
-        hor_layout.addWidget(self.joystick_ID)
-
-        horwidget2 = QtWidgets.QWidget()
-        layout.addWidget(horwidget2)
-        hor_layout2 = QtWidgets.QHBoxLayout()
-        horwidget2.setLayout(hor_layout2)
-        self.button_ID = custom_tree.SpinBoxCustom(bounds=(-1, 100))
-        self.button_ID.setReadOnly(True)
-        self.button_ID.setValue(-1)
-        hor_layout2.addWidget(QtWidgets.QLabel('Button ID:'))
-        hor_layout2.addWidget(self.button_ID)
-
-        horwidget3 = QtWidgets.QWidget()
-        layout.addWidget(horwidget3)
-        hor_layout3 = QtWidgets.QHBoxLayout()
-        horwidget3.setLayout(hor_layout3)
-        self.axis_ID = custom_tree.SpinBoxCustom(bounds=(-1, 100))
-        self.axis_ID.setReadOnly(True)
-        self.axis_ID.setValue(-1)
-        hor_layout3.addWidget(QtWidgets.QLabel('Axis ID:'))
-        hor_layout3.addWidget(self.axis_ID)
-
-        horwidget4 = QtWidgets.QWidget()
-        layout.addWidget(horwidget4)
-        hor_layout4 = QtWidgets.QHBoxLayout()
-        horwidget4.setLayout(hor_layout4)
-        self.axis_value = custom_tree.SpinBoxCustom(bounds=(-1., 1.))
-        self.axis_value.setReadOnly(True)
-        self.axis_value.setValue(0.0)
-        hor_layout4.addWidget(QtWidgets.QLabel('Axis Value:'))
-        hor_layout4.addWidget(self.axis_value)
+        layout.addWidget(self.settings_tree)
 
         buttonBox = QtWidgets.QDialogButtonBox()
         buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
