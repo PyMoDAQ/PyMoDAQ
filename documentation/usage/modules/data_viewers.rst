@@ -16,8 +16,7 @@ custom application.
 
    .. _figure_0Dviewer:
 
-.. figure:: /image/Utils/figure_0Dviewer.png
-   :alt: figure_0Dviewer
+.. figure:: /image/Utils/figure_0Dviewer.PNG
 
    0D viewer data display
 
@@ -30,7 +29,7 @@ custom application.
 
    .. _figure_1Dviewer:
 
-.. figure:: /image/Utils/1Ddetector.png
+.. figure:: /image/Utils/1Ddetector.PNG
    :alt: figure_1Dviewer
 
    1D viewer data display
@@ -44,7 +43,7 @@ custom application.
 
    .. _figure_2Dviewer:
 
-.. figure:: /image/Utils/figure_2Dviewer.png
+.. figure:: /image/Utils/figure_2Dviewer.PNG
    :alt: figure_2Dviewer
 
    2D viewer data display
