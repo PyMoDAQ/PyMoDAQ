@@ -1,3 +1,4 @@
 releases
 sphinx-csv-filter
 numpy
+pillow
