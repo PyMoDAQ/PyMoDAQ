@@ -745,7 +745,7 @@ def get_set_local_dir(basename='pymodaq_local'):
     if 'win32' in sys.platform:
         local_path = Path(os.environ['HOMEDRIVE']).joinpath(os.environ['HOMEPATH'], basename)
     else:
-        local_path = Path(os.environ['PATH']).joinpath(basename)
+        local_path = Path(os.environ['HOME']).joinpath(basename)
 
     if not local_path.is_dir():
         local_path.mkdir()
