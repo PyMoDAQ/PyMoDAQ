@@ -1,7 +1,7 @@
 Utility Modules
 ***************
 
-.. currentmodule:: pymodaq.daq_utils.h5saver
+.. currentmodule:: pymodaq.daq_utils.h5modules
 
 .. autosummary::
 

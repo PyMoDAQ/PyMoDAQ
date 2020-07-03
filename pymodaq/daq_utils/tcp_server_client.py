@@ -694,8 +694,8 @@ class TCPServer(QObject):
         wlist: (list) wait until ready for writing
         xlist: (list)  wait for an “exceptional condition”
         timeout: (float) optional timeout argument specifies a time-out as a floating point number in seconds.
-                 When the timeout argument is omitted the function blocks until at least one file descriptor is ready.
-                 A time-out value of zero specifies a poll and never blocks.
+                When the timeout argument is omitted the function blocks until at least one file descriptor is ready.
+                A time-out value of zero specifies a poll and never blocks.
 
         Returns
         -------
@@ -703,6 +703,7 @@ class TCPServer(QObject):
         list: writable sockets
         list: sockets with error pending
         """
+
         read_sockets, write_sockets, error_sockets = select.select([sock.socket for sock in rlist],
                                                                    [sock.socket for sock in wlist],
                                                                    [sock.socket for sock in xlist],

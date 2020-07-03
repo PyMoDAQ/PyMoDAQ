@@ -914,7 +914,7 @@ class H5LogHandler(logging.StreamHandler):
 class H5Saver(H5Backend, QObject):
     """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
-    on a UI (see :numref:`other_settings`) using the widget self.settings_tree. At the creation of a new file, a node
+    on a UI using the widget self.settings_tree. At the creation of a new file, a node
     group named **Raw_datas** and represented by the attribute ``raw_group`` is created and set with a metadata attribute:
 
     * 'type' given by the **save_type** class parameter
@@ -936,11 +936,9 @@ class H5Saver(H5Backend, QObject):
     ----------
     h5_file: pytables hdf5 file
              object used to save all datas and metadas
-
     h5_file_path: str or Path
                   pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
                   position within the epsilon precision (see comon_parameters variable)
-
     save_type: str
                an element of the list module attribute save_types = ['scan', 'detector', 'custom']
                * 'scan' is used for DAQ_Scan module and should be used for similar application
@@ -1456,13 +1454,10 @@ class H5Saver(H5Backend, QObject):
         ----------
         data: (ndarray) of dimension 1
         parent_group: (str or node) parent node where to save new data
-        axis: (str) either x_axis, y_axis, z_axis or time_axis
-            'x_axis', 'y_axis', 'z_axis', 'time_axis' are axes containing scalar values (floats or ints)
-            'time_axis' can be interpreted as the posix timestamp corresponding to a datetime object, see datetime.timestamp()
-        enlargeable: (bool)
-            if True the created array is a earray type
-            if False the created array is a carray type
+        axis: (str) either x_axis, y_axis, z_axis or time_axis. 'x_axis', 'y_axis', 'z_axis', 'time_axis' are axes containing scalar values (floats or ints). 'time_axis' can be interpreted as the posix timestamp corresponding to a datetime object, see datetime.timestamp()
+        enlargeable: (bool) if True the created array is a earray type if False the created array is a carray type
         """
+
         if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
             if 'axis' not in axis: # this take care of the case of sequential scans where axes are labelled with indexes
                 raise NameError('Invalid navigation axis name')
@@ -1512,12 +1507,11 @@ class H5Saver(H5Backend, QObject):
                  scan_shape=[], title='', enlargeable=False,
                  init=False, add_scan_dim=False, metadata=dict([])):
         """save data within the hdf5 file together with axes data (if any) and metadata, node name will be 'Data'
+
         Parameters
         ----------
         channel_group: (hdf5 node) node where to save the array, in general within a channel type group
-        data_dict: (dict) dictionnary containing the data to save and all the axis and metadata
-            mandatory key: 'data': (ndarray) data to save
-            other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....)
+        data_dict: (dict) dictionnary containing the data to save and all the axis and metadata mandatory key: 'data': (ndarray) data to save other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....)
         scan_type: (str) either '', 'scan1D' or 'scan2D' or Tabular or sequential
         scan_subtype: (str) see scanner module
         scan_shape: (iterable) the shape of the scan dimensions
