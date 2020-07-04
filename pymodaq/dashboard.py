@@ -279,25 +279,6 @@ class DashBoard(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_layout_state(self, file=None):
-        """
-            Load and restore a layout state from the select_file obtained pathname file.
-
-            See Also
-            --------
-            utils.select_file
-        """
-        try:
-            if file is None:
-                file = gutils.select_file(save=False, ext='dock')
-            if file is not None:
-                with open(str(file), 'rb') as f:
-                    dockstate = pickle.load(f)
-                    self.dockarea.restoreState(dockstate)
-            file = file.name
-            self.settings.child('loaded_files', 'layout_file').setValue(file)
-        except Exception as e:
-            logger.exception(str(e))
 
     def modify_overshoot(self):
         try:
@@ -381,6 +362,26 @@ class DashBoard(QObject):
             if hasattr(self, 'mainwindow'):
                 self.mainwindow.close()
 
+        except Exception as e:
+            logger.exception(str(e))
+
+    def load_layout_state(self, file=None):
+        """
+            Load and restore a layout state from the select_file obtained pathname file.
+
+            See Also
+            --------
+            utils.select_file
+        """
+        try:
+            if file is None:
+                file = gutils.select_file(save=False, ext='dock')
+            if file is not None:
+                with open(str(file), 'rb') as f:
+                    dockstate = pickle.load(f)
+                    self.dockarea.restoreState(dockstate)
+            file = file.name
+            self.settings.child('loaded_files', 'layout_file').setValue(file)
         except Exception as e:
             logger.exception(str(e))
 

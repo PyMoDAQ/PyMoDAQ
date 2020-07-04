@@ -2400,6 +2400,9 @@ def browse_data(fname=None, ret_all=False):
         else:
             data = None
             node_path = None
+
+        browser.h5utils.close_file()
+
         if ret_all:
             return data, fname, node_path
         else:
