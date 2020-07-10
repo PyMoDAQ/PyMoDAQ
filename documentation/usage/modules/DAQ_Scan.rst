@@ -36,26 +36,26 @@ display live data taken during a scan.
 
    .. _daq_scan_main:
 
-.. figure:: /image/DAQ_Scan/main_ui.png
+.. figure:: /image/DAQ_Scan/main_ui.PNG
    :alt: daq_scan_main
 
    Main DAQ_Scan user interface.
 
-.. :download:`png <main_ui.png>`
+.. :download:`png <main_ui.PNG>`
 
 Scan Flow
 *********
 The top of the settings panel is comprised of buttons to set, start and stop a scan as well as quit the application.
 
-.. |start| image:: /image/DAQ_Scan/start_scan.png
+.. |start| image:: /image/DAQ_Scan/start_scan.PNG
     :width: 60pt
     :height: 20pt
 
-.. |stop| image:: /image/DAQ_Scan/stop_scan.png
+.. |stop| image:: /image/DAQ_Scan/stop_scan.PNG
     :width: 60pt
     :height: 20pt
 
-.. |quit| image:: /image/DAQ_Scan/quit.png
+.. |quit| image:: /image/DAQ_Scan/quit.PNG
     :width: 60pt
     :height: 20pt
 
@@ -80,12 +80,12 @@ DAQ_Logger extension.
 
    .. _list_modules:
 
-.. figure:: /image/DAQ_Scan/list_modules.png
+.. figure:: /image/DAQ_Scan/list_modules.PNG
    :alt: list_modules
 
    List of declared modules from a preset
 
-.. :download:`png <list_modules.png>`
+.. :download:`png <list_modules.PNG>`
 
 General Settings
 ++++++++++++++++
