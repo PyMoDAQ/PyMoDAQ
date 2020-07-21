@@ -16,6 +16,13 @@ DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
 DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
 DAQ_NDViewer_Det_type = make_enum('daq_NDviewer')
 
+def iterative_show_pb(params):
+    for param in params:
+        if param['type'] == 'itemselect' or param['type'] == 'list':
+            param['show_pb'] = True
+        elif 'children' in param:
+            iterative_show_pb(param['children'])
+
 
 class PresetScalableGroupMove(pTypes.GroupParameter):
     """
@@ -52,15 +59,11 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
             newindex = len(childnames)
 
         params = daq_move_params
-        for param in params:
-            if param['type'] == 'itemselect' or param['type'] == 'list':
-                param['show_pb'] = True
+        iterative_show_pb(params)
 
         class_ = getattr(getattr(movehardware, 'daq_move_' + typ), 'DAQ_Move_' + typ)
         params_hardware = getattr(class_, 'params')
-        for param in params_hardware:
-            if param['type'] == 'itemselect' or param['type'] == 'list':
-                param['show_pb'] = True
+        iterative_show_pb(params_hardware)
 
         for main_child in params:
             if main_child['name'] == 'move_settings':
@@ -128,9 +131,7 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
                 newindex=len(childnames)
 
             params = daq_viewer_params
-            for param in params:
-                if param['type'] == 'itemselect' or param['type'] == 'list':
-                    param['show_pb'] = True
+            iterative_show_pb(params)
 
             for main_child in params:
                 if main_child['name'] == 'main_settings':
@@ -159,9 +160,7 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
                             child['visible'] = True
 
             params_hardware = getattr(class_, 'params')
-            for param in params_hardware:
-                if param['type'] == 'itemselect' or param['type'] == 'list':
-                    param['show_pb'] = True
+            iterative_show_pb(params_hardware)
 
             for main_child in params:
                 if main_child['name'] == 'detector_settings':
