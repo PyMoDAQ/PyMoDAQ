@@ -199,7 +199,7 @@ class DAQ_Move(Ui_Form, QObject):
 
             else:
                 self.stage_name = self.ui.Stage_type_combo.currentText()
-                stage = DAQ_Move_stage(self.stage_name, self.current_position)
+                stage = DAQ_Move_stage(self.stage_name, self.current_position, self.title)
                 self.stage_thread = QThread()
                 stage.moveToThread(self.stage_thread)
 
@@ -725,8 +725,9 @@ class DAQ_Move_stage(QObject):
     """
     status_sig=pyqtSignal(ThreadCommand)
 
-    def __init__(self,stage_name,position):
-        super(DAQ_Move_stage,self).__init__()
+    def __init__(self,stage_name,position, title='actuator'):
+        super().__init__()
+        self.logger = utils.set_logger(f'{logger.name}.{title}.actuator')
         self.hardware=None
         self.stage_name=stage_name
         self.current_position=position
