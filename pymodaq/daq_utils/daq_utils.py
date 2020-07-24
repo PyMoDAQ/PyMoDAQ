@@ -1119,6 +1119,26 @@ def linspace_step(start, stop, step):
     return np.linspace(start, new_stop, Nsteps)
 
 
+def find_dict_in_list_from_key_val(dicts, key, value):
+    """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
+
+    Parameters
+    ----------
+    dicts: (list) list of dictionnaries
+    key: (str) specific key to look for in each dict
+    value: value to match
+
+    Returns
+    -------
+    dict: if found otherwose returns None
+    """
+
+    for dict in dicts:
+        if key in dict:
+            if dict[key] == value:
+                return dict
+    return None
+
 def find_index(x, threshold):
     """
     find_index finds the index ix such that x(ix) is the closest from threshold
