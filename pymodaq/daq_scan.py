@@ -915,6 +915,11 @@ class DAQ_Scan(QObject):
         res = self.set_scan()
         if res:
 
+            #deactivate module controls usiong remote_control
+            if hasattr(self.dashboard, 'remote_manager'):
+                remote_manager = getattr(self.dashboard, 'remote_manager')
+                remote_manager.activate_all(False)
+
             # save settings from move modules
             move_modules_names = [mod.title for mod in self.modules_manager.actuators]
             for ind_move, move_name in enumerate(move_modules_names):
@@ -1039,6 +1044,12 @@ class DAQ_Scan(QObject):
             self.ui.set_scan_pb.setEnabled(True)
             self.ui.set_ini_positions_pb.setEnabled(True)
             self.ui.start_scan_pb.setEnabled(True)
+
+            #reactivate module controls usiong remote_control
+            if hasattr(self.dashboard, 'remote_manager'):
+                remote_manager = getattr(self.dashboard, 'remote_manager')
+                remote_manager.activate_all(True)
+
         elif status[0] == "Timeout":
             self.ui.status_message.setText('Timeout occurred')
 
