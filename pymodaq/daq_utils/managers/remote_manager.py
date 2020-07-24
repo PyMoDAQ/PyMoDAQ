@@ -12,8 +12,8 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 remote_path = utils.get_set_remote_path()
 remote_types = ['ShortCut', 'Joystick']
 
-actuator_actions = ['MoveRel']
-detector_actions = ['Snap', 'Grab', 'Stop']
+actuator_actions = ['move_Rel', 'move_Rel_p', 'move_Rel_m']
+detector_actions = ['snap', 'grab', 'stop']
 
 
 try:
@@ -55,7 +55,11 @@ class ScalableGroupRemote(parameterTypes.GroupParameter):
                   {'title': 'Shortcut:', 'name': 'shortcut', 'type': 'str', 'value': ''},
                   {'title': 'Set Joystick ID:', 'name': 'set_joystick', 'type': 'bool_push', 'label': 'Set',
                    'value': False, 'visible': False},
+
                   {'title': 'Joystick ID:', 'name': 'joystickID', 'type': 'int', 'value': -1, 'visible': False},
+                  {'title': 'Actionner type:', 'name': 'actionner_type', 'type': 'list', 'values': ['Axis', 'Button', 'Hat'],
+                    'visible': False},
+                  {'title': 'Actionner ID:', 'name': 'actionnerID', 'type': 'int', 'value': -1, 'visible': False},
                   ])
 
 
@@ -109,10 +113,10 @@ class ScalableGroupModules(parameterTypes.GroupParameter):
         #         param['show_pb'] = True
 
         if self.opts['modtype'] == 'Actuator':
-            child = {'title': f'Actuator {typ}', 'name': f'act_{typ}', 'type': 'group',
+            child = {'title': f'Actuator {typ}', 'name': f'act_{newindex:03d}', 'type': 'group',
                  'removable': True, 'children': params, 'removable': True, 'renamable': False}
         else:
-            child = {'title': f'Detector {typ}', 'name': f'det_{typ}', 'type': 'group',
+            child = {'title': f'Detector {typ}', 'name': f'det_{newindex:03d}', 'type': 'group',
                  'removable': True, 'children': params, 'removable': True, 'renamable': False}
 
         if child['name'] not in [child.name() for child in self.children()]:
@@ -158,6 +162,8 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
 
         pygame.init()
         pygame.joystick.init()
+        # width, height = 64 * 10, 64 * 8
+        # self.screen = pygame.display.set_mode((width, height))
         joystick_count = pygame.joystick.get_count()
         for ind in range(joystick_count):
             joystick = pygame.joystick.Joystick(ind)
@@ -171,7 +177,7 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
                 self.selection = dict(joy=event.joy)
             if event.type == pygame.QUIT:  # If user clicked close.
                 self.reject()
-            elif event.type == pygame.JOYBUTTONDOWN:
+            elif event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
                 self.settings.child(('buttonID')).show(True)
                 self.settings.child(('axisID')).show(False)
                 self.settings.child(('hatID')).show(False)
@@ -201,6 +207,7 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
                 self.settings.child(('hat_value2')).setValue(event.value[1])
                 self.selection.update(dict(hat=event.hat, value=event.value))
 
+
     def setupUI(self):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
@@ -212,8 +219,8 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
                   {'title': 'Axis ID', 'name': 'axisID', 'type': 'int', 'value': -1, 'visible': False},
                   {'title': 'Value:', 'name': 'axis_value', 'type': 'float', 'value': 0., 'visible': False},
                   {'title': 'Hat ID', 'name': 'hatID', 'type': 'int', 'value': -1, 'visible': False},
-                  {'title': 'Value:', 'name': 'hat_value1', 'type': 'int', 'value': 0, 'visible': False},
-                  {'title': 'Value:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False},]
+                  {'title': 'Value x:', 'name': 'hat_value1', 'type': 'int', 'value': 0, 'visible': False},
+                  {'title': 'Value y:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False},]
 
         self.settings = Parameter.create(name='settings', type='group', children=params)
         self.settings_tree = ParameterTree()
@@ -235,6 +242,8 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
 
 class RemoteManager(QObject):
 
+    remote_changed = pyqtSignal(dict)
+
     def __init__(self, actuators=[], detectors=[], msgbox=False):
         super().__init__()
         self.actuators = actuators
@@ -250,29 +259,94 @@ class RemoteManager(QObject):
             ret = msgBox.exec()
 
             if msgBox.clickedButton() == new_button:
-                self.set_new_preset()
+                self.set_new_remote()
 
             elif msgBox.clickedButton() == modify_button:
                 path = select_file(start_path=remote_path, save=False, ext='xml')
                 if path != '':
-                    self.set_file_preset(str(path))
+                    self.set_file_remote(str(path))
             else:  # cancel
                 pass
+        params = [{'title': 'Activate all', 'name': 'activate_all', 'type': 'action'},
+                {'title': 'Deactivate all', 'name': 'deactivate_all', 'type': 'action'},
+                  {'title:': 'Actions', 'name': 'action_group', 'type': 'group'}]
 
-    def set_new_preset(self):
+        self.remote_actions = dict(shortcuts=dict([]), joysticks=dict([]))
+        self.remote_settings = Parameter.create(title='Remote Settings', name='remote', type='group',
+                                                children=params)
+        self.remote_settings.sigTreeStateChanged.connect(self.remote_settings_changed)
+        self.remote_settings_tree = ParameterTree()
+        self.remote_settings_tree.setParameters(self.remote_settings, showTop=False)
+        self.remote_settings.child(('activate_all')).sigActivated.connect(lambda: self.activate_all(True))
+        self.remote_settings.child(('deactivate_all')).sigActivated.connect(lambda: self.activate_all(False))
+
+    def activate_all(self, activate=True):
+        for child in self.remote_settings.child(('action_group')).children():
+            child.setValue(activate)
+
+
+    def set_remote_configuration(self):
+        #remove existing shorcuts
+        while len(self.remote_actions['shortcuts']):
+            self.remote_actions['shortcuts'].pop(list(self.remote_actions['shortcuts'].keys())[0])
+
+        while len(self.remote_actions['joysticks']):
+            self.remote_actions['joysticks'].pop(list(self.remote_actions['joysticks'].keys())[0])
+        all_actions = []
+        for child in self.remote_params.child('act_actions').children():
+            module_name = child.opts['title'].split('Actuator ')[1]
+            module_type = 'act'
+            for action in child.child(('actions')).children():
+                all_actions.append((module_name, action, module_type))
+        for child in self.remote_params.child('det_actions').children():
+            module_name = child.opts['title'].split('Detector ')[1]
+            module_type = 'det'
+            for action in child.child(('actions')).children():
+                all_actions.append((module_name, action, module_type))
+
+        for ind, action_tuple in enumerate(all_actions):
+            module, action, module_type = action_tuple
+            if action.child('remote_type').value() == 'Keyboard':
+                #stc = QtWidgets.QShortcut(QtGui.QKeySequence(action.child(('shortcut')).value()), self.dockarea)
+                self.remote_settings.child(('action_group')).addChild(
+                    {'title': f"{module}: {action.child(('action')).value()} "
+                              f"{action.child(('shortcut')).value()}:",
+                     'name': f'shortcut{ind:02d}', 'type': 'led_push', 'value': False})
+                self.remote_actions['shortcuts'][f'shortcut{ind:02d}'] = \
+                    dict(shortcut=action.child(('shortcut')).value(), activated=False, name=f'shortcut{ind:02d}',
+                         action=action.child(('action')).value(), module_name=module, module_type=module_type)
+            else:
+                self.remote_settings.child(('action_group')).addChild(
+                    {'title': f"{module}: {action.child(('action')).value()}=>"
+                              f"J{action.child(('joystickID')).value()}/"
+                              f"{action.child(('actionner_type')).value()}"
+                              f"{action.child(('actionnerID')).value()}:",
+                     'name': f'joy{ind:02d}', 'type': 'led_push', 'value': False})
+                self.remote_actions['joysticks'][f'joy{ind:02d}'] =\
+                    dict(joystickID=action.child(('joystickID')).value(),
+                         actionner_type=action.child(('actionner_type')).value(),
+                         actionnerID=action.child(('actionnerID')).value(),
+                         activated=False, name=f'joy{ind:02d}',
+                         module_name=module, module_type=module_type)
+
+        self.activate_all()
+
+    def set_new_remote(self, file=None):
+        if file is None:
+            file = 'remote_default'
         param = [
-            {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'remote_default'},
+            {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file},
         ]
         params_action = [{'title': 'Actuator Actions:', 'name': 'act_actions', 'type': 'groupmodules',
                           'addList': self.actuators, 'modtype': 'Actuator'},
                          {'title': 'Detector Actions:', 'name': 'det_actions', 'type': 'groupmodules',
                           'addList': self.detectors, 'modtype': 'Detector'}
                          ]  # PresetScalableGroupMove(name="Moves")]
-        self.shortcut_params = Parameter.create(title='Preset', name='Preset', type='group',
+        self.remote_params = Parameter.create(title='Preset', name='Preset', type='group',
                                                 children=param + params_action)
-        self.shortcut_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-        self.show_preset()
+        self.remote_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
+        logger.info('Creating a new remote file')
+        self.show_remote()
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -286,7 +360,7 @@ class RemoteManager(QObject):
             =============== ============================================ ==============================
         """
         for param, change, data in changes:
-            path = self.shortcut_params.childPath(param)
+            path = self.remote_params.childPath(param)
             if change == 'childAdded':
                 pass
 
@@ -297,6 +371,8 @@ class RemoteManager(QObject):
                     param.parent().child(('shortcut')).show(status)
                     param.parent().child(('set_joystick')).show(not status)
                     param.parent().child(('joystickID')).show(not status)
+                    param.parent().child(('actionner_type')).show(not status)
+                    param.parent().child(('actionnerID')).show(not status)
 
                 elif param.name() == 'set_shortcut':
                     msgBox = ShortcutSelection()
@@ -307,21 +383,55 @@ class RemoteManager(QObject):
                     msgBox = JoystickButtonsSelection()
                     ret = msgBox.exec()
                     if ret:
-                        param.parent().child(('joystickID')).setValue(msgBox.button_ID.value())
+                        param.parent().child(('joystickID')).setValue(msgBox.selection['joy'])
+                        """
+                        possible cases: ['Axis', 'Button', 'Hat']
+                        """
+                        if 'axis' in msgBox.selection:
+                            param.parent().child(('actionner_type')).setValue('Axis')
+                            param.parent().child(('actionnerID')).setValue(msgBox.selection['axis'])
+                        elif 'button' in msgBox.selection:
+                            param.parent().child(('actionner_type')).setValue('Button')
+                            param.parent().child(('actionnerID')).setValue(msgBox.selection['button'])
+                        elif 'hat' in msgBox.selection:
+                            param.parent().child(('actionner_type')).setValue('Hat')
+                            param.parent().child(('actionnerID')).setValue(msgBox.selection['hat'])
+
 
             elif change == 'parent':
                 pass
 
-    def set_file_preset(self, filename, show=True):
+    def remote_settings_changed(self, param, changes):
+        for param, change, data in changes:
+            path = self.remote_params.childPath(param)
+            if change == 'childAdded':
+                pass
+
+            elif change == 'value':
+                if 'shortcut' in param.name():
+                    self.remote_actions['shortcuts'][param.name()]['activated'] = data
+                    self.remote_changed.emit(dict(action_type='shortcut',
+                                                  action_name=param.name(),
+                                                  action_dict=self.remote_actions['shortcuts'][param.name()]))
+                elif 'joy' in param.name():
+                    self.remote_actions['joysticks'][param.name()]['activated'] = data
+                    self.remote_changed.emit(dict(action_type='joystick',
+                                                  action_name=param.name(),
+                                                  action_dict=self.remote_actions['shortcuts'][param.name()]))
+
+
+
+
+    def set_file_remote(self, filename, show=True):
         """
 
         """
         children = custom_tree.XML_file_to_parameter(filename)
-        self.shortcut_params = Parameter.create(title='Shortcuts:', name='shortcuts', type='group', children=children)
+        self.remote_params = Parameter.create(title='Shortcuts:', name='shortcuts', type='group', children=children)
         if show:
-            self.show_preset()
+            self.show_remote()
 
-    def show_preset(self):
+    def show_remote(self):
         """
 
         """
@@ -330,7 +440,7 @@ class RemoteManager(QObject):
         tree = ParameterTree()
         # tree.setMinimumWidth(400)
         tree.setMinimumHeight(500)
-        tree.setParameters(self.shortcut_params, showTop=False)
+        tree.setParameters(self.remote_params, showTop=False)
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
@@ -347,8 +457,8 @@ class RemoteManager(QObject):
 
         if res == dialog.Accepted:
             # save preset parameters in a xml file
-            custom_tree.parameter_to_xml_file(self.shortcut_params, os.path.join(remote_path,
-                                                                                 self.shortcut_params.child(
+            custom_tree.parameter_to_xml_file(self.remote_params, os.path.join(remote_path,
+                                                                                 self.remote_params.child(
                                                                                      ('filename')).value()))
 
 if __name__ == '__main__':

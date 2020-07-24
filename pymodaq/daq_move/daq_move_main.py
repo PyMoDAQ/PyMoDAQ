@@ -284,6 +284,13 @@ class DAQ_Move(Ui_Form, QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
+    def move_Rel_p(self):
+        self.ui.Move_Rel_plus_pb.click()
+
+    def move_Rel_m(self, send_to_tcpip=False):
+        self.ui.Move_Rel_minus_pb.click()
+
+
     def move_Rel(self, rel_position, send_to_tcpip=False):
         """
             | Make a move from the given relative psition and the current one.

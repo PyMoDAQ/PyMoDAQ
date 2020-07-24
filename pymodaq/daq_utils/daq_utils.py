@@ -583,6 +583,20 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
                 recursive_find_files_extension(entry.path, ext, paths)
     return paths
 
+def remove_spaces(string):
+    """
+    return a string without any white spaces in it
+    Parameters
+    ----------
+    string
+
+    Returns
+    -------
+
+    """
+    return ''.join(string.split())
+
+
 def rint(x):
     """
     almost same as numpy rint function but return an integer

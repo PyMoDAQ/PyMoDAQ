@@ -212,10 +212,6 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def stop(self):
-        pass
-
-
     def send_param_status(self,param,changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.

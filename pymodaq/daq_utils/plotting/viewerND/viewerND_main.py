@@ -848,53 +848,54 @@ class ViewerND(QtWidgets.QWidget, QObject):
         nav_axis: (int) index of the navigation axis from where posx comes from
 
         """
-        try:
-            nav_axes = self.get_selected_axes()
-            # datas_transposed=self.update_data_signal(self.datas)
-            if len(nav_axes) == 0:
-                data = self.datas.data
+        if self.datas is not None:
+            try:
+                nav_axes = self.get_selected_axes()
+                # datas_transposed=self.update_data_signal(self.datas)
+                if len(nav_axes) == 0:
+                    data = self.datas.data
 
-            elif len(nav_axes) == 1:
-                if posx < nav_axes[0]['data'][0] or posx > nav_axes[0]['data'][-1]:
-                    return
-                ind_x = utils.find_index(nav_axes[0]['data'], posx)[0][0]
-                data = self.datas.inav[ind_x].data
-            elif len(nav_axes) == 2:
-                if posx < nav_axes[0]['data'][0] or posx > nav_axes[0]['data'][-1]:
-                    return
-                if posy < nav_axes[1]['data'][0] or posy > nav_axes[1]['data'][-1]:
-                    return
-                ind_x = utils.find_index(nav_axes[0]['data'], posx)[0][0]
-                ind_y = utils.find_index(nav_axes[1]['data'], posy)[0][0]
-                data = self.datas.inav[ind_x, ind_y].data
-
-            else:
-                pos = []
-                for ind_view, view in enumerate(self.nav_axes_viewers):
-                    p = view.roi_line.getPos()[0]
-                    if p < 0 or p > len(nav_axes[ind_view]['data']):
+                elif len(nav_axes) == 1:
+                    if posx < nav_axes[0]['data'][0] or posx > nav_axes[0]['data'][-1]:
                         return
-                    ind = int(np.rint(p))
-                    pos.append(ind)
-                data = self.datas.inav.__getitem__(pos).data
+                    ind_x = utils.find_index(nav_axes[0]['data'], posx)[0][0]
+                    data = self.datas.inav[ind_x].data
+                elif len(nav_axes) == 2:
+                    if posx < nav_axes[0]['data'][0] or posx > nav_axes[0]['data'][-1]:
+                        return
+                    if posy < nav_axes[1]['data'][0] or posy > nav_axes[1]['data'][-1]:
+                        return
+                    ind_x = utils.find_index(nav_axes[0]['data'], posx)[0][0]
+                    ind_y = utils.find_index(nav_axes[1]['data'], posy)[0][0]
+                    data = self.datas.inav[ind_x, ind_y].data
+
+                else:
+                    pos = []
+                    for ind_view, view in enumerate(self.nav_axes_viewers):
+                        p = view.roi_line.getPos()[0]
+                        if p < 0 or p > len(nav_axes[ind_view]['data']):
+                            return
+                        ind = int(np.rint(p))
+                        pos.append(ind)
+                    data = self.datas.inav.__getitem__(pos).data
 
 
-            if len(self.datas.axes_manager.signal_shape) == 0:  # means 0D data, plot on 1D viewer
-                self.data_buffer.extend(data)
-                self.ui.viewer1D.show_data([self.data_buffer])
+                if len(self.datas.axes_manager.signal_shape) == 0:  # means 0D data, plot on 1D viewer
+                    self.data_buffer.extend(data)
+                    self.ui.viewer1D.show_data([self.data_buffer])
 
-            elif len(self.datas.axes_manager.signal_shape) == 1:  # means 1D data, plot on 1D viewer
-                self.ui.viewer1D.remove_plots()
-                self.ui.viewer1D.x_axis = self.x_axis
-                self.ui.viewer1D.show_data([data])
+                elif len(self.datas.axes_manager.signal_shape) == 1:  # means 1D data, plot on 1D viewer
+                    self.ui.viewer1D.remove_plots()
+                    self.ui.viewer1D.x_axis = self.x_axis
+                    self.ui.viewer1D.show_data([data])
 
-            elif len(self.datas.axes_manager.signal_shape) == 2:  # means 2D data, plot on 2D viewer
-                self.ui.viewer2D.x_axis = self.x_axis
-                self.ui.viewer2D.y_axis = self.y_axis
-                self.ui.viewer2D.setImage(data)
-        except Exception as e:
-            logger.exception(str(e))
-            self.update_status(utils.getLineInfo() + str(e), wait_time=self.wait_time, log='log')
+                elif len(self.datas.axes_manager.signal_shape) == 2:  # means 2D data, plot on 2D viewer
+                    self.ui.viewer2D.x_axis = self.x_axis
+                    self.ui.viewer2D.y_axis = self.y_axis
+                    self.ui.viewer2D.setImage(data)
+            except Exception as e:
+                logger.exception(str(e))
+                self.update_status(utils.getLineInfo() + str(e), wait_time=self.wait_time, log='log')
 
 
 
