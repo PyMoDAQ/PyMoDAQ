@@ -116,7 +116,7 @@ class DAQ_Scan(QObject):
         self.scanner = Scanner(actuators=self.move_modules, adaptive_losses=adaptive_losses)
         self.scan_parameters = None
 
-        self.modules_manager = ModulesManager()
+        self.modules_manager = self.dashboard.modules_manager
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.detectors_changed[list].connect(self.update_plot_det_items)
 
@@ -523,11 +523,6 @@ class DAQ_Scan(QObject):
 
             # setting moves and det in tree
             preset_items_det = [mod for ind, mod in enumerate(self.detector_modules) if ind == 0]
-            preset_items_moves = [mod for ind, mod in enumerate(self.move_modules) if ind == 0]
-
-            self.modules_manager.set_actuators(self.move_modules, preset_items_moves)
-            self.modules_manager.set_detectors(self.detector_modules, preset_items_det)
-
             self.settings.child('scan_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
             if preset_items_det!=[]:
                 self.settings.child('scan_options', 'plot_from').setValue(preset_items_det[0].title)

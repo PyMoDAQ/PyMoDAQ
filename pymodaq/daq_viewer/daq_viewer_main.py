@@ -472,6 +472,15 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                                                                       'yscaling').value()))
         return scaling_options
 
+    def grab(self):
+        self.ui.grab_pb.click()
+
+    def snap(self):
+        self.ui.single_pb.click()
+
+    def stop(self):
+        self.ui.stop_pb.click()
+
     def grab_data(self, grab_state=False, send_to_tcpip=False):
         """
             Do a grab session using 2 profile :

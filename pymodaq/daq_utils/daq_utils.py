@@ -583,6 +583,20 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
                 recursive_find_files_extension(entry.path, ext, paths)
     return paths
 
+def remove_spaces(string):
+    """
+    return a string without any white spaces in it
+    Parameters
+    ----------
+    string
+
+    Returns
+    -------
+
+    """
+    return ''.join(string.split())
+
+
 def rint(x):
     """
     almost same as numpy rint function but return an integer
@@ -1118,6 +1132,26 @@ def linspace_step(start, stop, step):
     new_stop = start + (Nsteps - 1) * step
     return np.linspace(start, new_stop, Nsteps)
 
+
+def find_dict_in_list_from_key_val(dicts, key, value):
+    """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
+
+    Parameters
+    ----------
+    dicts: (list) list of dictionnaries
+    key: (str) specific key to look for in each dict
+    value: value to match
+
+    Returns
+    -------
+    dict: if found otherwose returns None
+    """
+
+    for dict in dicts:
+        if key in dict:
+            if dict[key] == value:
+                return dict
+    return None
 
 def find_index(x, threshold):
     """

@@ -89,7 +89,7 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
             else:
                 newindex=len(childnames)
 
-            child={'title': name ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
+            child={'title': name,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
                     {'title': 'Trig overshoot?:' , 'name': 'trig_overshoot', 'type': 'bool', 'value': True},
                     {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 20},
                     {'title': 'Triggered Moves:', 'name': 'params', 'type': 'groupmoveover', 'movelist': self.opts['movelist']}],'removable':True, 'renamable':False}

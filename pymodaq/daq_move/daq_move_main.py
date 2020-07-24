@@ -107,7 +107,7 @@ class DAQ_Move(Ui_Form, QObject):
         self.ui.Move_Done_LED.set_as_false()
         self.initialized_state = False
         self.ui.Current_position_sb.setReadOnly(False)
-        self.move_done_bool = False
+        self.move_done_bool = True
 
         ############IMPORTANT############################
         self.controller = None  # the hardware controller/set after initialization and to be used by other modules
@@ -283,6 +283,13 @@ class DAQ_Move(Ui_Form, QObject):
 
         except Exception as e:
             self.logger.exception(str(e))
+
+    def move_Rel_p(self):
+        self.ui.Move_Rel_plus_pb.click()
+
+    def move_Rel_m(self, send_to_tcpip=False):
+        self.ui.Move_Rel_minus_pb.click()
+
 
     def move_Rel(self, rel_position, send_to_tcpip=False):
         """

@@ -15,12 +15,13 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
-
+from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.version import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
+from pymodaq.daq_utils.managers.remote_manager import RemoteManager
 from pymodaq.daq_utils.plotting.roi_saver import ROISaver
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -38,9 +39,7 @@ layout_path = utils.get_set_layout_path()
 layout_path = utils.get_set_layout_path()
 overshoot_path = utils.get_set_overshoot_path()
 roi_path = utils.get_set_roi_path()
-
-
-
+remote_path = utils.get_set_remote_path()
 
 class DashBoard(QObject):
     """
@@ -77,11 +76,19 @@ class DashBoard(QObject):
         self.preset_manager = None
         self.roi_saver = None
 
+        self.remote_manager = None
+        self.shortcuts = dict([])
+        self.joysticks = dict([])
+        self.ispygame_init = False
+
+        self.modules_manager = None
+
         self.overshoot = False
         self.preset_file = None
         self.move_modules = []
         self.detector_modules = []
         self.setupUI()
+
 
     def set_preset_path(self, path):
         self.preset_path = path
@@ -197,7 +204,7 @@ class DashBoard(QObject):
         action_modify_overshoot.triggered.connect(self.modify_overshoot)
         self.overshoot_menu.addSeparator()
         load_overshoot = self.overshoot_menu.addMenu('Load Overshoots')
-        self.overshoot_menu.setEnabled(False)
+        #self.overshoot_menu.setEnabled(False)
 
         slots_over = dict([])
         for ind_file, file in enumerate(utils.get_set_overshoot_path().iterdir()):
@@ -215,7 +222,7 @@ class DashBoard(QObject):
         action_modify_roi.triggered.connect(self.modify_roi)
         self.roi_menu.addSeparator()
         load_roi = self.roi_menu.addMenu('Load roi configs')
-        self.roi_menu.setEnabled(False)
+        #self.roi_menu.setEnabled(False)
 
 
         slots = dict([])
@@ -226,8 +233,27 @@ class DashBoard(QObject):
                 slots[filestem].triggered.connect(
                     self.create_menu_slot_roi(utils.get_set_roi_path().joinpath(file)))
 
+
+        self.remote_menu = menubar.addMenu('Remote/Shortcuts Control')
+        self.remote_menu.addAction('New remote config.', self.create_remote)
+        self.remote_menu.addAction('Modify remote config.', self.modify_remote)
+        self.remote_menu.addSeparator()
+        load_remote = self.remote_menu.addMenu('Load remote config.')
+        #self.remote_menu.setEnabled(False)
+
+
+        slots = dict([])
+        for ind_file, file in enumerate(utils.get_set_remote_path().iterdir()):
+            if file.suffix == '.xml':
+                filestem = file.stem
+                slots[filestem] = load_remote.addAction(filestem)
+                slots[filestem].triggered.connect(
+                    self.create_menu_slot_remote(utils.get_set_remote_path().joinpath(file)))
+
+
+
         #actions menu
-        self.actions_menu = menubar.addMenu('Actions')
+        self.actions_menu = menubar.addMenu('Extensions')
         action_scan = self.actions_menu.addAction('Do Scans')
         action_scan.triggered.connect(self.load_scan_module)
         action_log = self.actions_menu.addAction('Log data')
@@ -253,6 +279,9 @@ class DashBoard(QObject):
     def create_menu_slot_over(self, filename):
         return lambda: self.set_overshoot_configuration(filename)
 
+    def create_menu_slot_remote(self, filename):
+        return lambda: self.set_remote_configuration(filename)
+
     def create_roi_file(self):
         try:
             if self.preset_file is not None:
@@ -262,6 +291,14 @@ class DashBoard(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+    def create_remote(self):
+        try:
+            if self.preset_file is not None:
+                self.remote_manager.set_new_remote(self.preset_file.stem)
+                self.create_menu(self.menubar)
+
+        except Exception as e:
+            logger.exception(str(e))
 
     def create_overshoot(self):
         try:
@@ -279,6 +316,16 @@ class DashBoard(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+    def modify_remote(self):
+        try:
+            path = gutils.select_file(start_path=utils.get_set_remote_path(), save=False, ext='xml')
+            if path != '':
+                self.remote_manager.set_file_remote(path)
+
+            else:  # cancel
+                pass
+        except Exception as e:
+            logger.exception(str(e))
 
     def modify_overshoot(self):
         try:
@@ -645,6 +692,159 @@ class DashBoard(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+    def set_remote_configuration(self, filename):
+        if not isinstance(filename, Path):
+            filename = Path(filename)
+        ext = filename.suffix
+        if ext == '.xml':
+            self.remote_file = filename
+            self.remote_manager.remote_changed.connect(self.activate_remote)
+            self.remote_manager.set_file_remote(filename, show=False)
+            self.settings.child('loaded_files', 'remote_file').setValue(filename)
+            self.remote_manager.set_remote_configuration()
+            self.remote_dock = Dock('Remote controls')
+            self.dockarea.addDock(self.remote_dock, 'below', self.logger_dock)
+            self.remote_dock.addWidget(self.remote_manager.remote_settings_tree)
+
+    def activate_remote(self, remote_action, activate_all=False):
+        """
+        remote_action = dict(action_type='shortcut' or 'joystick',
+                            action_name='blabla',
+                            action_dict= either:
+                                dict(shortcut=action.child(('shortcut')).value(), activated=True,
+                                 name=f'action{ind:02d}', action=action.child(('action')).value(),
+                                  module_name=module, module_type=module_type)
+
+                                or:
+                                 dict(joystickID=action.child(('joystickID')).value(),
+                                     actionner_type=action.child(('actionner_type')).value(),
+                                     actionnerID=action.child(('actionnerID')).value(),
+                                     activated=True, name=f'action{ind:02d}',
+                                     module_name=module, module_type=module_type)
+
+        """
+        if remote_action['action_type'] == 'shortcut':
+            if remote_action['action_name'] not in self.shortcuts:
+                self.shortcuts[remote_action['action_name']] =\
+                    QtWidgets.QShortcut(QtGui.QKeySequence(remote_action['action_dict']['shortcut']), self.dockarea)
+            self.activate_shortcut(self.shortcuts[remote_action['action_name']],
+                                   remote_action['action_dict'],
+                                   activate=remote_action['action_dict']['activated'])
+
+        elif remote_action['action_type'] == 'joystick':
+            if not self.ispygame_init:
+                self.init_pygame()
+
+            if remote_action['action_name'] not in self.joysticks:
+                self.joysticks[remote_action['action_name']] = remote_action['action_dict']
+
+    def init_pygame(self):
+        try:
+            import pygame
+            self.pygame = pygame
+            pygame.init()
+            pygame.joystick.init()
+            joystick_count = pygame.joystick.get_count()
+            self.joysticks_obj = []
+            for ind in range(joystick_count):
+                self.joysticks_obj.append(dict(obj=pygame.joystick.Joystick(ind)))
+                self.joysticks_obj[-1]['obj'].init()
+                self.joysticks_obj[-1]['id'] = self.joysticks_obj[-1]['obj'].get_id()
+
+            self.remote_timer = QtCore.QTimer()
+            self.remote_timer.timeout.connect(self.pygame_loop)
+            self.ispygame_init = True
+            self.remote_timer.start(10)
+
+        except ImportError as e:
+            logger.warning('No pygame module installed. Needed for joystick control')
+
+    def pygame_loop(self):
+        """
+        check is event correspond to any
+         dict(joystickID=action.child(('joystickID')).value(),
+             actionner_type=action.child(('actionner_type')).value(),
+             actionnerID=action.child(('actionnerID')).value(),
+             activated=True, name=f'action{ind:02d}',
+             module_name=module, module_type=module_type)
+        contained in self.joysticks
+        """
+
+        ## Specifi action for axis to get their values even if it doesn't change (in which case it would'nt trigger events)
+        for action_dict in self.joysticks.values():
+            if action_dict['activated'] and action_dict['actionner_type'].lower() == 'axis':
+                joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id', action_dict['joystickID'])
+                val = joy['obj'].get_axis(action_dict['actionnerID'])
+                if abs(val) > 1e-4:
+                    module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
+                                                                    mod=action_dict['module_type'])
+                    action = getattr(module, action_dict['action'])
+                    if module.move_done_bool:
+                        action(val * 1 * module.settings.child('move_settings', 'epsilon').value())
+
+        ## For other actions use the event loop
+        for event in self.pygame.event.get():  # User did something.
+            selection = dict([])
+            if 'joy' in event.dict:
+                selection.update(dict(joy=event.joy))
+            if event.type == self.pygame.JOYBUTTONDOWN:
+                selection.update(dict(button=event.button))
+            elif event.type == self.pygame.JOYAXISMOTION:
+                selection.update(dict(axis=event.axis, value=event.value))
+            elif event.type == self.pygame.JOYHATMOTION:
+                selection.update(dict(hat=event.hat, value=event.value))
+            if len(selection) > 1:
+                for action_dict in self.joysticks.values():
+                    if action_dict['activated']:
+                        module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
+                                                                        mod=action_dict['module_type'])
+                        if action_dict['module_type'] == 'det':
+                            action = getattr(module, action_dict['action'])
+                        else:
+                            action = getattr(module, action_dict['action'])
+
+                        if action_dict['joystickID'] == selection['joy']:
+                            if action_dict['actionner_type'].lower() == 'button' and 'button' in selection:
+                                if action_dict['actionnerID'] == selection['button']:
+                                    action()
+                            elif action_dict['actionner_type'].lower() == 'hat' and 'hat' in selection:
+                                if action_dict['actionnerID'] == selection['hat']:
+                                    action(selection['value'])
+
+        QtWidgets.QApplication.processEvents()
+
+
+
+    def activate_shortcut(self, shortcut, action=None, activate=True):
+        """
+        action = dict(shortcut=action.child(('shortcut')).value(), activated=True, name=f'action{ind:02d}',
+                             action=action.child(('action')).value(), module_name=module)
+        Parameters
+        ----------
+        shortcut
+        action
+        activate
+
+        Returns
+        -------
+
+        """
+        if activate:
+            shortcut.activated.connect(
+                self.create_activated_shortcut(action))
+        else:
+            try:
+                shortcut.activated.disconnect()
+            except:
+                pass
+
+    def create_activated_shortcut(self, action):
+        module = self.modules_manager.get_mod_from_name(action['module_name'], mod=action['module_type'])
+        if action['module_type'] == 'det':
+            return lambda: getattr(module, action['action'])()
+        else:
+            return lambda: getattr(module, action['action'])()
+
     def set_overshoot_configuration(self, filename):
         try:
             if not isinstance(filename, Path):
@@ -725,7 +925,9 @@ class DashBoard(QObject):
                 self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
                 self.move_modules = move_modules
                 self.detector_modules = detector_modules
-    
+
+                self.modules_manager = ModulesManager(self.detector_modules, self.move_modules)
+
                 #####################################################
                 self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],
                                                           move_modules=[move.title for move in move_modules])
@@ -734,7 +936,15 @@ class DashBoard(QObject):
                 path = overshoot_path.joinpath(file)
                 if path.is_file():
                     self.set_overshoot_configuration(path)
-    
+
+                self.remote_manager = RemoteManager(actuators=[move.title for move in move_modules],
+                                                    detectors=[det.title for det in detector_modules])
+                # load remote file if present
+                file = filename.name
+                path = remote_path.joinpath(file)
+                if path.is_file():
+                    self.set_remote_configuration(path)
+
                 self.roi_saver = ROISaver(det_modules=detector_modules)
                 #load roi saver if present
                 path = roi_path.joinpath(file)
@@ -759,6 +969,7 @@ class DashBoard(QObject):
                 self.overshoot_menu.setEnabled(True)
                 self.actions_menu.setEnabled(True)
                 self.roi_menu.setEnabled(True)
+                self.remote_menu.setEnabled(True)
                 self.update_init_tree()
 
                 self.preset_loaded_signal.emit(True)
@@ -815,8 +1026,11 @@ class DashBoard(QObject):
         self.logger_list.setMinimumWidth(300)
         self.init_tree = ParameterTree()
         self.init_tree.setMinimumWidth(300)
-        self.logger_dock.addWidget(self.init_tree)
-        self.logger_dock.addWidget(self.logger_list)
+        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter.addWidget(self.init_tree)
+        splitter.addWidget(self.logger_list)
+        self.logger_dock.addWidget(splitter)
+
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
             {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': 'DEBUG', 'values': ['DEBUG', 'INFO',
@@ -827,6 +1041,7 @@ class DashBoard(QObject):
                 {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '', 'readonly': True},
                 {'title': 'Layout file', 'name': 'layout_file', 'type': 'str', 'value': '', 'readonly': True},
                 {'title': 'ROI file', 'name': 'roi_file', 'type': 'str', 'value': '', 'readonly': True},
+                {'title': 'Remote file', 'name': 'remote_file', 'type': 'str', 'value': '', 'readonly': True},
             ]},
                 {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
                 {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},

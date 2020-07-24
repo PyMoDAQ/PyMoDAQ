@@ -155,16 +155,16 @@ class DAQ_Move_base(QObject):
         else:
             print(status)
 
-    def commit_settings(self,param):
+    def commit_settings(self, param):
       """
         to subclass to transfer parameters to hardware
       """
       pass
 
-    def commit_common_settings(self,param):
+    def commit_common_settings(self, param):
         pass
 
-    def get_position_with_scaling(self,pos):
+    def get_position_with_scaling(self, pos):
         """
             Get the current position from the hardware with scaling conversion.
 
