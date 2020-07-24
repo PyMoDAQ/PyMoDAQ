@@ -327,6 +327,7 @@ class RemoteManager(QObject):
                          actionner_type=action.child(('actionner_type')).value(),
                          actionnerID=action.child(('actionnerID')).value(),
                          activated=False, name=f'joy{ind:02d}',
+                         action=action.child(('action')).value(),
                          module_name=module, module_type=module_type)
 
         self.activate_all()
@@ -417,7 +418,7 @@ class RemoteManager(QObject):
                     self.remote_actions['joysticks'][param.name()]['activated'] = data
                     self.remote_changed.emit(dict(action_type='joystick',
                                                   action_name=param.name(),
-                                                  action_dict=self.remote_actions['shortcuts'][param.name()]))
+                                                  action_dict=self.remote_actions['joysticks'][param.name()]))
 
 
 

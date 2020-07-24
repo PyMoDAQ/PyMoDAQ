@@ -41,14 +41,6 @@ overshoot_path = utils.get_set_overshoot_path()
 roi_path = utils.get_set_roi_path()
 remote_path = utils.get_set_remote_path()
 
-try:
-    import pygame
-    nopygame = True
-except ImportError as e:
-    logger.warning('No pygame module installed. Needed for joystick control')
-    nopygame = True
-
-
 class DashBoard(QObject):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger """
@@ -83,10 +75,12 @@ class DashBoard(QObject):
         self.overshoot_manager = None
         self.preset_manager = None
         self.roi_saver = None
+
         self.remote_manager = None
         self.shortcuts = dict([])
         self.joysticks = dict([])
         self.ispygame_init = False
+
         self.modules_manager = None
 
         self.overshoot = False
@@ -740,22 +734,30 @@ class DashBoard(QObject):
         elif remote_action['action_type'] == 'joystick':
             if not self.ispygame_init:
                 self.init_pygame()
+
             if remote_action['action_name'] not in self.joysticks:
                 self.joysticks[remote_action['action_name']] = remote_action['action_dict']
 
     def init_pygame(self):
-        if not nopygame:
+        try:
+            import pygame
+            self.pygame = pygame
             pygame.init()
             pygame.joystick.init()
             joystick_count = pygame.joystick.get_count()
+            self.joysticks_obj = []
             for ind in range(joystick_count):
-                joystick = pygame.joystick.Joystick(ind)
-                joystick.init()
+                self.joysticks_obj.append(dict(obj=pygame.joystick.Joystick(ind)))
+                self.joysticks_obj[-1]['obj'].init()
+                self.joysticks_obj[-1]['id'] = self.joysticks_obj[-1]['obj'].get_id()
 
             self.remote_timer = QtCore.QTimer()
             self.remote_timer.timeout.connect(self.pygame_loop)
             self.ispygame_init = True
-            self.remote_timer.start(0)
+            self.remote_timer.start(10)
+
+        except ImportError as e:
+            logger.warning('No pygame module installed. Needed for joystick control')
 
     def pygame_loop(self):
         """
@@ -767,38 +769,49 @@ class DashBoard(QObject):
              module_name=module, module_type=module_type)
         contained in self.joysticks
         """
-        for event in pygame.event.get():  # User did something.
+
+        ## Specifi action for axis to get their values even if it doesn't change (in which case it would'nt trigger events)
+        for action_dict in self.joysticks.values():
+            if action_dict['activated'] and action_dict['actionner_type'].lower() == 'axis':
+                joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id', action_dict['joystickID'])
+                val = joy['obj'].get_axis(action_dict['actionnerID'])
+                if abs(val) > 1e-4:
+                    module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
+                                                                    mod=action_dict['module_type'])
+                    action = getattr(module, action_dict['action'])
+                    if module.move_done_bool:
+                        action(val * 1 * module.settings.child('move_settings', 'epsilon').value())
+
+        ## For other actions use the event loop
+        for event in self.pygame.event.get():  # User did something.
             selection = dict([])
             if 'joy' in event.dict:
                 selection.update(dict(joy=event.joy))
-            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.JOYBUTTONUP:
+            if event.type == self.pygame.JOYBUTTONDOWN:
                 selection.update(dict(button=event.button))
-            elif event.type == pygame.JOYAXISMOTION:
+            elif event.type == self.pygame.JOYAXISMOTION:
                 selection.update(dict(axis=event.axis, value=event.value))
-            elif event.type == pygame.JOYHATMOTION:
+            elif event.type == self.pygame.JOYHATMOTION:
                 selection.update(dict(hat=event.hat, value=event.value))
+            if len(selection) > 1:
+                for action_dict in self.joysticks.values():
+                    if action_dict['activated']:
+                        module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
+                                                                        mod=action_dict['module_type'])
+                        if action_dict['module_type'] == 'det':
+                            action = getattr(module, action_dict['action'])
+                        else:
+                            action = getattr(module, action_dict['action'])
 
-            for action_dict in self.joysticks.values():
-                if action_dict['activated']:
-                    module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
-                                                                    mod=action_dict['module_type'])
-                    if action['module_type'] == 'det':
-                        action = getattr(module, action_dict['action'])
-                    else:
-                        action = getattr(module, action_dict['action'])
-
-                    if action_dict['joystickID'] == selection['joy']:
-                        if action_dict['actionner_type'] == 'button':
-                            if action_dict['actionnerID'] == selection['button']:
-                                action()
-                            elif action_dict['actionner_type'] == 'hat':
+                        if action_dict['joystickID'] == selection['joy']:
+                            if action_dict['actionner_type'].lower() == 'button' and 'button' in selection:
+                                if action_dict['actionnerID'] == selection['button']:
+                                    action()
+                            elif action_dict['actionner_type'].lower() == 'hat' and 'hat' in selection:
                                 if action_dict['actionnerID'] == selection['hat']:
                                     action(selection['value'])
-                            if action_dict['actionner_type'] == 'axis':
-                                if action_dict['actionnerID'] == selection['axis']:
-                                    action(selection['value'])
 
-            QtWidgets.QApplication.processEvents()
+        QtWidgets.QApplication.processEvents()
 
 
 

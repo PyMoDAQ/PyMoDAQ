@@ -107,7 +107,7 @@ class DAQ_Move(Ui_Form, QObject):
         self.ui.Move_Done_LED.set_as_false()
         self.initialized_state = False
         self.ui.Current_position_sb.setReadOnly(False)
-        self.move_done_bool = False
+        self.move_done_bool = True
 
         ############IMPORTANT############################
         self.controller = None  # the hardware controller/set after initialization and to be used by other modules
