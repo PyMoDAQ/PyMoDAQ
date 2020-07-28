@@ -33,7 +33,7 @@ class DbLogger:
     user = 'pymodaq_user'
     user_pwd = 'pymodaq'
 
-    def __init__(self, database_name, ip_address='localhost', port=5432, save2D=False):
+    def __init__(self, database_name, ip_address='10.47.3.22', port=5432, save2D=False):
         """
 
         Parameters

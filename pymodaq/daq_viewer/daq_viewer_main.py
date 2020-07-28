@@ -414,7 +414,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.h5saver_continuous.settings.child(('N_saved')).setValue(self.h5saver_continuous.settings.child(('N_saved')).value()+1)
 
         except Exception as e:
-            self.self.logger.exception(str(e))
+            self.logger.exception(str(e))
 
     @pyqtSlot(OrderedDict)
     def get_data_from_viewer(self, datas):

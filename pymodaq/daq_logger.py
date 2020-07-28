@@ -32,6 +32,7 @@ try:
 except Exception as e:
     is_sql = False
     logger.warning(str(e))
+    logger.info('To enable logging to database install: sqalchemy and sql_alchemy_utils packages')
 
 
 class DAQ_Logger(QObject):
@@ -81,7 +82,8 @@ class DAQ_Logger(QObject):
         self.setup_modules(self.dashboard.title)
 
         self.h5saver.settings_tree.setVisible(False)
-        self.dblogger.settings_tree.setVisible(False)
+        if is_sql:
+            self.dblogger.settings_tree.setVisible(False)
 
 
     def create_menu(self):

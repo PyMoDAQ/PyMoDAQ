@@ -19,7 +19,7 @@ detector_actions = ['snap', 'grab', 'stop']
 try:
     import pygame
 except ImportError as e:
-    remote_types.pop('Joystick')
+    remote_types.pop(remote_types.index('Joystick'))
     logger.warning('Could not load pygame module, no joystick configurable')
 
 class ScalableGroupRemote(parameterTypes.GroupParameter):
