@@ -100,7 +100,7 @@ The possible settings are visible on :numref:`scan2D_fig` and described below:
 
   .. _scan2D_subtypes:
 
-.. figure:: /image/daq_scan/scan2D_subtypes.png
+.. figure:: /image/DAQ_Scan/scan2D_subtypes.png
    :alt: scannersubtypes_fig
 
    The main Scan2D subtypes: Linear, Back and Forth and Spiral.
