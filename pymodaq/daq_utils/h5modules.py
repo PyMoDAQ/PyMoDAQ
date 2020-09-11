@@ -12,7 +12,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter
-from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file
+from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
 from PyQt5 import QtWidgets
@@ -2217,8 +2217,9 @@ class H5Browser(QObject):
         H_splitter.addWidget(V_splitter2)
 
         form_viewer = QtWidgets.QWidget()
-        self.hyperviewer = ViewerND(form_viewer)
-        H_splitter.addWidget(form_viewer)
+        self.viewer_area = DockArea()
+        self.hyperviewer = ViewerND(self.viewer_area)
+        H_splitter.addWidget(self.viewer_area)
 
         layout.addWidget(H_splitter)
         self.parent.setLayout(layout)
@@ -2247,11 +2248,10 @@ class H5Browser(QObject):
                 params.append({'title': attr, 'name': attr, 'type': 'str', 'value': attr_dict[attr], 'readonly': True})
             self.settings_raw.addChildren(params)
 
-            for child in self.settings.children():
-                child.remove()
-            QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-
             if settings is not None:
+                for child in self.settings.children():
+                    child.remove()
+                QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
                 params = custom_tree.XML_string_to_parameter(settings)
                 self.settings.addChildren(params)
 
@@ -2412,6 +2412,10 @@ def browse_data(fname=None, ret_all=False):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ H5Browser')
     prog = H5Browser(win)
     win.show()
     QtWidgets.QApplication.processEvents()

@@ -117,33 +117,48 @@ class Viewer2D(QObject):
 
         self.ui.x_label = QLabel('x:')
         self.ui.y_label = QLabel('y:')
-        buttons_layout.addWidget(self.ui.x_label)
-        buttons_layout.addWidget(self.ui.y_label)
+        xywidget = QtWidgets.QWidget()
+        xywidget.setLayout(QtWidgets.QVBoxLayout())
 
+        buttons_layout.addWidget(xywidget)
+        xywidget.layout().addWidget(self.ui.x_label)
+        xywidget.layout().addWidget(self.ui.y_label)
+
+        red = QtWidgets.QWidget()
+        red.setLayout(QtWidgets.QVBoxLayout())
+        self.ui.red_cb = QCheckBox('Red')
         self.ui.z_label_red = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/r_icon.png")), 'z_red')
         self.ui.z_label_red.setFlat(True)
-        buttons_layout.addWidget(self.ui.z_label_red)
+        red.layout().addWidget(self.ui.red_cb)
+        red.layout().addWidget(self.ui.z_label_red)
+        buttons_layout.addWidget(red)
 
+        green = QtWidgets.QWidget()
+        green.setLayout(QtWidgets.QVBoxLayout())
+        self.ui.green_cb = QCheckBox('Green')
         self.ui.z_label_green = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/g_icon.png")), 'z_green')
         self.ui.z_label_green.setFlat(True)
-        buttons_layout.addWidget(self.ui.z_label_green)
+        green.layout().addWidget(self.ui.green_cb)
+        green.layout().addWidget(self.ui.z_label_green)
+        buttons_layout.addWidget(green)
 
+        blue = QtWidgets.QWidget()
+        blue.setLayout(QtWidgets.QVBoxLayout())
+        self.ui.blue_cb = QCheckBox('Blue')
         self.ui.z_label_blue = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/b_icon.png")), 'z_blue')
         self.ui.z_label_blue.setFlat(True)
-        buttons_layout.addWidget(self.ui.z_label_blue)
+        blue.layout().addWidget(self.ui.blue_cb)
+        blue.layout().addWidget(self.ui.z_label_blue)
+        buttons_layout.addWidget(blue)
 
+        spread = QtWidgets.QWidget()
+        spread.setLayout(QtWidgets.QVBoxLayout())
+        self.ui.spread_cb = QCheckBox('spread')
         self.ui.z_label_spread = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/grey_icon.png")), 'z_spread')
         self.ui.z_label_spread.setFlat(True)
-        buttons_layout.addWidget(self.ui.z_label_spread)
-
-        self.ui.red_cb = QCheckBox('Red')
-        buttons_layout.addWidget(self.ui.red_cb)
-        self.ui.green_cb = QCheckBox('Green')
-        buttons_layout.addWidget(self.ui.green_cb)
-        self.ui.blue_cb = QCheckBox('Blue')
-        buttons_layout.addWidget(self.ui.blue_cb)
-        self.ui.spread_cb = QCheckBox('spread')
-        buttons_layout.addWidget(self.ui.spread_cb)
+        spread.layout().addWidget(self.ui.spread_cb)
+        spread.layout().addWidget(self.ui.z_label_spread)
+        buttons_layout.addWidget(spread)
 
         buttons_layout.addStretch()
 
@@ -310,7 +325,7 @@ class Viewer2D(QObject):
         self.parent.setLayout(vertical_layout)
 
         buttons_widget = QtWidgets.QWidget()
-        buttons_widget.setMaximumHeight(40)
+        buttons_widget.setMaximumHeight(80)
         self.ui.buttons_layout = QtWidgets.QHBoxLayout()
         buttons_widget.setLayout(self.ui.buttons_layout)
         self.setupButtons(self.ui.buttons_layout)
@@ -332,6 +347,9 @@ class Viewer2D(QObject):
         self.ui.red_cb.setVisible(True)
         self.ui.red_cb.clicked.connect(self.update_selection_area_visibility)
         self.ui.red_cb.setChecked(True)
+        self.ui.spread_cb.setVisible(True)
+        self.ui.spread_cb.clicked.connect(self.update_selection_area_visibility)
+        self.ui.spread_cb.setChecked(True)
 
         self.image_widget.plotitem.addItem(self.ui.img_red)
         self.image_widget.plotitem.addItem(self.ui.img_green)
@@ -801,32 +819,41 @@ class Viewer2D(QObject):
 
         if self.ui.red_cb.isChecked() and self.isdata["red"] is False:  # turn it off if it was on but there is no data
             self.ui.red_cb.setChecked(False)
+            self.ui.red_cb.parent().setVisible(False)
+
         elif self.isdata["red"]:
             self.ui.red_cb.setChecked(True)
+            self.ui.red_cb.parent().setVisible(True)
         self.ui.img_red.setVisible(self.ui.red_cb.isChecked())
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_red.setVisible(self.ui.red_cb.isChecked())
 
         if self.ui.green_cb.isChecked() and self.isdata["green"] is False:  # turn it off if it was on but there is no data
             self.ui.green_cb.setChecked(False)
+            self.ui.green_cb.parent().setVisible(False)
         elif self.isdata["green"]:
             self.ui.green_cb.setChecked(True)
+            self.ui.green_cb.parent().setVisible(True)
         self.ui.img_green.setVisible(self.ui.green_cb.isChecked())
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_green.setVisible(self.ui.green_cb.isChecked())
 
         if self.ui.blue_cb.isChecked() and self.isdata["blue"] is False:  # turn it off if it was on but there is no data
             self.ui.blue_cb.setChecked(False)
+            self.ui.blue_cb.parent().setVisible(False)
         elif self.isdata["blue"]:
             self.ui.blue_cb.setChecked(True)
+            self.ui.blue_cb.parent().setVisible(True)
         self.ui.img_blue.setVisible(self.ui.blue_cb.isChecked())
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_blue.setVisible(self.ui.blue_cb.isChecked())
 
         if self.ui.spread_cb.isChecked() and self.isdata["spread"] is False:  # turn it off if it was on but there is no data
             self.ui.spread_cb.setChecked(False)
+            self.ui.spread_cb.parent().setVisible(False)
         elif self.isdata["spread"]:
             self.ui.spread_cb.setChecked(True)
+            self.ui.spread_cb.parent().setVisible(True)
         self.ui.img_spread.setVisible(self.ui.spread_cb.isChecked())
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_spread.setVisible(self.ui.spread_cb.isChecked())
@@ -1099,21 +1126,21 @@ class Viewer2D(QObject):
             if self.isdata["blue"]:
                 indx, indy = self.mapfromview('blue', posx, posy)
                 z_blue = self.transform_image(self.raw_data["blue"])[utils.rint(indy), utils.rint(indx)]
-                self.ui.z_label_blue.setText("{:.6e}".format(z_blue))
+                self.ui.z_label_blue.setText("{:.3e}".format(z_blue))
             if self.isdata["green"]:
                 indx, indy = self.mapfromview('green', posx, posy)
                 z_green = self.transform_image(self.raw_data["green"])[utils.rint(indy), utils.rint(indx)]
-                self.ui.z_label_green.setText("{:.6e}".format(z_green))
+                self.ui.z_label_green.setText("{:.3e}".format(z_green))
             if self.isdata["red"]:
                 indx, indy = self.mapfromview('red', posx, posy)
                 z_red = self.transform_image(self.raw_data["red"])[utils.rint(indy), utils.rint(indx)]
-                self.ui.z_label_red.setText("{:.6e}".format(z_red))
+                self.ui.z_label_red.setText("{:.3e}".format(z_red))
             if self.isdata["spread"]:
                 z_spread = self.ui.img_spread.get_val_at(self.mapfromview('spread', posx, posy))
-                self.ui.z_label_spread.setText("{:.6e}".format(z_spread))
+                self.ui.z_label_spread.setText("{:.3e}".format(z_spread))
 
-            self.ui.x_label.setText("x={:.6e} ".format(posx_scaled))
-            self.ui.y_label.setText("y={:.6e} ".format(posy_scaled))
+            self.ui.x_label.setText("x={:.3e} ".format(posx_scaled))
+            self.ui.y_label.setText("y={:.3e} ".format(posy_scaled))
 
         except Exception as e:
             print(e)
@@ -1189,6 +1216,7 @@ class Viewer2D(QObject):
 
 
 if __name__ == '__main__':
+    from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
     app = QtWidgets.QApplication(sys.argv)
     Form = DockArea()
     Form = QtWidgets.QWidget()
@@ -1214,9 +1242,9 @@ if __name__ == '__main__':
         scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
         scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
-    data = np.load('triangulation_data.npy')
-    #prog.setImage(data_red=data_blue, data_spread=data)
-    prog.setImage(data_spread=data)
+    #data = np.load('triangulation_data.npy')
+    prog.setImage(data_red=data_red, data_blue=data_blue, )
+    #prog.setImage(data_spread=data)
     app.processEvents()
     
 
