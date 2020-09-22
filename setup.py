@@ -86,6 +86,7 @@ setup(
 	    'simple_pid',
         'python-dateutil',
         'packaging',
+        'SQLAlchemy-Utils==0.36.6', #this is so that the check for database existence doesn't crash anymore, see pull request 463
         ],
     include_package_data=True,
     **setupOpts
