@@ -15,7 +15,7 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 dashboard_submodules_params = [
-    {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': False},
+    {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': True},
     {'title': 'Save raw datas only:', 'name': 'save_raw_only', 'type': 'bool', 'value': True, 'tooltip':
         'if True, will not save extracted ROIs used to do live plotting, only raw datas will be saved'},
     {'title': 'Do Save:', 'name': 'do_save', 'type': 'bool', 'default': False, 'value': False},

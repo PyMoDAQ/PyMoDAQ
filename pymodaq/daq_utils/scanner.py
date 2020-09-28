@@ -807,8 +807,11 @@ class TableModelTabular(gutils.TableModel):
         super().__init__(data, header, editable=editable, **kwargs)
 
     @pyqtSlot(int)
-    def add_data(self, row):
-        self.insert_data(row, [0. for name in self.header])
+    def add_data(self, row, data=None):
+        if data is not None:
+            self.insert_data(row, [float(d) for d in data])
+        else:
+            self.insert_data(row, [0. for name in self.header])
 
     @pyqtSlot(int)
     def remove_data(self, row):
