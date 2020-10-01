@@ -54,7 +54,7 @@ class ViewerPointList(QObject):
         self.settings_tree.setParameters(self.settings, showTop=False)
         dock_list.addWidget(self.settings_tree)
 
-        init_data = [[0. , 0., 0.]]
+        init_data = [[0., 0., 0.]]
         self.table_model = TableModelTabular(init_data, ['x', 'y', 'data'])
         self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)

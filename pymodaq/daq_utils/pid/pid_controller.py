@@ -11,7 +11,7 @@ from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pyqtgraph.dockarea import Dock
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name
+from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name, get_set_pid_path
 import importlib
 from simple_pid import PID
 import time
@@ -599,12 +599,12 @@ class DAQ_PID(QObject):
             else:
                 self.actuator_modules, self.detector_modules = self.set_default_preset()
 
-            # connecting to logger
-            for mov in self.actuator_modules:
-                mov.log_signal[str].connect(self.add_log)
-            for det in self.detector_modules:
-                det.log_signal[str].connect(self.add_log)
-            self.log_signal[str].connect(self.add_log)
+            # # connecting to logger
+            # for mov in self.actuator_modules:
+            #     mov.log_signal[str].connect(self.add_log)
+            # for det in self.detector_modules:
+            #     det.log_signal[str].connect(self.add_log)
+            # self.log_signal[str].connect(self.add_log)
 
             self.model_class.ini_model()
 
@@ -892,7 +892,7 @@ class PIDRunner(QObject):
                 self.det_done_datas = OrderedDict()
                 for ind_det, cmd in enumerate(self.detector_modules_commands):
                     cmd.emit(ThreadCommand("single",
-                                  [self.det_averaging[ind_det],'']))
+                                  [self.det_averaging[ind_det]]))
                     QtWidgets.QApplication.processEvents()
                 self.wait_for_det_done()
 
