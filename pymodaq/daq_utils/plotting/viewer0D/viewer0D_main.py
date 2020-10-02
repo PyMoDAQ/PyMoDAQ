@@ -138,8 +138,8 @@ class Viewer0D(QtWidgets.QWidget,QObject):
                 data_tot.append(data_tmp)
 
                 self.plot_channels[ind_plot].setData(x=self.x_axis, y=data_tmp)
-                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)] = OrderedDict(name=self.title, data=data[0],
-                                                                                         source='raw')
+                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)] = utils.DataToExport(name=self.title,
+                                                                                    data=data[0], source='raw')
             self.datas = data_tot
 
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()

@@ -428,16 +428,18 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         """
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
         self.received_data += 1
-        self.data_to_save_export['Ndatas'] += 1
         for key in datas:
             if not(key == 'name' or key == 'acq_time_s'):
                 if datas[key] is not None:
                     if self.data_to_save_export[key] is None:
                         self.data_to_save_export[key] = OrderedDict([])
                     for k in datas[key]:
-                        if k not in self.data_to_save_export[key]:
-                            self.data_to_save_export[key][k] = OrderedDict([])
-                        self.data_to_save_export[key][k].update(datas[key][k])
+                        if datas[key][k]['source'] != 'raw':
+                            name = f'{self.title}_{datas["name"]}_{k}'
+                            self.data_to_save_export[key][name] = utils.DataToExport(**datas[key][k])
+                            # if name not in self.data_to_save_export[key]:
+                            #
+                            # self.data_to_save_export[key][name].update(datas[key][k])
 
         if self.received_data == len(self.ui.viewers):
             if self.do_continuous_save:
@@ -1225,8 +1227,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.logger.exception(str(e))
 
     def init_show_data(self, datas):
-        self.data_to_save_export = OrderedDict(Ndatas=0, acq_time_s=0, name=self.title, data0D=None, data1D=None,
-                                               data2D=None, dataND=None)  # to be populated from the results in the viewers
         Npannels = len(datas)
         self.process_overshoot(datas)
         data_dims = [data['dim'] for data in datas]
@@ -1291,21 +1291,21 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     self.set_xy_axis(data_tmp, ind_data)
                 data_arrays = data_tmp.pop('data')
 
+                name = data_tmp.pop('name')
                 for ind_sub_data, dat in enumerate(data_arrays):
-                    if 'name' in data_tmp:
-                        data_tmp.pop('name')
                     if 'labels' in data_tmp:
                         data_tmp.pop('labels')
                     subdata_tmp = utils.DataToExport(name=self.title, data=dat, **data_tmp)
-
+                    sub_name = f'{self.title}_{name}_CH{ind_sub_data:03}'
                     if data_dim.lower() == 'data0d':
-                        data0D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                        subdata_tmp['data'] = subdata_tmp['data'][0]
+                        data0D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'data1d':
-                        data1D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                        data1D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'data2d':
-                        data2D['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                        data2D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'datand':
-                        dataND['CH{:03d}'.format(ind_sub_data)] = subdata_tmp
+                        dataND[sub_name] = subdata_tmp
 
             self.data_to_save_export['data0D'] = data0D
             self.data_to_save_export['data1D'] = data1D
