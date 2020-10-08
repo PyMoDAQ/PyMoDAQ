@@ -1301,8 +1301,20 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         subdata_tmp['data'] = subdata_tmp['data'][0]
                         data0D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'data1d':
+                        if 'x_axis' not in subdata_tmp:
+                            Nx = len(dat)
+                            x_axis = utils.Axis(data=np.linspace(0, Nx-1, Nx))
+                            subdata_tmp['x_axis'] = x_axis
                         data1D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'data2d':
+                        if 'x_axis' not in subdata_tmp:
+                            Nx = dat.shape[1]
+                            x_axis = utils.Axis(data=np.linspace(0, Nx-1, Nx))
+                            subdata_tmp['x_axis'] = x_axis
+                        if 'y_axis' not in subdata_tmp:
+                            Ny = dat.shape[0]
+                            y_axis = utils.Axis(data=np.linspace(0, Ny-1, Ny))
+                            subdata_tmp['y_axis'] = y_axis
                         data2D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'datand':
                         dataND[sub_name] = subdata_tmp

@@ -376,6 +376,7 @@ class DashBoard(QObject):
             quit_fun
         """
         try:
+            self.remote_timer.stop()
 
             for mov in self.move_modules:
                 mov.init_signal.disconnect(self.update_init_tree)
@@ -702,9 +703,8 @@ class DashBoard(QObject):
             self.remote_manager.set_file_remote(filename, show=False)
             self.settings.child('loaded_files', 'remote_file').setValue(filename)
             self.remote_manager.set_remote_configuration()
-            self.remote_dock = Dock('Remote controls')
-            self.dockarea.addDock(self.remote_dock, 'below', self.logger_dock)
             self.remote_dock.addWidget(self.remote_manager.remote_settings_tree)
+            self.remote_dock.setVisible(True)
 
     def activate_remote(self, remote_action, activate_all=False):
         """
@@ -1049,7 +1049,9 @@ class DashBoard(QObject):
         self.init_tree.setParameters(self.settings, showTop=False)
         self.dockarea.addDock(self.logger_dock, 'top')
         self.logger_dock.setVisible(True)
-
+        self.remote_dock = Dock('Remote controls')
+        self.dockarea.addDock(self.remote_dock, 'below', self.logger_dock)
+        self.remote_dock.setVisible(False)
         self.preset_manager = PresetManager(path=self.preset_path, extra_params=self.extra_params)
 
         #creating the menubar
@@ -1061,7 +1063,7 @@ class DashBoard(QObject):
 
 
         self.file_menu.setEnabled(True)
-        self.actions_menu.setEnabled(False)
+        self.actions_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)

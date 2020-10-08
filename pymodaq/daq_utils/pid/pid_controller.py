@@ -55,7 +55,7 @@ class DAQ_PID(QObject):
         print(e)
 
     if len(models) == 0:
-        raise Exception('No valid installed models')
+        logger.warning('No valid installed models')
 
 
     def __init__(self,area, detector_modules = [], actuator_modules =[]):
