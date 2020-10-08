@@ -1798,7 +1798,10 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
         opts = self.param.opts
         w = ItemSelect_pb()
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        w.itemselect.setMaximumHeight(70)
+        if 'height' in opts:
+            w.itemselect.setMaximumHeight(opts['height'])
+        else:
+            w.itemselect.setMaximumHeight(70)
         #w.setReadOnly(self.param.opts.get('readonly', False))
         if 'show_pb' in opts:
             w.add_pb.setVisible(opts['show_pb'])
@@ -1933,6 +1936,24 @@ class ItemSelectParameter(Parameter):
         self.emitStateChanged('activated', None)
 
 registerParameterType('itemselect', ItemSelectParameter, override=True)
+
+
+class ActionParameterItem(pTypes.ActionParameterItem):
+    def __init__(self, param, depth):
+        super().__init__(param, depth)
+
+        if 'title' in param.opts:
+            name = param.opts['title']
+        else:
+            name = param.name()
+        self.button.setText(name)
+
+
+class ActionParameter(pTypes.ActionParameter):
+    """Used for displaying a button within the tree."""
+    itemClass = ActionParameterItem
+registerParameterType('action', ActionParameter, override=True)
+
 
 class file_browserParameterItem(WidgetParameterItemcustom):
 
