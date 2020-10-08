@@ -37,13 +37,13 @@ Setting up a new environment
   that is currently the recommended one.
 * Activate your environment so that only packages installed within this environment will be *seen* by Python:
   ``conda activate my_env``
-* Install, using conda manager, some mandatory packages: ``conda install pip`` and ``conda install pyqt``
+* Install, using conda manager, some mandatory packages: ``conda install pyqt``
 
 Installing PyMoDAQ
 ------------------
 
-Easiest part: in your newly created and activated environment enter: ``pip install pymodaq==1.6.0``. This will install
-PyMoDAQ and all its dependencies (the version 1.6.0 in the example)
+Easiest part: in your newly created and activated environment enter: ``pip install pymodaq``. This will install the
+latest PyMoDAQ available version and all its dependencies. For a specific version enter:  ``pip install pymodaq==x.y.z``.
 
   .. _shortcut_section:
 
