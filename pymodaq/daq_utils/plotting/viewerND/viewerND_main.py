@@ -71,7 +71,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             area = DockArea()
             self.area = area
             parent.setLayout(QtWidgets.QVBoxLayout())
-            parent.layout.addWidget(area)
+            parent.layout().addWidget(area)
         elif isinstance(parent, DockArea):
             self.area = parent
 
