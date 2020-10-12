@@ -757,12 +757,18 @@ def get_set_local_dir(basename='pymodaq_local'):
     Path: the local path
     """
     if 'win32' in sys.platform:
-        local_path = Path(os.environ['HOMEDRIVE']).joinpath(os.environ['HOMEPATH'], basename)
+        local_path = Path(os.getenv('HOMEDRIVE')).joinpath(os.getenv('HOMEPATH'), basename)
     else:
-        local_path = Path(os.environ['HOME']).joinpath(basename)
+        local_path = Path(os.getenv('HOME')).joinpath(basename)
 
     if not local_path.is_dir():
-        local_path.mkdir()
+        try:
+            local_path.mkdir()
+        except Exception as e:
+            print("Cannot create local folder from your environment variable, using PyMoDAQ Folder as local directory")
+            local_path = Path(__file__).parent.parent.joinpath(basename)
+            if not local_path.is_dir():
+                local_path.mkdir()
     return local_path
 
 
