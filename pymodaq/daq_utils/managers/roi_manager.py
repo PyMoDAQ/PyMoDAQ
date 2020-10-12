@@ -188,8 +188,10 @@ class ROIManager(QObject):
         horwidget.setLayout(horlayout)
         self.save_ROI_pb = QtWidgets.QPushButton('Save ROIs')
         self.load_ROI_pb = QtWidgets.QPushButton('Load ROIs')
+        self.clear_ROI_pb = QtWidgets.QPushButton('Clear ROIs')
         horlayout.addWidget(self.save_ROI_pb)
         horlayout.addWidget(self.load_ROI_pb)
+        horlayout.addWidget(self.clear_ROI_pb)
 
         vlayout.addWidget(horwidget)
 
@@ -206,6 +208,7 @@ class ROIManager(QObject):
 
         self.save_ROI_pb.clicked.connect(self.save_ROI)
         self.load_ROI_pb.clicked.connect(lambda: self.load_ROI(None))
+        self.clear_ROI_pb.clicked.connect(self.clear_ROI)
 
     def roi_tree_changed(self, param, changes):
 
@@ -272,9 +275,9 @@ class ROIManager(QObject):
             elif change == 'value':
                 if param.name() in custom_tree.iter_children(self.settings.child(('ROIs')),[]):
                     if param.name() == 'Color' or param.name() == 'angle' :
-                        parent=param.parent().name()
+                        parent = param.parent().name()
                     else:
-                        parent=param.parent().parent().name()
+                        parent = param.parent().parent().name()
                     self.update_roi(parent,param)
 
 
@@ -355,22 +358,25 @@ class ROIManager(QObject):
         except Exception as e:
             print(e)
 
+    def clear_ROI(self):
+        indexes = [roi.index for roi in self.ROIs.values()]
+        for index in indexes:
+            self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
+            # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
+
+
     def load_ROI(self, path=None, params=None):
         try:
             if params is None:
                 if path is None:
                     path = select_file(save=False, ext='xml')
                     if path != '':
-                        params = custom_tree.XML_file_to_parameter(path)
+                        params = Parameter.create(title='Settings', name='settings', type='group',
+                                                  children=custom_tree.XML_file_to_parameter(path))
 
             if params is not None:
-                for roi in self.ROIs.values():
-                    index = roi.index
-                    self.viewer_widget.plotitem.removeItem(roi)
-                    # self.settings.sigTreeStateChanged.disconnect()
-                    self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
-                    # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
-                self.ROIs = OrderedDict([])
+                self.clear_ROI()
+                QtWidgets.QApplication.processEvents()
 
                 for param in params:
                     if 'roi_type' in custom_tree.iter_children(param, []):
