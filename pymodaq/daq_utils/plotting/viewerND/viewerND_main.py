@@ -466,9 +466,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         nav_axes = self.get_selected_axes()
         if len(nav_axes) != 0:
             self.ui.navigator1D.ui.crosshair.set_crosshair_position(np.mean(nav_axes[0]['data']))
-            x, y = self.ui.navigator2D.unscale_axis(np.mean(nav_axes[0]['data']),
-                                                    np.mean(nav_axes[1]['data']))
-            self.ui.navigator2D.ui.crosshair.set_crosshair_position(x, y)
+            if len(nav_axes) > 1:
+                x, y = self.ui.navigator2D.unscale_axis(np.mean(nav_axes[0]['data']),
+                                                        np.mean(nav_axes[1]['data']))
+                self.ui.navigator2D.ui.crosshair.set_crosshair_position(x, y)
 
             if self.x_axis['data'] is not None:
                 self.ROI1D.setRegion((np.min(self.x_axis['data']), np.max(self.x_axis['data'])))

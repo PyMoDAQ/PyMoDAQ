@@ -978,7 +978,7 @@ class H5Saver(H5Backend, QObject):
 
 
                  {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
-                 {'title': 'show file content?:', 'name': 'show_file', 'type': 'bool', 'default': False,
+                 {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
                   'value': False},
                  {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data',
                   'filetype': False, 'readonly': True, },

@@ -360,7 +360,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.Detector_type_combo.currentIndexChanged.connect(self.set_setting_tree)
         self.set_setting_tree()
 
-    def do_save_continuous(self,datas):
+    def do_save_continuous(self, datas):
         """
         method used to perform continuous saving of data, for instance for logging. Will save datas as a function of
         time in a h5 file set when *continuous_saving* parameter as been set.
@@ -376,8 +376,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.channel_arrays = OrderedDict([])
                 self.ini_time = time.perf_counter()
                 self.time_array = self.h5saver_continuous.add_navigation_axis(np.array([0.0, ]),
-                              self.h5saver_continuous.raw_group, 'x_axis', enlargeable=True,
-                              title='Time axis', metadata=dict(label='Time axis', units='second'))
+                              self.scan_continuous_group, 'x_axis', enlargeable=True,
+                              title='Time axis', metadata=dict(nav_index=0, label='Time axis', units='second'))
 
                 data_dims = ['data0D', 'data1D']
                 if self.h5saver_continuous.settings.child(('save_2D')).value():
@@ -388,17 +388,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         if not self.h5saver_continuous.is_node_in_group(self.continuous_group, data_dim):
                             self.channel_arrays[data_dim] = OrderedDict([])
 
-                            data_group=self.h5saver_continuous.add_data_group(self.continuous_group, data_dim)
+                            data_group = self.h5saver_continuous.add_data_group(self.continuous_group, data_dim)
                             for ind_channel, channel in enumerate(datas[data_dim]): #list of OrderedDict
 
                                 channel_group = self.h5saver_continuous.add_CH_group(data_group, title=channel)
                                 self.channel_arrays[data_dim]['parent'] = channel_group
                                 self.channel_arrays[data_dim][channel] = self.h5saver_continuous.add_data(channel_group,
-                                        datas[data_dim][channel], scan_type='scan1D', enlargeable = True)
+                                        datas[data_dim][channel], scan_type='scan1D', enlargeable=True)
                 self.is_continuous_initialized = True
 
-            dt=np.array([time.perf_counter()-self.ini_time])
-            self.h5saver_continuous.append(self.time_array, dt)
+            dt = np.array([time.perf_counter()-self.ini_time])
+            self.time_array.append(dt)
 
             data_dims = ['data0D', 'data1D']
             if self.h5saver_continuous.settings.child(('save_2D')).value():
@@ -407,11 +407,13 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             for data_dim in data_dims:
                 if data_dim in datas.keys() and len(datas[data_dim]) != 0:
                     for ind_channel, channel in enumerate(datas[data_dim]):
-                        self.h5saver_continuous.append(self.channel_arrays[data_dim][channel],
-                                                  datas[data_dim][channel]['data'])
+                        if isinstance(datas[data_dim][channel]['data'], float) or isinstance(datas[data_dim][channel]['data'], int):
+                            datas[data_dim][channel]['data'] = np.array([datas[data_dim][channel]['data']])
+                        self.channel_arrays[data_dim][channel].append(datas[data_dim][channel]['data'])
 
             self.h5saver_continuous.h5_file.flush()
-            self.h5saver_continuous.settings.child(('N_saved')).setValue(self.h5saver_continuous.settings.child(('N_saved')).value()+1)
+            self.h5saver_continuous.settings.child(('N_saved')).setValue(
+                self.h5saver_continuous.settings.child(('N_saved')).value()+1)
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -692,6 +694,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 #    self.update_viewer_pannels(param.value())
                 elif param.name() == 'show_averaging':
                     self.settings.child('main_settings', 'live_averaging').setValue(False)
+                    self.update_settings_signal.emit(edict(path=path, param=param, change=change))
 
                 elif param.name() == 'live_averaging':
                     self.settings.child('main_settings', 'show_averaging').setValue(False)
@@ -1053,7 +1056,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             daq_utils.set_current_scan_path
         """
         if self.h5saver_continuous.settings.child(('do_save')).value():
-            self.do_continuous_save=True
+            self.do_continuous_save = True
             self.is_continuous_initialized = False
             self.h5saver_continuous.settings.child(('base_name')).setValue('Data')
             self.h5saver_continuous.settings.child(('N_saved')).show()
@@ -1066,8 +1069,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
             settings_str += custom_tree.parameter_to_xml_string(self.h5saver_continuous.settings) + \
                               b'</All_settings>'
-
-            self.continuous_group = self.h5saver_continuous.add_det_group(self.h5saver_continuous.raw_group, "Continuous saving", settings_str)
+            self.scan_continuous_group = self.h5saver_continuous.add_scan_group("Continuous Saving")
+            self.continuous_group = self.h5saver_continuous.add_det_group(self.scan_continuous_group, "Continuous saving", settings_str)
             self.h5saver_continuous.h5_file.flush()
         else:
             self.do_continuous_save=False
@@ -1683,7 +1686,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
     def show_log(self):
         import webbrowser
-        webbrowser.open(self.logger.handlers[0].baseFilename)
+        webbrowser.open(self.logger.parent.handlers[0].baseFilename)
 
     def update_viewer_pannels(self, data_dims=['Data0D']):
         Nviewers = len(data_dims)
