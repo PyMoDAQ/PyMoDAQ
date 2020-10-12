@@ -2109,7 +2109,7 @@ if __name__ == '__main__':
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
-    win.setWindowTitle('pymodaq main')
+    win.setWindowTitle('PyMoDAQ Viewer')
     prog = DAQ_Viewer(area, title="Testing",DAQ_type=DAQ_type['DAQ0D'].name)
     win.show()
     sys.exit(app.exec_())

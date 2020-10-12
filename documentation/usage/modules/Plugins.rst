@@ -167,13 +167,14 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
     from pymodaq.daq_utils.daq_utils import DataFromPlugins
     x_axis = Axis(label='Wavelength', units= "nm", data = vector_X)
     y_axis = Axis(data=vector_Y)
-    self.data_grabed_signal.emit([DataFromPlugins(name='Camera',data=[data2D_0, data2D_1,...], dim='Data2D',
-                                        x_axis=x_axis,y_axis=y_axis),
-                                  DataFromPlugins(name='Spectrum',data=[data1D_0, data1D_1,...], dim='Data1D',
-                                        x_axis=x_axis, labels=['label0', 'label1', ...]),
-                                  DataFromPlugins(name='Current',data=[data0D_0, data0D_1,...], dim='Data0D'),
-                                  DataFromPlugins(name='Datacube',data=[dataND_0, dataND_1,...], dim='DataND',
-                                        nav_axes=[0,2]),
+    self.data_grabed_signal.emit([DataFromPlugins(name='Camera',data=[data2D_0, data2D_1,...],
+                                        dim='Data2D', x_axis=x_axis,y_axis=y_axis),
+                                  DataFromPlugins(name='Spectrum',data=[data1D_0, data1D_1,...],
+                                        dim='Data1D', x_axis=x_axis, labels=['label0', 'label1', ...]),
+                                  DataFromPlugins(name='Current',data=[data0D_0, data0D_1,...],
+                                        dim='Data0D'),
+                                  DataFromPlugins(name='Datacube',data=[dataND_0, dataND_1,...],
+                                        dim='DataND', nav_axes=[0,2]),
                                         nav_x_axis=NavAxis(data=.., label='Xaxis', units= "µm", nav_index=0])
 
 Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each ``DataFromPlugins``

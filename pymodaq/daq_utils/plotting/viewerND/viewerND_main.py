@@ -66,16 +66,13 @@ class ViewerND(QtWidgets.QWidget, QObject):
             area = DockArea()
             area.show()
             self.area = area
-
+        elif isinstance(parent, DockArea):
+            self.area = parent
         elif isinstance(parent, QtWidgets.QWidget):
             area = DockArea()
             self.area = area
             parent.setLayout(QtWidgets.QVBoxLayout())
             parent.layout().addWidget(area)
-        elif isinstance(parent, DockArea):
-            self.area = parent
-
-        self.area = area
 
         self.wait_time = 2000
         self.viewer_type = 'DataND'  # ☺by default but coul dbe used for 3D visualization

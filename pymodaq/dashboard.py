@@ -76,6 +76,7 @@ class DashBoard(QObject):
         self.preset_manager = None
         self.roi_saver = None
 
+        self.remote_timer = QtCore.QTimer()
         self.remote_manager = None
         self.shortcuts = dict([])
         self.joysticks = dict([])
@@ -751,7 +752,7 @@ class DashBoard(QObject):
                 self.joysticks_obj[-1]['obj'].init()
                 self.joysticks_obj[-1]['id'] = self.joysticks_obj[-1]['obj'].get_id()
 
-            self.remote_timer = QtCore.QTimer()
+
             self.remote_timer.timeout.connect(self.pygame_loop)
             self.ispygame_init = True
             self.remote_timer.start(10)
@@ -1047,10 +1048,11 @@ class DashBoard(QObject):
                 {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
                 ])
         self.init_tree.setParameters(self.settings, showTop=False)
-        self.dockarea.addDock(self.logger_dock, 'top')
-        self.logger_dock.setVisible(True)
         self.remote_dock = Dock('Remote controls')
-        self.dockarea.addDock(self.remote_dock, 'below', self.logger_dock)
+        self.dockarea.addDock(self.remote_dock, 'top')
+        self.dockarea.addDock(self.logger_dock, 'above', self.remote_dock)
+        self.logger_dock.setVisible(True)
+
         self.remote_dock.setVisible(False)
         self.preset_manager = PresetManager(path=self.preset_path, extra_params=self.extra_params)
 
@@ -1067,6 +1069,8 @@ class DashBoard(QObject):
         self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)
+
+
 
     def parameter_tree_changed(self, param, changes):
         """
