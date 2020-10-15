@@ -428,7 +428,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
     def commit_settings(self, param):
 
-        if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
+        if param.name() in custom_tree.iter_children(self.settings.child(('settings_client')), []):
             grabber_socket = \
             [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             grabber_socket.send_string('set_info')
