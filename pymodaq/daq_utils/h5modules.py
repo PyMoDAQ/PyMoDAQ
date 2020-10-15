@@ -1845,7 +1845,7 @@ class H5BrowserUtil(H5Backend):
                             fmts.append(fmt)
 
                 data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
-                np.savetxt(filesavename, data_trans, fmts, '\t', header='\t'.join(header))
+                np.savetxt(filesavename, data_trans, fmts, '\t', header='#'+'\t'.join(header))
 
     def get_h5file_scans(self, where='/'):
         #TODO add a test for this method
