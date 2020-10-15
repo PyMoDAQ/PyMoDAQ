@@ -1841,7 +1841,7 @@ class H5BrowserUtil(H5Backend):
                             elif data.dtype.char == 'l':
                                 fmt = '%d'  # for integers
                             else:
-                                fmt = '%.6f' # for decimal numbers
+                                fmt = '%.6f'  # for decimal numbers
                             fmts.append(fmt)
 
                 data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)

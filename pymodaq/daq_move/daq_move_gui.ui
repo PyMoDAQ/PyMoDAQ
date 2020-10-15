@@ -115,7 +115,7 @@
               <item row="2" column="0">
                <widget class="QLabel" name="label_2">
                 <property name="text">
-                 <string>Stage:</string>
+                 <string>Actuator:</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -132,7 +132,7 @@
               <item row="4" column="0">
                <widget class="QPushButton" name="IniStage_pb">
                 <property name="text">
-                 <string>Ini. Stage</string>
+                 <string>Initialization</string>
                 </property>
                 <property name="checkable">
                  <bool>true</bool>
@@ -216,7 +216,7 @@
               <item row="6" column="0">
                <widget class="QLabel" name="label_4">
                 <property name="text">
-                 <string>Current position:</string>
+                 <string>Current value:</string>
                 </property>
                </widget>
               </item>
@@ -356,7 +356,7 @@
               <item row="4" column="1" rowspan="2">
                <widget class="QPushButton" name="Move_Abs_pb">
                 <property name="text">
-                 <string>Move Abs</string>
+                 <string>Set Abs</string>
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
@@ -374,7 +374,7 @@
               <item row="8" column="1">
                <widget class="QPushButton" name="Move_Rel_minus_pb">
                 <property name="text">
-                 <string>Move Rel (-)</string>
+                 <string>Set Rel (-)</string>
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
@@ -385,7 +385,7 @@
               <item row="7" column="1">
                <widget class="QPushButton" name="Move_Rel_plus_pb">
                 <property name="text">
-                 <string>Move Rel (+)</string>
+                 <string>Set Rel (+)</string>
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
@@ -396,7 +396,7 @@
               <item row="11" column="0">
                <widget class="QPushButton" name="Stop_pb">
                 <property name="text">
-                 <string>Stop Motion</string>
+                 <string>Stop</string>
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
@@ -439,7 +439,7 @@
               <item row="11" column="1">
                <widget class="QPushButton" name="Get_position_pb">
                 <property name="text">
-                 <string>Where am I?</string>
+                 <string>Update Value?</string>
                 </property>
                 <property name="icon">
                  <iconset resource="../QtDesigner_Ressources/QtDesigner_ressources.qrc">
@@ -461,7 +461,7 @@
               <item row="3" column="0">
                <widget class="QLabel" name="label_5">
                 <property name="text">
-                 <string>Abs position:</string>
+                 <string>Abs value:</string>
                 </property>
                </widget>
               </item>

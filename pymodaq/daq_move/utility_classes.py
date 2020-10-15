@@ -25,7 +25,7 @@ comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value':
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-        {'title': 'Move type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
@@ -35,7 +35,7 @@ params = [
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
          ]},
     ]},
-    {'title': 'Move Settings:', 'name': 'move_settings', 'type': 'group'}
+    {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
 
 
@@ -379,7 +379,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
     def commit_settings(self,param):
 
-        if param.name() in custom_tree.iter_children(self.settings.child(('infos')), []):
+        if param.name() in custom_tree.iter_children(self.settings.child(('settings_client')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
             path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'

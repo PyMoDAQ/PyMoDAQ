@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'daq_move_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: PyQt5 UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -241,30 +243,30 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
-        self.label_2.setText(_translate("Form", "Stage:"))
+        self.label_2.setText(_translate("Form", "Actuator:"))
         self.Move_Done_LED.setText(_translate("Form", "TextLabel"))
-        self.IniStage_pb.setText(_translate("Form", "Ini. Stage"))
+        self.IniStage_pb.setText(_translate("Form", "Initialization"))
         self.Ini_state_LED.setText(_translate("Form", "TextLabel"))
         self.Stage_type_combo.setToolTip(_translate("Form", "Stage Type"))
         self.title_label.setText(_translate("Form", "DAQ Move"))
         self.Quit_pb.setText(_translate("Form", "Quit"))
-        self.label_4.setText(_translate("Form", "Current position:"))
+        self.label_4.setText(_translate("Form", "Current value:"))
         self.Moveto_pb_bis.setToolTip(_translate("Form", "Move to position"))
         self.Moveto_pb_bis_2.setToolTip(_translate("Form", "Move to position 2"))
         self.fine_tuning_pb.setToolTip(_translate("Form", "Show more options"))
         self.parameters_pb.setToolTip(_translate("Form", "Show connection settings"))
-        self.Move_Abs_pb.setText(_translate("Form", "Move Abs"))
+        self.Move_Abs_pb.setText(_translate("Form", "Set Abs"))
         self.label_3.setText(_translate("Form", "Rel increment:"))
-        self.Move_Rel_minus_pb.setText(_translate("Form", "Move Rel (-)"))
-        self.Move_Rel_plus_pb.setText(_translate("Form", "Move Rel (+)"))
-        self.Stop_pb.setText(_translate("Form", "Stop Motion"))
-        self.Get_position_pb.setText(_translate("Form", "Where am I?"))
+        self.Move_Rel_minus_pb.setText(_translate("Form", "Set Rel (-)"))
+        self.Move_Rel_plus_pb.setText(_translate("Form", "Set Rel (+)"))
+        self.Stop_pb.setText(_translate("Form", "Stop"))
+        self.Get_position_pb.setText(_translate("Form", "Update Value?"))
         self.Find_Home_pb.setText(_translate("Form", "Find Home"))
-        self.label_5.setText(_translate("Form", "Abs position:"))
-
+        self.label_5.setText(_translate("Form", "Abs value:"))
 from pymodaq.daq_utils.plotting.qled import QLED
 from pyqtgraph import SpinBox
 from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 if __name__ == "__main__":
     import sys
@@ -274,4 +276,3 @@ if __name__ == "__main__":
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
-

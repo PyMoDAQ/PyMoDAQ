@@ -32,6 +32,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
                 {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},
                 {'title': 'Something done:', 'name': 'something_done', 'type': 'led', 'value': False, 'readonly': True},
                 {'title': 'Infos:', 'name': 'info', 'type': 'text', 'value': ""},
+                {'title': 'push:', 'name': 'push', 'type': 'bool_push', 'value': False}
                 ]},
               {'title': 'Other settings:', 'name': 'other_settings', 'type': 'group', 'children': [
                   {'title': 'List of stuffs:', 'name': 'list_stuff', 'type': 'list', 'value': 'first',
