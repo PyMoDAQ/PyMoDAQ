@@ -47,8 +47,10 @@ def get_set_local_dir(basename='pymodaq_local'):
         try:
             local_path.mkdir()
         except Exception as e:
-            print("Cannot create local folder from your environment variable, using PyMoDAQ Folder as local directory")
             local_path = Path(__file__).parent.parent.joinpath(basename)
+            info = f"Cannot create local folder from your **Home** defined location: {Path.home()}," \
+                   f" using PyMoDAQ's folder as local directory: {local_path}"
+            print(info)
             if not local_path.is_dir():
                 local_path.mkdir()
     return local_path
@@ -1465,4 +1467,4 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    sparam = set_scan_spiral(10.1, -5.87, 10, 0.1)
+    pass
