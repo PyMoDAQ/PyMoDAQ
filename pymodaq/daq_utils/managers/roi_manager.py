@@ -198,7 +198,7 @@ class ROIManager(QObject):
 
         self.roitree = ParameterTree()
         vlayout.addWidget(self.roitree)
-        self.roiwidget.setMinimumWidth(300)
+        self.roiwidget.setMinimumWidth(100)
         self.roiwidget.setMaximumWidth(300)
 
         params = [{'title': 'Measurements:', 'name': 'measurements', 'type': 'table', 'value': OrderedDict([]), 'Ncol': 2, 'header': ["LO", "Value"]},
