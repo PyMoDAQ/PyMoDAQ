@@ -1,8 +1,4 @@
 #this is the configuration file of PyMoDAQ
-
-local_path = "default"  #relative to all config files (except this one), log... if this is set to default,
-#PyMoDAQ's local folder will be stored using user environment variables, you can otherwise set a path here
-
 [data_saving]
     [data_saving.h5file]
     save_path = "C:\\Data"  #base path where data are automatically saved
