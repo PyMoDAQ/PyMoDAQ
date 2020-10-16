@@ -109,8 +109,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     command_tcpip = pyqtSignal(ThreadCommand)
     grab_done_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
     quit_signal = pyqtSignal()
-    #used to trigger a saving of the data (from programatical function
-    # snapshot) and to trigger the end of acquisition from main program using this module
     update_settings_signal = pyqtSignal(edict)
     overshoot_signal = pyqtSignal(bool)
     status_signal = pyqtSignal(str)
@@ -128,28 +126,22 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         splash = QtGui.QPixmap('..//splash.png')
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
-
-        self.ui = Ui_Form()
-        widgetsettings = QtWidgets.QWidget()
-        self.ui.setupUi(widgetsettings)
-
+        self.title = title
+        self.DAQ_type = DAQ_type
         self.h5saver_continuous = H5Saver(save_type='detector')
+
         self.time_array = None
         self.channel_arrays = []
         self.grab_done = False
         self.navigator = None
         self.scanner = None
-        self.ui.navigator_pb.setVisible(False)
-        self.ui.navigator_pb.clicked.connect(self.send_to_nav)
         self.received_data = 0
         self.lcd = None
-        self.parent_scan =parent_scan #to use if one need the DAQ_Scan object
+        self.parent_scan = parent_scan #to use if one need the DAQ_Scan object
 
         self.ini_time = 0
         self.wait_time = 1000
-        self.title = title
-        self.ui.title_label.setText(self.title)
-        self.DAQ_type = DAQ_type
+
         self.dockarea = parent
         self.bkg = None  #buffer to store background
         self.filters = tables.Filters(complevel=5)        #options to save data to h5 file using compression zlib library and level 5 compression
@@ -157,6 +149,67 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.send_to_tcpip = False
         self.tcpclient_thread = None
 
+        self.measurement_module = None
+        self.detector = None
+
+        self.save_file_pathname = None  # to store last active path, will be an Path object
+        self.ind_continuous_grab = 0
+
+        self.initialized_state = False
+        self.measurement_module = None
+        self.snapshot_pathname = None
+
+        self.current_datas = None
+        # edict to be send to the daq_measurement module from 1D traces if any
+
+        self.data_to_save_export = None
+
+        self.do_save_data = False
+        self.do_continuous_save = False
+        self.is_continuous_initialized = False
+        self.file_continuous_save = None
+
+        ############IMPORTANT############################
+        self.controller = None #the hardware controller/set after initialization and to be used by other modules if needed
+        #################################################
+
+        self.setupUI(parent, dock_settings, dock_viewer)
+
+        self.settings.child('main_settings', 'controller_ID').setValue(controller_ID)
+
+        self.set_enabled_grab_buttons(enable=False)
+        self.set_enabled_Ini_buttons(enable=True)
+        self.ui.data_ready_led.set_as_false()
+
+        self.set_setting_tree() #to activate parameters of default Mock detector
+
+        # set managers options
+        if preset is not None:
+            for preset_dict in preset:
+                # fo instance preset_dict=edict(object='Stage_type_combo',method='setCurrentIndex',value=1)
+                if hasattr(self.ui, preset_dict['object']):
+                    obj = getattr(self.ui, preset_dict['object'])
+                    if hasattr(obj, preset_dict['method']):
+                        setattr(obj, preset_dict['method'], preset_dict['value'])
+        # initialize the controller if init=True
+        if init:
+            self.ui.IniDet_pb.click()
+
+        self.show_settings()
+
+
+    def setupUI(self, parent, dock_settings, dock_viewer):
+        self.ui = Ui_Form()
+        widgetsettings = QtWidgets.QWidget()
+        self.ui.setupUi(widgetsettings)
+
+        self.ui.title_label.setText(self.title)
+
+        self.ui.Ini_state_LED.clickable = False
+        self.ui.Ini_state_LED.set_as_false()
+
+        self.ui.navigator_pb.setVisible(False)
+        self.ui.navigator_pb.clicked.connect(self.send_to_nav)
 
         self.ui.statusbar=QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(25)
@@ -166,41 +219,38 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.statusbar.addWidget(self.ui.status_message)
 
 
-        ############IMPORTANT############################
-        self.controller = None #the hardware controller/set after initialization and to be used by other modules if needed
-        #################################################
-
         #create main parameter tree
         self.ui.settings_tree = ParameterTree()
         self.ui.settings_layout.addWidget(self.ui.settings_tree, 10)
         self.ui.settings_tree.setMinimumWidth(300)
-        self.settings=Parameter.create(title=self.title + ' settings', name='Settings', type='group', children=self.params)
-        self.settings.child('main_settings','DAQ_type').setValue(self.DAQ_type)
+        self.settings = Parameter.create(title=self.title + ' settings', name='Settings', type='group', children=self.params)
+        self.settings.child('main_settings', 'DAQ_type').setValue(self.DAQ_type)
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
         self.ui.settings_layout.addWidget(self.h5saver_continuous.settings_tree)
         self.h5saver_continuous.settings_tree.setVisible(False)
+
         #connecting from tree
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
         self.h5saver_continuous.settings.sigTreeStateChanged.connect(self.parameter_tree_changed) #trigger action from "do_save'  boolean
-        self.settings.child('main_settings','controller_ID').setValue(controller_ID)
+
 
         if dock_settings is not None:
             self.ui.settings_dock =dock_settings
-            self.ui.settings_dock.setTitle(title+"_Settings")
+            self.ui.settings_dock.setTitle(self.title+"_Settings")
         else:
-            self.ui.settings_dock = Dock(title+"_Settings", size=(10, 10))
+            self.ui.settings_dock = Dock(self.title+"_Settings", size=(10, 10))
             self.dockarea.addDock(self.ui.settings_dock)
 
-        self.ui.viewer_docks=[]
+        self.ui.viewer_docks = []
         if dock_viewer is not None:
             self.ui.viewer_docks.append(dock_viewer)
-            self.ui.viewer_docks[-1].setTitle(title+"_Viewer 1")
+            self.ui.viewer_docks[-1].setTitle(self.title+"_Viewer 1")
         else:
-            self.ui.viewer_docks.append(Dock(title+"_Viewer", size=(500,300), closable=False))
+            self.ui.viewer_docks.append(Dock(self.title+"_Viewer", size=(500,300), closable=False))
             self.dockarea.addDock(self.ui.viewer_docks[-1],'right',self.ui.settings_dock)
 
-
-
+        for dock in self.ui.viewer_docks:
+            dock.setEnabled(False)
 
         #install specific viewers
         self.viewer_widgets = []
@@ -208,34 +258,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         self.ui.settings_dock.addWidget(widgetsettings)
 
-
         ##Setting detector types
         self.ui.Detector_type_combo.clear()
         self.ui.Detector_type_combo.addItems(self.detector_types)
-
-        self.measurement_module = None
-        self.detector = None
-        self.set_enabled_grab_buttons(enable=False)
-        self.set_enabled_Ini_buttons(enable=True)
-        self.ui.data_ready_led.set_as_false()
-
-        self.save_file_pathname = None  # to store last active path, will be an Path object
-        self.ind_continuous_grab = 0
-
-        self.ui.Ini_state_LED.clickable = False
-        self.ui.Ini_state_LED.set_as_false()
-        self.initialized_state = False
-        self.measurement_module = None
-        self.snapshot_pathname = None
-
-        self.current_datas = None
-        # edict to be send to the daq_measurement module from 1D traces if any
-
-        self.data_to_save_export = OrderedDict([])
-        self.do_save_data = False
-        self.do_continuous_save = False
-        self.is_continuous_initialized = False
-        self.file_continuous_save = None
 
         ##Connecting buttons:
         self.ui.update_com_pb.clicked.connect(self.update_com) #update communications with hardware
@@ -255,24 +280,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.load_settings_pb.clicked.connect(self.load_settings)
         self.ui.DAQ_type_combo.currentTextChanged[str].connect(self.set_DAQ_type)
         self.ui.take_bkg_cb.clicked.connect(self.take_bkg)
-        self.ui.DAQ_type_combo.setCurrentText(DAQ_type)
+        self.ui.DAQ_type_combo.setCurrentText(self.DAQ_type)
         self.ui.log_pb.clicked.connect(self.show_log)
 
-        self.set_setting_tree() #to activate parameters of default Mock detector
-
-        # set managers options
-        if preset is not None:
-            for preset_dict in preset:
-                #fo instance preset_dict=edict(object='Stage_type_combo',method='setCurrentIndex',value=1)
-                if hasattr(self.ui,preset_dict['object']):
-                    obj=getattr(self.ui,preset_dict['object'])
-                    if hasattr(obj,preset_dict['method']):
-                        setattr(obj,preset_dict['method'],preset_dict['value'])
-        #initialize the controller if init=True
-        if init:
-            self.ui.IniDet_pb.click()
-
-        self.show_settings()
 
     def change_viewer(self):
         """
@@ -303,8 +313,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     if len(self.ui.viewer_docks) > 1:
                         dock = self.ui.viewer_docks.pop()
                         dock.close()
-
-
 
         self.ui.viewers = []
         self.viewer_widgets = []
@@ -429,26 +437,28 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             =============== ===================== ===================
         """
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
-        self.received_data += 1
-        for key in datas:
-            if not(key == 'name' or key == 'acq_time_s'):
-                if datas[key] is not None:
-                    if self.data_to_save_export[key] is None:
-                        self.data_to_save_export[key] = OrderedDict([])
-                    for k in datas[key]:
-                        if datas[key][k]['source'] != 'raw':
-                            name = f'{self.title}_{datas["name"]}_{k}'
-                            self.data_to_save_export[key][name] = utils.DataToExport(**datas[key][k])
-                            # if name not in self.data_to_save_export[key]:
-                            #
-                            # self.data_to_save_export[key][name].update(datas[key][k])
+        if self.data_to_save_export is not None: #means that somehow datas are not initialized so no further procsessing
+            self.received_data += 1
+            for key in datas:
+                if not(key == 'name' or key == 'acq_time_s'):
+                    if datas[key] is not None:
+                        if self.data_to_save_export[key] is None:
+                            self.data_to_save_export[key] = OrderedDict([])
+                        for k in datas[key]:
+                            if datas[key][k]['source'] != 'raw':
+                                name = f'{self.title}_{datas["name"]}_{k}'
+                                self.data_to_save_export[key][name] = utils.DataToExport(**datas[key][k])
+                                # if name not in self.data_to_save_export[key]:
+                                #
+                                # self.data_to_save_export[key][name].update(datas[key][k])
 
-        if self.received_data == len(self.ui.viewers):
-            if self.do_continuous_save:
-                self.do_save_continuous(self.data_to_save_export)
-                
-            self.grab_done = True
-            self.grab_done_signal.emit(self.data_to_save_export)
+
+                if self.received_data == len(self.ui.viewers):
+                    if self.do_continuous_save:
+                        self.do_save_continuous(self.data_to_save_export)
+
+                    self.grab_done = True
+                    self.grab_done_signal.emit(self.data_to_save_export)
 
     def get_scaling_options(self):
         """
@@ -548,6 +558,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         self.detector_thread.quit()
 
                 self.initialized_state = False
+                for dock in self.ui.viewer_docks:
+                    dock.setEnabled(False)
 
 
             else:
@@ -569,7 +581,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.command_detector.emit(ThreadCommand("ini_detector", attributes=[
                     self.settings.child(('detector_settings')).saveState(), self.controller]))
 
-
+                for dock in self.ui.viewer_docks:
+                    dock.setEnabled(True)
 
 
         except Exception as e:
