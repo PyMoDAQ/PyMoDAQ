@@ -11,6 +11,7 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import plot_colors
 from pymodaq.daq_utils.gui_utils import select_file
 import numpy as np
+from pathlib import Path
 import copy
 
 
@@ -350,7 +351,7 @@ class ROIManager(QObject):
 
         try:
             data = custom_tree.parameter_to_xml_string(self.settings.child(('ROIs')))
-            path = select_file(ext='xml')
+            path = select_file(start_path=Path.home(), ext='xml')
 
             if path != '':
                 with open(path, 'wb') as f:
@@ -369,7 +370,7 @@ class ROIManager(QObject):
         try:
             if params is None:
                 if path is None:
-                    path = select_file(save=False, ext='xml')
+                    path = select_file(start_path=Path.home(), save=False, ext='xml')
                     if path != '':
                         params = Parameter.create(title='Settings', name='settings', type='group',
                                                   children=custom_tree.XML_file_to_parameter(path))

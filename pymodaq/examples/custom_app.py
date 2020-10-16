@@ -10,7 +10,7 @@ from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.gui_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import getLineInfo
+from pymodaq.daq_utils.daq_utils import getLineInfo, load_config
 
 
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -19,6 +19,7 @@ from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 
+config = load_config()
 
 class CustomApp(QtWidgets.QWidget, QObject):
     #custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
@@ -26,7 +27,8 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     #list of dicts enabling the settings tree on the user interface
     params = [{'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-                {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data'},
+                {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
+                 'value': config['data_saving']['h5file']['save_path']},
                 {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
                 {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
                 {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},

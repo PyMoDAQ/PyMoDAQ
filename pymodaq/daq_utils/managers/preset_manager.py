@@ -1,10 +1,12 @@
 from PyQt5 import QtWidgets
 import sys
 import os
+from pymodaq.daq_utils import daq_utils as utils
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing
-from pymodaq.daq_utils.managers import preset_manager_utils
+from pymodaq.daq_utils.managers import preset_manager_utils  #mandatory to declare some specific Parameter types
 from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
@@ -12,13 +14,13 @@ from pymodaq.daq_utils.pid.pid_params import params as pid_params
 from pathlib import Path
 
 #check if preset_mode directory exists on the drive
-from pymodaq.daq_utils import daq_utils as utils
+
 pid_path = utils.get_set_pid_path()
 preset_path = utils.get_set_preset_path()
 overshoot_path = utils.get_set_overshoot_path()
 layout_path = utils.get_set_layout_path()
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+
 
 class PresetManager:
     def __init__(self, msgbox=False, path=None, extra_params=[], param_options=[]):
@@ -85,7 +87,7 @@ class PresetManager:
                     {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': pid_model, 'readonly': True},
                         ]
 
-            params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
+            params_move = [{'title': 'Actuators:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
             params_det = [{'title': 'Detectors:', 'name': 'Detectors',
                            'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
             self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=param+params_move+params_det)

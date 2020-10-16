@@ -30,7 +30,7 @@ Ntick = 128
 colors_red = np.array([(int(r), 0, 0) for r in np.linspace(0, 255, Ntick)])
 colors_green = np.array([(0, int(g), 0) for g in np.linspace(0, 255, Ntick)])
 colors_blue = np.array([(0, 0, int(b)) for b in np.linspace(0, 255, Ntick)])
-
+config = utils.load_config()
 
 class Navigator(QObject):
     log_signal = pyqtSignal(str)
@@ -185,7 +185,8 @@ class Navigator(QObject):
 
 
     def load_data(self):
-        self.h5module_path = str(gutils.select_file(start_path=None,save=False, ext='h5'))
+        self.h5module_path = str(gutils.select_file(start_path=config['data_saving']['h5file']['save_path'],
+                                                    save=False, ext='h5'))
         if self.h5module_path != '':
             self.settings.child('settings', 'filepath').setValue(self.h5module_path)
             if self.h5module is not None:

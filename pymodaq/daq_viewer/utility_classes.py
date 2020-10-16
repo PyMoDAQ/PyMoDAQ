@@ -12,7 +12,7 @@ import numpy as np
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
 
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
 from pymodaq.daq_utils.scanner import ScanParameters
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
@@ -28,6 +28,8 @@ try:
         calibs.append(filesplited)
 except:
     pass
+
+config = load_config()
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
@@ -48,8 +50,8 @@ params = [
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
-            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.39'},
-            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': config['network']['tcp-server']['ip']},
+            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config['network']['tcp-server']['port']},
         ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [

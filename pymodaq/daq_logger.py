@@ -141,7 +141,8 @@ class DAQ_Logger(QObject):
                     elif param.value() == 'SQL DataBase':
                         self.logger = self.dblogger
                 self.h5saver.settings_tree.setVisible(param.value() == 'H5 File')
-                self.dblogger.settings_tree.setVisible(param.value() == 'SQL DataBase')
+                if self.dblogger is not None:
+                    self.dblogger.settings_tree.setVisible(param.value() == 'SQL DataBase')
             elif change == 'parent':
                 pass
 
@@ -561,10 +562,10 @@ class DAQ_Logging(QObject):
         self.ind_log = 0
         self.modules_manager = modules_manager
 
-        self.logger = logger
-        if isinstance(self.logger, H5Saver):
+        self.data_logger = logger
+        if isinstance(self.data_logger, H5Saver):
             self.logger_type = "h5saver"
-        elif isinstance(self.logger, DbLoggerGUI):
+        elif isinstance(self.data_logger, DbLoggerGUI):
             self.logger_type = "dblogger"
 
     @pyqtSlot(list)
@@ -605,38 +606,38 @@ class DAQ_Logging(QObject):
         try:
             det_name = datas['name']
             if self.logger_type == 'h5saver':
-                det_group = self.logger.get_group_by_title(self.logger.raw_group, det_name)
-                time_array = self.logger.get_node(det_group, 'Logger_time_axis')
+                det_group = self.data_logger.get_group_by_title(self.data_logger.raw_group, det_name)
+                time_array = self.data_logger.get_node(det_group, 'Logger_time_axis')
                 time_array.append(np.array([datas['acq_time_s']]))
 
                 data_types = ['data0D', 'data1D']
-                if self.logger.settings.child(('save_2D')).value():
+                if self.data_logger.settings.child(('save_2D')).value():
                     data_types.extend(['data2D', 'dataND'])
 
                 for data_type in data_types:
                     if data_type in datas.keys() and len(datas[data_type]) != 0:
-                        if not self.logger.is_node_in_group(det_group, data_type):
-                            data_group = self.logger.add_data_group(det_group, data_type, metadata=dict(type='scan'))
+                        if not self.data_logger.is_node_in_group(det_group, data_type):
+                            data_group = self.data_logger.add_data_group(det_group, data_type, metadata=dict(type='scan'))
                         else:
-                            data_group = self.logger.get_node(det_group, utils.capitalize(data_type))
+                            data_group = self.data_logger.get_node(det_group, utils.capitalize(data_type))
                         for ind_channel, channel in enumerate(datas[data_type]):
-                            channel_group = self.logger.get_group_by_title(data_group, channel)
+                            channel_group = self.data_logger.get_group_by_title(data_group, channel)
                             if channel_group is None:
-                                channel_group = self.logger.add_CH_group(data_group, title=channel)
-                                data_array = self.logger.add_data(channel_group, datas[data_type][channel],
-                                                                   scan_type='scan1D', enlargeable=True)
+                                channel_group = self.data_logger.add_CH_group(data_group, title=channel)
+                                data_array = self.data_logger.add_data(channel_group, datas[data_type][channel],
+                                                                       scan_type='scan1D', enlargeable=True)
                             else:
-                                data_array = self.logger.get_node(channel_group, 'Data')
+                                data_array = self.data_logger.get_node(channel_group, 'Data')
                             if data_type == 'data0D':
                                 data_array.append(np.array([datas[data_type][channel]['data']]))
                             else:
                                 data_array.append(datas[data_type][channel]['data'])
-                self.logger.h5_file.flush()
+                self.data_logger.h5_file.flush()
 
             elif self.logger_type == 'dblogger':
-                self.logger.add_datas(datas)
+                self.data_logger.add_datas(datas)
 
-            self.logger.settings.child(('N_saved')).setValue(self.logger.settings.child(('N_saved')).value()+1)
+            self.data_logger.settings.child(('N_saved')).setValue(self.data_logger.settings.child(('N_saved')).value() + 1)
 
         except Exception as e:
             logger.exception(str(e))
@@ -651,7 +652,7 @@ class DAQ_Logging(QObject):
             status = 'Data Acquisition has been stopped by user'
             self.status_sig.emit(["Update_Status", status])
         if self.logger_type == 'h5saver':
-            self.logger.flush()
+            self.data_logger.flush()
 
 
     def start_logging(self):

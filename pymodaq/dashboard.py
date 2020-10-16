@@ -15,6 +15,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
+logger = utils.set_logger(utils.get_module_name(__file__))
+
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
@@ -28,8 +30,7 @@ from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
 
-logger = utils.set_logger(utils.get_module_name(__file__))
-
+config = utils.load_config()
 
 local_path = utils.get_set_local_dir()
 now = datetime.datetime.now()
@@ -90,6 +91,7 @@ class DashBoard(QObject):
         self.detector_modules = []
         self.setupUI()
 
+        logger.info('Dashboard Initialized')
 
     def set_preset_path(self, path):
         self.preset_path = path
@@ -161,6 +163,7 @@ class DashBoard(QObject):
         # %% create Settings menu
         self.file_menu = menubar.addMenu('File')
         self.file_menu.addAction('Show log file', self.show_log)
+        self.file_menu.addAction('Show configuration file', self.show_config)
         self.file_menu.addSeparator()
         quit_action = self.file_menu.addAction('Quit')
         quit_action.triggered.connect(self.quit_fun)
@@ -180,6 +183,7 @@ class DashBoard(QObject):
         action_show_log.setCheckable(True)
         action_show_log.toggled.connect(self.logger_dock.setVisible)
 
+
         self.preset_menu = menubar.addMenu('Preset Modes')
         action_new_preset = self.preset_menu.addAction('New Preset')
         # action.triggered.connect(lambda: self.show_file_attributes(type_info='managers'))
@@ -187,13 +191,13 @@ class DashBoard(QObject):
         action_modify_preset = self.preset_menu.addAction('Modify Preset')
         action_modify_preset.triggered.connect(self.modify_preset)
         self.preset_menu.addSeparator()
-        load_preset = self.preset_menu.addMenu('Load presets')
+        self.load_preset = self.preset_menu.addMenu('Load presets')
 
         slots = dict([])
         for ind_file, file in enumerate(self.preset_path.iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
-                slots[filestem] = load_preset.addAction(filestem)
+                slots[filestem] = self.load_preset.addAction(filestem)
                 slots[filestem].triggered.connect(
                     self.create_menu_slot(self.preset_path.joinpath(file)))
 
@@ -205,7 +209,7 @@ class DashBoard(QObject):
         action_modify_overshoot.triggered.connect(self.modify_overshoot)
         self.overshoot_menu.addSeparator()
         load_overshoot = self.overshoot_menu.addMenu('Load Overshoots')
-        #self.overshoot_menu.setEnabled(False)
+
 
         slots_over = dict([])
         for ind_file, file in enumerate(utils.get_set_overshoot_path().iterdir()):
@@ -223,8 +227,6 @@ class DashBoard(QObject):
         action_modify_roi.triggered.connect(self.modify_roi)
         self.roi_menu.addSeparator()
         load_roi = self.roi_menu.addMenu('Load roi configs')
-        #self.roi_menu.setEnabled(False)
-
 
         slots = dict([])
         for ind_file, file in enumerate(utils.get_set_roi_path().iterdir()):
@@ -240,8 +242,6 @@ class DashBoard(QObject):
         self.remote_menu.addAction('Modify remote config.', self.modify_remote)
         self.remote_menu.addSeparator()
         load_remote = self.remote_menu.addMenu('Load remote config.')
-        #self.remote_menu.setEnabled(False)
-
 
         slots = dict([])
         for ind_file, file in enumerate(utils.get_set_remote_path().iterdir()):
@@ -251,15 +251,13 @@ class DashBoard(QObject):
                 slots[filestem].triggered.connect(
                     self.create_menu_slot_remote(utils.get_set_remote_path().joinpath(file)))
 
-
-
         #actions menu
         self.actions_menu = menubar.addMenu('Extensions')
         action_scan = self.actions_menu.addAction('Do Scans')
         action_scan.triggered.connect(self.load_scan_module)
         action_log = self.actions_menu.addAction('Log data')
         action_log.triggered.connect(self.load_log_module)
-        self.actions_menu.setEnabled(False)
+
 
         # help menu
         help_menu = menubar.addMenu('?')
@@ -269,7 +267,10 @@ class DashBoard(QObject):
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
 
-
+        self.overshoot_menu.setEnabled(False)
+        self.roi_menu.setEnabled(False)
+        self.remote_menu.setEnabled(False)
+        self.actions_menu.setEnabled(False)
 
     def create_menu_slot(self, filename):
         return lambda: self.set_preset_mode(filename)
@@ -424,7 +425,7 @@ class DashBoard(QObject):
         """
         try:
             if file is None:
-                file = gutils.select_file(save=False, ext='dock')
+                file = gutils.select_file(start_path=utils.get_set_layout_path(), save=False, ext='dock')
             if file is not None:
                 with open(str(file), 'rb') as f:
                     dockstate = pickle.load(f)
@@ -448,7 +449,7 @@ class DashBoard(QObject):
             if 'float' in dockstate:
                 dockstate['float'] = []
             if file is None:
-                file = gutils.select_file(start_path=None, save=True, ext='dock')
+                file = gutils.select_file(start_path=utils.get_set_layout_path(), save=True, ext='dock')
             if file is not None:
                 with open(str(file), 'wb') as f:
                     pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
@@ -919,7 +920,7 @@ class DashBoard(QObject):
             self.clear_move_det_controllers()
             QtWidgets.QApplication.processEvents()
 
-
+            logger.info(f'Loading Preset file: {filename}')
             move_modules, detector_modules= self.set_file_preset(filename)
             if not(not move_modules and not detector_modules):
                 self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
@@ -964,16 +965,20 @@ class DashBoard(QObject):
                 self.mainwindow.setVisible(True)
                 for area in self.dockarea.tempAreas:
                     area.window().setVisible(True)
-    
-                self.file_menu.setEnabled(True)
-                self.settings_menu.setEnabled(True)
+
+                self.load_preset.setEnabled(False)
                 self.overshoot_menu.setEnabled(True)
-                self.actions_menu.setEnabled(True)
                 self.roi_menu.setEnabled(True)
                 self.remote_menu.setEnabled(True)
+                self.actions_menu.setEnabled(True)
+                self.file_menu.setEnabled(True)
+                self.settings_menu.setEnabled(True)
                 self.update_init_tree()
 
                 self.preset_loaded_signal.emit(True)
+
+            logger.info(f'Preset file: {filename} has been loaded')
+
 
         except Exception as e:
             logger.exception(str(e))
@@ -1019,6 +1024,11 @@ class DashBoard(QObject):
         import webbrowser
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
+    def show_config(self):
+        import webbrowser
+        webbrowser.open(str(utils.get_set_local_dir().joinpath('config.toml')))
+
+
     def setupUI(self):
 
         # %% create logger dock
@@ -1034,9 +1044,9 @@ class DashBoard(QObject):
 
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
-            {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': 'DEBUG', 'values': ['DEBUG', 'INFO',
-                                                                                              'WARNING', 'ERROR',
-                                                                                              'CRITICAL']},
+            {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config['general']['debug_level'],
+             'values': config['general']['debug_levels']},
+
             {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
                 {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},
                 {'title': 'Overshoot file', 'name': 'overshoot_file', 'type': 'str', 'value': '', 'readonly': True},
@@ -1065,7 +1075,7 @@ class DashBoard(QObject):
 
 
         self.file_menu.setEnabled(True)
-        self.actions_menu.setEnabled(True)
+        #self.actions_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)
@@ -1103,7 +1113,7 @@ class DashBoard(QObject):
                 pass
             elif change == 'value':
                 if param.name() == 'log_level':
-                    logger.setLevel(getattr(logging, param.value().upper()))
+                    logger.setLevel(param.value())
             elif change == 'parent':
                 pass
 
