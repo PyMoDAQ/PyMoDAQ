@@ -6,10 +6,7 @@ from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow
 
 from pymodaq.daq_utils import daq_utils as utils
-
-from pyqtgraph.parametertree import Parameter
-
-
+config = utils.load_config()
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
@@ -119,7 +116,7 @@ class ListPicker(QObject):
         else:
             return [-1, ""]
 
-def select_file(start_path=None, save=True, ext=None):
+def select_file(start_path=config['data_saving']['h5file']['save_path'], save=True, ext=None):
     """Save or open a file with Qt5 file dialog, to be used within an Qt5 loop.
 
     Usage::

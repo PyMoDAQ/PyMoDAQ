@@ -2,6 +2,9 @@ import os
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import logging
+from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name, get_set_pid_path
+logger = set_logger(get_module_name(__file__), base_logger=__name__ == '__main__')
+
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
@@ -11,7 +14,7 @@ from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pyqtgraph.dockarea import Dock
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name, get_set_pid_path
+
 import importlib
 from simple_pid import PID
 import time
@@ -22,7 +25,6 @@ import numpy as np
 from collections import OrderedDict
 from pymodaq.daq_utils.pid.pid_params import params
 
-logger = set_logger(get_module_name(__file__), __name__ == '__main__')
 
 class DAQ_PID(QObject):
     """

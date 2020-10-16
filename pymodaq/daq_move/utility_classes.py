@@ -5,10 +5,10 @@ from easydict import EasyDict as edict
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
-
+config = load_config()
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
                   {'name': 'epsilon', 'type': 'float', 'value': 0.01},
                   {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
@@ -31,8 +31,8 @@ params = [
          'children': [
              {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
              {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
-             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': '10.47.0.11'},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': 6341},
+             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': config['network']['tcp-server']['ip']},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config['network']['tcp-server']['port']},
          ]},
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
@@ -75,23 +75,22 @@ class DAQ_Move_base(QObject):
 
     """
 
-
-    Move_Done_signal=pyqtSignal(float)
-    is_multiaxes=False
-    params= []
+    Move_Done_signal = pyqtSignal(float)
+    is_multiaxes = False
+    params = []
     _controller_units = ''
 
     def __init__(self,parent=None,params_state=None):
-        QObject.__init__(self) #to make sure this is the parent class
+        QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
-        self.parent=parent
-        self.controller=None
-        self.stage=None
-        self.status=edict(info="",controller=None,stage=None,initialized=False)
-        self.current_position=0
-        self.target_position=0
+        self.parent = parent
+        self.controller = None
+        self.stage = None
+        self.status = edict(info="", controller=None, stage=None, initialized=False)
+        self.current_position = 0
+        self.target_position = 0
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
-        self.settings=Parameter.create(name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
                 self.settings.restoreState(params_state)

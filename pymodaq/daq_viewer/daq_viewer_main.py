@@ -629,7 +629,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.ini_det_fun()
 
             if path is None or path is False:
-                path = gutils.select_file(save=False,ext='par')
+                path = gutils.select_file(start_path=Path.home(), save=False,ext='par')
             with open(str(path), 'rb') as f:
                 settings = pickle.load(f)
                 settings_main=settings['settings_main']
@@ -1009,17 +1009,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         """
         try:
             if path is None or path is False:
-                path=gutils.select_file(save=True,ext='par')
+                path = gutils.select_file(start_path=Path.home(), save=True, ext='par')
 
-            settings_main=self.settings.saveState()
+            settings_main = self.settings.saveState()
             if self.DAQ_type != 'DAQ0D':
-                settings_viewer=self.ui.viewers[0].roi_manager.settings.saveState()
+                settings_viewer = self.ui.viewers[0].roi_manager.settings.saveState()
             else:
-                settings_viewer=None
+                settings_viewer = None
 
-            settings=OrderedDict(settings_main=settings_main,settings_viewer=settings_viewer)
+            settings = OrderedDict(settings_main=settings_main, settings_viewer=settings_viewer)
 
-            if path is not None: #could be if the Qdialog has been canceled
+            if path is not None:  # could be if the Qdialog has been canceled
                 with open(str(path), 'wb') as f:
                     pickle.dump(settings, f, pickle.HIGHEST_PROTOCOL)
 

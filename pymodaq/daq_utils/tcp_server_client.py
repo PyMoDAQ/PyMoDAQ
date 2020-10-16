@@ -9,15 +9,16 @@ from PyQt5 import QtWidgets
 import socket
 import select
 import numpy as np
-from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand
+from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand, load_config
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from collections import OrderedDict
 
-tcp_parameters = [{'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': 6341, 'default': 6341},
-                  {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': '10.47.0.39',
-                   'default': '10.47.0.39'},
+config = load_config()
+
+tcp_parameters = [{'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': config['network']['tcp-server']['ip'],},
+                  {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': config['network']['tcp-server']['port'],},
                   {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
                   {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
                   {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',

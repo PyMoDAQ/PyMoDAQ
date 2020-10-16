@@ -28,6 +28,8 @@ import copy
 import importlib
 from packaging import version as version_mod
 
+config = utils.load_config()
+
 logger = utils.set_logger(utils.get_module_name(__file__))
 backends_available = []
 
@@ -967,12 +969,12 @@ class H5Saver(H5Backend, QObject):
              [{'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
                  {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'values': backends_available, 'readonly': True},
                  {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False, 'children': [
-                     {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str', 'value': 'http://hsds.sebastienweber.fr',
-                      'readonly': False},
-                     {'title': 'User:', 'name': 'user', 'type': 'str', 'value': 'pymodaq_user',
-                      'readonly': False},
-                     {'title': 'password:', 'name': 'password', 'type': 'str', 'value': 'pymodaq',
-                      'readonly': False},
+                     {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
+                      'value': config['data_saving']['hsds']['root_url'], 'readonly': False},
+                     {'title': 'User:', 'name': 'user', 'type': 'str',
+                      'value': config['data_saving']['hsds']['username'], 'readonly': False},
+                     {'title': 'password:', 'name': 'password', 'type': 'str',
+                      'value': config['data_saving']['hsds']['pwd'], 'readonly': False},
                      ]},
                  ]},
 
@@ -980,18 +982,18 @@ class H5Saver(H5Backend, QObject):
                  {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
                  {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
                   'value': False},
-                 {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath', 'value': 'C:\Data',
-                  'filetype': False, 'readonly': True, },
+                 {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
+                  'value': config['data_saving']['h5file']['save_path'], 'filetype': False, 'readonly': True, },
                  {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
                  {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
-                 {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text', 'value': 'C:\Data',
-                  'readonly': True, 'visible': False},
+                 {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
+                  'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
                  {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
                  {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
                      {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
                       'values': ['zlib', 'gzip']},
-                     {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int', 'value': 5, 'min': 0,
-                      'max': 9},
+                     {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
+                      'value': config['data_saving']['h5file']['compression_level'], 'min': 0, 'max': 9},
                  ]},
              ]
 
@@ -2051,7 +2053,7 @@ class H5Browser(QObject):
         self.h5utils = H5BrowserUtil(backend=self.backend)
         if h5file is None:
             if h5file_path is None:
-                h5file_path = select_file(h5file_path, save=False, ext=['h5', 'hdf5'])
+                h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
             self.h5utils.open_file(h5file_path, 'a')
         else:
             self.h5utils.h5file = h5file
@@ -2359,7 +2361,7 @@ def browse_data(fname=None, ret_all=False):
         | Browse data present in any h5 file, when user has selected the one,
     """
     if fname is None:
-        fname = str(select_file(start_path=None, save=False, ext='h5'))
+        fname = str(select_file(start_path=config['data_saving']['h5file']['save_path'], save=False, ext='h5'))
 
     if type(fname) != str:
         try:

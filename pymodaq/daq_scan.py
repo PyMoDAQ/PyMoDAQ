@@ -30,6 +30,7 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.h5modules import H5Saver
 
+config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 try:
@@ -122,6 +123,7 @@ class DAQ_Scan(QObject):
 
         self.setupUI()
         self.setup_modules(self.dashboard.title)
+        logger.info('DAQ_Scan Initialized')
 
     @pyqtSlot(list)
     def update_actuators(self, actuators):
@@ -139,8 +141,8 @@ class DAQ_Scan(QObject):
         # %% init the 2D viewer
         self.ui.average2D_graph = Viewer2D(average2D_widget)
 
-        average_tab.addTab(average1D_widget,'1D plot Average')
-        average_tab.addTab(average2D_widget,'2D plot Average')
+        average_tab.addTab(average1D_widget, '1D plot Average')
+        average_tab.addTab(average2D_widget, '2D plot Average')
 
         self.ui.average_dock.addWidget(average_tab)
         self.dockarea.addDock(self.ui.average_dock,'right',self.ui.scan_dock)
@@ -787,14 +789,14 @@ class DAQ_Scan(QObject):
         #params about dataset attributes and scan attibutes
         date = QDateTime(QDate.currentDate(), QTime.currentTime())
         params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children':[
-                            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': 'Sebastien Weber'},
+                            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
                             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
                             {'title': 'Sample:', 'name': 'sample', 'type': 'str', 'value':''},
                             {'title': 'Experiment type:', 'name': 'experiment_type', 'type': 'str', 'value': ''},
                             {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''}]}]
 
         params_scan = [{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children':[
-                            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': 'Sebastien Weber'},
+                            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
                             {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
                             {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'value':'Scan1D', 'values':['Scan1D','Scan2D']},
                             {'title': 'Scan name:', 'name': 'scan_name', 'type': 'str', 'value': '', 'readonly': True},

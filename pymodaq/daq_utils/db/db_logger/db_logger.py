@@ -15,6 +15,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
 logger = utils.set_logger(utils.get_module_name(__file__))
+config = utils.load_config()
 
 class DBLogHandler(logging.StreamHandler):
     def __init__(self, dblogger):
@@ -30,10 +31,11 @@ class DBLogHandler(logging.StreamHandler):
 
 
 class DbLogger:
-    user = 'pymodaq_user'
-    user_pwd = 'pymodaq'
+    user = config['network']['logging']['user']['username']
+    user_pwd = config['network']['logging']['user']['pwd']
 
-    def __init__(self, database_name, ip_address='10.47.3.22', port=5432, save2D=False):
+    def __init__(self, database_name, ip_address=config['network']['logging']['sql']['ip'],
+                 port=config['network']['logging']['sql']['port'], save2D=False):
         """
 
         Parameters
@@ -170,15 +172,16 @@ class DbLogger:
 class DbLoggerGUI(DbLogger, QtCore.QObject):
     params = [{'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
                'values': ['PostgreSQL', ]},
-              {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str', 'value': 'localhost'},
-              {'title': 'Server port:', 'name': 'server_port', 'type': 'int', 'value': 5432},
+              {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str', 'value': config['network']['logging']['sql']['ip']},
+              {'title': 'Server port:', 'name': 'server_port', 'type': 'int', 'value': config['network']['logging']['sql']['port']},
               {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
               {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False, 'readonly': True},] + \
               dashboard_submodules_params
 
 
     def __init__(self, database_name):
-        DbLogger.__init__(self, database_name, ip_address='localhost', port=5432, save2D=False)
+        DbLogger.__init__(self, database_name, ip_address=config['network']['logging']['sql']['ip'],
+                          port=config['network']['logging']['sql']['port'], save2D=False)
         QtCore.QObject.__init__(self)
 
         self.settings = Parameter.create(title='DB settings', name='db_settings', type='group',

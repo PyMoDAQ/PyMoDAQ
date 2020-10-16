@@ -1,4 +1,6 @@
 import random
+from pymodaq.daq_utils import daq_utils as utils
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 from pyqtgraph.parametertree import parameterTypes as pTypes
 
@@ -75,7 +77,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
                     if child['name'] == 'controller_ID':
                         child['value'] = random.randint(0, 9999)
 
-        child = {'title': 'Move {:02.0f}'.format(newindex), 'name': 'move{:02.0f}'.format(newindex), 'type': 'group',
+        child = {'title': 'Actuator {:02.0f}'.format(newindex), 'name': 'move{:02.0f}'.format(newindex), 'type': 'group',
                  'removable': True, 'children': [
                 {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Move {:02.0f}'.format(newindex)},
                 {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
@@ -86,7 +88,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
 
 
-class PresetScalableGroupDet( pTypes.GroupParameter):
+class PresetScalableGroupDet(pTypes.GroupParameter):
     """
         =============== ==============
         **Attributes**    **Type**

@@ -17,6 +17,7 @@ if 'win32' in sys.platform:
 import enum
 import os
 import importlib
+import toml
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import inspect
@@ -29,7 +30,39 @@ Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
+def get_set_local_dir(basename='pymodaq_local'):
+    """Defines, creates abd returns a local folder where configurations files will be saved
 
+    Parameters
+    ----------
+    basename: (str) how the configuration folder will be named
+
+    Returns
+    -------
+    Path: the local path
+    """
+    local_path = Path.home().joinpath(basename)
+
+    if not local_path.is_dir():
+        try:
+            local_path.mkdir()
+        except Exception as e:
+            print("Cannot create local folder from your environment variable, using PyMoDAQ Folder as local directory")
+            local_path = Path(__file__).parent.parent.joinpath(basename)
+            if not local_path.is_dir():
+                local_path.mkdir()
+    return local_path
+
+def load_config():
+    config_path = get_set_local_dir().joinpath('config.toml')
+    if not config_path.exists(): #copy the template from pymodaq folder and create one in pymodad's local folder
+        config = toml.load(Path(__file__).parent.parent.joinpath('config_template.toml'))
+        config_path.write_text(toml.dumps(config))
+    else:
+        config = toml.load(config_path)
+    return config
+
+config = load_config()
 
 class JsonConverter:
     def __init__(self):
@@ -745,31 +778,9 @@ def check_vals_in_iterable(iterable1, iterable2):
         assert val1 == val2
 
 
-def get_set_local_dir(basename='pymodaq_local'):
-    """Defines, creates abd returns a local folder where configurations files will be saved
 
-    Parameters
-    ----------
-    basename: (str) how the configuration folder will be named
 
-    Returns
-    -------
-    Path: the local path
-    """
-    if 'win32' in sys.platform:
-        local_path = Path(os.getenv('HOMEDRIVE')).joinpath(os.getenv('HOMEPATH'), basename)
-    else:
-        local_path = Path(os.getenv('HOME')).joinpath(basename)
 
-    if not local_path.is_dir():
-        try:
-            local_path.mkdir()
-        except Exception as e:
-            print("Cannot create local folder from your environment variable, using PyMoDAQ Folder as local directory")
-            local_path = Path(__file__).parent.parent.joinpath(basename)
-            if not local_path.is_dir():
-                local_path.mkdir()
-    return local_path
 
 
 def get_set_config_path(config_name='config'):
@@ -840,7 +851,7 @@ def get_module_name(module__file__path):
 
 
 
-def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False):
+def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -863,7 +874,10 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     logger = logging.getLogger(logger_name)
     log_path = get_set_config_path('log')
     if add_handler:
-        logger.setLevel(logging.DEBUG)  #as a default, can then be cchanged in modules using logger.setLevel(level)
+        if log_level is None:
+            config = load_config()
+            log_level = config['general']['debug_level']
+        logger.setLevel(log_level)
         handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
@@ -1007,7 +1021,7 @@ def set_param_from_param(param_old, param_new):
 #########################
 ##File management
 
-def get_new_file_name(base_path=Path('C:\Data'), base_name='tttr_data'):
+def get_new_file_name(base_path=Path(config['data_saving']['h5file']['save_path']), base_name='tttr_data'):
     if isinstance(base_path, str):
         base_path = Path(base_path)
 
