@@ -21,20 +21,15 @@ from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.plotting.lcd import LCD
-import pymodaq.daq_utils.daq_utils as daq_utils
+
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
-from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
+from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins
 
-from pymodaq_plugins.daq_viewer_plugins import plugins_0D
-from pymodaq_plugins.daq_viewer_plugins import plugins_1D
-from pymodaq_plugins.daq_viewer_plugins import plugins_2D
-from pymodaq_plugins.daq_viewer_plugins import plugins_ND
-
-DAQ_0DViewer_Det_type = make_enum('daq_0Dviewer')
-DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
-DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
-DAQ_NDViewer_Det_type = make_enum('daq_NDviewer')
+DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
+DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
+DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
+DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 from collections import OrderedDict
 import numpy as np
@@ -321,13 +316,13 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer0D(self.viewer_widgets[-1]))
-            self.detector_types = DAQ_0DViewer_Det_type.names('daq_0Dviewer')
+            self.detector_types = [plugin['name'] for plugin in DAQ_0DViewer_Det_types]
 
         elif DAQ_type == "DAQ1D":
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer1D(self.viewer_widgets[-1]))
-            self.detector_types = DAQ_1DViewer_Det_type.names('daq_1Dviewer')
+            self.detector_types = [plugin['name'] for plugin in DAQ_1DViewer_Det_types]
 
         elif DAQ_type == "DAQ2D":
             for ind in range(Nviewers):
@@ -336,7 +331,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
                 self.ui.viewers[-1].ui.auto_levels_pb.click()
 
-            self.detector_types = DAQ_2DViewer_Det_type.names('daq_2Dviewer')
+            self.detector_types = [plugin['name'] for plugin in DAQ_2DViewer_Det_types]
             self.settings.child('main_settings','axes').show()
             self.ui.viewers[0].ROI_select_signal.connect(self.update_ROI)
             self.ui.viewers[0].ui.ROIselect_pb.clicked.connect(self.show_ROI)
@@ -345,7 +340,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             for ind in range(Nviewers):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
-            self.detector_types = DAQ_2DViewer_Det_type.names('daq_NDviewer')
+            self.detector_types = [plugin['name'] for plugin in DAQ_NDViewer_Det_types]
 
         self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
 
@@ -1227,14 +1222,19 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             if len(self.settings.child(('detector_settings')).children()) > 0:
                 for child in self.settings.child(('detector_settings')).children()[1:]:#leave just the ROIselect group
                     child.remove()
+            plug_name = self.detector_name
             if self.DAQ_type == 'DAQ0D':
-                obj = getattr(getattr(plugins_0D, 'daq_0Dviewer_'+self.detector_name), 'DAQ_0DViewer_'+self.detector_name)
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', plug_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_0Dviewer_'+self.detector_name), 'DAQ_0DViewer_'+self.detector_name)
             elif self.DAQ_type == "DAQ1D":
-                obj = getattr(getattr(plugins_1D, 'daq_1Dviewer_'+self.detector_name), 'DAQ_1DViewer_'+self.detector_name)
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', plug_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_1Dviewer_'+self.detector_name), 'DAQ_1DViewer_'+self.detector_name)
             elif self.DAQ_type == 'DAQ2D':
-                obj = getattr(getattr(plugins_2D, 'daq_2Dviewer_'+self.detector_name), 'DAQ_2DViewer_'+self.detector_name)
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', plug_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_2Dviewer_'+self.detector_name), 'DAQ_2DViewer_'+self.detector_name)
             elif self.DAQ_type == 'DAQND':
-                obj = getattr(getattr(plugins_ND, 'daq_NDviewer_'+self.detector_name), 'DAQ_NDViewer_'+self.detector_name)
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', plug_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_NDviewer_'+self.detector_name), 'DAQ_NDViewer_'+self.detector_name)
 
             params = getattr(obj, 'params')
             det_params = Parameter.create(name='Det Settings', type='group', children=params)
@@ -1935,22 +1935,25 @@ class DAQ_Detector(QObject):
         try:
             # status="Not initialized"
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
+
+            plug_name = self.detector_name
+
             if self.DAQ_type == 'DAQ0D':
-                class_ = getattr(getattr(plugins_0D, 'daq_0Dviewer_' + self.detector_name),
-                                 'DAQ_0DViewer_' + self.detector_name)
-
-            elif self.DAQ_type == 'DAQ1D':
-                class_ = getattr(getattr(plugins_1D, 'daq_1Dviewer_' + self.detector_name),
-                                 'DAQ_1DViewer_' + self.detector_name)
-                self.detector = class_(self, params_state)
-
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', plug_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + self.detector_name),
+                              'DAQ_0DViewer_' + self.detector_name)
+            elif self.DAQ_type == "DAQ1D":
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', plug_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + self.detector_name),
+                              'DAQ_1DViewer_' + self.detector_name)
             elif self.DAQ_type == 'DAQ2D':
-                class_ = getattr(getattr(plugins_2D, 'daq_2Dviewer_' + self.detector_name),
-                                 'DAQ_2DViewer_' + self.detector_name)
-
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', plug_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + self.detector_name),
+                              'DAQ_2DViewer_' + self.detector_name)
             elif self.DAQ_type == 'DAQND':
-                class_ = getattr(getattr(plugins_ND, 'daq_NDviewer_' + self.detector_name),
-                                 'DAQ_NDViewer_' + self.detector_name)
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', plug_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + self.detector_name),
+                              'DAQ_NDViewer_' + self.detector_name)
             else:
                 raise Exception(self.detector_name + " unknown")
 
