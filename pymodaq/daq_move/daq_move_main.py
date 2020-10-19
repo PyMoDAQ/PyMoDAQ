@@ -5,24 +5,25 @@ import sys
 from pymodaq.daq_move.daq_move_gui import Ui_Form
 
 from pymodaq.daq_move.utility_classes import params as daq_move_params
-#check for plugins to be added to the DAQ_Move_Stage_type enum
+
 #must be loaded to register proper custom parameter types
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+
+
 from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils import daq_utils as utils
-import pymodaq_plugins.daq_move_plugins as plugins
 
 local_path = utils.get_set_local_dir()
 sys.path.append(local_path)
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
+DAQ_Move_Stage_type = utils.get_plugins('daq_move')
 
-DAQ_Move_Stage_type = make_enum('daq_move')
 
 
 class DAQ_Move(Ui_Form, QObject):
@@ -123,7 +124,7 @@ class DAQ_Move(Ui_Form, QObject):
         self.parent.resize(150, 200)
 
         ##Setting stages types
-        self.stage_types = DAQ_Move_Stage_type.names('daq_move')
+        self.stage_types = [mov['name'] for mov in DAQ_Move_Stage_type]
         self.ui.Stage_type_combo.clear()
         self.ui.Stage_type_combo.addItems(self.stage_types)
 
@@ -494,10 +495,11 @@ class DAQ_Move(Ui_Form, QObject):
         try:
             for child in self.settings.child(('move_settings')).children():
                 child.remove()
-
-            class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
-            params=getattr(class_,'params')
-            move_params=Parameter.create(name='move_settings', type='group', children=params)
+            parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', self.stage_name)
+            class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.stage_name),
+                             'DAQ_Move_' + self.stage_name)
+            params = getattr(class_, 'params')
+            move_params = Parameter.create(name='move_settings', type='group', children=params)
 
 
             self.settings.child(('move_settings')).addChildren(move_params.children())
@@ -529,33 +531,13 @@ class DAQ_Move(Ui_Form, QObject):
     def stage_changed(self, index=0):
 
         """
-            Deprecated the main interface should not be dependant of the plugin type, especially because it may not be installed
-
-            | Update the User Interface from the DAQ_Move_Stage_Type given by the position of index parameter.
-            |
-            | In case of Kinesis_Flipper hardware, update the Move_abs values to adapt the programm to the hardware, else re-init the Move_abs to default value.
-
-            =============== =========== ====================================================================
-            **Parameters**   **Type**    **Description**
-
-             *index*         enum list   DAQ_Move_Stage_Type to be checked (corresponding to hardware type)
-            =============== =========== ====================================================================
 
             See Also
             --------
             move_Abs
         """
         pass
-        # if index == DAQ_Move_Stage_type['Kinesis_Flipper']: #Kinesis_Flipper
-        #     self.ui.Moveto_pb_bis_2.setVisible(True)
-        #     self.ui.Moveto_pb_bis.clicked.disconnect()
-        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.move_Abs(1))
-        #     self.ui.Moveto_pb_bis_2.clicked.connect(lambda: self.move_Abs(2))
-        #
-        # else:
-        #     self.ui.Moveto_pb_bis_2.setVisible(False)
-        #     self.ui.Moveto_pb_bis.clicked.disconnect()
-        #     self.ui.Moveto_pb_bis.clicked.connect(lambda: self.move_Abs(self.ui.Abs_position_sb_bis.value()))
+
 
     def stop_Motion(self):
         """
@@ -783,9 +765,11 @@ class DAQ_Move_stage(QObject):
 
         status=edict(initialized=False,info="")
         try:
-            class_=getattr(getattr(plugins,'daq_move_'+self.stage_name),'DAQ_Move_'+self.stage_name)
-            self.hardware=class_(self,params_state)
-            status.update(self.hardware.ini_stage(controller)) #return edict(info="", controller=, stage=)
+            parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', self.stage_name)
+            class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.stage_name),
+                             'DAQ_Move_' + self.stage_name)
+            self.hardware = class_(self, params_state)
+            status.update(self.hardware.ini_stage(controller))  # return edict(info="", controller=, stage=)
 
             self.hardware.Move_Done_signal.connect(self.Move_Done)
 

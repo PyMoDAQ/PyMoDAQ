@@ -129,11 +129,14 @@ class DAQ_Viewer_base(QObject):
         self.status = edict(info="",controller=None,initialized=False)
         self.scan_parameters = None
 
+        self.x_axis = None
+        self.y_axis = None
+
     def get_axis(self):
-        if self.plugin_type == '1D' or  self.plugin_type == '2D':
+        if self.plugin_type == '1D' or self.plugin_type == '2D':
             self.emit_x_axis()
 
-        if  self.plugin_type == '2D' :
+        if  self.plugin_type == '2D':
             self.emit_y_axis()
 
     def emit_status(self, status):
@@ -190,7 +193,7 @@ class DAQ_Viewer_base(QObject):
             if change == 'value':
                 self.settings.child(*path[1:]).setValue(param.value()) #blocks signal back to main UI
             elif change == 'childAdded':
-                child = Parameter.create(name = 'tmp')
+                child = Parameter.create(name='tmp')
                 child.restoreState(param)
                 self.settings.child(*path[1:]).addChild(child) #blocks signal back to main UI
                 param = child

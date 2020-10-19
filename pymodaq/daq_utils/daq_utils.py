@@ -746,7 +746,10 @@ def get_plugins(plugin_type='daq_0Dviewer'):
 
             for mod in plugin_list:
                 try:
-                    importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
+                    if plugin_type == 'daq_move':
+                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
+                    else:
+                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
                     plugins_import.append(mod)
                 except:
                     pass
