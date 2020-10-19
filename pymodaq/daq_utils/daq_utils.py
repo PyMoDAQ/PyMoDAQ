@@ -1,7 +1,7 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import QVariant
 import sys
-
+import pkg_resources
 import traceback
 from collections import OrderedDict
 
@@ -660,6 +660,20 @@ def elt_as_first_element(elt_list, match_word='Mock'):
         plugins = []
     return plugins
 
+def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
+    if elt_list != []:
+        ind_elt = 0
+        for ind, elt in enumerate(elt_list):
+            if match_word in elt[key]:
+                ind_elt = ind
+                break
+        plugin_match = elt_list[ind_elt]
+        elt_list.remove(plugin_match)
+        plugins = [plugin_match]
+        plugins.extend(elt_list)
+    else:
+        plugins = []
+    return plugins
 
 def find_in_path(path, mode='daq_move'):
     """
@@ -701,6 +715,48 @@ def get_names_simple(mode='daq_move'):
     plugins_import = elt_as_first_element(plugin_list, match_word='Mock')
     return plugins_import
 
+def get_plugins(plugin_type='daq_0Dviewer'):
+    """
+    Get plugins names as a list
+    Parameters
+    ----------
+    plugin_type: (str) plugin type either 'daq_0Dviewer', 'daq_1Dviewer', 'daq_2Dviewer', 'daq_NDviewer' or 'daq_move'
+    module: (module) parent module of the plugins
+
+    Returns
+    -------
+
+    """
+    discovered_plugins = {
+        entry_point.name: entry_point.load()
+        for entry_point
+        in pkg_resources.iter_entry_points('pymodaq.plugins')
+    }
+    plugins_import = []
+
+    for module in discovered_plugins.values():
+        try:
+            if plugin_type == 'daq_move':
+                submodule = importlib.import_module(f'{module.__name__}.daq_move_plugins', module.__package__)
+            else:
+                submodule = importlib.import_module(f'{module.__name__}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
+                                                    module.__package__)
+            plugin_list = [{'name': mod[len(plugin_type)+1:], 'module': submodule} for mod in dir(submodule) if plugin_type in mod]
+            # check if modules are importable
+
+            for mod in plugin_list:
+                try:
+                    if plugin_type == 'daq_move':
+                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
+                    else:
+                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
+                    plugins_import.append(mod)
+                except:
+                    pass
+        except :
+            pass
+    plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
+    return plugins_import
 
 def get_names(mode):
     """

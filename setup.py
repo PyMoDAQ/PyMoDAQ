@@ -81,7 +81,7 @@ setup(
         'easydict',
         #'pyqt5',
         'tables',
-        'pymodaq_plugins>=2.0.0',
+        'pymodaq_plugins>=2.0.1',
         'pymodaq_pid_models>=0.0.2',
 	    'simple_pid',
         'python-dateutil',

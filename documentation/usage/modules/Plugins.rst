@@ -1,20 +1,25 @@
-Any new hardware has to be included in PyMoDAQ as a python plugin. This is a script containing a python object following a particular template and behaviour and inheriting from a base class.
-Plugins are articulated given their type: Moves or Viewers and for the last their main dimensionality: **0D**, **1D** or **2D**.
+Any new hardware has to be included in PyMoDAQ as a plugin. A PyMoDAQ's plugin is a script containing a python object
+following a particular template and behaviour and inheriting from a base class.
+Plugins are articulated given their type: Moves or Viewers and for the latter their main dimensionality: **0D**, **1D** or **2D**.
 It is recommended to start from the *template* plugins (daq_move_Template, daq_NDviewer_Template, see below)
-and then check from other examples (pymodaq_plugins `repository`__) the proper way of writing a plugin. You will find below some information on the **how to**
-but comparison with existing ones will be beneficial.
+and then check from other examples (pymodaq_plugins `repository`__) the proper way of writing a plugin.
+You will find below some information on the **how to** but comparison with existing ones will be beneficial.
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugins
 
 Installation
 ------------
 
-All plugins are located in the **pymodaq_plugins** repository on github. This constitutes a python package that will be
-installed together with PyMoDAQ (or manually install it if you don't want the up to date version). PyMoDAQ will therefore
-call the plugins from the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
+The main and official list of plugins is located in the **pymodaq_plugins** repository on github. This constitutes a
+python package that will be installed together with PyMoDAQ (or manually install it if you don't want the up to date
+version). Other unofficial (contributed) plugins may also be installed if they follow PyMoDAQ's plugin specifications.
 
-List of plugins
----------------
+PyMoDAQ is looking at startup for all installed packages that it can consider as its plugins. This includes by default
+the *pymodaq_plugins* package installed on the *site_packages* location in python distribution but also these contributed
+plugins.
+
+List of default plugins
+-----------------------
 
 .. csv-table:: Plugins list
    :header-rows: 1
@@ -22,10 +27,21 @@ List of plugins
 
 See up-to-date database: https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg
 
+Contributions:
+--------------
+
+Users are welcomed to contribute to PyMoDAQ by writing their own plugins. Two approaches are possible:
+
+* Fork the official plugin repository add add within (in developper mode) your own plugin scripts
+* Copy the `plugin template package`__ on you disk and work on the templates within
+
+__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+
 Naming convention:
 ------------------
 
-For the plugin to be properly recognised by PyMoDAQ, its location and name must follow these rules:
+For the plugin to be properly recognised by PyMoDAQ, its location and name must follow some rules and syntax. The
+`plugin template package`__ could be copied locally as a starting point:
 
 * An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)
 * The plugin class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well)
@@ -34,6 +50,8 @@ For the plugin to be properly recognised by PyMoDAQ, its location and name must 
 * A detector plugin of dimensionality N (N=0, 1 or 2) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
 * The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
 * the script will be located within pymodaq_plugins installed package tree in ``C:\WPy-3710\...\pymodaq_plugins\daq_viewer_plugins\plugins_ND`` (replace N by 0, 1 or 2)
+
+__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
 
 .. _hardware_settings:
 

@@ -55,9 +55,9 @@ Here is a poster of PyMoDAQ features (to be updated).
 
    .. _figure_Main_diagramm:
 
-.. figure:: ../image/poster_PyMoDAQ.png
+.. figure:: ../image/pymodaq_diagram.png
    :alt: PyMoDAQ
 
-   PyMoDAQ features.
+   PyMoDAQ features: Control modules within a DashBoard and its extensions
 
-:download:`Download as pdf <../image/poster_PyMoDAQ.pdf>`
+:download:`Download as pdf <../image/pymodaq_diagram.png>`
