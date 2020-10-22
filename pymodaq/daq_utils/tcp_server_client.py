@@ -17,8 +17,8 @@ from collections import OrderedDict
 
 config = load_config()
 
-tcp_parameters = [{'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': config['network']['tcp-server']['ip'],},
-                  {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': config['network']['tcp-server']['port'],},
+tcp_parameters = [{'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': config['network']['tcp-server']['port'],},
+                  {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': config['network']['tcp-server']['ip'],},
                   {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
                   {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
                   {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',

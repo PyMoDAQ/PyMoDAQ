@@ -1,5 +1,6 @@
 include README.rst
 include LICENCE
 recursive-include pymodaq *.png
+recursive-include pymodaq *.toml
 recursive-include pymodaq/examples *.py
-#recursive-include documentation *.py *.rst *.png
+#recursive-include documentation *.py *.rst *.png *.toml
