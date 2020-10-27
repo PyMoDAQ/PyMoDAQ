@@ -218,7 +218,8 @@ class DAQ_Scan(QObject):
         """
         try:
             self.h5saver.close_file()
-            self.dashboard.quit_fun()
+            self.ui.scan_dock.close()
+            #self.dashboard.quit_fun()
         except Exception as e:
             logger.exception(str(e))
 

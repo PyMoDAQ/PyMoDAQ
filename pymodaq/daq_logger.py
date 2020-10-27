@@ -113,7 +113,7 @@ class DAQ_Logger(QObject):
             self.dblogger.close()
         except Exception as e:
             logger.exception(str(e))
-        self.dashboard.quit_fun()
+        self.ui.logger_dock.close()
 
     def parameter_tree_changed(self, param, changes):
         """

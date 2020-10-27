@@ -432,7 +432,7 @@ class DAQ_Move(Ui_Form, QObject):
             try:
                 self.parent.parent().parent().close() #the dock parent (if any)
             except Exception as e:
-                self.logger.exception(str(e))
+                self.logger.info('No dock parent to close')
 
         except Exception as e:
             icon = QtGui.QIcon()
@@ -458,7 +458,7 @@ class DAQ_Move(Ui_Form, QObject):
             --------
             update_status
         """
-        self.update_status("Timeout occured",wait_time=self.wait_time,log_type="log")
+        self.update_status("Timeout occured", wait_time=self.wait_time)
         self.wait_position_flag=False
 
     def set_enabled_move_buttons(self,enable=False):

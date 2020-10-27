@@ -267,10 +267,7 @@ class DashBoard(QObject):
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
 
-        self.overshoot_menu.setEnabled(False)
-        self.roi_menu.setEnabled(False)
-        self.remote_menu.setEnabled(False)
-        self.actions_menu.setEnabled(False)
+
 
     def create_menu_slot(self, filename):
         return lambda: self.set_preset_mode(filename)
@@ -1069,7 +1066,10 @@ class DashBoard(QObject):
         #creating the menubar
         self.menubar = self.mainwindow.menuBar()
         self.create_menu(self.menubar)
-
+        self.overshoot_menu.setEnabled(False)
+        self.roi_menu.setEnabled(False)
+        self.remote_menu.setEnabled(False)
+        self.actions_menu.setEnabled(False)
 #        connecting
         self.status_signal[str].connect(self.add_status)
 

@@ -23,12 +23,19 @@ It is divided in three main modules:
 * **DAQ_Scan_module** : This module lets you configure automated data acquisition from one or many detectors defined
   in the dashboard as a function or one or more actuators defined also in the dashboard.
 
-The detectors and the actuators are represented and manipulated using two generic modules:
+The detectors and the actuators are represented and manipulated using two control modules:
 
 * **DAQ_Move_module** : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.
 * **DAQ_Viewer_module** : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.
 
 and many others to simplify any application development.
+
+.. raw:: html
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
+     autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
 
 Published under the CeCILL-B FREE SOFTWARE LICENSE
 

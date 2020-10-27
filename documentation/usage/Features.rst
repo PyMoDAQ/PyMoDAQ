@@ -1,12 +1,21 @@
 PyMoDAQ's overview
 ==================
 
+.. raw:: html
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
+     autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+
+
+
    .. _overview:
 
 .. figure:: /image/overview.png
    :alt: overview
 
    PyMoDAQ control of an experimental setup using the Dashboard and a set of DAQ_Viewer and DAQ_Move modules
+
 
 PyMoDAQ is an advanced user interface to control instruments (casually called Detectors)  and actuators (sometimes
 called Moves for historical reasons). Each of these will have their own interface called :ref:`DAQ_Viewer_module` and
@@ -24,7 +33,7 @@ Dashboard's extensions can be used to perform advanced and automated tasks on th
   acquisition as a function of multiple actuators *positions*. Many kind of *scans* are possible: 1Ds, 2Ds, NDs, set of
   points and many ways to perform each of these among which :ref:`adaptive_scans` scan modes have been recently developed
   (from version 2.0.1).
-* The second one is the :ref:`DAQ_Logger`. It is a layer between all the detectors within the dashboard and various ways
+* The second one is the :ref:`DAQ_Logger_module`. It is a layer between all the detectors within the dashboard and various ways
   to log data acquired from these detectors. As of now, one can log to :
 
   * a local binary hdf5 file
@@ -38,10 +47,10 @@ Dashboard's extensions can be used to perform advanced and automated tasks on th
 
    .. _overview_submodules:
 
-.. figure:: /image/overview_submodules.png
+.. figure:: /image/pymodaq_diagram.png
    :alt: overview
 
-   PyMoDAQ's Dashboard and its extensions: DAQ_Scan for automated acquisitions and DAQ_Logger for data logging.
+   PyMoDAQ's Dashboard and its extensions: DAQ_Scan for automated acquisitions, DAQ_Logger for data logging and many other.
 
 
 
