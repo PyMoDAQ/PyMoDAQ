@@ -366,9 +366,8 @@ class DAQ_Move(Ui_Form, QObject):
                             self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
             elif change == 'parent':
-                if path is not None:
-                    if 'main_settings' not in path:
-                        self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
+                if param.name() not in custom_tree.iter_children(self.settings.child('main_settings'), []):
+                    self.update_settings_signal.emit(edict(path=['move_settings'], param=param, change=change))
 
     def connect_tcp_ip(self):
         if self.settings.child('main_settings', 'tcpip', 'connect_server').value():

@@ -209,7 +209,7 @@ class DAQ_Viewer_base(QObject):
 
             self.commit_settings(param)
         except Exception as e:
-            self.emit_status(ThreadCommand("Update_Status",[str(e),'log']))
+            self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
     def commit_settings(self,param):
         """

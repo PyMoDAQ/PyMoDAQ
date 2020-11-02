@@ -137,11 +137,11 @@ def test_get_names_simple():
     modules = utils.get_names_simple('daq_0Dviewer')
     assert 'Keithley2110' in modules
     assert 'LockIn7270' in modules
-    assert 'NIDAQmx' in modules
+    assert 'national_instruments' in modules
 
     modules = utils.get_names_simple('daq_1Dviewer')
     assert 'Labspec6TCP' in modules
-    assert 'NIDAQmx' in modules
+    assert 'national_instruments' in modules
     assert 'Shamrock' in modules
 
     modules = utils.get_names_simple('daq_2Dviewer')

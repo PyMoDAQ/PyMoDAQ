@@ -775,9 +775,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                             self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
             elif change == 'parent':
-                if path is not None:
-                    if 'main_settings' not in path:
-                        self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
+                if param.name() not in custom_tree.iter_children(self.settings.child('main_settings'), []):
+                    self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
 
     @pyqtSlot(ThreadCommand)
     def process_tcpip_cmds(self,status):
