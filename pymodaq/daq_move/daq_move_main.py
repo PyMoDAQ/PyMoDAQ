@@ -811,8 +811,8 @@ class DAQ_Move_stage(QObject):
             --------
             move_Rel
         """
-        self.target_position=self.current_position+rel_position
-        pos=self.hardware.move_Rel(rel_position)
+        self.target_position = self.current_position + rel_position
+        pos = self.hardware.move_Rel(rel_position)
 
 
     @pyqtSlot(float)
@@ -943,14 +943,14 @@ class DAQ_Move_stage(QObject):
             --------
             update_settings
         """
-        #settings_parameter_dict = edict(path=path,param=param)
-        path=settings_parameter_dict['path']
-        param=settings_parameter_dict['param']
-        if path[0]=='main_settings':
-            if hasattr(self,path[-1]):
-                setattr(self,path[-1],param.value())
+        # settings_parameter_dict = edict(path=path,param=param)
+        path = settings_parameter_dict['path']
+        param = settings_parameter_dict['param']
+        if path[0] == 'main_settings':
+            if hasattr(self, path[-1]):
+                setattr(self, path[-1], param.value())
 
-        elif path[0]=='move_settings':
+        elif path[0] == 'move_settings':
             self.hardware.update_settings(settings_parameter_dict)
 
 

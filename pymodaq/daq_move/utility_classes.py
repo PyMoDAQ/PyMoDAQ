@@ -204,23 +204,24 @@ class DAQ_Move_base(QObject):
             --------
             DAQ_utils.ThreadCommand, move_done
         """
-        sleep_ms=50
-        ind=0
-        while np.abs(self.check_position()-self.target_position)>self.settings.child(('epsilon')).value():
+        sleep_ms = 50
+        ind = 0
+        self.current_position = self.check_position()
+        while np.abs(self.check_position() - self.target_position) > self.settings.child(('epsilon')).value():
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped'))
                 break
             QThread.msleep(sleep_ms)
 
-            ind+=1
+            ind += 1
 
-            if ind*sleep_ms >= self.settings.child(('timeout')).value():
-
+            if ind * sleep_ms >= self.settings.child(('timeout')).value():
                 self.emit_status(ThreadCommand('raise_timeout'))
                 break
 
-            self.current_position=self.check_position()
+            self.current_position = self.check_position()
             QtWidgets.QApplication.processEvents()
+
         self.move_done()
 
 
