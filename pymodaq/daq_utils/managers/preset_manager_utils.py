@@ -9,14 +9,14 @@ from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
 
 from pymodaq_plugins import daq_move_plugins as movehardware
 from pyqtgraph.parametertree.Parameter import registerParameterType
-from pymodaq.daq_utils.daq_utils import make_enum
 from pymodaq_plugins.daq_viewer_plugins import plugins_0D, plugins_1D, plugins_2D, plugins_ND
 
-DAQ_Move_Stage_type = make_enum('daq_move')
-DAQ_0DViewer_Det_type = make_enum('daq_0Dviewer')
-DAQ_1DViewer_Det_type = make_enum('daq_1Dviewer')
-DAQ_2DViewer_Det_type = make_enum('daq_2Dviewer')
-DAQ_NDViewer_Det_type = make_enum('daq_NDviewer')
+
+DAQ_Move_Stage_type = utils.get_plugins('daq_move')
+DAQ_0DViewer_Det_types = utils.get_plugins('daq_0Dviewer')
+DAQ_1DViewer_Det_types = utils.get_plugins('daq_1Dviewer')
+DAQ_2DViewer_Det_types = utils.get_plugins('daq_2Dviewer')
+DAQ_NDViewer_Det_types = utils.get_plugins('daq_NDviewer')
 
 def iterative_show_pb(params):
     for param in params:
@@ -42,7 +42,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
     def __init__(self, **opts):
         opts['type'] = 'groupmove'
         opts['addText'] = "Add"
-        opts['addList'] = DAQ_Move_Stage_type.names('daq_move')
+        opts['addList'] = [mov['name'] for mov in DAQ_Move_Stage_type]
         pTypes.GroupParameter.__init__(self, **opts)
 
     def addNew(self, typ):
@@ -104,13 +104,13 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
         opts['type'] = 'groupdet'
         opts['addText'] = "Add"
         options=[]
-        for name in DAQ_0DViewer_Det_type.names('daq_0Dviewer'):
+        for name in [plugin['name'] for plugin in DAQ_0DViewer_Det_types]:
             options.append('DAQ0D/'+name)
-        for name in DAQ_1DViewer_Det_type.names('daq_1Dviewer'):
+        for name in [plugin['name'] for plugin in DAQ_1DViewer_Det_types]:
             options.append('DAQ1D/'+name)
-        for name in DAQ_2DViewer_Det_type.names('daq_2Dviewer'):
+        for name in [plugin['name'] for plugin in DAQ_2DViewer_Det_types]:
             options.append('DAQ2D/'+name)
-        for name in DAQ_NDViewer_Det_type.names('daq_NDviewer'):
+        for name in [plugin['name'] for plugin in DAQ_NDViewer_Det_types]:
             options.append('DAQND/'+name)
         opts['addList'] = options
 

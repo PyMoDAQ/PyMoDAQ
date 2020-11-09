@@ -729,8 +729,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):
     """
     discovered_plugins = {
         entry_point.name: entry_point.load()
-        for entry_point
-        in pkg_resources.iter_entry_points('pymodaq.plugins')
+        for entry_point in pkg_resources.iter_entry_points('pymodaq.plugins')
     }
     plugins_import = []
 

@@ -3,6 +3,7 @@
 
 import sys
 import datetime
+import subprocess
 import pickle
 import logging
 from pathlib import Path
@@ -29,7 +30,7 @@ from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
-
+from pymodaq_plugin_manager.manager import PluginManager
 config = utils.load_config()
 
 local_path = utils.get_set_local_dir()
@@ -166,7 +167,9 @@ class DashBoard(QObject):
         self.file_menu.addAction('Show configuration file', self.show_config)
         self.file_menu.addSeparator()
         quit_action = self.file_menu.addAction('Quit')
+        restart_action = self.file_menu.addAction('Restart')
         quit_action.triggered.connect(self.quit_fun)
+        restart_action.triggered.connect(self.restart_fun)
 
         self.settings_menu = menubar.addMenu('Settings')
         docked_menu = self.settings_menu.addMenu('Docked windows')
@@ -266,8 +269,18 @@ class DashBoard(QObject):
         action_help = help_menu.addAction('Help')
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
+        action_plugin_manager = help_menu.addAction('Plugin Manager')
+        action_plugin_manager.triggered.connect(self.start_plugin_manager)
 
-
+    def start_plugin_manager(self):
+        self.win_plug_manager = QtWidgets.QMainWindow()
+        self.win_plug_manager.setWindowTitle('PyMoDAQ Plugin Manager')
+        widget = QtWidgets.QWidget()
+        self.win_plug_manager.setCentralWidget(widget)
+        self.plugin_manager = PluginManager(widget)
+        self.plugin_manager.quit_signal.connect(self.quit_fun)
+        self.plugin_manager.restart_signal.connect(self.restart_fun)
+        self.win_plug_manager.show()
 
     def create_menu_slot(self, filename):
         return lambda: self.set_preset_mode(filename)
@@ -359,7 +372,7 @@ class DashBoard(QObject):
                     mssg.setText('You have to restart the application to take the modifications into account! Quitting the application...')
                     mssg.exec()
 
-                    self.quit_fun()
+                    self.restart_fun()
 
             else:  # cancel
                 pass
@@ -411,6 +424,11 @@ class DashBoard(QObject):
 
         except Exception as e:
             logger.exception(str(e))
+
+
+    def restart_fun(self):
+        self.quit_fun()
+        subprocess.call([sys.executable, __file__])
 
     def load_layout_state(self, file=None):
         """

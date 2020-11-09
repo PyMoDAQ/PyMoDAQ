@@ -954,11 +954,11 @@ class DAQ_Move_stage(QObject):
             self.hardware.update_settings(settings_parameter_dict)
 
 
-
-
-
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    Form = QtWidgets.QWidget();prog = DAQ_Move(Form,title="test",preset=[dict(object='Stage_type_combo',method='setCurrentText',value='PI')],init=False);Form.show()
-    #Form1 = QtWidgets.QWidget();prog = DAQ_Move(Form1,title="test1",managers=[dict(object='Stage_type_combo',method='setCurrentText',value='PI')],init=False);Form1.show()
+    Form = QtWidgets.QWidget()
+    prog = DAQ_Move(Form, title="test", preset=[dict(object='Stage_type_combo', method='setCurrentText', value='PI')],
+                    init=False)
+    Form.show()
+    # Form1 = QtWidgets.QWidget();prog = DAQ_Move(Form1,title="test1",managers=[dict(object='Stage_type_combo',method='setCurrentText',value='PI')],init=False);Form1.show()
     sys.exit(app.exec_())
