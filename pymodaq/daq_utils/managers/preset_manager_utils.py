@@ -7,9 +7,9 @@ from pyqtgraph.parametertree import parameterTypes as pTypes
 from pymodaq.daq_move.utility_classes import params as daq_move_params
 from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
 
-from pymodaq_plugins import daq_move_plugins as movehardware
 from pyqtgraph.parametertree.Parameter import registerParameterType
-from pymodaq_plugins.daq_viewer_plugins import plugins_0D, plugins_1D, plugins_2D, plugins_ND
+
+
 
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
@@ -63,7 +63,9 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
         params = daq_move_params
         iterative_show_pb(params)
 
-        class_ = getattr(getattr(movehardware, 'daq_move_' + typ), 'DAQ_Move_' + typ)
+        parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Stage_type, 'name', typ)
+        class_ = getattr(getattr(parent_module['module'], 'daq_move_' + typ),
+                         'DAQ_Move_' + typ)
         params_hardware = getattr(class_, 'params')
         iterative_show_pb(params_hardware)
 
@@ -98,7 +100,6 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
 
         See Also
         --------
-        pymodaq.daq_utils.daq_utils.make_enum
     """
     def __init__(self, **opts):
         opts['type'] = 'groupdet'
@@ -148,13 +149,17 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
                             child['value'] = random.randint(0, 9999)
 
             if '0D' in typ:
-                class_ = getattr(getattr(plugins_0D, 'daq_0Dviewer_' + typ[6:]), 'DAQ_0DViewer_' + typ[6:])
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', typ[6:])
+                class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_'+typ[6:]), 'DAQ_0DViewer_'+typ[6:])
             elif '1D' in typ:
-                class_ = getattr(getattr(plugins_1D, 'daq_1Dviewer_' + typ[6:]), 'DAQ_1DViewer_' + typ[6:])
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', typ[6:])
+                class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_'+typ[6:]), 'DAQ_1DViewer_'+typ[6:])
             elif '2D' in typ:
-                class_ = getattr(getattr(plugins_2D, 'daq_2Dviewer_' + typ[6:]), 'DAQ_2DViewer_' + typ[6:])
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', typ[6:])
+                class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_'+typ[6:]), 'DAQ_2DViewer_'+typ[6:])
             elif 'ND' in typ:
-                class_ = getattr(getattr(plugins_ND, 'daq_NDviewer_' + typ[6:]), 'DAQ_NDViewer_' + typ[6:])
+                parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', typ[6:])
+                class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_'+typ[6:]), 'DAQ_NDViewer_'+typ[6:])
             for main_child in params:
                 if main_child['name'] == 'main_settings':
                     for child in main_child['children']:

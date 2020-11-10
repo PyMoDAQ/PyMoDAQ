@@ -618,6 +618,24 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
                 recursive_find_files_extension(entry.path, ext, paths)
     return paths
 
+def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[], filters=['.git', '.idea']):
+    for child in Path(ini_path).iterdir():
+        if not any(filt in str(child) for filt in filters):
+            if child.is_dir():
+                print(child)
+                recursive_find_expr_in_files(child, exp, paths, filters)
+            else:
+                try:
+                    if 'daq_utils.py' in str(child):
+                        print(child)
+                    with child.open('r') as f:
+                        for ind, line in enumerate(f.readlines()):
+                            if exp in line:
+                                paths.append([child, ind])
+                except :
+                    pass
+    return paths
+
 def remove_spaces(string):
     """
     return a string without any white spaces in it
@@ -675,46 +693,6 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
         plugins = []
     return plugins
 
-def find_in_path(path, mode='daq_move'):
-    """
-        Find the .py files in the given path directory
-
-        =============== =========== ====================================
-        **Parameters**    **Type**   **Description**
-        *path*            string     The path to the directory to check
-        =============== =========== ====================================
-
-        Returns
-        -------
-        String list
-            The list containing all the .py files in the directory.
-    """
-    plugins = []
-    paths = os.listdir(path)
-    for entry in paths:
-        if mode in entry:
-            plugins.append(entry[len(mode) + 1:-3])
-    return plugins
-
-
-def get_names_simple(mode='daq_move'):
-    import pymodaq_plugins
-    base_path = os.path.split(pymodaq_plugins.__file__)[0]
-    plugin_list = []
-    if mode == 'daq_move':
-        plugin_list = find_in_path(os.path.join(base_path, 'daq_move_plugins'), mode)
-    elif mode == 'daq_0Dviewer':
-        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_0D'), mode)
-    elif mode == 'daq_1Dviewer':
-        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_1D'), mode)
-    elif mode == 'daq_2Dviewer':
-        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_2D'), mode)
-    elif mode == 'daq_NDviewer':
-        plugin_list = find_in_path(os.path.join(base_path, 'daq_viewer_plugins', 'plugins_ND'), mode)
-
-    plugins_import = elt_as_first_element(plugin_list, match_word='Mock')
-    return plugins_import
-
 def get_plugins(plugin_type='daq_0Dviewer'):
     """
     Get plugins names as a list
@@ -727,11 +705,12 @@ def get_plugins(plugin_type='daq_0Dviewer'):
     -------
 
     """
+    plugins_import = []
     discovered_plugins = {
         entry_point.name: entry_point.load()
         for entry_point in pkg_resources.iter_entry_points('pymodaq.plugins')
     }
-    plugins_import = []
+
 
     for module in discovered_plugins.values():
         try:
@@ -756,76 +735,6 @@ def get_plugins(plugin_type='daq_0Dviewer'):
             pass
     plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
     return plugins_import
-
-def get_names(mode):
-    """
-        Get plugins names list from os dir command on plugins folder.
-        The mode arguments specify the directory to list between DAQ_Move
-        and DAQ_Viewer_XD
-
-        =============== =========== ====================================================================
-        **Parameters**    **Type**   **Description**
-        *mode*            *string    The plugins directory to check between :
-                                        * *DAQ_Move* : Check for DAQ_Move controllers plugins
-                                        * *DAQ_Viewer_0D* : Chack for DAQ_Viewer\0D controllers plugins
-                                        * *DAQ_Viewer_1D* : Chack for DAQ_Viewer\1D controllers plugins
-                                        * *DAQ_Viewer_2D* : Chack for DAQ_Viewer\2D controllers plugins
-        =============== =========== ====================================================================
-
-        Returns
-        -------
-        String list
-            The list containing all the present plugins names.
-    """
-    plugin_list = get_names_simple(mode)
-    if mode == 'daq_move':
-        subpack = 'pymodaq_plugins.daq_move_plugins'
-    elif mode == 'daq_0Dviewer':
-        subpack = 'pymodaq_plugins.daq_viewer_plugins.plugins_0D'
-    elif mode == 'daq_1Dviewer':
-        subpack = 'pymodaq_plugins.daq_viewer_plugins.plugins_1D'
-    elif mode == 'daq_2Dviewer':
-        subpack = 'pymodaq_plugins.daq_viewer_plugins.plugins_2D'
-    elif mode == 'daq_NDviewer':
-        subpack = 'pymodaq_plugins.daq_viewer_plugins.plugins_ND'
-
-    # check if modules are importable
-    plugins_import = []
-    for mod in plugin_list:
-        try:
-            importlib.import_module(f'.{mode}_' + mod, subpack)
-            plugins_import.append(mod)
-        except:
-            pass
-
-    return plugins_import
-
-
-def make_enum(mode):
-    """
-        Custom class generator.
-        Create a dynamic enum containing the plugins folder file names.
-
-        Returns
-        -------
-        Instance of Enum
-            The enum object representing loaded plugins
-    """
-    names = get_names(mode)
-    values = {}
-    for i in range(0, len(names)):
-        values.update({names[i]: i + 1})
-    meta = type(enum.Enum)
-    bases = (enum.Enum,)
-    dict = meta.__prepare__(names, bases)
-    dict.update({'names': get_names})
-    for key, value in values.items():
-        dict[key] = value
-    if mode == 'daq_move':
-        return meta(mode + '_Stage_type', bases, dict)
-    else:
-        return meta(mode + '_Type', bases, dict)
-
 
 def check_vals_in_iterable(iterable1, iterable2):
     assert len(iterable1) == len(iterable2)
@@ -1522,4 +1431,4 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    pass
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'get_names_simple')

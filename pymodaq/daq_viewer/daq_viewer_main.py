@@ -2121,14 +2121,13 @@ class DAQ_Detector(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.daq_enums import DAQ_type
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
-    prog = DAQ_Viewer(area, title="Testing",DAQ_type=DAQ_type['DAQ0D'].name)
+    prog = DAQ_Viewer(area, title="Testing",DAQ_type='DAQ0D')
     win.show()
     sys.exit(app.exec_())
 

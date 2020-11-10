@@ -12,7 +12,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand, make_enum, getLineInfo
+from pymodaq.daq_utils.daq_utils import ThreadCommand
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils import daq_utils as utils

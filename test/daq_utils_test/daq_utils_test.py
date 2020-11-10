@@ -120,44 +120,6 @@ def test_elt_as_first_element():
     elts_sorted = utils.elt_as_first_element(elts[:], elts[1])
     assert elts_sorted[0] == elts[1]
 
-def test_find_in_path(tmp_path):
-    base_path = tmp_path
-    with open(base_path.joinpath('file_thisis1.py'), 'w') as f:
-        pass
-    with open(base_path.joinpath('file_thisis2.py'), 'w') as f:
-        pass
-    assert utils.find_in_path(base_path, 'file') == ['thisis1', 'thisis2']
-
-def test_get_names_simple():
-    modules = utils.get_names_simple('daq_move')
-    assert 'Conex' in modules
-    assert 'Kinesis' in modules
-    assert 'TCPServer' in modules
-
-    modules = utils.get_names_simple('daq_0Dviewer')
-    assert 'Keithley2110' in modules
-    assert 'LockIn7270' in modules
-    assert 'national_instruments' in modules
-
-    modules = utils.get_names_simple('daq_1Dviewer')
-    assert 'Labspec6TCP' in modules
-    assert 'national_instruments' in modules
-    assert 'Shamrock' in modules
-
-    modules = utils.get_names_simple('daq_2Dviewer')
-    assert 'AndorCCD' in modules
-    assert 'OpenCVCam' in modules
-    assert 'TIS' in modules
-
-    modules = utils.get_names_simple('daq_NDviewer')
-    assert 'FLIM' in modules
-    assert 'Mock' in modules
-
-@pytest.mark.parametrize('mod_type', ['daq_move', 'daq_0Dviewer', 'daq_1Dviewer', 'daq_2Dviewer','daq_NDviewer'])
-def test_make_enum(mod_type):
-    enum_names = utils.make_enum(mod_type).names(mod_type)
-    assert 'Mock' in enum_names
-
 def test_check_vals_in_iterable():
     with pytest.raises(Exception):
         utils.check_vals_in_iterable([1, ], [])

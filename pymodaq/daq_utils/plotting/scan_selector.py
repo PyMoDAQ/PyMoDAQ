@@ -254,7 +254,7 @@ if __name__ == '__main__':
             self.dock.addWidget(form)
             self.area.addDock(self.dock)
 
-    from pymodaq.daq_utils.daq_enums import DAQ_type
+
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
 
@@ -267,11 +267,11 @@ if __name__ == '__main__':
     win.setWindowTitle('pymodaq main')
     fake = FakeDaqScan(area)
 
-    prog = DAQ_Viewer(area, title="Testing", DAQ_type=DAQ_type['DAQ2D'].name, parent_scan=fake)
+    prog = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D', parent_scan=fake)
     prog.ui.IniDet_pb.click()
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
-    prog2 = DAQ_Viewer(area, title="Testing2", DAQ_type=DAQ_type['DAQ2D'].name, parent_scan=fake)
+    prog2 = DAQ_Viewer(area, title="Testing2", DAQ_type='DAQ2D', parent_scan=fake)
     prog2.ui.IniDet_pb.click()
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()

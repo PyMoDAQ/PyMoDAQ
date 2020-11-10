@@ -3,7 +3,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import logging
 from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name, get_set_pid_path
-logger = set_logger(get_module_name(__file__), base_logger=__name__ == '__main__')
+logger = set_logger(get_module_name(__file__))
 
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -46,7 +46,7 @@ class DAQ_PID(QObject):
 
                     models.append(file)
                 except Exception as e:
-                    print(e)
+                    logger.exception(str(e))
         if 'PIDModelMock' in models:
             mods = models
             mods.pop(models.index('PIDModelMock'))
@@ -54,7 +54,7 @@ class DAQ_PID(QObject):
             models.extend(mods)
 
     except Exception as e:
-        print(e)
+        logger.exception(str(e))
 
     if len(models) == 0:
         logger.warning('No valid installed models')

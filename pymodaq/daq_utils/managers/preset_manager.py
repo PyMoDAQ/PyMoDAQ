@@ -166,7 +166,7 @@ class PresetManager:
 
                 if param.name() == 'use_pid':
                     self.preset_params.child(('pid_settings')).show(param.value())
-                if param.name() == 'model_class':
+                if param.name() == 'model_class' and param.value() != '':
                     self.get_set_pid_model_params(param.value())
 
             elif change == 'parent':pass

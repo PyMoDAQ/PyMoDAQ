@@ -63,7 +63,6 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
 
         See Also
         --------
-        pymodaq.daq_utils.daq_utils.make_enum
     """
     def __init__(self, **opts):
         opts['type'] = 'groupdetover'
