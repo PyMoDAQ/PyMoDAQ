@@ -12,7 +12,7 @@ except ImportError:
 
 from pymodaq.version import get_version
 
-with open('README.rst') as fd:
+with open('README.md') as fd:
     long_description = fd.read()
 
 setupOpts = dict(
