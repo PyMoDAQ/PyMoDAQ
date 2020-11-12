@@ -2116,11 +2116,7 @@ class DAQ_Detector(QObject):
         return status
 
 
-
-
-
-
-if __name__ == '__main__':
+def main():
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = DockArea()
@@ -2130,4 +2126,8 @@ if __name__ == '__main__':
     prog = DAQ_Viewer(area, title="Testing",DAQ_type='DAQ0D')
     win.show()
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
 

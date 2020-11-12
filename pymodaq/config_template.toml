@@ -35,6 +35,10 @@ name = "User name"  # default name used as author in the hdf5 saving files
     ip = "10.47.0.39"
     port = 6341
 
+[presets]
+default_preset_for_scan = "preset_default"
+default_preset_for_logger = 'preset_default'
+
 [scan]
     default = 'Scan1D'
 

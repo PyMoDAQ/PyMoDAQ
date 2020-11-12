@@ -666,9 +666,12 @@ class DAQ_Logging(QObject):
             logger.exception(str(e))
 
 
-if __name__ == '__main__':
+def main():
     from pymodaq.dashboard import DashBoard
+    from pymodaq.daq_utils.daq_utils import load_config, get_set_preset_path
+    from pathlib import Path
 
+    config = load_config()
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
@@ -678,8 +681,12 @@ if __name__ == '__main__':
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    prog.set_preset_mode('C:\\Users\\weber\\pymodaq_local\\preset_configs\\preset_default.xml')
+    prog.set_preset_mode(Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_logger']}.xml"))
     # QThread.msleep(4000)
 
     prog.load_log_module()
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

@@ -11,17 +11,40 @@ Various ways are possible in order to start modules from PyMoDAQ. In all cases a
 (using ``pip`` or ``setup.py``, see :ref:`section_installation`) all the modules will be installed within the
 ``site-packages`` folder of python.
 
+
   .. _run_module:
 
 From command line tool:
 -----------------------
+Open a command line and **activate your environment** (if you're using anaconda, miniconda, venv...):
 
-Open a command line and activate your environment (if you're using anaconda or miniconda) and execute either:
+Load installed scripts
+**********************
+
+During its installation, a few scripts have been installed within you environment directory, this means you can start
+PyMoDAQ's main functionnalities directly writing in your console either:
+
+*  ``dashboard``
+*  ``daq_scan``
+*  ``daq_logger``
+*  ``daq_viewer``
+*  ``daq_move``
+*  ``h5browser``
+*  ``plugin_manager``
+
+
+Execute a given python file
+***************************
+
+If you knwow where, within PyMoDAQ directories, is the python file you want to run you can enter for instance:
 
 *  ``python -m pymodaq.dashboard``
+*  ``python -m pymodaq.daq_scan``
+*  ``python -m pymodaq.daq_logger``
 *  ``python -m pymodaq.daq_viewer.daq_viewer_main``
 *  ``python -m pymodaq.daq_move.daq_move_main``
-*  ``python -m pymodaq.daq_utils.h5browser``
+*  ``python -m pymodaq.h5browser``
+*  ``python -m pymodaq_plugin_manager.manager``
 
 for PyMoDAQ's main modules. The *-m* option tells python to look within its *site-packages* folder (where you've just
 installed pymodaq) In fact if one of PyMoDAQ's file (*xxx.py*) as an entry point (a ``if __name__='__main__:'``

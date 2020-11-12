@@ -72,7 +72,13 @@ setup(
     packages=allPackages,
     #package_dir={'examples': 'examples'},  ## install examples along with the rest of the source
     package_data={},
-    entry_points={},
+    entry_points={'console_scripts': ['dashboard=pymodaq.dashboard:main',
+                                      'daq_scan=pymodaq.daq_scan:main',
+                                      'daq_logger=pymodaq.daq_logger:main',
+                                      'daq_viewer=pymodaq.daq_viewer.daq_viewer_main:main',
+                                      'daq_move=pymodaq.daq_move.daq_move_main:main',
+                                      'h5browser=pymodaq.h5browser:main'],
+                  },
     python_requires='>=3.6, <3.8',
     install_requires=[
         'numpy',

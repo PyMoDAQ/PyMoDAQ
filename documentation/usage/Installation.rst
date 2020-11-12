@@ -47,6 +47,7 @@ latest PyMoDAQ available version and all its dependencies. For a specific versio
 
   .. _shortcut_section:
 
+
 Creating shortcuts on **Windows**
 ---------------------------------
 
@@ -81,4 +82,31 @@ will probably prefer using shortcuts on the desktop. Here is how to do it (Thank
 
    Shortcut properties
 
+
+   .. _PluginManager:
+
+Plugin Manager
+--------------
+
+The complete list of available plugins is maintained on this GitHub `repository`__.
+
+While you can install them manually (for instance using ``pip install plugin_name``), from PyMoDAQ 2.2.2 a plugin
+manager is available. You can open it from the **Dashboard** in the help section or directly using the command
+line: ``python -m pymodaq_plugin_manager.manager`` or directly ``plugin_manager``
+
+This will open the Plugin Manager User Interface as shown on figure :numref:`fig_plug_manager` listing the available
+plugins packages that can be either *installed*, *updated* or *removed*. It includes a description of the content of
+each package and the instruments it interfaces. For instance, on figure :numref:`fig_plug_manager`, the selected *Andor*
+plugin package is selected and includes two plugins: a Viewer1D to interface Andor Shamrock spectrometers and a Viewer2D
+to interface Andor CCD camera.
+
+   .. _fig_plug_manager:
+
+.. figure:: /image/installation/plugin_manager.png
+   :alt: plugin_manager
+
+   Plugin Manager interface
+
+
+__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
 

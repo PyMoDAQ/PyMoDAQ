@@ -10,30 +10,24 @@ __ https://github.com/CEMES-CNRS/pymodaq_plugins
 Installation
 ------------
 
-The main and official list of plugins is located in the **pymodaq_plugins** repository on github. This constitutes a
-python package that will be installed together with PyMoDAQ (or manually install it if you don't want the up to date
-version). Other unofficial (contributed) plugins may also be installed if they follow PyMoDAQ's plugin specifications.
+The main and official list of plugins is located in the ``pymodaq_plugins``__ repository on github. This constitutes a
+list of (contributed) python package that can be installed using the :ref:`PluginManager`. Other unofficial  plugins may
+also be installed if they follow PyMoDAQ's plugin specifications but you are invited to let know other users of the plugins
+you develop in order to contribute to PyMoDAQ's development.
 
 PyMoDAQ is looking at startup for all installed packages that it can consider as its plugins. This includes by default
-the *pymodaq_plugins* package installed on the *site_packages* location in python distribution but also these contributed
-plugins.
+the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
 
-List of default plugins
------------------------
-
-.. csv-table:: Plugins list
-   :header-rows: 1
-   :file: PyMoDAQ_plugins.csv
-
-See up-to-date database: https://docs.google.com/spreadsheets/d/1wfMfvLwTitZd2R2m1O5i6wVEaX1lJBahP2HUbxVdidg
+__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
 
 Contributions:
 --------------
 
 Users are welcomed to contribute to PyMoDAQ by writing their own plugins. Two approaches are possible:
 
-* Fork the official plugin repository add add within (in developper mode) your own plugin scripts
-* Copy the `plugin template package`__ on you disk and work on the templates within
+* Fork one of the official plugin package repositories and add within your own plugin scripts
+* Copy the `plugin template package`__ on you disk and work on the templates within then ask to create an official
+  plugin package
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugins_template
 
@@ -45,11 +39,9 @@ For the plugin to be properly recognised by PyMoDAQ, its location and name must 
 
 * An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)
 * The plugin class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well)
-* the script will be located within pymodaq_plugins installed package tree in ``C:\WPy-3710\...\pymodaq_plugins\daq_move_plugins\``
 
-* A detector plugin of dimensionality N (N=0, 1 or 2) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
+* A detector plugin of dimensionality N (N=0, 1, 2 or N) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
 * The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
-* the script will be located within pymodaq_plugins installed package tree in ``C:\WPy-3710\...\pymodaq_plugins\daq_viewer_plugins\plugins_ND`` (replace N by 0, 1 or 2)
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugins_template
 
@@ -137,31 +129,6 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
 
 
 
-
-
-
-DAQ Move plugin template
-------------------------
-
-An actuator plugin is a python class inheriting from a base class. Let's say you want to create the *template* plugin.
-You will first create a ``daq_move_Template.py`` file in the ``\pymodaq_plugins\daq_move_plugins`` folder.
-The plugin class will be called ``DAQ_Move_Template``.
-
-See :download:`daq_move_Template.py <daq_move_Template.py>` for a detailed template.
-
-
-.. _viewer_plugins:
-
-DAQ Viewer plugin template
---------------------------
-
-A detector plugin is a python class inheriting from a base class. Let's say you want to create the *template* plugin.
-You will first create a ``daq_NDviewer_Template.py`` file in the ``\pymodaq_plugins\daq_viewer_plugins\plugins_ND\``
-folder (with N=0, 1 or 2 depending the data dimensionality of your detector).
-The plugin class will be called ``DAQ_NDViewer_Template``.
-
-See :download:`daq_NDviewer_Template.py <daq_NDviewer_Template.py>` for a detailed template.
-
 .. _data_emission:
 
 Emission of data
@@ -245,7 +212,10 @@ Data ready?
 One difficulty with these viewer plugins is to determine when data is ready to be read from the controller and then
 to be send to the user interface for plotting and saving. There are a few solutions:
 
-* **synchronous**: The simplest one. When the ``grab`` command has been send to the controller (let's say to its ``grab_sync`` method), the ``grab_sync`` method will hold and freeze the plugin until the data are ready. The Mock or Tektronix modules work like this.
+* **synchronous**: The simplest one. When the ``grab`` command has been send to the controller (let's say to its
+  ``grab_sync`` method), the ``grab_sync`` method will hold and freeze the plugin until the data are ready.
+   The Mock plugin work like this.
+
 * **asynchronous**: There are 2 ways of doing asynchronous *waiting*. The first is to poll the controller state to check if data are
   ready within a loop. This polling could be done with a while loop but if nothing more is done then the plugin will still be
   freezed, except if one process periodically the Qt queue event using ``QtWidgets.QApplication.processEvents()`` method. The
@@ -361,8 +331,8 @@ Hardware needed files
 ---------------------
 
 If you are using/referring to custom python wrappers/dlls... within your plugin and need a place where to copy them
-in PyMoDAQ, then use the ``\pymodaq_plugins\hardware`` folder. For instance, the ``daq_2Dviewer_AndorCCD`` plugin need various files stored
-in the ``andor`` folder (on github repository). I would therefore copy it as ``\pymodaq_plugins\hardware\andor``
+in PyMoDAQ, then use the ``\hardware`` folder of your plugin package. For instance, the ``daq_2Dviewer_AndorCCD`` plugin need various files stored
+in the ``andor`` folder (on github repository). I would therefore copy it as ``\pymodaq_plugins_andor\hardware\andor``
 and call whatever module I need within (meaning there is a __init__.py file in the *andor* folder) as:
 
 .. code-block:: python

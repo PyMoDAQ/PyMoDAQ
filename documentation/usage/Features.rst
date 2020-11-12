@@ -1,15 +1,7 @@
 PyMoDAQ's overview
 ==================
 
-.. raw:: html
-
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
-     autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-
-
-
-   .. _overview:
+.. _overview:
 
 .. figure:: /image/overview.png
    :alt: overview
@@ -40,9 +32,11 @@ Dashboard's extensions can be used to perform advanced and automated tasks on th
   * a distant binary hdf5 file or *same as hdf5* but on the cloud (see `HSDS from the HDF group`__ and the `h5pyd`__ package)
   * a local or distant SQL Database (such as PostgreSQL). The current advantage of this solution is to be able to access
     your data on the database from a web application such as `Grafana`__. Soon a tutorial on this!!
+* Joystick control of the dashboard actuators (and eventually detectors).
+
 * Soon to be:
 
-  * Joystick control of the dashboard actuators (and eventually detectors).
+  * PID closed loop interface
   * A possibility to program a batch of scans.
 
    .. _overview_submodules:
@@ -58,15 +52,15 @@ __ https://www.hdfgroup.org/solutions/highly-scalable-data-service-hsds/
 __ https://github.com/HDFGroup/h5pyd
 __ https://grafana.com/grafana/
 
+..
+    Here is a poster of PyMoDAQ features (to be updated).
 
-Here is a poster of PyMoDAQ features (to be updated).
 
+       .. _figure_Main_diagramm:
 
-   .. _figure_Main_diagramm:
+    .. figure:: ../image/pymodaq_diagram.png
+       :alt: PyMoDAQ
 
-.. figure:: ../image/pymodaq_diagram.png
-   :alt: PyMoDAQ
+       PyMoDAQ features: Control modules within a DashBoard and its extensions
 
-   PyMoDAQ features: Control modules within a DashBoard and its extensions
-
-:download:`Download as pdf <../image/pymodaq_diagram.png>`
+    :download:`Download as pdf <../image/pymodaq_diagram.png>`

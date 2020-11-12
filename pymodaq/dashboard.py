@@ -1210,7 +1210,7 @@ class DashBoard(QObject):
             pass
 
 
-if __name__ == '__main__':
+def main():
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
@@ -1221,4 +1221,7 @@ if __name__ == '__main__':
     #win.setVisible(False)
     prog = DashBoard(area)
     sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
 
