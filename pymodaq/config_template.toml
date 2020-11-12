@@ -14,6 +14,8 @@
 [general]
 debug_level = 'DEBUG' #either 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'
 debug_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+check_version = "True"  #automatically check version at startup
+
 
 [user]
 name = "User name"  # default name used as author in the hdf5 saving files

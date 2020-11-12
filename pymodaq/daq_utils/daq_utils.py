@@ -1431,4 +1431,4 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'get_names_simple')
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', '[__name__]')

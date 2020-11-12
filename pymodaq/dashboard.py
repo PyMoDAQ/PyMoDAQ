@@ -31,6 +31,9 @@ from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
 from pymodaq_plugin_manager.manager import PluginManager
+from pymodaq_plugin_manager.validate import get_pypi_pymodaq
+from packaging import version as version_mod
+
 config = utils.load_config()
 
 local_path = utils.get_set_local_dir()
@@ -93,6 +96,9 @@ class DashBoard(QObject):
         self.setupUI()
 
         logger.info('Dashboard Initialized')
+
+        if config['general']['check_version']:
+            self.check_version(show=False)
 
     def set_preset_path(self, path):
         self.preset_path = path
@@ -269,6 +275,11 @@ class DashBoard(QObject):
         action_help = help_menu.addAction('Help')
         action_help.triggered.connect(self.show_help)
         action_help.setShortcut(QtCore.Qt.Key_F1)
+
+        help_menu.addSeparator()
+        action_update = help_menu.addAction('Check Version')
+        action_update.triggered.connect(lambda: self.check_version(True))
+
         action_plugin_manager = help_menu.addAction('Plugin Manager')
         action_plugin_manager.triggered.connect(self.start_plugin_manager)
 
@@ -426,9 +437,18 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
 
-    def restart_fun(self):
-        self.quit_fun()
-        subprocess.call([sys.executable, __file__])
+    def restart_fun(self, ask=False):
+        ret = False
+        mssg = QtWidgets.QMessageBox()
+        if ask:
+            mssg.setText('You have to restart the application to take the modifications into account!')
+            mssg.setInformativeText("Do you want to restart?")
+            mssg.setStandardButtons(mssg.Ok | mssg.Cancel)
+            ret = mssg.exec()
+
+        if ret == mssg.Ok or not ask:
+            self.quit_fun()
+            subprocess.call([sys.executable, __file__])
 
     def load_layout_state(self, file=None):
         """
@@ -1139,6 +1159,33 @@ class DashBoard(QObject):
     def show_about(self):
         self.splash_sc.setVisible(True)
         self.splash_sc.showMessage("PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()), QtCore.Qt.AlignRight, QtCore.Qt.white)
+
+
+    def check_version(self, show=True):
+        try:
+            current_version = version_mod.parse(get_version())
+            available_version = [version_mod.parse(ver['version']) for ver in get_pypi_pymodaq()]
+            msgBox = QtWidgets.QMessageBox()
+            if max(available_version) > current_version:
+                msgBox.setText(f"A new version of PyMoDAQ is available, {str(max(available_version))}!")
+                msgBox.setInformativeText("Do you want to install it?")
+                msgBox.setStandardButtons(msgBox.Ok | msgBox.Cancel)
+                msgBox.setDefaultButton(msgBox.Ok)
+
+                ret = msgBox.exec()
+
+                if ret == msgBox.Ok:
+                    command = [sys.executable, '-m', 'pip', 'install', f'pymodaq=={str(max(available_version))}']
+                    subprocess.Popen(command)
+
+                self.restart_fun()
+            else:
+                if show:
+                    msgBox.setText(f"Your version of PyMoDAQ, {str(current_version)}, is up to date!")
+                    ret = msgBox.exec()
+        except Exception as e:
+            logger.exception("Error while checking the available PyMoDAQ version")
+            
 
     def show_file_attributes(self, type_info='dataset'):
         """
