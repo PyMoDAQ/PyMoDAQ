@@ -81,7 +81,7 @@ setup(
                   },
     python_requires='>=3.6, <3.8',
     install_requires=[
-        'numpy',
+        'numpy==1.19.3',
         'scipy',
         'pyqtgraph==0.10',
         'easydict',
