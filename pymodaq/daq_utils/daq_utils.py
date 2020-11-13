@@ -57,14 +57,31 @@ def get_set_local_dir(basename='pymodaq_local'):
 
 def load_config():
     config_path = get_set_local_dir().joinpath('config.toml')
+    config_base = toml.load(Path(__file__).parent.parent.joinpath('config_template.toml'))
     if not config_path.exists(): #copy the template from pymodaq folder and create one in pymodad's local folder
-        config = toml.load(Path(__file__).parent.parent.joinpath('config_template.toml'))
-        config_path.write_text(toml.dumps(config))
+        config_path.write_text(toml.dumps(config_base))
     else:
+        # check if all fields are there
         config = toml.load(config_path)
+        if check_config(config_base, config):
+            config_path.write_text(toml.dumps(config))
     return config
 
+
+def check_config(config_base, config_local):
+    status = False
+    for key in config_base:
+        if key in config_local:
+            if isinstance(config_base[key], dict):
+                status = status or check_config(config_base[key], config_local[key])
+        else:
+            config_local[key] = config_base[key]
+            status = True
+    return status
+
 config = load_config()
+
+
 
 class JsonConverter:
     def __init__(self):
