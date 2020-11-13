@@ -1,4 +1,5 @@
 releases
 sphinx-csv-filter
-numpy
+numpy==1.19.3
 pillow
+pyqt5
