@@ -10,7 +10,7 @@ __ https://github.com/CEMES-CNRS/pymodaq_plugins
 Installation
 ------------
 
-The main and official list of plugins is located in the ``pymodaq_plugins``__ repository on github. This constitutes a
+The main and official list of plugins is located in the `pymodaq_plugins`__ repository on github. This constitutes a
 list of (contributed) python package that can be installed using the :ref:`PluginManager`. Other unofficial  plugins may
 also be installed if they follow PyMoDAQ's plugin specifications but you are invited to let know other users of the plugins
 you develop in order to contribute to PyMoDAQ's development.
