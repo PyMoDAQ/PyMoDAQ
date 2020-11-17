@@ -55,16 +55,17 @@ def get_set_local_dir(basename='pymodaq_local'):
                 local_path.mkdir()
     return local_path
 
-def load_config():
-    config_path = get_set_local_dir().joinpath('config.toml')
+def load_config(config_path=None):
+    if not config_path:
+        config_path = get_set_local_dir().joinpath('config.toml')
     config_base = toml.load(Path(__file__).parent.parent.joinpath('config_template.toml'))
     if not config_path.exists(): #copy the template from pymodaq folder and create one in pymodad's local folder
         config_path.write_text(toml.dumps(config_base))
-    else:
-        # check if all fields are there
-        config = toml.load(config_path)
-        if check_config(config_base, config):
-            config_path.write_text(toml.dumps(config))
+
+    # check if all fields are there
+    config = toml.load(config_path)
+    if check_config(config_base, config):
+        config_path.write_text(toml.dumps(config))
     return config
 
 

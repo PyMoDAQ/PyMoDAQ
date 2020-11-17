@@ -2063,20 +2063,21 @@ class H5Browser(QObject):
         self.ui.h5file_tree.ui.Open_Tree.click()
 
     def check_version(self):
-        if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
-            msgBox = QtWidgets.QMessageBox(parent=None)
-            msgBox.setWindowTitle("Invalid version")
-            msgBox.setText(f"Your file has been saved using PyMoDAQ "
-                           f"version {self.h5utils.root().attrs['pymodaq_version']} "
-                           f"while you're using version: {get_version()}\n"
-                           f"Please create and use an adapted environment to use this version (up to 1.6.4):\n"
-                           f"pip install pymodaq==1.6.4")
-            ret = msgBox.exec()
-            self.quit_fun()
-            if self.main_window is not None:
-                self.main_window.close()
-            else:
-                self.parent.close()
+        if 'pymodaq_version' in self.h5utils.root().attrs:
+            if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
+                msgBox = QtWidgets.QMessageBox(parent=None)
+                msgBox.setWindowTitle("Invalid version")
+                msgBox.setText(f"Your file has been saved using PyMoDAQ "
+                               f"version {self.h5utils.root().attrs['pymodaq_version']} "
+                               f"while you're using version: {get_version()}\n"
+                               f"Please create and use an adapted environment to use this version (up to 1.6.4):\n"
+                               f"pip install pymodaq==1.6.4")
+                ret = msgBox.exec()
+                self.quit_fun()
+                if self.main_window is not None:
+                    self.main_window.close()
+                else:
+                    self.parent.close()
 
     def add_comments(self, status, comment=''):
         try:

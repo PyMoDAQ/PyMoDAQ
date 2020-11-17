@@ -4,8 +4,14 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
+from pyqtgraph.parametertree import Parameter, ParameterTree
+import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing
+import datetime
 from pymodaq.daq_utils import daq_utils as utils
+import toml
+
 config = utils.load_config()
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -172,6 +178,7 @@ def select_file(start_path=config['data_saving']['h5file']['save_path'], save=Tr
             fname = parent.joinpath(filename + "." + ext)  # forcing the right extension on the filename
     return fname  # fname is a Path object
 
+
 class DockArea(DockArea, QObject):
     """
     Custom Dockarea class subclassing from the standard DockArea class and QObject so it can emit a signal when docks
@@ -206,6 +213,7 @@ class DockArea(DockArea, QObject):
             area = self.home.addTempArea()
         #print "added temp area", area, area.window()
         return area
+
 
 def set_enable_recursive(children, enable=False):
     """Apply the enable state on all children widgets, do it recursively
@@ -465,22 +473,115 @@ class SpinBoxDelegate(QtWidgets.QItemEditorFactory):  # http://doc.qt.io/qt-5/qs
             return super().createEditor(userType, parent)
 
 
+class TreeFromToml(QObject):
+    def __init__(self, conf_path=None):
+        super().__init__()
+
+        self.config_path = utils.get_set_local_dir().joinpath('config.toml')
+        config = utils.load_config(self.config_path)
+
+        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(self.config_path),
+                  'readonly': True}]
+        params.extend(self.dict_to_param(config))
+
+        self.settings = Parameter.create(title='settings', name='settings', type='group', children=params)
+        self.settings_tree = ParameterTree()
+        self.settings_tree.setParameters(self.settings, showTop=False)
+
+    def show_dialog(self):
+
+        self.dialog = QtWidgets.QDialog()
+        self.dialog.setWindowTitle('Please enter new configuration values!')
+        self.dialog.setLayout(QtWidgets.QVBoxLayout())
+        buttonBox = QtWidgets.QDialogButtonBox(parent=self.dialog)
+
+        buttonBox.addButton('Save', buttonBox.AcceptRole)
+        buttonBox.accepted.connect(self.dialog.accept)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
+        buttonBox.rejected.connect(self.dialog.reject)
+
+        self.dialog.layout().addWidget(self.settings_tree)
+        self.dialog.layout().addWidget(buttonBox)
+        self.dialog.setWindowTitle('Configuration entries')
+        res = self.dialog.exec()
+
+        if res == self.dialog.Accepted:
+            with open(self.config_path, 'w') as f:
+                config = self.param_to_dict(self.settings)
+                config.pop('config_path')
+                toml.dump(config, f)
+
+
+
+    @classmethod
+    def param_to_dict(cls, param):
+        config = dict()
+        for child in param.children():
+            if 'group' in child.opts['type']:
+                config[child.name()] = cls.param_to_dict(child)
+            else:
+                if child.opts['type'] == 'datetime':
+                    config[child.name()] = datetime.fromtimestamp(child.value().toSecsSinceEpoch()) #convert QDateTime to python datetime
+                elif child.opts['type'] == 'date':
+                    qdt = QtCore.QDateTime()
+                    qdt.setDate(child.value())
+                    pdt = datetime.fromtimestamp(qdt.toSecsSinceEpoch())
+                    config[child.name()] = pdt.date()
+                elif child.opts['type'] == 'list':
+                    config[child.name()] = child.opts['limits']
+                else:
+                    config[child.name()] = child.value()
+        return config
+
+    @classmethod
+    def dict_to_param(cls, config):
+        params = []
+        for key in config:
+            if isinstance(config[key], dict):
+                params.append({'title': f'{key.capitalize()}:', 'name': key, 'type': 'group',
+                               'children': cls.dict_to_param(config[key]), 'expanded': 'user' in key.lower() or \
+                               'general' in key.lower()})
+            else:
+                param = {'title': f'{key.capitalize()}:', 'name': key, 'value': config[key]}
+                if isinstance(config[key], float):
+                    param['type'] = 'float'
+                elif isinstance(config[key], bool): #placed before int because a bool is an instance of int
+                    param['type'] = 'bool'
+                elif isinstance(config[key], int):
+                    param['type'] = 'int'
+                elif isinstance(config[key], datetime.datetime):
+                    param['type'] = 'datetime'
+                elif isinstance(config[key], datetime.date):
+                    param['type'] = 'date'
+                elif isinstance(config[key], str):
+                    param['type'] = 'str'
+                elif isinstance(config[key], list):
+                    param['type'] = 'list'
+                    param['values'] = config[key]
+                    param['value'] = config[key][0]
+                    param['show_pb'] = True
+                params.append(param)
+        return params
+
 
 
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication([])
-    QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-    w = QtWidgets.QMainWindow()
-    table = TableView(w)
-    styledItemDelegate = QtWidgets.QStyledItemDelegate()
-    styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
-    table.setItemDelegate(styledItemDelegate)
+    # QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+    # w = QtWidgets.QMainWindow()
+    # table = TableView(w)
+    # styledItemDelegate = QtWidgets.QStyledItemDelegate()
+    # styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
+    # table.setItemDelegate(styledItemDelegate)
+    #
+    # table.setModel(TableModel([[name, 0., 1., 0.1] for name in ['X_axis', 'Y_axis', 'theta_axis']],
+    #                           header=['Actuator', 'Start', 'Stop', 'Step'],
+    #                           editable=[False, True, True, True]))
+    # w.setCentralWidget(table)
+    # w.show()
+    #
 
-    table.setModel(TableModel([[name, 0., 1., 0.1] for name in ['X_axis', 'Y_axis', 'theta_axis']],
-                              header=['Actuator', 'Start', 'Stop', 'Step'],
-                              editable=[False, True, True, True]))
-    w.setCentralWidget(table)
-    w.show()
+    c = TreeFromToml()
+    c.show_dialog()
     sys.exit(app.exec_())
-

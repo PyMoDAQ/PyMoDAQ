@@ -1060,9 +1060,8 @@ class DashBoard(QObject):
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
     def show_config(self):
-        import webbrowser
-        webbrowser.open(str(utils.get_set_local_dir().joinpath('config.toml')))
-
+        config = gutils.TreeFromToml()
+        config.show_dialog()
 
     def setupUI(self):
 
