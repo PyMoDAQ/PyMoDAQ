@@ -1177,7 +1177,7 @@ class DashBoard(QObject):
                     command = [sys.executable, '-m', 'pip', 'install', f'pymodaq=={str(max(available_version))}']
                     subprocess.Popen(command)
 
-                self.restart_fun()
+                    self.restart_fun()
             else:
                 if show:
                     msgBox.setText(f"Your version of PyMoDAQ, {str(current_version)}, is up to date!")
