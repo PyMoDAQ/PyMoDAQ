@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
 import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.dockarea import Dock

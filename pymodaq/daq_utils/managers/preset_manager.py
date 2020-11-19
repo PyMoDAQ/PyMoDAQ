@@ -120,7 +120,7 @@ class PresetManager:
         param = [
                 {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'},
                 {'title': 'Use PID as actuator:', 'name': 'use_pid', 'type': 'bool', 'value': False},
-                {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
+                #{'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
                 {'title': 'PID Settings:', 'name': 'pid_settings', 'type': 'group', 'visible': False, 'children': pid_params},
                 ]
         params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
@@ -128,15 +128,15 @@ class PresetManager:
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group',
                                               children=param+self.extra_params+params_move+params_det)
-        self.preset_params.child('saving_options', 'save_type').hide()
-        self.preset_params.child('saving_options', 'save_2D').hide()
-        self.preset_params.child('saving_options', 'do_save').hide()
-        self.preset_params.child('saving_options', 'N_saved').hide()
-        self.preset_params.child('saving_options', 'custom_name').hide()
-        self.preset_params.child('saving_options', 'show_file').hide()
-        self.preset_params.child('saving_options', 'current_scan_name').hide()
-        self.preset_params.child('saving_options', 'current_scan_path').hide()
-        self.preset_params.child('saving_options', 'current_h5_file').hide()
+        # self.preset_params.child('saving_options', 'save_type').hide()
+        # self.preset_params.child('saving_options', 'save_2D').hide()
+        # self.preset_params.child('saving_options', 'do_save').hide()
+        # self.preset_params.child('saving_options', 'N_saved').hide()
+        # self.preset_params.child('saving_options', 'custom_name').hide()
+        # self.preset_params.child('saving_options', 'show_file').hide()
+        # self.preset_params.child('saving_options', 'current_scan_name').hide()
+        # self.preset_params.child('saving_options', 'current_scan_path').hide()
+        # self.preset_params.child('saving_options', 'current_h5_file').hide()
         try:
             for option in self.param_options:
                 if 'path' in option and 'options_dict' in option:
