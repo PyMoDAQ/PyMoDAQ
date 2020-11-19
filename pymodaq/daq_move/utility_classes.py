@@ -8,20 +8,22 @@ import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
-config = load_config()
-comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly' : True},
-                  {'name': 'epsilon', 'type': 'float', 'value': 0.01},
-                  {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
 
-                    {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children':[
+config = load_config()
+comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
+                    {'name': 'epsilon', 'type': 'float', 'value': 0.01},
+                    {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
+
+                    {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
                         {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
                         {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
-                        {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1},]},
-                    
-                    {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children':[
-                         {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False, 'default': False},
-                         {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
-                         {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+                        {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
+
+                    {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
+                        {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
+                         'default': False},
+                        {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
+                        {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
@@ -29,9 +31,11 @@ params = [
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
-             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
+             {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
+              'value': False},
              {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
-             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': config['network']['tcp-server']['ip']},
+             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
+              'value': config['network']['tcp-server']['ip']},
              {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config['network']['tcp-server']['port']},
          ]},
     ]},
@@ -80,7 +84,7 @@ class DAQ_Move_base(QObject):
     params = []
     _controller_units = ''
 
-    def __init__(self,parent=None,params_state=None):
+    def __init__(self, parent=None, params_state=None):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
@@ -89,7 +93,8 @@ class DAQ_Move_base(QObject):
         self.status = edict(info="", controller=None, stage=None, initialized=False)
         self.current_position = 0
         self.target_position = 0
-        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
+        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
+        # current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
@@ -112,7 +117,7 @@ class DAQ_Move_base(QObject):
         except:
             pass
 
-    def check_bound(self,position):
+    def check_bound(self, position):
         """
 
         Parameters
@@ -124,16 +129,16 @@ class DAQ_Move_base(QObject):
 
         """
         self.move_is_done = False
-        if self.settings.child('bounds','is_bounds').value():
-            if position>self.settings.child('bounds','max_bound').value():
-                position=self.settings.child('bounds','max_bound').value()
-                self.emit_status(ThreadCommand('outofbounds',[]))
-            elif position<self.settings.child('bounds','min_bound').value():
-                position=self.settings.child('bounds','min_bound').value()
-                self.emit_status(ThreadCommand('outofbounds',[]))
+        if self.settings.child('bounds', 'is_bounds').value():
+            if position > self.settings.child('bounds', 'max_bound').value():
+                position = self.settings.child('bounds', 'max_bound').value()
+                self.emit_status(ThreadCommand('outofbounds', []))
+            elif position < self.settings.child('bounds', 'min_bound').value():
+                position = self.settings.child('bounds', 'min_bound').value()
+                self.emit_status(ThreadCommand('outofbounds', []))
         return position
 
-    def emit_status(self,status):
+    def emit_status(self, status):
         """
             | Emit the statut signal from the given status parameter.
             |
@@ -155,10 +160,10 @@ class DAQ_Move_base(QObject):
             print(status)
 
     def commit_settings(self, param):
-      """
-        to subclass to transfer parameters to hardware
-      """
-      pass
+        """
+          to subclass to transfer parameters to hardware
+        """
+        pass
 
     def commit_common_settings(self, param):
         pass
@@ -177,11 +182,12 @@ class DAQ_Move_base(QObject):
             float
                 the computed position.
         """
-        if self.settings.child('scaling','use_scaling').value():
-            pos=(pos-self.settings.child('scaling','offset').value())*self.settings.child('scaling','scaling').value()
+        if self.settings.child('scaling', 'use_scaling').value():
+            pos = (pos - self.settings.child('scaling', 'offset').value()) * self.settings.child('scaling',
+                                                                                                 'scaling').value()
         return pos
 
-    def move_done(self, position=None):#the position argument is just there to match some signature of child classes
+    def move_done(self, position=None):  # the position argument is just there to match some signature of child classes
         """
             | Emit a move done signal transmitting the float position to hardware.
             | The position argument is just there to match some signature of child classes.
@@ -192,7 +198,7 @@ class DAQ_Move_base(QObject):
             =============== ========== =============================================================================
 
         """
-        position=self.check_position()
+        position = self.check_position()
         self.Move_Done_signal.emit(position)
         self.move_is_done = True
 
@@ -224,8 +230,7 @@ class DAQ_Move_base(QObject):
 
         self.move_done()
 
-
-    def send_param_status(self,param,changes):
+    def send_param_status(self, param, changes):
         """
             | Send changes value updates to the gui to update consequently the User Interface.
             | The message passing is made via the Thread Command "update_settings".
@@ -247,8 +252,9 @@ class DAQ_Move_base(QObject):
                 self.emit_status(ThreadCommand('update_settings',
                                                [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
                                                 change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
-            elif change == 'value' or change == 'limits' or change=='options':
-                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
+            elif change == 'value' or change == 'limits' or change == 'options':
+                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
+                                                                   change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
 
@@ -267,7 +273,8 @@ class DAQ_Move_base(QObject):
                 the computed position.
         """
         if self.settings.child('scaling', 'use_scaling').value():
-            pos=pos/self.settings.child('scaling', 'scaling').value()+self.settings.child('scaling', 'offset').value()
+            pos = pos / self.settings.child('scaling', 'scaling').value() + self.settings.child('scaling',
+                                                                                                'offset').value()
         return pos
 
     def set_position_relative_with_scaling(self, pos):
@@ -275,11 +282,11 @@ class DAQ_Move_base(QObject):
             Set the scaled positions in case of relative moves
         """
         if self.settings.child('scaling', 'use_scaling').value():
-            pos = pos/self.settings.child('scaling', 'scaling').value()
+            pos = pos / self.settings.child('scaling', 'scaling').value()
         return pos
 
     @pyqtSlot(edict)
-    def update_settings(self,settings_parameter_dict):#settings_parameter_dict=edict(path=path,param=param)
+    def update_settings(self, settings_parameter_dict):  # settings_parameter_dict=edict(path=path,param=param)
         """
             Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.
 
@@ -318,6 +325,7 @@ class DAQ_Move_base(QObject):
         self.commit_common_settings(param)
         self.commit_settings(param)
 
+
 class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     """
         ================= ==============================
@@ -340,8 +348,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     socket_types = ["ACTUATOR"]
     params = comon_parameters + tcp_parameters
 
-
-    def __init__(self,parent=None,params_state=None):
+    def __init__(self, parent=None, params_state=None):
         """
 
         Parameters
@@ -354,7 +361,6 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         self.settings.child(('bounds')).hide()
         self.settings.child(('scaling')).hide()
         self.settings.child(('epsilon')).setValue(1)
-
 
         TCPServer.__init__(self, self.client_type)
 
@@ -377,16 +383,17 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             else:
                 self.send_command(sock, command)
 
-    def commit_settings(self,param):
+    def commit_settings(self, param):
 
         if param.name() in custom_tree.iter_children(self.settings.child(('settings_client')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
-            path = custom_tree.get_param_path(param)[2:]#get the path of this param as a list starting at parent 'infos'
+            path = custom_tree.get_param_path(param)[
+                   2:]  # get the path of this param as a list starting at parent 'infos'
 
             actuator_socket.send_list(path)
 
-            #send value
+            # send value
             data = custom_tree.parameter_to_xml_string(param)
             actuator_socket.send_string(data)
 
@@ -441,7 +448,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             sock.send_string('move_abs')
             sock.send_scalar(position)
 
-            #self.poll_moving()
+            # self.poll_moving()
 
     def move_Rel(self, position):
         position = self.check_bound(self.current_position + position) - self.current_position
@@ -491,7 +498,6 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
             self.send_command(sock, 'stop_motion')
 
-
     def stop(self):
         """
             not implemented.
@@ -500,7 +506,5 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         return ""
 
 
-
-
-if __name__=='__main__':
-    test=DAQ_Move_base()
+if __name__ == '__main__':
+    test = DAQ_Move_base()

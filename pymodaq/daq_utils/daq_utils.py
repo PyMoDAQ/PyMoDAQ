@@ -1137,7 +1137,7 @@ def linspace_step(start, stop, step):
     return np.linspace(start, new_stop, Nsteps)
 
 
-def find_dict_in_list_from_key_val(dicts, key, value):
+def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
     """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
 
     Parameters
@@ -1151,11 +1151,17 @@ def find_dict_in_list_from_key_val(dicts, key, value):
     dict: if found otherwose returns None
     """
 
-    for dict in dicts:
-        if key in dict:
-            if dict[key] == value:
-                return dict
-    return None
+    for ind, d in enumerate(dicts):
+        if key in d:
+            if d[key] == value:
+                if return_index:
+                    return d, ind
+                else:
+                    return d
+    if return_index:
+        return None, -1
+    else:
+        return None
 
 def find_index(x, threshold):
     """

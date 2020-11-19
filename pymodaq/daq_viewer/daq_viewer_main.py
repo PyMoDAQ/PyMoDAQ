@@ -6,7 +6,7 @@ Created on Wed Jan 10 16:54:14 2018
 """
 
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 import sys
 
 import pymodaq.daq_utils.scanner
@@ -25,11 +25,6 @@ from pymodaq.daq_utils.plotting.lcd import LCD
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
 from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins
-
-DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
-DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
-DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
-DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 from collections import OrderedDict
 import numpy as np
@@ -50,9 +45,14 @@ from pymodaq.daq_utils.h5modules import H5Saver
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import DockArea
 
-
 logger = utils.set_logger(utils.get_module_name(__file__))
 local_path = utils.get_set_local_dir()
+
+DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
+DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
+DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
+DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
+
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -100,15 +100,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     """
     command_detector = pyqtSignal(ThreadCommand)
     init_signal = pyqtSignal(bool)
-    custom_sig = pyqtSignal(ThreadCommand) #particular case where DAQ_Viewer  is used for a custom module
+    custom_sig = pyqtSignal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
     command_tcpip = pyqtSignal(ThreadCommand)
-    grab_done_signal = pyqtSignal(OrderedDict) #OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+    grab_done_signal = pyqtSignal(
+        OrderedDict)  # OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
     quit_signal = pyqtSignal()
     update_settings_signal = pyqtSignal(edict)
     overshoot_signal = pyqtSignal(bool)
     status_signal = pyqtSignal(str)
-
-
 
     params = daq_viewer_params
 
@@ -132,14 +131,15 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.scanner = None
         self.received_data = 0
         self.lcd = None
-        self.parent_scan = parent_scan #to use if one need the DAQ_Scan object
+        self.parent_scan = parent_scan  # to use if one need the DAQ_Scan object
 
         self.ini_time = 0
         self.wait_time = 1000
 
         self.dockarea = parent
-        self.bkg = None  #buffer to store background
-        self.filters = tables.Filters(complevel=5)        #options to save data to h5 file using compression zlib library and level 5 compression
+        self.bkg = None  # buffer to store background
+        self.filters = tables.Filters(
+            complevel=5)  # options to save data to h5 file using compression zlib library and level 5 compression
 
         self.send_to_tcpip = False
         self.tcpclient_thread = None
@@ -164,9 +164,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.is_continuous_initialized = False
         self.file_continuous_save = None
 
-        ############IMPORTANT############################
-        self.controller = None #the hardware controller/set after initialization and to be used by other modules if needed
-        #################################################
+        # ###########IMPORTANT############################
+        self.controller = None
+        # the hardware controller/set after initialization and to be used by other modules if needed
+        # ################################################
 
         self.setupUI(parent, dock_settings, dock_viewer)
 
@@ -176,7 +177,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.set_enabled_Ini_buttons(enable=True)
         self.ui.data_ready_led.set_as_false()
 
-        self.set_setting_tree() #to activate parameters of default Mock detector
+        self.set_setting_tree()  # to activate parameters of default Mock detector
 
         # set managers options
         if preset is not None:
@@ -192,7 +193,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         self.show_settings()
 
-
     def setupUI(self, parent, dock_settings, dock_viewer):
         self.ui = Ui_Form()
         widgetsettings = QtWidgets.QWidget()
@@ -206,63 +206,64 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.navigator_pb.setVisible(False)
         self.ui.navigator_pb.clicked.connect(self.send_to_nav)
 
-        self.ui.statusbar=QtWidgets.QStatusBar(parent)
+        self.ui.statusbar = QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(25)
         self.ui.settings_layout.addWidget(self.ui.statusbar)
         self.ui.status_message = QtWidgets.QLabel()
         self.ui.status_message.setMaximumHeight(25)
         self.ui.statusbar.addWidget(self.ui.status_message)
 
-
-        #create main parameter tree
+        # create main parameter tree
         self.ui.settings_tree = ParameterTree()
         self.ui.settings_layout.addWidget(self.ui.settings_tree, 10)
         self.ui.settings_tree.setMinimumWidth(300)
-        self.settings = Parameter.create(title=self.title + ' settings', name='Settings', type='group', children=self.params)
+        self.settings = Parameter.create(title=self.title + ' settings', name='Settings', type='group',
+                                         children=self.params)
         self.settings.child('main_settings', 'DAQ_type').setValue(self.DAQ_type)
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
         self.ui.settings_layout.addWidget(self.h5saver_continuous.settings_tree)
         self.h5saver_continuous.settings_tree.setVisible(False)
 
-        #connecting from tree
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)#any changes on the settings will update accordingly the detector
-        self.h5saver_continuous.settings.sigTreeStateChanged.connect(self.parameter_tree_changed) #trigger action from "do_save'  boolean
-
+        # connecting from tree
+        self.settings.sigTreeStateChanged.connect(
+            self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
+        self.h5saver_continuous.settings.sigTreeStateChanged.connect(
+            self.parameter_tree_changed)  # trigger action from "do_save'  boolean
 
         if dock_settings is not None:
-            self.ui.settings_dock =dock_settings
-            self.ui.settings_dock.setTitle(self.title+"_Settings")
+            self.ui.settings_dock = dock_settings
+            self.ui.settings_dock.setTitle(self.title + "_Settings")
         else:
-            self.ui.settings_dock = Dock(self.title+"_Settings", size=(10, 10))
+            self.ui.settings_dock = Dock(self.title + "_Settings", size=(10, 10))
             self.dockarea.addDock(self.ui.settings_dock)
 
         self.ui.viewer_docks = []
         if dock_viewer is not None:
             self.ui.viewer_docks.append(dock_viewer)
-            self.ui.viewer_docks[-1].setTitle(self.title+"_Viewer 1")
+            self.ui.viewer_docks[-1].setTitle(self.title + "_Viewer 1")
         else:
-            self.ui.viewer_docks.append(Dock(self.title+"_Viewer", size=(500,300), closable=False))
-            self.dockarea.addDock(self.ui.viewer_docks[-1],'right',self.ui.settings_dock)
+            self.ui.viewer_docks.append(Dock(self.title + "_Viewer", size=(500, 300), closable=False))
+            self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
 
         for dock in self.ui.viewer_docks:
             dock.setEnabled(False)
 
-        #install specific viewers
+        # install specific viewers
         self.viewer_widgets = []
         self.change_viewer()
 
         self.ui.settings_dock.addWidget(widgetsettings)
 
-        ##Setting detector types
+        # #Setting detector types
         self.ui.Detector_type_combo.clear()
         self.ui.Detector_type_combo.addItems(self.detector_types)
 
-        ##Connecting buttons:
-        self.ui.update_com_pb.clicked.connect(self.update_com) #update communications with hardware
-        self.ui.Quit_pb.clicked.connect(self.quit_fun, type = Qt.QueuedConnection)
+        # #Connecting buttons:
+        self.ui.update_com_pb.clicked.connect(self.update_com)  # update communications with hardware
+        self.ui.Quit_pb.clicked.connect(self.quit_fun, type=Qt.QueuedConnection)
         self.ui.settings_pb.clicked.connect(self.show_settings)
         self.ui.IniDet_pb.clicked.connect(self.ini_det_fun)
-        self.update_status("Ready",wait_time=self.wait_time)
+        self.update_status("Ready", wait_time=self.wait_time)
         self.ui.grab_pb.clicked.connect(lambda: self.grab_data(grab_state=True))
         self.ui.single_pb.clicked.connect(lambda: self.grab_data(grab_state=False))
         self.ui.stop_pb.clicked.connect(self.stop_all)
@@ -278,7 +279,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.DAQ_type_combo.setCurrentText(self.DAQ_type)
         self.ui.log_pb.clicked.connect(self.show_log)
 
-
     def change_viewer(self):
         """
             Change the viewer type from DAQ_Type value between :
@@ -291,8 +291,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             *DAQ_type*      string     Define the target dimension of the viewer
             ============== ========== ===========================================
         """
-        DAQ_type = self.settings.child('main_settings','DAQ_type').value()
-        Nviewers = self.settings.child('main_settings','Nviewers').value()
+        DAQ_type = self.settings.child('main_settings', 'DAQ_type').value()
+        Nviewers = self.settings.child('main_settings', 'Nviewers').value()
 
         if self.ui.IniDet_pb.isChecked():
             self.ui.IniDet_pb.click()
@@ -332,7 +332,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.ui.viewers[-1].ui.auto_levels_pb.click()
 
             self.detector_types = [plugin['name'] for plugin in DAQ_2DViewer_Det_types]
-            self.settings.child('main_settings','axes').show()
+            self.settings.child('main_settings', 'axes').show()
             self.ui.viewers[0].ROI_select_signal.connect(self.update_ROI)
             self.ui.viewers[0].ui.ROIselect_pb.clicked.connect(self.show_ROI)
 
@@ -344,20 +344,21 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
 
-
         for ind, viewer in enumerate(self.viewer_widgets):
             if ind == 0:
                 self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
             else:
-                self.ui.viewer_docks.append(Dock(self.title+"_Viewer {:d}".format(ind), size=(500, 300), closable=False))
+                self.ui.viewer_docks.append(
+                    Dock(self.title + "_Viewer {:d}".format(ind), size=(500, 300), closable=False))
                 self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.viewer_docks[-2])
             self.ui.viewer_docks[-1].addWidget(viewer)
             self.ui.viewers[ind].data_to_export_signal.connect(self.get_data_from_viewer)
 
-        ##Setting detector types
+        # #Setting detector types
         try:
             self.ui.Detector_type_combo.currentIndexChanged.disconnect(self.set_setting_tree)
-        except: pass
+        except Exception as e:
+            self.logger.exception(str(e))
         self.ui.Detector_type_combo.clear()
         self.ui.Detector_type_combo.addItems(self.detector_types)
         self.ui.Detector_type_combo.currentIndexChanged.connect(self.set_setting_tree)
@@ -374,13 +375,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         """
         try:
-            #init the enlargeable arrays
+            # init the enlargeable arrays
             if not self.is_continuous_initialized:
                 self.channel_arrays = OrderedDict([])
                 self.ini_time = time.perf_counter()
                 self.time_array = self.h5saver_continuous.add_navigation_axis(np.array([0.0, ]),
-                              self.scan_continuous_group, 'x_axis', enlargeable=True,
-                              title='Time axis', metadata=dict(nav_index=0, label='Time axis', units='second'))
+                                                                              self.scan_continuous_group, 'x_axis',
+                                                                              enlargeable=True,
+                                                                              title='Time axis',
+                                                                              metadata=dict(nav_index=0,
+                                                                                            label='Time axis',
+                                                                                            units='second'))
 
                 data_dims = ['data0D', 'data1D']
                 if self.h5saver_continuous.settings.child(('save_2D')).value():
@@ -392,15 +397,19 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                             self.channel_arrays[data_dim] = OrderedDict([])
 
                             data_group = self.h5saver_continuous.add_data_group(self.continuous_group, data_dim)
-                            for ind_channel, channel in enumerate(datas[data_dim]): #list of OrderedDict
+                            for ind_channel, channel in enumerate(datas[data_dim]):  # list of OrderedDict
 
                                 channel_group = self.h5saver_continuous.add_CH_group(data_group, title=channel)
                                 self.channel_arrays[data_dim]['parent'] = channel_group
                                 self.channel_arrays[data_dim][channel] = self.h5saver_continuous.add_data(channel_group,
-                                        datas[data_dim][channel], scan_type='scan1D', enlargeable=True)
+                                                                                                          datas[
+                                                                                                              data_dim][
+                                                                                                              channel],
+                                                                                                          scan_type='scan1D',
+                                                                                                          enlargeable=True)
                 self.is_continuous_initialized = True
 
-            dt = np.array([time.perf_counter()-self.ini_time])
+            dt = np.array([time.perf_counter() - self.ini_time])
             self.time_array.append(dt)
 
             data_dims = ['data0D', 'data1D']
@@ -410,13 +419,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             for data_dim in data_dims:
                 if data_dim in datas.keys() and len(datas[data_dim]) != 0:
                     for ind_channel, channel in enumerate(datas[data_dim]):
-                        if isinstance(datas[data_dim][channel]['data'], float) or isinstance(datas[data_dim][channel]['data'], int):
+                        if isinstance(datas[data_dim][channel]['data'], float) or isinstance(
+                                datas[data_dim][channel]['data'], int):
                             datas[data_dim][channel]['data'] = np.array([datas[data_dim][channel]['data']])
                         self.channel_arrays[data_dim][channel].append(datas[data_dim][channel]['data'])
 
             self.h5saver_continuous.h5_file.flush()
             self.h5saver_continuous.settings.child(('N_saved')).setValue(
-                self.h5saver_continuous.settings.child(('N_saved')).value()+1)
+                self.h5saver_continuous.settings.child(('N_saved')).value() + 1)
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -432,10 +442,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             =============== ===================== ===================
         """
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
-        if self.data_to_save_export is not None: #means that somehow datas are not initialized so no further procsessing
+        if self.data_to_save_export is not None:  # means that somehow datas are not initialized so no further procsessing
             self.received_data += 1
             for key in datas:
-                if not(key == 'name' or key == 'acq_time_s'):
+                if not (key == 'name' or key == 'acq_time_s'):
                     if datas[key] is not None:
                         if self.data_to_save_export[key] is None:
                             self.data_to_save_export[key] = OrderedDict([])
@@ -446,7 +456,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                                 # if name not in self.data_to_save_export[key]:
                                 #
                                 # self.data_to_save_export[key][name].update(datas[key][k])
-
 
                 if self.received_data == len(self.ui.viewers):
                     if self.do_continuous_save:
@@ -510,10 +519,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         else:
             if not (self.ui.grab_pb.isChecked()):
 
-                # if self.do_continuous_save:
-                #    try:
-                #        self.file_continuous_save.close()
-                #    except: pass
                 self.update_status(f'{self.title}: Stop Grab')
                 self.command_detector.emit(ThreadCommand("stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
@@ -556,7 +561,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 for dock in self.ui.viewer_docks:
                     dock.setEnabled(False)
 
-
             else:
                 self.detector_name = self.ui.Detector_type_combo.currentText()
 
@@ -579,7 +583,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 for dock in self.ui.viewer_docks:
                     dock.setEnabled(True)
 
-
         except Exception as e:
             self.logger.exception(str(e))
             self.set_enabled_grab_buttons(enable=False)
@@ -600,7 +603,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.tcpclient_thread.start()
             tcpclient.init_connection()
 
-
     def load_data(self):
 
         """
@@ -614,8 +616,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
-
-    def load_settings(self,path=None):
+    def load_settings(self, path=None):
         """
             to be checked to see if still working
             | Load settings contained in the pathname file (or select_file destination if path not defined).
@@ -631,34 +632,31 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             ini_det_fun, update_status
         """
         try:
-            if self.ui.Ini_state_LED.state: #means  initialzed
+            if self.ui.Ini_state_LED.state:  # means  initialzed
                 self.ui.IniDet_pb.setChecked(False)
                 QtWidgets.QApplication.processEvents()
                 self.ini_det_fun()
 
             if path is None or path is False:
-                path = gutils.select_file(start_path=Path.home(), save=False,ext='par')
+                path = gutils.select_file(start_path=Path.home(), save=False, ext='par')
             with open(str(path), 'rb') as f:
                 settings = pickle.load(f)
-                settings_main=settings['settings_main']
-                DAQ_type=settings_main['children']['main_settings']['children']['DAQ_type']['value']
-                if DAQ_type!=self.settings.child('main_settings','DAQ_type'):
-                    self.settings.child('main_settings','DAQ_type').setValue(DAQ_type)
+                settings_main = settings['settings_main']
+                DAQ_type = settings_main['children']['main_settings']['children']['DAQ_type']['value']
+                if DAQ_type != self.settings.child('main_settings', 'DAQ_type'):
+                    self.settings.child('main_settings', 'DAQ_type').setValue(DAQ_type)
                     QtWidgets.QApplication.processEvents()
 
                 self.settings.restoreState(settings_main)
 
-
-                settings_viewer=settings['settings_viewer']
+                settings_viewer = settings['settings_viewer']
                 if self.DAQ_type != 'DAQ0D':
                     self.ui.viewers[0].roi_manager.settings.restoreState(settings_viewer)
-
 
         except Exception as e:
             self.logger.exception(str(e))
 
-
-    def parameter_tree_changed(self,param,changes):
+    def parameter_tree_changed(self, param, changes):
         """
             Foreach value changed, update :
                 * Viewer in case of **DAQ_type** parameter name
@@ -681,10 +679,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         for param, change, data in changes:
             path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
             if change == 'childAdded':
                 if 'main_settings' not in path:
                     self.update_settings_signal.emit(edict(path=path, param=data[0].saveState(), change=change))
@@ -706,7 +700,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
                 elif param.name() == 'live_averaging':
                     self.settings.child('main_settings', 'show_averaging').setValue(False)
-                    if param.value() == True:
+                    if param.value():
                         self.settings.child('main_settings', 'N_live_averaging').show()
                         self.ind_continuous_grab = 0
                         self.settings.child('main_settings', 'N_live_averaging').setValue(0)
@@ -731,8 +725,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     if self.DAQ_type == "DAQ2D":
                         try:
                             self.ui.viewers[0].ROI_select_signal.disconnect(self.update_ROI)
-                        except:
-                            pass
+                        except Exception as e:
+                            self.logger.exception(str(e))
                         if self.settings.child('detector_settings', 'ROIselect', 'use_ROI').value():
                             if not self.ui.viewers[0].ui.ROIselect_pb.isChecked():
                                 self.ui.viewers[0].ui.ROIselect_pb.clicked()
@@ -779,7 +773,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
 
     @pyqtSlot(ThreadCommand)
-    def process_tcpip_cmds(self,status):
+    def process_tcpip_cmds(self, status):
         if 'Send Data' in status.command:
             self.snapshot('', send_to_tcpip=True)
         elif status.command == 'connected':
@@ -799,17 +793,15 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             param.restoreState(param_tmp.saveState())
 
         elif status.command == 'get_axis':
-            self.command_detector.emit(ThreadCommand('get_axis')) #tells the plugin to emit its axes so that the server will receive them
+            self.command_detector.emit(
+                ThreadCommand('get_axis'))  # tells the plugin to emit its axes so that the server will receive them
 
-
-
-    def process_overshoot(self,datas):
-        if self.settings.child('main_settings','overshoot','stop_overshoot').value():
+    def process_overshoot(self, datas):
+        if self.settings.child('main_settings', 'overshoot', 'stop_overshoot').value():
             for channels in datas:
                 for channel in channels['data']:
-                    if any(channel>=self.settings.child('main_settings','overshoot','overshoot_value').value()):
+                    if any(channel >= self.settings.child('main_settings', 'overshoot', 'overshoot_value').value()):
                         self.overshoot_signal.emit(True)
-
 
     def quit_fun(self):
         """
@@ -819,32 +811,34 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         """
         # insert anything that needs to be closed before leaving
         try:
-            if self.initialized_state==True: #means  initialzed
+            if self.initialized_state:  # means  initialzed
                 self.ui.IniDet_pb.click()
                 QtWidgets.QApplication.processEvents()
             self.quit_signal.emit()
             try:
-                self.ui.settings_dock.close() #close the settings widget
-            except: pass
+                self.ui.settings_dock.close()  # close the settings widget
+            except Exception as e:
+                self.logger.exception(str(e))
             if self.lcd is not None:
                 try:
                     self.lcd.parent.close()
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.exception(str(e))
             try:
                 for dock in self.ui.viewer_docks:
-                    dock.close() #the dock viewers
-            except: pass
+                    dock.close()  # the dock viewers
+            except Exception as e:
+                self.logger.exception(str(e))
             try:
                 self.nav_dock.close()
-            except:
-                pass
-
+            except Exception as e:
+                self.logger.exception(str(e))
 
             if __name__ == '__main__':
                 try:
                     self.dockarea.parent().close()
-                except: pass
+                except Exception as e:
+                    self.logger.exception(str(e))
         except Exception as e:
             icon = QtGui.QIcon()
             icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -867,7 +861,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             --------
             update_status
         """
-        self.update_status("Timeout occured",wait_time=self.wait_time,log_type="log")
+        self.update_status("Timeout occured", wait_time=self.wait_time, log_type="log")
 
     def save_current(self):
         """
@@ -878,9 +872,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             gutils.select_file, save_export_data
         """
         self.do_save_data = True
-        self.save_file_pathname = gutils.select_file(start_path=self.save_file_pathname, save=True, ext='h5') #see daq_utils
+        self.save_file_pathname = gutils.select_file(start_path=self.save_file_pathname, save=True,
+                                                     ext='h5')  # see daq_utils
         self.save_export_data(self.data_to_save_export)
-
 
     def save_datas(self, path=None, datas=None):
         """
@@ -925,12 +919,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 h5_file.flush()
                 h5_file.close()
 
-
             except Exception as e:
                 self.logger.exception(str(e))
         try:
             self.channel_arrays = OrderedDict([])
-            data_dims = ['data1D'] #we don't recrod 0D data in this mode (only in continuous)
+            data_dims = ['data1D']  # we don't recrod 0D data in this mode (only in continuous)
             if h5saver.settings.child(('save_2D')).value():
                 data_dims.extend(['data2D', 'dataND'])
             for data_dim in data_dims:
@@ -944,10 +937,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
                                 channel_group = h5saver.add_CH_group(data_group, title=channel)
 
-
-
                                 self.channel_arrays[data_dim]['parent'] = channel_group
-                                self.channel_arrays[data_dim][channel] = h5saver.add_data(channel_group, datas[data_dim][channel], scan_type='', enlargeable=False)
+                                self.channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
+                                                                                          datas[data_dim][channel],
+                                                                                          scan_type='',
+                                                                                          enlargeable=False)
 
                                 if data_dim == 'data2D' and 'Data2D' in self.viewer_types:
                                     ind_viewer = self.viewer_types.index('Data2D')
@@ -965,7 +959,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.logger.exception(str(e))
 
         h5saver.close_file()
-
 
     @pyqtSlot(OrderedDict)
     def save_export_data(self, datas):
@@ -995,11 +988,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             gutils.select_file, snapshot
         """
         self.do_save_data = True
-        self.save_file_pathname=gutils.select_file(start_path=self.save_file_pathname,save=True, ext='h5') #see daq_utils
-        self.snapshot(pathname=self.save_file_pathname,dosave=True)
+        self.save_file_pathname = gutils.select_file(start_path=self.save_file_pathname, save=True,
+                                                     ext='h5')  # see daq_utils
+        self.snapshot(pathname=self.save_file_pathname, dosave=True)
 
-
-    def save_settings(self,path=None):
+    def save_settings(self, path=None):
         """
             | Save the current viewer settings.
             | In case of Region Of Interest setting, save the current viewer state.
@@ -1033,7 +1026,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
-
     def send_to_nav(self):
         datas = dict()
         keys = list(self.data_to_save_export['data2D'].keys())
@@ -1051,7 +1043,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         datas['pixmap2D'] = buffer.data().data()
 
         self.navigator.show_image(datas)
-
 
     def set_continuous_save(self):
         """
@@ -1071,18 +1062,18 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.h5saver_continuous.init_file(update_h5=True)
 
             settings_str = custom_tree.parameter_to_xml_string(self.settings)
-            settings_str = b'<All_settings>'+settings_str
+            settings_str = b'<All_settings>' + settings_str
             if hasattr(self.ui.viewers[0], 'roi_manager'):
                 settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
             settings_str += custom_tree.parameter_to_xml_string(self.h5saver_continuous.settings) + \
-                              b'</All_settings>'
+                            b'</All_settings>'
             self.scan_continuous_group = self.h5saver_continuous.add_scan_group("Continuous Saving")
-            self.continuous_group = self.h5saver_continuous.add_det_group(self.scan_continuous_group, "Continuous saving", settings_str)
+            self.continuous_group = self.h5saver_continuous.add_det_group(self.scan_continuous_group,
+                                                                          "Continuous saving", settings_str)
             self.h5saver_continuous.h5_file.flush()
         else:
-            self.do_continuous_save=False
+            self.do_continuous_save = False
             self.h5saver_continuous.settings.child(('N_saved')).hide()
-
 
             try:
                 self.h5saver_continuous.close()
@@ -1104,7 +1095,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.ui.viewers[ind_viewer].y_axis = data['y_axis']
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                 self.command_tcpip.emit(ThreadCommand('y_axis', [data['y_axis']]))
-
 
     def set_datas_to_viewers(self, datas, temp=False):
         for ind, data in enumerate(datas):
@@ -1179,12 +1169,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.single_pb.setEnabled(enable)
         self.ui.save_current_pb.setEnabled(enable)
         self.ui.save_new_pb.setEnabled(enable)
-        #self.ui.settings_pb.setEnabled(enable)
+        # self.ui.settings_pb.setEnabled(enable)
 
-
-
-
-    def set_enabled_Ini_buttons(self,enable=False):
+    def set_enabled_Ini_buttons(self, enable=False):
         """
             Set enable :
                 * **Detector** button
@@ -1202,7 +1189,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.IniDet_pb.setEnabled(enable)
         self.ui.Quit_pb.setEnabled(enable)
 
-
     def set_setting_tree(self):
         """
             Set the local setting tree instance cleaning the current one and populate it with
@@ -1219,21 +1205,26 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.settings.child('main_settings', 'detector_type').setValue(self.detector_name)
         try:
             if len(self.settings.child(('detector_settings')).children()) > 0:
-                for child in self.settings.child(('detector_settings')).children()[1:]:#leave just the ROIselect group
+                for child in self.settings.child(('detector_settings')).children()[
+                             1:]:  # leave just the ROIselect group
                     child.remove()
             plug_name = self.detector_name
             if self.DAQ_type == 'DAQ0D':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', plug_name)
-                obj = getattr(getattr(parent_module['module'], 'daq_0Dviewer_'+self.detector_name), 'DAQ_0DViewer_'+self.detector_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + self.detector_name),
+                              'DAQ_0DViewer_' + self.detector_name)
             elif self.DAQ_type == "DAQ1D":
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', plug_name)
-                obj = getattr(getattr(parent_module['module'], 'daq_1Dviewer_'+self.detector_name), 'DAQ_1DViewer_'+self.detector_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + self.detector_name),
+                              'DAQ_1DViewer_' + self.detector_name)
             elif self.DAQ_type == 'DAQ2D':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', plug_name)
-                obj = getattr(getattr(parent_module['module'], 'daq_2Dviewer_'+self.detector_name), 'DAQ_2DViewer_'+self.detector_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + self.detector_name),
+                              'DAQ_2DViewer_' + self.detector_name)
             elif self.DAQ_type == 'DAQND':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', plug_name)
-                obj = getattr(getattr(parent_module['module'], 'daq_NDviewer_'+self.detector_name), 'DAQ_NDViewer_'+self.detector_name)
+                obj = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + self.detector_name),
+                              'DAQ_NDViewer_' + self.detector_name)
 
             params = getattr(obj, 'params')
             det_params = Parameter.create(name='Det Settings', type='group', children=params)
@@ -1242,7 +1233,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.logger.exception(str(e))
 
     def init_show_data(self, datas):
-        Npannels = len(datas)
         self.process_overshoot(datas)
         data_dims = [data['dim'] for data in datas]
         if data_dims != self.viewer_types:
@@ -1260,7 +1250,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             except Exception as e:
                 self.logger.exception(str(e))
 
-
     @pyqtSlot(list)
     def show_data(self, datas):
         """
@@ -1275,7 +1264,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
             if self.settings.child('main_settings', 'live_averaging').value():
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self.ind_continuous_grab)
-                ##self.ui.current_Naverage.setValue(self.ind_continuous_grab)
+                # #self.ui.current_Naverage.setValue(self.ind_continuous_grab)
                 self.ind_continuous_grab += 1
                 if self.ind_continuous_grab > 1:
                     try:
@@ -1286,8 +1275,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     except Exception as e:
                         self.logger.exception(str(e))
 
-
-            #store raw data for further processing
+            # store raw data for further processing
             Ndatas = len(datas)
             acq_time = datetime.datetime.now().timestamp()
             name = self.title
@@ -1318,17 +1306,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     elif data_dim.lower() == 'data1d':
                         if 'x_axis' not in subdata_tmp:
                             Nx = len(dat)
-                            x_axis = utils.Axis(data=np.linspace(0, Nx-1, Nx))
+                            x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
                             subdata_tmp['x_axis'] = x_axis
                         data1D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'data2d':
                         if 'x_axis' not in subdata_tmp:
                             Nx = dat.shape[1]
-                            x_axis = utils.Axis(data=np.linspace(0, Nx-1, Nx))
+                            x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
                             subdata_tmp['x_axis'] = x_axis
                         if 'y_axis' not in subdata_tmp:
                             Ny = dat.shape[0]
-                            y_axis = utils.Axis(data=np.linspace(0, Ny-1, Ny))
+                            y_axis = utils.Axis(data=np.linspace(0, Ny - 1, Ny))
                             subdata_tmp['y_axis'] = y_axis
                         data2D[sub_name] = subdata_tmp
                     elif data_dim.lower() == 'datand':
@@ -1370,14 +1358,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             # self.scanner.settings.child('scan_options', 'scan_type').setValue('Scan2D')
             # self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_selection').setValue('FromROI')
 
-            #self.navigator.sett_layout.insertWidget(0, self.scanner.settings_tree)
+            # self.navigator.sett_layout.insertWidget(0, self.scanner.settings_tree)
             self.ui.settings_layout.addWidget(self.scanner.settings_tree)
 
             QtWidgets.QApplication.processEvents()
             self.scanner.settings.child('scan_options', 'scan_type').setValue('Scan2D')
-            #self.scanner.settings.child('scan_options', 'scan_type').hide()
+            # self.scanner.settings.child('scan_options', 'scan_type').hide()
             self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').setValue('Linear')
-            #self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').hide()
+            # self.scanner.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').hide()
             self.scanner.scan_params_signal[pymodaq.daq_utils.scanner.ScanParameters].connect(self.update_from_scanner)
             QtWidgets.QApplication.processEvents()
             self.scanner.set_scan()
@@ -1419,9 +1407,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         else:
             self.ui.settings_widget.setVisible(False)
 
-
     @pyqtSlot(list)
-    def show_temp_data(self,datas):
+    def show_temp_data(self, datas):
         """
             | Show the given datas in the different pannels but do not send processed datas signal.
 
@@ -1432,9 +1419,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         """
         self.init_show_data(datas)
-        self.set_datas_to_viewers(datas,temp=True)
+        self.set_datas_to_viewers(datas, temp=True)
 
-    def snapshot(self, pathname=None, dosave=False, send_to_tcpip = False):
+    def snapshot(self, pathname=None, dosave=False, send_to_tcpip=False):
         """
             Do one single grab and save the data in pathname.
 
@@ -1519,10 +1506,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.update_status(status.attributes[0], wait_time=self.wait_time)
 
         elif status.command == "ini_detector":
-            self.update_status("detector initialized: "+str(status.attributes[0]['initialized']), wait_time=self.wait_time)
+            self.update_status("detector initialized: " + str(status.attributes[0]['initialized']),
+                               wait_time=self.wait_time)
 
             if status.attributes[0]['initialized']:
-                self.controller=status.attributes[0]['controller']
+                self.controller = status.attributes[0]['controller']
                 self.set_enabled_grab_buttons(enable=True)
                 self.ui.Ini_state_LED.set_as_true()
                 self.initialized_state = True
@@ -1532,10 +1520,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         elif status.command == "close":
             try:
-                self.update_status(status.attributes[0],wait_time=self.wait_time)
+                self.update_status(status.attributes[0], wait_time=self.wait_time)
                 self.detector_thread.exit()
                 self.detector_thread.wait()
-                finished=self.detector_thread.isFinished()
+                finished = self.detector_thread.isFinished()
                 if finished:
                     delattr(self, 'detector_thread')
                 else:
@@ -1543,7 +1531,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             except Exception as e:
                 self.logger.exception(str(e))
 
-            self.initialized_state=False
+            self.initialized_state = False
             self.init_signal.emit(self.initialized_state)
 
         elif status.command == "grab":
@@ -1567,7 +1555,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             except Exception as e:
                 self.logger.exception(str(e))
 
-
         elif status.command == "y_axis":
             try:
                 y_axis = status.attributes[0]
@@ -1578,7 +1565,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     y_axis = y_axis[0]
                 else:
                     for viewer in self.ui.viewers:
-                        viewer.y_axis=y_axis
+                        viewer.y_axis = y_axis
 
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                     self.command_tcpip.emit(ThreadCommand('y_axis', [y_axis]))
@@ -1588,12 +1575,12 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         elif status.command == "update_channels":
             pass
-            #if self.DAQ_type=='DAQ0D':
+            # if self.DAQ_type=='DAQ0D':
             #    for viewer in self.ui.viewers:
             #        viewer.update_channels()
 
         elif status.command == 'update_main_settings':
-            #this is a way for the plugins to update main settings of the ui (solely values, limits and options)
+            # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
             try:
                 if status.attributes[2] == 'value':
                     self.settings.child('main_settings', *status.attributes[0]).setValue(status.attributes[1])
@@ -1605,10 +1592,12 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.logger.exception(str(e))
 
         elif status.command == 'update_settings':
-            #using this the settings shown in the UI for the plugin reflects the real plugin settings
+            # using this the settings shown in the UI for the plugin reflects the real plugin settings
             try:
-                self.settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)#any changes on the detcetor settings will update accordingly the gui
-            except: pass
+                self.settings.sigTreeStateChanged.disconnect(
+                    self.parameter_tree_changed)  # any changes on the detcetor settings will update accordingly the gui
+            except Exception as e:
+                self.logger.exception(str(e))
             try:
                 if status.attributes[2] == 'value':
                     self.settings.child('detector_settings', *status.attributes[0]).setValue(status.attributes[1])
@@ -1642,8 +1631,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             if self.lcd is not None:
                 try:
                     self.lcd.parent.close()
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.exception(str(e))
             # lcd module
             lcd = QtWidgets.QWidget()
             self.lcd = LCD(lcd, **status.attributes[0])
@@ -1667,7 +1656,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.show_scanner(show)
             QtWidgets.QApplication.processEvents()
 
-        self.custom_sig.emit(status) #to be used if needed in custom application connected to this module
+        self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
     def update_com(self):
         self.command_detector.emit(ThreadCommand('update_com', []))
@@ -1704,9 +1693,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         Nviewers = len(data_dims)
 
         self.settings.child('main_settings', 'Nviewers').setValue(Nviewers)
-        DAQ_type = self.settings.child('main_settings', 'DAQ_type').value()
 
-        #check if viewers are compatible with new data type
+        # check if viewers are compatible with new data type
         N = 0
         for ind, data_dim in enumerate(data_dims):
             if len(self.viewer_types) > ind:
@@ -1717,19 +1705,19 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             else:
                 break
 
-        while len(self.ui.viewers) > N:# remove all viewers after index N
-        ##while len(self.ui.viewers)>Nviewers:
-            viewer = self.ui.viewers.pop()
+        while len(self.ui.viewers) > N:  # remove all viewers after index N
+            # #while len(self.ui.viewers)>Nviewers:
+            self.ui.viewers.pop()
             widget = self.viewer_widgets.pop()
             widget.close()
             dock = self.ui.viewer_docks.pop()
             dock.close()
             QtWidgets.QApplication.processEvents()
-        ##for ind,data_dim in enumerate(data_dims):
+        # #for ind,data_dim in enumerate(data_dims):
         ind_loop = 0
         Nviewers_init = len(self.ui.viewers)
         while len(self.ui.viewers) < len(data_dims):
-            data_dim = data_dims[Nviewers_init+ind_loop]
+            data_dim = data_dims[Nviewers_init + ind_loop]
             ind_loop += 1
             if data_dim == "Data0D":
                 self.viewer_widgets.append(QtWidgets.QWidget())
@@ -1743,13 +1731,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
                 self.ui.viewers[-1].ui.auto_levels_pb.click()
 
-            else: #for multideimensional data 0 up to dimension 4
+            else:  # for multideimensional data 0 up to dimension 4
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].status_signal.connect(self.log_messages)
 
-
-            self.ui.viewer_docks.append(Dock(self.title+"_Viewer {:d}".format(len(self.ui.viewer_docks)+1), size=(500,300), closable=False))
+            self.ui.viewer_docks.append(
+                Dock(self.title + "_Viewer {:d}".format(len(self.ui.viewer_docks) + 1), size=(500, 300),
+                     closable=False))
             self.ui.viewer_docks[-1].addWidget(self.viewer_widgets[-1])
             if ind == 0:
                 self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
@@ -1838,14 +1827,12 @@ class DAQ_Detector(QObject):
 
         path = settings_parameter_dict['path']
         param = settings_parameter_dict['param']
-        change = settings_parameter_dict['change']
         if path[0] == 'main_settings':
             if hasattr(self, path[-1]):
                 setattr(self, path[-1], param.value())
 
         elif path[0] == 'detector_settings':
             self.detector.update_settings(settings_parameter_dict)
-
 
     @pyqtSlot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
@@ -1886,7 +1873,7 @@ class DAQ_Detector(QObject):
 
         elif command.command == "stop_grab":
             self.grab_state = False
-            #self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
+            # self.status_sig.emit(ThreadCommand("Update_Status", ['Stoping grab']))
 
         elif command.command == "stop_all":
             self.grab_state = False
@@ -1902,18 +1889,16 @@ class DAQ_Detector(QObject):
         elif command.command == 'update_com':
             self.detector.update_com()
 
-        elif command.command =='update_wait_time':
+        elif command.command == 'update_wait_time':
             self.wait_time = command.attributes[0]
-
 
         elif command.command == 'get_axis':
             self.detector.get_axis()
 
-        else: #custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
+        else:  # custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
             if hasattr(self.detector, command.command):
                 cmd = getattr(self.detector, command.command)
                 cmd(*command.attributes)
-
 
     def ini_detector(self, params_state=None, controller=None):
         """
@@ -1940,19 +1925,19 @@ class DAQ_Detector(QObject):
             if self.DAQ_type == 'DAQ0D':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', plug_name)
                 class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + self.detector_name),
-                              'DAQ_0DViewer_' + self.detector_name)
+                                 'DAQ_0DViewer_' + self.detector_name)
             elif self.DAQ_type == "DAQ1D":
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', plug_name)
                 class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + self.detector_name),
-                              'DAQ_1DViewer_' + self.detector_name)
+                                 'DAQ_1DViewer_' + self.detector_name)
             elif self.DAQ_type == 'DAQ2D':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', plug_name)
                 class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + self.detector_name),
-                              'DAQ_2DViewer_' + self.detector_name)
+                                 'DAQ_2DViewer_' + self.detector_name)
             elif self.DAQ_type == 'DAQND':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', plug_name)
                 class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + self.detector_name),
-                              'DAQ_NDViewer_' + self.detector_name)
+                                 'DAQ_NDViewer_' + self.detector_name)
             else:
                 raise Exception(self.detector_name + " unknown")
 
@@ -1967,9 +1952,6 @@ class DAQ_Detector(QObject):
             if status['y_axis'] is not None:
                 y_axis = status['y_axis']
                 self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
-
-
-
 
             self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
 
@@ -2007,17 +1989,16 @@ class DAQ_Detector(QObject):
                     dat['dim'] = dat['type']
                     dat['type'] = 'raw'
 
-
-        if not(self.hardware_averaging): #to execute if the averaging has to be done software wise
+        if not self.hardware_averaging:  # to execute if the averaging has to be done software wise
             self.ind_average += 1
             if self.ind_average == 1:
                 self.datas = datas
             else:
                 try:
                     for indpannel, dic in enumerate(datas):
-                        self.datas[indpannel]['data'] =\
-                            [((self.ind_average-1)*self.datas[indpannel]['data'][ind]+datas[indpannel]['data'][ind])/
-                             self.ind_average for ind in range(len(datas[indpannel]['data']))]
+                        self.datas[indpannel]['data'] = \
+                            [((self.ind_average - 1) * self.datas[indpannel]['data'][ind] + datas[indpannel]['data'][
+                                ind]) / self.ind_average for ind in range(len(datas[indpannel]['data']))]
 
                     if self.show_averaging:
                         self.emit_temp_data(self.datas)
@@ -2032,8 +2013,8 @@ class DAQ_Detector(QObject):
         else:
             self.data_detector_sig.emit(datas)
         self.waiting_for_data = False
-        if self.grab_state == False:
-            #self.status_sig.emit(["Update_Status","Grabing braked"])
+        if not self.grab_state:
+            # self.status_sig.emit(["Update_Status","Grabing braked"])
             self.detector.stop()
 
     def single(self, Naverage=1, args_as_dict={}):
@@ -2075,12 +2056,12 @@ class DAQ_Detector(QObject):
             self.Naverage = Naverage
             if Naverage > 1:
                 self.average_done = False
-            #self.status_sig.emit(ThreadCommand("Update_Status", [f'Start Grabing']))
+            # self.status_sig.emit(ThreadCommand("Update_Status", [f'Start Grabing']))
             self.waiting_for_data = False
 
-
-            ####TODO: choose if the live mode is only made inside the plugins (suitable with STEM plugins) or if we keep it on top?
-            ##self.detector.grab(Naverage,live=live)
+            # ##TODO: choose if the live mode is only made inside the plugins (suitable with STEM plugins)
+            #  or if we keep it on top?
+            # #self.detector.grab(Naverage,live=live)
 
             while 1:
                 try:
@@ -2095,14 +2076,13 @@ class DAQ_Detector(QObject):
                         else:
                             if self.average_done:
                                 break
-                    if self.grab_state == False:
+                    if not self.grab_state:
                         break
                 except Exception as e:
                     self.logger.exception(str(e))
 
         except Exception as e:
             self.logger.exception(str(e))
-
 
     def Close(self):
         """
@@ -2123,11 +2103,10 @@ def main():
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
-    prog = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
+    DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
     win.show()
     sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
     main()
-

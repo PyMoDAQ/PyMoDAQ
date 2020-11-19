@@ -24,7 +24,7 @@ class ViewerPointList(QObject):
         xs, ys = self.viewer.scale_axis(posx, posy)
         indx, indy = self.viewer.mapfromview('red', posx, posy)
         z = self.viewer.transform_image(self.viewer.raw_data["red"])[utils.rint(indy), utils.rint(indx)]
-        self.table_model.add_data(self.table_view.currentIndex().row()+1, [xs, ys, z])
+        self.table_model.add_data(self.table_view.currentIndex().row() + 1, [xs, ys, z])
 
     def setData(self, data):
         self.viewer.setImage(data_red=data)
@@ -35,7 +35,6 @@ class ViewerPointList(QObject):
     def setYaxis(self, yaxis):
         self.viewer.y_axis = yaxis
 
-
     def set_viewer(self):
         dock_viewer = Dock('Viewer2D')
         self.area.addDock(dock_viewer, 'right')
@@ -43,12 +42,11 @@ class ViewerPointList(QObject):
         self.viewer = Viewer2D(widget)
         dock_viewer.addWidget(widget)
 
-
     def set_point_list(self):
         dock_list = Dock('List of points')
         self.area.addDock(dock_list, 'right')
         params = [{'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
-                   'delegate': gutils.SpinBoxDelegate, 'menu': True},]
+                   'delegate': gutils.SpinBoxDelegate, 'menu': True}, ]
         self.settings_tree = ParameterTree()
         self.settings = Parameter.create(name='settings', title='Settings', type='group', children=params)
         self.settings_tree.setParameters(self.settings, showTop=False)
@@ -58,7 +56,6 @@ class ViewerPointList(QObject):
         self.table_model = TableModelTabular(init_data, ['x', 'y', 'data'])
         self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)
-
 
         self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_view.horizontalHeader().setStretchLastSection(True)
@@ -81,6 +78,7 @@ class ViewerPointList(QObject):
         self.table_view.load_data_signal.connect(self.table_model.load_txt)
         self.table_view.save_data_signal.connect(self.table_model.save_txt)
 
+
 if __name__ == '__main__':
     from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
@@ -97,8 +95,8 @@ if __name__ == '__main__':
 
     Nx = 100
     Ny = 200
-    x = (np.linspace(0, Nx - 1, Nx)+100)/2
-    y = (np.linspace(0, Ny - 1, Ny)-10)*2
+    x = (np.linspace(0, Nx - 1, Nx) + 100) / 2
+    y = (np.linspace(0, Ny - 1, Ny) - 10) * 2
     from pymodaq.daq_utils.daq_utils import gauss2D
 
     data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)

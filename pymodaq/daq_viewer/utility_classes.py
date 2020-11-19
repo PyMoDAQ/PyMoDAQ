@@ -1,7 +1,6 @@
 import os
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
-
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -11,12 +10,12 @@ from easydict import EasyDict as edict
 import numpy as np
 from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
 
-
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
 from pymodaq.daq_utils.scanner import ScanParameters
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
-comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master', 'values': ['Master','Slave']},]
+comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
+                     'values': ['Master', 'Slave']}, ]
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -48,9 +47,11 @@ params = [
         {'title': 'Continuous saving:', 'name': 'continuous_saving_opt', 'type': 'bool', 'default': False,
          'value': False},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False, 'children': [
-            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect', 'value': False},
+            {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',
+             'value': False},
             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
-            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str', 'value': config['network']['tcp-server']['ip']},
+            {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
+             'value': config['network']['tcp-server']['ip']},
             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config['network']['tcp-server']['port']},
         ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
@@ -85,6 +86,7 @@ params = [
     ]}
 ]
 
+
 class DAQ_Viewer_base(QObject):
     """
         ===================== ===================================
@@ -101,14 +103,15 @@ class DAQ_Viewer_base(QObject):
         --------
         send_param_status
     """
-    hardware_averaging=False
-    data_grabed_signal=pyqtSignal(list)
-    data_grabed_signal_temp=pyqtSignal(list)
+    hardware_averaging = False
+    data_grabed_signal = pyqtSignal(list)
+    data_grabed_signal_temp = pyqtSignal(list)
 
     params = []
-    def __init__(self,parent=None,params_state=None):
+
+    def __init__(self, parent=None, params_state=None):
         QObject.__init__(self)
-        self.parent_parameters_path = [] #this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
+        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
@@ -126,7 +129,7 @@ class DAQ_Viewer_base(QObject):
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
 
         self.parent = parent
-        self.status = edict(info="",controller=None,initialized=False)
+        self.status = edict(info="", controller=None, initialized=False)
         self.scan_parameters = None
 
         self.x_axis = None
@@ -136,7 +139,7 @@ class DAQ_Viewer_base(QObject):
         if self.plugin_type == '1D' or self.plugin_type == '2D':
             self.emit_x_axis()
 
-        if  self.plugin_type == '2D':
+        if self.plugin_type == '2D':
             self.emit_y_axis()
 
     def emit_status(self, status):
@@ -172,7 +175,7 @@ class DAQ_Viewer_base(QObject):
         """
             Update the settings tree from settings_parameter_dict.
             Finally do a commit to activate changes.
-            
+
             ========================== ============= =====================================================
             **Parameters**              **Type**      **Description**
             *settings_parameter_dict*   dictionnnary  a dictionnary listing path and associated parameter
@@ -182,20 +185,21 @@ class DAQ_Viewer_base(QObject):
             --------
             send_param_status, commit_settings
         """
-            # settings_parameter_dict=edict(path=path,param=param)
+        # settings_parameter_dict=edict(path=path,param=param)
         try:
             path = settings_parameter_dict['path']
             param = settings_parameter_dict['param']
             change = settings_parameter_dict['change']
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-            except: pass
+            except:
+                pass
             if change == 'value':
-                self.settings.child(*path[1:]).setValue(param.value()) #blocks signal back to main UI
+                self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
             elif change == 'childAdded':
                 child = Parameter.create(name='tmp')
                 child.restoreState(param)
-                self.settings.child(*path[1:]).addChild(child) #blocks signal back to main UI
+                self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
                 param = child
 
             elif change == 'parent':
@@ -211,13 +215,13 @@ class DAQ_Viewer_base(QObject):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-    def commit_settings(self,param):
+    def commit_settings(self, param):
         """
             Not implemented.
         """
         pass
 
-    def send_param_status(self,param,changes):
+    def send_param_status(self, param, changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.
             In case of value changed, send the 'update_settings' ThreadCommand with concerned path,data and change as attributes.
@@ -235,11 +239,14 @@ class DAQ_Viewer_base(QObject):
         for param, change, data in changes:
             path = self.settings.childPath(param)
             if change == 'childAdded':
-                #first create a "copy" of the actual parameter and send this "copy", to be restored in the main UI
-                self.emit_status(ThreadCommand('update_settings',[self.parent_parameters_path+path, [data[0].saveState(), data[1]], change])) #send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
+                # first create a "copy" of the actual parameter and send this "copy", to be restored in the main UI
+                self.emit_status(ThreadCommand('update_settings',
+                                               [self.parent_parameters_path + path, [data[0].saveState(), data[1]],
+                                                change]))  # send parameters values/limits back to the GUI. Send kind of a copy back the GUI otherwise the child reference will be the same in both th eUI and the plugin so one of them will be removed
 
             elif change == 'value' or change == 'limits' or change == 'options':
-                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path+path, data, change])) #send parameters values/limits back to the GUI
+                self.emit_status(ThreadCommand('update_settings', [self.parent_parameters_path + path, data,
+                                                                   change]))  # send parameters values/limits back to the GUI
             elif change == 'parent':
                 pass
 
@@ -254,7 +261,7 @@ class DAQ_Viewer_base(QObject):
             --------
             daq_utils.ThreadCommand
         """
-        self.emit_status(ThreadCommand("x_axis",[self.x_axis]))
+        self.emit_status(ThreadCommand("x_axis", [self.x_axis]))
 
     def emit_y_axis(self):
         """
@@ -264,8 +271,8 @@ class DAQ_Viewer_base(QObject):
             --------
             daq_utils.ThreadCommand
         """
-        self.emit_status(ThreadCommand("y_axis",[self.y_axis]))
- 
+        self.emit_status(ThreadCommand("y_axis", [self.y_axis]))
+
 
 class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     """
@@ -435,7 +442,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
         if param.name() in custom_tree.iter_children(self.settings.child(('settings_client')), []):
             grabber_socket = \
-            [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
+                [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             grabber_socket.send_string('set_info')
 
             path = custom_tree.get_param_path(param)[
@@ -558,4 +565,4 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
 
 if __name__ == '__main__':
-    prog = DAQ_TCP_server()
+    prog = DAQ_Viewer_TCP_server()
