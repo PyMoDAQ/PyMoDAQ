@@ -4,7 +4,7 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
-from pymodaq.daq_utils.parameter import parameterTypes as custom_tree
+from pymodaq.daq_utils.parameter import pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils.scanner import TableModelTabular
 from PyQt5.QtCore import QObject, Qt, pyqtSlot
 from PyQt5 import QtWidgets

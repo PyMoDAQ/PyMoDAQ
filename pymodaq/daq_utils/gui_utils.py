@@ -1,13 +1,10 @@
-from collections import OrderedDict
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
+from PyQt5.QtCore import QObject, pyqtSignal, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
 from PyQt5 import QtGui, QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing
 import datetime
 from pymodaq.daq_utils import daq_utils as utils
 import toml
@@ -26,7 +23,12 @@ dashboard_submodules_params = [
     ]
 
 
-
+class QSpinBox_ro(QtWidgets.QSpinBox):
+    def __init__(self, **kwargs):
+        super(QtWidgets.QSpinBox, self).__init__()
+        self.setMaximum(100000)
+        self.setReadOnly(True)
+        self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
 
 
 def clickable(widget):
@@ -189,8 +191,8 @@ class DockArea(DockArea, QObject):
     """
     dock_signal = pyqtSignal()
 
-    def __init__(self, temporary=False, home=None):
-        super(DockArea, self).__init__(temporary, home)
+    def __init__(self, parent=None, temporary=False, home=None):
+        super(DockArea, self).__init__(parent, temporary, home)
 
     def moveDock(self, dock, position, neighbor):
         """

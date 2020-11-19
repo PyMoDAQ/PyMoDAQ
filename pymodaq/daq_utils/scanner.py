@@ -12,7 +12,7 @@ import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.gui_utils as gutils
 from pymodaq.daq_utils.plotting.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.parameterTypes as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.exceptions import ScannerException
 
 logger = utils.set_logger(utils.get_module_name(__file__))

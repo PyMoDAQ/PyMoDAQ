@@ -46,12 +46,7 @@ except:
     logger.info('Adaptive module is not present, no adaptive scan possible')
 
 
-class QSpinBox_ro(QtWidgets.QSpinBox):
-    def __init__(self, **kwargs):
-        super(QtWidgets.QSpinBox,self).__init__()
-        self.setMaximum(100000)
-        self.setReadOnly(True)
-        self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+
 
 
 class DAQ_Scan(QObject):
@@ -741,11 +736,11 @@ class DAQ_Scan(QObject):
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
         self.ui.status_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.status_message)
-        self.ui.N_scan_steps_sb = QSpinBox_ro()
+        self.ui.N_scan_steps_sb = gutils.QSpinBox_ro()
         self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb = QSpinBox_ro()
+        self.ui.indice_scan_sb = gutils.QSpinBox_ro()
         self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb = QSpinBox_ro()
+        self.ui.indice_average_sb = gutils.QSpinBox_ro()
         self.ui.indice_average_sb.setToolTip('Current average value')
         self.ui.scan_done_LED = QLED()
         self.ui.scan_done_LED.setToolTip('Scan done state')

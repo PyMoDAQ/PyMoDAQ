@@ -94,7 +94,8 @@ class AxisItem_Scaled(pg.AxisItem):
         pen             (QPen) Pen used when drawing ticks.
         ==============  ===============================================================
         """
-        pg.AxisItem.__init__(self, orientation, pen, linkView, parent, maxTickLength, showValues)
+        super().__init__(orientation, pen=pen, linkView=linkView, parent=parent, maxTickLength=maxTickLength,
+                         showValues=showValues)
         self.scaling = scaling
         self.offset = offset
 

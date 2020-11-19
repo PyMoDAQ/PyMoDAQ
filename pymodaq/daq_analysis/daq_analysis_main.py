@@ -11,7 +11,7 @@ from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.parameterTypes as custom_tree
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils

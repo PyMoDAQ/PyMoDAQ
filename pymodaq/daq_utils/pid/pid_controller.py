@@ -9,7 +9,7 @@ logger = set_logger(get_module_name(__file__))
 
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.parameterTypes as custom_tree
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils.gui_utils import DockArea
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.qled import QLED

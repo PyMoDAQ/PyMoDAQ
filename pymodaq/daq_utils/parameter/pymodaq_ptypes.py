@@ -107,17 +107,6 @@ class SpinBoxCustom(SpinBox.SpinBox):
             elif 'tip' in k:
                 self.opts[k] = opts[k]
                 self.setToolTip(opts[k])
-
-            elif k == 'show_pb':
-                pass
-            elif k == 'subtype':
-                pass
-            elif k == 'title':
-                pass
-            elif k == 'type':
-                 pass
-            else:
-                raise TypeError("Invalid keyword argument '%s'." % k)
         if 'value' in opts:
             self.setValue(opts['value'])
 
@@ -624,30 +613,32 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 self.widget.sigChanged.connect(self.widgetValueChanged)
         self.updateDefaultBtn()
 
+
 class SimpleParameterCustom(pTypes.SimpleParameter):
     itemClass = WidgetParameterItemcustom
 
     def __init__(self, *args, **kargs):
         pTypes.SimpleParameter.__init__(self, *args, **kargs)
 
-    # def _interpretValue(self, v):
-    #     fn = {
-    #         'int': int,
-    #         'float': float,
-    #         'bool': bool,
-    #         'str': str,
-    #         'color': self._interpColor,
-    #         'colormap': self._interpColormap,
-    #         'date_time': QDateTime,
-    #         'date': QDate,
-    #         'time': QTime,
-    #         'led': qled,
-    #         'pixmap': QtWidgets.QLabel,
-    #         'pixmap_check': Pixmap_check,
-    #         'slide': float
-    #     }[self.opts['type']]
-    #     return fn(v)
 
+    def _interpretValue(self, v):
+        fn = {
+            'int': int,
+            'float': float,
+            'bool': bool,
+            'bool_push': bool,
+            'str': str,
+            'color': self._interpColor,
+            'colormap': self._interpColormap,
+            'date_time': QDateTime,
+            'date': QDate,
+            'time': QTime,
+            'led': bool,
+            'pixmap': QtWidgets.QLabel,
+            'pixmap_check': Pixmap_check,
+            'slide': float
+        }[self.opts['type']]
+        return fn(v)
 
 registerParameterType('int', SimpleParameterCustom, override=True)
 registerParameterType('float', SimpleParameterCustom, override=True)

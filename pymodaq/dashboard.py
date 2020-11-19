@@ -14,7 +14,7 @@ from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.parameterTypes as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes# to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -516,10 +516,7 @@ class DashBoard(QObject):
             (Object list, Object list) tuple
                 The updated (Move modules list, Detector modules list).
 
-            See Also
-            --------
-            custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
-        """
+           """
         move_modules = []
         detector_modules = []
         if not isinstance(filename, Path):
@@ -559,10 +556,10 @@ class DashBoard(QObject):
             #################################################################
             ###### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
-            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], custom_tree.GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], ptypes.GroupParameterCustom):
                 plugins += [{'type': 'move', 'value': child} for child in
                            self.preset_manager.preset_params.child(('Moves')).children()]
-            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], custom_tree.GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], ptypes.GroupParameterCustom):
                 plugins += [{'type': 'det', 'value': child} for child in
                             self.preset_manager.preset_params.child(('Detectors')).children()]
 
@@ -1205,10 +1202,6 @@ class DashBoard(QObject):
                                             * dataset
                                             * managers
             =============== =========== ====================================
-
-            See Also
-            --------
-            custom_tree.parameter_to_xml_file, create_menu
         """
         dialog = QtWidgets.QDialog()
         vlayout = QtWidgets.QVBoxLayout()

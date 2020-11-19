@@ -79,11 +79,11 @@ setup(
                                       'daq_move=pymodaq.daq_move.daq_move_main:main',
                                       'h5browser=pymodaq.h5browser:main'],
                   },
-    python_requires='>=3.6, <3.8',
+    python_requires='>=3.6',
     install_requires=[
         'numpy==1.19.3',
         'scipy',
-        'pyqtgraph==0.10',
+        'pyqtgraph',
         'easydict',
         #'pyqt5',
         'tables',

@@ -8,8 +8,8 @@ from pymodaq.daq_move.utility_classes import params as daq_move_params
 
 #must be loaded to register proper custom parameter types
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import utils as putils
 
 
 from pymodaq.daq_utils.daq_utils import ThreadCommand
@@ -366,7 +366,7 @@ class DAQ_Move(Ui_Form, QObject):
                             self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
             elif change == 'parent':
-                if param.name() not in custom_tree.iter_children(self.settings.child('main_settings'), []):
+                if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
                     self.update_settings_signal.emit(edict(path=['move_settings'], param=param, change=change))
 
     def connect_tcp_ip(self):
@@ -410,7 +410,7 @@ class DAQ_Move(Ui_Form, QObject):
             self.thread_status(status)
 
         elif status.command == 'set_info':
-            param_dict = custom_tree.XML_string_to_parameter(status.attributes[1])[0]
+            param_dict = ioxml.XML_string_to_parameter(status.attributes[1])[0]
             param_tmp = Parameter.create(**param_dict)
             param = self.settings.child('move_settings', *status.attributes[0][1:])
 

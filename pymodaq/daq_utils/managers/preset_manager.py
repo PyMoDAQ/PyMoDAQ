@@ -1,17 +1,18 @@
 from PyQt5 import QtWidgets
 import sys
 import os
-
-import pymodaq.daq_utils.parameter.ioxml
-from pymodaq.daq_utils import daq_utils as utils
-logger = utils.set_logger(utils.get_module_name(__file__))
-
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import pymodaq_ptypes
+from pymodaq.daq_utils.managers import preset_manager_utils
+from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
 from pathlib import Path
+
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 #check if preset_mode directory exists on the drive
 
@@ -60,7 +61,7 @@ class PresetManager:
 
         """
         self.pid_type = False
-        children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
+        children = ioxml.XML_file_to_parameter(filename)
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
         if show:
             self.show_preset()
@@ -70,7 +71,7 @@ class PresetManager:
         self.pid_type = True
         filename = os.path.join(utils.get_set_pid_path(), pid_model + '.xml')
         if os.path.isfile(filename):
-            children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
+            children = ioxml.XML_file_to_parameter(filename)
             self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
 
         else:
@@ -204,18 +205,17 @@ class PresetManager:
             # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.preset_params, os.path.join(path,
-                                                                                                     self.preset_params.child(
-                                                                                   ('filename')).value()))
+            ioxml.parameter_to_xml_file(
+                self.preset_params, os.path.join(path, self.preset_params.child('filename').value()))
 
             if not self.pid_type:
                 #check if overshoot configuration and layout configuration with same name exists => delete them if yes
-                file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+                file = os.path.splitext(self.preset_params.child('filename').value())[0]
                 file = os.path.join(overshoot_path, file + '.xml')
                 if os.path.isfile(file):
                     os.remove(file)
 
-                file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+                file = os.path.splitext(self.preset_params.child('filename').value())[0]
                 file = os.path.join(layout_path, file +'.dock')
                 if os.path.isfile(file):
                     os.remove(file)

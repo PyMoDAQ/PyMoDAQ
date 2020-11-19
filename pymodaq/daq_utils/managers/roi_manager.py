@@ -411,7 +411,7 @@ class ROIScalableGroup(pTypes.GroupParameter):
         opts['type'] = 'group'
         opts['addText'] = "Add"
         self.roi_type = roi_type
-        if roi_type is not '1D':
+        if roi_type != '1D':
             opts['addList'] = ['RectROI', 'EllipseROI']
         self.color_list = ROIManager.color_list
         pTypes.GroupParameter.__init__(self, **opts)

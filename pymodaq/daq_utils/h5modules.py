@@ -2063,7 +2063,7 @@ class H5Browser(QObject):
         self.ui.h5file_tree.ui.Open_Tree.click()
 
     def check_version(self):
-        if 'pymodaq_version' in self.h5utils.root().attrs:
+        if 'pymodaq_version' in self.h5utils.root().attrs.attrs_name:
             if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
                 msgBox = QtWidgets.QMessageBox(parent=None)
                 msgBox.setWindowTitle("Invalid version")

@@ -137,22 +137,29 @@ def dict_from_param(param):
         title = param.name()
     opts.update(dict(title=title))
 
-    if param.opts['visible']:
-        visible = '1'
-    else:
-        visible = '0'
+    visible = '1'
+    if 'visible' in param.opts:
+        if param.opts['visible']:
+            visible = '1'
+        else:
+            visible = '0'
+
     opts.update(dict(visible=visible))
 
-    if param.opts['removable']:
-        removable = '1'
-    else:
-        removable = '0'
+    removable = '1'
+    if 'removable' in param.opts:
+        if param.opts['removable']:
+            removable = '1'
+        else:
+            removable = '0'
     opts.update(dict(removable=removable))
 
-    if param.opts['readonly']:
-        readonly = '1'
-    else:
-        readonly = '0'
+    readonly = '0'
+    if 'readonly' in param.opts:
+        if param.opts['readonly']:
+            readonly = '1'
+        else:
+            readonly = '0'
     opts.update(dict(readonly=readonly))
 
     if 'values' in param.opts:

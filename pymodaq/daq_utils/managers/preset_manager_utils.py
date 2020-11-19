@@ -1,16 +1,12 @@
 import random
 from pymodaq.daq_utils import daq_utils as utils
-logger = utils.set_logger(utils.get_module_name(__file__))
-
-from pyqtgraph.parametertree import parameterTypes as pTypes
-
 from pymodaq.daq_move.utility_classes import params as daq_move_params
 from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
 
 from pyqtgraph.parametertree.Parameter import registerParameterType
+from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom
 
-
-
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
 DAQ_0DViewer_Det_types = utils.get_plugins('daq_0Dviewer')
@@ -26,7 +22,7 @@ def iterative_show_pb(params):
             iterative_show_pb(param['children'])
 
 
-class PresetScalableGroupMove(pTypes.GroupParameter):
+class PresetScalableGroupMove(GroupParameterCustom):
     """
         |
 
@@ -43,7 +39,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
         opts['type'] = 'groupmove'
         opts['addText'] = "Add"
         opts['addList'] = [mov['name'] for mov in DAQ_Move_Stage_type]
-        pTypes.GroupParameter.__init__(self, **opts)
+        GroupParameterCustom.__init__(self, **opts)
 
     def addNew(self, typ):
         """
@@ -90,7 +86,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
 
 
-class PresetScalableGroupDet(pTypes.GroupParameter):
+class PresetScalableGroupDet(GroupParameterCustom):
     """
         =============== ==============
         **Attributes**    **Type**
@@ -115,7 +111,7 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
             options.append('DAQND/'+name)
         opts['addList'] = options
 
-        pTypes.GroupParameter.__init__(self, **opts)
+        GroupParameterCustom.__init__(self, **opts)
 
     def addNew(self, typ):
         """
