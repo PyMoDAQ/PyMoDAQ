@@ -1,13 +1,9 @@
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import QThread
+from PyQt5 import QtWidgets
 import sys
 import os
-import random
 
-import pyqtgraph.parametertree.parameterTypes as pTypes
+import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
-from pyqtgraph.parametertree.Parameter import registerParameterType
 
 from pymodaq.daq_utils.gui_utils import select_file
 
@@ -44,7 +40,7 @@ class ROISaver:
 
         """
 
-        children = custom_tree.XML_file_to_parameter(filename)
+        children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
         self.roi_presets = Parameter.create(title='roi', name='rois', type='group', children=children)
 
         det_children = [child for child in self.roi_presets.children() if 'det' in child.opts['name']]
@@ -92,7 +88,7 @@ class ROISaver:
                 det_param.addChild(viewer_param)
             self.roi_presets.addChild(det_param)
 
-        custom_tree.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path, file))
+        pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path, file))
         self.show_rois()
 
     def show_rois(self):
@@ -123,8 +119,8 @@ class ROISaver:
             # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path,
-                                                                               self.roi_presets.child(
+            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path,
+                                                                                                   self.roi_presets.child(
                                                                                    ('filename')).value()))
 
 

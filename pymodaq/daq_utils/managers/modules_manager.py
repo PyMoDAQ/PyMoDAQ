@@ -1,12 +1,10 @@
 from collections import OrderedDict
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
-from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5 import QtWidgets
 import time
-import numpy as np
 from pymodaq.daq_utils import daq_utils as utils
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 

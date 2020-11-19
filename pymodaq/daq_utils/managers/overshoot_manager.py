@@ -1,12 +1,10 @@
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import QThread
+from PyQt5 import QtWidgets
 import sys
 import os
-import random
 
+import pymodaq.daq_utils.parameter.ioxml
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
 from pymodaq.daq_utils.gui_utils import select_file
@@ -137,7 +135,7 @@ class OvershootManager:
         """
 
         """
-        children = custom_tree.XML_file_to_parameter(filename)
+        children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
         self.overshoot_params = Parameter.create(title='Overshoot', name='Overshoot', type='group', children=children)
         if show:
             self.show_overshoot()
@@ -180,8 +178,8 @@ class OvershootManager:
             # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.overshoot_params, os.path.join(overshoot_path,
-                                                                               self.overshoot_params.child(
+            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.overshoot_params, os.path.join(overshoot_path,
+                                                                                                        self.overshoot_params.child(
                                                                                    ('filename')).value()))
 
 

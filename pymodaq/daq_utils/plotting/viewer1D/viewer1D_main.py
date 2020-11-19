@@ -4,12 +4,12 @@ from PyQt5.QtWidgets import QPushButton, QLabel
 from PyQt5.QtGui import QIcon, QPixmap
 import sys
 
+import pymodaq.daq_utils.parameter.utils
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 from collections import OrderedDict
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
-import pymodaq.daq_utils.custom_parameter_tree as customparameter
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
@@ -240,7 +240,7 @@ class Viewer1D(QtWidgets.QWidget,QObject):
             item_param.child(('use_channel')).setValue(lab)
             item.sigRegionChanged.connect(self.update_lineouts)
             item.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
-            for child in customparameter.iter_children_params(item_param, childlist=[]):
+            for child in pymodaq.daq_utils.parameter.utils.iter_children_params(item_param, childlist=[]):
                 if child.type() != 'group':
                     child.sigValueChanged.connect(self.update_lineouts)
 

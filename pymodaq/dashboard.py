@@ -11,9 +11,10 @@ from pathlib import Path
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
+import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.parameterTypes as custom_tree# to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -546,7 +547,7 @@ class DashBoard(QObject):
                 if self.preset_manager.preset_params.child(('use_pid')).value():
                     self.open_PID()
                     QtWidgets.QApplication.processEvents()
-                    for child in custom_tree.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')), []):
+                    for child in pymodaq.daq_utils.parameter.utils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')), []):
                         preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
                         self.pid_controller.settings.child(*preset_path).setValue(child.value())
 
@@ -1020,7 +1021,7 @@ class DashBoard(QObject):
 
     def update_init_tree(self):
         for act in self.move_modules:
-            if act.title not in custom_tree.iter_children(self.settings.child(('actuators')), []):
+            if act.title not in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('actuators')), []):
                 title = act.title
                 name = ''.join(title.split())  # remove empty spaces
                 self.settings.child(('actuators')).addChild(
@@ -1029,7 +1030,7 @@ class DashBoard(QObject):
                 self.settings.child('actuators', name).setValue(act.initialized_state)
 
         for act in self.detector_modules:
-            if act.title not in custom_tree.iter_children(self.settings.child(('detectors')), []):
+            if act.title not in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('detectors')), []):
                 title = act.title
                 name = ''.join(title.split())  # remove empty spaces
                 self.settings.child(('detectors')).addChild(

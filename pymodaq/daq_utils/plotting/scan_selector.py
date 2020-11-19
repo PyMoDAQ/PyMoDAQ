@@ -1,14 +1,10 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
 import sys
-import numpy as np
 from collections import OrderedDict
-from pyqtgraph import gaussianFilter, ROI, RectROI, PolyLineROI, Point
+from pyqtgraph import ROI, RectROI, PolyLineROI, Point
 
-
-import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree
 from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.gui_utils import DockArea
 from pymodaq.daq_utils.plotting.plot_utils import QVector

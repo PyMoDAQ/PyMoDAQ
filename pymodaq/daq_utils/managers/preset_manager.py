@@ -1,12 +1,12 @@
 from PyQt5 import QtWidgets
 import sys
 import os
+
+import pymodaq.daq_utils.parameter.ioxml
 from pymodaq.daq_utils import daq_utils as utils
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing
-from pymodaq.daq_utils.managers import preset_manager_utils  #mandatory to declare some specific Parameter types
 from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
@@ -60,7 +60,7 @@ class PresetManager:
 
         """
         self.pid_type = False
-        children = custom_tree.XML_file_to_parameter(filename)
+        children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
         if show:
             self.show_preset()
@@ -70,7 +70,7 @@ class PresetManager:
         self.pid_type = True
         filename = os.path.join(utils.get_set_pid_path(), pid_model + '.xml')
         if os.path.isfile(filename):
-            children = custom_tree.XML_file_to_parameter(filename)
+            children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
             self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
 
         else:
@@ -204,8 +204,8 @@ class PresetManager:
             # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(path,
-                                                                               self.preset_params.child(
+            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.preset_params, os.path.join(path,
+                                                                                                     self.preset_params.child(
                                                                                    ('filename')).value()))
 
             if not self.pid_type:

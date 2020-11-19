@@ -1,16 +1,12 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+from PyQt5.QtCore import Qt,QObject, pyqtSlot, pyqtSignal
 
 import sys
 import os
-from collections import OrderedDict
 import numpy as np
 import tables
 
-from pyqtgraph.dockarea import Dock, DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pyqtgraph import HistogramLUTWidget
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic
 from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
 from pymodaq.daq_utils import daq_utils as utils

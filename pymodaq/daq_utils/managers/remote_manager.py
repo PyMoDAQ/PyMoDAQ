@@ -1,12 +1,11 @@
 import os, sys
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
-from PyQt5 import QtGui, QtWidgets, QtCore
-import time
-import numpy as np
+from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5 import QtGui, QtWidgets
+
+import pymodaq.daq_utils.parameter.ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import select_file
 from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType, parameterTypes
-from pymodaq.daq_utils import custom_parameter_tree as custom_tree
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 remote_path = utils.get_set_remote_path()
@@ -427,7 +426,7 @@ class RemoteManager(QObject):
         """
 
         """
-        children = custom_tree.XML_file_to_parameter(filename)
+        children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
         self.remote_params = Parameter.create(title='Shortcuts:', name='shortcuts', type='group', children=children)
         if show:
             self.show_remote()
@@ -458,8 +457,8 @@ class RemoteManager(QObject):
 
         if res == dialog.Accepted:
             # save preset parameters in a xml file
-            custom_tree.parameter_to_xml_file(self.remote_params, os.path.join(remote_path,
-                                                                                 self.remote_params.child(
+            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.remote_params, os.path.join(remote_path,
+                                                                                                     self.remote_params.child(
                                                                                      ('filename')).value()))
 
 if __name__ == '__main__':

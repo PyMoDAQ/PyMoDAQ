@@ -6,10 +6,10 @@ import numpy as np
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QRectF, QDate, QThread
 
+import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.gui_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import getLineInfo, load_config
 
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -275,10 +275,10 @@ class CustomApp(QtWidgets.QWidget, QObject):
                 h5saver.init_file(update_h5=True, addhoc_file_path=path)
 
                 # save all metadata
-                settings_str = custom_tree.parameter_to_xml_string(self.settings)
+                settings_str = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
                 settings_str = b'<All_settings>' + settings_str
-                settings_str += custom_tree.parameter_to_xml_string(self.detector.settings) + \
-                                custom_tree.parameter_to_xml_string(h5saver.settings) + \
+                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.detector.settings) + \
+                                pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(h5saver.settings) + \
                                 b'</All_settings>'
 
                 data_group = h5saver.add_data_group(h5saver.raw_group, group_data_type='data0D',

@@ -1,18 +1,19 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF, QLocale
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QPointF
 from collections import OrderedDict
+
+import pymodaq.daq_utils.parameter.ioxml
+import pymodaq.daq_utils.parameter.utils
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
 from pymodaq.daq_utils.daq_utils import plot_colors
 from pymodaq.daq_utils.gui_utils import select_file
 import numpy as np
 from pathlib import Path
-import copy
 
 
 class ROIBrushable(pgROI):
@@ -274,7 +275,7 @@ class ROIManager(QObject):
                 # self.roiChanged()
 
             elif change == 'value':
-                if param.name() in custom_tree.iter_children(self.settings.child(('ROIs')),[]):
+                if param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('ROIs')), []):
                     if param.name() == 'Color' or param.name() == 'angle' :
                         parent = param.parent().name()
                     else:
@@ -350,7 +351,7 @@ class ROIManager(QObject):
     def save_ROI(self):
 
         try:
-            data = custom_tree.parameter_to_xml_string(self.settings.child(('ROIs')))
+            data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings.child(('ROIs')))
             path = select_file(start_path=Path.home(), ext='xml')
 
             if path != '':
@@ -373,14 +374,14 @@ class ROIManager(QObject):
                     path = select_file(start_path=Path.home(), save=False, ext='xml')
                     if path != '':
                         params = Parameter.create(title='Settings', name='settings', type='group',
-                                                  children=custom_tree.XML_file_to_parameter(path))
+                                                  children=pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(path))
 
             if params is not None:
                 self.clear_ROI()
                 QtWidgets.QApplication.processEvents()
 
                 for param in params:
-                    if 'roi_type' in custom_tree.iter_children(param, []):
+                    if 'roi_type' in pymodaq.daq_utils.parameter.utils.iter_children(param, []):
                         self.settings.child(('ROIs')).addNew(param.child(('roi_type')).value())
                     else:
                         self.settings.child(('ROIs')).addNew()
