@@ -2,8 +2,8 @@ import os
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal
 
-import pymodaq.daq_utils.parameter.ioxml
-import pymodaq.daq_utils.parameter.utils
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter.utils import get_param_path, get_param_from_name, iter_children
 from pyqtgraph.parametertree import Parameter
 from easydict import EasyDict as edict
 
@@ -203,10 +203,10 @@ class DAQ_Viewer_base(QObject):
                 param = child
 
             elif change == 'parent':
-                children = pymodaq.daq_utils.parameter.utils.get_param_from_name(self.settings, param.name())
+                children = get_param_from_name(self.settings, param.name())
 
                 if children is not None:
-                    path = pymodaq.daq_utils.parameter.utils.get_param_path(children)
+                    path = get_param_path(children)
                     self.settings.child(*path[1:-1]).removeChild(children)
 
             self.settings.sigTreeStateChanged.connect(self.send_param_status)
@@ -440,17 +440,17 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
     def commit_settings(self, param):
 
-        if param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('settings_client')), []):
+        if param.name() in iter_children(self.settings.child(('settings_client')), []):
             grabber_socket = \
                 [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             grabber_socket.send_string('set_info')
 
-            path = pymodaq.daq_utils.parameter.utils.get_param_path(param)[
+            path = get_param_path(param)[
                    2:]  # get the path of this param as a list starting at parent 'infos'
             grabber_socket.send_list(path)
 
             # send value
-            data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
+            data = ioxml.parameter_to_xml_string(param)
             grabber_socket.send_string(data)
 
     def ini_detector(self, controller=None):

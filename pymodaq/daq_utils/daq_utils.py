@@ -16,6 +16,7 @@ if 'win32' in sys.platform:
 
 import enum
 import os
+import pkgutil
 import importlib
 import toml
 import logging
@@ -636,11 +637,11 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
                 recursive_find_files_extension(entry.path, ext, paths)
     return paths
 
-def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[], filters=['.git', '.idea']):
+def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
+                                 filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation']):
     for child in Path(ini_path).iterdir():
         if not any(filt in str(child) for filt in filters):
             if child.is_dir():
-                print(child)
                 recursive_find_expr_in_files(child, exp, paths, filters)
             else:
                 try:
@@ -729,7 +730,6 @@ def get_plugins(plugin_type='daq_0Dviewer'):
         for entry_point in pkg_resources.iter_entry_points('pymodaq.plugins')
     }
 
-
     for module in discovered_plugins.values():
         try:
             if plugin_type == 'daq_move':
@@ -737,7 +737,10 @@ def get_plugins(plugin_type='daq_0Dviewer'):
             else:
                 submodule = importlib.import_module(f'{module.__name__}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
                                                     module.__package__)
-            plugin_list = [{'name': mod[len(plugin_type)+1:], 'module': submodule} for mod in dir(submodule) if plugin_type in mod]
+            plugin_list = [{'name': mod[len(plugin_type) + 1:],
+                            'module': submodule} for mod in [mod[1] for
+                                                             mod in pkgutil.iter_modules([submodule.path.parent])]
+                           if plugin_type in mod]
             # check if modules are importable
 
             for mod in plugin_list:
@@ -1455,4 +1458,6 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', '[__name__]')
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'custom_parameter')
+    for p in paths:
+        print(str(p))

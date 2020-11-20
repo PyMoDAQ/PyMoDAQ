@@ -8,8 +8,8 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QLocale, QByteArray
 
 import pymodaq.daq_utils.parameter.ioxml
-import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
@@ -1748,7 +1748,7 @@ class H5Saver(H5Backend, QObject):
                     except:
                         self.update_status("The base path couldn't be set, please check your options")
 
-                elif param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('compression_options')), []):
+                elif param.name() in putils.iter_children(self.settings.child(('compression_options')), []):
                     compression = self.settings.child('compression_options', 'h5comp_library').value()
                     compression_opts = self.settings.child('compression_options', 'h5comp_level').value()
                     self.define_compression(compression, compression_opts)

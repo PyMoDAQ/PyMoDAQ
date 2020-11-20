@@ -60,12 +60,13 @@ class PresetManager:
         """
 
         """
+        status = False
         self.pid_type = False
         children = ioxml.XML_file_to_parameter(filename)
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
         if show:
-            self.show_preset()
-
+            status = self.show_preset()
+        return status
 
     def set_PID_preset(self, pid_model):
         self.pid_type = True
@@ -105,7 +106,8 @@ class PresetManager:
                 self.preset_params.child('Detectors','det{:02.0f}'.format(ind_det), 'name').setValue(detectors_name[ind_det])
                 QtWidgets.QApplication.processEvents()
 
-        self.show_preset()
+        status = self.show_preset()
+        return status
 
     def get_set_pid_model_params(self, model_file):
         model_mod = importlib.import_module('pymodaq_pid_models')
@@ -146,7 +148,8 @@ class PresetManager:
 
         self.preset_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-        self.show_preset()
+        status = self.show_preset()
+        return status
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -219,6 +222,8 @@ class PresetManager:
                 file = os.path.join(layout_path, file +'.dock')
                 if os.path.isfile(file):
                     os.remove(file)
+
+        return res == dialog.Accepted
 
 
 if __name__ == '__main__':

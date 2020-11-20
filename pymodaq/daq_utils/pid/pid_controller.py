@@ -3,7 +3,7 @@ from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 import logging
 
-import pymodaq.daq_utils.parameter.utils
+from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, getLineInfo, set_logger, get_module_name, get_set_pid_path
 logger = set_logger(get_module_name(__file__))
 
@@ -678,10 +678,6 @@ class DAQ_PID(QObject):
             *param*           instance of ppyqtgraph parameter   the parameter to be checked
             *changes*         tuple list                         Contain the (param,changes,info) list listing the changes made
             =============== =================================== ================================================================
-
-            See Also
-            --------
-            change_viewer, daq_utils.custom_parameter_tree.iter_children
         """
 
         for param, change, data in changes:
@@ -716,7 +712,7 @@ class DAQ_PID(QObject):
                 elif param.name() == 'sample_time':
                     self.command_pid.emit(ThreadCommand('update_options', dict(sample_time=param.value())))
 
-                elif param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('main_settings', 'pid_controls', 'output_limits'), []):
+                elif param.name() in putils.iter_children(self.settings.child('main_settings', 'pid_controls', 'output_limits'), []):
                     output_limits = [None, None]
                     if self.settings.child('main_settings', 'pid_controls', 'output_limits', 'output_limit_min_enabled').value():
                         output_limits[0] = self.settings.child('main_settings', 'pid_controls', 'output_limits', 'output_limit_min').value()
@@ -725,18 +721,18 @@ class DAQ_PID(QObject):
 
                     self.command_pid.emit(ThreadCommand('update_options', dict(output_limits=output_limits)))
 
-                elif param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('main_settings', 'pid_controls', 'filter'), []):
+                elif param.name() in putils.iter_children(self.settings.child('main_settings', 'pid_controls', 'filter'), []):
                     self.command_pid.emit(ThreadCommand('update_filter',
                                     [dict(enable=self.settings.child('main_settings', 'pid_controls', 'filter', 'filter_enable').value(),
                                          value=self.settings.child('main_settings', 'pid_controls', 'filter', 'filter_step').value())]))
 
-                elif param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('main_settings', 'pid_controls', 'pid_constants'), []):
+                elif param.name() in putils.iter_children(self.settings.child('main_settings', 'pid_controls', 'pid_constants'), []):
                     Kp = self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'kp').value()
                     Ki = self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'ki').value()
                     Kd = self.settings.child('main_settings', 'pid_controls', 'pid_constants', 'kd').value()
                     self.command_pid.emit(ThreadCommand('update_options', dict(tunings= (Kp, Ki, Kd))))
 
-                elif param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('models', 'model_params'), []):
+                elif param.name() in putils.iter_children(self.settings.child('models', 'model_params'), []):
                     self.model_class.update_settings(param)
 
                 elif param.name() == 'detector_modules':

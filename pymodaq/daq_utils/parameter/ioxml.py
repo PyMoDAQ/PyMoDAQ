@@ -320,17 +320,6 @@ def parameter_to_xml_file(param, filename):
 
         Examples
         --------
-        >>> import custom_parameter_tree as cpt
-        >>> from pyqtgraph.parametertree import Parameter
-        >>> import pathlib as pl
-        >>>    #Creating function parameters
-        >>> settings=Parameter(name='settings')
-        >>> filename="my_xml_file"
-        >>> cpt.parameter_to_xml_file(settings,filename)
-        >>>    #Verifiy the integrity of the converted xml file
-        >>> check=open("my_xml_file.xml","r")
-        >>> print(check.read())
-        <settings title="settings" type="None" />
     """
     fname = Path(filename)
     parent = fname.parent
@@ -475,20 +464,6 @@ def XML_file_to_parameter(file_name):
 
         Examples
         --------
-        >>> from pyqtgraph.parametertree import Parameter
-        >>> import custom_parameter_tree as cpt
-        >>>   #Creating test Parameter
-        >>> value=Parameter(name='value',value=10)
-        >>> settings=Parameter(name='settings')
-        >>> settings.addChild(value)
-        <Parameter 'value' at 0x5655f78>
-        >>>   #Creating test xml file
-        >>> xml_file=cpt.parameter_to_xml_file(settings,"my_xml_file")
-        >>> check=cpt.XML_file_to_parameter("my_xml_file.xml")
-        >>>   #Verifiy the integrity of the converted parameter
-        >>> print(check)
-        [{'visible': True, 'type': 'None', 'name': 'value', 'value': '10', 'title': 'value'}]
-
     """
     tree = ET.parse(file_name)
 
@@ -517,20 +492,6 @@ def XML_string_to_parameter(xml_string):
 
         Examples
         --------
-        >>> import custom_parameter_tree as cpt
-        >>> from pyqtgraph.parametertree import Parameter
-        >>>    #Creating test parameter
-        >>> settings=Parameter(name='settings')
-        >>> child=Parameter(name='info', value=10, visible=True)
-        >>> settings.addChild(child)
-        <Parameter 'info' at 0x84ab558>
-        >>>    #Creating test xml string
-        >>> xml_string=cpt.parameter_to_xml_string(settings)
-        >>>    #Verifiy the integrity of the converted parameter
-        >>> converted_parameter=cpt.XML_string_to_parameter(xml_string)
-        >>> print(converted_parameter)
-        [{'visible': True, 'type': 'None', 'name': 'info', 'value': '10', 'title': 'info'}]
-
     """
     root = ET.fromstring(xml_string)
     tree = ET.ElementTree(root)

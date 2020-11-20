@@ -2,10 +2,11 @@ import os, sys
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5 import QtGui, QtWidgets
 
-import pymodaq.daq_utils.parameter.ioxml
+from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import select_file
-from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType, parameterTypes
+from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType
+from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 remote_path = utils.get_set_remote_path()
@@ -14,14 +15,14 @@ remote_types = ['ShortCut', 'Joystick']
 actuator_actions = ['move_Rel', 'move_Rel_p', 'move_Rel_m']
 detector_actions = ['snap', 'grab', 'stop']
 
-
 try:
     import pygame
 except ModuleNotFoundError as e:
     remote_types.pop(remote_types.index('Joystick'))
     logger.warning('Could not load pygame module, no joystick configurable')
 
-class ScalableGroupRemote(parameterTypes.GroupParameter):
+
+class ScalableGroupRemote(GroupParameter):
     """
     """
 
@@ -38,42 +39,44 @@ class ScalableGroupRemote(parameterTypes.GroupParameter):
         """
             Add a child.
         """
-        childnames = [par.name() for par in self.children()]
-        if childnames == []:
+        name_prefix = 'action'  # or 'det_' but they have same length
+        child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
+        if not child_indexes:
             newindex = 0
         else:
-            newindex = len(childnames)
+            newindex = max(child_indexes) + 1
 
         params = [{'title': 'Action:', 'name': 'action', 'type': 'list', 'value': typ, 'values': self.opts['addList']},
                   {'title': 'Remote:', 'name': 'remote_type', 'type': 'list', 'value': 'Keyboard',
                    'values': ['Keyboard', 'Joystick']},
                   ]
         params.extend([
-                  {'title': 'Set Shortcut:', 'name': 'set_shortcut', 'type': 'bool_push', 'label': 'Set',
-                   'value': False},
-                  {'title': 'Shortcut:', 'name': 'shortcut', 'type': 'str', 'value': ''},
-                  {'title': 'Set Joystick ID:', 'name': 'set_joystick', 'type': 'bool_push', 'label': 'Set',
-                   'value': False, 'visible': False},
+            {'title': 'Set Shortcut:', 'name': 'set_shortcut', 'type': 'bool_push', 'label': 'Set',
+             'value': False},
+            {'title': 'Shortcut:', 'name': 'shortcut', 'type': 'str', 'value': ''},
+            {'title': 'Set Joystick ID:', 'name': 'set_joystick', 'type': 'bool_push', 'label': 'Set',
+             'value': False, 'visible': False},
 
-                  {'title': 'Joystick ID:', 'name': 'joystickID', 'type': 'int', 'value': -1, 'visible': False},
-                  {'title': 'Actionner type:', 'name': 'actionner_type', 'type': 'list', 'values': ['Axis', 'Button', 'Hat'],
-                    'visible': False},
-                  {'title': 'Actionner ID:', 'name': 'actionnerID', 'type': 'int', 'value': -1, 'visible': False},
-                  ])
-
+            {'title': 'Joystick ID:', 'name': 'joystickID', 'type': 'int', 'value': -1, 'visible': False},
+            {'title': 'Actionner type:', 'name': 'actionner_type', 'type': 'list', 'values': ['Axis', 'Button', 'Hat'],
+             'visible': False},
+            {'title': 'Actionner ID:', 'name': 'actionnerID', 'type': 'int', 'value': -1, 'visible': False},
+        ])
 
         # for param in params:
         #     if param['type'] == 'itemselect' or param['type'] == 'list':
         #         param['show_pb'] = True
 
-        child = {'title': f'Action {newindex:02d}', 'name': f'action{newindex:02d}', 'type': 'group',
+        child = {'title': f'Action {newindex:02d}', 'name': f'{name_prefix}{newindex:02d}', 'type': 'group',
                  'removable': True, 'children': params, 'removable': True, 'renamable': False}
 
         self.addChild(child)
+
+
 registerParameterType('groupremote', ScalableGroupRemote, override=True)
 
 
-class ScalableGroupModules(parameterTypes.GroupParameter):
+class ScalableGroupModules(GroupParameter):
     """
     """
 
@@ -90,11 +93,12 @@ class ScalableGroupModules(parameterTypes.GroupParameter):
         """
             Add a child.
         """
-        childnames = [par.name() for par in self.children()]
-        if childnames == []:
+        name_prefix = 'act_'  # or 'det_' but they have same length
+        child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
+        if not child_indexes:
             newindex = 0
         else:
-            newindex = len(childnames)
+            newindex = max(child_indexes) + 1
 
         if self.opts['modtype'] == 'Actuator':
             addlist = actuator_actions
@@ -104,24 +108,25 @@ class ScalableGroupModules(parameterTypes.GroupParameter):
         params = [
             {'title': 'Actions:', 'name': 'actions', 'type': 'groupremote', 'value': typ,
              'values': self.opts['addList'], 'addList': addlist},
-            ]
-
+        ]
 
         # for param in params:
         #     if param['type'] == 'itemselect' or param['type'] == 'list':
         #         param['show_pb'] = True
 
         if self.opts['modtype'] == 'Actuator':
-            child = {'title': f'Actuator {typ}', 'name': f'act_{newindex:03d}', 'type': 'group',
-                 'removable': True, 'children': params, 'removable': True, 'renamable': False}
+            child = {'title': f'Actuator {typ}', 'name': f'{name_prefix}{newindex:03d}', 'type': 'group',
+                     'removable': True, 'children': params, 'removable': True, 'renamable': False}
         else:
             child = {'title': f'Detector {typ}', 'name': f'det_{newindex:03d}', 'type': 'group',
-                 'removable': True, 'children': params, 'removable': True, 'renamable': False}
+                     'removable': True, 'children': params, 'removable': True, 'renamable': False}
 
         if child['name'] not in [child.name() for child in self.children()]:
             self.addChild(child)
+
+
 registerParameterType('groupmodules', ScalableGroupModules, override=True)
-    
+
 
 class ShortcutSelection(QtWidgets.QDialog):
     def __init__(self):
@@ -151,6 +156,7 @@ class ShortcutSelection(QtWidgets.QDialog):
     def keyPressEvent(self, event):
         keyseq = QtGui.QKeySequence(event.key())
         self.label.setText(keyseq.toString())
+
 
 class JoystickButtonsSelection(QtWidgets.QDialog):
     def __init__(self):
@@ -206,7 +212,6 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
                 self.settings.child(('hat_value2')).setValue(event.value[1])
                 self.selection.update(dict(hat=event.hat, value=event.value))
 
-
     def setupUI(self):
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
@@ -219,12 +224,12 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
                   {'title': 'Value:', 'name': 'axis_value', 'type': 'float', 'value': 0., 'visible': False},
                   {'title': 'Hat ID', 'name': 'hatID', 'type': 'int', 'value': -1, 'visible': False},
                   {'title': 'Value x:', 'name': 'hat_value1', 'type': 'int', 'value': 0, 'visible': False},
-                  {'title': 'Value y:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False},]
+                  {'title': 'Value y:', 'name': 'hat_value2', 'type': 'int', 'value': 0, 'visible': False}, ]
 
         self.settings = Parameter.create(name='settings', type='group', children=params)
         self.settings_tree = ParameterTree()
         # tree.setMinimumWidth(400)
-        #self.settings_tree.setMinimumHeight(500)
+        # self.settings_tree.setMinimumHeight(500)
         self.settings_tree.setParameters(self.settings, showTop=False)
 
         layout.addWidget(self.settings_tree)
@@ -238,9 +243,7 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
         buttonBox.rejected.connect(self.reject)
 
 
-
 class RemoteManager(QObject):
-
     remote_changed = pyqtSignal(dict)
 
     def __init__(self, actuators=[], detectors=[], msgbox=False):
@@ -267,7 +270,7 @@ class RemoteManager(QObject):
             else:  # cancel
                 pass
         params = [{'title': 'Activate all', 'name': 'activate_all', 'type': 'action'},
-                {'title': 'Deactivate all', 'name': 'deactivate_all', 'type': 'action'},
+                  {'title': 'Deactivate all', 'name': 'deactivate_all', 'type': 'action'},
                   {'title:': 'Actions', 'name': 'action_group', 'type': 'group'}]
 
         self.remote_actions = dict(shortcuts=dict([]), joysticks=dict([]))
@@ -283,9 +286,8 @@ class RemoteManager(QObject):
         for child in self.remote_settings.child(('action_group')).children():
             child.setValue(activate)
 
-
     def set_remote_configuration(self):
-        #remove existing shorcuts
+        # remove existing shorcuts
         while len(self.remote_actions['shortcuts']):
             self.remote_actions['shortcuts'].pop(list(self.remote_actions['shortcuts'].keys())[0])
 
@@ -306,7 +308,7 @@ class RemoteManager(QObject):
         for ind, action_tuple in enumerate(all_actions):
             module, action, module_type = action_tuple
             if action.child('remote_type').value() == 'Keyboard':
-                #stc = QtWidgets.QShortcut(QtGui.QKeySequence(action.child(('shortcut')).value()), self.dockarea)
+                # stc = QtWidgets.QShortcut(QtGui.QKeySequence(action.child(('shortcut')).value()), self.dockarea)
                 self.remote_settings.child(('action_group')).addChild(
                     {'title': f"{module}: {action.child(('action')).value()} "
                               f"{action.child(('shortcut')).value()}:",
@@ -321,7 +323,7 @@ class RemoteManager(QObject):
                               f"{action.child(('actionner_type')).value()}"
                               f"{action.child(('actionnerID')).value()}:",
                      'name': f'joy{ind:02d}', 'type': 'led_push', 'value': False})
-                self.remote_actions['joysticks'][f'joy{ind:02d}'] =\
+                self.remote_actions['joysticks'][f'joy{ind:02d}'] = \
                     dict(joystickID=action.child(('joystickID')).value(),
                          actionner_type=action.child(('actionner_type')).value(),
                          actionnerID=action.child(('actionnerID')).value(),
@@ -343,7 +345,7 @@ class RemoteManager(QObject):
                           'addList': self.detectors, 'modtype': 'Detector'}
                          ]  # PresetScalableGroupMove(name="Moves")]
         self.remote_params = Parameter.create(title='Preset', name='Preset', type='group',
-                                                children=param + params_action)
+                                              children=param + params_action)
         self.remote_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
         logger.info('Creating a new remote file')
         self.show_remote()
@@ -419,14 +421,11 @@ class RemoteManager(QObject):
                                                   action_name=param.name(),
                                                   action_dict=self.remote_actions['joysticks'][param.name()]))
 
-
-
-
     def set_file_remote(self, filename, show=True):
         """
 
         """
-        children = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(filename)
+        children = ioxml.XML_file_to_parameter(filename)
         self.remote_params = Parameter.create(title='Shortcuts:', name='shortcuts', type='group', children=children)
         if show:
             self.show_remote()
@@ -457,15 +456,15 @@ class RemoteManager(QObject):
 
         if res == dialog.Accepted:
             # save preset parameters in a xml file
-            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.remote_params, os.path.join(remote_path,
-                                                                                                     self.remote_params.child(
-                                                                                     ('filename')).value()))
+            ioxml.parameter_to_xml_file(
+                self.remote_params, os.path.join(remote_path, self.remote_params.child('filename').value()))
+
 
 if __name__ == '__main__':
     actuators = ['act0', 'act1', 'act2']
     detectors = ['det0', 'det1', 'det2']
     app = QtWidgets.QApplication(sys.argv)
-    #prog = RemoteManager(actuators=actuators, detectors=detectors, msgbox=True)
+    # prog = RemoteManager(actuators=actuators, detectors=detectors, msgbox=True)
     msgBox = JoystickButtonsSelection()
     ret = msgBox.exec()
     sys.exit(app.exec_())

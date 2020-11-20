@@ -77,9 +77,7 @@ class SpinBoxCustom(SpinBox.SpinBox):
             *opts*            string       the vararg options 
             =============== =========== ======================
 
-            See Also
-            --------
-            custom_parameter_tree.ItemSelect.setValue
+
         """
         #print opts
         for k in opts:
@@ -391,9 +389,6 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
 
             | This is a good function to override in subclasses.
 
-            See Also
-            --------
-            SpinBoxCustom, custom_parameter_tree.setOpts
         """
         opts = self.param.opts
         t = opts['type']
@@ -675,7 +670,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
 
             See Also
             --------
-            buttonClicked, limitsChanged, custom_parameter_tree.ItemSelect.setValue
+            buttonClicked, limitsChanged,
         """
         opts = self.param.opts
         t = opts['type']
@@ -745,7 +740,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
 
             See Also
             --------
-            limitsChanged, custom_parameter_tree.ItemSelect.setValue
+            limitsChanged,
         """
         if type(self.param.opts['limits']) == list:
             text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
@@ -1172,10 +1167,6 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
     def buttonClicked(self):
         """
            Append to the param attribute the dictionnary obtained from the QtWidget add parameter procedure.
-
-           See Also
-           --------
-           custom_parameter_tree.value, custom_parameter_tree.ItemSelect.setValue
         """
 
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
@@ -1507,9 +1498,6 @@ class Plain_text_pbParameterItem(pTypes.WidgetParameterItem):
         """
             Activate the parameter attribute.
 
-            See Also
-            --------
-            custom_parameter_tree.ItemSelectParameter.activate
         """
         self.param.activate()
 

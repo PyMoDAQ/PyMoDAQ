@@ -11,7 +11,7 @@ from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_ptypes
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
@@ -97,10 +97,6 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
                 * *1D viewer dock* : the preview window of 1D data
                 * *2D viewer dock* : the preview window of 2D data
                 * *Navigator viewer dock* : the global navigator graphic interface
-
-            See Also
-            --------
-            show_h5_attributes, show_h5_data, daq_utils.custom_parameter_tree.Table_custom, update_viewer_data
         """
         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # h5 file dock
@@ -113,7 +109,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
         V_splitter.addWidget(Form)
-        self.ui.attributes_table=custom_tree.Table_custom()
+        self.ui.attributes_table=pymodaq_ptypes.Table_custom()
         V_splitter.addWidget(self.ui.attributes_table)
         H_splitter.addWidget(V_splitter)
         self.ui.settings_tree=ParameterTree()
@@ -355,10 +351,6 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
              *col*                                    not used
             ================= ====================== ====================================
-
-            See Also
-            --------
-            daq_utils.custom_parameter_tree.XML_string_to_parameter, update_status
         """
         try:
             node=self.h5file.get_node(item.text(2))

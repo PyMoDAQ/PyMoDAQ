@@ -4,8 +4,8 @@ import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QObject, pyqtSignal, QLocale, pyqtSlot
 
-import pymodaq.daq_utils.parameter.ioxml
-import pymodaq.daq_utils.parameter.utils
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.daq_utils import linspace_step, odd_even, greater2n
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
@@ -364,7 +364,7 @@ class Scanner(QObject):
     def load_xml(self):
         fname = gutils.select_file(start_path=None, save=False, ext='xml')
         if fname is not None and fname != '':
-            par = pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(fname)
+            par = ioxml.XML_file_to_parameter(fname)
             self.settings.restoreState(Parameter.create(name='settings', type='group', children=par).saveState())
             self.update_model()
             scan_type = self.settings.child('scan_options', 'scan_type').value()
@@ -379,7 +379,7 @@ class Scanner(QObject):
         """
         fname = gutils.select_file(start_path=None, save=True, ext='xml')
         if fname is not None and fname != '':
-            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.settings, fname)
+            ioxml.parameter_to_xml_file(self.settings, fname)
 
     @property
     def actuators(self):
@@ -570,7 +570,7 @@ class Scanner(QObject):
 
                     self.update_scan2D_type(param)
 
-                elif param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('scan_options', 'scan2D_settings'), []):
+                elif param.name() in putils.iter_children(self.settings.child('scan_options', 'scan2D_settings'), []):
                     self.update_scan2D_type(param)
                     self.set_scan()
 

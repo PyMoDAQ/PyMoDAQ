@@ -3,10 +3,11 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QPointF
 from collections import OrderedDict
 
-import pymodaq.daq_utils.parameter.ioxml
-import pymodaq.daq_utils.parameter.utils
-import pyqtgraph.parametertree.parameterTypes as pTypes
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
+
 from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
@@ -275,7 +276,7 @@ class ROIManager(QObject):
                 # self.roiChanged()
 
             elif change == 'value':
-                if param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('ROIs')), []):
+                if param.name() in putils.iter_children(self.settings.child(('ROIs')), []):
                     if param.name() == 'Color' or param.name() == 'angle' :
                         parent = param.parent().name()
                     else:
@@ -351,7 +352,7 @@ class ROIManager(QObject):
     def save_ROI(self):
 
         try:
-            data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings.child(('ROIs')))
+            data = ioxml.parameter_to_xml_string(self.settings.child(('ROIs')))
             path = select_file(start_path=Path.home(), ext='xml')
 
             if path != '':
@@ -374,14 +375,14 @@ class ROIManager(QObject):
                     path = select_file(start_path=Path.home(), save=False, ext='xml')
                     if path != '':
                         params = Parameter.create(title='Settings', name='settings', type='group',
-                                                  children=pymodaq.daq_utils.parameter.ioxml.XML_file_to_parameter(path))
+                                                  children=ioxml.XML_file_to_parameter(path))
 
             if params is not None:
                 self.clear_ROI()
                 QtWidgets.QApplication.processEvents()
 
                 for param in params:
-                    if 'roi_type' in pymodaq.daq_utils.parameter.utils.iter_children(param, []):
+                    if 'roi_type' in putils.iter_children(param, []):
                         self.settings.child(('ROIs')).addNew(param.child(('roi_type')).value())
                     else:
                         self.settings.child(('ROIs')).addNew()
@@ -406,7 +407,7 @@ class ROIManager(QObject):
             else:
                 self.set_roi(child.children(), new_child.children())
 
-class ROIScalableGroup(pTypes.GroupParameter):
+class ROIScalableGroup(GroupParameter):
     def __init__(self, roi_type='1D', **opts):
         opts['type'] = 'group'
         opts['addText'] = "Add"
@@ -414,14 +415,16 @@ class ROIScalableGroup(pTypes.GroupParameter):
         if roi_type != '1D':
             opts['addList'] = ['RectROI', 'EllipseROI']
         self.color_list = ROIManager.color_list
-        pTypes.GroupParameter.__init__(self, **opts)
+        super().__init__(**opts)
 
     def addNew(self, typ=''):
-        indexes = [int(par.name()[-2:]) for par in self.children()]
-        if indexes == []:
+        name_prefix = 'ROI_'
+        child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
+        if not child_indexes:
             newindex = 0
         else:
-            newindex = max(indexes) + 1
+            newindex = max(child_indexes) + 1
+
         child = {'name': 'ROI_{:02d}'.format(newindex), 'type': 'group', 'removable': True, 'renamable': False}
 
         children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False},]

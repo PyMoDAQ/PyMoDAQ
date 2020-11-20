@@ -2,8 +2,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
 # from enum import IntEnum
 from easydict import EasyDict as edict
-
-import pymodaq.daq_utils.parameter.ioxml
+from pymodaq.daq_utils.parameter.utils import iter_children
+from pymodaq.daq_utils.parameter import ioxml
 import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
@@ -386,7 +386,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
     def commit_settings(self, param):
 
-        if param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('settings_client')), []):
+        if param.name() in iter_children(self.settings.child(('settings_client')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
             path = pymodaq.daq_utils.parameter.utils.get_param_path(param)[
@@ -395,7 +395,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             actuator_socket.send_list(path)
 
             # send value
-            data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
+            data = ioxml.parameter_to_xml_string(param)
             actuator_socket.send_string(data)
 
     def ini_stage(self, controller=None):

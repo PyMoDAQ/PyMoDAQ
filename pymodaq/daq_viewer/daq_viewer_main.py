@@ -357,8 +357,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         # #Setting detector types
         try:
             self.ui.Detector_type_combo.currentIndexChanged.disconnect(self.set_setting_tree)
-        except Exception as e:
-            self.logger.exception(str(e))
+        except TypeError as e:
+            pass  # just means it wasn't connected yet
+
         self.ui.Detector_type_combo.clear()
         self.ui.Detector_type_combo.addItems(self.detector_types)
         self.ui.Detector_type_combo.currentIndexChanged.connect(self.set_setting_tree)
@@ -674,7 +675,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
             See Also
             --------
-            change_viewer, daq_utils.custom_parameter_tree.iter_children
+            change_viewer,
         """
 
         for param, change, data in changes:
@@ -887,10 +888,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             *path*           string        the path name of the file to be saved.
             *datas*          dictionnary   the raw datas to save.
             =============== ============= ========================================
-
-            See Also
-            --------
-            gutils.select_file, daq_utils.custom_parameter_tree.parameter_to_xml_string, update_status
         """
         if path is not None:
             path = Path(path)

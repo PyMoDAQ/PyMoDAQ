@@ -81,23 +81,23 @@ setup(
                   },
     python_requires='>=3.6',
     install_requires=[
+        'pyqt5',
         'numpy==1.19.3',
         'scipy',
         'pyqtgraph',
         'easydict',
-        #'pyqt5',
         'tables',
-        'pymodaq_plugins>=2.0.1',
+        'pymodaq_plugins>=3.0.1',
         'pymodaq_pid_models>=0.0.2',
-	    'simple_pid',
+        'simple_pid',
         'python-dateutil',
         'packaging',
-        'SQLAlchemy-Utils==0.36.6', #this is so that the check for database existence doesn't crash anymore, see pull request 463
+        'SQLAlchemy-Utils==0.36.6',  # this is so that the check for database existence doesn't crash anymore,
+        # see pull request 463
         'toml',
         'pymodaq_plugin_manager',
 
-        ],
+    ],
     include_package_data=True,
     **setupOpts
 )
-

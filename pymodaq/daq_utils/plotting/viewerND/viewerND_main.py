@@ -144,10 +144,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
             *param*           instance of ppyqtgraph parameter   the parameter to be checked
             *changes*         tuple list                         Contain the (param,changes,info) list listing the changes made
             =============== =================================== ================================================================
-
-            See Also
-            --------
-            change_viewer, daq_utils.custom_parameter_tree.iter_children
         """
         try:
             for param, change, data in changes:
