@@ -6,7 +6,7 @@ Created on Mon Dec  4 10:59:53 2017
 
 """
 import sys
-from PyQt5 import QtWidgets,QtGui
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -32,9 +32,9 @@ class GroupParameterItemCustom(pTypes.GroupParameterItem):
         | Overwrite the optsChanged method from GroupParameterItem class.
 
     """
+
     def __init__(self, param, depth):
         pTypes.GroupParameterItem.__init__(self, param, depth)
-
 
     def optsChanged(self, param, changed):
         if 'addList' in changed:
@@ -61,13 +61,15 @@ class GroupParameterCustom(pTypes.GroupParameter):
         ============== ========================================
     """
     itemClass = GroupParameterItemCustom
-registerParameterType('group', GroupParameterCustom, override=True)
 
+
+registerParameterType('group', GroupParameterCustom, override=True)
 
 
 class SpinBoxCustom(SpinBox.SpinBox):
     def __init__(self, parent=None, value=0.0, **kwargs):
         super().__init__(parent, value, **kwargs)
+
     def setOpts(self, **opts):
         """
             Overriden class to add the field visible in the options.
@@ -79,7 +81,7 @@ class SpinBoxCustom(SpinBox.SpinBox):
 
 
         """
-        #print opts
+        # print opts
         for k in opts:
             if k == 'bounds':
                 self.setMinimum(opts[k][0], update=False)
@@ -91,7 +93,7 @@ class SpinBoxCustom(SpinBox.SpinBox):
             elif k in ['step', 'minStep']:
                 self.opts[k] = D(str(opts[k]))
             elif k == 'value':
-                pass   ## don't set value until bounds have been set
+                pass  ## don't set value until bounds have been set
             elif k == 'visible':
                 self.setVisible(opts[k])
             elif k == 'readonly':
@@ -117,8 +119,8 @@ class SpinBoxCustom(SpinBox.SpinBox):
             if 'step' in opts:
                 step = opts['step']
                 ## not necessary..
-                #if int(step) != step:
-                    #raise Exception('Integer SpinBox must have integer step size.')
+                # if int(step) != step:
+                # raise Exception('Integer SpinBox must have integer step size.')
             else:
                 self.opts['step'] = int(self.opts['step'])
 
@@ -137,163 +139,99 @@ class SpinBoxCustom(SpinBox.SpinBox):
 
         self.updateText()
 
+
 class Pixmap_check(QtWidgets.QWidget):
     """ value of this parameter is a dict with checked, data for the pixmap and optionally path in h5 node
     """
-    #valuechanged=pyqtSignal(dict)
+
+    # valuechanged=pyqtSignal(dict)
 
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Pixmap_check,self).__init__()
-        self.path=""
-        self.data=None
+        super(Pixmap_check, self).__init__()
+        self.path = ""
+        self.data = None
         self.initUI()
 
     def initUI(self):
         """
             Init the User Interface.
         """
-        self.ver_layout=QtWidgets.QVBoxLayout()
-        self.label=QtWidgets.QLabel()
-        self.checkbox=QtWidgets.QCheckBox('Show/Hide')
+        self.ver_layout = QtWidgets.QVBoxLayout()
+        self.label = QtWidgets.QLabel()
+        self.checkbox = QtWidgets.QCheckBox('Show/Hide')
         self.checkbox.setChecked(False)
         self.ver_layout.addWidget(self.label)
         self.ver_layout.addWidget(self.checkbox)
         self.ver_layout.setSpacing(0)
-        self.ver_layout.setContentsMargins(0,0,0,0);
+        self.ver_layout.setContentsMargins(0, 0, 0, 0);
         self.setLayout(self.ver_layout)
 
-    def setValue(self,dic):
+    def setValue(self, dic):
         if 'data' in dic:
-            self.data=QByteArray(dic['data'])
-            im=QtGui.QImage.fromData(self.data)
-            a=QtGui.QPixmap.fromImage(im)
+            if not isinstance(dic['data'], QtGui.QPixmap):
+                self.data = QByteArray(dic['data'])
+                im = QtGui.QImage.fromData(self.data)
+                a = QtGui.QPixmap.fromImage(im)
+            else:
+                a = dic['data']
         else:
             a = dic['pixmap']
         self.label.setPixmap(a)
         self.checkbox.setChecked(dic['checked'])
-        self.path=dic['path']
-        #self.valuechanged.emit(dic)
+        self.path = dic['path']
+        # self.valuechanged.emit(dic)
 
     def value(self):
-        return dict(pixmap=self.label.pixmap(),checked=self.checkbox.isChecked(),path=self.path)
+        return dict(pixmap=self.label.pixmap(), checked=self.checkbox.isChecked(), path=self.path)
+
 
 class QTimeCustom(QtWidgets.QTimeEdit):
-    def __init__(self,*args,**kwargs):
-        super(QTimeCustom,self).__init__(*args,**kwargs)
-        self.minutes_increment=1
+    def __init__(self, *args, **kwargs):
+        super(QTimeCustom, self).__init__(*args, **kwargs)
+        self.minutes_increment = 1
         self.timeChanged.connect(self.updateTime)
-        
-    def setTime(self,time):
-        hours=time.hour()
-        minutes=time.minute()
-        
-        minutes=int(np.round(minutes/self.minutes_increment)*self.minutes_increment)
-        if minutes==60:
-            minutes=0
-            hours+=1
-            
-        time.setHMS(hours,minutes,0)
-        
-        return super(QTimeCustom,self).setTime(time)
-        
-            
-    def setMinuteIncrement(self,minutes_increment):
-        self.minutes_increment=minutes_increment
+
+    def setTime(self, time):
+        hours = time.hour()
+        minutes = time.minute()
+
+        minutes = int(np.round(minutes / self.minutes_increment) * self.minutes_increment)
+        if minutes == 60:
+            minutes = 0
+            hours += 1
+
+        time.setHMS(hours, minutes, 0)
+
+        return super(QTimeCustom, self).setTime(time)
+
+    def setMinuteIncrement(self, minutes_increment):
+        self.minutes_increment = minutes_increment
         self.updateTime(self.time())
-        
+
     @pyqtSlot(QTime)
-    def updateTime(self,time):
+    def updateTime(self, time):
         self.setTime(time)
 
 
-class SliderParameterItem(pTypes.WidgetParameterItem):
-
-    def __init__(self, param, depth):
-        pTypes.WidgetParameterItem.__init__(self, param, depth)
-        self.hideWidget = False
-        self.subItem = QtWidgets.QTreeWidgetItem()
-        self.addChild(self.subItem)
-
-    def treeWidgetChanged(self):
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
-        # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.w)
-
-        # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
-
-    def limitsChanged(self, param, limits):
-        """Called when the parameter's limits have changed"""
-        ParameterItem.limitsChanged(self, param, limits)
-        t = self.param.opts['type']
-        self.w.setOpts(bounds=limits)
-
-    def makeWidget(self):
-        """
-            Make an initialized file_browser object with parameter options dictionnary ('readonly' key)0
-
-            Returns
-            -------
-            w : filebrowser
-                The initialized file browser.
-
-            See Also
-            --------
-            file_browser
-        """
-        opts = self.param.opts
-
-        defs = {
-            'value': 0, 'min': 0., 'max': 1000.,
-            'step': 1.0, 'dec': False,
-            'siPrefix': False, 'suffix': '', 'decimals': 12,
-        }
-
-        for k in defs:
-            if k in opts:
-                defs[k] = opts[k]
-        if 'limits' in opts:
-            defs['bounds'] = opts['limits']
-        if 'subtype' not in opts:
-            opts['subtype'] = 'linear'
-        self.w = SliderSpinBox(bounds=(0., 1000.), subtype=opts['subtype'])
-        self.w.setOpts(**defs)
-
-        self.w.sigChanged = self.w.spinbox.sigValueChanged
-        self.w.sigChanging = self.w.spinbox.sigValueChanging
-
-        return self.w
-
-
-class SliderParameter(Parameter):
-    """
-        Editable string; displayed as large text box in the tree.
-
-        See Also
-        --------
-        file_browserParameterItem
-    """
-    itemClass = SliderParameterItem
-registerParameterType('slide', SliderParameter, override=True)
-
 class SliderSpinBox(QtWidgets.QWidget):
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self, *args, **kwargs):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(SliderSpinBox,self).__init__()
+        super(SliderSpinBox, self).__init__()
         self.subtype = kwargs['subtype']
-        self.initUI(*args,**kwargs)
-        
+        self.initUI(*args, **kwargs)
+
+        self.valueChanged = self.spinbox.valueChanged  # (value)  for compatibility with QSpinBox
+        self.sigValueChanged = self.spinbox.sigValueChanged  # (self)
+        self.sigValueChanging = self.spinbox.sigValueChanging  # (self, value)  sent immediately; no delay.
+
     @property
     def opts(self):
         return self.spinbox.opts
 
     @opts.setter
-    def opts(self,**opts):
+    def opts(self, **opts):
         self.setOpts(**opts)
 
     def setOpts(self, **opts):
@@ -301,34 +239,32 @@ class SliderSpinBox(QtWidgets.QWidget):
         if 'visible' in opts:
             self.slider.setVisible(opts['visible'])
 
-
-    def initUI(self,*args,**kwargs):
+    def initUI(self, *args, **kwargs):
         """
             Init the User Interface.
         """
-        self.hor_layout=QtWidgets.QVBoxLayout()
-        self.slider=QtWidgets.QSlider(Qt.Horizontal)
+        self.hor_layout = QtWidgets.QVBoxLayout()
+        self.slider = QtWidgets.QSlider(Qt.Horizontal)
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
 
-        self.spinbox=SpinBoxCustom(parent=None, value=1, **kwargs)
+        self.spinbox = SpinBoxCustom(parent=None, value=1, **kwargs)
 
         self.hor_layout.addWidget(self.slider)
         self.hor_layout.addWidget(self.spinbox)
         self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0,0,0,0);
+        self.hor_layout.setContentsMargins(0, 0, 0, 0);
         self.setLayout(self.hor_layout)
 
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
 
-
-    def update_spinbox(self,val):
+    def update_spinbox(self, val):
         """
         val is a percentage [0-100] used in order to set the spinbox value between its min and max
         """
-        min_val=float(self.opts['bounds'][0])
-        max_val=float(self.opts['bounds'][1])
+        min_val = float(self.opts['bounds'][0])
+        max_val = float(self.opts['bounds'][1])
         if self.subtype == 'log':
             val_out = scroll_log(val, min_val, max_val)
         else:
@@ -343,33 +279,34 @@ class SliderSpinBox(QtWidgets.QWidget):
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
 
-    def update_slide(self,val):
+    def update_slide(self, val):
         """
         val is the spinbox value between its min and max
         """
-        min_val=float(self.opts['bounds'][0])
-        max_val=float(self.opts['bounds'][1])
-
+        min_val = float(self.opts['bounds'][0])
+        max_val = float(self.opts['bounds'][1])
 
         try:
             self.slider.valueChanged.disconnect(self.update_spinbox)
             self.spinbox.valueChanged.disconnect(self.update_slide)
         except:
             pass
-        self.slider.setValue(int((val-min_val)/(max_val-min_val)*100))
+        self.slider.setValue(int((val - min_val) / (max_val - min_val) * 100))
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
 
-    def setValue(self,val):
+    def setValue(self, val):
         self.spinbox.setValue(val)
 
     def value(self):
         return self.spinbox.value()
 
+
 class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
     """
         This is a subclass of widget parameteritem in order to deal with the visiblily of the spinbox when parameter visibility os toggled.
     """
+
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
 
@@ -392,7 +329,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         """
         opts = self.param.opts
         t = opts['type']
-        if t in ('int', 'float'):
+        if t in ('int', 'float', 'slide'):
             defs = {
                 'value': 0, 'min': None, 'max': None,
                 'step': 1.0, 'dec': False,
@@ -406,10 +343,17 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                     defs[k] = opts[k]
             if 'limits' in opts:
                 defs['bounds'] = opts['limits']
-            w = SpinBoxCustom()
+            if t in ('int', 'float'):
+                w = SpinBoxCustom()
+            else:
+                if 'subtype' not in opts:
+                    opts['subtype'] = 'linear'
+                w = SliderSpinBox(bounds=(0., 1000.), subtype=opts['subtype'])
+
             w.setOpts(**defs)
             w.sigChanged = w.sigValueChanged
             w.sigChanging = w.sigValueChanging
+
         elif t == 'bool':
             w = QtWidgets.QCheckBox()
             w.sigChanged = w.toggled
@@ -425,7 +369,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 w.setText(opts['title'])
             else:
                 w.setText(opts['name'])
-            #w.setMaximumWidth(50)
+            # w.setMaximumWidth(50)
             w.setCheckable(True)
             w.sigChanged = w.toggled
             w.value = w.isChecked
@@ -456,7 +400,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.setFlat(True)
             w.setEnabled(not opts.get('readonly', False))
         elif t == 'colormap':
-            from pyqtgraph.widgets.GradientWidget import GradientWidget ## need this here to avoid import loop
+            from pyqtgraph.widgets.GradientWidget import GradientWidget  ## need this here to avoid import loop
             w = GradientWidget(orientation='bottom')
             w.sigChanged = w.sigGradientChangeFinished
             w.sigChanging = w.sigGradientChanged
@@ -466,14 +410,20 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         elif t == 'date_time':
             w = QtWidgets.QDateTimeEdit(QDateTime(QDate.currentDate(), QTime.currentTime()))
             w.setCalendarPopup(True)
-            w.setDisplayFormat('dd/MM/yyyy hh:mm')
+            if 'format' in opts:
+                w.setDisplayFormat(opts['format'])
+            else:
+                w.setDisplayFormat('dd/MM/yyyy hh:mm')
             w.sigChanged = w.dateTimeChanged
             w.value = w.dateTime
             w.setValue = w.setDateTime
         elif t == 'date':
             w = QtWidgets.QDateEdit(QDate(QDate.currentDate()))
             w.setCalendarPopup(True)
-            w.setDisplayFormat('dd/MM/yyyy')
+            if 'format' in opts:
+                w.setDisplayFormat(opts['format'])
+            else:
+                w.setDisplayFormat('dd/MM/yyyy')
             w.sigChanged = w.dateChanged
             w.value = w.date
             w.setValue = w.setDate
@@ -504,26 +454,6 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.sigChanged = w.checkbox.toggled
             w.value = w.value
             w.setValue = w.setValue
-        # elif t=='slide':
-        #
-        #     defs = {
-        #         'value': 0, 'min': 0., 'max': 1000.,
-        #         'step': 1.0, 'dec': False,
-        #         'siPrefix': False, 'suffix': '', 'decimals': 12,
-        #     }
-        #     for k in defs:
-        #         if k in opts:
-        #             defs[k] = opts[k]
-        #     if 'limits' in opts:
-        #         defs['bounds'] = opts['limits']
-        #     if 'subtype' not in opts:
-        #         opts['subtype'] = 'linear'
-        #     w = SliderSpinBox(bounds=(0.,1000.), subtype=opts['subtype'])
-        #     w.setOpts(**defs)
-        #
-        #     w.sigChanged = w.spinbox.sigValueChanged
-        #     w.sigChanging = w.spinbox.sigValueChanging
-
         else:
             raise Exception("Unknown type '%s'" % str(t))
         return w
@@ -542,7 +472,8 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         """
             Hide the widget attribute.
         """
-        if not ('led' in self.param.opts['type'] or self.param.opts['type']=='pixmap' or self.param.opts['type']=='pixmap_check'):
+        if not ('led' in self.param.opts['type'] or self.param.opts['type'] == 'pixmap' or self.param.opts[
+            'type'] == 'pixmap_check'):
             self.widget.hide()
             self.displayLabel.show()
 
@@ -563,7 +494,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             --------
             optsChanged
         """
-        #print "opts changed:", opts
+        # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
 
         if 'readonly' in opts:
@@ -581,17 +512,14 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         if isinstance(self.widget, SpinBoxCustom):
             if 'visible' in opts:
                 opts.pop('visible')
-                self.widget.hide() # so that only the display label is shown when visible option is toggled
+                self.widget.hide()  # so that only the display label is shown when visible option is toggled
             if 'units' in opts and 'suffix' not in opts:
                 opts['suffix'] = opts['units']
             self.widget.setOpts(**opts)
             self.updateDisplayLabel()
 
         if 'title' in opts:
-            self.setText(0, opts['title']) #void QTreeWidgetItem::setText(int column, const QString &text)
-
-
-
+            self.setText(0, opts['title'])  # void QTreeWidgetItem::setText(int column, const QString &text)
 
     def valueChanged(self, param, val, force=False):
         ## called when the parameter's value has changed
@@ -615,7 +543,6 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
     def __init__(self, *args, **kargs):
         pTypes.SimpleParameter.__init__(self, *args, **kargs)
 
-
     def _interpretValue(self, v):
         fn = {
             'int': int,
@@ -635,6 +562,7 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
         }[self.opts['type']]
         return fn(v)
 
+
 registerParameterType('int', SimpleParameterCustom, override=True)
 registerParameterType('float', SimpleParameterCustom, override=True)
 registerParameterType('bool', SimpleParameterCustom, override=True)
@@ -646,6 +574,7 @@ registerParameterType('time', SimpleParameterCustom, override=True)
 registerParameterType('led', SimpleParameterCustom, override=True)
 registerParameterType('pixmap', SimpleParameterCustom, override=True)
 registerParameterType('pixmap_check', SimpleParameterCustom, override=True)
+registerParameterType('slide', SimpleParameterCustom, override=True)
 
 
 # registerParameterType('slide', SimpleParameterCustom , override=True)
@@ -655,10 +584,11 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         WidgetParameterItem subclass providing comboBox that lets the user select from a list of options.
 
     """
+
     def __init__(self, param, depth):
-        super(ListParameterItem_custom,self).__init__(param, depth)
-
-
+        super(ListParameterItem_custom, self).__init__(param, depth)
+        if 'tip' in param.opts:
+            self.displayLabel.setToolTip(param.opts['tip'])
     def makeWidget(self):
         """
             Make a widget from self parameter options, connected to the buttonClicked function.
@@ -681,6 +611,8 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
             w.add_pb.setVisible(opts['show_pb'])
         else:
             w.add_pb.setVisible(False)
+        if 'tip' in opts:
+            w.setToolTip(opts['tip'])
         w.sigChanged = w.combo.currentIndexChanged
         w.value = self.value
         w.setValue = self.setValue
@@ -721,13 +653,13 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         self.forward, self.reverse = ListParameter_custom.mapping(limits)
         try:
             self.widget.blockSignals(True)
-            val = self.targetValue  #asUnicode(self.widget.currentText())
+            val = self.targetValue  # asUnicode(self.widget.currentText())
 
             self.widget.combo.clear()
             for k in self.forward:
                 self.widget.combo.addItem(k)
                 if k == val:
-                    self.widget.combo.setCurrentIndex(self.widget.count()-1)
+                    self.widget.combo.setCurrentIndex(self.widget.count() - 1)
                     self.updateDisplayLabel()
         finally:
             self.widget.blockSignals(False)
@@ -764,7 +696,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
             --------
             optsChanged
         """
-        #print "opts changed:", opts
+        # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
 
         if 'show_pb' in opts:
@@ -787,13 +719,14 @@ class ListParameter_custom(pTypes.ListParameter):
     def __init__(self, **opts):
         super(ListParameter_custom, self).__init__(**opts)
 
-
     def activate(self):
         """
             Emit the Activated signal.
         """
         self.sigActivated.emit(self)
         self.emitStateChanged('activated', None)
+
+
 registerParameterType('list', ListParameter_custom, override=True)
 
 
@@ -840,7 +773,7 @@ class TableParameterItem(WidgetParameterItemcustom):
         """
         ## TODO: fix so that superclass method can be called
         ## (WidgetParameter should just natively support this style)
-        #WidgetParameterItem.treeWidgetChanged(self)
+        # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
@@ -861,16 +794,22 @@ class TableParameterItem(WidgetParameterItemcustom):
             --------
             Table_custom
         """
+        opts = self.param.opts
         w = Table_custom()
+        if 'tip' in opts:
+            w.setToolTip(opts['tip'])
         w.setColumnCount(2)
-        if 'header' in self.param.opts.keys():
+        if 'header' in opts:
             w.setHorizontalHeaderLabels(self.param.opts['header'])
-        w.setMaximumHeight(200)
-        #self.table.setReadOnly(self.param.opts.get('readonly', False))
+        if 'height' not in opts:
+            opts['height'] = 200
+        w.setMaximumHeight(opts['height'])
+        # self.table.setReadOnly(self.param.opts.get('readonly', False))
         w.value = w.get_table_value
         w.setValue = w.set_table_value
         w.sigChanged = w.itemChanged
         return w
+
 
 class Table_custom(QtWidgets.QTableWidget):
     """
@@ -881,11 +820,10 @@ class Table_custom(QtWidgets.QTableWidget):
         ============== ===========================
     """
 
-    valuechanged=pyqtSignal(OrderedDict)
+    valuechanged = pyqtSignal(OrderedDict)
+
     def __init__(self):
         QtWidgets.QTableWidget.__init__(self)
-
-
 
     def get_table_value(self):
         """
@@ -898,8 +836,8 @@ class Table_custom(QtWidgets.QTableWidget):
         """
         data = OrderedDict([])
         for ind in range(self.rowCount()):
-            item0 = self.item(ind,0)
-            item1 = self.item(ind,1)
+            item0 = self.item(ind, 0)
+            item1 = self.item(ind, 1)
             if item0 is not None and item1 is not None:
                 try:
                     data[item0.text()] = float(item1.text())
@@ -907,8 +845,7 @@ class Table_custom(QtWidgets.QTableWidget):
                     data[item0.text()] = item1.text()
         return data
 
-
-    def set_table_value(self,data_dict):
+    def set_table_value(self, data_dict):
         """
             Set the data values dictionnary to the custom table.
 
@@ -923,17 +860,18 @@ class Table_custom(QtWidgets.QTableWidget):
             for ind, (key, value) in enumerate(data_dict.items()):
                 item0 = QtWidgets.QTableWidgetItem(key)
                 item0.setFlags(item0.flags() ^ Qt.ItemIsEditable)
-                if isinstance(value,float):
+                if isinstance(value, float):
                     item1 = QtWidgets.QTableWidgetItem('{:.6e}'.format(value))
                 else:
                     item1 = QtWidgets.QTableWidgetItem(str(value))
                 item1.setFlags(item1.flags() ^ Qt.ItemIsEditable)
                 self.setItem(ind, 0, item0)
                 self.setItem(ind, 1, item1)
-            #self.valuechanged.emit(data_dict)
+            # self.valuechanged.emit(data_dict)
 
         except Exception as e:
             pass
+
 
 class TableParameter(Parameter):
     """
@@ -945,12 +883,14 @@ class TableParameter(Parameter):
     """
     itemClass = TableParameterItem
     """Editable string; displayed as large text box in the tree."""
+
     # def __init(self):
     #     super(TableParameter,self).__init__()
 
-    def setValue(self,value):
+    def setValue(self, value):
         self.opts['value'] = value
         self.sigValueChanged.emit(self, value)
+
 
 registerParameterType('table', TableParameter, override=True)
 
@@ -987,14 +927,16 @@ class TableViewParameterItem(WidgetParameterItemcustom):
             Table_custom
         """
         menu = False
-        if 'menu' in self.param.opts:
-            menu = self.param.opts['menu']
-
-
+        opts = self.param.opts
+        if 'menu' in opts:
+            menu = opts['menu']
         w = TableViewCustom(menu=menu)
 
+        if 'tip' in opts:
+            w.setToolTip(opts['tip'])
+
         w.setMaximumHeight(200)
-        #self.table.setReadOnly(self.param.opts.get('readonly', False))
+        # self.table.setReadOnly(self.param.opts.get('readonly', False))
         w.value = w.get_table_value
         w.setValue = w.set_table_value
         w.sigChanged = w.valueChanged
@@ -1017,12 +959,12 @@ class TableViewParameterItem(WidgetParameterItemcustom):
             --------
             optsChanged
         """
-        #print "opts changed:", opts
+        # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
 
         if 'readonly' in opts:
             self.updateDefaultBtn()
-            if isinstance(self.widget, (QtWidgets.QCheckBox,ColorButton.ColorButton)):
+            if isinstance(self.widget, (QtWidgets.QCheckBox, ColorButton.ColorButton)):
                 self.widget.setEnabled(not opts['readonly'])
 
         if 'delegate' in opts:
@@ -1032,9 +974,6 @@ class TableViewParameterItem(WidgetParameterItemcustom):
 
         if 'menu' in opts:
             self.widget.setmenu(opts['menu'])
-
-
-
 
 
 class TableViewCustom(QtWidgets.QTableView):
@@ -1077,7 +1016,6 @@ class TableViewCustom(QtWidgets.QTableView):
     def remove(self):
         self.remove_row_signal.emit(self.currentIndex().row())
 
-
     def data_has_changed(self, topleft, bottomright, roles):
         self.valueChanged.emit([topleft, bottomright, roles])
 
@@ -1087,8 +1025,7 @@ class TableViewCustom(QtWidgets.QTableView):
         """
         return self.model()
 
-
-    def set_table_value(self,data_model):
+    def set_table_value(self, data_model):
         """
 
         """
@@ -1101,6 +1038,7 @@ class TableViewCustom(QtWidgets.QTableView):
     def contextMenuEvent(self, event):
         if self.menu is not None:
             self.menu.exec(event.globalPos())
+
 
 class TableViewParameter(Parameter):
     """
@@ -1116,9 +1054,11 @@ class TableViewParameter(Parameter):
         self.opts['value'] = value
         self.sigValueChanged.emit(self, value)
 
+
 registerParameterType('table_view', TableViewParameter, override=True)
 
-class ItemSelectParameterItem(pTypes.WidgetParameterItem):
+
+class ItemSelectParameterItem(WidgetParameterItemcustom):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
@@ -1132,7 +1072,7 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
         """
         ## TODO: fix so that superclass method can be called
         ## (WidgetParameter should just natively support this style)
-        #WidgetParameterItem.treeWidgetChanged(self)
+        # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
@@ -1153,11 +1093,13 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
             w.itemselect.setMaximumHeight(opts['height'])
         else:
             w.itemselect.setMaximumHeight(70)
-        #w.setReadOnly(self.param.opts.get('readonly', False))
+        # w.setReadOnly(self.param.opts.get('readonly', False))
         if 'show_pb' in opts:
             w.add_pb.setVisible(opts['show_pb'])
         else:
             w.add_pb.setVisible(False)
+        if 'tip' in opts:
+            w.setToolTip(opts['tip'])
         w.value = w.itemselect.get_value
         w.setValue = w.itemselect.set_value
         w.sigChanged = w.itemselect.itemSelectionChanged
@@ -1170,13 +1112,13 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
         """
 
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
-                                            "String value:", QtWidgets.QLineEdit.Normal)
+                                                  "String value:", QtWidgets.QLineEdit.Normal)
         if ok and not (text == ""):
-            all=self.param.value()['all_items']
+            all = self.param.value()['all_items']
             all.append(text)
-            sel=self.param.value()['selected']
+            sel = self.param.value()['selected']
             sel.append(text)
-            val=dict(all_items=all,selected=sel)
+            val = dict(all_items=all, selected=sel)
             self.param.setValue(val)
             self.param.sigValueChanged.emit(self.param, val)
 
@@ -1188,7 +1130,7 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
             --------
             optsChanged
         """
-        #print "opts changed:", opts
+        # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
 
         if 'show_pb' in opts:
@@ -1198,13 +1140,13 @@ class ItemSelectParameterItem(pTypes.WidgetParameterItem):
 class ItemSelect_pb(QtWidgets.QWidget):
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(ItemSelect_pb,self).__init__()
+        super(ItemSelect_pb, self).__init__()
         self.initUI()
 
     def initUI(self):
-        self.hor_layout=QtWidgets.QHBoxLayout()
-        self.itemselect=ItemSelect()
-        self.add_pb=QtWidgets.QPushButton()
+        self.hor_layout = QtWidgets.QHBoxLayout()
+        self.itemselect = ItemSelect()
+        self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -1229,9 +1171,9 @@ class ItemSelect(QtWidgets.QListWidget):
             dictionnary
                 The dictionnary of all_items compared to the slelectedItems.
         """
-        selitems=[item.text() for item in self.selectedItems()]
-        allitems=[item.text() for item in self.all_items()]
-        return dict(all_items=allitems,selected=selitems)
+        selitems = [item.text() for item in self.selectedItems()]
+        allitems = [item.text() for item in self.all_items()]
+        return dict(all_items=allitems, selected=selitems)
 
     def all_items(self):
         """
@@ -1244,7 +1186,7 @@ class ItemSelect(QtWidgets.QListWidget):
         """
         return [self.item(ind) for ind in range(self.count())]
 
-    def set_value(self,values):
+    def set_value(self, values):
         """
             Set values to the all_items attributes filtering values by the 'selected' key.
 
@@ -1253,14 +1195,15 @@ class ItemSelect(QtWidgets.QListWidget):
             *values*          dictionnary    the values dictionnary to be setted.
             =============== ============== =======================================
         """
-        allitems=[item.text() for item in self.all_items()]
-        if allitems !=values['all_items']:
+        allitems = [item.text() for item in self.all_items()]
+        if allitems != values['all_items']:
             self.clear()
             self.addItems(values['all_items'])
             QtWidgets.QApplication.processEvents()
         for item in self.all_items():
             if item.text() in values['selected']:
                 item.setSelected(True)
+
 
 class ItemSelectParameter(Parameter):
     """
@@ -1282,6 +1225,7 @@ class ItemSelectParameter(Parameter):
         self.sigActivated.emit(self)
         self.emitStateChanged('activated', None)
 
+
 registerParameterType('itemselect', ItemSelectParameter, override=True)
 
 
@@ -1299,23 +1243,24 @@ class ActionParameterItem(pTypes.ActionParameterItem):
 class ActionParameter(pTypes.ActionParameter):
     """Used for displaying a button within the tree."""
     itemClass = ActionParameterItem
+
+
 registerParameterType('action', ActionParameter, override=True)
 
 
 class file_browserParameterItem(WidgetParameterItemcustom):
 
     def __init__(self, param, depth):
-        self.filetype=False
+        self.filetype = False
         super().__init__(param, depth)
         self.hideWidget = False
         self.subItem = QtWidgets.QTreeWidgetItem()
         self.addChild(self.subItem)
-        
 
     def treeWidgetChanged(self):
         ## TODO: fix so that superclass method can be called
         ## (WidgetParameter should just natively support this style)
-        #WidgetParameterItem.treeWidgetChanged(self)
+        # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.w)
 
@@ -1341,13 +1286,18 @@ class file_browserParameterItem(WidgetParameterItemcustom):
         else:
             self.filetype = True
 
-        self.w = file_browser(self.param.value(),file_type=self.filetype)
-        #self.file_browser.setMaximumHeight(100)
+
+
+        self.w = file_browser(self.param.value(), file_type=self.filetype)
+        if 'tip' in self.param.opts:
+            self.w.setToolTip(self.param.opts['tip'])
+        # self.file_browser.setMaximumHeight(100)
         self.w.base_path_edit.setReadOnly(self.param.opts['readonly'])
         self.w.value = self.w.get_value
         self.w.setValue = self.w.set_path
         self.w.sigChanged = self.w.value_changed
         return self.w
+
 
 class file_browser(QtWidgets.QWidget):
     """
@@ -1361,8 +1311,9 @@ class file_browser(QtWidgets.QWidget):
         --------
         browse_path
     """
-    value_changed=pyqtSignal(str)
-    def __init__(self,init_path='D:/Data',file_type=False):
+    value_changed = pyqtSignal(str)
+
+    def __init__(self, init_path='D:/Data', file_type=False):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(file_browser, self).__init__()
         self.filetype = file_type
@@ -1370,7 +1321,6 @@ class file_browser(QtWidgets.QWidget):
         self.initUI()
 
         self.base_path_browse_pb.clicked.connect(self.browse_path)
-
 
     def browse_path(self):
         """
@@ -1381,16 +1331,17 @@ class file_browser(QtWidgets.QWidget):
             set_path
         """
         if self.filetype is True:
-            folder_name = QtWidgets.QFileDialog.getOpenFileName(None,'Choose File',os.path.split(self.path)[0])[0]
+            folder_name = QtWidgets.QFileDialog.getOpenFileName(None, 'Choose File', os.path.split(self.path)[0])[0]
         elif self.filetype is False:
-            folder_name = QtWidgets.QFileDialog.getExistingDirectory(None,'Choose Folder',self.path)
+            folder_name = QtWidgets.QFileDialog.getExistingDirectory(None, 'Choose Folder', self.path)
 
         elif self.filetype == "save":
-            folder_name = QtWidgets.QFileDialog.getSaveFileName(None,'Enter a Filename', os.path.split(self.path)[0])[0]
+            folder_name = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a Filename', os.path.split(self.path)[0])[
+                0]
 
-        if not( not(folder_name)): #execute if the user didn't cancel the file selection
-             self.set_path(folder_name)
-             self.value_changed.emit(folder_name)
+        if not (not (folder_name)):  # execute if the user didn't cancel the file selection
+            self.set_path(folder_name)
+            self.value_changed.emit(folder_name)
 
     def set_path(self, path_file):
         """
@@ -1417,29 +1368,27 @@ class file_browser(QtWidgets.QWidget):
         """
         return self.base_path_edit.toPlainText()
 
-
     def initUI(self):
         """
             Init the User Interface.
         """
 
-        self.hor_layout=QtWidgets.QHBoxLayout()
-        self.base_path_edit=QtWidgets.QPlainTextEdit(self.path)
+        self.hor_layout = QtWidgets.QHBoxLayout()
+        self.base_path_edit = QtWidgets.QPlainTextEdit(self.path)
         self.base_path_edit.setMaximumHeight(50)
-        self.base_path_browse_pb=QtWidgets.QPushButton()
+        self.base_path_browse_pb = QtWidgets.QPushButton()
         self.base_path_browse_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Browse_Dir_Path.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.base_path_browse_pb.setIcon(icon3)
         self.hor_layout.addWidget(self.base_path_edit)
 
-        verlayout=QtWidgets.QVBoxLayout()
+        verlayout = QtWidgets.QVBoxLayout()
         verlayout.addWidget(self.base_path_browse_pb)
         verlayout.addStretch()
         self.hor_layout.addLayout(verlayout)
         self.hor_layout.setSpacing(0)
         self.setLayout(self.hor_layout)
-
 
 
 class file_browserParameter(Parameter):
@@ -1452,7 +1401,9 @@ class file_browserParameter(Parameter):
     """
     itemClass = file_browserParameterItem
 
+
 registerParameterType('browsepath', file_browserParameter, override=True)
+
 
 class Plain_text_pbParameterItem(pTypes.WidgetParameterItem):
 
@@ -1465,7 +1416,7 @@ class Plain_text_pbParameterItem(pTypes.WidgetParameterItem):
     def treeWidgetChanged(self):
         ## TODO: fix so that superclass method can be called
         ## (WidgetParameter should just natively support this style)
-        #WidgetParameterItem.treeWidgetChanged(self)
+        # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.w)
 
@@ -1495,11 +1446,10 @@ class Plain_text_pbParameterItem(pTypes.WidgetParameterItem):
         return self.w
 
     def buttonClicked(self):
-        """
-            Activate the parameter attribute.
-
-        """
-        self.param.activate()
+        text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
+                                                  "String value:", QtWidgets.QLineEdit.Normal);
+        if ok and not (text == ""):
+            self.param.setValue(self.param.value()+'\n'+text)
 
 class Plain_text_pb(QtWidgets.QWidget):
     """
@@ -1512,10 +1462,11 @@ class Plain_text_pb(QtWidgets.QWidget):
         --------
         initUI, emitsignal
     """
-    value_changed=pyqtSignal(str)
+    value_changed = pyqtSignal(str)
+
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Plain_text_pb,self).__init__()
+        super(Plain_text_pb, self).__init__()
 
         self.initUI()
         self.text_edit.textChanged.connect(self.emitsignal)
@@ -1524,10 +1475,10 @@ class Plain_text_pb(QtWidgets.QWidget):
         """
             Emit the value changed signal from the text_edit attribute.
         """
-        text=self.text_edit.toPlainText()
+        text = self.text_edit.toPlainText()
         self.value_changed.emit(text)
 
-    def set_value(self,txt):
+    def set_value(self, txt):
         """
             Set the value of the text_edit attribute.
 
@@ -1549,31 +1500,30 @@ class Plain_text_pb(QtWidgets.QWidget):
         """
         return self.text_edit.toPlainText()
 
-
     def initUI(self):
         """
             Init the User Interface.
         """
 
-        self.hor_layout=QtWidgets.QHBoxLayout()
-        self.text_edit=QtWidgets.QPlainTextEdit()
+        self.hor_layout = QtWidgets.QHBoxLayout()
+        self.text_edit = QtWidgets.QPlainTextEdit()
         self.text_edit.setReadOnly(True)
         self.text_edit.setMaximumHeight(50)
 
-        self.add_pb=QtWidgets.QPushButton()
+        self.add_pb = QtWidgets.QPushButton()
         self.add_pb.setText("")
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Add2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.add_pb.setIcon(icon3)
         self.hor_layout.addWidget(self.text_edit)
 
-
-        verlayout=QtWidgets.QVBoxLayout()
+        verlayout = QtWidgets.QVBoxLayout()
         verlayout.addWidget(self.add_pb)
         verlayout.addStretch()
         self.hor_layout.addLayout(verlayout)
         self.hor_layout.setSpacing(0)
         self.setLayout(self.hor_layout)
+
 
 class Plain_text_pbParameter(Parameter):
     """Editable string; displayed as large text box in the tree."""
@@ -1586,6 +1536,8 @@ class Plain_text_pbParameter(Parameter):
         """
         self.sigActivated.emit(self)
         self.emitStateChanged('activated', None)
+
+
 registerParameterType('text_pb', Plain_text_pbParameter, override=True)
 
 
@@ -1595,17 +1547,17 @@ class TextParameterItemCustom(pTypes.TextParameterItem):
 
         self.textBox.setMaximumHeight(50)
 
+
 class TextParameter(Parameter):
     """Editable string; displayed as large text box in the tree."""
     itemClass = TextParameterItemCustom
+
+
 registerParameterType('text', TextParameter, override=True)
 
-
-
 if __name__ == '__main__':
-
     app = QtWidgets.QApplication(sys.argv);
-    ex=QTimeCustom()
+    ex = QTimeCustom()
     ex.setMinuteIncrement(30)
     ex.show()
     sys.exit(app.exec_())
