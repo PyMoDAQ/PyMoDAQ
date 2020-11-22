@@ -4,6 +4,7 @@ import numpy as np
 from scipy.spatial import Delaunay as Triangulation
 import copy
 
+
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
         super().__init__(*elt)
@@ -259,8 +260,7 @@ def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
     else:
         order = [2, 1, 0, 3]  # for some reason, the colors line up as BGR in the final image.
 
-
-    #TODO check this
+    # TODO check this
     # copy data into image array
     if data.ndim == 1:
         # This is tempting:
@@ -286,6 +286,7 @@ def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
 
     profile()
     return tri, tri_data, imgData, alpha
+
 
 def makePolygons(tri):
     polygons = []

@@ -7,6 +7,9 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from pyqtgraph import PlotWidget
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -75,8 +78,6 @@ class Ui_Form(object):
         self.clear_pb.setToolTip(_translate("Form", "Clear plot"))
         self.show_datalist_pb.setToolTip(_translate("Form", "Show current data in a list"))
 
-from pyqtgraph import PlotWidget
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys
@@ -86,4 +87,3 @@ if __name__ == "__main__":
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
-

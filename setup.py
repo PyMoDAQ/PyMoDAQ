@@ -77,7 +77,8 @@ setup(
                                       'daq_logger=pymodaq.daq_logger:main',
                                       'daq_viewer=pymodaq.daq_viewer.daq_viewer_main:main',
                                       'daq_move=pymodaq.daq_move.daq_move_main:main',
-                                      'h5browser=pymodaq.h5browser:main'],
+                                      'h5browser=pymodaq.h5browser:main',
+                                      'parameter_example=pymodaq.examples.parameter_ex:main'],
                   },
     python_requires='>=3.6',
     install_requires=[

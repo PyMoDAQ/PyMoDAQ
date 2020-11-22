@@ -76,10 +76,8 @@ class SpinBoxCustom(SpinBox.SpinBox):
 
             =============== =========== ======================
             **Parameters**    **Type**     **Description**
-            *opts*            string       the vararg options 
+            *opts*            string       the vararg options
             =============== =========== ======================
-
-
         """
         # print opts
         for k in opts:
@@ -93,7 +91,7 @@ class SpinBoxCustom(SpinBox.SpinBox):
             elif k in ['step', 'minStep']:
                 self.opts[k] = D(str(opts[k]))
             elif k == 'value':
-                pass  ## don't set value until bounds have been set
+                pass  # # don't set value until bounds have been set
             elif k == 'visible':
                 self.setVisible(opts[k])
             elif k == 'readonly':
@@ -110,15 +108,15 @@ class SpinBoxCustom(SpinBox.SpinBox):
         if 'value' in opts:
             self.setValue(opts['value'])
 
-        ## If bounds have changed, update value to match
+        # # If bounds have changed, update value to match
         if 'bounds' in opts and 'value' not in opts:
             self.setValue()
 
-        ## sanity checks:
+        # # sanity checks:
         if self.opts['int']:
             if 'step' in opts:
                 step = opts['step']
-                ## not necessary..
+                # # not necessary..
                 # if int(step) != step:
                 # raise Exception('Integer SpinBox must have integer step size.')
             else:
@@ -164,7 +162,7 @@ class Pixmap_check(QtWidgets.QWidget):
         self.ver_layout.addWidget(self.label)
         self.ver_layout.addWidget(self.checkbox)
         self.ver_layout.setSpacing(0)
-        self.ver_layout.setContentsMargins(0, 0, 0, 0);
+        self.ver_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.ver_layout)
 
     def setValue(self, dic):
@@ -253,7 +251,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         self.hor_layout.addWidget(self.slider)
         self.hor_layout.addWidget(self.spinbox)
         self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0, 0, 0, 0);
+        self.hor_layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.hor_layout)
 
         self.slider.valueChanged.connect(self.update_spinbox)
@@ -272,7 +270,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         try:
             self.slider.valueChanged.disconnect(self.update_spinbox)
             self.spinbox.valueChanged.disconnect(self.update_slide)
-        except:
+        except Exception:
             pass
         self.spinbox.setValue(val_out)
 
@@ -289,7 +287,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         try:
             self.slider.valueChanged.disconnect(self.update_spinbox)
             self.spinbox.valueChanged.disconnect(self.update_slide)
-        except:
+        except Exception:
             pass
         self.slider.setValue(int((val - min_val) / (max_val - min_val) * 100))
         self.slider.valueChanged.connect(self.update_spinbox)
@@ -400,7 +398,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             w.setFlat(True)
             w.setEnabled(not opts.get('readonly', False))
         elif t == 'colormap':
-            from pyqtgraph.widgets.GradientWidget import GradientWidget  ## need this here to avoid import loop
+            from pyqtgraph.widgets.GradientWidget import GradientWidget  # # need this here to avoid import loop
             w = GradientWidget(orientation='bottom')
             w.sigChanged = w.sigGradientChangeFinished
             w.sigChanging = w.sigGradientChanged
@@ -472,8 +470,9 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         """
             Hide the widget attribute.
         """
-        if not ('led' in self.param.opts['type'] or self.param.opts['type'] == 'pixmap' or self.param.opts[
-            'type'] == 'pixmap_check'):
+        status = 'led' in self.param.opts['type'] or self.param.opts['type'] == 'pixmap'
+        status = not (status or self.param.opts['type'] == 'pixmap_check')
+        if status:
             self.widget.hide()
             self.displayLabel.show()
 
@@ -508,7 +507,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         if 'tip' in opts:
             self.displayLabel.setToolTip(opts['tip'])
 
-        ## If widget is a SpinBox, pass options straight through
+        # # If widget is a SpinBox, pass options straight through
         if isinstance(self.widget, SpinBoxCustom):
             if 'visible' in opts:
                 opts.pop('visible')
@@ -522,7 +521,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             self.setText(0, opts['title'])  # void QTreeWidgetItem::setText(int column, const QString &text)
 
     def valueChanged(self, param, val, force=False):
-        ## called when the parameter's value has changed
+        # # called when the parameter's value has changed
         ParameterItem.valueChanged(self, param, val)
         if self.widget.sigChanged is not None:
             self.widget.sigChanged.disconnect(self.widgetValueChanged)
@@ -530,7 +529,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         try:
             if force or val != self.widget.value():
                 self.widget.setValue(val)
-            self.updateDisplayLabel(val)  ## always make sure label is updated, even if values match!
+            self.updateDisplayLabel(val)  # # always make sure label is updated, even if values match!
         finally:
             if self.widget.sigChanged is not None:
                 self.widget.sigChanged.connect(self.widgetValueChanged)
@@ -589,6 +588,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         super(ListParameterItem_custom, self).__init__(param, depth)
         if 'tip' in param.opts:
             self.displayLabel.setToolTip(param.opts['tip'])
+
     def makeWidget(self):
         """
             Make a widget from self parameter options, connected to the buttonClicked function.
@@ -606,7 +606,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         t = opts['type']
         w = Combo_pb()
         w.add_pb.clicked.connect(self.buttonClicked)
-        w.setMaximumHeight(20)  ## set to match height of spin box and line edit
+        w.setMaximumHeight(20)  # # set to match height of spin box and line edit
         if 'show_pb' in opts:
             w.add_pb.setVisible(opts['show_pb'])
         else:
@@ -616,7 +616,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         w.sigChanged = w.combo.currentIndexChanged
         w.value = self.value
         w.setValue = self.setValue
-        self.widget = w  ## needs to be set before limits are changed
+        self.widget = w  # # needs to be set before limits are changed
         self.limitsChanged(self.param, self.param.opts['limits'])
         if len(self.forward) > 0:
             self.setValue(self.param.value())
@@ -648,7 +648,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         """
 
         if len(limits) == 0:
-            limits = ['']  ## Can never have an empty list--there is always at least a singhe blank item.
+            limits = ['']  # # Can never have an empty list--there is always at least a singhe blank item.
 
         self.forward, self.reverse = ListParameter_custom.mapping(limits)
         try:
@@ -676,7 +676,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
         """
         if type(self.param.opts['limits']) == list:
             text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
-                                                      "String value:", QtWidgets.QLineEdit.Normal);
+                                                      "String value:", QtWidgets.QLineEdit.Normal)
             if ok and not (text == ""):
                 self.param.opts['limits'].append(text)
                 self.limitsChanged(self.param, self.param.opts['limits'])
@@ -754,7 +754,7 @@ class Combo_pb(QtWidgets.QWidget):
         self.hor_layout.addWidget(self.combo)
         self.hor_layout.addWidget(self.add_pb)
         self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0, 0, 0, 0);
+        self.hor_layout.setContentsMargins(0, 0, 0, 0)
         self.add_pb.setMaximumWidth(25)
         self.setLayout(self.hor_layout)
 
@@ -771,8 +771,8 @@ class TableParameterItem(WidgetParameterItemcustom):
         """
             Check for changement in the Widget tree.
         """
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
+        # # TODO: fix so that superclass method can be called
+        # # (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
@@ -841,7 +841,7 @@ class Table_custom(QtWidgets.QTableWidget):
             if item0 is not None and item1 is not None:
                 try:
                     data[item0.text()] = float(item1.text())
-                except:
+                except Exception:
                     data[item0.text()] = item1.text()
         return data
 
@@ -1070,8 +1070,8 @@ class ItemSelectParameterItem(WidgetParameterItemcustom):
         """
 
         """
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
+        # # TODO: fix so that superclass method can be called
+        # # (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
@@ -1258,8 +1258,8 @@ class file_browserParameterItem(WidgetParameterItemcustom):
         self.addChild(self.subItem)
 
     def treeWidgetChanged(self):
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
+        # # TODO: fix so that superclass method can be called
+        # # (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.w)
@@ -1285,8 +1285,6 @@ class file_browserParameterItem(WidgetParameterItemcustom):
             self.filetype = self.param.opts['filetype']
         else:
             self.filetype = True
-
-
 
         self.w = file_browser(self.param.value(), file_type=self.filetype)
         if 'tip' in self.param.opts:
@@ -1394,7 +1392,6 @@ class file_browser(QtWidgets.QWidget):
 class file_browserParameter(Parameter):
     """
         Editable string; displayed as large text box in the tree.
-        
         See Also
         --------
         file_browserParameterItem
@@ -1414,8 +1411,8 @@ class Plain_text_pbParameterItem(pTypes.WidgetParameterItem):
         self.addChild(self.subItem)
 
     def treeWidgetChanged(self):
-        ## TODO: fix so that superclass method can be called
-        ## (WidgetParameter should just natively support this style)
+        # # TODO: fix so that superclass method can be called
+        # # (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
         self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
         self.treeWidget().setItemWidget(self.subItem, 0, self.w)
@@ -1447,9 +1444,10 @@ class Plain_text_pbParameterItem(pTypes.WidgetParameterItem):
 
     def buttonClicked(self):
         text, ok = QtWidgets.QInputDialog.getText(None, "Enter a value to add to the parameter",
-                                                  "String value:", QtWidgets.QLineEdit.Normal);
+                                                  "String value:", QtWidgets.QLineEdit.Normal)
         if ok and not (text == ""):
-            self.param.setValue(self.param.value()+'\n'+text)
+            self.param.setValue(self.param.value() + '\n' + text)
+
 
 class Plain_text_pb(QtWidgets.QWidget):
     """
@@ -1556,7 +1554,7 @@ class TextParameter(Parameter):
 registerParameterType('text', TextParameter, override=True)
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv);
+    app = QtWidgets.QApplication(sys.argv)
     ex = QTimeCustom()
     ex.setMinuteIncrement(30)
     ex.show()

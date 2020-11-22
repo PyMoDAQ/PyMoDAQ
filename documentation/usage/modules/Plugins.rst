@@ -53,7 +53,7 @@ Hardware Settings
 An important feature similar for all modules is the layout as a tree structure of all the hardware parameters.
 These settings will appear on the UI as a tree of parameters with a title and different types, see :numref:`figure_settings`.
 On the module side, they will be instantiated as a list of dictionaries and later exist in the object ``self.settings``.
-This object inherits from on the ``Parameter`` object defined in `pyqtgraph`__.
+This object inherits from the ``Parameter`` object defined in `pyqtgraph`__.
 
 
 __ http://www.pyqtgraph.org/documentation/parametertree/index.html
@@ -80,7 +80,8 @@ Here is an example of such a list of dictionaries corresponding to :numref:`figu
                 {'title': 'Height:', 'name': 'st_height', 'type': 'int', 'value': 1 , 'default':1, 'min':1},
                 ]},]}]}]
 
-The list of available types of parameters :module:`custom_parameter_tree` (defined in ``pymodaq.daq_utils.custom_parameter_tree.py``) is:
+The list of available types of parameters :module:`pymodaq_ptypes`
+(defined in ``pymodaq.daq_utils.parameter.pymodaq_ptypes.py``) is:
 
 * ``group`` : "camera settings" on :numref:`figure_settings` is of type group
 * ``int`` : settable integer (SpinBox_Custom object)
@@ -98,6 +99,9 @@ The list of available types of parameters :module:`custom_parameter_tree` (defin
 * ``text`` : a text area (for comments for instance)
 
 **Important**: the *name* key in the dictionnaries must **not** contain any space, please use underscore if necessary!
+
+For a live example of these Parameters nd their widget, type in ``parameter_example`` in your shell.
+
 
 Once the module is initialized, any modification on the UI hardware settings will be send to the plugin through
 the ``commit_settings`` method of the plugin class and illustrated below (still from the ``daq_2Dviewer_AndorCCD`` plugin).

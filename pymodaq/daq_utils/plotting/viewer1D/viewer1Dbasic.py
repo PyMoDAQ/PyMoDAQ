@@ -129,7 +129,7 @@ class Viewer1DBasic(QObject):
             if self.labels == [] or len(self.labels) != len(datas):
                 self.update_labels(self.labels)
 
-            if self.plot_channels == None: #initialize data and plots
+            if self.plot_channels is None:  # initialize data and plots
                 self.ini_data_plots(len(datas))
             elif len(self.plot_channels) != len(datas):
                 self.remove_plots()
@@ -137,7 +137,7 @@ class Viewer1DBasic(QObject):
 
             for ind_plot, data in enumerate(datas):
                 if self._x_axis is None or len(self._x_axis) != len(data):
-                    self._x_axis = np.linspace(0,len(data), len(data), endpoint=False)
+                    self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
 
                 self.plot_channels[ind_plot].setData(x=self.x_axis, y=data)
 
@@ -199,11 +199,12 @@ if __name__ == '__main__':
 
     Form = QtWidgets.QWidget()
     prog = Viewer1DBasic(Form)
-    #prog.show_roi_region()
+    # prog.show_roi_region()
     prog.show_roi_line()
     prog.roi_region_signal.connect(print_region)
     prog.roi_line_signal.connect(print_line)
     from pymodaq.daq_utils.daq_utils import gauss1D
+
     x = np.linspace(0, 200, 201)
     y1 = gauss1D(x, 75, 25)
     y2 = gauss1D(x, 120, 50, 2)
@@ -217,7 +218,6 @@ if __name__ == '__main__':
     ydata_expodec += 0.1 * np.random.rand(len(x))
 
     prog.show_data([y1, y2, ydata_expodec])
-
 
     Form.show()
     prog.x_axis

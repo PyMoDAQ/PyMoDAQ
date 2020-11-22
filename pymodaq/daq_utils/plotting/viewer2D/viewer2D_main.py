@@ -6,13 +6,7 @@ import sys
 from collections import OrderedDict
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
 import pyqtgraph as pg
-from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-Gradients.update(OrderedDict([
-            ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
-            ('green', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}),
-            ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}),]))
 
-#import pymodaq
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
 from pymodaq.daq_utils.plotting.plot_utils import AxisItem_Scaled
 from pymodaq.daq_utils.plotting.graph_items import ImageItem, PlotCurveItem, TriangulationItem
@@ -23,27 +17,31 @@ from easydict import EasyDict as edict
 import copy
 from pymodaq.daq_utils.gui_utils import DockArea
 
-import  pymodaq.daq_utils.daq_utils as utils
+import pymodaq.daq_utils.daq_utils as utils
 import datetime
 
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
+Gradients.update(OrderedDict([
+    ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
+    ('green', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}),
+    ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}), ]))
 
 
 class Viewer2D(QObject):
     data_to_export_signal = pyqtSignal(
         OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-    crosshair_dragged = pyqtSignal(float,
-                                   float)  # signal used to pass crosshair position to other modules in scaled axes units
+    crosshair_dragged = pyqtSignal(float, float)  # signal used to pass crosshair position to other modules in
+    # scaled axes units
     sig_double_clicked = pyqtSignal(float, float)
     ROI_select_signal = pyqtSignal(QRectF)
     ROI_changed = pyqtSignal()
     ROI_changed_finished = pyqtSignal()
 
     def __init__(self, parent=None, scaling_options=utils.ScalingOptions(scaled_xaxis=utils.ScaledAxis(),
-                                                                   scaled_yaxis=utils.ScaledAxis())):
+                                                                         scaled_yaxis=utils.ScaledAxis())):
         super().__init__()
         # setting the gui
-
 
         self.title = 'viewer2D'
         if parent is None:
@@ -68,8 +66,6 @@ class Viewer2D(QObject):
         self.data_to_export = OrderedDict([])
 
         self.setupUI()
-
-
 
     def setupButtons(self, buttons_layout):
         self.ui.Show_histogram = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Histogram.png")), '')
@@ -212,7 +208,7 @@ class Viewer2D(QObject):
         self.ui.img_blue = ImageItem()
         self.ui.img_spread = TriangulationItem()
 
-        #self.ui.img_red.sig_double_clicked.connect(self.double_clicked)
+        # self.ui.img_red.sig_double_clicked.connect(self.double_clicked)
         self.ui.img_red.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
         self.ui.img_green.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
         self.ui.img_blue.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
@@ -258,17 +254,17 @@ class Viewer2D(QObject):
         self.ui.Show_histogram.clicked.connect(self.show_hide_histogram)
 
     def setupIsoCurve(self):
-        #TODO provide isocurve for the spread points
-        ## Isocurve drawing
-        self.ui.iso = pg.IsocurveItem(level=0.8, pen='g',axisOrder='row-major')
+        # TODO provide isocurve for the spread points
+        # # Isocurve drawing
+        self.ui.iso = pg.IsocurveItem(level=0.8, pen='g', axisOrder='row-major')
         self.ui.iso.setParentItem(self.ui.img_red)
         self.ui.iso.setZValue(5)
-        ## Draggable line for setting isocurve level
+        # # Draggable line for setting isocurve level
         self.ui.isoLine = pg.InfiniteLine(angle=0, movable=True, pen='g')
         self.ui.histogram_red.vb.addItem(self.ui.isoLine)
-        self.ui.histogram_red.vb.setMouseEnabled(y=False) # makes user interaction a little easier
+        self.ui.histogram_red.vb.setMouseEnabled(y=False)  # makes user interaction a little easier
         self.ui.isoLine.setValue(0.8)
-        self.ui.isoLine.setZValue(1000) # bring iso line above contrast controls
+        self.ui.isoLine.setZValue(1000)  # bring iso line above contrast controls
         self.ui.isocurve_pb.clicked.connect(self.show_hide_iso)
         self.ui.isocurve_pb.setChecked(False)
         self.show_hide_iso()
@@ -276,7 +272,7 @@ class Viewer2D(QObject):
         self.ui.isoLine.sigDragged.connect(self.updateIsocurve)
 
     def setupCrosshair(self):
-        ##crosshair
+        # #crosshair
         self.ui.crosshair = Crosshair(self.image_widget.plotitem)
         self.ui.crosshair_H_blue = PlotCurveItem(pen='b')
         self.ui.crosshair_H_green = PlotCurveItem(pen="g")
@@ -302,7 +298,7 @@ class Viewer2D(QObject):
         self.crosshairClicked()
 
     def setupROI(self):
-        ## ROI stuff
+        # # ROI stuff
         self.ui.RoiCurve_H = OrderedDict()
         self.ui.RoiCurve_V = OrderedDict()
         self.ui.RoiCurve_integrated = OrderedDict()
@@ -337,7 +333,7 @@ class Viewer2D(QObject):
         self.setupGraphs(graphs_layout)
         vertical_layout.addWidget(graphs_widget)
 
-        #selection area checkbox
+        # selection area checkbox
         self.ui.blue_cb.setVisible(True)
         self.ui.blue_cb.setChecked(True)
         self.ui.blue_cb.clicked.connect(self.update_selection_area_visibility)
@@ -360,7 +356,7 @@ class Viewer2D(QObject):
         self.ui.aspect_ratio_pb.clicked.connect(self.lock_aspect_ratio)
         self.ui.aspect_ratio_pb.setChecked(True)
 
-        #histograms
+        # histograms
         histo_layout = QtWidgets.QHBoxLayout()
         self.setupHisto(histo_layout)
 
@@ -375,7 +371,7 @@ class Viewer2D(QObject):
 
         self.setupCrosshair()
 
-        #flipping
+        # flipping
 
         self.ui.FlipUD_pb.clicked.connect(self.update_image)
         self.ui.FlipLR_pb.clicked.connect(self.update_image)
@@ -385,7 +381,7 @@ class Viewer2D(QObject):
 
         self.ui.Ini_plot_pb.clicked.connect(self.ini_plot)
 
-        ##splitter
+        # #splitter
 
         self.ui.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.ui.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
@@ -448,14 +444,12 @@ class Viewer2D(QObject):
             H_indexes = (utils.rint(indy), data_H_indexes)
             V_indexes = (data_V_indexes, utils.rint(indx))
 
-
             if self.isdata["blue"]:
                 self.ui.crosshair_H_blue.setData(y=data_blue.__getitem__(H_indexes), x=x_axis_scaled)
             if self.isdata["green"]:
                 self.ui.crosshair_H_green.setData(y=data_green.__getitem__(H_indexes), x=x_axis_scaled)
             if self.isdata["red"]:
                 self.ui.crosshair_H_red.setData(y=data_red.__getitem__(H_indexes), x=x_axis_scaled)
-
 
             if self.isdata["blue"]:
                 self.ui.crosshair_V_blue.setData(y=y_axis_scaled, x=data_blue.__getitem__(V_indexes))
@@ -488,7 +482,7 @@ class Viewer2D(QObject):
             self.ui.x_label.setVisible(True)
             self.ui.y_label.setVisible(True)
             range = self.image_widget.view.viewRange()
-            self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])),np.mean(np.array(range[0])))
+            self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])), np.mean(np.array(range[0])))
 
             if self.isdata["blue"]:
                 self.ui.z_label_blue.setVisible(True)
@@ -508,7 +502,7 @@ class Viewer2D(QObject):
                 self.ui.crosshair_V_spread.setVisible(True)
 
             self.update_crosshair_data(*self.ui.crosshair.get_positions())
-            ##self.crosshairChanged()
+            # #self.crosshairChanged()
         else:
             self.ui.crosshair.setVisible(False)
             self.ui.x_label.setVisible(False)
@@ -528,7 +522,7 @@ class Viewer2D(QObject):
             self.ui.crosshair_V_spread.setVisible(False)
         QtWidgets.QApplication.processEvents()
         self.show_lineouts()
-        #self.show_lineouts()
+        # self.show_lineouts()
 
     @pyqtSlot(float, float)
     def double_clicked(self, posx, posy):
@@ -547,15 +541,15 @@ class Viewer2D(QObject):
             self.image_widget.plotitem.vb.setAspectLocked(lock=False)
 
     @pyqtSlot(int, int)
-    def move_left_splitter(self,pos,index):
+    def move_left_splitter(self, pos, index):
         self.ui.splitter_VLeft.blockSignals(True)
-        self.ui.splitter_VLeft.moveSplitter(pos,index)
+        self.ui.splitter_VLeft.moveSplitter(pos, index)
         self.ui.splitter_VLeft.blockSignals(False)
 
     @pyqtSlot(int, int)
-    def move_right_splitter(self,pos,index):
+    def move_right_splitter(self, pos, index):
         self.ui.splitter_VRight.blockSignals(True)
-        self.ui.splitter_VRight.moveSplitter(pos,index)
+        self.ui.splitter_VRight.moveSplitter(pos, index)
         self.ui.splitter_VRight.blockSignals(False)
 
     def restore_state(self, data_tree):
@@ -573,7 +567,6 @@ class Viewer2D(QObject):
             self.update_roi(index, 'dy', param.child(*('size', 'dy')).value())
             self.ui.ROIs[index].sigRegionChangeFinished.connect(self.ui.ROIs[index].emit_index_signal)
 
-
     def roi_changed(self):
         try:
             if self.raw_data is None:
@@ -581,7 +574,7 @@ class Viewer2D(QObject):
             axes = (0, 1)
             self.data_to_export['data0D'] = OrderedDict([])
             self.data_to_export['data1D'] = OrderedDict([])
-            self.measure_data_dict  = OrderedDict([])
+            self.measure_data_dict = OrderedDict([])
             for indROI, key in enumerate(self.roi_manager.ROIs):
 
                 color_source = self.roi_manager.settings.child('ROIs', key,
@@ -605,14 +598,15 @@ class Viewer2D(QObject):
                 if data_flag is None:
                     return
 
-
                 if color_source == "red" or color_source == "green" or color_source == "blue":
                     data, coords = self.roi_manager.ROIs[key].getArrayRegion(
                         self.transform_image(self.raw_data[color_source]),
                         img_source, axes, returnMappedCoords=True)
                     if data is not None:
-                        xvals = np.linspace(np.min(np.min(coords[1, :, :])), np.max(np.max(coords[1, :, :])), data.shape[1])
-                        yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])), data.shape[0])
+                        xvals = np.linspace(np.min(np.min(coords[1, :, :])), np.max(np.max(coords[1, :, :])),
+                                            data.shape[1])
+                        yvals = np.linspace(np.min(np.min(coords[0, :, :])), np.max(np.max(coords[0, :, :])),
+                                            data.shape[0])
 
                 else:
                     roi = self.roi_manager.ROIs[key]
@@ -620,9 +614,9 @@ class Viewer2D(QObject):
                     yvals = []
                     data = []
                     for ind in range(self.raw_data['spread'].shape[0]):
-                        #invoke the QPainterpath of the ROI (from the shape method)
+                        # invoke the QPainterpath of the ROI (from the shape method)
                         if roi.shape().contains(QPointF(self.raw_data['spread'][ind, 0] - roi.pos().x(),
-                                                       self.raw_data['spread'][ind, 1] - roi.pos().y())):
+                                                        self.raw_data['spread'][ind, 1] - roi.pos().y())):
                             xvals.append(self.raw_data['spread'][ind, 0])
                             yvals.append(self.raw_data['spread'][ind, 1])
                             data.append(self.raw_data['spread'][ind, 2])
@@ -632,7 +626,6 @@ class Viewer2D(QObject):
                         data = np.array(data)
                         xvals = np.array(xvals)
                         yvals = np.array(yvals)
-
 
                 if data is not None:
                     x_axis, y_axis = self.scale_axis(xvals, yvals)
@@ -650,14 +643,12 @@ class Viewer2D(QObject):
                         data_H = np.mean(data, axis=0)
                         data_V = np.mean(data, axis=1)
 
-
-                    self.data_integrated_plot[key] = np.append(self.data_integrated_plot[key],
-                                       np.array([[self.data_integrated_plot[key][0, -1]], [0]]) +
-                                       np.array([[1], [np.sum(data)]]), axis=1)
+                    self.data_integrated_plot[key] = np.append(self.data_integrated_plot[key], np.array(
+                        [[self.data_integrated_plot[key][0, -1]], [0]]) + np.array([[1], [np.sum(data)]]), axis=1)
 
                     if self.data_integrated_plot[key].shape[1] > self.max_size_integrated:
                         self.data_integrated_plot[key] = \
-                            self.data_integrated_plot[key][:, self.data_integrated_plot[key].shape[1]-200:]
+                            self.data_integrated_plot[key][:, self.data_integrated_plot[key].shape[1] - 200:]
 
                     self.ui.RoiCurve_H[key].setData(y=data_H, x=data_H_axis)
                     self.ui.RoiCurve_V[key].setData(y=data_V_axis, x=data_V)
@@ -665,30 +656,32 @@ class Viewer2D(QObject):
                     self.ui.RoiCurve_integrated[key].setData(y=self.data_integrated_plot[key][1, :],
                                                              x=self.data_integrated_plot[key][0, :])
 
-                    self.data_to_export['data2D'][self.title+'_{:s}'.format(key)] = \
+                    self.data_to_export['data2D'][self.title + '_{:s}'.format(key)] = \
                         utils.DataToExport(name=self.title, data=data, source='roi',
-                        x_axis=utils.Axis(data=x_axis, units=self.scaling_options['scaled_xaxis']['units'],
-                                          label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=utils.Axis(data=y_axis, units=self.scaling_options['scaled_yaxis']['units'],
-                                          label=self.scaling_options['scaled_yaxis']['label']))
+                                           x_axis=utils.Axis(data=x_axis,
+                                                             units=self.scaling_options['scaled_xaxis']['units'],
+                                                             label=self.scaling_options['scaled_xaxis']['label']),
+                                           y_axis=utils.Axis(data=y_axis,
+                                                             units=self.scaling_options['scaled_yaxis']['units'],
+                                                             label=self.scaling_options['scaled_yaxis']['label']))
 
-                    self.data_to_export['data1D'][self.title+'_Hlineout_{:s}'.format(key)] = \
+                    self.data_to_export['data1D'][self.title + '_Hlineout_{:s}'.format(key)] = \
                         utils.DataToExport(name=self.title, data=data_H, source='roi',
-                        x_axis=utils.Axis(data=data_H_axis, units=self.scaling_options['scaled_xaxis']['units'],
-                                          label=self.scaling_options['scaled_xaxis']['label']))
-                    self.data_to_export['data1D'][self.title+'_Vlineout_{:s}'.format(key)] = \
+                                           x_axis=utils.Axis(data=data_H_axis,
+                                                             units=self.scaling_options['scaled_xaxis']['units'],
+                                                             label=self.scaling_options['scaled_xaxis']['label']))
+                    self.data_to_export['data1D'][self.title + '_Vlineout_{:s}'.format(key)] = \
                         utils.DataToExport(name=self.title, data=data_V, source='roi',
-                        x_axis=utils.Axis(data=data_V_axis, units=self.scaling_options['scaled_yaxis']['units'],
-                                          label=self.scaling_options['scaled_yaxis']['label']))
+                                           x_axis=utils.Axis(data=data_V_axis,
+                                                             units=self.scaling_options['scaled_yaxis']['units'],
+                                                             label=self.scaling_options['scaled_yaxis']['label']))
 
-                    self.data_to_export['data0D'][self.title+'_Integrated_{:s}'.format(key)] = \
-                        utils.DataToExport(name=self.title, data=np.sum(data), source='roi',)
+                    self.data_to_export['data0D'][self.title + '_Integrated_{:s}'.format(key)] = \
+                        utils.DataToExport(name=self.title, data=np.sum(data), source='roi', )
 
                     self.measure_data_dict["Lineout {:s}:".format(key)] = np.sum(data)
 
-
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
-
 
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
             self.data_to_export_signal.emit(self.data_to_export)
@@ -716,13 +709,11 @@ class Viewer2D(QObject):
 
         self.roi_changed()
 
-
-
     def roi_clicked(self):
         roistate = self.ui.roiBtn.isChecked()
 
         self.roi_manager.roiwidget.setVisible(roistate)
-        for k,roi in self.roi_manager.ROIs.items():
+        for k, roi in self.roi_manager.ROIs.items():
             roi.setVisible(roistate)
             self.ui.RoiCurve_H[k].setVisible(roistate)
             self.ui.RoiCurve_V[k].setVisible(roistate)
@@ -736,25 +727,24 @@ class Viewer2D(QObject):
         # if len(self.ui.ROIs) == 0 and roistate:
         #     self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
 
-
-    def scale_axis(self,xaxis_pxl,yaxis_pxl):
-        return xaxis_pxl*self.scaling_options['scaled_xaxis']['scaling']+self.scaling_options['scaled_xaxis']['offset'],\
-               yaxis_pxl*self.scaling_options['scaled_yaxis']['scaling']+self.scaling_options['scaled_yaxis']['offset']
+    def scale_axis(self, xaxis_pxl, yaxis_pxl):
+        return xaxis_pxl * self.scaling_options['scaled_xaxis']['scaling'] + self.scaling_options['scaled_xaxis'][
+            'offset'], yaxis_pxl * self.scaling_options['scaled_yaxis']['scaling'] + \
+            self.scaling_options['scaled_yaxis']['offset']
 
     def unscale_axis(self, xaxis, yaxis):
-        return (xaxis-self.scaling_options['scaled_xaxis']['offset'])/self.scaling_options['scaled_xaxis']['scaling'],\
-               (yaxis-self.scaling_options['scaled_yaxis']['offset'])/self.scaling_options['scaled_yaxis']['scaling']
+        return (xaxis - self.scaling_options['scaled_xaxis']['offset']) / self.scaling_options['scaled_xaxis'][
+            'scaling'], (yaxis - self.scaling_options['scaled_yaxis']['offset']) / \
+            self.scaling_options['scaled_yaxis']['scaling']
 
-  
     def selected_region_changed(self):
         if self.ui.ROIselect_pb.isChecked():
-            pos=self.ui.ROIselect.pos()
-            size=self.ui.ROIselect.size()
-            self.ROI_select_signal.emit(QRectF(pos[0],pos[1],size[0],size[1]))
-
+            pos = self.ui.ROIselect.pos()
+            size = self.ui.ROIselect.size()
+            self.ROI_select_signal.emit(QRectF(pos[0], pos[1], size[0], size[1]))
 
     def set_autolevels(self):
-        self.autolevels=self.ui.auto_levels_pb.isChecked()
+        self.autolevels = self.ui.auto_levels_pb.isChecked()
         if not self.ui.auto_levels_pb.isChecked():
             self.ui.histogram_red.regionChanged()
             self.ui.histogram_green.regionChanged()
@@ -800,8 +790,9 @@ class Viewer2D(QObject):
 
     def set_image_transform(self):
         # deactiviate fliping and rotation as non sense for points defined data
-        status = not (self.isdata["red"] is False and self.isdata["blue"] is False and self.isdata["green"] is False
-                      and self.isdata["spread"] is True)
+        status = self.isdata["red"] is False and self.isdata["blue"] is False
+        status = status and self.isdata["green"] is False and self.isdata["spread"] is True
+        status = not status
 
         self.ui.FlipUD_pb.setVisible(status)
         self.ui.FlipLR_pb.setVisible(status)
@@ -828,7 +819,8 @@ class Viewer2D(QObject):
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_red.setVisible(self.ui.red_cb.isChecked())
 
-        if self.ui.green_cb.isChecked() and self.isdata["green"] is False:  # turn it off if it was on but there is no data
+        if self.ui.green_cb.isChecked() and self.isdata["green"] is False:
+            # turn it off if it was on but there is no data
             self.ui.green_cb.setChecked(False)
             self.ui.green_cb.parent().setVisible(False)
         elif self.isdata["green"]:
@@ -838,7 +830,8 @@ class Viewer2D(QObject):
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_green.setVisible(self.ui.green_cb.isChecked())
 
-        if self.ui.blue_cb.isChecked() and self.isdata["blue"] is False:  # turn it off if it was on but there is no data
+        if self.ui.blue_cb.isChecked() and self.isdata["blue"] is False:
+            # turn it off if it was on but there is no data
             self.ui.blue_cb.setChecked(False)
             self.ui.blue_cb.parent().setVisible(False)
         elif self.isdata["blue"]:
@@ -848,7 +841,8 @@ class Viewer2D(QObject):
         if self.ui.Show_histogram.isChecked():
             self.ui.histogram_blue.setVisible(self.ui.blue_cb.isChecked())
 
-        if self.ui.spread_cb.isChecked() and self.isdata["spread"] is False:  # turn it off if it was on but there is no data
+        if self.ui.spread_cb.isChecked() and self.isdata["spread"] is False:
+            # turn it off if it was on but there is no data
             self.ui.spread_cb.setChecked(False)
             self.ui.spread_cb.parent().setVisible(False)
         elif self.isdata["spread"]:
@@ -862,7 +856,6 @@ class Viewer2D(QObject):
         try:
             self.raw_data = dict(blue=data_blue, green=data_green, red=data_red, spread=data_spread)
 
-
             red_flag = data_red is not None
             self.isdata["red"] = red_flag
             green_flag = data_green is not None
@@ -872,14 +865,13 @@ class Viewer2D(QObject):
             spread_flag = data_spread is not None
             self.isdata["spread"] = spread_flag
 
-
             data_red, data_blue, data_green = self.set_image_transform()
             self.set_visible_items()
 
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(),
                                               data2D=OrderedDict())
 
-            if data_red is not None:  #if only one data only the red canal should be set otherwise this would fail
+            if data_red is not None:  # if only one data only the red canal should be set otherwise this would fail
                 self._x_axis = np.linspace(0, data_red.shape[1] - 1, data_red.shape[1])
                 self._y_axis = np.linspace(0, data_red.shape[0] - 1, data_red.shape[0])
                 self.x_axis_scaled, self.y_axis_scaled = self.scale_axis(self._x_axis, self._y_axis)
@@ -887,40 +879,50 @@ class Viewer2D(QObject):
             ind = 0
             if red_flag:
                 self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_red, source='raw',
-                        x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
-                                          label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
-                                          label=self.scaling_options['scaled_yaxis']['label']))
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
+                    utils.DataToExport(data=data_red, source='raw',
+                                       x_axis=utils.Axis(data=self.x_axis_scaled,
+                                                         units=self.scaling_options['scaled_xaxis']['units'],
+                                                         label=self.scaling_options['scaled_xaxis']['label']),
+                                       y_axis=utils.Axis(data=self.y_axis_scaled,
+                                                         units=self.scaling_options['scaled_yaxis']['units'],
+                                                         label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
             if green_flag:
                 self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_green, source='raw',
-                        x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
-                                          label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
-                                          label=self.scaling_options['scaled_yaxis']['label']))
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
+                    utils.DataToExport(data=data_green, source='raw',
+                                       x_axis=utils.Axis(data=self.x_axis_scaled,
+                                                         units=self.scaling_options['scaled_xaxis']['units'],
+                                                         label=self.scaling_options['scaled_xaxis']['label']),
+                                       y_axis=utils.Axis(data=self.y_axis_scaled,
+                                                         units=self.scaling_options['scaled_yaxis']['units'],
+                                                         label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
             if blue_flag:
                 self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_blue, source='raw',
-                        x_axis=utils.Axis(data=self.x_axis_scaled, units=self.scaling_options['scaled_xaxis']['units'],
-                                          label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=utils.Axis(data=self.y_axis_scaled, units=self.scaling_options['scaled_yaxis']['units'],
-                                          label=self.scaling_options['scaled_yaxis']['label']))
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
+                    utils.DataToExport(data=data_blue, source='raw',
+                                       x_axis=utils.Axis(data=self.x_axis_scaled,
+                                                         units=self.scaling_options['scaled_xaxis']['units'],
+                                                         label=self.scaling_options['scaled_xaxis']['label']),
+                                       y_axis=utils.Axis(data=self.y_axis_scaled,
+                                                         units=self.scaling_options['scaled_yaxis']['units'],
+                                                         label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
             if spread_flag:
                 self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels)
-                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = utils.DataToExport(data=data_spread[:, 2],
-                        source='raw',
-                        x_axis=utils.Axis(data=data_spread[:, 0], units=self.scaling_options['scaled_xaxis']['units'],
-                                    label=self.scaling_options['scaled_xaxis']['label']),
-                        y_axis=utils.Axis(data=data_spread[:, 1], units=self.scaling_options['scaled_yaxis']['units'],
-                                    label=self.scaling_options['scaled_yaxis']['label']))
+                self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
+                    utils.DataToExport(data=data_spread[:, 2], source='raw',
+                                       x_axis=utils.Axis(data=data_spread[:, 0],
+                                                         units=self.scaling_options['scaled_xaxis']['units'],
+                                                         label=self.scaling_options['scaled_xaxis']['label']),
+                                       y_axis=utils.Axis(data=data_spread[:, 1],
+                                                         units=self.scaling_options['scaled_yaxis']['units'],
+                                                         label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
-
 
             if self.ui.roiBtn.isChecked():
                 self.roi_changed()
@@ -964,8 +966,6 @@ class Viewer2D(QObject):
         if data_spread is not None:
             self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels)
 
-
-
     def mapfromview(self, graphitem, x, y):
         """
         get item coordinates from view coordinates
@@ -982,18 +982,14 @@ class Viewer2D(QObject):
         y: (float) coordinate in the item reference frame
         """
         if isinstance(graphitem, str):
-            if not graphitem in ('red', 'blue', 'green', 'spread'):
+            if graphitem not in ('red', 'blue', 'green', 'spread'):
                 return None
             graphitem = getattr(self.ui, f'img_{graphitem}')
         point = graphitem.mapFromView(QtCore.QPointF(x, y))
         return point.x(), point.y()
 
-
-
     def setObjectName(self, txt):
         self.parent.setObjectName(txt)
-
-
 
     def show_hide_histogram(self):
         if self.isdata["blue"] and self.ui.blue_cb.isChecked():
@@ -1021,7 +1017,6 @@ class Viewer2D(QObject):
         else:
             self.ui.iso.hide()
             self.ui.isoLine.hide()
-
 
     def show_lineouts(self):
         state = self.ui.roiBtn.isChecked() or self.ui.crosshair_pb.isChecked()
@@ -1057,12 +1052,11 @@ class Viewer2D(QObject):
         self.ui.Lineout_integrated.update()
 
         QtGui.QGuiApplication.processEvents()
-        self.ui.splitter_VRight.splitterMoved[int,int].emit(0.6*self.parent.height(),1)
-        self.ui.splitter.moveSplitter(0.6*self.parent.width(),1)
-        self.ui.splitter_VLeft.moveSplitter(0.6*self.parent.height(),1)
-        self.ui.splitter_VLeft.splitterMoved[int,int].emit(0.6*self.parent.height(),1)
+        self.ui.splitter_VRight.splitterMoved[int, int].emit(0.6 * self.parent.height(), 1)
+        self.ui.splitter.moveSplitter(0.6 * self.parent.width(), 1)
+        self.ui.splitter_VLeft.moveSplitter(0.6 * self.parent.height(), 1)
+        self.ui.splitter_VLeft.splitterMoved[int, int].emit(0.6 * self.parent.height(), 1)
         QtGui.QGuiApplication.processEvents()
-
 
     def show_ROI_select(self):
         self.ui.ROIselect.setVisible(self.ui.ROIselect_pb.isChecked())
@@ -1095,23 +1089,23 @@ class Viewer2D(QObject):
     #     self.ui.crosshair_V_spread.setOpts(flipudbis=self.ui.rotate_pb.isChecked())
 
     def update_selection_area_visibility(self):
-        bluestate=self.ui.blue_cb.isChecked()
+        bluestate = self.ui.blue_cb.isChecked()
         self.ui.img_blue.setVisible(bluestate)
-        #self.ui.histogram_blue.setVisible(bluestate)
+        # self.ui.histogram_blue.setVisible(bluestate)
 
-        greenstate=self.ui.green_cb.isChecked()
+        greenstate = self.ui.green_cb.isChecked()
         self.ui.img_green.setVisible(greenstate)
-        #self.ui.histogram_green.setVisible(greenstate)
+        # self.ui.histogram_green.setVisible(greenstate)
 
-        redstate=self.ui.red_cb.isChecked()
+        redstate = self.ui.red_cb.isChecked()
         self.ui.img_red.setVisible(redstate)
-        #self.ui.histogram_red.setVisible(redstate)
+        # self.ui.histogram_red.setVisible(redstate)
 
     def update_crosshair_data(self, posx, posy, name=""):
         try:
             (posx_scaled, posy_scaled) = self.scale_axis(posx, posy)
             self.crosshair_dragged.emit(posx_scaled, posy_scaled)
-            
+
             # if self._x_axis is not None:
             #     x_axis_scaled, y_axis_scaled = self.scale_axis(self._x_axis, self._y_axis)
             #     indx = utils.find_index(self._x_axis, posx)[0][0]
@@ -1120,8 +1114,6 @@ class Viewer2D(QObject):
             #     indx, indy = (posx_scaled, posy_scaled)
 
             self.crosshairChanged(posx, posy)
-
-
 
             if self.isdata["blue"]:
                 indx, indy = self.mapfromview('blue', posx, posy)
@@ -1148,7 +1140,6 @@ class Viewer2D(QObject):
     def updateIsocurve(self):
         self.ui.iso.setLevel(self.ui.isoLine.value())
 
-
     @property
     def x_axis(self):
         return self.x_axis_scaled
@@ -1166,7 +1157,6 @@ class Viewer2D(QObject):
                 units = x_axis['units']
         else:
             xdata = x_axis
-
 
         if len(xdata) > 1:
             x_scaling = xdata[1] - xdata[0]
@@ -1201,7 +1191,7 @@ class Viewer2D(QObject):
             if 'units' in y_axis:
                 units = y_axis['units']
         else:
-            ydata=y_axis
+            ydata = y_axis
 
         if len(ydata) > 1:
             y_scaling = ydata[1] - ydata[0]
@@ -1213,10 +1203,9 @@ class Viewer2D(QObject):
         self.set_scaling_axes(self.scaling_options)
 
 
-
-
 if __name__ == '__main__':
     from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
     app = QtWidgets.QApplication(sys.argv)
     Form = DockArea()
     Form = QtWidgets.QWidget()
@@ -1228,24 +1217,21 @@ if __name__ == '__main__':
     y = pg.np.linspace(0, Ny - 1, Ny)
     from pymodaq.daq_utils.daq_utils import gauss2D
 
-    data_red =  3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)
-    #data_red = pg.gaussianFilter(data_red, (2, 2))
-    data_green =  3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
-    #data_green = pg.gaussianFilter(data_green, (2, 2))
+    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)
+    # data_red = pg.gaussianFilter(data_red, (2, 2))
+    data_green = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+    # data_green = pg.gaussianFilter(data_green, (2, 2))
     data_blue = data_random + 3 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
-
-
 
     prog = Viewer2D(Form)
     prog.set_scaling_axes(scaling_options=utils.ScalingOptions(
         scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
         scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
-    #data = np.load('triangulation_data.npy')
+    # data = np.load('triangulation_data.npy')
     prog.setImage(data_red=data_red, data_blue=data_blue, )
-    #prog.setImage(data_spread=data)
+    # prog.setImage(data_spread=data)
     app.processEvents()
-    
 
     sys.exit(app.exec_())

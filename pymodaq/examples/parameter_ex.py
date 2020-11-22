@@ -10,6 +10,7 @@ from pymodaq.daq_utils.parameter import pymodaq_ptypes  # this import register t
 from collections import OrderedDict
 from pymodaq.daq_utils import gui_utils as gutils
 
+
 class ParameterEx:
     params = [
         {'title': 'Groups:', 'name': 'groups', 'type': 'group', 'children': [
@@ -81,13 +82,7 @@ class ParameterEx:
                     ' pymodaq.daq_utils.scanner module'},
         ]},  # The advantage of the Table model lies in its modularity for concrete examples see the
         # TableModelTabular and the TableModelSequential custom models in the pymodaq.daq_utils.scanner module
-
-
     ]
-
-
-
-
 
     def __init__(self, tree):
         self.parameter_tree = tree
@@ -96,7 +91,6 @@ class ParameterEx:
         self.parameter_tree.setParameters(self.settings, showTop=False)
 
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -114,14 +108,15 @@ class ParameterEx:
                 pass  # triggered when a param is removed from the tree
 
 
-
-
-if  __name__ == '__main__':
-
+def main():
     app = QtWidgets.QApplication(sys.argv)
 
     parametertree = ParameterTree()
-    tree_ex = ParameterEx(parametertree)
+    ParameterEx(parametertree)
     parametertree.show()
 
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

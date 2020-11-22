@@ -7,13 +7,13 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
 from pymodaq.daq_utils.managers.roi_manager import ROIBrushable
 
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+
 pos = []
 colors = []
 for ticks in Gradients['thermal']['ticks']:
     pos.append(ticks[0])
     colors.append(ticks[1])
 cmap = pg.ColorMap(pos, colors, Gradients['thermal']['mode'])
-
 
 
 def setTicksLabels(values):
@@ -24,6 +24,7 @@ def setTicksLabels(values):
         vstr = d.toString('HH:mm dd/MM/yy')
         strings.append(vstr)
     return strings
+
 
 class AxisItemDate(pg.AxisItem):
 
@@ -38,11 +39,13 @@ class AxisItemDate(pg.AxisItem):
         strings = setTicksLabels(values)
         return strings
 
+
 class GanttROI(ROIBrushable):
     index_signal = pyqtSignal(int)
 
-    def __init__(self,task='No task', index=0, start=0, stop=1, brush = None, *args, **kwargs):
-        super().__init__(pos=[start, index], size=[stop-start, 1], brush=brush, pen=brush, snapSize=1, scaleSnap=True, translateSnap=True, *args, **kwargs)  # )
+    def __init__(self, task='No task', index=0, start=0, stop=1, brush=None, *args, **kwargs):
+        super().__init__(pos=[start, index], size=[stop - start, 1], brush=brush, pen=brush, snapSize=1, scaleSnap=True,
+                         translateSnap=True, *args, **kwargs)  # )
         self.h1 = self.addScaleHandle([1, 0.5], [0, 0.5])
         self.h2 = self.addScaleHandle([0, 0.5], [1, 0.5])
 
@@ -55,7 +58,7 @@ class GanttROI(ROIBrushable):
 
     def update_tooltip(self):
         self.h2.setToolTip(setTicksLabels([self.pos()[0]])[0])
-        self.h1.setToolTip(setTicksLabels([self.pos()[0]+self.size()[0]])[0])
+        self.h1.setToolTip(setTicksLabels([self.pos()[0] + self.size()[0]])[0])
 
     def center(self):
         return QPointF(self.pos().x() + self.size().x() / 2, self.pos().y() + self.size().y() / 2)
@@ -64,17 +67,17 @@ class GanttROI(ROIBrushable):
         self.index_signal.emit(self.index)
 
 
-
 class GanttTask(QObject):
-    alpha=255
+    alpha = 255
+
     def __init__(self, task_dict):
         super().__init__()
 
-        self.task_dict = task_dict # taskdict=dict(name=  ,idnumber=  ,task_type=int(0 to 12), time_start=, time_end=)
-        qc = cmap.mapToQColor(task_dict['task_type']/12)
+        self.task_dict = task_dict  # taskdict=dict(name=  ,idnumber=  ,task_type=int(0 to 12), time_start=, time_end=)
+        qc = cmap.mapToQColor(task_dict['task_type'] / 12)
         qc.setAlpha(self.alpha)
         self.roi_item = GanttROI(task_dict['name'], task_dict['idnumber'], start=task_dict['time_start'],
-                            stop=task_dict['time_end'], brush = qc)
+                                 stop=task_dict['time_end'], brush=qc)
         self.roi_item.sigRegionChangeFinished.connect(self.show_hide_move_text())
         self.roi_item.setZValue(-1000)
         self.text_item = pg.TextItem(task_dict['name'])
@@ -83,9 +86,6 @@ class GanttTask(QObject):
 
     def show_hide_move_text(self):
         pass
-
-
-
 
 
 class GanttChart(QObject):
@@ -110,17 +110,14 @@ class GanttChart(QObject):
         self.widget.plotItem.addItem(self.tasks[-1].text_item)
 
 
-
-
-
-
-## create GUI
+# # create GUI
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     gchart = GanttChart()
     gchart.widget.show()
 
-
-    gchart.add_task(dict(name='This is task 1, the best of all the tasks!yeeah baby', idnumber= 1 ,task_type=1, time_start=5, time_end=7))
+    gchart.add_task(
+        dict(name='This is task 1, the best of all the tasks!yeeah baby', idnumber=1, task_type=1, time_start=5,
+             time_end=7))
 
     sys.exit(app.exec_())

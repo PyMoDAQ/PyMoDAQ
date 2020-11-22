@@ -721,8 +721,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                             for viewer in self.ui.viewers:
                                 viewer.set_scaling_axes(self.get_scaling_options())
                 elif param.name() in putils.iter_children(self.settings.child('detector_settings', 'ROIselect'),
-                                                                                     []) and \
-                        'ROIselect' in param.parent().name():  # to be sure a param named 'y0' for instance will not collide with the y0 from the ROI
+                                                          []) and 'ROIselect' in param.parent().name():  # to be sure
+                    # a param named 'y0' for instance will not collide with the y0 from the ROI
                     if self.DAQ_type == "DAQ2D":
                         try:
                             self.ui.viewers[0].ROI_select_signal.disconnect(self.update_ROI)
@@ -1060,8 +1060,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             settings_str = b'<All_settings>' + settings_str
             if hasattr(self.ui.viewers[0], 'roi_manager'):
                 settings_str += ioxml.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
-            settings_str += ioxml.parameter_to_xml_string(self.h5saver_continuous.settings) + \
-                            b'</All_settings>'
+            settings_str += ioxml.parameter_to_xml_string(self.h5saver_continuous.settings) + b'</All_settings>'
             self.scan_continuous_group = self.h5saver_continuous.add_scan_group("Continuous Saving")
             self.continuous_group = self.h5saver_continuous.add_det_group(self.scan_continuous_group,
                                                                           "Continuous saving", settings_str)
@@ -1200,8 +1199,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.settings.child('main_settings', 'detector_type').setValue(self.detector_name)
         try:
             if len(self.settings.child(('detector_settings')).children()) > 0:
-                for child in self.settings.child(('detector_settings')).children()[
-                             1:]:  # leave just the ROIselect group
+                for child in self.settings.child(('detector_settings')).children()[1:]:
+                    # leave just the ROIselect group
                     child.remove()
             plug_name = self.detector_name
             if self.DAQ_type == 'DAQ0D':
@@ -1241,7 +1240,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 for ind_channels, channels in enumerate(datas):
                     for ind_channel, channel in enumerate(channels['data']):
                         datas[ind_channels]['data'][ind_channel] = datas[ind_channels]['data'][ind_channel] - \
-                                                                   self.bkg[ind_channels]['data'][ind_channel]
+                            self.bkg[ind_channels]['data'][ind_channel]
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -1266,7 +1265,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         for ind, dic in enumerate(datas):
                             dic['data'] = [((self.ind_continuous_grab - 1) * self.current_datas[ind]['data'][
                                 ind_channel] + dic['data'][ind_channel]) / self.ind_continuous_grab for ind_channel in
-                                           range(len(dic['data']))]
+                                range(len(dic['data']))]
                     except Exception as e:
                         self.logger.exception(str(e))
 

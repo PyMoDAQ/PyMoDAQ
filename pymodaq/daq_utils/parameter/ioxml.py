@@ -7,7 +7,7 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import QDateTime
 
 
-def walk_parameters_to_xml(parent_elt=None,param=None):
+def walk_parameters_to_xml(parent_elt=None, param=None):
     """
         To convert a parameter object (and children) to xml data tree.
 
@@ -45,7 +45,7 @@ def walk_parameters_to_xml(parent_elt=None,param=None):
         opts = dict_from_param(param)
         elt = ET.Element(param.name(), **opts)
         param_type = str(param.type())
-        if 'group' not in param_type: #covers 'group', custom 'groupmove'...
+        if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
             add_text_to_elt(elt, param)
         else:
             walk_parameters_to_xml(elt, param)
@@ -91,7 +91,7 @@ def add_text_to_elt(elt, param):
         else:
             str(param.value())
     elif param_type == 'int':
-        if param.value() == True:  #known bug
+        if param.value():  # known bug
             val = 1
         else:
             val = param.value()
@@ -107,7 +107,7 @@ def add_text_to_elt(elt, param):
                         data=param.value().get_data_all(),
                         header=param.value().header)
             text = json.dumps(data)
-        except:
+        except Exception:
             text = ''
     else:
         text = str(param.value())
@@ -363,7 +363,6 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
         if type(XML_elt) is not ET.Element:
             raise TypeError('not valid XML element')
 
-
         elts = XML_elt.getchildren()
         if len(elts) == 0:
             param_dict = elt_to_dict(XML_elt)
@@ -377,16 +376,16 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
             param_dict = elt_to_dict(el)
             param_type = el.get('type')
 
-            if 'group' not in param_type: #covers 'group', custom 'groupmove'...
+            if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
                 set_txt_from_elt(el, param_dict)
             else:
-                subparams=[]
-                param_dict.update(dict(children=walk_xml_to_parameter(subparams,el)))
+                subparams = []
+                param_dict.update(dict(children=walk_xml_to_parameter(subparams, el)))
 
                 param_dict.update(dict(name=el.tag))
 
             params.append(param_dict)
-    except Exception as e: #to be able to debug when there's an issue
+    except Exception as e:  # to be able to debug when there's an issue
         raise e
     return params
 
@@ -418,7 +417,7 @@ def set_txt_from_elt(el, param_dict):
             param_value = bool(int(val_text))
         elif param_type == 'bool_push':
             param_value = bool(int(val_text))
-        elif 'led' in param_type:  #covers 'led' and 'led_push'types
+        elif 'led' in param_type:  # covers 'led' and 'led_push'types
             param_value = bool(val_text)
         elif param_type == 'date_time':
             param_value = QDateTime.fromSecsSinceEpoch(int(val_text))
@@ -431,7 +430,7 @@ def set_txt_from_elt(el, param_dict):
         elif param_type == 'list':
             try:
                 param_value = eval(val_text)
-            except:
+            except Exception:
                 param_value = val_text  # for back compatibility
         elif param_type == 'table_view':
             data_dict = json.loads(val_text)
@@ -496,7 +495,7 @@ def XML_string_to_parameter(xml_string):
     root = ET.fromstring(xml_string)
     tree = ET.ElementTree(root)
 
-    #tree.write('test.xml')
+    # tree.write('test.xml')
     params = walk_xml_to_parameter(params=[], XML_elt=root)
 
     return params

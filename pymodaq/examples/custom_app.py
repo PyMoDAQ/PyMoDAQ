@@ -6,7 +6,7 @@ import numpy as np
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QRectF, QDate, QThread
 
-import pymodaq.daq_utils.parameter.ioxml
+from pymodaq.daq_utils.parameter import ioxml
 from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.gui_utils import DockArea
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -26,25 +26,26 @@ class CustomApp(QtWidgets.QWidget, QObject):
     log_signal = pyqtSignal(str)
 
     # list of dicts enabling the settings tree on the user interface
-    params = [{'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
-        {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
-         'value': config['data_saving']['h5file']['save_path']},
-        {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
-        {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
-        {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},
-        {'title': 'Something done:', 'name': 'something_done', 'type': 'led', 'value': False, 'readonly': True},
-        {'title': 'Infos:', 'name': 'info', 'type': 'text', 'value': ""},
-        {'title': 'push:', 'name': 'push', 'type': 'bool_push', 'value': False}
-    ]},
-              {'title': 'Other settings:', 'name': 'other_settings', 'type': 'group', 'children': [
-                  {'title': 'List of stuffs:', 'name': 'list_stuff', 'type': 'list', 'value': 'first',
-                   'values': ['first', 'second', 'third'], 'tip': 'choose a stuff from the list'},
-                  {'title': 'List of integers:', 'name': 'list_int', 'type': 'list', 'value': 0,
-                   'values': [0, 256, 512], 'tip': 'choose a stuff from this int list'},
-                  {'title': 'one integer:', 'name': 'an_integer', 'type': 'int', 'value': 500, },
-                  {'title': 'one float:', 'name': 'a_float', 'type': 'float', 'value': 2.7, },
-              ]},
-              ]
+    params = [
+        {'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
+            {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
+             'value': config['data_saving']['h5file']['save_path']},
+            {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
+            {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
+            {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},
+            {'title': 'Something done:', 'name': 'something_done', 'type': 'led', 'value': False, 'readonly': True},
+            {'title': 'Infos:', 'name': 'info', 'type': 'text', 'value': ""},
+            {'title': 'push:', 'name': 'push', 'type': 'bool_push', 'value': False}
+        ]},
+        {'title': 'Other settings:', 'name': 'other_settings', 'type': 'group', 'children': [
+            {'title': 'List of stuffs:', 'name': 'list_stuff', 'type': 'list', 'value': 'first',
+                'values': ['first', 'second', 'third'], 'tip': 'choose a stuff from the list'},
+            {'title': 'List of integers:', 'name': 'list_int', 'type': 'list', 'value': 0,
+                'values': [0, 256, 512], 'tip': 'choose a stuff from this int list'},
+            {'title': 'one integer:', 'name': 'an_integer', 'type': 'int', 'value': 500, },
+            {'title': 'one float:', 'name': 'a_float', 'type': 'float', 'value': 2.7, },
+        ]},
+    ]
 
     def __init__(self, dockarea):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -176,7 +177,6 @@ class CustomApp(QtWidgets.QWidget, QObject):
                         self.detector.grab_done_signal.disconnect()
                         self.settings.child('main_settings', 'something_done').setValue(False)
 
-
             elif change == 'parent':
                 pass
 
@@ -275,11 +275,10 @@ class CustomApp(QtWidgets.QWidget, QObject):
                 h5saver.init_file(update_h5=True, addhoc_file_path=path)
 
                 # save all metadata
-                settings_str = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+                settings_str = ioxml.parameter_to_xml_string(self.settings)
                 settings_str = b'<All_settings>' + settings_str
-                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.detector.settings) + \
-                                pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(h5saver.settings) + \
-                                b'</All_settings>'
+                settings_str += ioxml.parameter_to_xml_string(self.detector.settings) + ioxml.parameter_to_xml_string(
+                    h5saver.settings) + b'</All_settings>'
 
                 data_group = h5saver.add_data_group(h5saver.raw_group, group_data_type='data0D',
                                                     title='data from custom app',
@@ -296,7 +295,6 @@ class CustomApp(QtWidgets.QWidget, QObject):
                 self.settings.child('main_settings', 'info').setValue(st)
 
                 h5saver.close_file()
-
 
         except Exception as e:
             self.add_log(getLineInfo() + str(e))
@@ -316,8 +314,8 @@ class CustomApp(QtWidgets.QWidget, QObject):
         now = datetime.datetime.now()
         new_item = QtWidgets.QListWidgetItem(str(now) + ": " + txt)
         self.logger_list.addItem(new_item)
-        ##to do
-        ##self.save_parameters.logger_array.append(str(now)+": "+txt)
+        # #to do
+        # #self.save_parameters.logger_array.append(str(now)+": "+txt)
 
     @pyqtSlot(str)
     def emit_log(self, txt):

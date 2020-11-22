@@ -1,8 +1,6 @@
 import importlib
 import os
 
-
-
 models = []
 try:
     model_mod = importlib.import_module('pymodaq_pid_models')
@@ -27,12 +25,11 @@ except Exception as e:
 if len(models) == 0:
     print('No valid installed models to run the pid controller')
 
-
 params = [
     {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True, 'children': [
         {'title': 'Models class:', 'name': 'model_class', 'type': 'list', 'values': models},
         {'title': 'Modules managers:', 'name': 'module_settings',
-            'tooltip': 'Get/Set managers settings for each module in the current model', 'type': 'bool', 'value': False},
+         'tooltip': 'Get/Set managers settings for each module in the current model', 'type': 'bool', 'value': False},
         {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
     ]},
     {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group', 'visible': False,

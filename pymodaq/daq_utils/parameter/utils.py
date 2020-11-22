@@ -58,7 +58,7 @@ def iter_children_params(param, childlist=[]):
     return childlist
 
 
-def get_param_from_name(parent,name):
+def get_param_from_name(parent, name):
     """Get Parameter under parent whose name is name
 
     Parameters

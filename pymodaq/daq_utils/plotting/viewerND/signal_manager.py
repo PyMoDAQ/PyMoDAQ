@@ -11,7 +11,9 @@ import copy
 
 import math
 from pymodaq.daq_utils import daq_utils as utils
-#%%
+
+
+# %%
 def generate_axis(offset, scale, size, offset_index=0):
     """Creates an axis given the offset, scale and number of channels
 
@@ -34,6 +36,7 @@ def generate_axis(offset, scale, size, offset_index=0):
                        offset + scale * (size - 1 - offset_index),
                        size)
 
+
 def add_scalar_axis(signal):
     am = signal.axes_manager
     signal.__class__ = Signal
@@ -43,6 +46,7 @@ def add_scalar_axis(signal):
                     offset=0,
                     name="Scalar",
                     navigate=False)
+
 
 def isfloat(number):
     """Check if a number or array is of float type.
@@ -55,9 +59,10 @@ def isfloat(number):
     else:
         return isinstance(number, float)
 
+
 def iterable_not_string(thing):
-    return isinstance(thing, collections.Iterable) and \
-        not isinstance(thing, str)
+    return isinstance(thing, collections.Iterable) and not isinstance(thing, str)
+
 
 class SpecialSlicers(object):
 
@@ -67,6 +72,7 @@ class SpecialSlicers(object):
 
     def __getitem__(self, slices, out=None):
         return self.obj._slicer(slices, self.isNavigation, out=out)
+
 
 class SpecialSlicersSignal(SpecialSlicers):
 
@@ -80,6 +86,86 @@ class SpecialSlicersSignal(SpecialSlicers):
 
     def __len__(self):
         return self.obj.axes_manager.signal_shape[0]
+
+
+class attrgetter:
+    """
+    Return a callable object that fetches the given attribute(s) from its operand.
+    After f = attrgetter('name'), the call f(r) returns r.name.
+    After g = attrgetter('name', 'date'), the call g(r) returns (r.name, r.date).
+    After h = attrgetter('name.first', 'name.last'), the call h(r) returns
+    (r.name.first, r.name.last).
+    """
+    __slots__ = ('_attrs', '_call')
+
+    def __init__(self, attr, *attrs):
+        if not attrs:
+            if not isinstance(attr, str):
+                raise TypeError('attribute name must be a string')
+            self._attrs = (attr,)
+            names = attr.split('.')
+
+            def func(obj):
+                for name in names:
+                    obj = getattr(obj, name)
+                return obj
+            self._call = func
+        else:
+            self._attrs = (attr,) + attrs
+            getters = tuple(map(attrgetter, self._attrs))
+
+            def func(obj):
+                return tuple(getter(obj) for getter in getters)
+            self._call = func
+
+    def __call__(self, obj):
+        return self._call(obj)
+
+    def __repr__(self):
+        return '%s.%s(%s)' % (self.__class__.__module__,
+                              self.__class__.__qualname__,
+                              ', '.join(map(repr, self._attrs)))
+
+    def __reduce__(self):
+        return self.__class__, self._attrs
+
+
+def attrsetter(target, attrs, value):
+    """ Sets attribute of the target to specified value, supports nested
+        attributes. Only creates a new attribute if the object supports such
+        behaviour (e.g. DictionaryTreeBrowser does)
+
+        Parameters
+        ----------
+            target : object
+            attrs : string
+                attributes, separated by periods (e.g.
+                'metadata.Signal.Noise_parameters.variance' )
+            value : object
+
+        Example
+        -------
+        First create a signal and model pair:
+
+        >>> s = hs.signals.Signal1D(np.arange(10))
+        >>> m = s.create_model()
+        >>> m.signal.data
+        array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+        Now set the data of the model with attrsetter
+        >>> attrsetter(m, 'signal1D.data', np.arange(10)+2)
+        >>> self.signal.data
+        array([2, 3, 4, 5, 6, 7, 8, 9, 10, 10])
+
+        The behaviour is identical to
+        >>> self.signal.data = np.arange(10) + 2
+
+
+    """
+    where = attrs.rfind('.')
+    if where != -1:
+        target = attrgetter(attrs[:where])(target)
+    setattr(target, attrs[where + 1:], value)
 
 
 class FancySlicing(object):
@@ -120,9 +206,8 @@ class FancySlicing(object):
             # Expand the first Ellipsis
             ellipsis_index = _orig_slices.index(Ellipsis)
             _orig_slices.remove(Ellipsis)
-            _orig_slices = (_orig_slices[:ellipsis_index] + [slice(None), ] *
-                            max(0, len(idx) - len(_orig_slices)) +
-                            _orig_slices[ellipsis_index:])
+            _orig_slices = (_orig_slices[:ellipsis_index] + [slice(None), ] * max(0, len(idx) - len(
+                _orig_slices)) + _orig_slices[ellipsis_index:])
             # Replace all the following Ellipses by :
             while Ellipsis in _orig_slices:
                 _orig_slices[_orig_slices.index(Ellipsis)] = slice(None)
@@ -131,16 +216,14 @@ class FancySlicing(object):
         if len(_orig_slices) > len(idx):
             raise IndexError("too many indices")
 
-        slices = np.array([slice(None,)] *
-                          len(self.axes_manager._axes))
+        slices = np.array([slice(None, )] * len(self.axes_manager._axes))
 
         slices[idx] = _orig_slices + (slice(None),) * max(
             0, len(idx) - len(_orig_slices))
 
         array_slices = []
         for slice_, axis in zip(slices, self.axes_manager._axes):
-            if (isinstance(slice_, slice) or
-                    len(self.axes_manager._axes) < 2):
+            if (isinstance(slice_, slice) or len(self.axes_manager._axes) < 2):
                 array_slices.append(axis._get_array_slices(slice_))
             else:
                 if isinstance(slice_, float):
@@ -152,7 +235,7 @@ class FancySlicing(object):
         array_slices = self._get_array_slices(slices, isNavigation)
         new_data = self.data[array_slices]
         if new_data.size == 1 and new_data.dtype is np.dtype('O'):
-            if isinstance(new_data[0], (np.ndarray, dArray)):
+            if isinstance(new_data[0], np.ndarray):
                 return self.__class__(new_data[0]).transpose(navigation_axes=0)
             else:
                 return new_data[0]
@@ -162,8 +245,7 @@ class FancySlicing(object):
                                                 copy_variance=True)
             _to_remove = []
             for slice_, axis in zip(array_slices, _obj.axes_manager._axes):
-                if (isinstance(slice_, slice) or
-                        len(self.axes_manager._axes) < 2):
+                if (isinstance(slice_, slice) or len(self.axes_manager._axes) < 2):
                     axis._slice_me(slice_)
                 else:
                     _to_remove.append(axis.index_in_axes_manager)
@@ -175,13 +257,11 @@ class FancySlicing(object):
             i = 0
             for slice_, axis_src in zip(array_slices, self.axes_manager._axes):
                 axis_src = axis_src.copy()
-                if (isinstance(slice_, slice) or
-                        len(self.axes_manager._axes) < 2):
+                if (isinstance(slice_, slice) or len(self.axes_manager._axes) < 2):
                     axis_src._slice_me(slice_)
                     axis_dst = out.axes_manager._axes[i]
                     i += 1
-                    axis_dst.update_from(axis_src, attributes=(
-                        "scale", "offset", "size"))
+                    axis_dst.update_from(axis_src, attributes=("scale", "offset", "size"))
 
         if hasattr(self, "_additional_slicing_targets"):
             for ta in self._additional_slicing_targets:
@@ -213,6 +293,7 @@ class FancySlicing(object):
         else:
             out.events.data_changed.trigger(obj=out)
 
+
 class DataAxis(object):
 
     def __init__(self,
@@ -229,7 +310,7 @@ class DataAxis(object):
         self.scale = scale
         self.offset = offset
         self.size = size
-        self.value=None
+        self.value = None
         self.high_index = self.size - 1
         self.low_index = 0
         self.index = 0
@@ -258,7 +339,7 @@ class DataAxis(object):
     @property
     def index_in_axes_manager(self):
         if self.axes_manager is not None:
-            return self.axes_manager._get_axes_in_natural_order().\
+            return self.axes_manager._get_axes_in_natural_order(). \
                 index(self)
         else:
             raise AttributeError(
@@ -278,7 +359,6 @@ class DataAxis(object):
             return self.value2index(value)
         else:
             return value
-
 
     def _slice_me(self, slice_):
         """Returns a slice to slice the corresponding data axis and
@@ -309,7 +389,6 @@ class DataAxis(object):
             self.scale *= step
 
         return my_slice
-
 
     @property
     def index_in_array(self):
@@ -368,7 +447,6 @@ class DataAxis(object):
             return self.axis[index.ravel()].reshape(index.shape)
         else:
             return self.axis[index]
-
 
     def _get_array_slices(self, slice_):
         """Returns a slice to slice the corresponding data axis without
@@ -433,13 +511,12 @@ class DataAxis(object):
 
         return slice(start, stop, step)
 
-
     def update_axis(self):
         self.axis = generate_axis(self.offset, self.scale, self.size)
         if len(self.axis) != 0:
             self.low_value, self.high_value = (
                 self.axis.min(), self.axis.max())
-        self.value=[self.low_value,self.high_value]
+        self.value = [self.low_value, self.high_value]
 
     def _update_slice(self, value):
         if value is False:
@@ -450,7 +527,7 @@ class DataAxis(object):
     @property
     def index_in_axes_manager(self):
         if self.axes_manager is not None:
-            return self.axes_manager._get_axes_in_natural_order().\
+            return self.axes_manager._get_axes_in_natural_order(). \
                 index(self)
         else:
             raise AttributeError(
@@ -458,16 +535,16 @@ class DataAxis(object):
                 " and therefore its index_in_array attribute "
                 " is not defined")
 
+
 class AxesManager(object):
 
-    def __init__(self,axes_list):
-        self._axes=[]
+    def __init__(self, axes_list):
+        self._axes = []
         self.create_axes(axes_list)
         # set_signal_dimension is called only if there is no current
         # view. It defaults to spectrum
         navigates = [i.navigate for i in self._axes]
         self._update_attributes()
-
 
     def _append_axis(self, *args, **kwargs):
         axis = DataAxis(*args, **kwargs)
@@ -517,8 +594,7 @@ class AxesManager(object):
                 if y == axis.name:
                     return axis
             raise ValueError("There is no DataAxis named %s" % y)
-        elif (isfloat(y.real) and not y.real.is_integer() or
-                isfloat(y.imag) and not y.imag.is_integer()):
+        elif (isfloat(y.real) and not y.real.is_integer() or isfloat(y.imag) and not y.imag.is_integer()):
             raise TypeError("axesmanager indices must be integers, "
                             "complex integers or strings")
         if y.imag == 0:  # Natural order
@@ -619,7 +695,6 @@ class AxesManager(object):
                      else tuple())
         return nav_shape + sig_shape
 
-
     def _get_dimension_str(self):
         string = "("
         for axis in self.navigation_axes:
@@ -656,18 +731,15 @@ class AxesManager(object):
 
         return text
 
-    def _update_axes(self,old_axes,navigation_axes,signal_axes):
+    def _update_axes(self, old_axes, navigation_axes, signal_axes):
 
-        for ind_ax,ax in enumerate(self._axes):
-            navigate=old_axes[ind_ax] in navigation_axes
-            ax.navigate=navigate
+        for ind_ax, ax in enumerate(self._axes):
+            navigate = old_axes[ind_ax] in navigation_axes
+            ax.navigate = navigate
             ax._update_slice(navigate)
 
 
-
-
 class Signal(FancySlicing):
-
 
     def __init__(self, data, **kwds):
         """Create a Signal from a numpy array.
@@ -703,7 +775,6 @@ class Signal(FancySlicing):
             # Create a "Scalar" axis because the axis is the last one left and
             add_scalar_axis(self)
 
-
     def _get_undefined_axes_list(self):
         axes = []
         for s in self.data.shape:
@@ -718,7 +789,6 @@ class Signal(FancySlicing):
     def data(self, value):
         self._data = np.atleast_1d(np.asanyarray(value))
 
-
     def __repr__(self):
         unfolded = ""
         string = '<'
@@ -730,7 +800,6 @@ class Signal(FancySlicing):
         string += '>'
 
         return string
-
 
     def _apply_function_on_data_and_remove_axis(self, function, axes,
                                                 out=None):
@@ -751,9 +820,9 @@ class Signal(FancySlicing):
                                        ar_axes=ar_axes, out=out)
         if out:
             if np_out:
-                function(self.data, axis=ar_axes, out=out.data,)
+                function(self.data, axis=ar_axes, out=out.data, )
             else:
-                data = np.atleast_1d(function(self.data, axis=ar_axes,))
+                data = np.atleast_1d(function(self.data, axis=ar_axes, ))
                 if data.shape == out.data.shape:
                     out.data[:] = data
                 else:
@@ -763,7 +832,7 @@ class Signal(FancySlicing):
             out.events.data_changed.trigger(obj=out)
         else:
             s.data = np.atleast_1d(
-                function(self.data, axis=ar_axes,))
+                function(self.data, axis=ar_axes, ))
             s._remove_axis([ax.index_in_axes_manager for ax in axes])
             return s
 
@@ -826,7 +895,6 @@ class Signal(FancySlicing):
             return time.reshape(out_shape)
         except Exception as e:
             return time.reshape(out_shape)
-
 
     def max(self, axis=None, out=None):
         """Returns a signal with the maximum of the signal along at least one
@@ -924,7 +992,6 @@ class Signal(FancySlicing):
         return self._apply_function_on_data_and_remove_axis(np.mean, axis,
                                                             out=out)
 
-
     def std(self, axis=None, out=None):
         """Returns a signal with the standard deviation of the signal along
         at least one axis.
@@ -989,7 +1056,6 @@ class Signal(FancySlicing):
         return self._apply_function_on_data_and_remove_axis(np.var, axis,
                                                             out=out)
 
-
     def nansum(self, axis=None, out=None):
         """%s
         """
@@ -997,7 +1063,6 @@ class Signal(FancySlicing):
             axis = self.axes_manager.navigation_axes
         return self._apply_function_on_data_and_remove_axis(np.nansum, axis,
                                                             out=out)
-
 
     def nanmax(self, axis=None, out=None):
         """%s
@@ -1007,14 +1072,12 @@ class Signal(FancySlicing):
         return self._apply_function_on_data_and_remove_axis(np.nanmax, axis,
                                                             out=out)
 
-
     def nanmin(self, axis=None, out=None):
         """%s"""
         if axis is None:
             axis = self.axes_manager.navigation_axes
         return self._apply_function_on_data_and_remove_axis(np.nanmin, axis,
                                                             out=out)
-
 
     def nanmean(self, axis=None, out=None):
         """%s """
@@ -1023,7 +1086,6 @@ class Signal(FancySlicing):
         return self._apply_function_on_data_and_remove_axis(np.nanmean, axis,
                                                             out=out)
 
-
     def nanstd(self, axis=None, out=None):
         """%s"""
         if axis is None:
@@ -1031,14 +1093,12 @@ class Signal(FancySlicing):
         return self._apply_function_on_data_and_remove_axis(np.nanstd, axis,
                                                             out=out)
 
-
     def nanvar(self, axis=None, out=None):
         """%s"""
         if axis is None:
             axis = self.axes_manager.navigation_axes
         return self._apply_function_on_data_and_remove_axis(np.nanvar, axis,
                                                             out=out)
-
 
     def diff(self, axis, order=1, out=None):
         """Returns a signal with the n-th order discrete difference along
@@ -1079,9 +1139,6 @@ class Signal(FancySlicing):
             return s
         else:
             out.events.data_changed.trigger(obj=out)
-
-
-
 
     def transpose(self, signal_axes=None,
                   navigation_axes=None, optimize=False):
@@ -1215,8 +1272,8 @@ class Signal(FancySlicing):
 
         # reconfigure the axes of the axesmanager:
         ram = res.axes_manager
-        #ram._update_trait_handlers(remove=True)
-        ram._update_axes(self.axes_manager._axes,navigation_axes,signal_axes)
+        # ram._update_trait_handlers(remove=True)
+        ram._update_axes(self.axes_manager._axes, navigation_axes, signal_axes)
 
         # _axes are ordered in array order
         ram._axes = [ram._axes[i] for i in array_order]
@@ -1265,22 +1322,18 @@ class Signal(FancySlicing):
         return copy.deepcopy(self)
 
 
+if __name__ == '__main__':
+    # import hyperspy.api as hs
 
-if __name__=='__main__':
-    
-    #import hyperspy.api as hs
+    data = np.array([[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]])
 
-    data=np.array([[[1,2,3,4],[5,6,7,8],[9,10,11,12]],[[1,2,3,4],[5,6,7,8],[9,10,11,12]]])
+    # signal_hs=hs.signals.BaseSignal(data)
+    # print(signal_hs)
+    # signal_hs_t=signal_hs.transpose(signal_axes=[1])
+    # print(signal_hs_t)
 
-    #signal_hs=hs.signals.BaseSignal(data)
-    #print(signal_hs)
-    #signal_hs_t=signal_hs.transpose(signal_axes=[1])
-    #print(signal_hs_t)
-
-
-    signal=Signal(data)
+    signal = Signal(data)
     print(signal)
 
-
-    signal_t=signal.transpose(signal_axes=[1])
+    signal_t = signal.transpose(signal_axes=[1])
     print(signal_t)
