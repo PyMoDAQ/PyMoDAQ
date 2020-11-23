@@ -81,7 +81,7 @@ class SpinBoxCustom(SpinBox.SpinBox):
         """
         # print opts
         for k in opts:
-            if k == 'bounds':
+            if k == 'bounds' or k == 'limits':
                 self.setMinimum(opts[k][0], update=False)
                 self.setMaximum(opts[k][1], update=False)
             elif k == 'min':
@@ -216,7 +216,7 @@ class SliderSpinBox(QtWidgets.QWidget):
 
     def __init__(self, *args, **kwargs):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(SliderSpinBox, self).__init__()
+        super().__init__()
         self.subtype = kwargs['subtype']
         self.initUI(*args, **kwargs)
 
@@ -346,7 +346,9 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             else:
                 if 'subtype' not in opts:
                     opts['subtype'] = 'linear'
-                w = SliderSpinBox(bounds=(0., 1000.), subtype=opts['subtype'])
+                if 'limits' not in opts:
+                    defs['bounds'] = (0., 10.)
+                w = SliderSpinBox(subtype=opts['subtype'])
 
             w.setOpts(**defs)
             w.sigChanged = w.sigValueChanged
@@ -456,6 +458,16 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             raise Exception("Unknown type '%s'" % str(t))
         return w
 
+    def limitsChanged(self, param, limits):
+        """Called when the parameter's limits have changed"""
+        ParameterItem.limitsChanged(self, param, limits)
+
+        t = self.param.opts['type']
+        if t == 'int' or t == 'float' or t == 'slide':
+            self.widget.setOpts(bounds=limits)
+        else:
+            return  ## don't know what to do with any other types..
+
     def showEditor(self):
         """
             Show the widget attribute.
@@ -508,7 +520,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
             self.displayLabel.setToolTip(opts['tip'])
 
         # # If widget is a SpinBox, pass options straight through
-        if isinstance(self.widget, SpinBoxCustom):
+        if isinstance(self.widget, SpinBoxCustom) or isinstance(self.widget, SliderSpinBox):
             if 'visible' in opts:
                 opts.pop('visible')
                 self.widget.hide()  # so that only the display label is shown when visible option is toggled
@@ -560,6 +572,21 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
             'slide': float
         }[self.opts['type']]
         return fn(v)
+
+    def setLimits(self, limits):
+        """Set limits on the acceptable values for this parameter.
+        The format of limits depends on the type of the parameter and
+        some parameters do not make use of limits at all."""
+        if 'limits' in self.opts and self.opts['limits'] == limits:
+            return
+        self.opts['limits'] = limits
+        self.sigLimitsChanged.emit(self, limits)
+        if self.opts['type'] in ['int', 'float', 'slide']:
+            if self.value() > limits[1]:
+                self.setValue(limits[1])
+            elif self.value() < limits[0]:
+                self.setValue(limits[0])
+        return limits
 
 
 registerParameterType('int', SimpleParameterCustom, override=True)

@@ -2057,7 +2057,7 @@ class DAQ_Detector(QObject):
             #  or if we keep it on top?
             # #self.detector.grab(Naverage,live=live)
 
-            while 1:
+            while True:
                 try:
                     if not self.waiting_for_data:
                         self.waiting_for_data = True
