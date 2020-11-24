@@ -7,6 +7,7 @@ import time
 from datetime import timedelta
 import sys
 
+
 class PushButtonShortcut(QtWidgets.QPushButton):
 
     def __init__(self, *args, shortcut=None, shortcut_widget=None, **kwargs):
@@ -20,7 +21,6 @@ class PushButtonShortcut(QtWidgets.QPushButton):
 
     def click_button(self):
         self.click()
-
 
 
 class ChronoTimer(QObject):
@@ -39,15 +39,14 @@ class ChronoTimer(QObject):
             self.duration = timedelta()
         else:
             self.type = 'timer'
-            self.duration = timedelta(**duration)  #seconds
-        self.displayed_time = 0  #in seconds
+            self.duration = timedelta(**duration)  # seconds
+        self.displayed_time = 0  # in seconds
         self.started = False
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.display_time)
 
         self.setup_ui()
-
 
     def setup_ui(self):
 
@@ -88,7 +87,6 @@ class ChronoTimer(QObject):
         hor_widget = QtWidgets.QWidget()
         hor_widget.setLayout(hor_layout)
 
-
         self.controls_layout.addWidget(hor_widget)
 
         icon = QtGui.QIcon()
@@ -123,22 +121,22 @@ class ChronoTimer(QObject):
         self.dock_controls.addWidget(self.widget_controls)
 
     def get_times(self, duration):
-        seconds = int(duration.total_seconds()%60)
-        total_minutes = duration.total_seconds()//60
-        minutes = int(total_minutes%60)
-        hours = int(total_minutes//60)
+        seconds = int(duration.total_seconds() % 60)
+        total_minutes = duration.total_seconds() // 60
+        minutes = int(total_minutes % 60)
+        hours = int(total_minutes // 60)
 
         return hours, minutes, seconds
 
     def get_elapsed_time(self):
-        return time.perf_counter()-self.ini_time
+        return time.perf_counter() - self.ini_time
 
     def display_time(self):
         elapsed_time = self.get_elapsed_time()
         if self.type == 'timer':
-            display_timedelta = self.duration-timedelta(seconds=elapsed_time)
+            display_timedelta = self.duration - timedelta(seconds=elapsed_time)
         else:
-            display_timedelta = self.duration+timedelta(seconds=elapsed_time)
+            display_timedelta = self.duration + timedelta(seconds=elapsed_time)
 
         self.displayed_time = display_timedelta.total_seconds()
         if display_timedelta.total_seconds() <= 0:
@@ -163,8 +161,8 @@ class ChronoTimer(QObject):
             self.timer.stop()
             self.paused_time = time.perf_counter()
         else:
-            elapsed_pause_time= time.perf_counter()- self.paused_time
-            self.ini_time +=elapsed_pause_time
+            elapsed_pause_time = time.perf_counter() - self.paused_time
+            self.ini_time += elapsed_pause_time
             self.timer.start()
             self.started = True
 
@@ -181,11 +179,12 @@ class ChronoTimer(QObject):
 
     def set_lcd_color(self, lcd, color):
         palette = lcd.palette()
-        #lcd.setPalette(QtGui.QPalette(Qt.red))
+        # lcd.setPalette(QtGui.QPalette(Qt.red))
         if hasattr(Qt, color):
             palette.setBrush(palette.WindowText, getattr(Qt, color))
             palette.setColor(palette.Background, QtGui.QColor(0, 0, 0))
         lcd.setPalette(palette)
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
@@ -197,7 +196,7 @@ if __name__ == '__main__':
     win.setCentralWidget(area)
     win.setWindowTitle('Chrono Timer')
 
-    #prog = ChronoTimer(area, dict(hours=1, minutes=0, seconds=0))
+    # prog = ChronoTimer(area, dict(hours=1, minutes=0, seconds=0))
     prog = ChronoTimer(area)
     win.show()
     sys.exit(app.exec_())

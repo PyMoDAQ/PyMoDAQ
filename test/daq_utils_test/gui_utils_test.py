@@ -6,8 +6,10 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock
 import datetime
 
+
 class TestDockArea:
     moved = False
+
     def track_signal(self):
         self.moved = True
 
@@ -22,5 +24,3 @@ class TestDockArea:
         area.moveDock(dock2, 'below', dock1)
         QtWidgets.QApplication.processEvents()
         assert self.moved is True
-
-

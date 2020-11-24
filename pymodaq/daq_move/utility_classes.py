@@ -115,7 +115,7 @@ class DAQ_Move_base(QObject):
         self._controller_units = units
         try:
             self.settings.child(('units')).setValue(units)
-        except:
+        except Exception:
             pass
 
     def check_bound(self, position):
@@ -305,7 +305,7 @@ class DAQ_Move_base(QObject):
         change = settings_parameter_dict['change']
         try:
             self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-        except:
+        except Exception:
             pass
         if change == 'value':
             self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
@@ -389,8 +389,8 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if param.name() in iter_children(self.settings.child(('settings_client')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
-            path = pymodaq.daq_utils.parameter.utils.get_param_path(param)[
-                   2:]  # get the path of this param as a list starting at parent 'infos'
+            path = pymodaq.daq_utils.parameter.utils.get_param_path(param)[2:]
+            # get the path of this param as a list starting at parent 'infos'
 
             actuator_socket.send_list(path)
 

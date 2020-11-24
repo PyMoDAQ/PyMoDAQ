@@ -7,8 +7,7 @@ which in turn needs access to this version information.)
 from subprocess import Popen, PIPE
 from os.path import abspath, dirname
 
-
-VERSION = (2, 3, 0, 'final', 0)
+VERSION = (2, 3, 1, 'final', 0)
 
 
 def git_sha():
@@ -98,6 +97,7 @@ def get_version(form='short'):
         if form == 'all':
             return versions
         raise TypeError('"%s" is not a valid form specifier.' % form)
+
 
 __version__ = get_version('short')
 

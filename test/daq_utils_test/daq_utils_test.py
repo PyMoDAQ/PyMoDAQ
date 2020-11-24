@@ -26,6 +26,7 @@ class TestJsonConverter:
         assert conv.json2object(conv.object2json([10, 5, 'yui'])) == [10, 5, 'yui']
         assert conv.json2object(conv.object2json((10, 5, 'yui'))) == (10, 5, 'yui')
 
+
 class TestUnits:
     def test_Enm2cmrel(self):
         assert utils.Enm2cmrel(520, 515) == pytest.approx(186.70649738)
@@ -45,6 +46,7 @@ class TestUnits:
     def test_l2w(self):
         assert utils.l2w(800) == pytest.approx(2.35619449)
 
+
 class TestString:
     def test_capitalize(self):
         string = 'abcdef'
@@ -57,6 +59,7 @@ class TestString:
         assert utils.uncapitalize(string) == 'aBCDef'
         assert utils.uncapitalize(string, 3) == 'abcDef'
 
+
 def test_get_data_dimension():
     shapes = [(), (1,), (10,), (5, 5)]
     scan_types = ['scan1D', 'scan2D']
@@ -66,7 +69,7 @@ def test_get_data_dimension():
             for rem in remove:
                 arr = np.ones((shape))
                 size = arr.size
-                dim =  len(arr.shape)
+                dim = len(arr.shape)
                 if dim == 1 and size == 1:
                     dim = 0
                 if rem:
@@ -76,13 +79,14 @@ def test_get_data_dimension():
                         dim -= 2
                 assert utils.get_data_dimension(arr, scan, rem) == (shape, '{:d}D'.format(dim), size)
 
+
 class TestScroll:
     def test_scroll_log(self):
         min_val = 50
         max_val = 51
         for scroll_val in range(101):
             assert utils.scroll_linear(scroll_val, min_val, max_val) == \
-                   pytest.approx(10**(scroll_val * (np.log10(max_val)-np.log10(min_val))/100 + np.log10(min_val)),
+                   pytest.approx(10 ** (scroll_val * (np.log10(max_val) - np.log10(min_val)) / 100 + np.log10(min_val)),
                                  rel=1e-4)
 
     def test_scroll_linear(self):
@@ -90,7 +94,7 @@ class TestScroll:
         max_val = 51
         for scroll_val in range(101):
             assert utils.scroll_linear(scroll_val, min_val, max_val) == \
-                   pytest.approx(scroll_val * (max_val-min_val)/100 + min_val)
+                   pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
 
 
 def test_ThreadCommand():
@@ -99,6 +103,7 @@ def test_ThreadCommand():
     threadcomm = utils.ThreadCommand(command, attributes)
     assert threadcomm.command is command
     assert threadcomm.attributes is attributes
+
 
 def test_Axis():
     ax = utils.Axis()
@@ -111,14 +116,16 @@ def test_Axis():
     assert ax['label'] == 'a label'
     assert ax['units'] == 'seconds'
 
+
 def test_elt_as_first_element():
     elts = ['test', 'tyuio', 'Mock', 'test2']
     elts_sorted = utils.elt_as_first_element(elts[:])
     assert elts_sorted[0] == 'Mock'
-    for ind in range(1,len(elts)):
+    for ind in range(1, len(elts)):
         assert elts_sorted[ind] in elts
     elts_sorted = utils.elt_as_first_element(elts[:], elts[1])
     assert elts_sorted[0] == elts[1]
+
 
 def test_check_vals_in_iterable():
     with pytest.raises(Exception):
@@ -127,6 +134,7 @@ def test_check_vals_in_iterable():
     assert not utils.check_vals_in_iterable([1, 2.0, 4], (1, 2, 4))
     assert not utils.check_vals_in_iterable([1, 2.0, 4], (1, 2.0, 4))
     assert not utils.check_vals_in_iterable(np.array([1, 2.0, 4]), np.array((1, 2, 4)))
+
 
 def test_get_set_local_dir():
     local_path = utils.get_set_local_dir()
@@ -148,7 +156,7 @@ def test_get_set_pid_path():
 
 
 def test_zeros_aligned():
-    #just one exemple...
+    # just one exemple...
     align = 64
     data = utils.zeros_aligned(1230, align, np.uint32)
     assert data.ctypes.data % align == 0
@@ -162,8 +170,8 @@ def test_set_param_from_param():
             {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
              'readonly': True},
-        ]
-         }]
+        ]}
+    ]
     settings = Parameter.create(name='settings', type='group', children=params)
     settings_old = Parameter.create(name='settings', type='group', children=params)
 
@@ -196,7 +204,7 @@ def test_get_new_file_name(tmp_path):
         pass
     file, direct = utils.get_new_file_name(tmp_path, base_name)
     assert file == f'{base_name}_001'
-    base_name ='anotherbasename'
+    base_name = 'anotherbasename'
     file, direct = utils.get_new_file_name(tmp_path, base_name)
     assert file == f'{base_name}_000'
 
@@ -204,11 +212,12 @@ def test_get_new_file_name(tmp_path):
 class TestMath():
     def test_my_moment(self):
         x = utils.linspace_step(0, 100, 1)
-        y = utils.gauss1D(x, 42.321, 13.5) #relation between dx in the gauss1D and in the moment is np.sqrt(4*np.log(2))
-        
+        y = utils.gauss1D(x, 42.321,
+                          13.5)  # relation between dx in the gauss1D and in the moment is np.sqrt(4*np.log(2))
+
         x0, dx = utils.my_moment(x, y)
         assert x0 == pytest.approx(42.321)
-        assert dx*np.sqrt(4*np.log(2)) == pytest.approx(13.5)
+        assert dx * np.sqrt(4 * np.log(2)) == pytest.approx(13.5)
 
     def test_odd_even(self):
         assert not utils.odd_even(10)
@@ -242,7 +251,7 @@ class TestMath():
         with pytest.raises(ValueError):
             utils.linspace_step(0, 10, 0.)
 
-    def test_find_index(self):  #get closest value and index
+    def test_find_index(self):  # get closest value and index
         x = utils.linspace_step(1.0, -1, -0.13)
         assert utils.find_index(x, -0.55) == [(12, -0.56)]
         assert utils.find_index(x, [-0.55, 0.741]) == [(12, -0.56), (2, 0.74)]
@@ -285,10 +294,10 @@ class TestMath():
         omega_grid, time_grid = utils.ftAxis(Npts, omega_max)
         assert len(omega_grid) == Npts
         assert len(time_grid) == Npts
-        assert np.max(time_grid) == (Npts-1) * np.pi / (2 * omega_max)
+        assert np.max(time_grid) == (Npts - 1) * np.pi / (2 * omega_max)
 
     def test_ftAxis_time(self):
-        time_max = 10000  #fs
+        time_max = 10000  # fs
         Npts = 1024
         omega_grid, time_grid = utils.ftAxis_time(Npts, time_max)
         assert len(omega_grid) == Npts
@@ -317,5 +326,3 @@ class TestMath():
         assert np.all(signal_temp == pytest.approx(np.real(utils.ift(signal_omega))))
         with pytest.raises(Exception):
             utils.ift(signal_temp, 2)
-
-

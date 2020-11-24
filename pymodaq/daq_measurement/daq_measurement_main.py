@@ -1,5 +1,5 @@
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSize
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSize
 
 import sys
 from pymodaq.daq_measurement.daq_measurement_GUI import Ui_Form
@@ -10,6 +10,7 @@ from scipy.signal import find_peaks
 import pyqtgraph as pg
 import numpy as np
 from enum import Enum
+
 
 class Measurement_type(Enum):
     Cursor_Integration = 0
@@ -58,6 +59,7 @@ class Measurement_type(Enum):
             formula = "A*np.sin(2*np.pi*x/dx-phi)+offset"
 
         return [variables, formula, subitems]
+
     def gaussian_func(self, x, amp, dx, x0, offset):
         return amp * np.exp(-2 * np.log(2) * (x - x0) ** 2 / dx ** 2) + offset
 
@@ -65,12 +67,13 @@ class Measurement_type(Enum):
         return alpha / np.pi * 1 / 2 * gamma / ((x - x0) ** 2 + (1 / 2 * gamma) ** 2) + offset
 
     def decaying_func(self, x, N0, gamma, x0, offset):
-        return N0 * np.exp(-(x-x0) / gamma) + offset
+        return N0 * np.exp(-(x - x0) / gamma) + offset
 
     def sinus_func(self, x, A, dx, phi, offset):
-        return A*np.sin(2*np.pi*x/dx-phi)+offset
+        return A * np.sin(2 * np.pi * x / dx - phi) + offset
 
-class DAQ_Measurement(Ui_Form,QObject):
+
+class DAQ_Measurement(Ui_Form, QObject):
     """
         =================== ================================== =======================================
         **Attributes**       **Type**                          **Description**
@@ -94,8 +97,9 @@ class DAQ_Measurement(Ui_Form,QObject):
         ----------
         Ui_Form, QObject, PyQt5, pyqtgraph
     """
-    measurement_signal=pyqtSignal(list)
-    def __init__(self,parent):
+    measurement_signal = pyqtSignal(list)
+
+    def __init__(self, parent):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(Ui_Form, self).__init__()
         self.ui = Ui_Form()
@@ -108,16 +112,16 @@ class DAQ_Measurement(Ui_Form,QObject):
         QtWidgets.QApplication.processEvents()
 
         self.ui.splitter.setSizes([200, 400])
-        self.ui.statusbar=QtWidgets.QStatusBar(parent)
+        self.ui.statusbar = QtWidgets.QStatusBar(parent)
         self.ui.statusbar.setMaximumHeight(15)
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.wait_time=1000
-        self.parent=parent
-        self.xdata=None
-        self.ydata=None
+        self.wait_time = 1000
+        self.parent = parent
+        self.xdata = None
+        self.ydata = None
 
-        self.measurement_types=Measurement_type.names()
-        self.measurement_type=Measurement_type(0)
+        self.measurement_types = Measurement_type.names()
+        self.measurement_type = Measurement_type(0)
         self.ui.measurement_type_combo.clear()
         self.ui.measurement_type_combo.addItems(self.measurement_types)
 
@@ -132,17 +136,16 @@ class DAQ_Measurement(Ui_Form,QObject):
         self.ui.selected_region.setVisible(True)
         self.fourierfilt.viewer1D.plotwidget.addItem(self.ui.selected_region)
 
-
-        ##Connecting buttons:
-        self.ui.Quit_pb.clicked.connect(self.Quit_fun,type = Qt.QueuedConnection)
+        # Connecting buttons:
+        self.ui.Quit_pb.clicked.connect(self.Quit_fun, type=Qt.QueuedConnection)
         self.ui.measurement_type_combo.currentTextChanged[str].connect(self.update_measurement_subtype)
         self.ui.measure_subtype_combo.currentTextChanged[str].connect(self.update_measurement)
-        self.update_measurement_subtype(self.ui.measurement_type_combo.currentText(),update=False)
+        self.update_measurement_subtype(self.ui.measurement_type_combo.currentText(), update=False)
         self.ui.selected_region.sigRegionChanged.connect(self.update_measurement)
         self.ui.result_sb.valueChanged.connect(self.ui.result_lcd.display)
 
     @pyqtSlot(dict)
-    def update_fft_filter(self,d):
+    def update_fft_filter(self, d):
         self.frequency = d['frequency']
         self.phase = d['phase']
         self.update_measurement()
@@ -155,7 +158,7 @@ class DAQ_Measurement(Ui_Form,QObject):
         # insert anything that needs to be closed before leaving
         self.parent.close()
 
-    def update_status(self,txt,wait_time=0):
+    def update_status(self, txt, wait_time=0):
         """
             Update the statut bar showing the given text message with a delay of wait_time ms (0s by default).
 
@@ -168,10 +171,10 @@ class DAQ_Measurement(Ui_Form,QObject):
             =============== ========= ===========================
 
         """
-        self.ui.statusbar.showMessage(txt,wait_time)
+        self.ui.statusbar.showMessage(txt, wait_time)
 
     @pyqtSlot(str)
-    def update_measurement_subtype(self,mtype,update=True):
+    def update_measurement_subtype(self, mtype, update=True):
         """
             | Update the ui-measure_subtype_combo from subitems and formula attributes, if specified by update parameter.
             | Linked with the update_measurement method
@@ -189,8 +192,8 @@ class DAQ_Measurement(Ui_Form,QObject):
             update_measurement_subtype, update_measurement, update_status
 
         """
-        self.measurement_type=Measurement_type[mtype]
-        [variables,self.formula,self.subitems]=Measurement_type.update_measurement_subtype(mtype)
+        self.measurement_type = Measurement_type[mtype]
+        [variables, self.formula, self.subitems] = Measurement_type.update_measurement_subtype(mtype)
 
         try:
             self.ui.measure_subtype_combo.clear()
@@ -200,7 +203,7 @@ class DAQ_Measurement(Ui_Form,QObject):
             if update:
                 self.update_measurement()
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time)
+            self.update_status(str(e), wait_time=self.wait_time)
 
     def update_measurement(self):
         """
@@ -217,39 +220,38 @@ class DAQ_Measurement(Ui_Form,QObject):
 
         """
         try:
-            xlimits=self.ui.selected_region.getRegion()
+            xlimits = self.ui.selected_region.getRegion()
             mtype = self.ui.measurement_type_combo.currentText()
-            msubtype=self.ui.measure_subtype_combo.currentText()
+            msubtype = self.ui.measure_subtype_combo.currentText()
             if mtype == 'Sinus':
 
                 # boundaries = utils.find_index(self.xdata, [xlimits[0], xlimits[1]])
                 # sub_xaxis = self.xdata[boundaries[0][0]:boundaries[1][0]]
                 # sub_data = self.ydata[boundaries[0][0]:boundaries[1][0]]
-                #self.fourierfilt.parent.setVisible(True)
+                # self.fourierfilt.parent.setVisible(True)
                 self.fourierfilt.show_data(dict(data=self.ydata, xaxis=self.xdata))
             else:
-                #self.fourierfilt.parent.setVisible(False)
+                # self.fourierfilt.parent.setVisible(False)
                 pass
 
-            measurement_results=self.do_measurement(xlimits[0],xlimits[1],self.xdata,self.ydata,mtype,msubtype)
+            measurement_results = self.do_measurement(xlimits[0], xlimits[1], self.xdata, self.ydata, mtype, msubtype)
             if measurement_results['status'] is not None:
-                self.update_status(measurement_results['status'],wait_time=self.wait_time)
+                self.update_status(measurement_results['status'], wait_time=self.wait_time)
                 return
             self.ui.result_sb.setValue(measurement_results['value'])
             self.measurement_signal.emit([measurement_results['value']])
             if measurement_results['datafit'] is not None:
                 self.ui.fit_curve.setVisible(True)
-                self.ui.fit_curve.setData(measurement_results['xaxis'],measurement_results['datafit'])
+                self.ui.fit_curve.setData(measurement_results['xaxis'], measurement_results['datafit'])
             else:
                 self.ui.fit_curve.setVisible(False)
         except Exception as e:
-            self.update_status(str(e),wait_time=self.wait_time)
+            self.update_status(str(e), wait_time=self.wait_time)
 
-    def eval_func(self,x,*args):
+    def eval_func(self, x, *args):
         dic = dict(zip(self.subitems, args))
-        dic.update(dict(np=np,x=x))
+        dic.update(dict(np=np, x=x))
         return eval(self.formula, dic)
-
 
     def do_measurement(self, xmin, xmax, xaxis, data1D, mtype, msubtype):
         try:
@@ -260,7 +262,7 @@ class DAQ_Measurement(Ui_Form,QObject):
             if msubtype in self.subitems:
                 msub_ind = self.subitems.index(msubtype)
 
-            measurement_results=dict(status=None, value = 0, xaxis= np.array([]), datafit =np.array([]))
+            measurement_results = dict(status=None, value=0, xaxis=np.array([]), datafit=np.array([]))
 
             if mtype == 'Cursor_Integration':  # "Cursor Intensity Integration":
                 if msubtype == "sum":
@@ -285,7 +287,7 @@ class DAQ_Measurement(Ui_Form,QObject):
                 m = utils.my_moment(sub_xaxis, sub_data)
                 p0 = [amp, m[1], m[0], offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
-                measurement_results['datafit']=self.eval_func(sub_xaxis, *popt)
+                measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
                 result_measurement = popt[msub_ind]
 
             elif mtype == 'Lorentzian_Fit':  # "Lorentzian Fit":
@@ -309,8 +311,8 @@ class DAQ_Measurement(Ui_Form,QObject):
                 offset = min([sub_data[0], sub_data[-1]])
                 measurement_results['xaxis'] = sub_xaxis
                 N0 = np.max(sub_data) - offset
-                t37 = sub_xaxis[utils.find_index(sub_data-offset,0.37*N0)[0][0]]-x0
-                #polynome = np.polyfit(sub_xaxis, -np.log((sub_data - 0.99 * offset) / N0), 1)
+                t37 = sub_xaxis[utils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
+                # polynome = np.polyfit(sub_xaxis, -np.log((sub_data - 0.99 * offset) / N0), 1)
                 p0 = [N0, t37, x0, offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
                 measurement_results['datafit'] = self.eval_func(sub_xaxis, *popt)
@@ -318,9 +320,9 @@ class DAQ_Measurement(Ui_Form,QObject):
 
             elif mtype == 'Sinus':  #
                 offset = np.mean(sub_data)
-                A = (np.max(sub_data)-np.min(sub_data))/2
-                phi=self.fourierfilt.phase
-                dx=1/self.fourierfilt.frequency
+                A = (np.max(sub_data) - np.min(sub_data)) / 2
+                phi = self.fourierfilt.phase
+                dx = 1 / self.fourierfilt.frequency
                 measurement_results['xaxis'] = sub_xaxis
                 p0 = [A, dx, phi, offset]
                 popt, pcov = curve_fit(self.eval_func, sub_xaxis, sub_data, p0=p0)
@@ -338,9 +340,7 @@ class DAQ_Measurement(Ui_Form,QObject):
             else:
                 result_measurement = 0
 
-
-            measurement_results['value']=result_measurement
-
+            measurement_results['value'] = result_measurement
 
             return measurement_results
         except Exception as e:
@@ -348,7 +348,7 @@ class DAQ_Measurement(Ui_Form,QObject):
             measurement_results['status'] = str(e)
             return measurement_results
 
-    def update_data(self,xdata=None,ydata=None):
+    def update_data(self, xdata=None, ydata=None):
         """
             | Update xdata attribute with the numpy linspcae regular distribution (if param is none) and update the User Interface curve data.
             | Call the update_measurement method synchronously to keep same values.
@@ -366,30 +366,32 @@ class DAQ_Measurement(Ui_Form,QObject):
 
         """
         if xdata is None:
-            self.xdata=np.linspace(0,len(ydata)-1,len(ydata))
+            self.xdata = np.linspace(0, len(ydata) - 1, len(ydata))
         else:
-            self.xdata=xdata
-        self.ydata=ydata
-        self.fourierfilt.show_data(dict(data=self.ydata,xaxis=self.xdata))
+            self.xdata = xdata
+        self.ydata = ydata
+        self.fourierfilt.show_data(dict(data=self.ydata, xaxis=self.xdata))
         self.update_measurement()
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     from pymodaq.daq_utils.daq_utils import gauss1D
+
     prog = DAQ_Measurement(Form)
-    xdata=np.linspace(0,400,401)
-    x0=50
-    dx=20
+    xdata = np.linspace(0, 400, 401)
+    x0 = 50
+    dx = 20
     tau = 27
-    tau2=100
-    ydata_gauss=10*gauss1D(xdata,x0,dx)+np.random.rand(len(xdata))
+    tau2 = 100
+    ydata_gauss = 10 * gauss1D(xdata, x0, dx) + np.random.rand(len(xdata))
     ydata_expodec = np.zeros((len(xdata)))
-    ydata_expodec[:50] = 10*gauss1D(xdata[:50],x0,dx,2)
-    ydata_expodec[50:] = 10*np.exp(-(xdata[50:]-x0)/tau)#+10*np.exp(-(xdata[50:]-x0)/tau2)
-    ydata_expodec += 2*np.random.rand(len(xdata))
-    ydata_sin =10+2*np.sin(2*np.pi*xdata/21-np.deg2rad(55))+2*np.random.rand(len(xdata))
-    prog.update_data(xdata,ydata_sin)
+    ydata_expodec[:50] = 10 * gauss1D(xdata[:50], x0, dx, 2)
+    ydata_expodec[50:] = 10 * np.exp(-(xdata[50:] - x0) / tau)  # +10*np.exp(-(xdata[50:]-x0)/tau2)
+    ydata_expodec += 2 * np.random.rand(len(xdata))
+    ydata_sin = 10 + 2 * np.sin(2 * np.pi * xdata / 21 - np.deg2rad(55)) + 2 * np.random.rand(len(xdata))
+    prog.update_data(xdata, ydata_sin)
     Form.show()
 
     sys.exit(app.exec_())

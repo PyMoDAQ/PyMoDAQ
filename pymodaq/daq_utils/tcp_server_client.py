@@ -832,10 +832,9 @@ class TCPServer(QObject):
                 self.read_info_xml(sock)
 
         elif command == "Info":
-            """
-            add a custom info (as a string value) in the server widget settings. To be used if the client is not a 
-            PyMoDAQ's module
-            """
+            # add a custom info (as a string value) in the server widget settings. To be used if the client is not a
+            # PyMoDAQ's module
+
             try:
                 sock = self.find_socket_within_connected_clients(self.client_type)
                 if sock is not None:  # if client self.client_type is connected then send it the command
@@ -860,12 +859,12 @@ class TCPServer(QObject):
             param_xml = sock.get_string()
         try:
             param_dict = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(param_xml)[0]
-        except:
-            raise Exception('Invalid xml structure for TCP server settings')
+        except Exception as e:
+            raise Exception(f'Invalid xml structure for TCP server settings: {str(e)}')
         try:
             param_here = self.settings.child('settings_client', *path[1:])
-        except:
-            raise Exception('Invalid path for TCP server settings')
+        except Exception as e:
+            raise Exception(f'Invalid path for TCP server settings: {str(e)}')
         param_here.restoreState(param_dict)
 
     def read_info(self, sock=None, test_info='an_info', test_value=''):
@@ -881,7 +880,7 @@ class TCPServer(QObject):
             data = sock.get_string()
 
         if info not in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('infos')), []):
-            self.settings.child(('infos')).addChild({'name': info, 'type': 'str', 'value': data})
+            self.settings.child('infos').addChild({'name': info, 'type': 'str', 'value': data})
             pass
         else:
             self.settings.child('infos', info).setValue(data)

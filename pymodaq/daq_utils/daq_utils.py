@@ -10,7 +10,6 @@ import datetime
 from pathlib import Path
 from ctypes import CFUNCTYPE
 
-
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 
@@ -24,12 +23,12 @@ from logging.handlers import TimedRotatingFileHandler
 import inspect
 import json
 
-
 plot_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
+
 
 def get_set_local_dir(basename='pymodaq_local'):
     """Defines, creates abd returns a local folder where configurations files will be saved
@@ -56,11 +55,12 @@ def get_set_local_dir(basename='pymodaq_local'):
                 local_path.mkdir()
     return local_path
 
+
 def load_config(config_path=None):
     if not config_path:
         config_path = get_set_local_dir().joinpath('config.toml')
     config_base = toml.load(Path(__file__).parent.parent.joinpath('config_template.toml'))
-    if not config_path.exists(): #copy the template from pymodaq folder and create one in pymodad's local folder
+    if not config_path.exists():  # copy the template from pymodaq folder and create one in pymodad's local folder
         config_path.write_text(toml.dumps(config_base))
 
     # check if all fields are there
@@ -81,8 +81,8 @@ def check_config(config_base, config_local):
             status = True
     return status
 
-config = load_config()
 
+config = load_config()
 
 
 class JsonConverter:
@@ -113,8 +113,9 @@ class JsonConverter:
                     return dic
             else:
                 return dic
-        except:
+        except Exception:
             return jsonstring
+
 
 def decode_data(encoded_data):
     """
@@ -147,8 +148,8 @@ def decode_data(encoded_data):
     return data
 
 
-####################################
-## Units conversion
+# ###################################
+# # Units conversion
 def Enm2cmrel(E_nm, ref_wavelength=515):
     """Converts energy in nm to cm-1 relative to a ref wavelength
 
@@ -238,14 +239,14 @@ def nm2eV(E_nm):
     >>> nm2eV(800)
     1.549802593918197
     """
-    E_freq = c / E_nm * 1e9;
-    E_J = E_freq * h;
-    E_eV = E_J / Cb;
+    E_freq = c / E_nm * 1e9
+    E_J = E_freq * h
+    E_eV = E_J / Cb
     return E_eV
 
 
 def E_J2eV(E_J):
-    E_eV = E_J / Cb;
+    E_eV = E_J / Cb
     return E_eV
 
 
@@ -268,7 +269,7 @@ def eV2cm(E_eV):
     564.5880342655984
     """
     E_nm = eV2nm(E_eV)
-    E_cm = 1 / (E_nm * 1e-7);
+    E_cm = 1 / (E_nm * 1e-7)
     return E_cm
 
 
@@ -281,7 +282,7 @@ def cm2nm(E_cm):
 
 
 def eV2E_J(E_eV):
-    E_J = E_eV * Cb;
+    E_J = E_eV * Cb
     return E_J
 
 
@@ -398,14 +399,14 @@ def getLineInfo():
         res += t
     return res
 
-
     def __repr__(self):
         if self.axis_seq_indexes == []:
-            return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1), len(self.axis_2D_2))
+            return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1),
+                                                                               len(self.axis_2D_2))
         else:
             shape = ''
             for ind, axis in enumerate(self.axis_seq):
-                if ind != len(self.axis_seq)-1:
+                if ind != len(self.axis_seq) - 1:
                     shape += '{:d}, '.format(len(axis))
                 else:
                     shape += '{:d}'.format(len(axis))
@@ -428,7 +429,6 @@ class ThreadCommand(object):
     def __init__(self, command="", attributes=[]):
         self.command = command
         self.attributes = attributes
-
 
 
 class Axis(dict):
@@ -462,6 +462,7 @@ class Axis(dict):
         self['units'] = units
         self.update(kwargs)
 
+
 class NavAxis(Axis):
     def __init__(self, data=None, label='', units='', nav_index=-1, **kwargs):
         super().__init__(data=None, label='', units='', **kwargs)
@@ -469,6 +470,7 @@ class NavAxis(Axis):
         if nav_index < 0:
             raise ValueError('nav_index should be a positive integer representing the index of this axis among all'
                              'navigation axes')
+
 
 class Data(OrderedDict):
     def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis(), **kwargs):
@@ -490,7 +492,7 @@ class Data(OrderedDict):
         self['name'] = name
         if not isinstance(source, str):
             raise TypeError('source for the DataToExport class should be a string')
-        elif not('raw' in source or 'roi' in source):
+        elif not ('raw' in source or 'roi' in source):
             raise ValueError('Invalid "source" for the DataToExport class')
         self['source'] = source
 
@@ -499,7 +501,6 @@ class Data(OrderedDict):
         elif distribution not in ('uniform', 'spread'):
             raise ValueError('Invalid "distribution" for the DataToExport class')
         self['distribution'] = distribution
-
 
         if not isinstance(x_axis, Axis):
             if isinstance(x_axis, np.ndarray):
@@ -521,6 +522,7 @@ class Data(OrderedDict):
 
         for k in kwargs:
             self[k] = kwargs[k]
+
 
 class DataFromPlugins(Data):
 
@@ -568,6 +570,7 @@ class DataFromPlugins(Data):
                 dim = 'DataND'
         self['dim'] = dim
 
+
 class DataToExport(Data):
     def __init__(self, data=None, dim='', **kwargs):
         """
@@ -609,6 +612,7 @@ class DataToExport(Data):
                 dim = 'Data0D'
         self['dim'] = dim
 
+
 class ScaledAxis(Axis):
     def __init__(self, label='', units='', offset=0, scaling=1):
         super().__init__(label=label, units=units)
@@ -621,12 +625,14 @@ class ScaledAxis(Axis):
             raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
         self['scaling'] = scaling
 
+
 class ScalingOptions(dict):
     def __init__(self, scaled_xaxis=ScaledAxis(), scaled_yaxis=ScaledAxis()):
         assert isinstance(scaled_xaxis, ScaledAxis)
         assert isinstance(scaled_yaxis, ScaledAxis)
         self['scaled_xaxis'] = scaled_xaxis
         self['scaled_yaxis'] = scaled_yaxis
+
 
 def recursive_find_files_extension(ini_path, ext, paths=[]):
     with os.scandir(ini_path) as it:
@@ -637,6 +643,7 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
                 recursive_find_files_extension(entry.path, ext, paths)
     return paths
 
+
 def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
                                  filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation']):
     for child in Path(ini_path).iterdir():
@@ -645,15 +652,14 @@ def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
                 recursive_find_expr_in_files(child, exp, paths, filters)
             else:
                 try:
-                    if 'daq_utils.py' in str(child):
-                        print(child)
                     with child.open('r') as f:
                         for ind, line in enumerate(f.readlines()):
                             if exp in line:
                                 paths.append([child, ind])
-                except :
+                except Exception:
                     pass
     return paths
+
 
 def remove_spaces(string):
     """
@@ -682,6 +688,7 @@ def rint(x):
     """
     return int(np.rint(x))
 
+
 def elt_as_first_element(elt_list, match_word='Mock'):
     if elt_list != []:
         ind_elt = 0
@@ -697,6 +704,7 @@ def elt_as_first_element(elt_list, match_word='Mock'):
         plugins = []
     return plugins
 
+
 def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     if elt_list != []:
         ind_elt = 0
@@ -711,6 +719,7 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     else:
         plugins = []
     return plugins
+
 
 def get_plugins(plugin_type='daq_0Dviewer'):
     """
@@ -750,12 +759,13 @@ def get_plugins(plugin_type='daq_0Dviewer'):
                     else:
                         importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
                     plugins_import.append(mod)
-                except:
+                except Exception:
                     pass
-        except :
+        except Exception:
             pass
     plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
     return plugins_import
+
 
 def check_vals_in_iterable(iterable1, iterable2):
     assert len(iterable1) == len(iterable2)
@@ -763,11 +773,6 @@ def check_vals_in_iterable(iterable1, iterable2):
     iterable2 = list(iterable2)
     for val1, val2 in zip(iterable1, iterable2):
         assert val1 == val2
-
-
-
-
-
 
 
 def get_set_config_path(config_name='config'):
@@ -814,10 +819,12 @@ def get_set_layout_path():
     """
     return get_set_config_path('layout_configs')
 
+
 def get_set_remote_path():
     """ creates and return the config folder path for remote (shortcuts or joystick) files
     """
     return get_set_config_path('remote_configs')
+
 
 def get_set_overshoot_path():
     """ creates and return the config folder path for overshoot files
@@ -835,7 +842,6 @@ def get_module_name(module__file__path):
     """from the full path of a module extract its name"""
     path = Path(module__file__path)
     return path.stem
-
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
@@ -876,6 +882,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         logger.addHandler(console_handler)
     return logger
 
+
 def caller_name(skip=2):
     """Get a name of a caller in the format module.class.method
 
@@ -907,6 +914,7 @@ def caller_name(skip=2):
         name.append(codename)  # function or a method
     del parentframe
     return ".".join(name)
+
 
 def zeros_aligned(n, align, dtype=np.uint32):
     """
@@ -1005,8 +1013,8 @@ def set_param_from_param(param_old, param_new):
         #    print(str(e))
 
 
-#########################
-##File management
+# ########################
+# #File management
 
 def get_new_file_name(base_path=Path(config['data_saving']['h5file']['save_path']), base_name='tttr_data'):
     if isinstance(base_path, str):
@@ -1037,8 +1045,8 @@ def get_new_file_name(base_path=Path(config['data_saving']['h5file']['save_path'
     return file, curr_dir
 
 
-###############
-##Math utilities
+# ##############
+# Math utilities
 def my_moment(x, y):
     """Returns the moments of a distribution y over an axe x
 
@@ -1166,10 +1174,10 @@ def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
     else:
         return None
 
+
 def find_index(x, threshold):
     """
     find_index finds the index ix such that x(ix) is the closest from threshold
-    
     Parameters
     ----------
     x : vector
@@ -1189,11 +1197,13 @@ def find_index(x, threshold):
         out.append((ix, x[ix]))
     return out
 
+
 def find_common_index(x, y, x0, y0):
     vals = x + 1j * y
     val = x0 + 1j * y0
     ind = int(np.argmin(np.abs(vals - val)))
     return ind, x[ind], y[ind]
+
 
 def gauss1D(x, x0, dx, n=1):
     """
@@ -1222,23 +1232,23 @@ def gauss1D(x, x0, dx, n=1):
     out = np.exp(-2 * np.log(2) ** (1 / n) * (((x - x0) / dx)) ** (2 * n))
     return out
 
-def rotate_2D_array(arr, angle):
-    theta = np.radians(angle)
-    c, s = np.cos(theta), np.sin(theta)
-    R = np.array(((c, -s), (s, c)))
-    (x0r, y0r) = tuple(R.dot(np.array([x0, y0])))
 
-    data = np.zeros((len(y), len(x)))
-
-    for indx, xtmp in enumerate(x):
-        for indy, ytmp in enumerate(y):
-            rotatedvect = R.dot(np.array([xtmp, ytmp]))
-            data[indy, indx] = np.exp(
-                -2 * np.log(2) ** (1 / n) * ((rotatedvect[0] - x0r) / dx) ** (2 * n)) * np.exp(
-                -2 * np.log(2) ** (1 / n) * ((rotatedvect[1] - y0r) / dy) ** (2 * n))
-
-
-    return data
+# def rotate_2D_array(arr, angle):
+#     theta = np.radians(angle)
+#     c, s = np.cos(theta), np.sin(theta)
+#     R = np.array(((c, -s), (s, c)))
+#     (x0r, y0r) = tuple(R.dot(np.array([x0, y0])))
+#
+#     data = np.zeros((len(y), len(x)))
+#
+#     for indx, xtmp in enumerate(x):
+#         for indy, ytmp in enumerate(y):
+#             rotatedvect = R.dot(np.array([xtmp, ytmp]))
+#             data[indy, indx] = np.exp(
+#                 -2 * np.log(2) ** (1 / n) * ((rotatedvect[0] - x0r) / dx) ** (2 * n)) * np.exp(
+#                 -2 * np.log(2) ** (1 / n) * ((rotatedvect[1] - y0r) / dy) ** (2 * n))
+#
+#     return data
 
 
 def gauss2D(x, x0, dx, y, y0, dy, n=1, angle=0):
@@ -1257,7 +1267,7 @@ def gauss2D(x, x0, dx, y, y0, dy, n=1, angle=0):
     dy: (float) :the FWHM of the gaussian
     n=1 : an integer to define hypergaussian, n=1 by default for regular gaussian
     angle: (float) a float to rotate main axes, in degree
-    
+
     Returns
     -------
     out : ndarray 2 dimensions
@@ -1370,7 +1380,7 @@ def ft(x, dim=-1):
         raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
     assert isinstance(x, np.ndarray)
     assert dim >= -1
-    assert dim <= len(x.shape)-1
+    assert dim <= len(x.shape) - 1
 
     out = np.fft.fftshift(np.fft.fft(np.fft.fftshift(x, axes=dim), axis=dim), axes=dim)
     return out
@@ -1394,7 +1404,7 @@ def ift(x, dim=0):
         raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
     assert isinstance(x, np.ndarray)
     assert dim >= -1
-    assert dim <= len(x.shape)-1
+    assert dim <= len(x.shape) - 1
     out = np.fft.fftshift(np.fft.ifft(np.fft.fftshift(x, axes=dim), axis=dim), axes=dim)
     return out
 
@@ -1417,7 +1427,8 @@ def ft2(x, dim=(-2, -1)):
     if hasattr(dim, '__iter__'):
         for d in dim:
             if not isinstance(d, int):
-                raise TypeError('elements in dim should be an integer specifying the array dimension over which to do the calculation')
+                raise TypeError(
+                    'elements in dim should be an integer specifying the array dimension over which to do the calculation')
             assert d <= len(x.shape)
     else:
         if not isinstance(dim, int):
@@ -1446,7 +1457,8 @@ def ift2(x, dim=(-2, -1)):
     if hasattr(dim, '__iter__'):
         for d in dim:
             if not isinstance(d, int):
-                raise TypeError('elements in dim should be an integer specifying the array dimension over which to do the calculation')
+                raise TypeError(
+                    'elements in dim should be an integer specifying the array dimension over which to do the calculation')
             assert d <= len(x.shape)
     else:
         if not isinstance(dim, int):

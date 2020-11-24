@@ -48,11 +48,13 @@ def get_h5saver(get_save_type, request, qtbot):
 def get_h5saver_scan(request, qtbot):
     return H5Saver(save_type='scan', backend=request.param)
 
+
 def get_temp_path(tmp_path, backend='h5pyd'):
     if backend == 'h5pyd':
         return PurePosixPath('/home/pymodaq_user/test_backend/')
     else:
         return tmp_path
+
 
 class TestH5Backend:
 
@@ -71,8 +73,6 @@ class TestH5Backend:
         assert bck.root().attrs['pymodaq_version'] == get_version()
         bck.close_file()
         assert bck.isopen() is False
-
-
 
     def test_attrs(self, get_backend):
         bck = get_backend
@@ -111,7 +111,6 @@ class TestH5Backend:
             g4 = bck.add_group('g4', gtype, bck.root())
         bck.close_file()
 
-
     def test_group_creation(self, get_backend):
         bck = get_backend
         title = 'this is a group'
@@ -134,8 +133,6 @@ class TestH5Backend:
 
         assert list(bck.get_children(g2)) == ['g21', 'g22']
 
-
-
         assert bck.get_parent_node(g22) == g2
         assert bck.get_parent_node(bck.get_parent_node(g2)) is None
         assert g22.parent_node == g2
@@ -144,7 +141,7 @@ class TestH5Backend:
         assert isinstance(g2, Node)
         assert isinstance(g22, Node)
 
-        #test node methods
+        # test node methods
         assert g2 != g1
 
         assert g22.parent_node == g2
@@ -215,8 +212,6 @@ class TestH5Backend:
         with pytest.raises(AttributeError):
             bck.append(carray1, carray1_data)
 
-
-
         bck.close_file()
 
     @pytest.mark.parametrize('compression', ['gzip', 'zlib'])
@@ -271,7 +266,6 @@ class TestH5Backend:
         array.append(data)
         assert np.all(array[-1, :, :] == pytest.approx(data))
 
-
     def test_vlarray(self, get_backend):
         bck = get_backend
         g1 = bck.get_set_group(bck.root(), 'g1')
@@ -309,8 +303,8 @@ class TestH5Backend:
         sarray.append(st2)
         assert sarray[-1] == st2
 
-class TestH5Saver:
 
+class TestH5Saver:
 
     def test_init_file_addhoc(self, get_h5saver, tmp_path):
         h5saver = get_h5saver
@@ -358,10 +352,12 @@ class TestH5Saver:
         assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan000'
         assert h5saver.get_scan_index() == 0
         scan_group1 = h5saver.add_scan_group()
-        assert scan_group == scan_group1 #no increment as no scan_done attribute
-        utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
+        assert scan_group == scan_group1  # no increment as no scan_done attribute
+        utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))),
+                                     sorted(['Logger', 'Scan000']))
         h5saver.init_file(update_h5=False)
-        utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))), sorted(['Logger', 'Scan000']))
+        utils.check_vals_in_iterable(sorted(list(h5saver.get_children(h5saver.raw_group))),
+                                     sorted(['Logger', 'Scan000']))
 
     def test_load_file(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
@@ -373,7 +369,6 @@ class TestH5Saver:
         h5saver.load_file(file_path=file_path)
         assert h5saver.file_loaded
 
-
     def test_groups(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
         base_path = tmp_path
@@ -381,7 +376,7 @@ class TestH5Saver:
         update_h5 = True
         h5saver.init_file(update_h5=update_h5)
         scan_group = h5saver.add_scan_group(settings_as_xml='this is a setting',
-                                                   metadata=dict(attr1='blabla', attr2=1.1, pixmap2D='invalid pixmap'))
+                                            metadata=dict(attr1='blabla', attr2=1.1, pixmap2D='invalid pixmap'))
         assert h5saver.get_scan_index() == 0
         assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan000'
         scan_group = h5saver.add_scan_group()
@@ -404,7 +399,6 @@ class TestH5Saver:
         assert h5saver.get_scan_index() == 2
         assert h5saver.get_node_name(h5saver.get_last_scan()) == 'Scan001'
 
-
     def test_hierarchy(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
         base_path = tmp_path
@@ -414,18 +408,20 @@ class TestH5Saver:
         h5saver.add_det_group(scan_group)
         h5saver.add_det_group(scan_group)
         move_group = h5saver.add_move_group(scan_group)
-        assert h5saver.get_node_path(move_group) == f'/Raw_datas/Scan000/Move000'
+        assert h5saver.get_node_path(move_group) == '/Raw_datas/Scan000/Move000'
         det_group = h5saver.add_det_group(scan_group)
         for data_type in group_data_types:
             data_group = h5saver.add_data_group(det_group, data_type)
             assert h5saver.get_node_name(data_group) == utils.capitalize(data_type)
             CH_group0 = h5saver.add_CH_group(data_group)
-            assert h5saver.get_node_path(CH_group0) == f'/Raw_datas/Scan000/Detector002/{utils.capitalize(data_type)}/Ch000'
+            assert h5saver.get_node_path(
+                CH_group0) == f'/Raw_datas/Scan000/Detector002/{utils.capitalize(data_type)}/Ch000'
             CH_group1 = h5saver.add_CH_group(data_group)
-            assert h5saver.get_node_path(CH_group1) == f'/Raw_datas/Scan000/Detector002/{utils.capitalize(data_type)}/Ch001'
+            assert h5saver.get_node_path(
+                CH_group1) == f'/Raw_datas/Scan000/Detector002/{utils.capitalize(data_type)}/Ch001'
 
         live_group = h5saver.add_live_scan_group(scan_group, '0D')
-        assert h5saver.get_node_path(live_group) == f'/Raw_datas/Scan000/Live_scan_0D'
+        assert h5saver.get_node_path(live_group) == '/Raw_datas/Scan000/Live_scan_0D'
 
     def test_data_save(self, get_h5saver_scan, tmp_path):
         h5saver = get_h5saver_scan
@@ -437,7 +433,6 @@ class TestH5Saver:
         data_group = h5saver.add_data_group(det_group, 'data2D')
         CH_group0 = h5saver.add_CH_group(data_group)
         CH_group1 = h5saver.add_CH_group(data_group)
-
 
         xaxis = dict(data=np.linspace(0, 5, 6), label='x_axis_label', units='x_axis_units')
         yaxis = dict(data=np.linspace(10, 20, 11), label='y_axis_label', units='custom')
@@ -495,8 +490,6 @@ class TestH5Saver:
         assert np.all(h5saver.read(array).shape == (2, 10))
 
 
-
-
 @pytest.fixture(params=tested_backend)
 def create_test_file(request, qtbot):
     bck = H5Saver(backend=request.param)
@@ -508,7 +501,7 @@ def create_test_file(request, qtbot):
     Nnavy = 10
     scan_shape = (Nnavx, Nnavy)
     x_axis = dict(label='this is data axis', units='no units', data=np.arange(Nx))
-    data1D = dict(data=np.arange(Nx)*1.0+7, x_axis=x_axis)
+    data1D = dict(data=np.arange(Nx) * 1.0 + 7, x_axis=x_axis)
 
     nav_x_axis = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx))
     nav_y_axis = utils.Axis(label='this is nav y axis', units='y units', data=np.arange(Nnavy))
@@ -524,26 +517,25 @@ def create_test_file(request, qtbot):
                                             pixmap_1D=b'this should be binary png in reality',
                                             pixmap_2D=b'this should be another binary png in reality'))
 
-
     bck.add_data(raw_group, data1D)
 
     scan_group = bck.add_scan_group('first scan', settings_as_xml='this should dbe xml settings')
     params = [
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
             {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
-             'readonly': True},
+                'readonly': True},
             {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
             {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
              'readonly': True},
         ]
-         }]
+        }
+    ]
     settings = Parameter.create(name='settings', type='group', children=params)
     settings_xml = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(settings)
 
     det_group = bck.add_det_group(scan_group, 'det group', settings_as_xml=settings_xml)
     data_group = bck.add_data_group(det_group, 'data1D')
     ch_group = bck.add_CH_group(data_group)
-
 
     data = np.arange(Nx * Nnavx * Nnavy)
     data = data.reshape(Nnavx, Nnavy, Nx)
@@ -559,16 +551,19 @@ def create_test_file(request, qtbot):
     bck.close_file()
     return bck
 
+
 @pytest.fixture(params=tested_backend)
 def get_file(request):
     filepath = f'./data/data_test_{request.param}.h5'
     return filepath
+
 
 @pytest.fixture(params=tested_backend)
 def load_test_file(request, get_file):
     bck = H5BrowserUtil(backend=request.param)
     bck.open_file(get_file, 'r')
     return bck
+
 
 class TestH5BrowserUtil:
 
@@ -604,17 +599,16 @@ class TestH5BrowserUtil:
         assert attr_dict['shape'] == (5, 10, 12)
         assert attr_dict['type'] == 'data'
 
-        node_path ='/Raw_datas/Logger'
+        node_path = '/Raw_datas/Logger'
         node = h5utils.get_node(node_path)
         attr_dict, settings, scan_settings, pixmaps = h5utils.get_h5_attributes(node_path)
         assert attr_dict['data_dimension'] == '0D'
         assert attr_dict['dtype'] == 'uint8'
         assert attr_dict['scan_type'] == 'scan1D'
-        assert attr_dict['shape'] == (2, )
+        assert attr_dict['shape'] == (2,)
         assert attr_dict['subdtype'] == 'string'
         assert attr_dict['type'] == 'log'
         h5utils.close_file()
-
 
     def test_get_h5_data(self, load_test_file):
         """Load files (created with all backends) and manipulate them using
@@ -647,7 +641,7 @@ class TestH5BrowserUtil:
         assert node.children_name() == ['Data', 'X_axis']
         node_path = '/Agroup/Data'
         data, axes, nav_axes = h5utils.get_h5_data(node_path)
-        assert np.all(data == pytest.approx(np.arange(Nx)*1.0+7))
+        assert np.all(data == pytest.approx(np.arange(Nx) * 1.0 + 7))
 
         node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
         node = h5utils.get_node(node_path)
@@ -702,7 +696,7 @@ class TestH5BrowserUtil:
         os.remove('/data/data.txt')
 
         node_path = '/Agroup'
-        h5utils.export_data(node_path, '/data/data.txt') #export both Data and X_axis node
+        h5utils.export_data(node_path, '/data/data.txt')  # export both Data and X_axis node
 
         xaxis = h5utils.get_node('/Agroup/X_axis').read()
         data = h5utils.get_node('/Agroup/Data').read()
@@ -714,6 +708,7 @@ class TestH5BrowserUtil:
 
         h5utils.close_file()
 
+
 @pytest.fixture(params=tested_backend)
 def load_test_file_h5browser(request, get_file, qtbot):
     win = QtWidgets.QMainWindow()
@@ -721,6 +716,7 @@ def load_test_file_h5browser(request, get_file, qtbot):
     win.show()
     qtbot.addWidget(win)
     return h5browser
+
 
 class TestH5Browser:
 
@@ -731,8 +727,8 @@ class TestH5Browser:
     def test_h5browser(self, load_test_file_h5browser, qtbot):
         h5browser = load_test_file_h5browser
 
-
-        item = h5browser.ui.h5file_tree.treewidget.findItems('Agroup', QtCore.Qt.MatchExactly|QtCore.Qt.MatchRecursive)[0]
+        item = h5browser.ui.h5file_tree.treewidget.findItems(
+            'Agroup', QtCore.Qt.MatchExactly | QtCore.Qt.MatchRecursive)[0]
         assert item.text(2) == '/Agroup'
         h5browser.ui.h5file_tree.treewidget.setCurrentItem(item)
 
@@ -744,7 +740,8 @@ class TestH5Browser:
 
         node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/X_axis'
         node = h5browser.h5utils.get_node(node_path)
-        items = h5browser.ui.h5file_tree.treewidget.findItems('X_axis', QtCore.Qt.MatchExactly|QtCore.Qt.MatchRecursive)
+        items = h5browser.ui.h5file_tree.treewidget.findItems('X_axis',
+                                                              QtCore.Qt.MatchExactly | QtCore.Qt.MatchRecursive)
         item = [it for it in items if it.text(2) == node_path][0]
         h5browser.ui.h5file_tree.treewidget.setCurrentItem(item)
 
@@ -753,7 +750,7 @@ class TestH5Browser:
         for child in h5browser.settings_raw.children():
             assert child.name in node.attrs.attrs_name
 
-        node.attrs['comments'] = '' # mandatory for cross testing
+        node.attrs['comments'] = ''  # mandatory for cross testing
         h5browser.add_comments(False, comment='this is a comment.')
         assert node.attrs['comments'] == 'this is a comment.'
         h5browser.add_comments(False, comment=' This is a second comment')

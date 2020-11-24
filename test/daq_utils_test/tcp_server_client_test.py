@@ -14,6 +14,7 @@ from gevent import server, socket
 from time import sleep
 from collections import OrderedDict
 
+
 class SimpleServer(server.StreamServer):
     def __init__(self, *args, handle_fun=lambda x: print('nothing as an handle'), **kwargs):
         super().__init__(*args, **kwargs)
@@ -21,6 +22,7 @@ class SimpleServer(server.StreamServer):
 
     def handle(self, sock, address):
         self.handle_fun(sock)
+
 
 # class Test:
 #     """check the test server is working"""
@@ -47,8 +49,7 @@ class TestTCPIP:
 
     def test_check_sended(self):
         string = 'this is a message of a given length'
-        server = SimpleServer(('127.0.0.1', 0), handle_fun=
-                              lambda x: Socket(x).check_sended(string.encode()))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).check_sended(string.encode()))
         server.start()
         client = socket.create_connection(('127.0.0.1', server.server_port))
         response = client.recv(4096)
@@ -58,8 +59,7 @@ class TestTCPIP:
 
     def test_check_received_length(self):
         string = 'this is a message'
-        server = SimpleServer(('127.0.0.1', 0), handle_fun=
-                                                lambda x: Socket(x).check_sended(string.encode()))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).check_sended(string.encode()))
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         assert client.check_received_length(len(string.encode())) == string.encode()
@@ -68,8 +68,7 @@ class TestTCPIP:
 
     def test_send_string(self):
         string = 'this is a message'
-        server = SimpleServer(('127.0.0.1', 0), handle_fun=
-                                                lambda x: Socket(x).send_string(string))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).send_string(string))
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         len_string = int.from_bytes(client.check_received_length(4), 'big')
@@ -80,8 +79,7 @@ class TestTCPIP:
 
     def test_get_string(self):
         string = 'this is a message'
-        server = SimpleServer(('127.0.0.1', 0), handle_fun=
-                                                lambda x: Socket(x).send_string(string))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).send_string(string))
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         assert client.get_string() == string
@@ -90,8 +88,7 @@ class TestTCPIP:
 
     def test_get_int(self):
         one_integer = 15489
-        server = SimpleServer(('127.0.0.1', 0), handle_fun=
-                                                lambda x: x.sendall(Socket.int_to_bytes(one_integer)))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: x.sendall(Socket.int_to_bytes(one_integer)))
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         assert client.get_int() == one_integer
@@ -138,7 +135,7 @@ class TestTCPIP:
                   np.random.rand(10, 1, 3),
                   np.random.rand(10, 4, 3, 1),
                   ]
-        server = SimpleServer(('127.0.0.1', 0),)
+        server = SimpleServer(('127.0.0.1', 0), )
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         sleep(0.1)
@@ -167,7 +164,7 @@ class TestTCPIP:
                   np.random.rand(10, 1, 3),
                   np.random.rand(10, 4, 3, 1),
                   ]
-        server = SimpleServer(('127.0.0.1', 0),)
+        server = SimpleServer(('127.0.0.1', 0), )
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
         server_socket = Socket(server.do_read()[0])
@@ -181,13 +178,12 @@ class TestTCPIP:
 
     def test_send_list(self):
         listing = [np.random.rand(7, 2),
-                    'Hello World',
-                    1,
-                    2.654,
-                    ]
+                   'Hello World',
+                   1,
+                   2.654,
+                   ]
 
-        server = SimpleServer(('127.0.0.1', 0), handle_fun=
-                              lambda x: Socket(x).send_list(listing))
+        server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).send_list(listing))
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
 
@@ -206,14 +202,13 @@ class TestTCPIP:
                 data.append(client.get_array())
         utils.check_vals_in_iterable(data, listing)
 
-
         client.close()
         server.stop()
 
     def test_send_another_list(self):
         listing = ['another list that should raise an exception because there is a boolean that is not a valid type',
-                    ['gg',],
-                    ]
+                   ['gg', ],
+                   ]
         server = SimpleServer(('127.0.0.1', 0), )
         server.start()
         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
@@ -224,19 +219,24 @@ class TestTCPIP:
 
         server.stop()
 
-## will be used to test any kind of server derived from TCPServer
+
+# will be used to test any kind of server derived from TCPServer
 servers = [MockServer, ]
+
 
 @pytest.fixture(params=servers)
 def get_server(request):
     return request.param
 
+
 socket_types = ["GRABBER", "ACTUATOR"]
+
 
 class TestMockServer:
     """
     Test base functionnalities of the TCPServer with a small wrapper (MockServer) to init some necessary attributes
     """
+
     def test_attributes(self, get_server, qtbot):
         server = get_server()
         assert hasattr(server, 'emit_status')
@@ -279,31 +279,31 @@ class TestMockServer:
         server.connected_clients.append(dict(type='ACTUATOR',
                                              socket=actu_socket))
 
-        #find_socket_within_connected_clients
+        # find_socket_within_connected_clients
         assert server.find_socket_within_connected_clients('ACTUATOR') == actu_socket
         assert server.find_socket_within_connected_clients('ACTUAT') is None
 
-        #find_socket_type_within_connected_clients
+        # find_socket_type_within_connected_clients
         assert server.find_socket_type_within_connected_clients(server.serversocket) == 'server'
 
-        #set_connected_clients_table
+        # set_connected_clients_table
         assert server.set_connected_clients_table() == OrderedDict(server="unconnected invalid socket",
                                                                    ACTUATOR="unconnected invalid socket")
 
-        #remove_client
+        # remove_client
         server.remove_client(actu_socket)
         assert server.set_connected_clients_table() == OrderedDict(server="unconnected invalid socket")
 
     def test_commands(self, get_server, qtbot):
         server = get_server()
         server.socket_types = socket_types
-        #Combination of general messages and specific ones (depending the connected client, Grabber or Actuator
+        # Combination of general messages and specific ones (depending the connected client, Grabber or Actuator
         server.message_list = ["Quit", "Done", "Info", "Infos", "Info_xml",
-                               #"Send Data 0D", "Send Data 1D", "Send Data 2D", "Send Data ND", "Status",
+                               # "Send Data 0D", "Send Data 1D", "Send Data 2D", "Send Data ND", "Status",
                                # 'x_axis', 'y_axis'
                                ]
 
-        #read_info
+        # read_info
         server.read_info(None, 'random_info', 'random info value')
 
         assert 'random_info' in putils.iter_children(server.settings.child(('infos')), [])
@@ -311,14 +311,14 @@ class TestMockServer:
 
         # read_infos
         params = [{'title': 'Device index:', 'name': 'device', 'type': 'int', 'value': 0, 'max': 3, 'min': 0},
-                    {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
-                    {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
-                            'children': [
-                                {'title': 'Device index:', 'name': 'device1', 'type': 'int', 'value': 0, 'max': 3,
-                                 'min': 0},
-                                {'title': 'Device index:', 'name': 'device2', 'type': 'int', 'value': 0, 'max': 3,
-                                 'min': 0},]
-                         }]
+                  {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
+                  {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
+                   'children': [
+                       {'title': 'Device index:', 'name': 'device1', 'type': 'int', 'value': 0, 'max': 3,
+                        'min': 0},
+                       {'title': 'Device index:', 'name': 'device2', 'type': 'int', 'value': 0, 'max': 3,
+                        'min': 0}, ]
+                   }]
 
         param = Parameter.create(name='settings', type='group', children=params)
         params_xml = ioxml.parameter_to_xml_string(param)
@@ -330,20 +330,21 @@ class TestMockServer:
         assert 'line_settings' in putils.iter_children(server.settings.child(('settings_client')), [])
         assert server.settings.child('settings_client', 'line_settings').opts['type'] == 'group'
 
-
         # read_info_xml
         one_param = param.child(('infos'))
         one_param.setValue('another_info')
         assert one_param.value() == 'another_info'
         path = param.childPath(one_param)
-        path.insert(0, '') #add one to mimic correct behaviour
+        path.insert(0, '')  # add one to mimic correct behaviour
         server.read_info_xml(None, path, ioxml.parameter_to_xml_string(one_param))
         assert server.settings.child('settings_client', 'infos').value() == 'another_info'
 
     #
 
+
 class ClientObjectManager(QObject):
     cmd_signal = pyqtSignal(utils.ThreadCommand)
+
 
 class TestMockClient:
     command = ''
@@ -359,19 +360,18 @@ class TestMockClient:
         server = SimpleServer(('127.0.0.1', 6341), )
         server.start()
 
-
         params = [{'title': 'Device index:', 'name': 'device', 'type': 'int', 'value': 0, 'max': 3, 'min': 0},
                   {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
                   {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
                    'children': [
                        {'name': 'someparam', 'type': 'float', 'value': 15.54, 'readonly': True},
-                        ]
+                   ]
                    }]
         param = Parameter.create(name='settings', type='group', children=params)
         client = TCPClient(ipaddress="127.0.0.1", port=6341, params_state=param.saveState(), client_type="sometype")
         client.cmd_signal.connect(self.get_cmd_signal)
 
-        #check init method
+        # check init method
         assert client.ipaddress == "127.0.0.1"
         assert client.port == 6341
         assert client.client_type == 'sometype'
@@ -380,7 +380,6 @@ class TestMockClient:
         client.socket.connect((client.ipaddress, client.port))
         sleep(0.5)
         server_socket = Socket(server.do_read()[0])
-
 
         client.send_data([np.array([0, 1, 2, 3]), 'item', 5.1])
         assert server_socket.get_string() == 'Done'
@@ -395,8 +394,7 @@ class TestMockClient:
         assert server_socket.get_string() == 'someinfo'
         assert server_socket.get_string() == 'this is an info'
 
-
-        #test queue_command
+        # test queue_command
         client.cmd_signal.connect(self.get_cmd_signal)
         client_manager = ClientObjectManager()
         client_manager.cmd_signal.connect(client.queue_command)
@@ -404,7 +402,7 @@ class TestMockClient:
         with pytest.raises(Exception):
             client.queue_command(utils.ThreadCommand('Weird command'))
 
-        #test get_data
+        # test get_data
         server_socket.send_string('set_info')
         server_socket.send_list(['line_settings', 'someparam'])
         server_socket.send_string(ioxml.parameter_to_xml_string(param.child('line_settings', 'someparam')))
@@ -413,8 +411,8 @@ class TestMockClient:
         client.get_data(msg)
         assert self.command == 'set_info'
         utils.check_vals_in_iterable(self.attributes, [['line_settings', 'someparam'],
-                                    ioxml.parameter_to_xml_string(param.child('line_settings', 'someparam')).decode()])
-
+                                                       ioxml.parameter_to_xml_string(
+                                                           param.child('line_settings', 'someparam')).decode()])
 
         server_socket.send_string('move_abs')
         server_socket.send_scalar(12.546)

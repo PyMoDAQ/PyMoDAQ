@@ -28,7 +28,7 @@ scan_subtypes = dict(Scan1D=['Linear', 'Adaptive', 'Linear back to start', 'Rand
 
 try:
     import adaptive
-except:
+except Exception:
     scan_subtypes['Scan1D'].pop(scan_subtypes['Scan1D'].index('Adaptive'))
     scan_subtypes['Scan2D'].pop(scan_subtypes['Scan2D'].index('Adaptive'))
     scan_subtypes['Tabular'].pop(scan_subtypes['Tabular'].index('Adaptive'))
@@ -306,8 +306,7 @@ class Scanner(QObject):
         ]},
         {'title': 'Load settings', 'name': 'load_xml', 'type': 'action'},
         {'title': 'Save settings', 'name': 'save_xml', 'type': 'action'},
-    ]},
-              ]
+    ]}]
 
     def __init__(self, scanner_items=OrderedDict([]), scan_type='Scan1D', actuators=[], adaptive_losses=None):
         """
@@ -499,7 +498,6 @@ class Scanner(QObject):
                             self.update_scan_2D_positions()
                         self.update_scan2D_type(param)
 
-
                     elif data == 'Sequential':
                         self.settings.child('scan_options', 'scan1D_settings').hide()
                         self.settings.child('scan_options', 'scan2D_settings').hide()
@@ -534,22 +532,20 @@ class Scanner(QObject):
                     ismanual = self.settings.child('scan_options', 'tabular_settings',
                                                    'tabular_selection').value() == 'Manual'
                     self.settings.child('scan_options', 'tabular_settings', 'tabular_loss').show(isadaptive)
-                    self.settings.child('scan_options', 'tabular_settings', 'tabular_step').show(not isadaptive and
-                                                                                                 not ismanual)
+                    self.settings.child('scan_options', 'tabular_settings',
+                                        'tabular_step').show(not isadaptive and not ismanual)
                     self.update_tabular_positions()
 
                 elif param.name() == 'tabular_roi_module' or param.name() == 'scan2D_roi_module':
                     self.scan_selector.settings.child('scan_options', 'sources').setValue(param.value())
-
-
 
                 elif param.name() == 'tabular_selection':
                     isadaptive = 'adaptive' in self.settings.child('scan_options', 'tabular_settings',
                                                                    'tabular_subtype').value().lower()
                     ismanual = self.settings.child('scan_options', 'tabular_settings',
                                                    'tabular_selection').value() == 'Manual'
-                    self.settings.child('scan_options', 'tabular_settings', 'tabular_step').show(not isadaptive and
-                                                                                                 not ismanual)
+                    self.settings.child('scan_options', 'tabular_settings',
+                                        'tabular_step').show(not isadaptive and not ismanual)
                     if data == 'Polylines':
                         self.settings.child('scan_options', 'tabular_settings', 'tabular_roi_module').show()
                         self.scan_selector.show_scan_selector(visible=True)
@@ -614,7 +610,6 @@ class Scanner(QObject):
                                                   starts=[start], stops=[stop], steps=[step],
                                                   adaptive_loss=self.settings.child('scan_options', 'scan1D_settings',
                                                                                     'scan1D_loss').value())
-
 
         elif scan_type == "Scan2D":
             starts = [self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').value(),
@@ -702,10 +697,10 @@ class Scanner(QObject):
                 self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(
                     np.mean((pos_dl_scaled[1], pos_ur_scaled[1])))
 
-                nsteps = 2 * np.min((np.abs((pos_ur_scaled[0] - pos_dl_scaled[0]) / 2) /
-                                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value(),
-                                     np.abs((pos_ur_scaled[1] - pos_dl_scaled[1]) / 2) /
-                                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
+                nsteps = 2 * np.min((np.abs((pos_ur_scaled[0] - pos_dl_scaled[0]) / 2) / self.settings.child(
+                    'scan_options', 'scan2D_settings', 'step_2d_axis1').value(), np.abs(
+                    (pos_ur_scaled[1] - pos_dl_scaled[1]) / 2) / self.settings.child(
+                    'scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
 
                 self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').setValue(nsteps)
 
@@ -781,12 +776,14 @@ class Scanner(QObject):
                         param.setValue(-param.value())
 
                 self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(
-                    np.rint(self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) *
-                    np.abs(self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value()))
+                    np.rint(self.settings.child(
+                        'scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
+                        self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value()))
 
                 self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(
-                    np.rint(self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) *
-                    np.abs(self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
+                    np.rint(self.settings.child(
+                        'scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
+                        self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
                 QtWidgets.QApplication.processEvents()
                 self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
             else:
@@ -1118,14 +1115,11 @@ if __name__ == '__main__':
     from pymodaq.daq_utils.plotting.navigator import Navigator
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
-
-    class UI():
+    class UI:
         def __init__(self):
             pass
 
-
     class FakeDaqScan:
-
         def __init__(self, area):
             self.area = area
             self.detector_modules = None
@@ -1137,11 +1131,9 @@ if __name__ == '__main__':
             self.dock.addWidget(form)
             self.area.addDock(self.dock)
 
-
     def get_scan_params(param):
         print(param)
         print(param.scan_info.positions)
-
 
     #
     # ####simple sequential scan test

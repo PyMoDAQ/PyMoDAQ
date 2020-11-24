@@ -7,6 +7,8 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -28,7 +30,7 @@ class Ui_Form(object):
         self.formula_edit = QtWidgets.QPlainTextEdit(self.gridLayoutWidget)
         self.formula_edit.setMaximumSize(QtCore.QSize(16777215, 50))
         self.formula_edit.setPlainText("")
-        self.formula_edit.setTextInteractionFlags(QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
+        self.formula_edit.setTextInteractionFlags(QtCore.Qt.TextSelectableByKeyboard | QtCore.Qt.TextSelectableByMouse)
         self.formula_edit.setObjectName("formula_edit")
         self.gridLayout.addWidget(self.formula_edit, 4, 1, 1, 1)
         self.Quit_pb = QtWidgets.QPushButton(self.gridLayoutWidget)
@@ -126,10 +128,9 @@ class Ui_Form(object):
         self.measure_subtype_combo.setItemText(2, _translate("Form", "x0"))
         self.label_9.setText(_translate("Form", "Measurement Type: "))
         self.label_7.setText(_translate("Form", "Formula\n"
-"(the variable is \"x\"):"))
+                                                "(the variable is \"x\"):"))
         self.label_4.setText(_translate("Form", "Result:"))
 
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 if __name__ == "__main__":
     import sys
@@ -139,4 +140,3 @@ if __name__ == "__main__":
     ui.setupUi(Form)
     Form.show()
     sys.exit(app.exec_())
-

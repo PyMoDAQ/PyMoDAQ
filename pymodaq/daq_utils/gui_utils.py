@@ -13,14 +13,13 @@ config = utils.load_config()
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
-
 dashboard_submodules_params = [
     {'title': 'Save 2D datas and above:', 'name': 'save_2D', 'type': 'bool', 'value': True},
     {'title': 'Save raw datas only:', 'name': 'save_raw_only', 'type': 'bool', 'value': True, 'tooltip':
         'if True, will not save extracted ROIs used to do live plotting, only raw datas will be saved'},
     {'title': 'Do Save:', 'name': 'do_save', 'type': 'bool', 'default': False, 'value': False},
     {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
-    ]
+]
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
@@ -34,6 +33,7 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
 def clickable(widget):
     class Filter(QObject):
         clicked = pyqtSignal()
+
         def eventFilter(self, obj, event):
             if obj == widget:
                 if event.type() == QEvent.MouseButtonRelease:
@@ -42,7 +42,7 @@ def clickable(widget):
                         # The developer can opt for .emit(obj) to get the object within the slot.
                         return True
             return False
-     
+
     filter = Filter(widget)
     widget.installEventFilter(filter)
     return filter.clicked
@@ -99,14 +99,13 @@ class ListPicker(QObject):
         self.dialog.setMinimumWidth(500)
         vlayout = QtWidgets.QVBoxLayout()
 
-
         self.list_widget = QtWidgets.QListWidget()
         self.list_widget.addItems(self.list)
 
         vlayout.addWidget(self.list_widget, 10)
         self.dialog.setLayout(vlayout)
 
-        buttonBox = QtWidgets.QDialogButtonBox();
+        buttonBox = QtWidgets.QDialogButtonBox()
         buttonBox.addButton('Apply', buttonBox.AcceptRole)
         buttonBox.accepted.connect(self.dialog.accept)
         buttonBox.addButton('Cancel', buttonBox.RejectRole)
@@ -120,9 +119,10 @@ class ListPicker(QObject):
         pass
         if res == self.dialog.Accepted:
             # save managers parameters in a xml file
-            return  [self.list_widget.currentIndex(), self.list_widget.currentItem().text()]
+            return [self.list_widget.currentIndex(), self.list_widget.currentItem().text()]
         else:
             return [-1, ""]
+
 
 def select_file(start_path=config['data_saving']['h5file']['save_path'], save=True, ext=None):
     """Save or open a file with Qt5 file dialog, to be used within an Qt5 loop.
@@ -198,8 +198,9 @@ class DockArea(DockArea, QObject):
         """
         Move an existing Dock to a new location.
         """
-        ## Moving to the edge of a tabbed dock causes a drop outside the tab box
-        if position in ['left', 'right', 'top', 'bottom'] and neighbor is not None and neighbor.container() is not None and neighbor.container().type() == 'tab':
+        # Moving to the edge of a tabbed dock causes a drop outside the tab box
+        if position in ['left', 'right', 'top',
+                        'bottom'] and neighbor is not None and neighbor.container() is not None and neighbor.container().type() == 'tab':
             neighbor = neighbor.container()
         self.addDock(dock, position, neighbor)
         self.dock_signal.emit()
@@ -213,7 +214,7 @@ class DockArea(DockArea, QObject):
             win.show()
         else:
             area = self.home.addTempArea()
-        #print "added temp area", area, area.window()
+        # print "added temp area", area, area.window()
         return area
 
 
@@ -235,7 +236,7 @@ def set_enable_recursive(children, enable=False):
             set_enable_recursive(child.children(), enable)
 
 
-def widget_to_png_to_bytes(widget, keep_aspect= True, width=200, height=100):
+def widget_to_png_to_bytes(widget, keep_aspect=True, width=200, height=100):
     """
     Renders the widget content in a png format as a bytes string
     Parameters
@@ -328,7 +329,7 @@ class TableModel(QtCore.QAbstractTableModel):
             for dat in data:
                 data_tot.append([float(d) for d in dat])
             data = data_tot
-        self._data = data #stored data as a list of list
+        self._data = data  # stored data as a list of list
         self.data_tmp = None
         self.header = header
         if not isinstance(editable, list):
@@ -441,26 +442,29 @@ class TableModel(QtCore.QAbstractTableModel):
     def insertRows(self, row, count, parent):
         self.beginInsertRows(QtCore.QModelIndex(), row, row + count - 1)
         for ind in range(count):
-            self._data.insert(row+ind, self.data_tmp)
+            self._data.insert(row + ind, self.data_tmp)
         self.endInsertRows()
         return True
 
     def remove_row(self, row):
         self.removeRows(row, 1, self.index(-1, -1))
 
-
     def removeRows(self, row, count, parent):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
         for ind in range(count):
-            self._data.pop(row+ind)
+            self._data.pop(row + ind)
         self.endRemoveRows()
         return True
 
 
-class SpinBoxDelegate(QtWidgets.QItemEditorFactory):  # http://doc.qt.io/qt-5/qstyleditemdelegate.html#subclassing-qstyleditemdelegate    It is possible for a custom delegate to provide editors without the use of an editor item factory. In this case, the following virtual functions must be reimplemented:
+class SpinBoxDelegate(QtWidgets.QItemEditorFactory):
+    # http://doc.qt.io/qt-5/qstyleditemdelegate.html#subclassing-qstyleditemdelegate
+    # It is possible for a custom delegate to provide editors without the use of an editor item factory.
+    # In this case, the following virtual functions must be reimplemented:
     """
     TO implement custom widget editor for cells in a tableview
     """
+
     def __init__(self):
         super().__init__()
 
@@ -483,7 +487,7 @@ class TreeFromToml(QObject):
         config = utils.load_config(self.config_path)
 
         params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(self.config_path),
-                  'readonly': True}]
+                   'readonly': True}]
         params.extend(self.dict_to_param(config))
 
         self.settings = Parameter.create(title='settings', name='settings', type='group', children=params)
@@ -513,8 +517,6 @@ class TreeFromToml(QObject):
                 config.pop('config_path')
                 toml.dump(config, f)
 
-
-
     @classmethod
     def param_to_dict(cls, param):
         config = dict()
@@ -523,7 +525,8 @@ class TreeFromToml(QObject):
                 config[child.name()] = cls.param_to_dict(child)
             else:
                 if child.opts['type'] == 'datetime':
-                    config[child.name()] = datetime.fromtimestamp(child.value().toSecsSinceEpoch()) #convert QDateTime to python datetime
+                    config[child.name()] = datetime.fromtimestamp(
+                        child.value().toSecsSinceEpoch())  # convert QDateTime to python datetime
                 elif child.opts['type'] == 'date':
                     qdt = QtCore.QDateTime()
                     qdt.setDate(child.value())
@@ -541,13 +544,13 @@ class TreeFromToml(QObject):
         for key in config:
             if isinstance(config[key], dict):
                 params.append({'title': f'{key.capitalize()}:', 'name': key, 'type': 'group',
-                               'children': cls.dict_to_param(config[key]), 'expanded': 'user' in key.lower() or \
-                               'general' in key.lower()})
+                               'children': cls.dict_to_param(config[key]),
+                               'expanded': 'user' in key.lower() or 'general' in key.lower()})
             else:
                 param = {'title': f'{key.capitalize()}:', 'name': key, 'value': config[key]}
                 if isinstance(config[key], float):
                     param['type'] = 'float'
-                elif isinstance(config[key], bool): #placed before int because a bool is an instance of int
+                elif isinstance(config[key], bool):  # placed before int because a bool is an instance of int
                     param['type'] = 'bool'
                 elif isinstance(config[key], int):
                     param['type'] = 'int'
@@ -566,9 +569,9 @@ class TreeFromToml(QObject):
         return params
 
 
-
 if __name__ == '__main__':
     import sys
+
     app = QtWidgets.QApplication([])
     # QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
     # w = QtWidgets.QMainWindow()

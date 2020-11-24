@@ -9,6 +9,10 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from pymodaq.daq_utils.plotting.qled import QLED
+from pyqtgraph import SpinBox
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -56,7 +60,7 @@ class Ui_Form(object):
         self.gridLayout_2.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
         self.gridLayout_2.setObjectName("gridLayout_2")
         self.label_2 = QtWidgets.QLabel(self.groupBox_main)
-        self.label_2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label_2.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.label_2.setObjectName("label_2")
         self.gridLayout_2.addWidget(self.label_2, 2, 0, 1, 1)
         self.Move_Done_LED = QLED(self.groupBox_main)
@@ -263,13 +267,11 @@ class Ui_Form(object):
         self.Get_position_pb.setText(_translate("Form", "Update Value?"))
         self.Find_Home_pb.setText(_translate("Form", "Find Home"))
         self.label_5.setText(_translate("Form", "Abs value:"))
-from pymodaq.daq_utils.plotting.qled import QLED
-from pyqtgraph import SpinBox
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     ui = Ui_Form()

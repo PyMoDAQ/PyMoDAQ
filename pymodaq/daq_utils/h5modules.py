@@ -33,7 +33,7 @@ config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 backends_available = []
 
-#default backend
+# default backend
 is_tables = True
 try:
     import tables
@@ -43,7 +43,7 @@ except Exception as e:
     is_tables = False
 
 is_h5py = True
-#other possibility
+# other possibility
 try:
     import h5py
     backends_available.append('h5py')
@@ -52,9 +52,10 @@ except Exception as e:
     is_h5y = False
 
 is_h5pyd = True
-#this one is to be used for remote reading/writing towards a HSDS server (or h5serv), see HDFGroup
+# this one is to be used for remote reading/writing towards a HSDS server (or h5serv), see HDFGroup
 try:
     import h5pyd
+
     backends_available.append('h5pyd')
 except Exception as e:
     logger.warning(str(e))
@@ -90,6 +91,7 @@ def check_mandatory_attrs(attr_name, attr):
     else:
         return attr
 
+
 def get_attr(node, attr_name, backend='tables'):
     if backend == 'tables':
         if attr_name is not None:
@@ -116,24 +118,37 @@ def get_attr(node, attr_name, backend='tables'):
                 attrs[attr_name] = JsonConverter.json2object(attrval)
             return attrs
 
+
 def set_attr(node, attr_name, attr_value, backend='tables'):
-        if backend == 'tables':
-            node._v_attrs[attr_name] = JsonConverter.object2json(attr_value)
-        else:
-            node.attrs[attr_name] = JsonConverter.object2json(attr_value)
+    if backend == 'tables':
+        node._v_attrs[attr_name] = JsonConverter.object2json(attr_value)
+    else:
+        node.attrs[attr_name] = JsonConverter.object2json(attr_value)
+
 
 class InvalidGroupType(Exception):
     pass
+
+
 class InvalidSave(Exception):
     pass
+
+
 class InvalidGroupDataType(Exception):
     pass
+
+
 class InvalidDataType(Exception):
     pass
+
+
 class InvalidDataDimension(Exception):
     pass
+
+
 class InvalidScanType(Exception):
     pass
+
 
 class Node(object):
     def __init__(self, node, backend):
@@ -212,6 +227,7 @@ class Node(object):
         else:
             return self._node.name
 
+
 class GROUP(Node):
     def __init__(self, node, backend):
         super().__init__(node, backend)
@@ -282,10 +298,12 @@ class GROUP(Node):
             return list(self.node.keys())
         pass
 
+
 class CARRAY(Node):
     def __init__(self, node, backend):
         super().__init__(node, backend)
         self._array = node
+
     @property
     def array(self):
         return self._array
@@ -315,6 +333,7 @@ class CARRAY(Node):
         else:
             return len(self.array)
 
+
 class EARRAY(CARRAY):
     def __init__(self, array, backend):
         super().__init__(array, backend)
@@ -339,6 +358,7 @@ class EARRAY(CARRAY):
             self.array.resize(self.array.len() + 1, axis=0)
             self.array[-1] = data
 
+
 class VLARRAY(EARRAY):
     def __init__(self, array, backend):
         super().__init__(array, backend)
@@ -349,6 +369,7 @@ class VLARRAY(EARRAY):
         sh = list(self.attrs['shape'])
         sh[0] += 1
         self.attrs['shape'] = tuple(sh)
+
 
 class StringARRAY(VLARRAY):
     def __init__(self, array, backend):
@@ -371,6 +392,7 @@ class StringARRAY(VLARRAY):
     def string_to_array(self, string):
         return np.frombuffer(pickle.dumps(string), np.uint8)
 
+
 class Attributes(object):
     def __init__(self, node, backend='tables'):
         self._node = node
@@ -378,7 +400,7 @@ class Attributes(object):
 
     def __getitem__(self, item):
         attr = get_attr(self._node.node, item, backend=self.backend)
-        #if isinstance(attr, bytes):
+        # if isinstance(attr, bytes):
         #    attr = attr.decode()
         return attr
 
@@ -421,6 +443,7 @@ class Attributes(object):
             return "%s:\n   %s" % (str(self), attrlist)
         else:
             return str(self)
+
 
 class H5Backend:
     def __init__(self, backend='tables'):
@@ -473,7 +496,7 @@ class H5Backend:
                 if self.isopen():
                     self._h5file.close()
         except Exception as e:
-            print(e) #no big deal
+            print(e)  # no big deal
 
     def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', **kwargs):
         self.file_path = fullpathname
@@ -495,7 +518,6 @@ class H5Backend:
             self.h5file.copy_file(str(filenamepath))
         else:
             raise Warning(f'Not possible to copy the file with the "{self.backend}" backend')
-
 
     def root(self):
         if self.backend == 'tables':
@@ -555,7 +577,7 @@ class H5Backend:
         if isinstance(where, Node):
             where = where.node
 
-        if not name in list(self.get_children(where)):
+        if name not in list(self.get_children(where)):
             if self.backend == 'tables':
                 group = self._h5file.create_group(where, name, title)
             else:
@@ -624,7 +646,7 @@ class H5Backend:
             return GROUP(node, self.backend)
         else:
             attr = self.get_attr(node, 'CLASS')
-            if not 'ARRAY' in attr:
+            if 'ARRAY' not in attr:
                 return GROUP(node, self.backend)
             elif attr == 'CARRAY':
                 return CARRAY(node, self.backend)
@@ -635,8 +657,6 @@ class H5Backend:
                     return StringARRAY(node, self.backend)
                 else:
                     return VLARRAY(node, self.backend)
-
-
 
     def get_node_name(self, node):
         """return node name
@@ -651,7 +671,6 @@ class H5Backend:
         if isinstance(node, Node):
             node = node.node
         return self.get_node(node).name
-
 
     def get_node_path(self, node):
         """return node path
@@ -693,7 +712,7 @@ class H5Backend:
         --------
         children_name, Node, CARRAY, EARRAY, VLARRAY or StringARRAY
         """
-        where = self.get_node(where)  #return a node object in case where is a string
+        where = self.get_node(where)  # return a node object in case where is a string
         if isinstance(where, Node):
             where = where.node
 
@@ -741,7 +760,6 @@ class H5Backend:
                     stack.append(child)
                     yield child
 
-
     def read(self, array, *args, **kwargs):
         if isinstance(array, CARRAY):
             array = array.array
@@ -758,15 +776,17 @@ class H5Backend:
         dtype = obj.dtype
         if self.backend == 'tables':
             array = CARRAY(self._h5file.create_carray(where, name, obj=obj,
-                                               title=title,
-                                               filters=self.compression), self.backend)
+                                                      title=title,
+                                                      filters=self.compression), self.backend)
         else:
             if self.compression is not None:
-                array = CARRAY(self.get_node(where).node.create_dataset(name, data=obj, **self.compression), self.backend)
+                array = CARRAY(self.get_node(where).node.create_dataset(name, data=obj, **self.compression),
+                               self.backend)
             else:
                 array = CARRAY(self.get_node(where).node.create_dataset(name, data=obj), self.backend)
             array.array.attrs['TITLE'] = title
-            array.array.attrs['CLASS'] = 'CARRAY' #direct writing using h5py to be compatible with pytable automatic class writing as binary
+            array.array.attrs[
+                'CLASS'] = 'CARRAY'  # direct writing using h5py to be compatible with pytable automatic class writing as binary
         array.attrs['shape'] = obj.shape
         array.attrs['dtype'] = dtype.name
         array.attrs['subdtype'] = ''
@@ -788,7 +808,7 @@ class H5Backend:
         if self.backend == 'tables':
             atom = self.h5module.Atom.from_dtype(dtype)
             array = EARRAY(self._h5file.create_earray(where, name, atom, shape=shape, title=title,
-                                               filters=self.compression), self.backend)
+                                                      filters=self.compression), self.backend)
         else:
             maxshape = [None]
             if data_shape is not None:
@@ -803,7 +823,8 @@ class H5Backend:
                     self.get_node(where).node.create_dataset(name, shape=shape, dtype=dtype, maxshape=maxshape),
                     self.backend)
             array.array.attrs['TITLE'] = title
-            array.array.attrs['CLASS'] = 'EARRAY' #direct writing using h5py to be compatible with pytable automatic class writing as binary
+            array.array.attrs[
+                'CLASS'] = 'EARRAY'  # direct writing using h5py to be compatible with pytable automatic class writing as binary
             array.array.attrs['EXTDIM'] = 0
         array.attrs['shape'] = shape
         array.attrs['dtype'] = dtype.name
@@ -838,12 +859,12 @@ class H5Backend:
             atom = self.h5module.Atom.from_dtype(dtype)
             if subdtype == 'string':
                 array = StringARRAY(self._h5file.create_vlarray(where, name, atom, title=title,
-                                                            filters=self.compression), self.backend)
+                                                                filters=self.compression), self.backend)
             else:
                 array = VLARRAY(self._h5file.create_vlarray(where, name, atom, title=title,
-                                                filters=self.compression), self.backend)
+                                                            filters=self.compression), self.backend)
         else:
-            maxshape = (None, )
+            maxshape = (None,)
             if self.backend == 'h5py':
                 dt = self.h5module.vlen_dtype(dtype)
             else:
@@ -864,9 +885,10 @@ class H5Backend:
                     array = VLARRAY(self.get_node(where).node.create_dataset(name, (0,), dtype=dt,
                                                                              maxshape=maxshape), self.backend)
             array.array.attrs['TITLE'] = title
-            array.array.attrs['CLASS'] = 'VLARRAY' #direct writing using h5py to be compatible with pytable automatic class writing as binary
+            array.array.attrs[
+                'CLASS'] = 'VLARRAY'  # direct writing using h5py to be compatible with pytable automatic class writing as binary
             array.array.attrs['EXTDIM'] = 0
-        array.attrs['shape'] = (0, )
+        array.attrs['shape'] = (0,)
         array.attrs['dtype'] = dtype.name
         array.attrs['subdtype'] = subdtype
         array.attrs['backend'] = self.backend
@@ -909,9 +931,11 @@ class H5LogHandler(logging.StreamHandler):
         self.h5saver = h5saver
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         self.setFormatter(formatter)
+
     def emit(self, record):
         msg = self.format(record)
         self.h5saver.add_log(msg)
+
 
 class H5Saver(H5Backend, QObject):
     """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
@@ -964,38 +988,39 @@ class H5Saver(H5Backend, QObject):
     status_sig = pyqtSignal(utils.ThreadCommand)
     new_file_sig = pyqtSignal(bool)
 
-    params = [{'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True}, ] + \
-             dashboard_submodules_params + \
-             [{'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
-                 {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'values': backends_available, 'readonly': True},
-                 {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False, 'children': [
-                     {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
-                      'value': config['data_saving']['hsds']['root_url'], 'readonly': False},
-                     {'title': 'User:', 'name': 'user', 'type': 'str',
-                      'value': config['data_saving']['hsds']['username'], 'readonly': False},
-                     {'title': 'password:', 'name': 'password', 'type': 'str',
-                      'value': config['data_saving']['hsds']['pwd'], 'readonly': False},
-                     ]},
-                 ]},
+    params = [
+        {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True},
+    ] + dashboard_submodules_params + \
+        [{'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
+            {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'values': backends_available,
+                'readonly': True},
+            {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False, 'children': [
+                {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
+                    'value': config['data_saving']['hsds']['root_url'], 'readonly': False},
+                {'title': 'User:', 'name': 'user', 'type': 'str',
+                    'value': config['data_saving']['hsds']['username'], 'readonly': False},
+                {'title': 'password:', 'name': 'password', 'type': 'str',
+                    'value': config['data_saving']['hsds']['pwd'], 'readonly': False},
+            ]},
+        ]},
 
-
-                 {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
-                 {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
-                  'value': False},
-                 {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
-                  'value': config['data_saving']['h5file']['save_path'], 'filetype': False, 'readonly': True, },
-                 {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
-                 {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
-                 {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
-                  'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
-                 {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
-                 {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
-                     {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
-                      'values': ['zlib', 'gzip']},
-                     {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
-                      'value': config['data_saving']['h5file']['compression_level'], 'min': 0, 'max': 9},
-                 ]},
-             ]
+        {'title': 'custom_name?:', 'name': 'custom_name', 'type': 'bool', 'default': False, 'value': False},
+        {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
+            'value': False},
+        {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
+            'value': config['data_saving']['h5file']['save_path'], 'filetype': False, 'readonly': True, },
+        {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
+        {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
+            'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
+        {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
+        {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
+            {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
+                'values': ['zlib', 'gzip']},
+            {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
+                'value': config['data_saving']['h5file']['compression_level'], 'min': 0, 'max': 9},
+        ]},
+    ]
 
     def __init__(self, save_type='scan', backend='tables'):
         """
@@ -1025,7 +1050,8 @@ class H5Saver(H5Backend, QObject):
         self.current_scan_name = None
         self.raw_group = None
 
-        self.settings = Parameter.create(title='Saving settings', name='save_settings', type='group', children=self.params)
+        self.settings = Parameter.create(title='Saving settings', name='save_settings', type='group',
+                                         children=self.params)
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumHeight(310)
         self.settings_tree.setParameters(self.settings, showTop=False)
@@ -1033,13 +1059,12 @@ class H5Saver(H5Backend, QObject):
 
         self.settings.child(('save_type')).setValue(save_type)
 
-
         # self.settings.child('saving_options', 'save_independent').show(save_type == 'scan')
         # self.settings.child('saving_options', 'do_save').show(not save_type == 'scan')
         # self.settings.child('saving_options', 'current_scan_name').show(save_type == 'scan')
 
-
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
+        self.settings.sigTreeStateChanged.connect(
+            self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
 
     @property
     def h5_file(self):
@@ -1099,11 +1124,11 @@ class H5Saver(H5Backend, QObject):
                 self.settings.child(('current_scan_path')).setValue(str(scan_path))
 
                 if not scan_type:
-                    self.h5_file_path = save_path #will remove the dataset part used for DAQ_scan datas
-                    self.h5_file_name = base_name+datetime_now.strftime('_%Y%m%d_%H_%M_%S.h5')
+                    self.h5_file_path = save_path  # will remove the dataset part used for DAQ_scan datas
+                    self.h5_file_name = base_name + datetime_now.strftime('_%Y%m%d_%H_%M_%S.h5')
                 else:
                     self.h5_file_path = save_path
-                    self.h5_file_name = save_path.name+".h5"
+                    self.h5_file_name = save_path.name + ".h5"
             else:
                 self.h5_file_name = select_file(start_path=base_name, save=True, ext='h5')
                 self.h5_file_path = self.h5_file_name.parent
@@ -1140,7 +1165,8 @@ class H5Saver(H5Backend, QObject):
         else:
             self.current_scan_group = self.get_last_scan()
 
-        self.raw_group.attrs['type'] = self.settings.child(('save_type')).value()  # first possibility to set a node attribute
+        self.raw_group.attrs['type'] = self.settings.child(
+            ('save_type')).value()  # first possibility to set a node attribute
         self.root().set_attr('file', self.h5_file_name)  # second possibility
         if update_h5:
             self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
@@ -1164,10 +1190,10 @@ class H5Saver(H5Backend, QObject):
         else:
             new_scan = True
         if new_scan:
-            self.current_scan_group = self.add_incremental_group('scan', self.raw_group, title, settings_as_xml, metadata)
+            self.current_scan_group = self.add_incremental_group('scan', self.raw_group, title, settings_as_xml,
+                                                                 metadata)
             self.set_attr(self.current_scan_group, 'description', '')
             self.settings.child(('current_scan_name')).setValue(self.get_node_name(self.current_scan_group))
-
 
         return self.current_scan_group
 
@@ -1197,7 +1223,7 @@ class H5Saver(H5Backend, QObject):
             ind_dataset = None
             if current_scan == '' or update_h5:
                 next_scan_index = 0
-                update_h5 = True #just started the main program so one should create a new h5
+                update_h5 = True  # just started the main program so one should create a new h5
                 self.file_loaded = False
             else:
                 next_scan_index = self.get_scan_index()
@@ -1211,8 +1237,10 @@ class H5Saver(H5Backend, QObject):
                 curr_date = datetime.date.today()
 
             scan_path, current_filename, dataset_path = self.set_current_scan_path(base_path, base_name, update_h5,
-                                next_scan_index, create_dataset_folder=scan_type, curr_date=curr_date,
-                                ind_dataset=ind_dataset)
+                                                                                   next_scan_index,
+                                                                                   create_dataset_folder=scan_type,
+                                                                                   curr_date=curr_date,
+                                                                                   ind_dataset=ind_dataset)
             self.settings.child(('current_scan_path')).setValue(str(scan_path))
 
             return scan_path, current_filename, dataset_path
@@ -1262,7 +1290,8 @@ class H5Saver(H5Backend, QObject):
         return found_path
 
     @classmethod
-    def set_current_scan_path(cls, base_dir, base_name='Scan', update_h5=False, next_scan_index=0, create_scan_folder=False,
+    def set_current_scan_path(cls, base_dir, base_name='Scan', update_h5=False, next_scan_index=0,
+                              create_scan_folder=False,
                               create_dataset_folder=True, curr_date=None, ind_dataset=None):
         """
 
@@ -1284,9 +1313,9 @@ class H5Saver(H5Backend, QObject):
             curr_date = datetime.date.today()
 
         year_path = cls.find_part_in_path_and_subpath(base_dir, part=str(curr_date.year),
-                                                        create=True)  # create directory of the year if it doen't exist and return it
+                                                      create=True)  # create directory of the year if it doen't exist and return it
         day_path = cls.find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
-                                                       create=True)  # create directory of the day if it doen't exist and return it
+                                                     create=True)  # create directory of the day if it doen't exist and return it
         dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
         dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
 
@@ -1300,8 +1329,9 @@ class H5Saver(H5Backend, QObject):
                 else:
                     ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2])
 
-        dataset_path = cls.find_part_in_path_and_subpath(day_path, part=dataset_base_name + "_{:03d}".format(ind_dataset),
-                                                     create=create_dataset_folder)
+        dataset_path = cls.find_part_in_path_and_subpath(day_path,
+                                                         part=dataset_base_name + "_{:03d}".format(ind_dataset),
+                                                         create=create_dataset_folder)
         scan_paths = sorted([path for path in dataset_path.glob(base_name + '*') if path.is_dir()])
         # if scan_paths==[]:
         #     ind_scan=0
@@ -1313,7 +1343,7 @@ class H5Saver(H5Backend, QObject):
         ind_scan = next_scan_index
 
         scan_path = cls.find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
-                                                  create=create_scan_folder)
+                                                      create=create_scan_folder)
         return scan_path, base_name + '{:03d}'.format(ind_scan), dataset_path
 
     def get_last_scan(self):
@@ -1348,8 +1378,8 @@ class H5Saver(H5Backend, QObject):
                     if 'scan_done' in self.get_attr(self.get_node(self.raw_group, groups[-1])):
                         if self.get_attr(self.get_node(self.raw_group, groups[-1]), 'scan_done'):
                             return len(groups)
-                        return len(groups)-1
-                    return len(groups)-1
+                        return len(groups) - 1
+                    return len(groups) - 1
                 return 0
 
         except Exception as e:
@@ -1408,7 +1438,7 @@ class H5Saver(H5Backend, QObject):
         if isinstance(where, Node):
             where = where.node
         logger = 'Logger'
-        if not logger in list(self.get_children(where)):
+        if logger not in list(self.get_children(where)):
             # check if logger node exist
             self.logger_array = self.add_string_array(where, logger)
             self.logger_array.attrs['type'] = 'log'
@@ -1461,7 +1491,7 @@ class H5Saver(H5Backend, QObject):
         """
 
         if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
-            if 'axis' not in axis: # this take care of the case of sequential scans where axes are labelled with indexes
+            if 'axis' not in axis:  # this take care of the case of sequential scans where axes are labelled with indexes
                 raise NameError('Invalid navigation axis name')
 
         array = self.add_array(parent_group, f"{self.settings.child(('save_type')).value()}_{axis}", 'navigation_axis',
@@ -1474,7 +1504,7 @@ class H5Saver(H5Backend, QObject):
         isadaptive = scan_subtype == 'Adaptive'
         if not isadaptive:
             shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
-                                                          remove_scan_dimension=True)
+                                                              remove_scan_dimension=True)
         else:
             shape, dimension, size = data_dict['data'].shape, '0D', 1
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
@@ -1491,8 +1521,8 @@ class H5Saver(H5Backend, QObject):
                 tmp_dict = copy.deepcopy(data_dict['x_axis'])
                 array_to_save = tmp_dict.pop('data')
             self.add_array(channel_group, 'x_axis', 'axis',
-                                   array_type=np.float, array_to_save=array_to_save,
-                                   enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+                           array_type=np.float, array_to_save=array_to_save,
+                           enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         if 'y_axis' in data_dict:
             if not isinstance(data_dict['y_axis'], dict):
                 array_to_save = data_dict['y_axis']
@@ -1501,8 +1531,8 @@ class H5Saver(H5Backend, QObject):
                 tmp_dict = copy.deepcopy(data_dict['y_axis'])
                 array_to_save = tmp_dict.pop('data')
             self.add_array(channel_group, 'y_axis', 'axis',
-                                   array_type=np.float, array_to_save=array_to_save,
-                                   enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+                           array_type=np.float, array_to_save=array_to_save,
+                           enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
 
     def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_subtype='',
@@ -1537,7 +1567,7 @@ class H5Saver(H5Backend, QObject):
         shape, dimension, size = utils.get_data_dimension(data_dict['data'])
         tmp_data_dict = copy.deepcopy(data_dict)
 
-        #save axis
+        # save axis
         # this loop covers all type of axis : x_axis, y_axis... nav_x_axis, ...
         axis_keys = [k for k in tmp_data_dict.keys() if 'axis' in k]
         for key in axis_keys:
@@ -1554,7 +1584,7 @@ class H5Saver(H5Backend, QObject):
 
         array_to_save = tmp_data_dict.pop('data')
         if 'type' in tmp_data_dict:
-            tmp_data_dict.pop('type') #otherwise this metadata would overide mandatory attribute 'type' for a h5 node
+            tmp_data_dict.pop('type')  # otherwise this metadata would overide mandatory attribute 'type' for a h5 node
         tmp_data_dict.update(metadata)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
                                     title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension,
@@ -1619,13 +1649,13 @@ class H5Saver(H5Backend, QObject):
             array = self.create_earray(where, utils.capitalize(name), dtype=np.dtype(array_type),
                                        data_shape=data_shape, title=title)
         else:
-            if add_scan_dim:  #means it is an array initialization to zero
+            if add_scan_dim:  # means it is an array initialization to zero
                 shape = list(scan_shape[:])
                 shape.extend(data_shape)
                 if init or array_to_save is None:
                     array_to_save = np.zeros(shape)
 
-            array = self.create_carray(where, utils.capitalize(name), obj=array_to_save,  title=title)
+            array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
         self.set_attr(array, 'type', data_type)
         self.set_attr(array, 'data_dimension', data_dimension)
         self.set_attr(array, 'scan_type', scan_type)
@@ -1676,7 +1706,7 @@ class H5Saver(H5Backend, QObject):
             ind_group = -1
         else:
             ind_group = int(nodes_tmp[-1][-3:])
-        group = self.get_set_group(where, utils.capitalize(group_type)+'{:03d}'.format(ind_group + 1), title)
+        group = self.get_set_group(where, utils.capitalize(group_type) + '{:03d}'.format(ind_group + 1), title)
         self.set_attr(group, 'settings', settings_as_xml)
         if group_type.lower() != 'ch':
             self.set_attr(group, 'type', group_type.lower())
@@ -1740,15 +1770,15 @@ class H5Saver(H5Backend, QObject):
                     param.setValue(False)
                     self.show_file_content()
 
-
                 elif param.name() == 'base_path':
                     try:
                         if not os.path.isdir(param.value()):
                             os.mkdir(param.value())
-                    except:
+                    except Exception as e:
+                        logger.warning(f"The base path couldn't be set, please check your options: {str(e)}")
                         self.update_status("The base path couldn't be set, please check your options")
 
-                elif param.name() in putils.iter_children(self.settings.child(('compression_options')), []):
+                elif param.name() in putils.iter_children(self.settings.child('compression_options'), []):
                     compression = self.settings.child('compression_options', 'h5comp_library').value()
                     compression_opts = self.settings.child('compression_options', 'h5comp_level').value()
                     self.define_compression(compression, compression_opts)
@@ -1775,6 +1805,7 @@ class H5Saver(H5Backend, QObject):
             self.analysis_prog = H5Browser(form, h5file=self.h5file)
         form.show()
 
+
 def find_scan_node(scan_node):
     """
     utility function to find the parent node of "scan" type, meaning some of its children (DAQ_scan case)
@@ -1796,16 +1827,18 @@ def find_scan_node(scan_node):
                 break
             else:
                 scan_node = scan_node.parent_node
-        children = list(scan_node.children().values()) #for data saved using daq_scan
-        children.extend([scan_node.parent_node.children()[child] for child in scan_node.parent_node.children_name()]) #for data saved using the daq_logger
+        children = list(scan_node.children().values())  # for data saved using daq_scan
+        children.extend([scan_node.parent_node.children()[child] for child in
+                         scan_node.parent_node.children_name()])  # for data saved using the daq_logger
         nav_children = []
         for child in children:
             if 'type' in child.attrs.attrs_name:
                 if child.attrs['type'] == 'navigation_axis':
                     nav_children.append(child)
         return scan_node, nav_children
-    except:
+    except Exception:
         return None, []
+
 
 class H5BrowserUtil(H5Backend):
     def __init__(self, backend='tables'):
@@ -1839,7 +1872,7 @@ class H5BrowserUtil(H5Backend):
                             dtypes.append((subnode_name, data.dtype))
                             header.append(subnode_name)
                             if data.dtype.char == 'U':
-                                fmt = '%s'  #for strings
+                                fmt = '%s'  # for strings
                             elif data.dtype.char == 'l':
                                 fmt = '%d'  # for integers
                             else:
@@ -1847,10 +1880,10 @@ class H5BrowserUtil(H5Backend):
                             fmts.append(fmt)
 
                 data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
-                np.savetxt(filesavename, data_trans, fmts, '\t', header='#'+'\t'.join(header))
+                np.savetxt(filesavename, data_trans, fmts, '\t', header='#' + '\t'.join(header))
 
     def get_h5file_scans(self, where='/'):
-        #TODO add a test for this method
+        # TODO add a test for this method
         scan_list = []
         where = self.get_node(where)
         for node in self.walk_nodes(where):
@@ -1936,8 +1969,8 @@ class H5BrowserUtil(H5Backend):
                                         axes['nav_{:s}'.format(ax)] = Axis(data=axis_node.read())
                                     else:
                                         axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
-                                        if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[
-                                            ind_ax]:  # could happen in case of linear back to start type of scan
+                                        if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:
+                                            # could happen in case of linear back to start type of scan
                                             tmp_ax = []
                                             for ix in axes['nav_{:s}'.format(ax)]['data']:
                                                 tmp_ax.extend([ix, ix])
@@ -1950,7 +1983,7 @@ class H5BrowserUtil(H5Backend):
 
                         if 'scan_type' in node.attrs.attrs_name:
                             scan_type = node.attrs['scan_type'].lower()
-                            #if scan_type == 'scan1d' or scan_type == 'scan2d':
+                            # if scan_type == 'scan1d' or scan_type == 'scan2d':
                             scan_node, nav_children = find_scan_node(node)
                             nav_axes = []
                             if scan_type == 'tabular' or is_spread:
@@ -1964,14 +1997,11 @@ class H5BrowserUtil(H5Backend):
                                     all_units.append(axis_node.attrs['units'])
 
                                 nav_axes.append(0)
-                                axes[f'nav_x_axis'] = Axis(data=np.linspace(0, npts-1, npts),
-                                                           nav_index=nav_axes[-1],
-                                                           units='',
-                                                           label='Scan index',
-                                                           labels=labels,
-                                                           datas=datas,
-                                                           all_units=all_units)
-                            else :
+                                axes['nav_x_axis'] = Axis(
+                                    data=np.linspace(0, npts - 1, npts),
+                                    nav_index=nav_axes[-1], units='', label='Scan index', labels=labels,
+                                    datas=datas, all_units=all_units)
+                            else:
                                 for axis_node in nav_children:
                                     nav_axes.append(axis_node.attrs['nav_index'])
                                     if is_spread:
@@ -1979,9 +2009,11 @@ class H5BrowserUtil(H5Backend):
                                                                                nav_index=nav_axes[-1])
                                     else:
                                         axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.unique(axis_node.read()),
-                                                                           nav_index=nav_axes[-1])
+                                                                               nav_index=nav_axes[-1])
                                         if nav_axes[-1] < len(data.shape):
-                                            if axes[f'nav_{nav_axes[-1]:02d}']['data'].shape[0] != data.shape[nav_axes[-1]]:  # could happen in case of linear back to start type of scan
+                                            if axes[f'nav_{nav_axes[-1]:02d}'][
+                                                    'data'].shape[0] != data.shape[nav_axes[-1]]:
+                                                # could happen in case of linear back to start type of scan
                                                 tmp_ax = []
                                                 for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
                                                     tmp_ax.extend([ix, ix])
@@ -2001,17 +2033,20 @@ class H5BrowserUtil(H5Backend):
                             axes['y_axis']['units'] = axis_node.attrs['units']
                         if 'label' in axis_node.attrs.attrs_name:
                             axes['y_axis']['label'] = axis_node.attrs['label']
-                        axes['x_axis'] = Axis(data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
-                                              units='pxls',
-                                              label='')
+                        axes['x_axis'] = Axis(
+                            data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
+                            units='pxls',
+                            label='')
                 return data, axes, nav_axes, is_spread
 
             elif isinstance(data, list):
                 return data, [], [], is_spread
 
+
 class H5Browser(QObject):
     """UI used to explore h5 files, plot and export subdatas"""
-    data_node_signal = pyqtSignal(str) # the path of a node where data should be monitored, displayed...whatever use from the caller
+    data_node_signal = pyqtSignal(
+        str)  # the path of a node where data should be monitored, displayed...whatever use from the caller
     status_signal = pyqtSignal(str)
 
     def __init__(self, parent, h5file=None, h5file_path=None, backend='tables'):
@@ -2045,11 +2080,11 @@ class H5Browser(QObject):
         self.backend = backend
         self.current_node_path = None
 
-        #construct the UI interface
+        # construct the UI interface
         self.ui = QObject()  # the user interface
         self.set_GUI()
 
-        #construct the h5 interface and load the file (or open a select file message)
+        # construct the h5 interface and load the file (or open a select file message)
         self.h5utils = H5BrowserUtil(backend=self.backend)
         if h5file is None:
             if h5file_path is None:
@@ -2163,8 +2198,8 @@ class H5Browser(QObject):
         self.splash_sc = QtWidgets.QSplashScreen(splash, QtCore.Qt.WindowStaysOnTopHint)
         self.splash_sc.setVisible(True)
         self.splash_sc.showMessage(f"PyMoDAQ version {get_version()}\n"
-                                   f"Modular Acquisition with Python\nWritten by Sébastien Weber"
-                                   , QtCore.Qt.AlignRight, QtCore.Qt.white)
+                                   f"Modular Acquisition with Python\nWritten by Sébastien Weber",
+                                   QtCore.Qt.AlignRight, QtCore.Qt.white)
 
     def show_log(self):
         import webbrowser
@@ -2185,7 +2220,7 @@ class H5Browser(QObject):
         H_splitter = QtWidgets.QSplitter(Qt.Horizontal)
 
         Form = QtWidgets.QWidget()
-        #self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
+        # self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
         self.ui.h5file_tree = Tree_layout(Form, col_counts=1, labels=["Node"])
         self.ui.h5file_tree.ui.Tree.setMinimumWidth(300)
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
@@ -2305,7 +2340,7 @@ class H5Browser(QObject):
                                                scan_type=scan_type, **deepcopy(axes))
                     self.hyperviewer.init_ROI()
                 elif isinstance(data, list):
-                    if not(not data):
+                    if not (not data):
                         if isinstance(data[0], str):
                             self.ui.text_list.clear()
                             for txt in data:
@@ -2328,7 +2363,6 @@ class H5Browser(QObject):
                 base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
                 self.ui.h5file_tree.ui.Tree.addTopLevelItem(base_tree_item)
                 self.add_widget_totree(pixmap_items)
-
 
         except Exception as e:
             logger.exception(str(e))
@@ -2367,7 +2401,7 @@ def browse_data(fname=None, ret_all=False):
     if type(fname) != str:
         try:
             fname = str(fname)
-        except:
+        except Exception:
             raise Exception('filename in browse data is not valid')
     if fname != '':
         (root, ext) = os.path.splitext(fname)
@@ -2411,6 +2445,7 @@ def browse_data(fname=None, ret_all=False):
         else:
             return data
     return None, '', ''
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
