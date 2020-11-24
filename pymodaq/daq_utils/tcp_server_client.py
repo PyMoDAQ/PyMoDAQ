@@ -9,10 +9,11 @@ from PyQt5 import QtWidgets
 import socket
 import select
 import numpy as np
+
+import pymodaq.daq_utils.parameter.ioxml
+import pymodaq.daq_utils.parameter.utils
 from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand, load_config
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pyqtgraph.parametertree import Parameter
 from collections import OrderedDict
 
 config = load_config()
@@ -419,7 +420,7 @@ class TCPClient(QObject):
                 self.socket.send_list(path)
 
                 # send value
-                data = custom_tree.parameter_to_xml_string(param)
+                data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
                 self.socket.send_string(data)
 
         elif command.command == 'position_is':
@@ -471,7 +472,7 @@ class TCPClient(QObject):
             self.cmd_signal.emit(ThreadCommand('connected'))
             self.socket.send_string(self.client_type)
 
-            self.send_infos_xml(custom_tree.parameter_to_xml_string(self.settings))
+            self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
             self.cmd_signal.emit(ThreadCommand('get_axis'))
             self.connected = True
             # %%
@@ -858,7 +859,7 @@ class TCPServer(QObject):
     def read_infos(self, sock=None, infos=''):
         if sock is not None:
             infos = sock.get_string()
-        params = custom_tree.XML_string_to_parameter(infos)
+        params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(infos)
 
         param_state = {'title': 'Infos Client:', 'name': 'settings_client', 'type': 'group', 'children': params}
         self.settings.child(('settings_client')).restoreState(param_state)
@@ -868,7 +869,7 @@ class TCPServer(QObject):
             path = sock.get_list()
             param_xml = sock.get_string()
         try:
-            param_dict = custom_tree.XML_string_to_parameter(param_xml)[0]
+            param_dict = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(param_xml)[0]
         except:
             raise Exception('Invalid xml structure for TCP server settings')
         try:
@@ -889,7 +890,7 @@ class TCPServer(QObject):
             info = sock.get_string()
             data = sock.get_string()
 
-        if info not in custom_tree.iter_children(self.settings.child(('infos')), []):
+        if info not in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('infos')), []):
             self.settings.child(('infos')).addChild({'name': info, 'type': 'str', 'value': data})
             pass
         else:
@@ -923,6 +924,6 @@ if __name__ ==  '__main__':
          }]}]
 
     param = Parameter.create(name='settings', type='group', children=params)
-    params = custom_tree.parameter_to_xml_string(param)
+    params = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
     server.read_infos(None, params)
     sys.exit(app.exec_())

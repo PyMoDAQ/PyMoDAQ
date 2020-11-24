@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, Qt
 import pyqtgraph as pg
-from.plot_utils import makeAlphaTriangles, makePolygons
+from .plot_utils import makeAlphaTriangles, makePolygons
 
 import numpy as np
 from pyqtgraph import debug as debug
@@ -16,7 +16,6 @@ class ImageItem(pg.ImageItem):
         self.fliplr = False
         self.rotate90 = False
         self.rescale = None
-
 
     def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
         """Returns x and y arrays containing the histogram values for the current image.
@@ -54,7 +53,7 @@ class ImageItem(pg.ImageItem):
                     bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
                     if len(bins) == 0:
                         bins = [mn, mx]
-            except:
+            except Exception:
                 bins = 500
             else:
                 bins = 500
@@ -86,8 +85,8 @@ class ImageItem(pg.ImageItem):
             self.setLookupTable(kargs['lut'], update=update)
         if 'levels' in kargs:
             self.setLevels(kargs['levels'], update=update)
-        #if 'clipLevel' in kargs:
-            #self.setClipLevel(kargs['clipLevel'])
+        # if 'clipLevel' in kargs:
+        # self.setClipLevel(kargs['clipLevel'])
         if 'opacity' in kargs:
             self.setOpacity(kargs['opacity'])
         if 'compositionMode' in kargs:
@@ -174,6 +173,7 @@ class ImageItem(pg.ImageItem):
         if self.border is not None:
             p.setPen(self.border)
             p.drawRect(self.boundingRect())
+
 
 class TriangulationItem(ImageItem):
     """
@@ -354,9 +354,9 @@ class TriangulationItem(ImageItem):
             xds = max(1, int(1.0 / w))
             yds = max(1, int(1.0 / h))
             axes = [1, 0] if self.axisOrder == 'row-major' else [0, 1]
-            #TODO adapt downsample
-            #image = fn.downsample(self.image, xds, axis=axes[0])
-            #image = fn.downsample(image, yds, axis=axes[1])
+            # TODO adapt downsample
+            # image = fn.downsample(self.image, xds, axis=axes[0])
+            # image = fn.downsample(image, yds, axis=axes[1])
             self._lastDownsample = (xds, yds)
         else:
             image = self.image
@@ -368,8 +368,8 @@ class TriangulationItem(ImageItem):
         # Assume images are in column-major order for backward compatibility
         # (most images are in row-major order)
 
-
-        self.triangulation, self.tri_data, rgba_values, alpha = makeAlphaTriangles(image, lut=lut, levels=levels, useRGBA=True)
+        self.triangulation, self.tri_data, rgba_values, alpha = makeAlphaTriangles(image, lut=lut, levels=levels,
+                                                                                   useRGBA=True)
         polygons = makePolygons(self.triangulation)
         self.qimage = dict(polygons=polygons, values=rgba_values, alpha=alpha)
 
@@ -397,12 +397,11 @@ class TriangulationItem(ImageItem):
             points_to_test[:, 1] = val
 
         simplex = self.triangulation.find_simplex(points_to_test)
-        good_indexes = np.where(simplex == np.linspace(0, len(simplex)-1, len(simplex), dtype=int))
+        good_indexes = np.where(simplex == np.linspace(0, len(simplex) - 1, len(simplex), dtype=int))
         return centroids[good_indexes[0]], self.tri_data[good_indexes[0]]
 
     def compute_centroids(self):
         return np.mean(self.triangulation.points[self.triangulation.simplices], axis=1)
-
 
     def dataTransform(self):
         """Return the transform that maps from this image's input array to its
@@ -494,6 +493,7 @@ class TriangulationItem(ImageItem):
     def getPixmap(self):
         pass
 
+
 class PlotCurveItem(pg.PlotCurveItem):
 
     def __init__(self, *args, **kargs):
@@ -567,4 +567,3 @@ class PlotCurveItem(pg.PlotCurveItem):
         if self.fliplr:
             tr.scale(-1, 1)
         return tr
-

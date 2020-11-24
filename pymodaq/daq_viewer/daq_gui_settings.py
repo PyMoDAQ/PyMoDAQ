@@ -8,6 +8,8 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class Ui_Form(object):
@@ -132,7 +134,7 @@ class Ui_Form(object):
         self.gridLayout_3.setSpacing(6)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.label_3 = QtWidgets.QLabel(self.settings_widget)
-        self.label_3.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label_3.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.label_3.setObjectName("label_3")
         self.gridLayout_3.addWidget(self.label_3, 1, 0, 1, 3)
         self.DAQ_type_combo = QtWidgets.QComboBox(self.settings_widget)
@@ -143,7 +145,7 @@ class Ui_Form(object):
         self.DAQ_type_combo.addItem("")
         self.gridLayout_3.addWidget(self.DAQ_type_combo, 0, 3, 1, 3)
         self.label_4 = QtWidgets.QLabel(self.settings_widget)
-        self.label_4.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.label_4.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTrailing | QtCore.Qt.AlignVCenter)
         self.label_4.setObjectName("label_4")
         self.gridLayout_3.addWidget(self.label_4, 0, 0, 1, 3)
         self.Quit_pb = QtWidgets.QPushButton(self.settings_widget)
@@ -223,12 +225,11 @@ class Ui_Form(object):
         self.data_ready_led.setText(_translate("Form", "TextLabel"))
         self.IniDet_pb.setToolTip(_translate("Form", "To initialize the detector"))
         self.IniDet_pb.setText(_translate("Form", "Ini. Det."))
-from pymodaq.daq_utils.plotting.qled import QLED
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     ui = Ui_Form()

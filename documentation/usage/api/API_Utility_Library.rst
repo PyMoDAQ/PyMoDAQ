@@ -18,18 +18,18 @@ daq_utils
    utility_api/file_management
 
 
-custom_tree module
-------------------
+parameter
+---------
 
-Extension of the *pyqtgraph* Parameter, ParameterTree items and dedicated functions to deals with Parameters
+Extension of the *pyqtgraph* Parameter, ParameterTree widgets and dedicated functions to deals with Parameters
 (e.g. save them in XML)
 
 .. toctree::
    :maxdepth: 5
 
-   utility_api/custom_tree/new_items
-   utility_api/custom_tree/param_xml
-   utility_api/custom_tree/param_manage
+   utility_api/parameter/new_items
+   utility_api/parameter/param_xml
+   utility_api/parameter/param_manage
 
 
 

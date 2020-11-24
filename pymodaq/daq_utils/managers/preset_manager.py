@@ -1,17 +1,18 @@
 from PyQt5 import QtWidgets
 import sys
 import os
-from pymodaq.daq_utils import daq_utils as utils
-logger = utils.set_logger(utils.get_module_name(__file__))
-
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing
-from pymodaq.daq_utils.managers import preset_manager_utils  #mandatory to declare some specific Parameter types
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import pymodaq_ptypes
+from pymodaq.daq_utils.managers import preset_manager_utils
+from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
 from pymodaq.daq_utils.pid.pid_params import params as pid_params
 from pathlib import Path
+
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 #check if preset_mode directory exists on the drive
 
@@ -59,18 +60,19 @@ class PresetManager:
         """
 
         """
+        status = False
         self.pid_type = False
-        children = custom_tree.XML_file_to_parameter(filename)
+        children = ioxml.XML_file_to_parameter(filename)
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
         if show:
-            self.show_preset()
-
+            status = self.show_preset()
+        return status
 
     def set_PID_preset(self, pid_model):
         self.pid_type = True
         filename = os.path.join(utils.get_set_pid_path(), pid_model + '.xml')
         if os.path.isfile(filename):
-            children = custom_tree.XML_file_to_parameter(filename)
+            children = ioxml.XML_file_to_parameter(filename)
             self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
 
         else:
@@ -104,7 +106,8 @@ class PresetManager:
                 self.preset_params.child('Detectors','det{:02.0f}'.format(ind_det), 'name').setValue(detectors_name[ind_det])
                 QtWidgets.QApplication.processEvents()
 
-        self.show_preset()
+        status = self.show_preset()
+        return status
 
     def get_set_pid_model_params(self, model_file):
         model_mod = importlib.import_module('pymodaq_pid_models')
@@ -119,7 +122,7 @@ class PresetManager:
         param = [
                 {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'},
                 {'title': 'Use PID as actuator:', 'name': 'use_pid', 'type': 'bool', 'value': False},
-                {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
+                #{'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
                 {'title': 'PID Settings:', 'name': 'pid_settings', 'type': 'group', 'visible': False, 'children': pid_params},
                 ]
         params_move = [{'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
@@ -127,15 +130,15 @@ class PresetManager:
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group',
                                               children=param+self.extra_params+params_move+params_det)
-        self.preset_params.child('saving_options', 'save_type').hide()
-        self.preset_params.child('saving_options', 'save_2D').hide()
-        self.preset_params.child('saving_options', 'do_save').hide()
-        self.preset_params.child('saving_options', 'N_saved').hide()
-        self.preset_params.child('saving_options', 'custom_name').hide()
-        self.preset_params.child('saving_options', 'show_file').hide()
-        self.preset_params.child('saving_options', 'current_scan_name').hide()
-        self.preset_params.child('saving_options', 'current_scan_path').hide()
-        self.preset_params.child('saving_options', 'current_h5_file').hide()
+        # self.preset_params.child('saving_options', 'save_type').hide()
+        # self.preset_params.child('saving_options', 'save_2D').hide()
+        # self.preset_params.child('saving_options', 'do_save').hide()
+        # self.preset_params.child('saving_options', 'N_saved').hide()
+        # self.preset_params.child('saving_options', 'custom_name').hide()
+        # self.preset_params.child('saving_options', 'show_file').hide()
+        # self.preset_params.child('saving_options', 'current_scan_name').hide()
+        # self.preset_params.child('saving_options', 'current_scan_path').hide()
+        # self.preset_params.child('saving_options', 'current_h5_file').hide()
         try:
             for option in self.param_options:
                 if 'path' in option and 'options_dict' in option:
@@ -145,7 +148,8 @@ class PresetManager:
 
         self.preset_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-        self.show_preset()
+        status = self.show_preset()
+        return status
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -204,21 +208,22 @@ class PresetManager:
             # save managers parameters in a xml file
             #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.preset_params, os.path.join(path,
-                                                                               self.preset_params.child(
-                                                                                   ('filename')).value()))
+            ioxml.parameter_to_xml_file(
+                self.preset_params, os.path.join(path, self.preset_params.child('filename').value()))
 
             if not self.pid_type:
                 #check if overshoot configuration and layout configuration with same name exists => delete them if yes
-                file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+                file = os.path.splitext(self.preset_params.child('filename').value())[0]
                 file = os.path.join(overshoot_path, file + '.xml')
                 if os.path.isfile(file):
                     os.remove(file)
 
-                file = os.path.splitext(self.preset_params.child(('filename')).value())[0]
+                file = os.path.splitext(self.preset_params.child('filename').value())[0]
                 file = os.path.join(layout_path, file +'.dock')
                 if os.path.isfile(file):
                     os.remove(file)
+
+        return res == dialog.Accepted
 
 
 if __name__ == '__main__':

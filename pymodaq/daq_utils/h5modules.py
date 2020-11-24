@@ -4,12 +4,12 @@ from collections import OrderedDict
 import warnings
 import logging
 from copy import deepcopy
-import PyQt5  #mandatory for some parameter from Xml
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QBuffer
+from PyQt5 import QtGui, QtCore
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, QLocale, QByteArray
+
+import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
@@ -1748,7 +1748,7 @@ class H5Saver(H5Backend, QObject):
                     except:
                         self.update_status("The base path couldn't be set, please check your options")
 
-                elif param.name() in custom_tree.iter_children(self.settings.child(('compression_options')), []):
+                elif param.name() in putils.iter_children(self.settings.child(('compression_options')), []):
                     compression = self.settings.child('compression_options', 'h5comp_library').value()
                     compression_opts = self.settings.child('compression_options', 'h5comp_level').value()
                     self.define_compression(compression, compression_opts)
@@ -2063,7 +2063,7 @@ class H5Browser(QObject):
         self.ui.h5file_tree.ui.Open_Tree.click()
 
     def check_version(self):
-        if 'pymodaq_version' in self.h5utils.root().attrs:
+        if 'pymodaq_version' in self.h5utils.root().attrs.attrs_name:
             if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
                 msgBox = QtWidgets.QMessageBox(parent=None)
                 msgBox.setWindowTitle("Invalid version")
@@ -2255,11 +2255,11 @@ class H5Browser(QObject):
                 for child in self.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-                params = custom_tree.XML_string_to_parameter(settings)
+                params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(settings)
                 self.settings.addChildren(params)
 
             if scan_settings is not None:
-                params = custom_tree.XML_string_to_parameter(scan_settings)
+                params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(scan_settings)
                 self.settings.addChildren(params)
 
             if pixmaps == []:

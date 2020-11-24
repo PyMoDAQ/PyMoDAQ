@@ -1,18 +1,16 @@
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import QThread
+from PyQt5 import QtWidgets
 import sys
 import os
-import random
 
-import pyqtgraph.parametertree.parameterTypes as pTypes
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from pyqtgraph.parametertree.Parameter import registerParameterType
 
 from pymodaq.daq_utils.gui_utils import select_file
 
 
-class PresetScalableGroupMove(pTypes.GroupParameter):
+class PresetScalableGroupMove(GroupParameter):
     """
         |
 
@@ -25,11 +23,12 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
         --------
         hardware.DAQ_Move_Stage_type
     """
+
     def __init__(self, **opts):
         opts['type'] = 'groupmoveover'
         opts['addText'] = "Add"
         opts['addList'] = opts['movelist']
-        pTypes.GroupParameter.__init__(self, **opts)
+        super().__init__(**opts)
 
     def addNew(self, name):
         """
@@ -40,20 +39,26 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
             *typ*            string
             =============== ===========
         """
-        childnames=[par.name() for par in self.children()]
-        if childnames==[]:
-            newindex=0
+        name_prefix = 'move'
+        child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
+        if not child_indexes:
+            newindex = 0
         else:
-            newindex=len(childnames)
+            newindex = max(child_indexes) + 1
 
-        child={'title': name ,'name': 'move{:02.0f}'.format(newindex), 'type': 'group', 'removable': True, 'children': [
-                {'title': 'Move if overshoot?:' , 'name': 'move_overshoot', 'type': 'bool', 'value': True},
-                {'title': 'Position:', 'name': 'position', 'type': 'float', 'value': 0}],'removable':True, 'renamable':False}
+        child = {'title': name, 'name': f'{name_prefix}{newindex:02.0f}', 'type': 'group', 'removable': True,
+                 'children': [
+                     {'title': 'Move if overshoot?:', 'name': 'move_overshoot', 'type': 'bool', 'value': True},
+                     {'title': 'Position:', 'name': 'position', 'type': 'float', 'value': 0}], 'removable': True,
+                 'renamable': False}
 
         self.addChild(child)
+
+
 registerParameterType('groupmoveover', PresetScalableGroupMove, override=True)
 
-class PresetScalableGroupDet( pTypes.GroupParameter):
+
+class PresetScalableGroupDet(GroupParameter):
     """
         =============== ==============
         **Attributes**    **Type**
@@ -64,13 +69,14 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
         See Also
         --------
     """
+
     def __init__(self, **opts):
         opts['type'] = 'groupdetover'
         opts['addText'] = "Add"
         opts['addList'] = opts['detlist']
         opts['movelist'] = opts['movelist']
 
-        pTypes.GroupParameter.__init__(self, **opts)
+        super().__init__(**opts)
 
     def addNew(self, name):
         """
@@ -82,28 +88,30 @@ class PresetScalableGroupDet( pTypes.GroupParameter):
             =============== ===========  ================
         """
         try:
-            childnames=[par.name() for par in self.children()]
-            if childnames==[]:
-                newindex=0
+            name_prefix = 'det'
+            child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
+            if not child_indexes:
+                newindex = 0
             else:
-                newindex=len(childnames)
+                newindex = max(child_indexes) + 1
 
-            child={'title': name,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
-                    {'title': 'Trig overshoot?:' , 'name': 'trig_overshoot', 'type': 'bool', 'value': True},
-                    {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 20},
-                    {'title': 'Triggered Moves:', 'name': 'params', 'type': 'groupmoveover', 'movelist': self.opts['movelist']}],'removable':True, 'renamable':False}
+            child = {'title': name, 'name': f'{name_prefix}{newindex:02.0f}', 'type': 'group', 'children': [
+                {'title': 'Trig overshoot?:', 'name': 'trig_overshoot', 'type': 'bool', 'value': True},
+                {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 20},
+                {'title': 'Triggered Moves:', 'name': 'params', 'type': 'groupmoveover',
+                 'movelist': self.opts['movelist']}], 'removable': True, 'renamable': False}
 
             self.addChild(child)
         except Exception as e:
             print(str(e))
+
+
 registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
 
-
-#check if overshoot_configurations directory exists on the drive
+# check if overshoot_configurations directory exists on the drive
 from pymodaq.daq_utils.daq_utils import get_set_overshoot_path
 
 overshoot_path = get_set_overshoot_path()
-
 
 
 class OvershootManager:
@@ -118,8 +126,8 @@ class OvershootManager:
             msgBox.setText("Overshoot Manager?");
             msgBox.setInformativeText("What do you want to do?");
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
-            new_button=msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
-            modify_button=msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
+            new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
+            modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
             msgBox.setDefaultButton(QtWidgets.QMessageBox.Cancel)
             ret = msgBox.exec()
 
@@ -127,28 +135,29 @@ class OvershootManager:
                 self.set_new_overshoot()
 
             elif msgBox.clickedButton() == modify_button:
-                path = select_file(start_path=overshoot_path,save=False, ext='xml')
+                path = select_file(start_path=overshoot_path, save=False, ext='xml')
                 if path != '':
                     self.set_file_overshoot(str(path))
-            else: #cancel
+            else:  # cancel
                 pass
 
     def set_file_overshoot(self, filename, show=True):
         """
 
         """
-        children = custom_tree.XML_file_to_parameter(filename)
+        children = ioxml.XML_file_to_parameter(filename)
         self.overshoot_params = Parameter.create(title='Overshoot', name='Overshoot', type='group', children=children)
         if show:
             self.show_overshoot()
 
-
-    def set_new_overshoot(self, file = None):
+    def set_new_overshoot(self, file=None):
         if file is None:
             file = 'overshoot_default'
         param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}]
-        params_det = [{'title': 'Detectors:', 'name': 'Detectors','type': 'groupdetover', 'detlist': self.det_modules, 'movelist': self.move_modules}]  # [PresetScalableGroupDet(name="Detectors")]
-        self.overshoot_params = Parameter.create(title='Preset', name='Preset', type='group', children=param+params_det)
+        params_det = [{'title': 'Detectors:', 'name': 'Detectors', 'type': 'groupdetover', 'detlist': self.det_modules,
+                       'movelist': self.move_modules}]  # [PresetScalableGroupDet(name="Detectors")]
+        self.overshoot_params = Parameter.create(title='Preset', name='Preset', type='group',
+                                                 children=param + params_det)
 
         self.show_overshoot()
 
@@ -178,15 +187,14 @@ class OvershootManager:
 
         if res == dialog.Accepted:
             # save managers parameters in a xml file
-            #start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
-            #start = os.path.join("..",'daq_scan')
-            custom_tree.parameter_to_xml_file(self.overshoot_params, os.path.join(overshoot_path,
-                                                                               self.overshoot_params.child(
-                                                                                   ('filename')).value()))
+            # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
+            # start = os.path.join("..",'daq_scan')
+            ioxml.parameter_to_xml_file(
+                self.overshoot_params, os.path.join(overshoot_path, self.overshoot_params.child('filename').value()))
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    prog = OvershootManager(True,['det camera','det current'],['Move X','Move Y'])
+    prog = OvershootManager(True, ['det camera', 'det current'], ['Move X', 'Move Y'])
 
     sys.exit(app.exec_())

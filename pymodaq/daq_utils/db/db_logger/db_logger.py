@@ -1,10 +1,7 @@
-import os
-import numpy as np
 import logging
 import datetime
 from PyQt5 import QtCore
 from contextlib import contextmanager
-import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
@@ -12,7 +9,6 @@ from .db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, C
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = utils.load_config()

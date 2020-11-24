@@ -1,10 +1,11 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
 # from enum import IntEnum
 from easydict import EasyDict as edict
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.parameter.utils import iter_children
+from pymodaq.daq_utils.parameter import ioxml
+import pymodaq.daq_utils.parameter.utils
+from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
@@ -315,10 +316,10 @@ class DAQ_Move_base(QObject):
             param = child
 
         elif change == 'parent':
-            children = custom_tree.get_param_from_name(self.settings, param.name())
+            children = pymodaq.daq_utils.parameter.utils.get_param_from_name(self.settings, param.name())
 
             if children is not None:
-                path = custom_tree.get_param_path(children)
+                path = pymodaq.daq_utils.parameter.utils.get_param_path(children)
                 self.settings.child(*path[1:-1]).removeChild(children)
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
@@ -385,16 +386,16 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
     def commit_settings(self, param):
 
-        if param.name() in custom_tree.iter_children(self.settings.child(('settings_client')), []):
+        if param.name() in iter_children(self.settings.child(('settings_client')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
-            path = custom_tree.get_param_path(param)[
+            path = pymodaq.daq_utils.parameter.utils.get_param_path(param)[
                    2:]  # get the path of this param as a list starting at parent 'infos'
 
             actuator_socket.send_list(path)
 
             # send value
-            data = custom_tree.parameter_to_xml_string(param)
+            data = ioxml.parameter_to_xml_string(param)
             actuator_socket.send_string(data)
 
     def ini_stage(self, controller=None):

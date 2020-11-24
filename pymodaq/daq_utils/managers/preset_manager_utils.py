@@ -1,16 +1,12 @@
 import random
 from pymodaq.daq_utils import daq_utils as utils
-logger = utils.set_logger(utils.get_module_name(__file__))
-
-from pyqtgraph.parametertree import parameterTypes as pTypes
-
 from pymodaq.daq_move.utility_classes import params as daq_move_params
 from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
 
 from pyqtgraph.parametertree.Parameter import registerParameterType
+from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
 
-
-
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
 DAQ_0DViewer_Det_types = utils.get_plugins('daq_0Dviewer')
@@ -26,7 +22,7 @@ def iterative_show_pb(params):
             iterative_show_pb(param['children'])
 
 
-class PresetScalableGroupMove(pTypes.GroupParameter):
+class PresetScalableGroupMove(GroupParameter):
     """
         |
 
@@ -43,7 +39,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
         opts['type'] = 'groupmove'
         opts['addText'] = "Add"
         opts['addList'] = [mov['name'] for mov in DAQ_Move_Stage_type]
-        pTypes.GroupParameter.__init__(self, **opts)
+        super().__init__(**opts)
 
     def addNew(self, typ):
         """
@@ -54,11 +50,14 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
             *typ*            string
             =============== ===========
         """
-        childnames = [par.name() for par in self.children()]
-        if childnames == []:
+        name_prefix = 'move'
+
+        child_indexes = [int(par.name()[len(name_prefix)+1:]) for par in self.children()]
+
+        if child_indexes == []:
             newindex = 0
         else:
-            newindex = len(childnames)
+            newindex = max(child_indexes)+1
 
         params = daq_move_params
         iterative_show_pb(params)
@@ -79,7 +78,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
                     if child['name'] == 'controller_ID':
                         child['value'] = random.randint(0, 9999)
 
-        child = {'title': 'Actuator {:02.0f}'.format(newindex), 'name': 'move{:02.0f}'.format(newindex), 'type': 'group',
+        child = {'title': 'Actuator {:02.0f}'.format(newindex), 'name': f'{name_prefix}{newindex:02.0f}', 'type': 'group',
                  'removable': True, 'children': [
                 {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Move {:02.0f}'.format(newindex)},
                 {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
@@ -90,7 +89,7 @@ class PresetScalableGroupMove(pTypes.GroupParameter):
 registerParameterType('groupmove', PresetScalableGroupMove, override=True)
 
 
-class PresetScalableGroupDet(pTypes.GroupParameter):
+class PresetScalableGroupDet(GroupParameter):
     """
         =============== ==============
         **Attributes**    **Type**
@@ -115,7 +114,7 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
             options.append('DAQND/'+name)
         opts['addList'] = options
 
-        pTypes.GroupParameter.__init__(self, **opts)
+        super().__init__(**opts)
 
     def addNew(self, typ):
         """
@@ -127,11 +126,13 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
             =============== ===========  ================
         """
         try:
-            childnames=[par.name() for par in self.children()]
-            if childnames==[]:
-                newindex=0
+            name_prefix = 'det'
+            child_indexes = [int(par.name()[len(name_prefix)+1:]) for par in self.children()]
+
+            if child_indexes == []:
+                newindex = 0
             else:
-                newindex=len(childnames)
+                newindex = max(child_indexes) + 1
 
             params = daq_viewer_params
             iterative_show_pb(params)
@@ -178,7 +179,7 @@ class PresetScalableGroupDet(pTypes.GroupParameter):
 
                     main_child['children'].extend(params_hardware)
 
-            child = {'title': 'Det {:02.0f}'.format(newindex) ,'name': 'det{:02.0f}'.format(newindex), 'type': 'group', 'children': [
+            child = {'title': 'Det {:02.0f}'.format(newindex) ,'name': f'{name_prefix}{newindex:02.0f}', 'type': 'group', 'children': [
                     {'title': 'Name:', 'name': 'name', 'type': 'str', 'value': 'Det {:02.0f}'.format(newindex)},
                     {'title': 'Init?:', 'name': 'init', 'type': 'bool', 'value': True},
                     {'title': 'Settings:', 'name': 'params', 'type': 'group', 'children': params},

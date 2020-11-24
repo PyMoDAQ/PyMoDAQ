@@ -1,17 +1,20 @@
 import sys
-import json
 from collections import OrderedDict
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QObject, pyqtSignal, QLocale, pyqtSlot
 
-from pymodaq.daq_utils.daq_utils import linspace_step, odd_even, greater2n, find_index
+from pymodaq.daq_utils.parameter import ioxml
+
+from pymodaq.daq_utils.daq_utils import linspace_step, odd_even, greater2n
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.gui_utils as gutils
+from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.plotting.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_types# to be placed after importing Parameter
+
 from pymodaq.daq_utils.exceptions import ScannerException
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -363,7 +366,7 @@ class Scanner(QObject):
     def load_xml(self):
         fname = gutils.select_file(start_path=None, save=False, ext='xml')
         if fname is not None and fname != '':
-            par = custom_tree.XML_file_to_parameter(fname)
+            par = ioxml.XML_file_to_parameter(fname)
             self.settings.restoreState(Parameter.create(name='settings', type='group', children=par).saveState())
             self.update_model()
             scan_type = self.settings.child('scan_options', 'scan_type').value()
@@ -378,7 +381,7 @@ class Scanner(QObject):
         """
         fname = gutils.select_file(start_path=None, save=True, ext='xml')
         if fname is not None and fname != '':
-            custom_tree.parameter_to_xml_file(self.settings, fname)
+            ioxml.parameter_to_xml_file(self.settings, fname)
 
     @property
     def actuators(self):
@@ -409,14 +412,14 @@ class Scanner(QObject):
                     else:
                         init_data = [[name, 0., 1., 0.1] for name in self._actuators]
                 self.table_model = TableModelSequential(init_data,)
-                self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
+                self.table_view = putils.get_widget_from_tree(self.settings_tree, pymodaq_types.TableViewCustom)[0]
                 self.settings.child('scan_options', 'seq_settings', 'seq_table').setValue(self.table_model)
             elif scan_type == 'Tabular':
                 if init_data is None:
                     init_data = [[0. for name in self._actuators]]
     
                 self.table_model = TableModelTabular(init_data, [name for name in self._actuators])
-                self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[1]
+                self.table_view = putils.get_widget_from_tree(self.settings_tree, pymodaq_types.TableViewCustom)[1]
                 self.settings.child('scan_options', 'tabular_settings', 'tabular_table').setValue(self.table_model)
         except Exception as e:
             logger.exception(str(e))
@@ -569,7 +572,7 @@ class Scanner(QObject):
 
                     self.update_scan2D_type(param)
 
-                elif param.name() in custom_tree.iter_children(self.settings.child('scan_options', 'scan2D_settings'), []):
+                elif param.name() in putils.iter_children(self.settings.child('scan_options', 'scan2D_settings'), []):
                     self.update_scan2D_type(param)
                     self.set_scan()
 
@@ -1109,7 +1112,7 @@ def set_scan_sequential(starts, stops, steps):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     from PyQt5.QtCore import QThread
-    from pymodaq.daq_utils.gui_utils import DockArea, TableModel, SpinBoxDelegate
+    from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
     from pymodaq.daq_utils.plotting.navigator import Navigator

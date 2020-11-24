@@ -1,10 +1,10 @@
 import os
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize
+from PyQt5 import QtWidgets
+from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal
 
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter.utils import get_param_path, get_param_from_name, iter_children
+from pyqtgraph.parametertree import Parameter
 from easydict import EasyDict as edict
 
 import numpy as np
@@ -20,13 +20,11 @@ comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status',
 local_path = get_set_local_dir()
 # look for eventual calibration files
 calibs = ['None']
-try:
-    for ind_file, file in enumerate(os.listdir(os.path.join(local_path, 'camera_calibrations'))):
-        if file.endswith(".xml"):
-            (filesplited, ext) = os.path.splitext(file)
-        calibs.append(filesplited)
-except:
-    pass
+if local_path.joinpath('camera_calibrations').is_dir():
+    for ind_file, file in enumerate(local_path.joinpath('camera_calibrations').iterdir()):
+        if 'xml' in file.suffix:
+            calibs.append(file.stem)
+
 
 config = load_config()
 
@@ -192,7 +190,7 @@ class DAQ_Viewer_base(QObject):
             change = settings_parameter_dict['change']
             try:
                 self.settings.sigTreeStateChanged.disconnect(self.send_param_status)
-            except:
+            except Exception:
                 pass
             if change == 'value':
                 self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
@@ -203,10 +201,10 @@ class DAQ_Viewer_base(QObject):
                 param = child
 
             elif change == 'parent':
-                children = custom_tree.get_param_from_name(self.settings, param.name())
+                children = get_param_from_name(self.settings, param.name())
 
                 if children is not None:
-                    path = custom_tree.get_param_path(children)
+                    path = get_param_path(children)
                     self.settings.child(*path[1:-1]).removeChild(children)
 
             self.settings.sigTreeStateChanged.connect(self.send_param_status)
@@ -338,8 +336,6 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             else:
                 self.send_command(sock, command)
 
-
-
         else:  # else simulate mock data
             if command == "Send Data 0D":
                 self.set_1D_Mock_data()
@@ -440,24 +436,24 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
     def commit_settings(self, param):
 
-        if param.name() in custom_tree.iter_children(self.settings.child(('settings_client')), []):
+        if param.name() in iter_children(self.settings.child(('settings_client')), []):
             grabber_socket = \
                 [client['socket'] for client in self.connected_clients if client['type'] == self.client_type][0]
             grabber_socket.send_string('set_info')
 
-            path = custom_tree.get_param_path(param)[
-                   2:]  # get the path of this param as a list starting at parent 'infos'
+            path = get_param_path(param)[2:]  # get the path of this param as a list starting at parent 'infos'
             grabber_socket.send_list(path)
 
             # send value
-            data = custom_tree.parameter_to_xml_string(param)
+            data = ioxml.parameter_to_xml_string(param)
             grabber_socket.send_string(data)
 
     def ini_detector(self, controller=None):
         """
             | Initialisation procedure of the detector updating the status dictionnary.
             |
-            | Init axes from image , here returns only None values (to tricky to di it with the server and not really necessary for images anyway)
+            | Init axes from image , here returns only None values (to tricky to di it with the server and not really
+             necessary for images anyway)
 
             See Also
             --------
@@ -538,7 +534,6 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
             self.Naverage = Naverage
             self.process_cmds("Send Data {:s}".format(self.grabber_type))
             # self.command_server.emit(["process_cmds","Send Data 2D"])
-
 
         except Exception as e:
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), "log"]))

@@ -1,0 +1,1 @@
+from pyqtgraph.parametertree import parameterTypes

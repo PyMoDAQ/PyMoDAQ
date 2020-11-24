@@ -1,5 +1,6 @@
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QRectF, QPointF
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QRectF, \
+    QPointF
 import sys
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
@@ -17,6 +18,7 @@ from pymodaq.daq_utils.plotting.viewerND.signal_manager import Signal
 import datetime
 
 logger = utils.set_logger(utils.get_module_name(__file__))
+
 
 class ViewerND(QtWidgets.QWidget, QObject):
     """
@@ -51,16 +53,15 @@ class ViewerND(QtWidgets.QWidget, QObject):
     """
     command_DAQ_signal = pyqtSignal(list)
     log_signal = pyqtSignal(str)
-    data_to_export_signal = pyqtSignal(OrderedDict) #edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-
+    data_to_export_signal = pyqtSignal(OrderedDict)  # edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
 
     def __init__(self, parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(ViewerND, self).__init__()
         # if parent is None:
         #     raise Exception('no valid parent container, expected dockarea')
-            # parent=DockArea()
-            # exit(0)
+        # parent=DockArea()
+        # exit(0)
 
         if parent is None:
             area = DockArea()
@@ -97,8 +98,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
                                           data2D=OrderedDict(),
                                           dataND=OrderedDict())
 
-
-
     @pyqtSlot(OrderedDict)
     def export_data(self, datas):
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
@@ -128,8 +127,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             logger.exception(str(e))
             return ""
 
-
-    def parameter_tree_changed(self,param,changes):
+    def parameter_tree_changed(self, param, changes):
         """
             Foreach value changed, update :
                 * Viewer in case of **DAQ_type** parameter name
@@ -144,10 +142,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
             *param*           instance of ppyqtgraph parameter   the parameter to be checked
             *changes*         tuple list                         Contain the (param,changes,info) list listing the changes made
             =============== =================================== ================================================================
-
-            See Also
-            --------
-            change_viewer, daq_utils.custom_parameter_tree.iter_children
         """
         try:
             for param, change, data in changes:
@@ -161,15 +155,14 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
                 elif change == 'value':
                     pass
-                    #if param.name()=='navigator_axes':
+                    # if param.name()=='navigator_axes':
                     #    self.update_data_signal()
                     #    self.settings.child('data_shape_settings', 'data_shape').setValue(str(datas_transposed))
                     #    self.set_data(self.datas)
 
-
         except Exception as e:
             logger.exception(str(e))
-            self.update_status(utils.getLineInfo()+str(e),self.wait_time,'log')
+            self.update_status(utils.getLineInfo() + str(e), self.wait_time, 'log')
 
     def set_axis(self, Npts):
         """
@@ -190,7 +183,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
         axis = np.linspace(0, Npts, Npts, endpoint=False)
         return axis
 
-
     def restore_nav_axes(self, navigation_axes, nav_axes=None):
         if nav_axes is None:
             N_nav_axes = len(self.datas.data.shape)
@@ -209,7 +201,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 sorted_indexes.append(ind)
                 nav_axes_dicts.append(Axis(nav_index=ind, label=f'Nav {ind:02d}'))
                 N = self.datas.data.shape[ind]
-                nav_axes_dicts[-1]['data'] = np.linspace(0, N-1, N)
+                nav_axes_dicts[-1]['data'] = np.linspace(0, N - 1, N)
 
         # sort nav axes:
         sorted_index = np.argsort(sorted_indexes)
@@ -229,19 +221,20 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.restore_nav_axes(nav_axes)
 
             ##########################################################################
-            #display the correct signal viewer
-            if len(datas_transposed.axes_manager.signal_shape) == 0: #signal data are 0D
+            # display the correct signal viewer
+            if len(datas_transposed.axes_manager.signal_shape) == 0:  # signal data are 0D
                 self.ui.viewer1D.parent.setVisible(True)
                 self.ui.viewer2D.parent.setVisible(False)
-            elif len(datas_transposed.axes_manager.signal_shape) == 1: #signal data are 1D
+            elif len(datas_transposed.axes_manager.signal_shape) == 1:  # signal data are 1D
                 self.ui.viewer1D.parent.setVisible(True)
                 self.ui.viewer2D.parent.setVisible(False)
-            elif len(datas_transposed.axes_manager.signal_shape) == 2: #signal data are 2D
+            elif len(datas_transposed.axes_manager.signal_shape) == 2:  # signal data are 2D
                 self.ui.viewer1D.parent.setVisible(False)
                 self.ui.viewer2D.parent.setVisible(True)
             self.x_axis = Axis()
             self.y_axis = Axis()
-            if len(datas_transposed.axes_manager.signal_shape) == 1 or len(datas_transposed.axes_manager.signal_shape) == 2:#signal data are 1D
+            if len(datas_transposed.axes_manager.signal_shape) == 1 or len(
+                    datas_transposed.axes_manager.signal_shape) == 2:  # signal data are 1D
 
                 if 'x_axis' in kwargs:
                     if not isinstance(kwargs['x_axis'], dict):
@@ -256,8 +249,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                                                                        label=kwargs['y_axis']['label'],
                                                                        units=kwargs['y_axis']['units']))
 
-
-            if len(datas_transposed.axes_manager.signal_shape)==2:#signal data is 2D
+            if len(datas_transposed.axes_manager.signal_shape) == 2:  # signal data is 2D
                 if 'y_axis' in kwargs:
                     if not isinstance(kwargs['y_axis'], dict):
                         self.y_axis['data'] = kwargs['y_axis'][:]
@@ -273,10 +265,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
             elif len(axes_nav) == 2:
                 self.update_viewer_data(*self.ui.navigator2D.ui.crosshair.get_positions())
 
-
-
-            ##get ROI bounds from viewers if any
-            ROI_bounds_1D=[]
+            # #get ROI bounds from viewers if any
+            ROI_bounds_1D = []
             try:
                 self.ROI1D.getRegion()
                 indexes_values = utils.find_index(self.ui.viewer1D.x_axis, self.ROI1D.getRegion())
@@ -304,12 +294,11 @@ class ViewerND(QtWidgets.QWidget, QObject):
             if len(nav_axes) == 0:  # no Navigator
                 self.ui.navigator1D.parent.setVisible(False)
                 self.ui.navigator2D.parent.setVisible(False)
-                #self.navigator_label.setVisible(False)
+                # self.navigator_label.setVisible(False)
                 self.ui.nav_axes_widget.setVisible(False)
                 self.ROI1D.setVisible(False)
                 self.ROI2D.setVisible(False)
                 navigator_data = []
-
 
             elif len(nav_axes) == 1:  # 1D Navigator
                 self.ROI1D.setVisible(True)
@@ -317,7 +306,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.ui.navigator1D.parent.setVisible(True)
                 self.ui.navigator2D.parent.setVisible(False)
                 self.ui.nav_axes_widget.setVisible(False)
-                #self.navigator_label.setVisible(True)
+                # self.navigator_label.setVisible(True)
                 self.ui.navigator1D.remove_plots()
                 self.ui.navigator1D.x_axis = nav_axes[0]
 
@@ -371,15 +360,14 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     self.ui.navigator1D.show_data(navigator_data)
                     self.ui.navigator1D.update_labels(labels)
 
-            elif len(nav_axes) == 2:#2D Navigator:
+            elif len(nav_axes) == 2:  # 2D Navigator:
                 self.ROI1D.setVisible(True)
                 self.ROI2D.setVisible(True)
 
                 self.ui.navigator1D.parent.setVisible(False)
                 self.ui.navigator2D.parent.setVisible(True)
                 self.ui.nav_axes_widget.setVisible(False)
-                #self.navigator_label.setVisible(True)
-
+                # self.navigator_label.setVisible(True)
 
                 self.ui.navigator2D.x_axis = nav_axes[0]
                 self.ui.navigator2D.y_axis = nav_axes[1]
@@ -391,8 +379,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 else:
                     self.ui.navigator2D.setImage(*navigator_data)
 
-
-            else: #more than 2 nv axes, display all nav axes in 1D plots
+            else:  # more than 2 nv axes, display all nav axes in 1D plots
 
                 self.ui.navigator1D.parent.setVisible(False)
                 self.ui.navigator2D.parent.setVisible(False)
@@ -412,16 +399,14 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     self.nav_axes_viewers[ind].roi_line_signal.connect(self.update_viewer_data)
                     self.nav_axes_viewers[ind].show_data([nav_axes[ind]['data']])
                     self.nav_axes_viewers[ind].set_axis_label(dict(orientation='bottom',
-                                                                  label=nav_axes[ind]['label'],
-                                                                  units=nav_axes[ind]['units']))
+                                                                   label=nav_axes[ind]['label'],
+                                                                   units=nav_axes[ind]['units']))
 
             self.update_viewer_data()
 
         except Exception as e:
             logger.exception(str(e))
             self.update_status(utils.getLineInfo() + str(e), self.wait_time, 'log')
-
-
 
     def get_data_from_1Dsignal_roi(self, datas_transposed, ROI_bounds_1D):
         if ROI_bounds_1D != []:
@@ -491,13 +476,12 @@ class ViewerND(QtWidgets.QWidget, QObject):
         for indx in range(len(x)):
             for indy in range(len(y)):
                 datas[indy, indx, :, :] = amp[indy, indx] * (
-                            utils.gauss2D(z, 50 + indx * 2, 20, t, 50 + 3 * indy, 30) + np.random.rand(len(t),
-                                                                                                       len(z)) / 10)
+                    utils.gauss2D(z, 50 + indx * 2, 20, t, 50 + 3 * indy, 30) + np.random.rand(len(t), len(z)) / 10)
 
         nav_axis = dict(nav00=Axis(data=y, nav_index=0, label='y_axis', units='yunits'),
-                    nav01=Axis(data=x, nav_index=1, label='x_axis', units='xunits'),
-                    nav02=Axis(data=t, nav_index=2, label='t_axis', units='tunits'),
-                    nav03=Axis(data=z, nav_index=3, label='z_axis', units='zunits'))
+                        nav01=Axis(data=x, nav_index=1, label='x_axis', units='xunits'),
+                        nav02=Axis(data=t, nav_index=2, label='t_axis', units='tunits'),
+                        nav03=Axis(data=z, nav_index=3, label='z_axis', units='zunits'))
 
         if data_shape == '4D':
             nav_axes = [2, 3]
@@ -521,17 +505,16 @@ class ViewerND(QtWidgets.QWidget, QObject):
             dict(all_items=[ax['label'] for ax in self.nav_axes_dicts],
                  selected=[self.nav_axes_dicts[ind]['label'] for ind in nav_axes]))
 
-
     def set_GUI(self):
         """
 
         """
-        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        #main_layout = QtWidgets.QGridLayout()
-        #self.area.setLayout(main_layout)
+        # main_layout = QtWidgets.QGridLayout()
+        # self.area.setLayout(main_layout)
 
-        #vsplitter = QtWidgets.QSplitter(Qt.Vertical)
+        # vsplitter = QtWidgets.QSplitter(Qt.Vertical)
         # Hsplitter=QtWidgets.QSplitter(Qt.Horizontal)
 
         params = [
@@ -540,18 +523,18 @@ class ViewerND(QtWidgets.QWidget, QObject):
             {'title': 'set data:', 'name': 'set_data_2D', 'type': 'action', 'visible': False},
             {'title': 'set data:', 'name': 'set_data_1D', 'type': 'action', 'visible': False},
             {'title': 'Signal shape', 'name': 'data_shape_settings', 'type': 'group', 'children': [
-                    {'title': 'Initial Data shape:', 'name': 'data_shape_init', 'type': 'str', 'value': "",
-                     'readonly': True},
-                    {'title': 'Axes shape:', 'name': 'nav_axes_shapes', 'type': 'group', 'children': [],
-                     'readonly': True},
-                    {'title': 'Data shape:', 'name': 'data_shape', 'type': 'str', 'value': "", 'readonly': True},
-                    {'title': 'Navigator axes:', 'name': 'navigator_axes', 'type': 'itemselect'},
-                    {'title': 'Set Nav axes:', 'name': 'set_nav_axes', 'type': 'action', 'visible': True},
-                        ]},
-                ]
+                {'title': 'Initial Data shape:', 'name': 'data_shape_init', 'type': 'str', 'value': "",
+                 'readonly': True},
+                {'title': 'Axes shape:', 'name': 'nav_axes_shapes', 'type': 'group', 'children': [],
+                 'readonly': True},
+                {'title': 'Data shape:', 'name': 'data_shape', 'type': 'str', 'value': "", 'readonly': True},
+                {'title': 'Navigator axes:', 'name': 'navigator_axes', 'type': 'itemselect'},
+                {'title': 'Set Nav axes:', 'name': 'set_nav_axes', 'type': 'action', 'visible': True},
+            ]},
+        ]
 
         self.settings = Parameter.create(name='Param', type='group', children=params)
-        ##self.signal_axes_selection()
+        # #self.signal_axes_selection()
 
         # connecting from tree
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)  # any changes on the settings
@@ -560,8 +543,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.settings.child(('set_data_3D')).sigActivated.connect(lambda: self.set_data_test('3D'))
         self.settings.child(('set_data_4D')).sigActivated.connect(lambda: self.set_data_test('4D'))
         self.settings.child('data_shape_settings', 'set_nav_axes').sigActivated.connect(self.update_data)
-        ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        ##% 1D signalviewer
+        # #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # #% 1D signalviewer
         viewer1D_widget = QtWidgets.QWidget()
         self.ui.viewer1D = Viewer1D(viewer1D_widget)
         self.ROI1D = LinearRegionItem()
@@ -589,8 +572,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
         dock_signal.addWidget(viewer1D_widget)
         dock_signal.addWidget(viewer2D_widget)
 
-        ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        ##% Navigator viewer Dock
+        # #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        # #% Navigator viewer Dock
         navigator1D_widget = QtWidgets.QWidget()
         self.ui.navigator1D = Viewer1D(navigator1D_widget)
         self.ui.navigator1D.ui.crosshair.crosshair_dragged.connect(self.update_viewer_data)
@@ -608,15 +591,15 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # vlayout_navigation = QtWidgets.QVBoxLayout()
         # self.navigator_label = QtWidgets.QLabel('Navigation View')
         # self.navigator_label.setMaximumHeight(15)
-        #layout_navigation.addWidget(self.navigator_label)
+        # layout_navigation.addWidget(self.navigator_label)
         self.ui.nav_axes_widget = QtWidgets.QWidget()
         self.ui.nav_axes_widget.setLayout(QtWidgets.QVBoxLayout())
-        #vlayout_navigation.addWidget(navigator2D_widget)
-        #vlayout_navigation.addWidget(self.ui.nav_axes_widget)
+        # vlayout_navigation.addWidget(navigator2D_widget)
+        # vlayout_navigation.addWidget(self.ui.nav_axes_widget)
         self.ui.nav_axes_widget.setVisible(False)
-        #vlayout_navigation.addWidget(navigator1D_widget)
-        #self.ui.navigation_widget.setLayout(vlayout_navigation)
-        #vsplitter.insertWidget(0, self.ui.navigation_widget)
+        # vlayout_navigation.addWidget(navigator1D_widget)
+        # self.ui.navigation_widget.setLayout(vlayout_navigation)
+        # vsplitter.insertWidget(0, self.ui.navigation_widget)
 
         dock_navigation = Dock('Navigation')
         dock_navigation.addWidget(navigator1D_widget)
@@ -633,7 +616,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # VLayout1.addWidget(viewer1D_widget)
         # VLayout1.addWidget(viewer2D_widget)
         # self.ui.signal_widget.setLayout(VLayout1)
-        #vsplitter.insertWidget(1, self.ui.signal_widget)
+        # vsplitter.insertWidget(1, self.ui.signal_widget)
 
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/cartesian.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -655,14 +638,14 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.viewer1D.ui.button_widget.layout().insertWidget(0, self.ui.set_signals_pb_1D_bis)
         self.ui.viewer2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D_bis)
 
-        #main_layout.addWidget(vsplitter)
+        # main_layout.addWidget(vsplitter)
 
         self.ui.set_signals_pb_1D.clicked.connect(self.signal_axes_selection)
         self.ui.set_signals_pb_2D.clicked.connect(self.signal_axes_selection)
         self.ui.set_signals_pb_1D_bis.clicked.connect(self.signal_axes_selection)
         self.ui.set_signals_pb_2D_bis.clicked.connect(self.signal_axes_selection)
 
-        #to start: display as default a 2D navigator and a 1D viewer
+        # to start: display as default a 2D navigator and a 1D viewer
         self.ui.navigator1D.parent.setVisible(False)
         self.ui.viewer2D.parent.setVisible(True)
 
@@ -679,7 +662,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.spread_viewer_1D.ui.crosshair.crosshair_dragged.connect(self.get_nav_position)
         self.ui.spread_viewer_1D.ui.crosshair_pb.click()
         self.ui.spread_viewer_2D.ui.auto_levels_pb.click()
-        #todo: better connection as discussed
+        # todo: better connection as discussed
         self.ui.spread_viewer_2D.crosshair_dragged.connect(self.get_nav_position)
         self.ui.spread_viewer_2D.ui.crosshair_pb.click()
 
@@ -711,7 +694,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.scan_type = scan_type
         self.data_buffer = []
         self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(),
-                                          data2D=OrderedDict(), dataND=OrderedDict(),)
+                                          data2D=OrderedDict(), dataND=OrderedDict(), )
         self.data_to_export['dataND']['CH000'] = OrderedDict(data=datas, source='raw', nav_axes=nav_axes)
         for key in kwargs:
             self.data_to_export['dataND']['CH000'][key] = kwargs[key]
@@ -721,15 +704,14 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.restore_nav_axes(kwargs, nav_axes=nav_axes)
         self.set_nav_shapes()
 
-
         try:
             if self.data_axes is not None:
                 if datas.ndim != len(self.data_axes) or self.get_selected_axes_indexes() != nav_axes:
-                    self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the managers to nav_axes
+                    self.set_nav_axes(datas.ndim, nav_axes)  # init the list of axes and set the managers to nav_axes
             else:
-                self.set_nav_axes(datas.ndim, nav_axes) #init the list of axes and set the managers to nav_axes
+                self.set_nav_axes(datas.ndim, nav_axes)  # init the list of axes and set the managers to nav_axes
 
-            #self.datas=hs.signals.BaseSignal(datas)
+            # self.datas=hs.signals.BaseSignal(datas)
 
             self.update_data_signal()
             self.settings.child('data_shape_settings', 'data_shape_init').setValue(str(datas.shape))
@@ -787,21 +769,20 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     def update_data_signal(self):
         try:
-            axes_nav = [len(self.data_axes)-ind-1 for ind in self.get_selected_axes_indexes()]
+            axes_nav = [len(self.data_axes) - ind - 1 for ind in self.get_selected_axes_indexes()]
             axes_signal = [ax for ax in self.data_axes if ax not in axes_nav]
             self.datas = Signal(self._datas)
             self.datas = self.datas.transpose(signal_axes=axes_signal, navigation_axes=axes_nav)
 
         except Exception as e:
             logger.exception(str(e))
-            self.update_status(utils.getLineInfo()+str(e), self.wait_time, 'log')
+            self.update_status(utils.getLineInfo() + str(e), self.wait_time, 'log')
 
     def update_Navigator(self):
-        ##self.update_data_signal()
+        # #self.update_data_signal()
         self.set_data(self.datas, **self.datas_settings)
 
-
-    def update_status(self,txt, wait_time=1000, log=''):
+    def update_status(self, txt, wait_time=1000, log=''):
         """
             | Update the statut bar showing a Message with a delay of wait_time ms (1s by default)
 
@@ -816,7 +797,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
         """
         if log != '':
             self.log_signal.emit(txt)
-
 
     def get_axis_from_label(self):
         pass
@@ -846,7 +826,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     ind_scan = utils.find_index(xaxis, posx)[0]
 
                 self.ui.navigator1D.ui.crosshair.set_crosshair_position(ind_scan[0])
-
 
     def update_viewer_data(self, posx=0, posy=0):
         """
@@ -891,7 +870,6 @@ class ViewerND(QtWidgets.QWidget, QObject):
                         pos.append(ind)
                     data = self.datas.inav.__getitem__(pos).data
 
-
                 if len(self.datas.axes_manager.signal_shape) == 0:  # means 0D data, plot on 1D viewer
                     self.data_buffer.extend(data)
                     self.ui.viewer1D.show_data([self.data_buffer])
@@ -910,9 +888,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 self.update_status(utils.getLineInfo() + str(e), wait_time=self.wait_time, log='log')
 
 
-
 if __name__ == '__main__':
-
     app = QtWidgets.QApplication(sys.argv)
     area = DockArea()
     prog = ViewerND(area)

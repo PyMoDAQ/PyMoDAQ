@@ -9,11 +9,12 @@ import logging
 from pathlib import Path
 
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
+from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes# to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -376,19 +377,30 @@ class DashBoard(QObject):
         try:
             path = gutils.select_file(start_path=self.preset_path, save=False, ext='xml')
             if path != '':
-                self.preset_manager.set_file_preset(path)
+                modified = self.preset_manager.set_file_preset(path)
 
-                if self.detector_modules != []:
-                    mssg = QtWidgets.QMessageBox()
-                    mssg.setText('You have to restart the application to take the modifications into account! Quitting the application...')
-                    mssg.exec()
-
-                    self.restart_fun()
+                if modified:
+                    self.remove_preset_related_files(path.name)
+                    if self.detector_modules:
+                        mssg = QtWidgets.QMessageBox()
+                        mssg.setText('You have to restart the application to take the modifications into account!\n\n'
+                                     'The related files: ROI, Layout, Overshoot and Remote will be deleted'
+                                     ' if existing!\n\n'
+                                     'Quitting the application...')
+                        mssg.exec()
+                        self.restart_fun()
 
             else:  # cancel
                 pass
         except Exception as e:
             logger.exception(str(e))
+
+    def remove_preset_related_files(self, name):
+        utils.get_set_roi_path().joinpath(name).unlink(missing_ok=True)
+        utils.get_set_layout_path().joinpath(name).unlink(missing_ok=True)
+        utils.get_set_overshoot_path().joinpath(name).unlink(missing_ok=True)
+        utils.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
+
 
     def quit_fun(self):
         """
@@ -515,10 +527,7 @@ class DashBoard(QObject):
             (Object list, Object list) tuple
                 The updated (Move modules list, Detector modules list).
 
-            See Also
-            --------
-            custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, update_status,DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
-        """
+           """
         move_modules = []
         detector_modules = []
         if not isinstance(filename, Path):
@@ -546,7 +555,7 @@ class DashBoard(QObject):
                 if self.preset_manager.preset_params.child(('use_pid')).value():
                     self.open_PID()
                     QtWidgets.QApplication.processEvents()
-                    for child in custom_tree.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')), []):
+                    for child in putils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')), []):
                         preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
                         self.pid_controller.settings.child(*preset_path).setValue(child.value())
 
@@ -558,10 +567,10 @@ class DashBoard(QObject):
             #################################################################
             ###### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
-            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], custom_tree.GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], ptypes.GroupParameterCustom):
                 plugins += [{'type': 'move', 'value': child} for child in
                            self.preset_manager.preset_params.child(('Moves')).children()]
-            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], custom_tree.GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], ptypes.GroupParameterCustom):
                 plugins += [{'type': 'det', 'value': child} for child in
                             self.preset_manager.preset_params.child(('Detectors')).children()]
 
@@ -1020,7 +1029,7 @@ class DashBoard(QObject):
 
     def update_init_tree(self):
         for act in self.move_modules:
-            if act.title not in custom_tree.iter_children(self.settings.child(('actuators')), []):
+            if act.title not in putils.iter_children(self.settings.child(('actuators')), []):
                 title = act.title
                 name = ''.join(title.split())  # remove empty spaces
                 self.settings.child(('actuators')).addChild(
@@ -1029,7 +1038,7 @@ class DashBoard(QObject):
                 self.settings.child('actuators', name).setValue(act.initialized_state)
 
         for act in self.detector_modules:
-            if act.title not in custom_tree.iter_children(self.settings.child(('detectors')), []):
+            if act.title not in putils.iter_children(self.settings.child(('detectors')), []):
                 title = act.title
                 name = ''.join(title.split())  # remove empty spaces
                 self.settings.child(('detectors')).addChild(
@@ -1135,9 +1144,6 @@ class DashBoard(QObject):
             *changes*         tuple list                         Contain the (param,changes,info) list listing the changes made
             =============== =================================== ================================================================
 
-            See Also
-            --------
-            change_viewer, daq_utils.custom_parameter_tree.iter_children
         """
 
         for param, change, data in changes:
@@ -1204,10 +1210,6 @@ class DashBoard(QObject):
                                             * dataset
                                             * managers
             =============== =========== ====================================
-
-            See Also
-            --------
-            custom_tree.parameter_to_xml_file, create_menu
         """
         dialog = QtWidgets.QDialog()
         vlayout = QtWidgets.QVBoxLayout()

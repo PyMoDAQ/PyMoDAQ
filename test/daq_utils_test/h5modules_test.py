@@ -3,14 +3,14 @@ import numpy as np
 from datetime import datetime
 import pytest
 from pathlib import PurePosixPath
-from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore
+
+import pymodaq.daq_utils.parameter.ioxml
 from pymodaq.version import get_version
 from pymodaq.daq_utils import daq_utils as utils
-from pyqtgraph.parametertree import parameterTypes, Parameter
-from pymodaq.daq_utils import custom_parameter_tree as ctree
+from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
-    group_data_types, data_types, data_dimensions, scan_types, InvalidGroupType, InvalidDataDimension, InvalidDataType, \
-    InvalidGroupDataType, InvalidSave, InvalidScanType, CARRAY, EARRAY, VLARRAY, StringARRAY, Node, Attributes
+    group_data_types, InvalidGroupType, CARRAY, EARRAY, StringARRAY, Node, Attributes
 import csv
 
 tested_backend = ['tables', 'h5py', 'h5pyd']
@@ -538,7 +538,7 @@ def create_test_file(request, qtbot):
         ]
          }]
     settings = Parameter.create(name='settings', type='group', children=params)
-    settings_xml = ctree.parameter_to_xml_string(settings)
+    settings_xml = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(settings)
 
     det_group = bck.add_det_group(scan_group, 'det group', settings_as_xml=settings_xml)
     data_group = bck.add_data_group(det_group, 'data1D')

@@ -1,9 +1,9 @@
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt,QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray
+from PyQt5.QtCore import Qt,QObject, pyqtSignal, QLocale, QByteArray
 
 import sys
 import pymodaq
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+import pymodaq.daq_utils.parameter.ioxml
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 
@@ -11,12 +11,10 @@ from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_ptypes
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
-import os
 from easydict import EasyDict as edict
 from pyqtgraph.dockarea import DockArea, Dock
 import tables
@@ -99,10 +97,6 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
                 * *1D viewer dock* : the preview window of 1D data
                 * *2D viewer dock* : the preview window of 2D data
                 * *Navigator viewer dock* : the global navigator graphic interface
-
-            See Also
-            --------
-            show_h5_attributes, show_h5_data, daq_utils.custom_parameter_tree.Table_custom, update_viewer_data
         """
         #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # h5 file dock
@@ -115,7 +109,7 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
         V_splitter.addWidget(Form)
-        self.ui.attributes_table=custom_tree.Table_custom()
+        self.ui.attributes_table=pymodaq_ptypes.Table_custom()
         V_splitter.addWidget(self.ui.attributes_table)
         H_splitter.addWidget(V_splitter)
         self.ui.settings_tree=ParameterTree()
@@ -357,10 +351,6 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
 
              *col*                                    not used
             ================= ====================== ====================================
-
-            See Also
-            --------
-            daq_utils.custom_parameter_tree.XML_string_to_parameter, update_status
         """
         try:
             node=self.h5file.get_node(item.text(2))
@@ -376,10 +366,10 @@ class DAQ_Analysis(QtWidgets.QWidget,QObject):
                 for child in self.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents() #so that the tree associated with settings updates
-                params=custom_tree.XML_string_to_parameter(attrs.settings.decode())
+                params= pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(attrs.settings.decode())
                 self.settings.addChildren(params)
                 if hasattr(attrs,'scan_settings'):
-                    params=custom_tree.XML_string_to_parameter(attrs.scan_settings.decode())
+                    params= pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(attrs.scan_settings.decode())
                     self.settings.addChildren(params)
         except Exception as e:
             self.update_status(str(e),wait_time=self.wait_time)

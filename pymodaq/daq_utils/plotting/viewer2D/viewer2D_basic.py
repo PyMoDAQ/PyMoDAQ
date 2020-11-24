@@ -10,21 +10,22 @@ from easydict import EasyDict as edict
 class Viewer2DBasic(QObject):
     sig_double_clicked = pyqtSignal(float, float)
 
-    def __init__(self,parent=None, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         super(Viewer2DBasic, self).__init__()
-        #setting the gui
+        # setting the gui
         if parent is None:
             parent = QtWidgets.QWidget()
         self.parent = parent
-        self.scaling_options = edict(scaled_xaxis=edict(label="",units=None,offset=0,scaling=1),scaled_yaxis=edict(label="",units=None,offset=0,scaling=1))
+        self.scaling_options = edict(scaled_xaxis=edict(label="", units=None, offset=0, scaling=1),
+                                     scaled_yaxis=edict(label="", units=None, offset=0, scaling=1))
         self.setupUI()
 
-    def scale_axis(self,xaxis,yaxis):
-        return xaxis*self.scaling_options.scaled_xaxis.scaling+self.scaling_options.scaled_xaxis.offset,yaxis*self.scaling_options.scaled_yaxis.scaling+self.scaling_options.scaled_yaxis.offset
+    def scale_axis(self, xaxis, yaxis):
+        return xaxis * self.scaling_options.scaled_xaxis.scaling + self.scaling_options.scaled_xaxis.offset, yaxis * self.scaling_options.scaled_yaxis.scaling + self.scaling_options.scaled_yaxis.offset
 
-    @pyqtSlot(float,float)
-    def double_clicked(self,posx,posy):
-        self.sig_double_clicked.emit(posx,posy)
+    @pyqtSlot(float, float)
+    def double_clicked(self, posx, posy):
+        self.sig_double_clicked.emit(posx, posy)
 
     def setupUI(self):
         vlayout = QtWidgets.QVBoxLayout()
@@ -36,10 +37,10 @@ class Viewer2DBasic(QObject):
         self.image_widget = ImageWidget()
         hsplitter.addWidget(self.image_widget)
 
-        self.scaled_yaxis=AxisItem_Scaled('right')
-        self.scaled_xaxis=AxisItem_Scaled('top')
-        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1,1))
-        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2,2))
+        self.scaled_yaxis = AxisItem_Scaled('right')
+        self.scaled_xaxis = AxisItem_Scaled('top')
+        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1, 1))
+        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2, 2))
         self.image_widget.view.sig_double_clicked.connect(self.double_clicked)
         self.scaled_xaxis.linkToView(self.image_widget.view)
         self.scaled_yaxis.linkToView(self.image_widget.view)
@@ -76,18 +77,19 @@ class Viewer2DBasic(QObject):
 class ImageWidget(pg.GraphicsLayoutWidget):
     """this gives a layout to add imageitems.
     """
-    def __init__(self, parent = None, *args_plotitem, **kwargs_plotitem):
+
+    def __init__(self, parent=None, *args_plotitem, **kwargs_plotitem):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super(ImageWidget, self).__init__(parent)
         self.setupUI(*args_plotitem, **kwargs_plotitem)
 
-    def setupUI(self,  *args_plotitem, **kwargs_plotitem):
+    def setupUI(self, *args_plotitem, **kwargs_plotitem):
         layout = QtWidgets.QGridLayout()
-        #set viewer area
+        # set viewer area
         self.scene_obj = self.scene()
         self.view = View_cust()
-        self.plotitem = pg.PlotItem(viewBox=self.view,  *args_plotitem, **kwargs_plotitem)
-        self.plotItem = self.plotitem #for backcompatibility
+        self.plotitem = pg.PlotItem(viewBox=self.view, *args_plotitem, **kwargs_plotitem)
+        self.plotItem = self.plotitem  # for backcompatibility
         self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         self.setCentralItem(self.plotitem)
 
@@ -110,8 +112,6 @@ class View_cust(pg.ViewBox):
         if ev.double():
             pos = self.mapToView(ev.pos())
             self.sig_double_clicked.emit(pos.x(), pos.y())
-
-
 
 
 if __name__ == '__main__':

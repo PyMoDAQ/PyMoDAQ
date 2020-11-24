@@ -12,11 +12,11 @@ import numpy as np
 from pathlib import Path
 import os
 
+import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QTimer, QDateTime, QDate, QTime
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
 from pymodaq.daq_utils import exceptions
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
@@ -27,7 +27,6 @@ from pymodaq.daq_utils.plotting.qled import QLED
 
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.h5modules import H5Saver
 
 config = utils.load_config()
@@ -47,12 +46,7 @@ except:
     logger.info('Adaptive module is not present, no adaptive scan possible')
 
 
-class QSpinBox_ro(QtWidgets.QSpinBox):
-    def __init__(self, **kwargs):
-        super(QtWidgets.QSpinBox,self).__init__()
-        self.setMaximum(100000)
-        self.setReadOnly(True)
-        self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+
 
 
 class DAQ_Scan(QObject):
@@ -410,9 +404,9 @@ class DAQ_Scan(QObject):
         if type_info == 'dataset_info':
             # save contents of given parameter object into an xml string under the attribute settings
             settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           custom_tree.parameter_to_xml_string(params) + \
-                           custom_tree.parameter_to_xml_string(self.settings) + \
-                           custom_tree.parameter_to_xml_string(
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params) + \
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings) + \
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
                                self.dashboard.preset_manager.preset_params) + b'</All_settings>'
 
             attr['settings'] = settings_str
@@ -420,10 +414,10 @@ class DAQ_Scan(QObject):
 
         elif type_info=='scan_info':
             settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           custom_tree.parameter_to_xml_string(params) + \
-                           custom_tree.parameter_to_xml_string(self.settings) + \
-                           custom_tree.parameter_to_xml_string(self.h5saver.settings) + \
-                           custom_tree.parameter_to_xml_string(self.scanner.settings) + b'</All_settings>'
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params) + \
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings) + \
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings) + \
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.scanner.settings) + b'</All_settings>'
 
             attr['settings'] = settings_str
 
@@ -742,11 +736,11 @@ class DAQ_Scan(QObject):
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
         self.ui.status_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.status_message)
-        self.ui.N_scan_steps_sb = QSpinBox_ro()
+        self.ui.N_scan_steps_sb = gutils.QSpinBox_ro()
         self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb = QSpinBox_ro()
+        self.ui.indice_scan_sb = gutils.QSpinBox_ro()
         self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb = QSpinBox_ro()
+        self.ui.indice_average_sb = gutils.QSpinBox_ro()
         self.ui.indice_average_sb.setToolTip('Current average value')
         self.ui.scan_done_LED = QLED()
         self.ui.scan_done_LED.setToolTip('Scan done state')
@@ -929,7 +923,7 @@ class DAQ_Scan(QObject):
                 move_group_name = 'Move{:03d}'.format(ind_move)
                 if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, move_group_name):
                     self.h5saver.add_move_group(self.h5saver.current_scan_group, title='',
-                                                settings_as_xml=custom_tree.parameter_to_xml_string(
+                                                settings_as_xml=pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
                                                 self.modules_manager.actuators[ind_move].settings),
                                                 metadata=dict(name=move_name))
 
@@ -938,7 +932,7 @@ class DAQ_Scan(QObject):
             for ind_det, det_name in enumerate(detector_modules_names):
                 det_group_name = 'Detector{:03d}'.format(ind_det)
                 if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, det_group_name):
-                    settings_str = custom_tree.parameter_to_xml_string(self.modules_manager.detectors[ind_det].settings)
+                    settings_str = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.modules_manager.detectors[ind_det].settings)
                     try:
                         if 'Data0D' not in [viewer.viewer_type for viewer in
                                             self.modules_manager.detectors[ind_det].ui.viewers]:  # no roi_settings in viewer0D
@@ -947,7 +941,7 @@ class DAQ_Scan(QObject):
                                 if hasattr(viewer, 'roi_manager'):
                                     settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
                                         ind_viewer).encode()
-                                    settings_str += custom_tree.parameter_to_xml_string(
+                                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
                                         viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(ind_viewer).encode()
                             settings_str += b'</All_settings>'
                     except Exception as e:

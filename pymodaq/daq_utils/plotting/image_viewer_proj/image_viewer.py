@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Image_Viewer(QtWidgets.QGraphicsView):
     def __init__(self, parent):
         super(Image_Viewer, self).__init__(parent)
@@ -10,7 +11,7 @@ class Image_Viewer(QtWidgets.QGraphicsView):
         self.setScene(self._scene)
         self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
-        
+
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setBackgroundBrush(QtGui.QBrush(QtGui.QColor(30, 30, 30)))
@@ -34,7 +35,7 @@ class Image_Viewer(QtWidgets.QGraphicsView):
         if pixmap and not pixmap.isNull():
             self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
             self._image.setPixmap(pixmap)
-            #self.fitInView()
+            # self.fitInView()
         else:
             self.setDragMode(QtWidgets.QGraphicsView.NoDrag)
             self._image.setPixmap(QtGui.QPixmap())
@@ -45,8 +46,8 @@ class Image_Viewer(QtWidgets.QGraphicsView):
     def wheelEvent(self, event):
         try:
             if not self._image.pixmap().isNull():
-                #delta=QtCore.QPoint()
-                #delta.y
+                # delta=QtCore.QPoint()
+                # delta.y
                 if event.angleDelta().y() > 0:
                     factor = 1.25
                     self._zoom += 1
@@ -61,6 +62,7 @@ class Image_Viewer(QtWidgets.QGraphicsView):
                     self._zoom = 0
         except Exception as e:
             pass
+
 
 class Window(QtWidgets.QWidget):
     def __init__(self):
@@ -79,14 +81,15 @@ class Window(QtWidgets.QWidget):
     def handleOpen(self):
         path = QtWidgets.QFileDialog.getOpenFileName(
             self, 'Choose Image', self.edit.text())
-        path=path[0]
+        path = path[0]
         if path:
             self.edit.setText(path)
             self.viewer.setPhoto(QtGui.QPixmap(path))
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     window = Window()
     window.setGeometry(500, 300, 800, 600)

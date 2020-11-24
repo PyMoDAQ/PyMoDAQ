@@ -9,16 +9,14 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 import sys
 from collections import OrderedDict
 import numpy as np
-import os
 import logging
 
+import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree# to be placed after importing Parameter
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
-from pymodaq.daq_utils.daq_utils import getLineInfo
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
@@ -177,14 +175,14 @@ class DAQ_Logger(QObject):
         self.logger.settings.child(('N_saved')).setValue(0)
 
         settings_str = b'<All_settings>'
-        settings_str += custom_tree.parameter_to_xml_string(self.dashboard.settings)
-        settings_str += custom_tree.parameter_to_xml_string(self.dashboard.preset_manager.preset_params)
+        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
+        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.preset_manager.preset_params)
         if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-            settings_str += custom_tree.parameter_to_xml_string(self.dashboard.overshoot_manager.overshoot_params)
+            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.overshoot_manager.overshoot_params)
         if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-            settings_str += custom_tree.parameter_to_xml_string(self.dashboard.roi_saver.roi_presets)
-        settings_str += custom_tree.parameter_to_xml_string(self.settings)
-        settings_str += custom_tree.parameter_to_xml_string(self.logger.settings)
+            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.roi_saver.roi_presets)
+        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
         settings_str += b'</All_settings>'
 
         if self.settings.child(('log_type')).value() == 'H5 File':
@@ -223,10 +221,10 @@ class DAQ_Logger(QObject):
                 #create the detectors in the chosen logger
                 for det in det_modules_log:
                     settings_str = b'<All_settings>'
-                    settings_str += custom_tree.parameter_to_xml_string(det.settings)
+                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(det.settings)
                     for viewer in det.ui.viewers:
                         if hasattr(viewer, 'roi_manager'):
-                            settings_str += custom_tree.parameter_to_xml_string(viewer.roi_manager.settings)
+                            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(viewer.roi_manager.settings)
                     settings_str += b'</All_settings>'
 
                     if self.settings.child(('log_type')).value() == 'H5 File':

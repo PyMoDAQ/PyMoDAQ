@@ -64,7 +64,6 @@ class LCD(QObject):
         labels = []
         self.lcds = []
 
-
         for ind in range(self.Nvals):
             lcd_layouts.append(QtWidgets.QVBoxLayout())
             labels.append(QtWidgets.QLabel(self.labels[ind]))
@@ -75,34 +74,32 @@ class LCD(QObject):
             lcd_layouts[-1].addWidget(self.lcds[-1])
             vlayout.addLayout(lcd_layouts[-1])
 
-            if ind != self.Nvals-1:
+            if ind != self.Nvals - 1:
                 hFrame = QtWidgets.QFrame()
                 hFrame.setFrameShape(QtWidgets.QFrame.HLine)
                 vlayout.addWidget(hFrame)
-
 
         lcd_widget = QtWidgets.QWidget()
         lcd_widget.setLayout(vlayout)
         hsplitter.addWidget(lcd_widget)
         hsplitter.addWidget(form)
-        self.parent.resize(800,500)
+        self.parent.resize(800, 500)
         hsplitter.setSizes([400, 300])
 
 
 if __name__ == '__main__':
     from pymodaq.daq_utils.daq_utils import gauss1D
     import numpy as np
-    x=np.linspace(0,200,201)
-    y1=gauss1D(x,75,25)
-    y2=gauss1D(x,120,50,2)
+
+    x = np.linspace(0, 200, 201)
+    y1 = gauss1D(x, 75, 25)
+    y2 = gauss1D(x, 120, 50, 2)
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
 
-
     prog = LCD(Form, Nvals=2)
     Form.show()
-    for ind,data in enumerate(y1):
+    for ind, data in enumerate(y1):
         prog.setvalues([data])
         QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
-

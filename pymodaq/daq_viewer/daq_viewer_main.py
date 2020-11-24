@@ -4,7 +4,7 @@ Created on Wed Jan 10 16:54:14 2018
 
 @author: Weber Sébastien
 """
-
+import os
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
 import sys
@@ -30,10 +30,10 @@ from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
-import os
-from easydict import EasyDict as edict
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import utils as putils
 
+from easydict import EasyDict as edict
 from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
 from pyqtgraph.dockarea import Dock
 import pickle
@@ -357,8 +357,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         # #Setting detector types
         try:
             self.ui.Detector_type_combo.currentIndexChanged.disconnect(self.set_setting_tree)
-        except Exception as e:
-            self.logger.exception(str(e))
+        except TypeError as e:
+            pass  # just means it wasn't connected yet
+
         self.ui.Detector_type_combo.clear()
         self.ui.Detector_type_combo.addItems(self.detector_types)
         self.ui.Detector_type_combo.currentIndexChanged.connect(self.set_setting_tree)
@@ -674,7 +675,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
             See Also
             --------
-            change_viewer, daq_utils.custom_parameter_tree.iter_children
+            change_viewer,
         """
 
         for param, change, data in changes:
@@ -706,11 +707,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         self.settings.child('main_settings', 'N_live_averaging').setValue(0)
                     else:
                         self.settings.child('main_settings', 'N_live_averaging').hide()
-                elif param.name() in custom_tree.iter_children(self.settings.child('main_settings', 'axes'), []):
+                elif param.name() in putils.iter_children(self.settings.child('main_settings', 'axes'), []):
                     if self.DAQ_type == "DAQ2D":
                         if param.name() == 'use_calib':
                             if param.value() != 'None':
-                                params = custom_tree.XML_file_to_parameter(
+                                params = ioxml.XML_file_to_parameter(
                                     os.path.join(local_path, 'camera_calibrations', param.value() + '.xml'))
                                 param_obj = Parameter.create(name='calib', type='group', children=params)
                                 self.settings.child('main_settings', 'axes').restoreState(
@@ -719,9 +720,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         else:
                             for viewer in self.ui.viewers:
                                 viewer.set_scaling_axes(self.get_scaling_options())
-                elif param.name() in custom_tree.iter_children(self.settings.child('detector_settings', 'ROIselect'),
-                                                               []) and \
-                        'ROIselect' in param.parent().name():  # to be sure a param named 'y0' for instance will not collide with the y0 from the ROI
+                elif param.name() in putils.iter_children(self.settings.child('detector_settings', 'ROIselect'),
+                                                          []) and 'ROIselect' in param.parent().name():  # to be sure
+                    # a param named 'y0' for instance will not collide with the y0 from the ROI
                     if self.DAQ_type == "DAQ2D":
                         try:
                             self.ui.viewers[0].ROI_select_signal.disconnect(self.update_ROI)
@@ -769,7 +770,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                             self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
             elif change == 'parent':
-                if param.name() not in custom_tree.iter_children(self.settings.child('main_settings'), []):
+                if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
                     self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
 
     @pyqtSlot(ThreadCommand)
@@ -786,7 +787,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.thread_status(status)
 
         elif status.command == 'set_info':
-            param_dict = custom_tree.XML_string_to_parameter(status.attributes[1])[0]
+            param_dict = ioxml.XML_string_to_parameter(status.attributes[1])[0]
             param_tmp = Parameter.create(**param_dict)
             param = self.settings.child('detector_settings', *status.attributes[0][1:])
 
@@ -829,10 +830,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                     dock.close()  # the dock viewers
             except Exception as e:
                 self.logger.exception(str(e))
-            try:
+            if hasattr(self, 'nav_dock'):
                 self.nav_dock.close()
-            except Exception as e:
-                self.logger.exception(str(e))
 
             if __name__ == '__main__':
                 try:
@@ -889,20 +888,16 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             *path*           string        the path name of the file to be saved.
             *datas*          dictionnary   the raw datas to save.
             =============== ============= ========================================
-
-            See Also
-            --------
-            gutils.select_file, daq_utils.custom_parameter_tree.parameter_to_xml_string, update_status
         """
         if path is not None:
             path = Path(path)
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
 
-        settings_str = b'<All_settings>' + custom_tree.parameter_to_xml_string(self.settings)
+        settings_str = b'<All_settings>' + ioxml.parameter_to_xml_string(self.settings)
         if hasattr(self.ui.viewers[0], 'roi_manager'):
-            settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
-        settings_str += custom_tree.parameter_to_xml_string(h5saver.settings)
+            settings_str += ioxml.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
+        settings_str += ioxml.parameter_to_xml_string(h5saver.settings)
         settings_str += b'</All_settings>'
 
         det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
@@ -1061,12 +1056,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.h5saver_continuous.settings.child(('N_saved')).setValue(0)
             self.h5saver_continuous.init_file(update_h5=True)
 
-            settings_str = custom_tree.parameter_to_xml_string(self.settings)
+            settings_str = ioxml.parameter_to_xml_string(self.settings)
             settings_str = b'<All_settings>' + settings_str
             if hasattr(self.ui.viewers[0], 'roi_manager'):
-                settings_str += custom_tree.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
-            settings_str += custom_tree.parameter_to_xml_string(self.h5saver_continuous.settings) + \
-                            b'</All_settings>'
+                settings_str += ioxml.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
+            settings_str += ioxml.parameter_to_xml_string(self.h5saver_continuous.settings) + b'</All_settings>'
             self.scan_continuous_group = self.h5saver_continuous.add_scan_group("Continuous Saving")
             self.continuous_group = self.h5saver_continuous.add_det_group(self.scan_continuous_group,
                                                                           "Continuous saving", settings_str)
@@ -1205,8 +1199,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.settings.child('main_settings', 'detector_type').setValue(self.detector_name)
         try:
             if len(self.settings.child(('detector_settings')).children()) > 0:
-                for child in self.settings.child(('detector_settings')).children()[
-                             1:]:  # leave just the ROIselect group
+                for child in self.settings.child(('detector_settings')).children()[1:]:
+                    # leave just the ROIselect group
                     child.remove()
             plug_name = self.detector_name
             if self.DAQ_type == 'DAQ0D':
@@ -1246,7 +1240,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 for ind_channels, channels in enumerate(datas):
                     for ind_channel, channel in enumerate(channels['data']):
                         datas[ind_channels]['data'][ind_channel] = datas[ind_channels]['data'][ind_channel] - \
-                                                                   self.bkg[ind_channels]['data'][ind_channel]
+                            self.bkg[ind_channels]['data'][ind_channel]
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -1271,7 +1265,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         for ind, dic in enumerate(datas):
                             dic['data'] = [((self.ind_continuous_grab - 1) * self.current_datas[ind]['data'][
                                 ind_channel] + dic['data'][ind_channel]) / self.ind_continuous_grab for ind_channel in
-                                           range(len(dic['data']))]
+                                range(len(dic['data']))]
                     except Exception as e:
                         self.logger.exception(str(e))
 
@@ -2063,7 +2057,7 @@ class DAQ_Detector(QObject):
             #  or if we keep it on top?
             # #self.detector.grab(Naverage,live=live)
 
-            while 1:
+            while True:
                 try:
                     if not self.waiting_for_data:
                         self.waiting_for_data = True

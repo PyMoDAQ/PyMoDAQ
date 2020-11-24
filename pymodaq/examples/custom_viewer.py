@@ -1,9 +1,10 @@
+import pymodaq.daq_utils.parameter.utils
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
-from pymodaq.daq_utils import custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.parameter import pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils.scanner import TableModelTabular
 from PyQt5.QtCore import QObject, Qt, pyqtSlot
 from PyQt5 import QtWidgets
@@ -54,7 +55,7 @@ class ViewerPointList(QObject):
 
         init_data = [[0., 0., 0.]]
         self.table_model = TableModelTabular(init_data, ['x', 'y', 'data'])
-        self.table_view = custom_tree.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
+        self.table_view = pymodaq.daq_utils.parameter.utils.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)
 
         self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -80,10 +81,8 @@ class ViewerPointList(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
-
     from pymodaq.daq_utils.gui_utils import DockArea
-    from pymodaq.daq_utils.daq_utils import ScalingOptions, ScaledAxis, Axis
+    from pymodaq.daq_utils.daq_utils import Axis
     import sys
     import numpy as np
 

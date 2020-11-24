@@ -50,7 +50,7 @@ Other widgets for ParameterTree have been introduced:
 
 
 
-.. automodule:: pymodaq.daq_utils.custom_parameter_tree
+.. automodule:: pymodaq.daq_utils.parameter.pymodaq_ptypes
    :members: GroupParameterItemCustom, GroupParameterCustom, SpinBoxCustom, Pixmap_check, QTimeCustom,
              SliderParameterItem, SliderParameter, SliderSpinBox,
              ListParameter_custom, ListParameterItem_custom, Combo_pb, TableParameterItem, TableParameter, Table_custom,

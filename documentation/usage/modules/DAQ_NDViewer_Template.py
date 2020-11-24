@@ -1,9 +1,9 @@
 #template example
 
 #mandatory imports
+import pymodaq.daq_utils.parameter.utils
 from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_viewer.utility_classes import comon_parameters
-from pymodaq.daq_utils import custom_parameter_tree
 from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
@@ -114,7 +114,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             if param.name()=='set_point':
                 self.controller.SetTemperature(param.value())
 
-            elif param.name() == 'readout' or param.name() in custom_parameter_tree.iter_children(self.settings.child('camera_settings', 'readout_settings')):
+            elif param.name() == 'readout' or param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('camera_settings', 'readout_settings')):
                 self.update_read_mode()
                 
             elif param.name()=='exposure':

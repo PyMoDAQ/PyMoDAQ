@@ -1,13 +1,14 @@
 import pytest
 import numpy as np
 import socket as native_socket
-from pymodaq.daq_utils import daq_utils as utils
-from PyQt5.QtCore import QThread, pyqtSignal, QObject
-from pymodaq.daq_utils.tcp_server_client import MockServer, TCPServer, TCPClient, Socket
 
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pyqtgraph.parametertree.parameterTypes as pTypes
-import pymodaq.daq_utils.custom_parameter_tree as custom_tree
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import utils as putils
+from pymodaq.daq_utils import daq_utils as utils
+from PyQt5.QtCore import pyqtSignal, QObject
+from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, Socket
+
+from pyqtgraph.parametertree import Parameter
 
 from gevent import server, socket
 from time import sleep
@@ -305,7 +306,7 @@ class TestMockServer:
         #read_info
         server.read_info(None, 'random_info', 'random info value')
 
-        assert 'random_info' in custom_tree.iter_children(server.settings.child(('infos')), [])
+        assert 'random_info' in putils.iter_children(server.settings.child(('infos')), [])
         assert server.settings.child('infos', 'random_info').value() == 'random info value'
 
         # read_infos
@@ -320,13 +321,13 @@ class TestMockServer:
                          }]
 
         param = Parameter.create(name='settings', type='group', children=params)
-        params_xml = custom_tree.parameter_to_xml_string(param)
+        params_xml = ioxml.parameter_to_xml_string(param)
         server.read_infos(None, params_xml)
 
-        assert 'device' in custom_tree.iter_children(server.settings.child(('settings_client')), [])
-        assert 'infos' in custom_tree.iter_children(server.settings.child(('settings_client')), [])
+        assert 'device' in putils.iter_children(server.settings.child(('settings_client')), [])
+        assert 'infos' in putils.iter_children(server.settings.child(('settings_client')), [])
         assert server.settings.child('settings_client', 'infos').value() == 'one_info'
-        assert 'line_settings' in custom_tree.iter_children(server.settings.child(('settings_client')), [])
+        assert 'line_settings' in putils.iter_children(server.settings.child(('settings_client')), [])
         assert server.settings.child('settings_client', 'line_settings').opts['type'] == 'group'
 
 
@@ -336,7 +337,7 @@ class TestMockServer:
         assert one_param.value() == 'another_info'
         path = param.childPath(one_param)
         path.insert(0, '') #add one to mimic correct behaviour
-        server.read_info_xml(None, path, custom_tree.parameter_to_xml_string(one_param))
+        server.read_info_xml(None, path, ioxml.parameter_to_xml_string(one_param))
         assert server.settings.child('settings_client', 'infos').value() == 'another_info'
 
     #
@@ -385,9 +386,9 @@ class TestMockClient:
         assert server_socket.get_string() == 'Done'
         utils.check_vals_in_iterable(server_socket.get_list(), [np.array([0, 1, 2, 3]), 'item', 5.1])
 
-        client.send_infos_xml(custom_tree.parameter_to_xml_string(param))
+        client.send_infos_xml(ioxml.parameter_to_xml_string(param))
         assert server_socket.get_string() == 'Infos'
-        assert server_socket.get_string() == custom_tree.parameter_to_xml_string(param).decode()
+        assert server_socket.get_string() == ioxml.parameter_to_xml_string(param).decode()
 
         client.send_info_string('someinfo', 'this is an info')
         assert server_socket.get_string() == 'Info'
@@ -406,13 +407,13 @@ class TestMockClient:
         #test get_data
         server_socket.send_string('set_info')
         server_socket.send_list(['line_settings', 'someparam'])
-        server_socket.send_string(custom_tree.parameter_to_xml_string(param.child('line_settings', 'someparam')))
+        server_socket.send_string(ioxml.parameter_to_xml_string(param.child('line_settings', 'someparam')))
 
         msg = client.socket.get_string()
         client.get_data(msg)
         assert self.command == 'set_info'
         utils.check_vals_in_iterable(self.attributes, [['line_settings', 'someparam'],
-                        custom_tree.parameter_to_xml_string(param.child('line_settings', 'someparam')).decode()])
+                                    ioxml.parameter_to_xml_string(param.child('line_settings', 'someparam')).decode()])
 
 
         server_socket.send_string('move_abs')
