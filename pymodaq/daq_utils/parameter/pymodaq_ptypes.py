@@ -466,7 +466,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         if t == 'int' or t == 'float' or t == 'slide':
             self.widget.setOpts(bounds=limits)
         else:
-            return  ## don't know what to do with any other types..
+            return  # don't know what to do with any other types..
 
     def showEditor(self):
         """

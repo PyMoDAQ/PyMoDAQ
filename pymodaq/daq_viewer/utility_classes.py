@@ -102,6 +102,7 @@ class DAQ_Viewer_base(QObject):
         send_param_status
     """
     hardware_averaging = False
+    live_mode_available = False
     data_grabed_signal = pyqtSignal(list)
     data_grabed_signal_temp = pyqtSignal(list)
 

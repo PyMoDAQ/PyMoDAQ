@@ -45,10 +45,11 @@ class ROIBrushable(pgROI):
         p.drawRect(0, 0, 1, 1)
         # p.restore()
 
+
 class LinearROI(pgLinearROI):
     index_signal = pyqtSignal(int)
 
-    def __init__(self, index=0, pos=[0,10], **kwargs):
+    def __init__(self, index=0, pos=[0, 10], **kwargs):
         super().__init__(values=pos, **kwargs)
         self.index = index
         self.sigRegionChangeFinished.connect(self.emit_index_signal)
@@ -65,6 +66,7 @@ class LinearROI(pgLinearROI):
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
 
+
 class EllipseROI(pgROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
@@ -74,15 +76,15 @@ class EllipseROI(pgROI):
     **Arguments**
     pos            (length-2 sequence) The position of the ROI's origin.
     size           (length-2 sequence) The size of the ROI's bounding rectangle.
-    \**args        All extra keyword arguments are passed to ROI()
+    **args         All extra keyword arguments are passed to ROI()
     ============== =============================================================
 
     """
     index_signal = pyqtSignal(int)
 
-    def __init__(self, index=0, pos=[0,0], size=[10,10], **kwargs):
+    def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
-        super().__init__( pos=pos, size=size, **kwargs)
+        super().__init__(pos=pos, size=size, **kwargs)
         self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         self.addScaleHandle([0.5 * 2. ** -0.5 + 0.5, 0.5 * 2. ** -0.5 + 0.5], [0.5, 0.5])
         self.index = index
@@ -109,7 +111,7 @@ class EllipseROI(pgROI):
             return arr
         w = arr.shape[axes[0]]
         h = arr.shape[axes[1]]
-        ## generate an ellipsoidal mask
+        # generate an ellipsoidal mask
         mask = np.fromfunction(
             lambda x, y: (((x + 0.5) / (w / 2.) - 1) ** 2 + ((y + 0.5) / (h / 2.) - 1) ** 2) ** 0.5 < 1, (w, h))
 
@@ -131,7 +133,7 @@ class EllipseROI(pgROI):
         p.setRenderHint(QtGui.QPainter.Antialiasing)
         p.setPen(self.currentPen)
 
-        p.scale(r.width(), r.height())  ## workaround for GL bug
+        p.scale(r.width(), r.height())  # workaround for GL bug
         r = QtCore.QRectF(r.x() / r.width(), r.y() / r.height(), 1, 1)
 
         p.drawEllipse(r)
@@ -148,7 +150,7 @@ class EllipseROI(pgROI):
 class RectROI(pgROI):
     index_signal = pyqtSignal(int)
 
-    def __init__(self, index=0, pos=[0,0], size = [10,10]):
+    def __init__(self, index=0, pos=[0, 0], size=[10, 10]):
         super().__init__(pos=pos, size=size)  # , scaleSnap=True, translateSnap=True)
         self.addScaleHandle([1, 1], [0, 0])
         self.addRotateHandle([0, 0], [0.5, 0.5])
@@ -177,7 +179,7 @@ class ROIManager(QObject):
         super().__init__()
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
-        self.viewer_widget = viewer_widget #either a PlotWidget or a ImageWidget
+        self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
         self.ROIs = OrderedDict([])
         self.setupUI()
 
@@ -203,8 +205,10 @@ class ROIManager(QObject):
         self.roiwidget.setMinimumWidth(100)
         self.roiwidget.setMaximumWidth(300)
 
-        params = [{'title': 'Measurements:', 'name': 'measurements', 'type': 'table', 'value': OrderedDict([]), 'Ncol': 2, 'header': ["LO", "Value"]},
-                ROIScalableGroup(roi_type=self.ROI_type, name="ROIs")]
+        params = [
+            {'title': 'Measurements:', 'name': 'measurements', 'type': 'table', 'value': OrderedDict([]), 'Ncol': 2,
+             'header': ["LO", "Value"]},
+            ROIScalableGroup(roi_type=self.ROI_type, name="ROIs")]
         self.settings = Parameter.create(title='ROIs Settings', name='rois_settings', type='group', children=params)
         self.roitree.setParameters(self.settings, showTop=False)
         self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
@@ -221,7 +225,7 @@ class ROIManager(QObject):
                 childName = '.'.join(path)
             else:
                 childName = param.name()
-            if change == 'childAdded':#new roi to create
+            if change == 'childAdded':  # new roi to create
                 par = data[0]
                 newindex = int(par.name()[-2:])
 
@@ -234,22 +238,20 @@ class ROIManager(QObject):
                     newroi.setBrush(par.child(('Color')).value())
                     newroi.setOpacity(0.2)
 
-
                 elif par.child(('type')).value() == '2D':
                     roi_type = par.child(('roi_type')).value()
                     xrange = self.viewer_widget.plotItem.vb.viewRange()[0]
                     yrange = self.viewer_widget.plotItem.vb.viewRange()[1]
-                    width = np.max(((xrange[1]-xrange[0])/10, 2))
-                    height = np.max(((yrange[1] - yrange[0])/10, 2))
-                    pos = [int(np.mean(xrange)-width/2), int(np.mean(yrange)-width/2)]
-
+                    width = np.max(((xrange[1] - xrange[0]) / 10, 2))
+                    height = np.max(((yrange[1] - yrange[0]) / 10, 2))
+                    pos = [int(np.mean(xrange) - width / 2), int(np.mean(yrange) - width / 2)]
 
                     if roi_type == 'RectROI':
-                        newroi = RectROI(index=newindex, pos = pos,
-                                       size =[width, height])
+                        newroi = RectROI(index=newindex, pos=pos,
+                                         size=[width, height])
                     else:
-                        newroi = EllipseROI(index=newindex, pos = pos,
-                                       size =[width, height])
+                        newroi = EllipseROI(index=newindex, pos=pos,
+                                            size=[width, height])
                     newroi.setPen(par.child(('Color')).value())
 
                 newroi.sigRegionChanged.connect(self.ROI_changed.emit)
@@ -257,32 +259,23 @@ class ROIManager(QObject):
                 newroi.index_signal[int].connect(self.update_roi_tree)
                 try:
                     self.settings.sigTreeStateChanged.disconnect()
-                except:
+                except Exception:
                     pass
                 self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
                 self.viewer_widget.plotItem.addItem(newroi)
-
 
                 self.ROIs["ROI_%02.0d" % newindex] = newroi
 
                 self.new_ROI_signal.emit(newindex, roi_type)
                 self.update_roi_tree(newindex)
 
-                # self.ui.RoiCurve_H["ROI_%02.0d" % newindex]=self.ui.Lineout_H.plot(pen=QtGui.QColor(*self.color_list[newindex]))
-                # self.ui.RoiCurve_V["ROI_%02.0d" % newindex]=self.ui.Lineout_V.plot(pen=QtGui.QColor(*self.color_list[newindex]))
-                # self.ui.RoiCurve_integrated["ROI_%02.0d" % newindex]=self.ui.Lineout_integrated.plot(pen=QtGui.QColor(*self.color_list[newindex]))
-                # self.data_integrated_plot["ROI_%02.0d" % newindex]=np.zeros((2,1))
-                # #self.data_to_export["%02.0d" % newindex]=None
-                # self.roiChanged()
-
             elif change == 'value':
                 if param.name() in putils.iter_children(self.settings.child(('ROIs')), []):
-                    if param.name() == 'Color' or param.name() == 'angle' :
+                    if param.name() == 'Color' or param.name() == 'angle':
                         parent = param.parent().name()
                     else:
                         parent = param.parent().parent().name()
-                    self.update_roi(parent,param)
-
+                    self.update_roi(parent, param)
 
             elif change == 'parent':
                 if 'ROI' in param.name():
@@ -310,7 +303,6 @@ class ROIManager(QObject):
             poss.sort()
             self.ROIs[roi_key].setPos(poss)
 
-
         elif param.name() == 'angle':
             self.ROIs[roi_key].setAngle(param.value())
         elif param.name() == 'width':
@@ -320,9 +312,8 @@ class ROIManager(QObject):
             size = self.ROIs[roi_key].size()
             self.ROIs[roi_key].setSize((size[0], param.value()))
 
-
     @pyqtSlot(int)
-    def update_roi_tree(self,index):
+    def update_roi_tree(self, index):
         roi = self.ROIs['ROI_%02.0d' % index]
         par = self.settings.child(*('ROIs', 'ROI_%02.0d' % index))
         if isinstance(roi, LinearROI):
@@ -334,7 +325,7 @@ class ROIManager(QObject):
 
         try:
             self.settings.sigTreeStateChanged.disconnect()
-        except:
+        except Exception:
             pass
         if isinstance(roi, LinearROI):
             par.child(*('position', 'left')).setValue(pos[0])
@@ -344,10 +335,9 @@ class ROIManager(QObject):
             par.child(*('position', 'y')).setValue(pos[1])
             par.child(*('size', 'width')).setValue(size[0])
             par.child(*('size', 'height')).setValue(size[1])
-            par.child(('angle')).setValue(angle)
+            par.child('angle').setValue(angle)
 
         self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
-
 
     def save_ROI(self):
 
@@ -367,7 +357,6 @@ class ROIManager(QObject):
             self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
             # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
-
     def load_ROI(self, path=None, params=None):
         try:
             if params is None:
@@ -386,14 +375,13 @@ class ROIManager(QObject):
                         self.settings.child(('ROIs')).addNew(param.child(('roi_type')).value())
                     else:
                         self.settings.child(('ROIs')).addNew()
-                #self.settings.child(('ROIs')).addChildren(params)
+                # self.settings.child(('ROIs')).addChildren(params)
                 QtWidgets.QApplication.processEvents()
 
                 # settings = Parameter.create(title='Settings', name='settings', type='group')
                 #
                 # for param in params:
                 #     settings.addChildren(custom_tree.XML_string_to_parameter(custom_tree.parameter_to_xml_string(param)))
-
 
                 self.set_roi(self.settings.child(('ROIs')).children(), params)
 
@@ -406,6 +394,7 @@ class ROIManager(QObject):
                 child.setValue(new_child.value())
             else:
                 self.set_roi(child.children(), new_child.children())
+
 
 class ROIScalableGroup(GroupParameter):
     def __init__(self, roi_type='1D', **opts):
@@ -427,29 +416,29 @@ class ROIScalableGroup(GroupParameter):
 
         child = {'name': 'ROI_{:02d}'.format(newindex), 'type': 'group', 'removable': True, 'renamable': False}
 
-        children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False},]
+        children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False}, ]
         if self.roi_type == '2D':
             children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
-                            {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
-                             'values': ['red', 'green', 'blue', 'spread']}, ])
+                             {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
+                              'values': ['red', 'green', 'blue', 'spread']}, ])
         else:
             children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
 
         functions = ['Sum', 'Mean', 'half-life', 'expotime']
         children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'values': functions,
-                 'value': 'Sum', 'visible': self.roi_type == '1D'})
+                         'value': 'Sum', 'visible': self.roi_type == '1D'})
         children.extend([
-            {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])},])
+            {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])}, ])
         if self.roi_type == '2D':
             children.extend([{'name': 'position', 'type': 'group', 'children': [
                 {'name': 'x', 'type': 'float', 'value': 0, 'step': 1},
                 {'name': 'y', 'type': 'float', 'value': 0, 'step': 1}
-            ]},])
+            ]}, ])
         else:
             children.extend([{'name': 'position', 'type': 'group', 'children': [
                 {'name': 'left', 'type': 'float', 'value': 0, 'step': 1},
                 {'name': 'right', 'type': 'float', 'value': 10, 'step': 1}
-            ]},])
+            ]}, ])
         if self.roi_type == '2D':
             children.extend([
                 {'name': 'size', 'type': 'group', 'children': [
@@ -462,10 +451,12 @@ class ROIScalableGroup(GroupParameter):
 
         self.addChild(child)
 
+
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
     from pyqtgraph import PlotWidget
+
     im = ImageWidget()
     im = PlotWidget()
     prog = ROIManager(im, '1D')

@@ -80,7 +80,7 @@ setup(
                                       'h5browser=pymodaq.h5browser:main',
                                       'parameter_example=pymodaq.examples.parameter_ex:main'],
                   },
-    python_requires='>=3.6',
+    python_requires='>=3.6, <3.9',
     install_requires=[
         'pyqt5',
         'numpy==1.19.3',

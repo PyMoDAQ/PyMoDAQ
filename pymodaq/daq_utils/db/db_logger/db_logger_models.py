@@ -11,8 +11,10 @@ class Configuration(Base):
     id = Column(Integer, primary_key=True)
     timestamp = Column(Integer, nullable=False, index=True)
     settings_xml = Column(String)
+
     def __repr__(self):
         return f"<Config(date='{datetime.datetime.fromtimestamp(self.timestamp).isoformat()}', settings_xml='{self.settings_xml[0:20]}')>"
+
 
 class Detector(Base):
     __tablename__ = 'detectors'

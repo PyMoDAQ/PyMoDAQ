@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5 import QtGui, QtWidgets
 
@@ -253,7 +254,7 @@ class RemoteManager(QObject):
         if msgbox:
             msgBox = QtWidgets.QMessageBox()
             msgBox.setText("Preset Manager?")
-            msgBox.setInformativeText("What do you want to do?");
+            msgBox.setInformativeText("What do you want to do?")
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
             new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
             modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
@@ -398,7 +399,6 @@ class RemoteManager(QObject):
                         elif 'hat' in msgBox.selection:
                             param.parent().child(('actionner_type')).setValue('Hat')
                             param.parent().child(('actionnerID')).setValue(msgBox.selection['hat'])
-
 
             elif change == 'parent':
                 pass

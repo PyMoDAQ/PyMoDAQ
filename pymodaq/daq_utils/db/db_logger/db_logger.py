@@ -13,6 +13,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = utils.load_config()
 
+
 class DBLogHandler(logging.StreamHandler):
     def __init__(self, dblogger):
         super().__init__()
@@ -23,7 +24,6 @@ class DBLogHandler(logging.StreamHandler):
     def emit(self, record):
         msg = self.format(record)
         self.dblogger.add_log(msg)
-
 
 
 class DbLogger:
@@ -73,7 +73,7 @@ class DbLogger:
 
     def connect_db(self):
         self.engine = create_engine(f"postgresql://{self.user}:{self.user_pwd}@{self.ip_address}:"
-                               f"{self.port}/{self.database_name}")
+                                    f"{self.port}/{self.database_name}")
         try:
             if not database_exists(self.engine.url):
                 create_database(self.engine.url)
@@ -108,8 +108,6 @@ class DbLogger:
         """
         return [res[0] for res in session.query(Detector.name)]
 
-
-
     def add_detectors(self, detectors):
         """
         add detectors in the detectors table
@@ -139,10 +137,10 @@ class DbLogger:
             time_stamp = datas['acq_time_s']
             detector_name = datas['name']
             if session.query(Detector).filter_by(name=detector_name).count() == 0:
-                #security detector adding in case it hasn't been done previously (and properly)
+                # security detector adding in case it hasn't been done previously (and properly)
                 self.add_detectors(session, dict(name=detector_name))
 
-            det_id = session.query(Detector).filter_by(name=detector_name).one().id  #detector names should/are unique
+            det_id = session.query(Detector).filter_by(name=detector_name).one().id  # detector names should/are unique
 
             if 'data0D' in datas:
                 for channel in datas['data0D']:
@@ -162,18 +160,20 @@ class DbLogger:
                                        channel=f"{datas['data2D'][channel]['name']}:{channel}",
                                        value=datas['data2D'][channel]['data'].tolist()))
 
-            #not yet dataND as db should not be where to save these datas
+            # not yet dataND as db should not be where to save these datas
 
 
 class DbLoggerGUI(DbLogger, QtCore.QObject):
-    params = [{'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
-               'values': ['PostgreSQL', ]},
-              {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str', 'value': config['network']['logging']['sql']['ip']},
-              {'title': 'Server port:', 'name': 'server_port', 'type': 'int', 'value': config['network']['logging']['sql']['port']},
-              {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
-              {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False, 'readonly': True},] + \
-              dashboard_submodules_params
-
+    params = [
+        {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
+            'values': ['PostgreSQL', ]},
+        {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str',
+            'value': config['network']['logging']['sql']['ip']},
+        {'title': 'Server port:', 'name': 'server_port', 'type': 'int',
+            'value': config['network']['logging']['sql']['port']},
+        {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
+        {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False, 'readonly': True},
+    ] + dashboard_submodules_params
 
     def __init__(self, database_name):
         DbLogger.__init__(self, database_name, ip_address=config['network']['logging']['sql']['ip'],
@@ -205,7 +205,8 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
                 childName = '.'.join(path)
             else:
                 childName = param.name()
-            if change == 'childAdded':pass
+            if change == 'childAdded':
+                pass
 
             elif change == 'value':
                 if param.name() == 'server_ip':
@@ -221,5 +222,5 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
                 elif param.name() == 'save_2D':
                     self.save2D = param.value()
 
-
-            elif change == 'parent':pass
+            elif change == 'parent':
+                pass

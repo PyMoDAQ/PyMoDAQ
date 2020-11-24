@@ -10,33 +10,33 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class ModulesManager(QObject):
-
     detectors_changed = pyqtSignal(list)
     actuators_changed = pyqtSignal(list)
     det_done_signal = pyqtSignal(OrderedDict)
     move_done_signal = pyqtSignal(OrderedDict)
     timeout_signal = pyqtSignal(bool)
 
-    params = [{'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
-                    {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect'},
-                    {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect'},
-                ]},
+    params = [
+        {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
+            {'title': 'detectors', 'name': 'detectors', 'type': 'itemselect'},
+            {'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect'},
+        ]},
 
-              {'title': "Moves done?", 'name': 'move_done', 'type': 'led', 'value': False},
-              {'title': "Detections done?", 'name': 'det_done', 'type': 'led', 'value': False},
+        {'title': "Moves done?", 'name': 'move_done', 'type': 'led', 'value': False},
+        {'title': "Detections done?", 'name': 'det_done', 'type': 'led', 'value': False},
 
-              {'title': 'Data dimensions', 'name': 'data_dimensions', 'type': 'group', 'children': [
-                  {'title': "Probe detector's data", 'name': 'probe_data', 'type': 'action'},
-                  {'title': 'Data0D list:', 'name': 'det_data_list0D', 'type': 'itemselect'},
-                  {'title': 'Data1D list:', 'name': 'det_data_list1D', 'type': 'itemselect'},
-                  {'title': 'Data2D list:', 'name': 'det_data_list2D', 'type': 'itemselect'},
-                  {'title': 'DataND list:', 'name': 'det_data_listND', 'type': 'itemselect'},
-              ]},
-              {'title': 'Actuators positions', 'name': 'actuators_positions', 'type': 'group', 'children': [
-                  {'title': "Test actuators", 'name': 'test_actuator', 'type': 'action'},
-                  {'title': 'Positions:', 'name': 'positions_list', 'type': 'itemselect'},
-              ]},
-             ]
+        {'title': 'Data dimensions', 'name': 'data_dimensions', 'type': 'group', 'children': [
+            {'title': "Probe detector's data", 'name': 'probe_data', 'type': 'action'},
+            {'title': 'Data0D list:', 'name': 'det_data_list0D', 'type': 'itemselect'},
+            {'title': 'Data1D list:', 'name': 'det_data_list1D', 'type': 'itemselect'},
+            {'title': 'Data2D list:', 'name': 'det_data_list2D', 'type': 'itemselect'},
+            {'title': 'DataND list:', 'name': 'det_data_listND', 'type': 'itemselect'},
+        ]},
+        {'title': 'Actuators positions', 'name': 'actuators_positions', 'type': 'group', 'children': [
+            {'title': "Test actuators", 'name': 'test_actuator', 'type': 'action'},
+            {'title': 'Positions:', 'name': 'positions_list', 'type': 'itemselect'},
+        ]},
+    ]
 
     def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10000):
         super().__init__()
@@ -46,7 +46,7 @@ class ModulesManager(QObject):
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.timeout = timeout  #in ms
+        self.timeout = timeout  # in ms
 
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
@@ -57,9 +57,9 @@ class ModulesManager(QObject):
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumWidth(300)
         self.settings_tree.setParameters(self.settings, showTop=False)
-        
+
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-        
+
         self.settings.child('data_dimensions', 'probe_data').sigActivated.connect(self.get_det_data_list)
         self.settings.child('actuators_positions', 'test_actuator').sigActivated.connect(self.test_move_actuators)
 
@@ -123,7 +123,6 @@ class ModulesManager(QObject):
     @property
     def Nactuators(self):
         return len(self.actuators)
-
 
     @property
     def detectors_name(self):
@@ -212,10 +211,10 @@ class ModulesManager(QObject):
             sig.emit(utils.ThreadCommand("single", [1, kwargs]))
 
         while not self.det_done_flag:
-            #wait for grab done signals to end
+            # wait for grab done signals to end
 
             QtWidgets.QApplication.processEvents()
-            if time.perf_counter()-tzero > self.timeout:
+            if time.perf_counter() - tzero > self.timeout:
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
@@ -254,7 +253,7 @@ class ModulesManager(QObject):
         positions = dict()
         for act in self.get_names(self.actuators):
             pos, done = QtWidgets.QInputDialog.getDouble(None, f'Enter a target position for actuator {act}',
-                                                   'Position:')
+                                                         'Position:')
             if not done:
                 pos = 0.
             positions[act] = pos
@@ -269,8 +268,6 @@ class ModulesManager(QObject):
 
         self.connect_actuators(False)
 
-
-
     def move_actuators(self, positions):
         self.move_done_positions = OrderedDict()
         self.move_done_flag = False
@@ -278,7 +275,6 @@ class ModulesManager(QObject):
 
         if not hasattr(positions, '__iter__'):
             positions = [positions]
-
 
         if len(positions) == self.Nactuators:
             if isinstance(positions, dict):
@@ -298,7 +294,7 @@ class ModulesManager(QObject):
 
         while not self.move_done_flag:
             QtWidgets.QApplication.processEvents()
-            if time.perf_counter()-tzero > self.timeout:
+            if time.perf_counter() - tzero > self.timeout:
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
@@ -314,6 +310,7 @@ class ModulesManager(QObject):
         return pos
 
     pyqtSlot(str, float)
+
     def move_done(self, name, position):
         """
         """
@@ -327,7 +324,6 @@ class ModulesManager(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-
     @pyqtSlot(OrderedDict)
     def det_done(self, data):
         try:
@@ -339,15 +335,16 @@ class ModulesManager(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+
 if __name__ == '__main__':
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     from PyQt5.QtCore import QThread
     from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
     from pymodaq.daq_move.daq_move_main import DAQ_Move
-
 
     win = QtWidgets.QMainWindow()
     area = DockArea()

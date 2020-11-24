@@ -13,7 +13,7 @@ import pymodaq.daq_utils.gui_utils as gutils
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.plotting.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_types# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_types  # to be placed after importing Parameter
 
 from pymodaq.daq_utils.exceptions import ScannerException
 
@@ -34,6 +34,7 @@ except:
     scan_subtypes['Tabular'].pop(scan_subtypes['Tabular'].index('Adaptive'))
 
     logger.info('adaptive module is not present, no adaptive scan possible')
+
 
 class ScanInfo:
     def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, **kwargs):
@@ -84,7 +85,8 @@ class ScanParameters:
         """
         self.Naxes = Naxes
         if scan_type not in scan_types:
-            raise ValueError(f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(scan_types)}')
+            raise ValueError(
+                f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(scan_types)}')
         if scan_subtype not in scan_subtypes[scan_type]:
             raise ValueError(
                 f'Chosen scan_subtype value ({scan_subtype}) is not possible. Should be among : {str(scan_subtypes[scan_type])}')
@@ -131,7 +133,7 @@ class ScanParameters:
                     axes_indexes[ind, ind_pos] = utils.find_index(axes_unique[ind_pos], pos)[0][0]
 
             return ScanInfo(Nsteps=positions.shape[0], axes_unique=axes_unique,
-                                      axes_indexes=axes_indexes, positions=positions, adaptive_loss=self.adaptive_loss)
+                            axes_indexes=axes_indexes, positions=positions, adaptive_loss=self.adaptive_loss)
         else:
             return ScanInfo()
 
@@ -147,7 +149,7 @@ class ScanParameters:
                 self.scan_info = self.get_info_from_positions(positions)
 
             elif self.scan_subtype == 'Linear back to start':
-                positions = np.insert(positions, range(1, len(positions)+1), positions[0], axis=0)
+                positions = np.insert(positions, range(1, len(positions) + 1), positions[0], axis=0)
                 self.scan_info = self.get_info_from_positions(positions)
 
             elif self.scan_subtype == 'Random':
@@ -157,7 +159,7 @@ class ScanParameters:
             elif self.scan_subtype == 'Adaptive':
                 # return an "empty" ScanInfo as positions will be "set" during the scan
                 self.scan_info = ScanInfo(Nsteps=0, positions=np.array([0, 1]), axes_unique=[np.array([])],
-                              axes_indexes=np.array([]), adaptive_loss=self.adaptive_loss)
+                                          axes_indexes=np.array([]), adaptive_loss=self.adaptive_loss)
 
             else:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
@@ -182,7 +184,7 @@ class ScanParameters:
             elif self.scan_subtype == 'Adaptive':
                 # return an "empty" ScanInfo as positions will be "set" during the scan
                 self.scan_info = ScanInfo(Nsteps=0, positions=np.zeros([0, 2]), axes_unique=[np.array([])],
-                              axes_indexes=np.array([]), adaptive_loss=self.adaptive_loss)
+                                          axes_indexes=np.array([]), adaptive_loss=self.adaptive_loss)
             else:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
@@ -201,7 +203,7 @@ class ScanParameters:
                 self.scan_info = self.get_info_from_positions(self.positions)
             elif self.scan_subtype == 'Adaptive':
                 # return an "empty" ScanInfo as positions will be "set" during the scan
-                #but adds some usefull info such as total length and list of vectors
+                # but adds some usefull info such as total length and list of vectors
                 vectors = []
                 length = 0.
 
@@ -233,79 +235,79 @@ class Scanner(QObject):
     scan_params_signal = pyqtSignal(ScanParameters)
 
     params = [{'title': 'Scanner settings', 'name': 'scan_options', 'type': 'group', 'children': [
-                {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
-                {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
+        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
+        {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
 
-                {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': scan_types,
-                         'value': config['scan']['default']},
-               {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
-                    {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
-                     'values': scan_subtypes['Scan1D'], 'value': config['scan']['scan1D']['type'],
-                     'tip': 'For adaptive, an algo will '
-                     'determine the positions to check within the scan bounds. The defined step will be set as the'
-                     'biggest feature size the algo should reach.'},
-                    {'title': 'Loss type', 'name': 'scan1D_loss', 'type': 'list',
-                     'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
-                    {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': config['scan']['scan1D']['start']},
-                    {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': config['scan']['scan1D']['stop']},
-                    {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': config['scan']['scan1D']['step']}
-                ]},
-                {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
-                    {'title': 'Scan subtype:', 'name': 'scan2D_type', 'type': 'list',
-                     'values': scan_subtypes['Scan2D'], 'value': config['scan']['scan2D']['type'],
-                     'tip': 'For adaptive, an algo will '
-                     'determine the positions to check within the scan bounds. The defined step will be set as the'
-                     'biggest feature size the algo should reach.'},
-                    {'title': 'Loss type', 'name': 'scan2D_loss', 'type': 'list',
-                     'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
-                    {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list', 'values': ['Manual', 'FromROI']},
-                    {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
-                    {'title': 'Start Ax1:', 'name': 'start_2d_axis1', 'type': 'float',
-                     'value': config['scan']['scan2D']['start1'], 'visible': True},
-                    {'title': 'Start Ax2:', 'name': 'start_2d_axis2', 'type': 'float',
-                     'value': config['scan']['scan2D']['start2'], 'visible': True},
-                    {'title': 'Step Ax1:', 'name': 'step_2d_axis1', 'type': 'float',
-                     'value': config['scan']['scan2D']['step1'], 'visible': True},
-                    {'title': 'Step Ax2:', 'name': 'step_2d_axis2', 'type': 'float',
-                     'value': config['scan']['scan2D']['step2'], 'visible': True},
-                    {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
-                     'value': config['scan']['scan2D']['npts'],
-                     'visible': True},
-                    {'title': 'Stop Ax1:', 'name': 'stop_2d_axis1', 'type': 'float',
-                     'value': config['scan']['scan2D']['stop1'], 'visible': True,
-                     'readonly': True,},
-                    {'title': 'Stop Ax2:', 'name': 'stop_2d_axis2', 'type': 'float',
-                     'value': config['scan']['scan2D']['stop2'], 'visible': True,
-                     'readonly': True,},
+        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': scan_types,
+         'value': config['scan']['default']},
+        {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
+            {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
+             'values': scan_subtypes['Scan1D'], 'value': config['scan']['scan1D']['type'],
+             'tip': 'For adaptive, an algo will '
+                    'determine the positions to check within the scan bounds. The defined step will be set as the'
+                    'biggest feature size the algo should reach.'},
+            {'title': 'Loss type', 'name': 'scan1D_loss', 'type': 'list',
+             'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
+            {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': config['scan']['scan1D']['start']},
+            {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': config['scan']['scan1D']['stop']},
+            {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': config['scan']['scan1D']['step']}
+        ]},
+        {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
+            {'title': 'Scan subtype:', 'name': 'scan2D_type', 'type': 'list',
+             'values': scan_subtypes['Scan2D'], 'value': config['scan']['scan2D']['type'],
+             'tip': 'For adaptive, an algo will '
+                    'determine the positions to check within the scan bounds. The defined step will be set as the'
+                    'biggest feature size the algo should reach.'},
+            {'title': 'Loss type', 'name': 'scan2D_loss', 'type': 'list',
+             'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
+            {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list', 'values': ['Manual', 'FromROI']},
+            {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
+            {'title': 'Start Ax1:', 'name': 'start_2d_axis1', 'type': 'float',
+             'value': config['scan']['scan2D']['start1'], 'visible': True},
+            {'title': 'Start Ax2:', 'name': 'start_2d_axis2', 'type': 'float',
+             'value': config['scan']['scan2D']['start2'], 'visible': True},
+            {'title': 'Step Ax1:', 'name': 'step_2d_axis1', 'type': 'float',
+             'value': config['scan']['scan2D']['step1'], 'visible': True},
+            {'title': 'Step Ax2:', 'name': 'step_2d_axis2', 'type': 'float',
+             'value': config['scan']['scan2D']['step2'], 'visible': True},
+            {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
+             'value': config['scan']['scan2D']['npts'],
+             'visible': True},
+            {'title': 'Stop Ax1:', 'name': 'stop_2d_axis1', 'type': 'float',
+             'value': config['scan']['scan2D']['stop1'], 'visible': True,
+             'readonly': True, },
+            {'title': 'Stop Ax2:', 'name': 'stop_2d_axis2', 'type': 'float',
+             'value': config['scan']['scan2D']['stop2'], 'visible': True,
+             'readonly': True, },
 
-                ]},
-                {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
-                    {'title': 'Scan subtype:', 'name': 'scanseq_type', 'type': 'list',
-                     'values': scan_subtypes['Sequential'], 'value': scan_subtypes['Sequential'][0],},
-                    {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view',
-                     'delegate': gutils.SpinBoxDelegate},
-                ]},
-                {'title': 'Tabular settings', 'name': 'tabular_settings', 'type': 'group', 'visible': False, 'children': [
-                    {'title': 'Scan subtype:', 'name': 'tabular_subtype', 'type': 'list',
-                     'values': scan_subtypes['Tabular'], 'value': config['scan']['tabular']['type'],
-                     'tip': 'For adaptive, an algo will '
-                            'determine the positions to check within the scan bounds. The defined step will be set as the'
-                            'biggest feature size the algo should reach.'},
-                    {'title': 'Loss type', 'name': 'tabular_loss', 'type': 'list',
-                     'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
-                    {'title': 'Selection:', 'name': 'tabular_selection', 'type': 'list',
-                     'values': ['Manual', 'Polylines']},
-                    {'title': 'From module:', 'name': 'tabular_roi_module', 'type': 'list', 'values': [],
-                     'visible': False},
-                    {'title': 'Curvilinear Step:', 'name': 'tabular_step', 'type': 'float',
-                     'value': config['scan']['tabular']['curvilinear']},
-                    {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
-                     'delegate': gutils.SpinBoxDelegate, 'menu': True},
-                ]},
-                {'title': 'Load settings', 'name': 'load_xml', 'type': 'action'},
-                {'title': 'Save settings', 'name': 'save_xml', 'type': 'action'},
-                ]},
-                ]
+        ]},
+        {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
+            {'title': 'Scan subtype:', 'name': 'scanseq_type', 'type': 'list',
+             'values': scan_subtypes['Sequential'], 'value': scan_subtypes['Sequential'][0], },
+            {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view',
+             'delegate': gutils.SpinBoxDelegate},
+        ]},
+        {'title': 'Tabular settings', 'name': 'tabular_settings', 'type': 'group', 'visible': False, 'children': [
+            {'title': 'Scan subtype:', 'name': 'tabular_subtype', 'type': 'list',
+             'values': scan_subtypes['Tabular'], 'value': config['scan']['tabular']['type'],
+             'tip': 'For adaptive, an algo will '
+                    'determine the positions to check within the scan bounds. The defined step will be set as the'
+                    'biggest feature size the algo should reach.'},
+            {'title': 'Loss type', 'name': 'tabular_loss', 'type': 'list',
+             'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
+            {'title': 'Selection:', 'name': 'tabular_selection', 'type': 'list',
+             'values': ['Manual', 'Polylines']},
+            {'title': 'From module:', 'name': 'tabular_roi_module', 'type': 'list', 'values': [],
+             'visible': False},
+            {'title': 'Curvilinear Step:', 'name': 'tabular_step', 'type': 'float',
+             'value': config['scan']['tabular']['curvilinear']},
+            {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
+             'delegate': gutils.SpinBoxDelegate, 'menu': True},
+        ]},
+        {'title': 'Load settings', 'name': 'load_xml', 'type': 'action'},
+        {'title': 'Save settings', 'name': 'save_xml', 'type': 'action'},
+    ]},
+              ]
 
     def __init__(self, scanner_items=OrderedDict([]), scan_type='Scan1D', actuators=[], adaptive_losses=None):
         """
@@ -325,7 +327,7 @@ class Scanner(QObject):
 
         self.scan_selector = ScanSelector(scanner_items, scan_type)
         self.settings.child('scan_options', 'scan_type').setValue(scan_type)
-        #self.scan_selector.settings.child('scan_options', 'scan_type').hide()
+        # self.scan_selector.settings.child('scan_options', 'scan_type').hide()
         self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
         self.scan_selector.scan_select_signal.connect(self.update_tabular_positions)
 
@@ -345,7 +347,6 @@ class Scanner(QObject):
             if 'loss2D' in adaptive_losses:
                 self.settings.child('scan_options', 'scan2D_settings', 'scan2D_loss').setOpts(
                     limits=adaptive_losses['loss2D'], visible=False)
-
 
         if actuators != []:
             self.actuators = actuators
@@ -411,13 +412,13 @@ class Scanner(QObject):
                                 init_data.append([name, 0., 1., 0.1])
                     else:
                         init_data = [[name, 0., 1., 0.1] for name in self._actuators]
-                self.table_model = TableModelSequential(init_data,)
+                self.table_model = TableModelSequential(init_data, )
                 self.table_view = putils.get_widget_from_tree(self.settings_tree, pymodaq_types.TableViewCustom)[0]
                 self.settings.child('scan_options', 'seq_settings', 'seq_table').setValue(self.table_model)
             elif scan_type == 'Tabular':
                 if init_data is None:
                     init_data = [[0. for name in self._actuators]]
-    
+
                 self.table_model = TableModelTabular(init_data, [name for name in self._actuators])
                 self.table_view = putils.get_widget_from_tree(self.settings_tree, pymodaq_types.TableViewCustom)[1]
                 self.settings.child('scan_options', 'tabular_settings', 'tabular_table').setValue(self.table_model)
@@ -490,7 +491,8 @@ class Scanner(QObject):
                         self.settings.child('scan_options', 'tabular_settings').hide()
                         self.settings_tree.setMaximumHeight(500)
                         self.scan_selector.settings.child('scan_options', 'scan_type').setValue(data)
-                        if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_selection').value() == 'Manual':
+                        if self.settings.child('scan_options', 'scan2D_settings',
+                                               'scan2D_selection').value() == 'Manual':
                             self.scan_selector.show_scan_selector(visible=False)
                         else:
                             self.scan_selector.show_scan_selector(visible=True)
@@ -512,8 +514,6 @@ class Scanner(QObject):
                         self.settings.child('scan_options', 'seq_settings').hide()
                         self.settings.child('scan_options', 'tabular_settings').show()
                         self.settings.child('scan_options', 'tabular_settings', 'tabular_step').hide()
-
-
 
                         self.update_tabular_positions()
                         self.settings_tree.setMaximumHeight(600)
@@ -577,7 +577,7 @@ class Scanner(QObject):
                     self.set_scan()
 
                 elif param.name() == 'Nsteps':
-                    pass #just do nothing (otherwise set_scan will be fired, see below)
+                    pass  # just do nothing (otherwise set_scan will be fired, see below)
 
                 else:
                     try:
@@ -593,12 +593,13 @@ class Scanner(QObject):
         # layout.setSpacing(0)
         # self.parent.setLayout(layout)
         self.settings_tree = ParameterTree()
-        self.settings = Parameter.create(name='Scanner_Settings', title='Scanner Settings', type='group', children=self.params)
+        self.settings = Parameter.create(name='Scanner_Settings', title='Scanner Settings', type='group',
+                                         children=self.params)
         self.settings_tree.setParameters(self.settings, showTop=False)
         self.settings_tree.setMaximumHeight(500)
 
         self.settings.child('scan_options', 'calculate_positions').sigActivated.connect(self.set_scan)
-        #layout.addWidget(self.settings_tree)
+        # layout.addWidget(self.settings_tree)
 
     def set_scan(self):
         scan_type = self.settings.child('scan_options', 'scan_type').value()
@@ -608,9 +609,11 @@ class Scanner(QObject):
             stop = self.settings.child('scan_options', 'scan1D_settings', 'stop_1D').value()
             step = self.settings.child('scan_options', 'scan1D_settings', 'step_1D').value()
             self.scan_parameters = ScanParameters(Naxes=1, scan_type="Scan1D",
-                    scan_subtype=self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').value(),
-                    starts=[start], stops=[stop], steps=[step],
-                    adaptive_loss=self.settings.child('scan_options', 'scan1D_settings', 'scan1D_loss').value())
+                                                  scan_subtype=self.settings.child('scan_options', 'scan1D_settings',
+                                                                                   'scan1D_type').value(),
+                                                  starts=[start], stops=[stop], steps=[step],
+                                                  adaptive_loss=self.settings.child('scan_options', 'scan1D_settings',
+                                                                                    'scan1D_loss').value())
 
 
         elif scan_type == "Scan2D":
@@ -621,19 +624,20 @@ class Scanner(QObject):
             steps = [self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value(),
                      self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()]
             self.scan_parameters = ScanParameters(Naxes=2, scan_type="Scan2D",
-                                             scan_subtype=self.settings.child('scan_options', 'scan2D_settings',
-                                                                              'scan2D_type').value(),
-                                             starts=starts, stops=stops, steps=steps,
-                    adaptive_loss=self.settings.child('scan_options', 'scan2D_settings', 'scan2D_loss').value())
+                                                  scan_subtype=self.settings.child('scan_options', 'scan2D_settings',
+                                                                                   'scan2D_type').value(),
+                                                  starts=starts, stops=stops, steps=steps,
+                                                  adaptive_loss=self.settings.child('scan_options', 'scan2D_settings',
+                                                                                    'scan2D_loss').value())
 
         elif scan_type == "Sequential":
             starts = [self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))]
             stops = [self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))]
             steps = [self.table_model.get_data(ind, 3) for ind in range(self.table_model.rowCount(None))]
             self.scan_parameters = ScanParameters(Naxes=len(starts), scan_type="Sequential",
-                                             scan_subtype=self.settings.child('scan_options', 'seq_settings',
-                                                                              'scanseq_type').value(),
-                                             starts=starts, stops=stops, steps=steps)
+                                                  scan_subtype=self.settings.child('scan_options', 'seq_settings',
+                                                                                   'scanseq_type').value(),
+                                                  starts=starts, stops=stops, steps=steps)
 
         elif scan_type == 'Tabular':
             positions = np.array(self.table_model.get_data_all())
@@ -649,10 +653,11 @@ class Scanner(QObject):
                 steps = None
 
             self.scan_parameters = ScanParameters(Naxes=Naxes, scan_type="Tabular",
-                                             scan_subtype=self.settings.child('scan_options', 'tabular_settings',
-                                                                              'tabular_subtype').value(),
-                                             starts=starts, stops=stops, steps=steps, positions=positions,
-                    adaptive_loss=self.settings.child('scan_options', 'tabular_settings', 'tabular_loss').value())
+                                                  scan_subtype=self.settings.child('scan_options', 'tabular_settings',
+                                                                                   'tabular_subtype').value(),
+                                                  starts=starts, stops=stops, steps=steps, positions=positions,
+                                                  adaptive_loss=self.settings.child('scan_options', 'tabular_settings',
+                                                                                    'tabular_loss').value())
 
         self.settings.child('scan_options', 'Nsteps').setValue(self.scan_parameters.Nsteps)
         self.scan_params_signal.emit(self.scan_parameters)
@@ -668,7 +673,8 @@ class Scanner(QObject):
                     if self.settings.child('scan_options', 'tabular_settings', 'tabular_subtype').value() == 'Linear':
                         positions = self.scan_selector.scan_selector.getArrayIndexes(
                             spacing=self.settings.child('scan_options', 'tabular_settings', 'tabular_step').value())
-                    elif self.settings.child('scan_options', 'tabular_settings', 'tabular_subtype').value() == 'Adaptive':
+                    elif self.settings.child('scan_options', 'tabular_settings',
+                                             'tabular_subtype').value() == 'Adaptive':
                         positions = self.scan_selector.scan_selector.get_vertex()
 
                     steps_x, steps_y = zip(*positions)
@@ -682,25 +688,24 @@ class Scanner(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-
     def update_scan_2D_positions(self):
         try:
             viewer = self.scan_selector.scan_selector_source
             pos_dl = self.scan_selector.scan_selector.pos()
-            pos_ur = self.scan_selector.scan_selector.pos()+self.scan_selector.scan_selector.size()
+            pos_ur = self.scan_selector.scan_selector.pos() + self.scan_selector.scan_selector.size()
             pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
             pos_ur_scaled = viewer.scale_axis(pos_ur[0], pos_ur[1])
 
-            if self.settings.child('scan_options','scan2D_settings', 'scan2D_type').value() == 'Spiral':
+            if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').value() == 'Spiral':
                 self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(
                     np.mean((pos_dl_scaled[0], pos_ur_scaled[0])))
                 self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(
                     np.mean((pos_dl_scaled[1], pos_ur_scaled[1])))
 
-                nsteps = 2 * np.min((np.abs((pos_ur_scaled[0]-pos_dl_scaled[0])/2) /
-                                    self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value(),
-                                    np.abs((pos_ur_scaled[1]-pos_dl_scaled[1])/2) /
-                                    self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
+                nsteps = 2 * np.min((np.abs((pos_ur_scaled[0] - pos_dl_scaled[0]) / 2) /
+                                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').value(),
+                                     np.abs((pos_ur_scaled[1] - pos_dl_scaled[1]) / 2) /
+                                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
 
                 self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').setValue(nsteps)
 
@@ -734,8 +739,8 @@ class Scanner(QObject):
             if scan_subtype == 'Adaptive':
                 if self.settings.child('scan_options', 'scan2D_settings', 'scan2D_loss').value() == 'resolution':
                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').setOpts(
-                       title='Minimal feature (%):',
-                       tip='Features smaller than this will not be probed first. In percent of maximal scanned area length',
+                        title='Minimal feature (%):',
+                        tip='Features smaller than this will not be probed first. In percent of maximal scanned area length',
                         visible=True)
                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').setOpts(
                         title='Maximal feature (%):',
@@ -746,9 +751,9 @@ class Scanner(QObject):
                     self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').hide()
             else:
                 self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').setOpts(title='Step Ax1:',
-                                        tip='Step size for ax1 in actuator units')
+                                                                                                tip='Step size for ax1 in actuator units')
                 self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').setOpts(title='Step Ax2:',
-                                        tip='Step size for ax2 in actuator units')
+                                                                                                tip='Step size for ax2 in actuator units')
 
             if scan_subtype == 'Spiral':
                 self.settings.child('scan_options', 'scan2D_settings',
@@ -765,13 +770,11 @@ class Scanner(QObject):
                 self.settings.child('scan_options', 'scan2D_settings',
                                     'npts_by_axis').show()
 
-
                 # do some checks and set stops values
                 self.settings.sigTreeStateChanged.disconnect()
                 if param.name() == 'step_2d_axis1':
                     if param.value() < 0:
                         param.setValue(-param.value())
-
 
                 if param.name() == 'step_2d_axis2':
                     if param.value() < 0:
@@ -806,7 +809,7 @@ class Scanner(QObject):
 class TableModelTabular(gutils.TableModel):
     def __init__(self, data, axes_name=None, **kwargs):
         if axes_name is None:
-            if 'header' in kwargs: #when saved as XML the header will be saved and restored here
+            if 'header' in kwargs:  # when saved as XML the header will be saved and restored here
                 axes_name = [h for h in kwargs['header']]
                 kwargs.pop('header')
             else:
@@ -840,7 +843,6 @@ class TableModelTabular(gutils.TableModel):
         fname = gutils.select_file(start_path=None, save=True, ext='dat')
         if fname is not None and fname != '':
             np.savetxt(fname, self.get_data_all(), delimiter='\t')
-
 
     def __repr__(self):
         return f'{self.__class__.__name__} from module {self.__class__.__module__}'
@@ -890,11 +892,11 @@ class TableModelSequential(gutils.TableModel):
         stop = self.data(self.index(row, 2), QtCore.Qt.DisplayRole)
         step = self.data(self.index(row, 3), QtCore.Qt.DisplayRole)
         isstep = False
-        if col == 1:  #the start
+        if col == 1:  # the start
             start = value
-        elif col == 2: #the stop
+        elif col == 2:  # the stop
             stop = value
-        else: #the step
+        else:  # the step
             isstep = True
             step = value
 
@@ -906,7 +908,6 @@ class TableModelSequential(gutils.TableModel):
             else:
                 self._data[row][3] = -step
         return True
-
 
 
 def set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=10000):
@@ -1030,7 +1031,6 @@ def set_scan_spiral(starts, rmaxs, rsteps, nsteps=None, oversteps=10000):
     else:
         Nlin = Nlin[0]
 
-
     axis_1_indexes = [0]
     axis_2_indexes = [0]
     while flag:
@@ -1100,7 +1100,7 @@ def set_scan_sequential(starts, stops, steps):
         else:
             indexes_true = np.where(np.array(state))
             positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
-            positions[indexes_true[-1][0]-1] += steps[indexes_true[-1][0]-1]
+            positions[indexes_true[-1][0] - 1] += steps[indexes_true[-1][0] - 1]
 
         state = pos_above_stops(positions, steps, stops)
         if not np.any(np.array(state)):
@@ -1117,6 +1117,7 @@ if __name__ == '__main__':
     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
     from pymodaq.daq_utils.plotting.navigator import Navigator
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+
 
     class UI():
         def __init__(self):
@@ -1136,9 +1137,11 @@ if __name__ == '__main__':
             self.dock.addWidget(form)
             self.area.addDock(self.dock)
 
+
     def get_scan_params(param):
         print(param)
         print(param.scan_info.positions)
+
 
     #
     # ####simple sequential scan test
@@ -1146,7 +1149,6 @@ if __name__ == '__main__':
     # prog.settings_tree.show()
     # #prog.actuators = ['xxx', 'yyy']
     # prog.scan_params_signal.connect(get_scan_params)
-
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
@@ -1169,16 +1171,15 @@ if __name__ == '__main__':
     QThread.msleep(1000)
     QtWidgets.QApplication.processEvents()
 
-
-    fake.detector_modules=[prog, prog2]
+    fake.detector_modules = [prog, prog2]
     items = OrderedDict()
     items[prog.title] = dict(viewers=[view for view in prog.ui.viewers],
-                           names=[view.title for view in prog.ui.viewers],
-                           )
+                             names=[view.title for view in prog.ui.viewers],
+                             )
     items['Navigator'] = dict(viewers=[prog2.viewer],
-                             names=['Navigator'])
+                              names=['Navigator'])
     items["DaqScan"] = dict(viewers=[fake.ui.scan2D_graph],
-                             names=["DaqScan"])
+                            names=["DaqScan"])
 
     prog = Scanner(items, actuators=['Xaxis', 'Yaxis'])
     prog.settings_tree.show()

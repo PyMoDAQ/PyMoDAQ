@@ -6,8 +6,11 @@ from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.parametertree.Parameter import registerParameterType
-
 from pymodaq.daq_utils.gui_utils import select_file
+
+# check if overshoot_configurations directory exists on the drive
+from pymodaq.daq_utils.daq_utils import get_set_overshoot_path
+overshoot_path = get_set_overshoot_path()
 
 
 class PresetScalableGroupMove(GroupParameter):
@@ -108,11 +111,6 @@ class PresetScalableGroupDet(GroupParameter):
 
 registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
 
-# check if overshoot_configurations directory exists on the drive
-from pymodaq.daq_utils.daq_utils import get_set_overshoot_path
-
-overshoot_path = get_set_overshoot_path()
-
 
 class OvershootManager:
     def __init__(self, msgbox=False, det_modules=[], move_modules=[]):
@@ -123,8 +121,8 @@ class OvershootManager:
 
         if msgbox:
             msgBox = QtWidgets.QMessageBox()
-            msgBox.setText("Overshoot Manager?");
-            msgBox.setInformativeText("What do you want to do?");
+            msgBox.setText("Overshoot Manager?")
+            msgBox.setInformativeText("What do you want to do?")
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
             new_button = msgBox.addButton("New", QtWidgets.QMessageBox.ActionRole)
             modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
