@@ -1,6 +1,8 @@
 import distutils.dir_util
 from distutils.command import build
-import os, sys, re
+import os
+import sys
+
 try:
     import setuptools
     from setuptools import setup, find_packages
@@ -23,7 +25,7 @@ setupOpts = dict(
     url='http://pymodaq.cnrs.fr',
     author='Sébastien Weber',
     author_email='sebastien.weber@cemes.fr',
-    classifiers = [
+    classifiers=[
         "Programming Language :: Python :: 3",
         "Development Status :: 5 - Production/Stable",
         "Environment :: Other Environment",
@@ -34,7 +36,8 @@ setupOpts = dict(
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Software Development :: User Interfaces",
-        ],)
+    ], )
+
 
 def listAllPackages(pkgroot):
     path = os.getcwd()
@@ -43,26 +46,25 @@ def listAllPackages(pkgroot):
     return ['.'.join(p) for p in subdirs]
 
 
-allPackages = (listAllPackages(pkgroot='pymodaq')) #+
-               #['pyqtgraph.'+x for x in helpers.listAllPackages(pkgroot='examples')])
+allPackages = (listAllPackages(pkgroot='pymodaq'))  # +
 
+
+# ['pyqtgraph.'+x for x in helpers.listAllPackages(pkgroot='examples')])
 
 
 def get_packages():
-
-    packages=find_packages()
+    packages = find_packages()
     for pkg in packages:
         if 'hardware.' in pkg:
             packages.pop(packages.index(pkg))
     return packages
 
+
 allPackages = get_packages()
-
-
 
 setup(
     version=get_version(),
-     #cmdclass={'build': Build,},
+    # cmdclass={'build': Build,},
     #           'install': Install,
     #           'deb': helpers.DebCommand,
     #           'test': helpers.TestCommand,
@@ -70,7 +72,7 @@ setup(
     #           'mergetest': helpers.MergeTestCommand,
     #           'style': helpers.StyleCommand},
     packages=allPackages,
-    #package_dir={'examples': 'examples'},  ## install examples along with the rest of the source
+    # package_dir={'examples': 'examples'},  ## install examples along with the rest of the source
     package_data={},
     entry_points={'console_scripts': ['dashboard=pymodaq.dashboard:main',
                                       'daq_scan=pymodaq.daq_scan:main',

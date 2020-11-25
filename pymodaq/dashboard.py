@@ -14,10 +14,10 @@ from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes# to be placed after importing Parameter
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes  # to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
-logger = utils.set_logger(utils.get_module_name(__file__))
+
 
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
@@ -35,6 +35,8 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 from packaging import version as version_mod
 
+logger = utils.set_logger(utils.get_module_name(__file__))
+
 config = utils.load_config()
 
 local_path = utils.get_set_local_dir()
@@ -46,6 +48,7 @@ layout_path = utils.get_set_layout_path()
 overshoot_path = utils.get_set_overshoot_path()
 roi_path = utils.get_set_roi_path()
 remote_path = utils.get_set_remote_path()
+
 
 class DashBoard(QObject):
     """
@@ -110,7 +113,6 @@ class DashBoard(QObject):
         self.extra_params = params
         self.preset_manager = PresetManager(path=self.preset_path, extra_params=params, param_options=param_options)
 
-
     @pyqtSlot(str)
     def add_status(self, txt):
         """
@@ -123,7 +125,7 @@ class DashBoard(QObject):
         """
         try:
             now = datetime.datetime.now()
-            new_item = QtWidgets.QListWidgetItem(now.strftime('%Y/%m/%d %H:%M:%S')+": "+txt)
+            new_item = QtWidgets.QListWidgetItem(now.strftime('%Y/%m/%d %H:%M:%S') + ": " + txt)
             self.logger_list.addItem(new_item)
 
         except Exception as e:
@@ -138,7 +140,7 @@ class DashBoard(QObject):
             quit_fun, update_status
         """
         try:
-        #remove all docks containing Moves or Viewers
+            # remove all docks containing Moves or Viewers
             if hasattr(self, 'move_modules'):
                 if self.move_modules is not None:
                     for module in self.move_modules:
@@ -156,7 +158,6 @@ class DashBoard(QObject):
     def load_scan_module(self):
         self.scan_module = DAQ_Scan(dockarea=self.dockarea, dashboard=self)
         self.scan_module.status_signal.connect(self.add_status)
-
 
     def load_log_module(self):
         self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
@@ -193,7 +194,6 @@ class DashBoard(QObject):
         action_show_log.setCheckable(True)
         action_show_log.toggled.connect(self.logger_dock.setVisible)
 
-
         self.preset_menu = menubar.addMenu('Preset Modes')
         action_new_preset = self.preset_menu.addAction('New Preset')
         # action.triggered.connect(lambda: self.show_file_attributes(type_info='managers'))
@@ -220,7 +220,6 @@ class DashBoard(QObject):
         self.overshoot_menu.addSeparator()
         load_overshoot = self.overshoot_menu.addMenu('Load Overshoots')
 
-
         slots_over = dict([])
         for ind_file, file in enumerate(utils.get_set_overshoot_path().iterdir()):
             if file.suffix == '.xml':
@@ -228,7 +227,6 @@ class DashBoard(QObject):
                 slots_over[filestem] = load_overshoot.addAction(filestem)
                 slots_over[filestem].triggered.connect(
                     self.create_menu_slot_over(utils.get_set_overshoot_path().joinpath(file)))
-
 
         self.roi_menu = menubar.addMenu('ROI Modes')
         action_new_roi = self.roi_menu.addAction('Save Current ROIs as a file')
@@ -246,7 +244,6 @@ class DashBoard(QObject):
                 slots[filestem].triggered.connect(
                     self.create_menu_slot_roi(utils.get_set_roi_path().joinpath(file)))
 
-
         self.remote_menu = menubar.addMenu('Remote/Shortcuts Control')
         self.remote_menu.addAction('New remote config.', self.create_remote)
         self.remote_menu.addAction('Modify remote config.', self.modify_remote)
@@ -261,13 +258,12 @@ class DashBoard(QObject):
                 slots[filestem].triggered.connect(
                     self.create_menu_slot_remote(utils.get_set_remote_path().joinpath(file)))
 
-        #actions menu
+        # actions menu
         self.actions_menu = menubar.addMenu('Extensions')
         action_scan = self.actions_menu.addAction('Do Scans')
         action_scan.triggered.connect(self.load_scan_module)
         action_log = self.actions_menu.addAction('Log data')
         action_log.triggered.connect(self.load_log_module)
-
 
         # help menu
         help_menu = menubar.addMenu('?')
@@ -401,7 +397,6 @@ class DashBoard(QObject):
         utils.get_set_overshoot_path().joinpath(name).unlink(missing_ok=True)
         utils.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
 
-
     def quit_fun(self):
         """
             Quit the current instance of DAQ_scan and close on cascade move and detector modules.
@@ -424,7 +419,7 @@ class DashBoard(QObject):
                     QtWidgets.QApplication.processEvents()
                     QThread.msleep(1000)
                     QtWidgets.QApplication.processEvents()
-                except:
+                except Exception:
                     pass
 
             for module in self.detector_modules:
@@ -433,7 +428,7 @@ class DashBoard(QObject):
                     QtWidgets.QApplication.processEvents()
                     QThread.msleep(1000)
                     QtWidgets.QApplication.processEvents()
-                except:
+                except Exception:
                     pass
             areas = self.dockarea.tempAreas[:]
             for area in areas:
@@ -447,7 +442,6 @@ class DashBoard(QObject):
 
         except Exception as e:
             logger.exception(str(e))
-
 
     def restart_fun(self, ask=False):
         ret = False
@@ -505,7 +499,7 @@ class DashBoard(QObject):
 
     def save_layout_state_auto(self):
         if self.preset_file is not None:
-            path = layout_path.joinpath(self.preset_file.stem+'.dock')
+            path = layout_path.joinpath(self.preset_file.stem + '.dock')
             self.save_layout_state(path)
 
     def open_PID(self):
@@ -541,7 +535,6 @@ class DashBoard(QObject):
             det_docks_viewer = []
             move_forms = []
 
-
             # ### set daq scan settings set in presets
             # try:
             #     for child in self.preset_manager.preset_params.child(('saving_options')).children():
@@ -550,12 +543,13 @@ class DashBoard(QObject):
             # except Exception as e:
             #     logger.exception(str(e))
 
-            ## set PID if checked in managers
+            # # set PID if checked in managers
             try:
                 if self.preset_manager.preset_params.child(('use_pid')).value():
                     self.open_PID()
                     QtWidgets.QApplication.processEvents()
-                    for child in putils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')), []):
+                    for child in putils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')),
+                                                             []):
                         preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
                         self.pid_controller.settings.child(*preset_path).setValue(child.value())
 
@@ -564,13 +558,15 @@ class DashBoard(QObject):
             except Exception as e:
                 logger.exception(str(e))
 
-            #################################################################
-            ###### sort plugins by IDs and within the same IDs by Master and Slave status
+            # ################################################################
+            # ##### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
-            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0], ptypes.GroupParameterCustom):
+            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0],
+                          ptypes.GroupParameterCustom):
                 plugins += [{'type': 'move', 'value': child} for child in
-                           self.preset_manager.preset_params.child(('Moves')).children()]
-            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0], ptypes.GroupParameterCustom):
+                            self.preset_manager.preset_params.child(('Moves')).children()]
+            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0],
+                          ptypes.GroupParameterCustom):
                 plugins += [{'type': 'det', 'value': child} for child in
                             self.preset_manager.preset_params.child(('Detectors')).children()]
 
@@ -654,7 +650,6 @@ class DashBoard(QObject):
                         except Exception as e:
                             logger.exception(str(e))
 
-
                     else:
                         ind_det += 1
                         plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
@@ -665,7 +660,7 @@ class DashBoard(QObject):
 
                         if ind_det == 0:
                             self.logger_dock.area.addDock(det_docks_settings[-1],
-                                                             'bottom')  # dockarea of the logger dock
+                                                          'bottom')  # dockarea of the logger dock
                         else:
                             self.dockarea.addDock(det_docks_settings[-1], 'right', det_docks_viewer[-2])
                         self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
@@ -771,7 +766,7 @@ class DashBoard(QObject):
         """
         if remote_action['action_type'] == 'shortcut':
             if remote_action['action_name'] not in self.shortcuts:
-                self.shortcuts[remote_action['action_name']] =\
+                self.shortcuts[remote_action['action_name']] = \
                     QtWidgets.QShortcut(QtGui.QKeySequence(remote_action['action_dict']['shortcut']), self.dockarea)
             self.activate_shortcut(self.shortcuts[remote_action['action_name']],
                                    remote_action['action_dict'],
@@ -797,7 +792,6 @@ class DashBoard(QObject):
                 self.joysticks_obj[-1]['obj'].init()
                 self.joysticks_obj[-1]['id'] = self.joysticks_obj[-1]['obj'].get_id()
 
-
             self.remote_timer.timeout.connect(self.pygame_loop)
             self.ispygame_init = True
             self.remote_timer.start(10)
@@ -816,7 +810,7 @@ class DashBoard(QObject):
         contained in self.joysticks
         """
 
-        ## Specifi action for axis to get their values even if it doesn't change (in which case it would'nt trigger events)
+        # # Specifi action for axis to get their values even if it doesn't change (in which case it would'nt trigger events)
         for action_dict in self.joysticks.values():
             if action_dict['activated'] and action_dict['actionner_type'].lower() == 'axis':
                 joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id', action_dict['joystickID'])
@@ -828,7 +822,7 @@ class DashBoard(QObject):
                     if module.move_done_bool:
                         action(val * 1 * module.settings.child('move_settings', 'epsilon').value())
 
-        ## For other actions use the event loop
+        # # For other actions use the event loop
         for event in self.pygame.event.get():  # User did something.
             selection = dict([])
             if 'joy' in event.dict:
@@ -859,8 +853,6 @@ class DashBoard(QObject):
 
         QtWidgets.QApplication.processEvents()
 
-
-
     def activate_shortcut(self, shortcut, action=None, activate=True):
         """
         action = dict(shortcut=action.child(('shortcut')).value(), activated=True, name=f'action{ind:02d}',
@@ -881,7 +873,7 @@ class DashBoard(QObject):
         else:
             try:
                 shortcut.activated.disconnect()
-            except:
+            except Exception:
                 pass
 
     def create_activated_shortcut(self, action):
@@ -965,8 +957,8 @@ class DashBoard(QObject):
             QtWidgets.QApplication.processEvents()
 
             logger.info(f'Loading Preset file: {filename}')
-            move_modules, detector_modules= self.set_file_preset(filename)
-            if not(not move_modules and not detector_modules):
+            move_modules, detector_modules = self.set_file_preset(filename)
+            if not (not move_modules and not detector_modules):
                 self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
                 self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
                 self.move_modules = move_modules
@@ -992,19 +984,19 @@ class DashBoard(QObject):
                     self.set_remote_configuration(path)
 
                 self.roi_saver = ROISaver(det_modules=detector_modules)
-                #load roi saver if present
+                # load roi saver if present
                 path = roi_path.joinpath(file)
                 if path.is_file():
                     self.set_roi_configuration(path)
-    
-                #connecting to logger
+
+                # connecting to logger
                 for mov in move_modules:
                     mov.status_signal[str].connect(self.add_status)
                     mov.init_signal.connect(self.update_init_tree)
                 for det in detector_modules:
                     det.status_signal[str].connect(self.add_status)
                     det.init_signal.connect(self.update_init_tree)
-    
+
                 self.splash_sc.close()
                 self.mainwindow.setVisible(True)
                 for area in self.dockarea.tempAreas:
@@ -1022,7 +1014,6 @@ class DashBoard(QObject):
                 self.preset_loaded_signal.emit(True)
 
             logger.info(f'Preset file: {filename} has been loaded')
-
 
         except Exception as e:
             logger.exception(str(e))
@@ -1046,9 +1037,9 @@ class DashBoard(QObject):
                 QtWidgets.QApplication.processEvents()
                 self.settings.child('detectors', name).setValue(act.initialized_state)
 
-
     pyqtSlot(bool)
-    def stop_moves(self,overshoot):
+
+    def stop_moves(self, overshoot):
         """
             Foreach module of the move module object list, stop motion.
 
@@ -1062,7 +1053,6 @@ class DashBoard(QObject):
 
         for mod in self.move_modules:
             mod.stop_Motion()
-
 
     def show_log(self):
         import webbrowser
@@ -1085,7 +1075,6 @@ class DashBoard(QObject):
         splitter.addWidget(self.logger_list)
         self.logger_dock.addWidget(splitter)
 
-
         self.settings = Parameter.create(name='init_settings', type='group', children=[
             {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config['general']['debug_level'],
              'values': config['general']['debug_levels']},
@@ -1097,9 +1086,9 @@ class DashBoard(QObject):
                 {'title': 'ROI file', 'name': 'roi_file', 'type': 'str', 'value': '', 'readonly': True},
                 {'title': 'Remote file', 'name': 'remote_file', 'type': 'str', 'value': '', 'readonly': True},
             ]},
-                {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
-                {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
-                ])
+            {'title': 'Actuators Init.', 'name': 'actuators', 'type': 'group', 'children': []},
+            {'title': 'Detectors Init.', 'name': 'detectors', 'type': 'group', 'children': []},
+        ])
         self.init_tree.setParameters(self.settings, showTop=False)
         self.remote_dock = Dock('Remote controls')
         self.dockarea.addDock(self.remote_dock, 'top')
@@ -1109,24 +1098,21 @@ class DashBoard(QObject):
         self.remote_dock.setVisible(False)
         self.preset_manager = PresetManager(path=self.preset_path, extra_params=self.extra_params)
 
-        #creating the menubar
+        # creating the menubar
         self.menubar = self.mainwindow.menuBar()
         self.create_menu(self.menubar)
         self.overshoot_menu.setEnabled(False)
         self.roi_menu.setEnabled(False)
         self.remote_menu.setEnabled(False)
         self.actions_menu.setEnabled(False)
-#        connecting
+        #        connecting
         self.status_signal[str].connect(self.add_status)
 
-
         self.file_menu.setEnabled(True)
-        #self.actions_menu.setEnabled(True)
+        # self.actions_menu.setEnabled(True)
         self.settings_menu.setEnabled(True)
         self.preset_menu.setEnabled(True)
         self.mainwindow.setVisible(True)
-
-
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -1160,11 +1146,11 @@ class DashBoard(QObject):
             elif change == 'parent':
                 pass
 
-
     def show_about(self):
         self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage("PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()), QtCore.Qt.AlignRight, QtCore.Qt.white)
-
+        self.splash_sc.showMessage(
+            "PyMoDAQ version {:}\nModular Acquisition with Python\nWritten by Sébastien Weber".format(get_version()),
+            QtCore.Qt.AlignRight, QtCore.Qt.white)
 
     def check_version(self, show=True):
         try:
@@ -1190,7 +1176,6 @@ class DashBoard(QObject):
                     ret = msgBox.exec()
         except Exception as e:
             logger.exception("Error while checking the available PyMoDAQ version")
-            
 
     def show_file_attributes(self, type_info='dataset'):
         """
@@ -1216,11 +1201,10 @@ class DashBoard(QObject):
         tree = ParameterTree()
         tree.setMinimumWidth(400)
         tree.setMinimumHeight(500)
-        if type_info=='scan':
+        if type_info == 'scan':
             tree.setParameters(self.scan_attributes, showTop=False)
-        elif type_info=='dataset':
+        elif type_info == 'dataset':
             tree.setParameters(self.dataset_attributes, showTop=False)
-
 
         vlayout.addWidget(tree)
         dialog.setLayout(vlayout)
@@ -1232,14 +1216,13 @@ class DashBoard(QObject):
 
         vlayout.addWidget(buttonBox)
         dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
-        res=dialog.exec()
+        res = dialog.exec()
         return res
 
     def show_help(self):
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
-
-    def update_status(self,txt,wait_time=0, log_type=None):
+    def update_status(self, txt, wait_time=0, log_type=None):
         """
             Show the txt message in the status bar with a delay of wait_time ms.
 
@@ -1266,10 +1249,10 @@ def main():
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
 
-    #win.setVisible(False)
+    # win.setVisible(False)
     prog = DashBoard(area)
     sys.exit(app.exec_())
 
+
 if __name__ == '__main__':
     main()
-
