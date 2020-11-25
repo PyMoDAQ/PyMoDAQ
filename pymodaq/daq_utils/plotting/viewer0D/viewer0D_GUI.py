@@ -8,7 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import PlotWidget
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.ressources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class Ui_Form(object):

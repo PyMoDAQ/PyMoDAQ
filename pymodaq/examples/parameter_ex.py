@@ -3,12 +3,12 @@ S Weber  2020
 Examples of custome parameter types derived from pyqtgraph
 """
 import sys
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets, QtCore
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
-from pymodaq.daq_utils.parameter import pymodaq_ptypes  # this import register the custom types that are then available
 from collections import OrderedDict
 from pymodaq.daq_utils import gui_utils as gutils
+from pymodaq.daq_utils.parameter import pymodaq_ptypes
+from pymodaq.ressources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class ParameterEx:

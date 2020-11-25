@@ -679,10 +679,18 @@ def main():
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    prog.set_preset_mode(Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_logger']}.xml"))
-    # QThread.msleep(4000)
+    file = Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_logger']}.xml")
+    if file.exists():
+        prog.set_preset_mode(file)
+        prog.load_log_module()
+    else:
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{file}\n"
+                       f"Impossible to load the Logger Module")
+        msgBox.setStandardButtons(msgBox.Ok)
+        ret = msgBox.exec()
 
-    prog.load_log_module()
     sys.exit(app.exec_())
 
 

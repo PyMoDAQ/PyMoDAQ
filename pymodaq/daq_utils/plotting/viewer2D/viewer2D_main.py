@@ -19,6 +19,7 @@ from pymodaq.daq_utils.gui_utils import DockArea
 
 import pymodaq.daq_utils.daq_utils as utils
 import datetime
+from pymodaq.ressources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
@@ -1204,8 +1205,6 @@ class Viewer2D(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.QtDesigner_Ressources import QtDesigner_ressources_rc
-
     app = QtWidgets.QApplication(sys.argv)
     Form = DockArea()
     Form = QtWidgets.QWidget()

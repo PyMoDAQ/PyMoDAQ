@@ -5,10 +5,13 @@ from pymodaq.daq_move.daq_move_gui import Ui_Form
 
 from pymodaq.daq_move.utility_classes import params as daq_move_params
 
-# must be loaded to register proper custom parameter types
+
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
+
+# must be imported to register proper custom parameter types
+from pymodaq.daq_utils.parameter import pymodaq_ptypes
 
 from pymodaq.daq_utils.daq_utils import ThreadCommand
 from easydict import EasyDict as edict

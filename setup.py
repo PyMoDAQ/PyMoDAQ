@@ -85,7 +85,7 @@ setup(
         'pyqt5',
         'numpy==1.19.3',
         'scipy',
-        'pyqtgraph',
+        'pyqtgraph>=0.11',
         'easydict',
         'tables',
         'pymodaq_plugins>=3.0.1',

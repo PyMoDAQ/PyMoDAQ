@@ -55,11 +55,16 @@ def get_set_local_dir(basename='pymodaq_local'):
                 local_path.mkdir()
     return local_path
 
+def copy_preset():
+    path = get_set_preset_path().joinpath('preset_default.xml')
+    if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
+        with open(str(Path(__file__).parent.parent.joinpath('ressources/preset_default.xml')), 'r') as file:
+            path.write_text(file.read())
 
 def load_config(config_path=None):
     if not config_path:
         config_path = get_set_local_dir().joinpath('config.toml')
-    config_base = toml.load(Path(__file__).parent.parent.joinpath('config_template.toml'))
+    config_base = toml.load(Path(__file__).parent.parent.joinpath('ressources/config_template.toml'))
     if not config_path.exists():  # copy the template from pymodaq folder and create one in pymodad's local folder
         config_path.write_text(toml.dumps(config_base))
 

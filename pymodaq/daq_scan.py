@@ -1925,13 +1925,20 @@ def main():
     win.resize(1000,500)
     win.setWindowTitle('PyMoDAQ Dashboard')
 
-    #win.setVisible(False)
 
     prog = DashBoard(area)
-    prog.set_preset_mode(Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml"))
-    # QThread.msleep(4000)
+    file = Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
+    if file.exists():
+        prog.set_preset_mode(file)
+        prog.load_scan_module()
+    else:
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{file}\n"
+                       f"Impossible to load the DAQ_Scan Module")
+        msgBox.setStandardButtons(msgBox.Ok)
+        ret = msgBox.exec()
 
-    prog.load_scan_module()
     sys.exit(app.exec_())
 
 
