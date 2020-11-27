@@ -2,6 +2,8 @@ import distutils.dir_util
 from distutils.command import build
 import os
 import sys
+from pathlib import Path
+import importlib
 
 try:
     import setuptools
@@ -12,7 +14,10 @@ except ImportError:
     from distutils.core import setup
     from distutils.command import install
 
-from pymodaq.version import get_version
+path = Path(__file__).parent.joinpath('src/pymodaq')
+sys.path.insert(0, str(path))
+get_version = importlib.import_module('version', 'pymodaq').get_version
+
 
 with open('README.rst') as fd:
     long_description = fd.read()
