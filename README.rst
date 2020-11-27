@@ -35,8 +35,6 @@ and many others to simplify any application development.
     <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
      autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-
-
 Published under the CeCILL-B FREE SOFTWARE LICENSE
 
 GitHub repo: https://github.com/CEMES-CNRS
