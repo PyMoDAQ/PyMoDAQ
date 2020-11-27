@@ -11,7 +11,7 @@ import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter
+from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter, NavAxis
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 import pickle
@@ -19,7 +19,7 @@ from PyQt5 import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.scanner import scan_types as stypes
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
-from pymodaq.version import get_version
+from pymodaq import __version__
 import datetime
 from dateutil import parser
 import numpy as np
@@ -503,14 +503,14 @@ class H5Backend:
         if self.backend == 'tables':
             self._h5file = self.h5module.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
             if mode == 'w':
-                self.root().attrs['pymodaq_version'] = get_version()
+                self.root().attrs['pymodaq_version'] = __version__
             return self._h5file
         else:
             self._h5file = self.h5module.File(str(fullpathname), mode=mode, **kwargs)
 
             if mode == 'w':
                 self.root().attrs['TITLE'] = title
-                self.root().attrs['pymodaq_version'] = get_version()
+                self.root().attrs['pymodaq_version'] = __version__
             return self._h5file
 
     def save_file_as(self, filenamepath='h5copy.txt'):
@@ -1997,7 +1997,7 @@ class H5BrowserUtil(H5Backend):
                                     all_units.append(axis_node.attrs['units'])
 
                                 nav_axes.append(0)
-                                axes['nav_x_axis'] = Axis(
+                                axes['nav_x_axis'] = NavAxis(
                                     data=np.linspace(0, npts - 1, npts),
                                     nav_index=nav_axes[-1], units='', label='Scan index', labels=labels,
                                     datas=datas, all_units=all_units)
@@ -2005,11 +2005,11 @@ class H5BrowserUtil(H5Backend):
                                 for axis_node in nav_children:
                                     nav_axes.append(axis_node.attrs['nav_index'])
                                     if is_spread:
-                                        axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=axis_node.read(),
-                                                                               nav_index=nav_axes[-1])
+                                        axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=axis_node.read(),
+                                                                                  nav_index=nav_axes[-1])
                                     else:
-                                        axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.unique(axis_node.read()),
-                                                                               nav_index=nav_axes[-1])
+                                        axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=np.unique(axis_node.read()),
+                                                                                  nav_index=nav_axes[-1])
                                         if nav_axes[-1] < len(data.shape):
                                             if axes[f'nav_{nav_axes[-1]:02d}'][
                                                     'data'].shape[0] != data.shape[nav_axes[-1]]:
@@ -2017,8 +2017,8 @@ class H5BrowserUtil(H5Backend):
                                                 tmp_ax = []
                                                 for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
                                                     tmp_ax.extend([ix, ix])
-                                                    axes[f'nav_{nav_axes[-1]:02d}'] = Axis(data=np.array(tmp_ax),
-                                                                                           nav_index=nav_axes[-1])
+                                                    axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=np.array(tmp_ax),
+                                                                                              nav_index=nav_axes[-1])
 
                                     if 'units' in axis_node.attrs.attrs_name:
                                         axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
@@ -2104,7 +2104,7 @@ class H5Browser(QObject):
                 msgBox.setWindowTitle("Invalid version")
                 msgBox.setText(f"Your file has been saved using PyMoDAQ "
                                f"version {self.h5utils.root().attrs['pymodaq_version']} "
-                               f"while you're using version: {get_version()}\n"
+                               f"while you're using version: {__version__}\n"
                                f"Please create and use an adapted environment to use this version (up to 1.6.4):\n"
                                f"pip install pymodaq==1.6.4")
                 ret = msgBox.exec()
@@ -2197,7 +2197,7 @@ class H5Browser(QObject):
         splash = QtGui.QPixmap(splash_path)
         self.splash_sc = QtWidgets.QSplashScreen(splash, QtCore.Qt.WindowStaysOnTopHint)
         self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage(f"PyMoDAQ version {get_version()}\n"
+        self.splash_sc.showMessage(f"PyMoDAQ version {__version__()}\n"
                                    f"Modular Acquisition with Python\nWritten by Sébastien Weber",
                                    QtCore.Qt.AlignRight, QtCore.Qt.white)
 

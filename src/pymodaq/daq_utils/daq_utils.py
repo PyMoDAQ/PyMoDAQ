@@ -472,11 +472,12 @@ class Axis(dict):
 
 class NavAxis(Axis):
     def __init__(self, data=None, label='', units='', nav_index=-1, **kwargs):
-        super().__init__(data=None, label='', units='', **kwargs)
+        super().__init__(data=data, label=label, units=units, **kwargs)
 
         if nav_index < 0:
             raise ValueError('nav_index should be a positive integer representing the index of this axis among all'
                              'navigation axes')
+        self['nav_index'] = nav_index
 
 
 class Data(OrderedDict):

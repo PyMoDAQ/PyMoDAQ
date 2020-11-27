@@ -144,14 +144,14 @@ def test_get_set_local_dir():
 def test_get_set_log_path():
     local_path = utils.get_set_local_dir()
     log_path = utils.get_set_log_path()
-    assert Path(log_path) == Path(local_path).joinpath('logging')
+    assert Path(log_path) == Path(local_path).joinpath('log')
     assert Path(log_path).is_dir()
 
 
 def test_get_set_pid_path():
     local_path = utils.get_set_local_dir()
     pid_path = utils.get_set_pid_path()
-    assert Path(pid_path) == Path(local_path).joinpath('config_pid')
+    assert Path(pid_path) == Path(local_path).joinpath('pid_configs')
     assert Path(pid_path).is_dir()
 
 

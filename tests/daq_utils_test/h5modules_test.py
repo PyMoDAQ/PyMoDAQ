@@ -2,18 +2,18 @@ import os
 import numpy as np
 from datetime import datetime
 import pytest
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, Path
 from PyQt5 import QtWidgets, QtCore
 
 import pymodaq.daq_utils.parameter.ioxml
-from pymodaq.version import get_version
+from pymodaq import __version__
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
     group_data_types, InvalidGroupType, CARRAY, EARRAY, StringARRAY, Node, Attributes
 import csv
 
-tested_backend = ['tables', 'h5py', 'h5pyd']
+tested_backend = ['tables', 'h5py']  # , 'h5pyd']
 
 
 @pytest.fixture(scope="module")
@@ -70,7 +70,7 @@ class TestH5Backend:
 
         assert bck.isopen() is True
         assert bck.root().attrs['TITLE'] == title
-        assert bck.root().attrs['pymodaq_version'] == get_version()
+        assert bck.root().attrs['pymodaq_version'] == __version__
         bck.close_file()
         assert bck.isopen() is False
 
@@ -493,7 +493,8 @@ class TestH5Saver:
 @pytest.fixture(params=tested_backend)
 def create_test_file(request, qtbot):
     bck = H5Saver(backend=request.param)
-    filepath = f'./data/data_test_{request.param}.h5'
+    basepath = Path(__file__).parent
+    filepath = basepath.joinpath(f'data/data_test_{request.param}.h5')
     bck.init_file(update_h5=True, addhoc_file_path=filepath)
 
     Nx = 12
@@ -503,8 +504,8 @@ def create_test_file(request, qtbot):
     x_axis = dict(label='this is data axis', units='no units', data=np.arange(Nx))
     data1D = dict(data=np.arange(Nx) * 1.0 + 7, x_axis=x_axis)
 
-    nav_x_axis = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx))
-    nav_y_axis = utils.Axis(label='this is nav y axis', units='y units', data=np.arange(Nnavy))
+    nav_x_axis = dict(label='this is nav x axis', units='x units', data=np.arange(Nnavx), nav_index=0)
+    nav_y_axis = utils.NavAxis(label='this is nav y axis', units='y units', data=np.arange(Nnavy), nav_index=1)
 
     d = datetime(year=2020, month=5, day=24, hour=10, minute=52, second=55)
 
@@ -554,7 +555,8 @@ def create_test_file(request, qtbot):
 
 @pytest.fixture(params=tested_backend)
 def get_file(request):
-    filepath = f'./data/data_test_{request.param}.h5'
+    basepath = Path(__file__).parent
+    filepath = basepath.joinpath(f'data/data_test_{request.param}.h5')
     return filepath
 
 
@@ -618,7 +620,7 @@ class TestH5BrowserUtil:
         node_path = '/Raw_datas/Logger'
         node = h5utils.get_node(node_path)
         assert isinstance(node, StringARRAY)
-        data, axes, nav_axes = h5utils.get_h5_data(node_path)
+        data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
         assert isinstance(data, list)
         assert len(data) == 2
         assert data[0] == 'log1 to check'
@@ -640,12 +642,12 @@ class TestH5BrowserUtil:
         assert len(node.children()) == 2
         assert node.children_name() == ['Data', 'X_axis']
         node_path = '/Agroup/Data'
-        data, axes, nav_axes = h5utils.get_h5_data(node_path)
+        data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
         assert np.all(data == pytest.approx(np.arange(Nx) * 1.0 + 7))
 
         node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
         node = h5utils.get_node(node_path)
-        data, axes, nav_axes = h5utils.get_h5_data(node_path)
+        data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
         assert isinstance(data, np.ndarray)
         assert data.shape == (5, 10, 12)
         assert node.attrs['shape'] == (5, 10, 12)
@@ -660,13 +662,13 @@ class TestH5BrowserUtil:
         assert isinstance(axes['x_axis'], utils.Axis)
         assert isinstance(axes['x_axis'], dict)
 
-        assert axes['nav_x_axis']['label'] == nav_x_axis_in_file['label']
-        assert axes['nav_x_axis']['units'] == nav_x_axis_in_file['units']
-        assert np.all(axes['nav_x_axis']['data'] == nav_x_axis_in_file['data'])
+        assert axes['nav_00']['label'] == nav_x_axis_in_file['label']
+        assert axes['nav_00']['units'] == nav_x_axis_in_file['units']
+        assert np.all(axes['nav_00']['data'] == nav_x_axis_in_file['data'])
 
-        assert axes['nav_y_axis']['label'] == nav_y_axis_in_file['label']
-        assert axes['nav_y_axis']['units'] == nav_y_axis_in_file['units']
-        assert np.all(axes['nav_y_axis']['data'] == nav_y_axis_in_file['data'])
+        assert axes['nav_01']['label'] == nav_y_axis_in_file['label']
+        assert axes['nav_01']['units'] == nav_y_axis_in_file['units']
+        assert np.all(axes['nav_01']['data'] == nav_y_axis_in_file['data'])
         h5utils.close_file()
 
     def test_export_h5_data(self, load_test_file):
@@ -691,7 +693,7 @@ class TestH5BrowserUtil:
         node = h5utils.get_node(node_path)
         data = node.read()
         h5utils.export_data(node_path, '/data/data.txt')
-        data_back = np.loadtxt('data.txt')
+        data_back = np.loadtxt('/data/data.txt')
         assert np.all(data == pytest.approx(data_back))
         os.remove('/data/data.txt')
 
