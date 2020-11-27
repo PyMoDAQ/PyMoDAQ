@@ -1918,22 +1918,22 @@ class DAQ_Detector(QObject):
 
             if self.DAQ_type == 'DAQ0D':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + self.detector_name),
-                                 'DAQ_0DViewer_' + self.detector_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + plug_name),
+                                 'DAQ_0DViewer_' + plug_name)
             elif self.DAQ_type == "DAQ1D":
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + self.detector_name),
-                                 'DAQ_1DViewer_' + self.detector_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + plug_name),
+                                 'DAQ_1DViewer_' + plug_name)
             elif self.DAQ_type == 'DAQ2D':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + self.detector_name),
-                                 'DAQ_2DViewer_' + self.detector_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + plug_name),
+                                 'DAQ_2DViewer_' + plug_name)
             elif self.DAQ_type == 'DAQND':
                 parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + self.detector_name),
-                                 'DAQ_NDViewer_' + self.detector_name)
+                class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + plug_name),
+                                 'DAQ_NDViewer_' + plug_name)
             else:
-                raise Exception(self.detector_name + " unknown")
+                raise Exception(plug_name + " unknown")
 
             self.detector = class_(self, params_state)
             self.detector.data_grabed_signal.connect(self.data_ready)

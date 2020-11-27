@@ -91,7 +91,7 @@ def add_text_to_elt(elt, param):
         else:
             str(param.value())
     elif param_type == 'int':
-        if param.value():  # known bug
+        if param.value() is True:  # known bug is True should be clearly specified here
             val = 1
         else:
             val = param.value()
