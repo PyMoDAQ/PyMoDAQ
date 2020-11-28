@@ -10,7 +10,6 @@ python:
 install:
   - pip install coverage
   - pip install tox tox-travis
-  - python setup.py bdist_wheel
 
 
 script:
