@@ -1,6 +1,17 @@
 PyMoDAQ
 #######
 
+.. image:: https://img.shields.io/pypi/v/pymodaq.svg
+   :target: https://pypi.org/project/pymodaq/
+   :alt: Latest Version
+
+.. image:: https://readthedocs.org/projects/pymodaq/badge/?version=stable
+   :target: https://pymodaq.readthedocs.io/en/stable/?badge=stable
+   :alt: Documentation Status
+
+.. image:: https://travis-ci.org/CEMES-CNRS/PyMoDAQ.svg?branch=master
+   :target: https://travis-ci.org/CEMES-CNRS/pymodaq
+
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut
 
