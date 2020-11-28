@@ -1,0 +1,18 @@
+language: python
+cache: pip
+
+python:
+  - "3.6"
+  - "3.7"
+  - "3.8"
+
+
+install:
+  - pip install tox tox-travis
+
+script:
+  - tox
+
+after_success:
+  - pip install coveralls
+  - coveralls
