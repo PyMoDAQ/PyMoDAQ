@@ -9,7 +9,7 @@ PyMoDAQ
    :target: https://pymodaq.readthedocs.io/en/stable/?badge=stable
    :alt: Documentation Status
 
-.. image:: https://travis-ci.org/CEMES-CNRS/PyMoDAQ.svg?branch=master
+.. image:: https://travis-ci.org/CEMES-CNRS/PyMoDAQ.svg?branch=packaging_testing
    :target: https://travis-ci.org/CEMES-CNRS/pymodaq
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png

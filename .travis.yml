@@ -8,11 +8,12 @@ python:
 
 
 install:
+  - pip install coverage
   - pip install tox tox-travis
+  - python setup.py bdist_wheel
+
 
 script:
   - tox
 
-after_success:
-  - pip install coveralls
-  - coveralls
+after_success: coverage combine && codecov
