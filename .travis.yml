@@ -5,7 +5,10 @@ python:
   - "3.6"
   - "3.7"
   - "3.8"
-  -
+
+before_install:
+  - python -m pip install --upgrade pip
+
 matrix:
   include:
     - os: windows
@@ -20,6 +23,8 @@ matrix:
 install:
   - pip install coverage
   - pip install tox tox-travis
+  - pip install setuptools
+  - pip install wheel
 
 
 script:
