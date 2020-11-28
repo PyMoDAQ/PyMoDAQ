@@ -22,7 +22,7 @@ matrix:
       before_install:
         - choco install python3
         - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
-        - python -m virtualenv $HOME/venv
+        - python3 -m virtualenv $HOME/venv
         - source $HOME/venv/Scripts/activate
 
 install:
@@ -33,6 +33,6 @@ install:
 
 
 script:
-  - tox
+  - python
 
 after_success: coverage combine && codecov
