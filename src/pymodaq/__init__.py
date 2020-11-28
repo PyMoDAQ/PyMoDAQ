@@ -20,4 +20,7 @@ try:
     logger.info('')
 
 except Exception as e:
-    logger.exception(str(e))
+    try:
+        logger.exception(str(e))
+    except Exception as e:
+        print(str(e))
