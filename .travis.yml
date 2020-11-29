@@ -29,9 +29,10 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyqt coverage tox tox-travis
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyqt coverage
   - conda activate test-environment
   - python setup.py install
+  - pip install tox tox-travis
 
 script:
   - tox
