@@ -29,6 +29,10 @@ Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
+def get_version():
+    with open(str(Path(__file__).parent.parent.joinpath('ressources/VERSION')), 'r') as fvers:
+        version = fvers.read().strip()
+    return version
 
 def get_set_local_dir(basename='pymodaq_local'):
     """Defines, creates abd returns a local folder where configurations files will be saved
@@ -653,7 +657,7 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
 
 
 def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
-                                 filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation']):
+                                 filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox']):
     for child in Path(ini_path).iterdir():
         if not any(filt in str(child) for filt in filters):
             if child.is_dir():
@@ -1478,6 +1482,8 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'custom_parameter')
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', '__version__')
     for p in paths:
         print(str(p))
+    v = get_version()
+    pass

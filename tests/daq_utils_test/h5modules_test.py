@@ -6,7 +6,6 @@
 # from PyQt5 import QtWidgets, QtCore
 #
 # import pymodaq.daq_utils.parameter.ioxml
-# from pymodaq import __version__
 # from pymodaq.daq_utils import daq_utils as utils
 # from pyqtgraph.parametertree import Parameter
 # from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
@@ -70,7 +69,7 @@
 #
 #         assert bck.isopen() is True
 #         assert bck.root().attrs['TITLE'] == title
-#         assert bck.root().attrs['pymodaq_version'] == __version__
+#         assert bck.root().attrs['pymodaq_version'] == utils.get_version()
 #         bck.close_file()
 #         assert bck.isopen() is False
 #

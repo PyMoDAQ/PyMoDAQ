@@ -19,7 +19,7 @@ from PyQt5 import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.scanner import scan_types as stypes
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
-from pymodaq import __version__
+
 import datetime
 from dateutil import parser
 import numpy as np
@@ -503,14 +503,14 @@ class H5Backend:
         if self.backend == 'tables':
             self._h5file = self.h5module.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
             if mode == 'w':
-                self.root().attrs['pymodaq_version'] = __version__
+                self.root().attrs['pymodaq_version'] = utils.get_version()
             return self._h5file
         else:
             self._h5file = self.h5module.File(str(fullpathname), mode=mode, **kwargs)
 
             if mode == 'w':
                 self.root().attrs['TITLE'] = title
-                self.root().attrs['pymodaq_version'] = __version__
+                self.root().attrs['pymodaq_version'] = utils.get_version()
             return self._h5file
 
     def save_file_as(self, filenamepath='h5copy.txt'):
@@ -2104,7 +2104,7 @@ class H5Browser(QObject):
                 msgBox.setWindowTitle("Invalid version")
                 msgBox.setText(f"Your file has been saved using PyMoDAQ "
                                f"version {self.h5utils.root().attrs['pymodaq_version']} "
-                               f"while you're using version: {__version__}\n"
+                               f"while you're using version: {utils.get_version()}\n"
                                f"Please create and use an adapted environment to use this version (up to 1.6.4):\n"
                                f"pip install pymodaq==1.6.4")
                 ret = msgBox.exec()
@@ -2197,7 +2197,7 @@ class H5Browser(QObject):
         splash = QtGui.QPixmap(splash_path)
         self.splash_sc = QtWidgets.QSplashScreen(splash, QtCore.Qt.WindowStaysOnTopHint)
         self.splash_sc.setVisible(True)
-        self.splash_sc.showMessage(f"PyMoDAQ version {__version__()}\n"
+        self.splash_sc.showMessage(f"PyMoDAQ version {utils.get_version()}\n"
                                    f"Modular Acquisition with Python\nWritten by Sébastien Weber",
                                    QtCore.Qt.AlignRight, QtCore.Qt.white)
 
