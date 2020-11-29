@@ -1,8 +1,12 @@
-language: python
+# appveyor.yml
+---
+environment:
+  matrix:
+  - TOXENV: py36
+  - TOXENV: py37
+  - TOXENV: py38
 
-python:
-  - "3.7"
-  - "3.8"
+build: off
 
 install:
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -16,10 +20,9 @@ install:
 
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyqt coverage
   - conda activate test-environment
-  - pip install tox tox-travis
-  - python setup.py install
+  - pip install tox
 
-script:
-  - tox
+test_script:
+- tox
 
-after_test: coverage combine && codecov
+after_success: coverage combine && codecov
