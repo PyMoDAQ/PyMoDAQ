@@ -12,6 +12,9 @@ PyMoDAQ
 .. image:: https://travis-ci.org/CEMES-CNRS/PyMoDAQ.svg?branch=packaging_testing
    :target: https://travis-ci.org/CEMES-CNRS/pymodaq
 
+.. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/packagingtesting/graph/badge.svg?token=IQNJRCQDM2
+    :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
+
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut
 
