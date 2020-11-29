@@ -118,3 +118,5 @@ venv.bak/
 *.iml
 
 
+.tox
+*.h5
