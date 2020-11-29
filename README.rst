@@ -25,10 +25,16 @@ It simplifies the interaction with detector and actuator hardware to go straight
 It has two purposes:
 
 * First, to provide a complete interface to perform automated measurements or logging data without having to write a user/interface for each
-  new experiment, this is under the *Dashboard_module* environment and its two extensions.
+  new experiment, this is under the *Dashboard_module* environment and its extensions.
 * Second, to provide various tools (modules) to easily build *custom apps*
 
-It is divided in three main modules:
+It is organised a shown below:
+
+.. figure:: http://pymodaq.cnrs.fr/en/latest/_images/pymodaq_diagram.png
+   :alt: overview
+
+   PyMoDAQ's Dashboard and its extensions: DAQ_Scan for automated acquisitions, DAQ_Logger for data logging and many other.
+
 
 * **Dashboard_module** : This is the module that will initialize actuators and detectors given the need of your
   particular experiment. You configure the dashboard using an interface for quick launch of various configurations.
