@@ -25,4 +25,4 @@ install:
 test_script:
 - tox
 
-after_success: coverage combine && codecov
+after_test: coverage combine && codecov
