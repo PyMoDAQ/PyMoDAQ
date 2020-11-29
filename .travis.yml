@@ -17,8 +17,6 @@ matrix:
         - source $HOME/venv/Scripts/activate
 
 install:
-  # We do this conditionally because it saves us some downloading if the
-  # version is the same.
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - source "$HOME/miniconda/etc/profile.d/conda.sh"
@@ -28,11 +26,10 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pyqt coverage
   - conda activate test-environment
-  - python setup.py install
   - pip install tox tox-travis
+  - python setup.py install
 
 script:
   - tox
