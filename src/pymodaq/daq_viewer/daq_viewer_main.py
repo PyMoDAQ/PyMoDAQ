@@ -1663,7 +1663,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.status_signal.emit(txt)
         self.logger.info(txt)
 
-    def update_status(self, txt, wait_time=0):
+    def update_status(self, txt, wait_time=0, log=True):
         """
             | Show the given txt message in the status bar with a delay of wait_time ms.
             | Emit a log signal if log_type parameter is defined.
@@ -1677,7 +1677,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         """
         self.ui.statusbar.showMessage(txt, wait_time)
         self.status_signal.emit(txt)
-        self.logger.info(txt)
+        if log:
+            self.logger.info(txt)
 
     def show_log(self):
         import webbrowser

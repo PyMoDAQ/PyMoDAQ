@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 import sys
-
+import numpy as np
 
 class LCD(QObject):
 
@@ -20,14 +20,14 @@ class LCD(QObject):
         display values on lcds
         Parameters
         ----------
-        values: list of list of one element
+        values: list of list of numerical values (int or float)
 
         Returns
         -------
 
         """
         while len(values) < self.Nvals:
-            values.append(0)
+            values.append(np.array([0.]))
         if len(values) > self.Nvals:
             values = values[:self.Nvals]
         vals = []
@@ -57,6 +57,7 @@ class LCD(QObject):
         self.parent.setLayout(vlayout)
         form = QtWidgets.QWidget()
         self.viewer0D = Viewer0D(form)
+        self.viewer0D.labels = self.labels
 
         vlayout = QtWidgets.QVBoxLayout()
 
