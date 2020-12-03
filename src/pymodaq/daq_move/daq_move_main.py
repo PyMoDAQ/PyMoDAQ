@@ -1,10 +1,10 @@
 from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, Qt
 import sys
 from pymodaq.daq_move.daq_move_gui import Ui_Form
 
 from pymodaq.daq_move.utility_classes import params as daq_move_params
-
+from pathlib import Path
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import ioxml
@@ -86,7 +86,11 @@ class DAQ_Move(Ui_Form, QObject):
         self.logger = utils.set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Move: {title}')
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(DAQ_Move, self).__init__()
+        super().__init__()
+
+        here = Path(__file__).parent
+        splash = QtGui.QPixmap(str(here.parent.joinpath('splash.png')))
+        self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
 
         self.ui = Ui_Form()
         self.ui.setupUi(parent)
@@ -677,6 +681,17 @@ class DAQ_Move(Ui_Form, QObject):
 
         elif status.command == 'outofbounds':
             self.bounds_signal.emit(True)
+
+        elif status.command == 'show_splash':
+            self.ui.settings_tree.setEnabled(False)
+            self.splash_sc.show()
+            self.splash_sc.raise_()
+            self.splash_sc.showMessage(status.attributes[0], color=Qt.white)
+
+        elif status.command == 'close_splash':
+            self.splash_sc.close()
+            self.ui.settings_tree.setEnabled(True)
+
 
     def update_status(self, txt, wait_time=0):
         """

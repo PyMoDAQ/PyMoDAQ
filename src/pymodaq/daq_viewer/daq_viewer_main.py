@@ -35,7 +35,6 @@ from pymodaq.daq_utils.parameter import utils as putils
 
 from easydict import EasyDict as edict
 from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
-from pyqtgraph.dockarea import Dock
 import pickle
 import time
 import datetime
@@ -43,7 +42,7 @@ import tables
 from pathlib import Path
 from pymodaq.daq_utils.h5modules import H5Saver
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.gui_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea, Dock
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 local_path = utils.get_set_local_dir()
@@ -118,7 +117,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
         super(DAQ_Viewer, self).__init__()
 
-        splash = QtGui.QPixmap('..//splash.png')
+        here = Path(__file__).parent
+        splash = QtGui.QPixmap(str(here.parent.joinpath('splash.png')))
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
         self.title = title
         self.DAQ_type = DAQ_type

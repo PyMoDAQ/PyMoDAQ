@@ -1,11 +1,12 @@
-# import numpy as np
-# from PyQt5 import QtWidgets
-# import pytest
-# from pymodaq.daq_utils import daq_utils
-# from pymodaq.daq_utils import gui_utils as gutils
-# from pyqtgraph.dockarea import Dock
-# import datetime
-#
+import numpy as np
+from PyQt5 import QtWidgets, QtCore
+import sys
+import pytest
+from pymodaq.daq_utils import daq_utils
+from pymodaq.daq_utils import gui_utils as gutils
+from pyqtgraph.dockarea import Dock, DockArea
+import datetime
+
 #
 # class TestDockArea:
 #     moved = False
@@ -24,3 +25,22 @@
 #         area.moveDock(dock2, 'below', dock1)
 #         QtWidgets.QApplication.processEvents()
 #         assert self.moved is True
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.show()
+
+    dock = Dock(name='Test Dock', area=area)
+    area.addDock(dock)
+
+    QtCore.QThread.sleep(2)
+    dock.close()
+    QtWidgets.QApplication.processEvents()
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

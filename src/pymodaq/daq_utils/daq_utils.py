@@ -1159,6 +1159,24 @@ def linspace_step(start, stop, step):
     new_stop = start + (Nsteps - 1) * step
     return np.linspace(start, new_stop, Nsteps)
 
+def find_dict_if_matched_key_val(dict_tmp, key, value):
+    """
+    check if a key/value pair match in a given dictionnary
+    Parameters
+    ----------
+    dict_tmp: (dict) the dictionnary to be tested
+    key: (str) a key string to look for in dict_tmp
+    value: (object) any python object
+
+    Returns
+    -------
+    bool: True if the key/value pair has been found in dict_tmp
+
+    """
+    if key in dict_tmp:
+        if dict_tmp[key] == value:
+            return True
+    return False
 
 def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
     """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
@@ -1171,21 +1189,18 @@ def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
 
     Returns
     -------
-    dict: if found otherwose returns None
+    dict: if found otherwise returns None
     """
-
-    for ind, d in enumerate(dicts):
-        if key in d:
-            if d[key] == value:
+    for ind, dict_tmp in enumerate(dicts):
+        if find_dict_if_matched_key_val(dict_tmp, key, value):
                 if return_index:
-                    return d, ind
+                    return dict_tmp, ind
                 else:
-                    return d
+                    return dict_tmp
     if return_index:
         return None, -1
     else:
         return None
-
 
 def find_index(x, threshold):
     """

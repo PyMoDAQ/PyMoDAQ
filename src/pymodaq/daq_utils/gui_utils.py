@@ -2,7 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QEvent, QBuffer, QIODevice, QLocal
 from PyQt5 import QtGui, QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
-from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow
+from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow, Dock
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import datetime
@@ -180,6 +180,32 @@ def select_file(start_path=config['data_saving']['h5file']['save_path'], save=Tr
             fname = parent.joinpath(filename + "." + ext)  # forcing the right extension on the filename
     return fname  # fname is a Path object
 
+
+class Dock(Dock):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def setOrientation(self, o='auto', force=False):
+        """
+        Sets the orientation of the title bar for this Dock.
+        Must be one of 'auto', 'horizontal', or 'vertical'.
+        By default ('auto'), the orientation is determined
+        based on the aspect ratio of the Dock.
+        """
+        if self.container() is not None:  # patch here for when Dock is closed and when the QApplication
+            # event loop is processed
+            if o == 'auto' and self.autoOrient:
+                if self.container().type() == 'tab':
+                    o = 'horizontal'
+                elif self.width() > self.height() * 1.5:
+                    o = 'vertical'
+                else:
+                    o = 'horizontal'
+            if force or self.orientation != o:
+                self.orientation = o
+                self.label.setOrientation(o)
+                self.updateStyle()
 
 class DockArea(DockArea, QObject):
     """

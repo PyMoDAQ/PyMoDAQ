@@ -12,7 +12,8 @@ import numpy as np
 
 config = load_config()
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
-                    {'name': 'epsilon', 'type': 'float', 'value': 0.01},
+                    {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
+                     'tip': 'Differential Value at which the controller considers it reached the target position'},
                     {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
 
                     {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
@@ -89,7 +90,7 @@ class DAQ_Move_base(QObject):
         QObject.__init__(self)  # to make sure this is the parent class
         self.move_is_done = False
         self.parent = parent
-        self.controller = None
+        self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
         self.current_position = 0
