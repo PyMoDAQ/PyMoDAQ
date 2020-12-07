@@ -8,7 +8,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from collections import OrderedDict
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.parameter import pymodaq_ptypes
-from pymodaq.ressources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class ParameterEx:

@@ -19,7 +19,7 @@ from pymodaq.daq_utils.gui_utils import DockArea
 
 import pymodaq.daq_utils.daq_utils as utils
 import datetime
-from pymodaq.ressources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
