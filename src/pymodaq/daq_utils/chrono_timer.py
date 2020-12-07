@@ -5,7 +5,7 @@ from pymodaq.daq_utils.gui_utils import DockArea
 import time
 from datetime import timedelta
 import sys
-from pymodaq.ressources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class PushButtonShortcut(QtWidgets.QPushButton):

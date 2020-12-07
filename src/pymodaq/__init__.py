@@ -1,7 +1,7 @@
 from pathlib import Path
 
 try:
-    with open(str(Path(__file__).parent.joinpath('ressources/VERSION')), 'r') as fvers:
+    with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
         __version__ = fvers.read().strip()
 
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
