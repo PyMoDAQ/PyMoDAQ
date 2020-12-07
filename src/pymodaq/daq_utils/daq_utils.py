@@ -1,7 +1,10 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import QVariant
 import sys
-from importlib import metadata
+if '3.8' in sys.version:
+    from importlib import metadata
+else:
+    import importlib_metadata as metadata
 import pkgutil
 
 import traceback
