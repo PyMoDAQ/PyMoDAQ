@@ -1,7 +1,9 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import QVariant
 import sys
-import pkg_resources
+from importlib import metadata
+import pkgutil
+
 import traceback
 from collections import OrderedDict
 
@@ -15,7 +17,7 @@ if 'win32' in sys.platform:
 
 import enum
 import os
-import pkgutil
+
 import importlib
 import toml
 import logging
@@ -30,7 +32,7 @@ h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
 def get_version():
-    with open(str(Path(__file__).parent.parent.joinpath('ressources/VERSION')), 'r') as fvers:
+    with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
         version = fvers.read().strip()
     return version
 
@@ -63,14 +65,14 @@ def get_set_local_dir(basename='pymodaq_local'):
 def copy_preset():
     path = get_set_preset_path().joinpath('preset_default.xml')
     if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
-        with open(str(Path(__file__).parent.parent.joinpath('ressources/preset_default.xml')), 'r') as file:
+        with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
             path.write_text(file.read())
 
 
 def load_config(config_path=None):
     if not config_path:
         config_path = get_set_local_dir().joinpath('config.toml')
-    config_base = toml.load(Path(__file__).parent.parent.joinpath('ressources/config_template.toml'))
+    config_base = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
     if not config_path.exists():  # copy the template from pymodaq folder and create one in pymodad's local folder
         config_path.write_text(toml.dumps(config_base))
 
@@ -746,18 +748,15 @@ def get_plugins(plugin_type='daq_0Dviewer'):
 
     """
     plugins_import = []
-    discovered_plugins = {
-        entry_point.name: entry_point.load()
-        for entry_point in pkg_resources.iter_entry_points('pymodaq.plugins')
-    }
+    discovered_plugins = metadata.entry_points()['pymodaq.plugins']
 
-    for module in discovered_plugins.values():
+    for module in discovered_plugins:
         try:
             if plugin_type == 'daq_move':
-                submodule = importlib.import_module(f'{module.__name__}.daq_move_plugins', module.__package__)
+                submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
             else:
-                submodule = importlib.import_module(f'{module.__name__}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
-                                                    module.__package__)
+                submodule = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
+                                                    module.value)
             plugin_list = [{'name': mod[len(plugin_type) + 1:],
                             'module': submodule} for mod in [mod[1] for
                                                              mod in pkgutil.iter_modules([submodule.path.parent])]
@@ -1482,8 +1481,10 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', '__version__')
-    for p in paths:
-        print(str(p))
-    v = get_version()
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', '__version__')
+    # for p in paths:
+    #     print(str(p))
+    # v = get_version()
+    # pass
+    plugins = get_plugins()
     pass
