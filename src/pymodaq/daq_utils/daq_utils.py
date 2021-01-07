@@ -1,7 +1,10 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import QVariant
 import sys
-if '3.8' in sys.version:
+from packaging import version as version_mod
+python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
+if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
+    # standard lib
     from importlib import metadata
 else:
     import importlib_metadata as metadata
