@@ -14,6 +14,9 @@ PyMoDAQ
 
 .. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
+    
+.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/workflows/Python%20package/badge.svg
+    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions?query=workflow%3A%22Python+package%22
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut
