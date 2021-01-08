@@ -5,8 +5,8 @@ PyMoDAQ
    :target: https://pypi.org/project/pymodaq/
    :alt: Latest Version
 
-.. image:: https://readthedocs.org/projects/pymodaq/badge/?version=stable
-   :target: https://pymodaq.readthedocs.io/en/stable/?badge=stable
+.. image:: https://readthedocs.org/projects/pymodaq/badge/?version=latest
+   :target: https://pymodaq.readthedocs.io/en/stable/?badge=latest
    :alt: Documentation Status
 
 .. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
