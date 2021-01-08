@@ -5,7 +5,7 @@
 SPHINXOPTS    = -E
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = DAQ_Modular_Acquisition_Pro
-SOURCEDIR     = .
+SOURCEDIR     = ./src
 BUILDDIR      = _build
 
 # Put it first so that "make" without argument is like "make help".
