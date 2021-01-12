@@ -22,7 +22,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
-from pymodaq.version import get_version
+from pymodaq.daq_utils.daq_utils import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.managers.remote_manager import RemoteManager
