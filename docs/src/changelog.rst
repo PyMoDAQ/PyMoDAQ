@@ -3,6 +3,7 @@
 =========
 Changelog
 =========
+
 * :release:`3.0.4 <2021-01-12>`
 * :support:`0` Fixed broken documentation build since new src layout
 * :bug:`0` Wrong call to version in the dashboard
@@ -14,6 +15,8 @@ Changelog
   (coverage still very low...)
 * :support:`0` Implemented the src package layout to separate source code from packaging
 * :release:`3.0.2 <2020-11-25>`
+* :release:`3.0.1 <2020-11-25>`
+* :release:`3.0.0 <2020-11-25>`
 * :support:`0` flake8 syntax checking and cleaning
 * :support:`0` compatibility with pyqtgraph >= 0.11. This package development restarted
 * :support:`0` compatibility with python < 3.9 (was <3.8 before)
@@ -22,6 +25,11 @@ Changelog
   version file of the pymodaq_plugins repository... Anyhow this new main version reflects new compatibility with last
   developments of the pyqtgraph package and compatibility with python >= 3.8
 * :release:`2.2.6 <2020-11-17>`
+* :release:`2.2.5 <2020-11-17>`
+* :release:`2.2.4 <2020-11-17>`
+* :release:`2.2.3 <2020-11-17>`
+* :release:`2.2.2 <2020-11-17>`
+* :release:`2.2.1 <2020-11-17>`
 * :feature:`0` Multiple plugins repository was making installation of plugins tiresome. Introduction of the Plugin
   Manager that contains/fetch information on available plugins for installation, update or removal.
 * :feature:`0` The configuration file can be edited from a GUI (opened from the Dashboard menu)
@@ -31,10 +39,13 @@ Changelog
 * :feature:`0` A local configuration file is now available and editable as a toml file to pre-fill information on
   default settings such as Author name, preset_file if DAQ_Scan started directly, log level, network IP/port ...
 * :release:`2.1.2 <2020-10-12>`
+* :release:`2.1.1 <2020-10-11>`
+* :release:`2.1.0 <2020-10-10>`
 * :support:`0` Added documentation and code example to write custom applications using PyMoDAQ modules
 * :feature:`0` Introduction of the remote manager. Than let the user controls DAQ_Moves and DAQ_Viewers in the Dashboard
   using keyboard shortcuts or gamepad joysticks and buttons
 * :release:`2.0.1 <2020-06-22>`
+* :release:`2.0.0 <2020-06-21>`
 * :feature:`0` Specific plotting for tabular/adaptive scans included in DAQ_Scan live and H5Browser
 * :feature:`0` Adaptive Scans now available. Needed the development of a module manager to select active actuators and
   detectors.
