@@ -283,7 +283,7 @@ class DAQ_Scan(QObject):
                     for ind_channel, channel in enumerate(averaged_datas):  # list of OrderedDict
                         channel_group = self.h5saver.add_CH_group(live_group, title=channel)
                         self.h5saver.add_data_live_scan(channel_group,
-                                                        averaged_datas['Scan_Data_Average_{:03d}'.format(ind_channel)],
+                                                        averaged_datas['Scan_Data_{:03d}'.format(ind_channel)],
                                                         scan_type='scan1D',
                                                         scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
@@ -325,14 +325,14 @@ class DAQ_Scan(QObject):
                     else:
                         averaged_datas = OrderedDict([])
                         for ind, data2D in enumerate(self.scan_data_2D_average):
-                            averaged_datas['Scan_Data_Average_{:03d}'.format(ind)] = OrderedDict([])
-                            averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['data'] = data2D.T
-                            averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['x_axis'] = dict(
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D.T
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(
                                 data=self.ui.scan2D_graph.x_axis,
                                 units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
                                 label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'], )
                             if scan_type == 'scan2D':
-                                averaged_datas['Scan_Data_Average_{:03d}'.format(ind)]['y_axis'] = dict(
+                                averaged_datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(
                                     data=self.ui.scan2D_graph.y_axis,
                                     units=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['units'],
                                     label=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['label'])
@@ -340,7 +340,7 @@ class DAQ_Scan(QObject):
                         for ind_channel, channel in enumerate(averaged_datas):  # dict of OrderedDict
                             channel_group = self.h5saver.add_CH_group(live_group, title=channel)
                             self.h5saver.add_data_live_scan(channel_group, averaged_datas[
-                                'Scan_Data_Average_{:03d}'.format(ind_channel)],
+                                'Scan_Data_{:03d}'.format(ind_channel)],
                                 scan_type=scan_type, scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 else:
@@ -1654,6 +1654,7 @@ class DAQ_Scan_Acquisition(QObject):
                     indexes = self.scan_parameters.axes_indexes[self.ind_scan]
 
                 if self.Naverage > 1:
+                    indexes = list(indexes)
                     indexes.append(self.ind_average)
 
                 indexes = tuple(indexes)
@@ -1864,11 +1865,11 @@ class DAQ_Scan_Acquisition(QObject):
                     logger.warning('Adaptive for more than 2 axis is not currently done (sequential adaptive)')
 
             self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
-            self.ind_scan = -1
+
             self.timeout_scan_flag = False
             for ind_average in range(self.Naverage):
                 self.ind_average = ind_average
-
+                self.ind_scan = -1
                 while True:
                     self.ind_scan += 1
                     if not self.isadaptive:
