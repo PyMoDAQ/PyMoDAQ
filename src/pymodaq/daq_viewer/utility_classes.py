@@ -134,6 +134,9 @@ class DAQ_Viewer_base(QObject):
         self.x_axis = None
         self.y_axis = None
 
+    def stop(self):
+        pass
+
     def get_axis(self):
         if self.plugin_type == '1D' or self.plugin_type == '2D':
             self.emit_x_axis()
