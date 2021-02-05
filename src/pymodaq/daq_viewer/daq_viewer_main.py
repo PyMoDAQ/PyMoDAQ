@@ -2100,7 +2100,7 @@ def main():
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
-    DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
+    DAQ_Viewer(area, title="Testing", DAQ_type='DAQ1D')
     win.show()
     sys.exit(app.exec_())
 

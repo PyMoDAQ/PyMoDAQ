@@ -265,7 +265,8 @@ def elt_to_dict(el):
         param.update(dict(addList=addList))
 
     if 'values' in el.attrib.keys():
-        values = eval(el.get('values'))
+        values = list(eval(el.get('values')))  # make sure the evaluated values are returned as list (in case another
+        # iterator type has been used)
         param.update(dict(values=values))
 
     if 'limits' in el.attrib.keys():

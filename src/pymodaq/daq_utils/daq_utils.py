@@ -1085,6 +1085,10 @@ def my_moment(x, y):
     m.extend([np.sqrt(np.sum((x - m[0]) ** 2 * y) * dx / norm)])
     return m
 
+def normalize(x):
+    x = x - np.min(x)
+    x = x / np.max(x)
+    return x
 
 def odd_even(x):
     """
