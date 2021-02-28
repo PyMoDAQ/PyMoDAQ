@@ -1,5 +1,11 @@
 <RCC>
   <qresource prefix="icons">
+	<file>Icon_Library/load_ROI.png</file>
+	<file>Icon_Library/Open_1D.png</file>
+	<file>Icon_Library/Open_2D.png</file>
+	<file>Icon_Library/Open_sim.png</file>
+	<file>Icon_Library/save_ROI.png</file>
+	<file>Icon_Library/clear_ROI.png</file>
 	<file>Icon_Library/grey_icon.png</file>
     <file>Icon_Library/remove.png</file>
     <file>Icon_Library/HLM.ico</file>

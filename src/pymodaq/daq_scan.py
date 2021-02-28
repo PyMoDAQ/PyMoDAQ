@@ -729,9 +729,13 @@ class DAQ_Scan(QObject):
         self.ui.scan2D_graph.ui.FlipUD_pb.setVisible(False)
         self.ui.scan2D_graph.ui.FlipLR_pb.setVisible(False)
         self.ui.scan2D_graph.ui.rotate_pb.setVisible(False)
-        self.ui.move_to_crosshair_cb = QtWidgets.QCheckBox("Move at doubleClicked")
 
-        self.ui.scan2D_graph.ui.buttons_layout.addWidget(self.ui.move_to_crosshair_cb)
+        self.move_to_crosshair_action = gutils.QAction(
+            QtGui.QIcon(QtGui.QPixmap(':/icons/Icon_Library/move_contour.png')),"Move at doubleClicked")
+        self.move_to_crosshair_action.setCheckable(True)
+        self.ui.move_to_crosshair_cb = self.move_to_crosshair_action
+
+        self.ui.scan2D_graph.toolbar_button.addAction(self.move_to_crosshair_action)
         self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
 
         # %% init and set the status bar

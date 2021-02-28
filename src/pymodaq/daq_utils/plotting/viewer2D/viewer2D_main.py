@@ -15,7 +15,7 @@ from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import numpy as np
 from easydict import EasyDict as edict
 import copy
-from pymodaq.daq_utils.gui_utils import DockArea
+from pymodaq.daq_utils.gui_utils import DockArea, QAction
 
 import pymodaq.daq_utils.daq_utils as utils
 import datetime
@@ -68,96 +68,97 @@ class Viewer2D(QObject):
 
         self.setupUI()
 
-    def setupButtons(self, buttons_layout):
-        self.ui.Show_histogram = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Histogram.png")), '')
-        self.ui.Show_histogram.setCheckable(True)
-        buttons_layout.addWidget(self.ui.Show_histogram)
+    def setupButtons(self):
 
-        self.ui.roiBtn = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Region.png")), '')
-        self.ui.roiBtn.setCheckable(True)
-        buttons_layout.addWidget(self.ui.roiBtn)
+        self.position_action = QAction('(,)')
+        self.x_label_action = self.position_action  # backcompatibility
+        self.toolbar_button.addAction(self.position_action)
 
-        self.ui.isocurve_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/meshPlot.png")), '')
-        self.ui.isocurve_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.isocurve_pb)
 
-        self.ui.Ini_plot_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Refresh.png")), '')
-        buttons_layout.addWidget(self.ui.Ini_plot_pb)
+        self.red_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/r_icon.png")), 'Show/Hide Red Channel')
+        self.ui.z_label_red = self.red_action  # for backcompatibility
+        self.ui.red_cb = self.red_action  # for backcompatibility
+        self.red_action.setCheckable(True)
+        self.toolbar_button.addAction(self.red_action)
 
-        self.ui.aspect_ratio_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Zoom_1_1.png")), '')
-        self.ui.aspect_ratio_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.aspect_ratio_pb)
+        self.green_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/g_icon.png")), 'Show/Hide Green Channel')
+        self.ui.z_label_green = self.green_action  # for backcompatibility
+        self.ui.green_cb = self.green_action  # for backcompatibility
+        self.green_action.setCheckable(True)
+        self.toolbar_button.addAction(self.green_action)
 
-        self.ui.auto_levels_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/autoscale.png")), '')
-        self.ui.auto_levels_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.auto_levels_pb)
 
-        self.ui.crosshair_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/reset.png")), '')
-        self.ui.crosshair_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.crosshair_pb)
+        self.blue_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/b_icon.png")), 'Show/Hide Blue Channel')
+        self.ui.z_label_blue = self.blue_action  # for backcompatibility
+        self.ui.blue_cb = self.blue_action  # for backcompatibility
+        self.blue_action.setCheckable(True)
+        self.toolbar_button.addAction(self.blue_action)
 
-        self.ui.ROIselect_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Select_24.png")), '')
-        self.ui.ROIselect_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.ROIselect_pb)
+        self.spread_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/grey_icon.png")), 'Show/Hide Spread Channel')
+        self.ui.z_label_spread = self.spread_action  # for backcompatibility
+        self.ui.spread_cb = self.spread_action  # for backcompatibility
+        self.spread_action.setCheckable(True)
+        self.toolbar_button.addAction(self.spread_action)
 
-        self.ui.FlipUD_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/scale_vertically.png")), '')
-        self.ui.FlipUD_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.FlipUD_pb)
+        self.histo_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Histogram.png")), 'Show/Hide Histogram')
+        self.ui.Show_histogram = self.histo_action
+        self.histo_action.setCheckable(True)
+        self.toolbar_button.addAction(self.histo_action)
 
-        self.ui.FlipLR_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/scale_horizontally.png")), '')
-        self.ui.FlipLR_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.FlipLR_pb)
+        self.roi_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Region.png")), 'Show/Hide ROI manager')
+        self.ui.roiBtn = self.roi_action  # for backcompatibility
+        self.roi_action.setCheckable(True)
+        self.toolbar_button.addAction(self.roi_action)
 
-        self.ui.rotate_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/rotation2.png")), '')
-        self.ui.rotate_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.rotate_pb)
+        self.isocurve_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/meshPlot.png")), 'Show/Hide Isocurve')
+        self.isocurve_action.setCheckable(True)
+        self.toolbar_button.addAction(self.isocurve_action)
 
-        self.ui.x_label = QLabel('x:')
-        self.ui.y_label = QLabel('y:')
-        xywidget = QtWidgets.QWidget()
-        xywidget.setLayout(QtWidgets.QVBoxLayout())
+        self.ini_plot_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Refresh.png")), 'Initialize the plots')
+        self.ui.Ini_plot_pb = self.ini_plot_action
+        self.toolbar_button.addAction(self.ini_plot_action)
 
-        buttons_layout.addWidget(xywidget)
-        xywidget.layout().addWidget(self.ui.x_label)
-        xywidget.layout().addWidget(self.ui.y_label)
+        self.aspect_ratio_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Zoom_1_1.png")), 'Fix Aspect Ratio')
+        self.ui.aspect_ratio_pb = self.aspect_ratio_action  # for backcompatibility
+        self.aspect_ratio_action.setCheckable(True)
+        self.toolbar_button.addAction(self.aspect_ratio_action)
 
-        red = QtWidgets.QWidget()
-        red.setLayout(QtWidgets.QVBoxLayout())
-        self.ui.red_cb = QCheckBox('Red')
-        self.ui.z_label_red = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/r_icon.png")), 'z_red')
-        self.ui.z_label_red.setFlat(True)
-        red.layout().addWidget(self.ui.red_cb)
-        red.layout().addWidget(self.ui.z_label_red)
-        buttons_layout.addWidget(red)
+        self.auto_levels_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/autoscale.png")),
+                                          'Scale Histogram to Min/Max intensity ')
+        self.ui.auto_levels_pb = self.auto_levels_action  # for backcompatibility
+        self.auto_levels_action.setCheckable(True)
+        self.toolbar_button.addAction(self.auto_levels_action)
 
-        green = QtWidgets.QWidget()
-        green.setLayout(QtWidgets.QVBoxLayout())
-        self.ui.green_cb = QCheckBox('Green')
-        self.ui.z_label_green = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/g_icon.png")), 'z_green')
-        self.ui.z_label_green.setFlat(True)
-        green.layout().addWidget(self.ui.green_cb)
-        green.layout().addWidget(self.ui.z_label_green)
-        buttons_layout.addWidget(green)
+        self.crosshair_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/reset.png")), 'Show/Hide data Crosshair')
+        self.ui.crosshair_pb = self.crosshair_action  # for backcompatibility
+        self.crosshair_action.setCheckable(True)
+        self.toolbar_button.addAction(self.crosshair_action)
 
-        blue = QtWidgets.QWidget()
-        blue.setLayout(QtWidgets.QVBoxLayout())
-        self.ui.blue_cb = QCheckBox('Blue')
-        self.ui.z_label_blue = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/b_icon.png")), 'z_blue')
-        self.ui.z_label_blue.setFlat(True)
-        blue.layout().addWidget(self.ui.blue_cb)
-        blue.layout().addWidget(self.ui.z_label_blue)
-        buttons_layout.addWidget(blue)
+        self.ROIselect_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Select_24.png")),
+                                        'Show/Hide ROI selection area')
+        self.ui.ROIselect_pb = self.ROIselect_action  # for backcompatibility
+        self.ROIselect_action.setCheckable(True)
+        self.toolbar_button.addAction(self.ROIselect_action)
 
-        spread = QtWidgets.QWidget()
-        spread.setLayout(QtWidgets.QVBoxLayout())
-        self.ui.spread_cb = QCheckBox('spread')
-        self.ui.z_label_spread = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/grey_icon.png")), 'z_spread')
-        self.ui.z_label_spread.setFlat(True)
-        spread.layout().addWidget(self.ui.spread_cb)
-        spread.layout().addWidget(self.ui.z_label_spread)
-        buttons_layout.addWidget(spread)
+        self.FlipUD_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/scale_vertically.png")),
+                                     'Flip the image up/down')
+        self.ui.FlipUD_pb = self.FlipUD_action  # for backcompatibility
+        self.FlipUD_action.setCheckable(True)
+        self.toolbar_button.addAction(self.FlipUD_action)
 
-        buttons_layout.addStretch()
+        self.FlipLR_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/scale_horizontally.png")),
+                                     'Flip the image left/right')
+        self.ui.FlipLR_pb = self.FlipLR_action  # for backcompatibility
+        self.FlipLR_action.setCheckable(True)
+        self.toolbar_button.addAction(self.FlipLR_action)
+
+        self.rotate_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/rotation2.png")),
+                                     'Rotate the image')
+        self.ui.rotate_pb = self.rotate_action  # for backcompatibility
+        self.rotate_action.setCheckable(True)
+        self.toolbar_button.addAction(self.rotate_action)
+
+
 
     def setupGraphs(self, graphs_layout):
         self.ui.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -192,7 +193,7 @@ class Viewer2D(QObject):
         axisl.setLabel(text='', units='Pxls')
 
         self.autolevels = False
-        self.ui.auto_levels_pb.clicked.connect(self.set_autolevels)
+        self.auto_levels_action.triggered.connect(self.set_autolevels)
 
         self.scaled_yaxis = AxisItem_Scaled('right')
         self.scaled_xaxis = AxisItem_Scaled('top')
@@ -252,7 +253,7 @@ class Viewer2D(QObject):
         self.ui.histogram_green.setVisible(False)
         self.ui.histogram_blue.setVisible(False)
         self.ui.histogram_spread.setVisible(False)
-        self.ui.Show_histogram.clicked.connect(self.show_hide_histogram)
+        self.histo_action.triggered.connect(self.show_hide_histogram)
 
     def setupIsoCurve(self):
         # TODO provide isocurve for the spread points
@@ -266,8 +267,8 @@ class Viewer2D(QObject):
         self.ui.histogram_red.vb.setMouseEnabled(y=False)  # makes user interaction a little easier
         self.ui.isoLine.setValue(0.8)
         self.ui.isoLine.setZValue(1000)  # bring iso line above contrast controls
-        self.ui.isocurve_pb.clicked.connect(self.show_hide_iso)
-        self.ui.isocurve_pb.setChecked(False)
+        self.isocurve_action.triggered.connect(self.show_hide_iso)
+        self.isocurve_action.setChecked(False)
         self.show_hide_iso()
         # build isocurves from smoothed data
         self.ui.isoLine.sigDragged.connect(self.updateIsocurve)
@@ -295,7 +296,7 @@ class Viewer2D(QObject):
         self.ui.Lineout_V.plotItem.addItem(self.ui.crosshair_V_spread)
 
         self.ui.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
-        self.ui.crosshair_pb.clicked.connect(self.crosshairClicked)
+        self.crosshair_action.triggered.connect(self.crosshairClicked)
         self.crosshairClicked()
 
     def setupROI(self):
@@ -305,7 +306,7 @@ class Viewer2D(QObject):
         self.ui.RoiCurve_integrated = OrderedDict()
         self.data_integrated_plot = OrderedDict()
         self.ui.ROIs = OrderedDict([])
-        self.ui.roiBtn.clicked.connect(self.roi_clicked)
+        self.roi_action.triggered.connect(self.roi_clicked)
 
         self.roi_manager = ROIManager(self.image_widget, '2D')
         self.roi_manager.new_ROI_signal.connect(self.add_ROI)
@@ -319,34 +320,35 @@ class Viewer2D(QObject):
         self.ui = QObject()
 
         vertical_layout = QtWidgets.QVBoxLayout()
+        vertical_layout.setContentsMargins(5, 5, 5, 5)
         self.parent.setLayout(vertical_layout)
-
-        buttons_widget = QtWidgets.QWidget()
-        buttons_widget.setMaximumHeight(80)
-        self.ui.buttons_layout = QtWidgets.QHBoxLayout()
-        buttons_widget.setLayout(self.ui.buttons_layout)
-        self.setupButtons(self.ui.buttons_layout)
-        vertical_layout.addWidget(buttons_widget)
+        splitter_vertical = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        vertical_layout.addWidget(splitter_vertical)
+        #buttons_widget = QtWidgets.QWidget()
+        self.toolbar_button = QtWidgets.QToolBar()
+        splitter_vertical.addWidget(self.toolbar_button)
+        self.setupButtons()
 
         graphs_widget = QtWidgets.QWidget()
         graphs_layout = QtWidgets.QHBoxLayout()
+        graphs_layout.setContentsMargins(0, 0, 0, 0)
         graphs_widget.setLayout(graphs_layout)
         self.setupGraphs(graphs_layout)
-        vertical_layout.addWidget(graphs_widget)
+        splitter_vertical.addWidget(graphs_widget)
 
         # selection area checkbox
-        self.ui.blue_cb.setVisible(True)
-        self.ui.blue_cb.setChecked(True)
-        self.ui.blue_cb.clicked.connect(self.update_selection_area_visibility)
-        self.ui.green_cb.setVisible(True)
-        self.ui.green_cb.setChecked(True)
-        self.ui.green_cb.clicked.connect(self.update_selection_area_visibility)
-        self.ui.red_cb.setVisible(True)
-        self.ui.red_cb.clicked.connect(self.update_selection_area_visibility)
-        self.ui.red_cb.setChecked(True)
-        self.ui.spread_cb.setVisible(True)
-        self.ui.spread_cb.clicked.connect(self.update_selection_area_visibility)
-        self.ui.spread_cb.setChecked(True)
+        self.blue_action.setVisible(True)
+        self.blue_action.setChecked(True)
+        self.blue_action.triggered.connect(self.update_selection_area_visibility)
+        self.green_action.setVisible(True)
+        self.green_action.setChecked(True)
+        self.green_action.triggered.connect(self.update_selection_area_visibility)
+        self.red_action.setVisible(True)
+        self.red_action.triggered.connect(self.update_selection_area_visibility)
+        self.red_action.setChecked(True)
+        self.spread_action.setVisible(True)
+        self.spread_action.triggered.connect(self.update_selection_area_visibility)
+        self.spread_action.setChecked(True)
 
         self.image_widget.plotitem.addItem(self.ui.img_red)
         self.image_widget.plotitem.addItem(self.ui.img_green)
@@ -354,8 +356,8 @@ class Viewer2D(QObject):
         self.image_widget.plotitem.addItem(self.ui.img_spread)
         self.ui.graphicsView.setCentralItem(self.image_widget.plotitem)
 
-        self.ui.aspect_ratio_pb.clicked.connect(self.lock_aspect_ratio)
-        self.ui.aspect_ratio_pb.setChecked(True)
+        self.aspect_ratio_action.triggered.connect(self.lock_aspect_ratio)
+        self.aspect_ratio_action.setChecked(True)
 
         # histograms
         histo_layout = QtWidgets.QHBoxLayout()
@@ -366,7 +368,7 @@ class Viewer2D(QObject):
         self.image_widget.plotitem.addItem(self.ui.ROIselect)
         self.ui.ROIselect.setVisible(False)
         self.ui.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
-        self.ui.ROIselect_pb.clicked.connect(self.show_ROI_select)
+        self.ROIselect_action.triggered.connect(self.show_ROI_select)
 
         self.setupIsoCurve()
 
@@ -374,13 +376,13 @@ class Viewer2D(QObject):
 
         # flipping
 
-        self.ui.FlipUD_pb.clicked.connect(self.update_image)
-        self.ui.FlipLR_pb.clicked.connect(self.update_image)
-        self.ui.rotate_pb.clicked.connect(self.update_image)
+        self.FlipUD_action.triggered.connect(self.update_image)
+        self.FlipLR_action.triggered.connect(self.update_image)
+        self.rotate_action.triggered.connect(self.update_image)
 
         self.setupROI()
 
-        self.ui.Ini_plot_pb.clicked.connect(self.ini_plot)
+        self.ini_plot_action.triggered.connect(self.ini_plot)
 
         # #splitter
 
@@ -478,27 +480,23 @@ class Viewer2D(QObject):
                                                x=data[y_sorted_indexes][data_V_indexes])
 
     def crosshairClicked(self):
-        if self.ui.crosshair_pb.isChecked():
+        if self.crosshair_action.isChecked():
             self.ui.crosshair.setVisible(True)
-            self.ui.x_label.setVisible(True)
-            self.ui.y_label.setVisible(True)
+            self.position_action.setVisible(True)
+
             range = self.image_widget.view.viewRange()
             self.ui.crosshair.set_crosshair_position(np.mean(np.array(range[0])), np.mean(np.array(range[0])))
 
             if self.isdata["blue"]:
-                self.ui.z_label_blue.setVisible(True)
                 self.ui.crosshair_H_blue.setVisible(True)
                 self.ui.crosshair_V_blue.setVisible(True)
             if self.isdata["green"]:
-                self.ui.z_label_green.setVisible(True)
                 self.ui.crosshair_H_green.setVisible(True)
                 self.ui.crosshair_V_green.setVisible(True)
             if self.isdata["red"]:
-                self.ui.z_label_red.setVisible(True)
                 self.ui.crosshair_H_red.setVisible(True)
                 self.ui.crosshair_V_red.setVisible(True)
             if self.isdata["spread"]:
-                self.ui.z_label_spread.setVisible(True)
                 self.ui.crosshair_H_spread.setVisible(True)
                 self.ui.crosshair_V_spread.setVisible(True)
 
@@ -506,19 +504,14 @@ class Viewer2D(QObject):
             # #self.crosshairChanged()
         else:
             self.ui.crosshair.setVisible(False)
-            self.ui.x_label.setVisible(False)
-            self.ui.y_label.setVisible(False)
+            self.position_action.setVisible(False)
 
-            self.ui.z_label_blue.setVisible(False)
-            self.ui.z_label_green.setVisible(False)
-            self.ui.z_label_red.setVisible(False)
             self.ui.crosshair_H_blue.setVisible(False)
             self.ui.crosshair_H_green.setVisible(False)
             self.ui.crosshair_H_red.setVisible(False)
             self.ui.crosshair_V_blue.setVisible(False)
             self.ui.crosshair_V_green.setVisible(False)
             self.ui.crosshair_V_red.setVisible(False)
-            self.ui.z_label_spread.setVisible(False)
             self.ui.crosshair_H_spread.setVisible(False)
             self.ui.crosshair_V_spread.setVisible(False)
         QtWidgets.QApplication.processEvents()
@@ -536,7 +529,7 @@ class Viewer2D(QObject):
             self.data_integrated_plot[k] = np.zeros((2, 1))
 
     def lock_aspect_ratio(self):
-        if self.ui.aspect_ratio_pb.isChecked():
+        if self.aspect_ratio_action.isChecked():
             self.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         else:
             self.image_widget.plotitem.vb.setAspectLocked(lock=False)
@@ -582,16 +575,16 @@ class Viewer2D(QObject):
                                                                'use_channel').value()
 
                 if color_source == "red":
-                    data_flag = self.ui.red_cb.isChecked()
+                    data_flag = self.red_action.isChecked()
                     img_source = self.ui.img_red
                 elif color_source == "green":
-                    data_flag = self.ui.green_cb.isChecked()
+                    data_flag = self.green_action.isChecked()
                     img_source = self.ui.img_green
                 elif color_source == "blue":
-                    data_flag = self.ui.blue_cb.isChecked()
+                    data_flag = self.blue_action.isChecked()
                     img_source = self.ui.img_blue
                 elif color_source == 'spread':
-                    data_flag = self.ui.spread_cb.isChecked()
+                    data_flag = self.spread_action.isChecked()
                     img_source = self.ui.img_spread
                 else:
                     data_flag = None
@@ -711,7 +704,7 @@ class Viewer2D(QObject):
         self.roi_changed()
 
     def roi_clicked(self):
-        roistate = self.ui.roiBtn.isChecked()
+        roistate = self.roi_action.isChecked()
 
         self.roi_manager.roiwidget.setVisible(roistate)
         for k, roi in self.roi_manager.ROIs.items():
@@ -720,7 +713,7 @@ class Viewer2D(QObject):
             self.ui.RoiCurve_V[k].setVisible(roistate)
             self.ui.RoiCurve_integrated[k].setVisible(roistate)
 
-        if self.ui.roiBtn.isChecked():
+        if self.roi_action.isChecked():
             self.roi_changed()
 
         self.show_lineouts()
@@ -739,14 +732,14 @@ class Viewer2D(QObject):
             self.scaling_options['scaled_yaxis']['scaling']
 
     def selected_region_changed(self):
-        if self.ui.ROIselect_pb.isChecked():
+        if self.ROIselect_action.isChecked():
             pos = self.ui.ROIselect.pos()
             size = self.ui.ROIselect.size()
             self.ROI_select_signal.emit(QRectF(pos[0], pos[1], size[0], size[1]))
 
     def set_autolevels(self):
-        self.autolevels = self.ui.auto_levels_pb.isChecked()
-        if not self.ui.auto_levels_pb.isChecked():
+        self.autolevels = self.auto_levels_action.isChecked()
+        if not self.auto_levels_action.isChecked():
             self.ui.histogram_red.regionChanged()
             self.ui.histogram_green.regionChanged()
             self.ui.histogram_blue.regionChanged()
@@ -778,11 +771,11 @@ class Viewer2D(QObject):
         if data is not None:
             if len(data.shape) > 2:
                 data = np.mean(data, axis=0)
-            if self.ui.FlipUD_pb.isChecked():
+            if self.FlipUD_action.isChecked():
                 data = np.flipud(data)
-            if self.ui.FlipLR_pb.isChecked():
+            if self.FlipLR_action.isChecked():
                 data = np.fliplr(data)
-            if self.ui.rotate_pb.isChecked():
+            if self.rotate_action.isChecked():
                 data = np.flipud(np.transpose(data))
         if data is not None:
             return data.copy()
@@ -795,9 +788,9 @@ class Viewer2D(QObject):
         status = status and self.isdata["green"] is False and self.isdata["spread"] is True
         status = not status
 
-        self.ui.FlipUD_pb.setVisible(status)
-        self.ui.FlipLR_pb.setVisible(status)
-        self.ui.rotate_pb.setVisible(status)
+        self.FlipUD_action.setVisible(status)
+        self.FlipLR_action.setVisible(status)
+        self.rotate_action.setVisible(status)
         data_red, data_blue, data_green = None, None, None
         if self.isdata["red"]:
             data_red = self.transform_image(self.raw_data['red'])
@@ -809,49 +802,52 @@ class Viewer2D(QObject):
 
     def set_visible_items(self):
 
-        if self.ui.red_cb.isChecked() and self.isdata["red"] is False:  # turn it off if it was on but there is no data
-            self.ui.red_cb.setChecked(False)
-            self.ui.red_cb.parent().setVisible(False)
+        if self.red_action.isChecked() and self.isdata["red"] is False:  # turn it off if it was on but there is no data
+            self.red_action.setChecked(False)
+            self.red_action.setVisible(False)
 
         elif self.isdata["red"]:
-            self.ui.red_cb.setChecked(True)
-            self.ui.red_cb.parent().setVisible(True)
-        self.ui.img_red.setVisible(self.ui.red_cb.isChecked())
-        if self.ui.Show_histogram.isChecked():
-            self.ui.histogram_red.setVisible(self.ui.red_cb.isChecked())
+            self.red_action.setChecked(True)
+            self.red_action.setVisible(True)
 
-        if self.ui.green_cb.isChecked() and self.isdata["green"] is False:
+        self.ui.img_red.setVisible(self.red_action.isChecked())
+        if self.histo_action.isChecked():
+            self.ui.histogram_red.setVisible(self.red_action.isChecked())
+
+        if self.green_action.isChecked() and self.isdata["green"] is False:
             # turn it off if it was on but there is no data
-            self.ui.green_cb.setChecked(False)
-            self.ui.green_cb.parent().setVisible(False)
+            self.green_action.setChecked(False)
+            self.green_action.setVisible(False)
+
         elif self.isdata["green"]:
-            self.ui.green_cb.setChecked(True)
-            self.ui.green_cb.parent().setVisible(True)
-        self.ui.img_green.setVisible(self.ui.green_cb.isChecked())
-        if self.ui.Show_histogram.isChecked():
-            self.ui.histogram_green.setVisible(self.ui.green_cb.isChecked())
+            self.green_action.setChecked(True)
+            self.green_action.setVisible(True)
 
-        if self.ui.blue_cb.isChecked() and self.isdata["blue"] is False:
+        self.ui.img_green.setVisible(self.green_action.isChecked())
+        if self.histo_action.isChecked():
+            self.ui.histogram_green.setVisible(self.green_action.isChecked())
+
+        if self.blue_action.isChecked() and self.isdata["blue"] is False:
             # turn it off if it was on but there is no data
-            self.ui.blue_cb.setChecked(False)
-            self.ui.blue_cb.parent().setVisible(False)
+            self.blue_action.setChecked(False)
+            self.blue_action.setVisible(False)
         elif self.isdata["blue"]:
-            self.ui.blue_cb.setChecked(True)
-            self.ui.blue_cb.parent().setVisible(True)
-        self.ui.img_blue.setVisible(self.ui.blue_cb.isChecked())
-        if self.ui.Show_histogram.isChecked():
-            self.ui.histogram_blue.setVisible(self.ui.blue_cb.isChecked())
+            self.blue_action.setChecked(True)
+            self.blue_action.setVisible(True)
 
-        if self.ui.spread_cb.isChecked() and self.isdata["spread"] is False:
+        self.ui.img_blue.setVisible(self.blue_action.isChecked())
+        if self.histo_action.isChecked():
+            self.ui.histogram_blue.setVisible(self.blue_action.isChecked())
+
+        if self.spread_action.isChecked() and self.isdata["spread"] is False:
             # turn it off if it was on but there is no data
-            self.ui.spread_cb.setChecked(False)
-            self.ui.spread_cb.parent().setVisible(False)
+            self.spread_action.setChecked(False)
+            self.spread_action.setVisible(False)
         elif self.isdata["spread"]:
-            self.ui.spread_cb.setChecked(True)
-            self.ui.spread_cb.parent().setVisible(True)
-        self.ui.img_spread.setVisible(self.ui.spread_cb.isChecked())
-        if self.ui.Show_histogram.isChecked():
-            self.ui.histogram_spread.setVisible(self.ui.spread_cb.isChecked())
+            self.spread_action.setChecked(True)
+            self.spread_action.setVisible(True)
+        if self.histo_action.isChecked():
+            self.ui.histogram_spread.setVisible(self.spread_action.isChecked())
 
     def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
         try:
@@ -925,16 +921,16 @@ class Viewer2D(QObject):
                                                          label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
 
-            if self.ui.roiBtn.isChecked():
+            if self.roi_action.isChecked():
                 self.roi_changed()
             else:
                 self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
                 self.data_to_export_signal.emit(self.data_to_export)
 
-            if self.ui.isocurve_pb.isChecked() and red_flag:
+            if self.isocurve_action.isChecked() and red_flag:
                 self.ui.iso.setData(pg.gaussianFilter(data_red, (2, 2)))
 
-            if self.ui.crosshair_pb.isChecked():
+            if self.crosshair_action.isChecked():
                 self.crosshairChanged()
 
         except Exception as e:
@@ -993,34 +989,34 @@ class Viewer2D(QObject):
         self.parent.setObjectName(txt)
 
     def show_hide_histogram(self):
-        if self.isdata["blue"] and self.ui.blue_cb.isChecked():
-            self.ui.histogram_blue.setVisible(self.ui.Show_histogram.isChecked())
+        if self.isdata["blue"] and self.blue_action.isChecked():
+            self.ui.histogram_blue.setVisible(self.histo_action.isChecked())
             self.ui.histogram_blue.setLevels(self.raw_data['blue'].min(), self.raw_data['blue'].max())
-        if self.isdata["green"] and self.ui.green_cb.isChecked():
-            self.ui.histogram_green.setVisible(self.ui.Show_histogram.isChecked())
+        if self.isdata["green"] and self.green_action.isChecked():
+            self.ui.histogram_green.setVisible(self.histo_action.isChecked())
             self.ui.histogram_green.setLevels(self.raw_data['green'].min(), self.raw_data['green'].max())
-        if self.isdata["red"] and self.ui.red_cb.isChecked():
-            self.ui.histogram_red.setVisible(self.ui.Show_histogram.isChecked())
+        if self.isdata["red"] and self.red_action.isChecked():
+            self.ui.histogram_red.setVisible(self.histo_action.isChecked())
             self.ui.histogram_red.setLevels(self.raw_data['red'].min(), self.raw_data['red'].max())
-        if self.isdata["spread"] and self.ui.spread_cb.isChecked():
-            self.ui.histogram_spread.setVisible(self.ui.Show_histogram.isChecked())
+        if self.isdata["spread"] and self.spread_action.isChecked():
+            self.ui.histogram_spread.setVisible(self.histo_action.isChecked())
             self.ui.histogram_spread.setLevels(self.raw_data['spread'].min(), self.raw_data['spread'].max())
         QtWidgets.QApplication.processEvents()
 
     def show_hide_iso(self):
-        if self.ui.isocurve_pb.isChecked():
+        if self.isocurve_action.isChecked():
             self.ui.iso.show()
             self.ui.isoLine.show()
-            self.ui.Show_histogram.setChecked(True)
+            self.histo_action.setChecked(True)
             self.show_hide_histogram()
-            if self.ui.isocurve_pb.isChecked() and self.raw_data['red'] is not None:
+            if self.isocurve_action.isChecked() and self.raw_data['red'] is not None:
                 self.ui.iso.setData(pg.gaussianFilter(self.raw_data['red'], (2, 2)))
         else:
             self.ui.iso.hide()
             self.ui.isoLine.hide()
 
     def show_lineouts(self):
-        state = self.ui.roiBtn.isChecked() or self.ui.crosshair_pb.isChecked()
+        state = self.roi_action.isChecked() or self.crosshair_action.isChecked()
         if state:
             showLineout_H = True
             showLineout_V = True
@@ -1053,52 +1049,29 @@ class Viewer2D(QObject):
         self.ui.Lineout_integrated.update()
 
         QtGui.QGuiApplication.processEvents()
-        self.ui.splitter_VRight.splitterMoved[int, int].emit(0.6 * self.parent.height(), 1)
-        self.ui.splitter.moveSplitter(0.6 * self.parent.width(), 1)
-        self.ui.splitter_VLeft.moveSplitter(0.6 * self.parent.height(), 1)
-        self.ui.splitter_VLeft.splitterMoved[int, int].emit(0.6 * self.parent.height(), 1)
+        self.ui.splitter_VRight.splitterMoved[int, int].emit(int(0.6 * self.parent.height()), 1)
+        self.ui.splitter.moveSplitter(int(0.6 * self.parent.width()), 1)
+        self.ui.splitter_VLeft.moveSplitter(int(0.6 * self.parent.height()), 1)
+        self.ui.splitter_VLeft.splitterMoved[int, int].emit(int(0.6 * self.parent.height()), 1)
         QtGui.QGuiApplication.processEvents()
 
     def show_ROI_select(self):
-        self.ui.ROIselect.setVisible(self.ui.ROIselect_pb.isChecked())
+        self.ui.ROIselect.setVisible(self.ROIselect_action.isChecked())
 
     def update_image(self):
         self.setImageTemp(data_red=self.raw_data['red'], data_green=self.raw_data['green'],
                           data_blue=self.raw_data['blue'], data_spread=self.raw_data['spread'])
 
-    # def update_image_flipud(self):
-    #     self.ui.img_red.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
-    #     self.ui.img_green.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
-    #     self.ui.img_blue.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
-    #     self.ui.img_spread.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
-    #
-    #     self.ui.crosshair_V_spread.setOpts(flipud=self.ui.FlipUD_pb.isChecked())
-    #
-    # def update_image_fliplr(self):
-    #     self.ui.img_red.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
-    #     self.ui.img_green.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
-    #     self.ui.img_blue.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
-    #     self.ui.img_spread.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
-    #
-    #     self.ui.crosshair_H_spread.setOpts(fliplr=self.ui.FlipLR_pb.isChecked())
-    #
-    # def update_image_rotate(self):
-    #     self.ui.img_red.setOpts(rotate90=self.ui.rotate_pb.isChecked())
-    #     self.ui.img_green.setOpts(rotate90=self.ui.rotate_pb.isChecked())
-    #     self.ui.img_blue.setOpts(rotate90=self.ui.rotate_pb.isChecked())
-    #     self.ui.img_spread.setOpts(rotate90=self.ui.rotate_pb.isChecked())
-    #     self.ui.crosshair_V_spread.setOpts(flipudbis=self.ui.rotate_pb.isChecked())
-
     def update_selection_area_visibility(self):
-        bluestate = self.ui.blue_cb.isChecked()
+        bluestate = self.blue_action.isChecked()
         self.ui.img_blue.setVisible(bluestate)
         # self.ui.histogram_blue.setVisible(bluestate)
 
-        greenstate = self.ui.green_cb.isChecked()
+        greenstate = self.green_action.isChecked()
         self.ui.img_green.setVisible(greenstate)
         # self.ui.histogram_green.setVisible(greenstate)
 
-        redstate = self.ui.red_cb.isChecked()
+        redstate = self.red_action.isChecked()
         self.ui.img_red.setVisible(redstate)
         # self.ui.histogram_red.setVisible(redstate)
 
@@ -1115,25 +1088,28 @@ class Viewer2D(QObject):
             #     indx, indy = (posx_scaled, posy_scaled)
 
             self.crosshairChanged(posx, posy)
+            dat = f'({posx_scaled:.1e}, {posy_scaled:.1e})'
+            if self.isdata["red"]:
+                indx, indy = self.mapfromview('red', posx, posy)
+                z_red = self.transform_image(self.raw_data["red"])[utils.rint(indy), utils.rint(indx)]
+                dat += f' r={z_red:.1e},'
+
+            if self.isdata["green"]:
+                indx, indy = self.mapfromview('green', posx, posy)
+                z_green = self.transform_image(self.raw_data["green"])[utils.rint(indy), utils.rint(indx)]
+                dat += f' b={z_green:.1e},'
 
             if self.isdata["blue"]:
                 indx, indy = self.mapfromview('blue', posx, posy)
                 z_blue = self.transform_image(self.raw_data["blue"])[utils.rint(indy), utils.rint(indx)]
-                self.ui.z_label_blue.setText("{:.3e}".format(z_blue))
-            if self.isdata["green"]:
-                indx, indy = self.mapfromview('green', posx, posy)
-                z_green = self.transform_image(self.raw_data["green"])[utils.rint(indy), utils.rint(indx)]
-                self.ui.z_label_green.setText("{:.3e}".format(z_green))
-            if self.isdata["red"]:
-                indx, indy = self.mapfromview('red', posx, posy)
-                z_red = self.transform_image(self.raw_data["red"])[utils.rint(indy), utils.rint(indx)]
-                self.ui.z_label_red.setText("{:.3e}".format(z_red))
+                dat += f' g={z_blue:.1e},'
+
             if self.isdata["spread"]:
                 z_spread = self.ui.img_spread.get_val_at(self.mapfromview('spread', posx, posy))
-                self.ui.z_label_spread.setText("{:.3e}".format(z_spread))
+                dat += f' s={z_spread:.1e},'
 
-            self.ui.x_label.setText("x={:.3e} ".format(posx_scaled))
-            self.ui.y_label.setText("y={:.3e} ".format(posy_scaled))
+            self.position_action.setText(dat)
+
 
         except Exception as e:
             print(e)
@@ -1161,7 +1137,10 @@ class Viewer2D(QObject):
 
         if len(xdata) > 1:
             x_scaling = xdata[1] - xdata[0]
-            x_offset = np.min(xdata)
+            if x_scaling > 0:
+                x_offset = np.min(xdata)
+            else:
+                x_offset = np.max(xdata)
         else:
             x_scaling = 1.
             x_offset = 0.
@@ -1196,7 +1175,10 @@ class Viewer2D(QObject):
 
         if len(ydata) > 1:
             y_scaling = ydata[1] - ydata[0]
-            y_offset = np.min(ydata)
+            if y_scaling > 0:
+                y_offset = np.min(ydata)
+            else:
+                y_offset = np.max(ydata)
         else:
             y_scaling = 1.
             y_offset = 0.

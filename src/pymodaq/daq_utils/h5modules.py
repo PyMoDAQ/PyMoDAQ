@@ -2391,7 +2391,7 @@ class H5Browser(QObject):
             self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'], 1, widget)
 
 
-def browse_data(fname=None, ret_all=False):
+def browse_data(fname=None, ret_all=False, message=None):
     """
         | Browse data present in any h5 file, when user has selected the one,
     """
@@ -2428,7 +2428,12 @@ def browse_data(fname=None, ret_all=False):
         buttonBox.rejected.connect(dialog.reject)
 
         vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Select data to be loaded')
+        dialog = QtWidgets.QDialog()
+        dialog.setWindowTitle('Select a data node in the tree')
+        if message is None or not isinstance(message, str):
+            dialog.setWindowTitle('Select a data node in the tree')
+        else:
+            dialog.setWindowTitle(message)
         res = dialog.exec()
 
         if res == dialog.Accepted:

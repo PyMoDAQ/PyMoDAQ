@@ -22,17 +22,17 @@ class Viewer0D(QtWidgets.QWidget, QObject):
         super(Viewer0D, self).__init__()
         if parent is None:
             parent = QtWidgets.QWidget()
-
+        self.parent = parent
         self.title = 'viewer0D'  # is changed when used from DAQ_Viewer
         self.ui = Ui_Form()
         self.ui.setupUi(parent)
 
-        self.ui.statusbar = QtWidgets.QStatusBar(parent)
-        self.ui.statusbar.setMaximumHeight(15)
-        self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.ui.status_message = QtWidgets.QLabel()
-        self.ui.status_message.setMaximumHeight(15)
-        self.ui.statusbar.addWidget(self.ui.status_message)
+        # self.ui.statusbar = QtWidgets.QStatusBar(parent)
+        # self.ui.statusbar.setMaximumHeight(15)
+        # self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
+        # self.ui.status_message = QtWidgets.QLabel()
+        # self.ui.status_message.setMaximumHeight(15)
+        # self.ui.statusbar.addWidget(self.ui.status_message)
 
         self.ui.xaxis_item = self.ui.Graph1D.plotItem.getAxis('bottom')
 
@@ -108,7 +108,7 @@ class Viewer0D(QtWidgets.QWidget, QObject):
 
             self.update_Graph1D(datas)
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     def show_data_list(self, state=None):
         if state is None:
@@ -149,7 +149,7 @@ class Viewer0D(QtWidgets.QWidget, QObject):
             self.data_to_export_signal.emit(self.data_to_export)
 
         except Exception as e:
-            self.update_status(str(e), self.wait_time)
+            logger.exception(str(e))
 
     def update_channels(self):
         if self.plot_channels is not None:
@@ -168,11 +168,10 @@ class Viewer0D(QtWidgets.QWidget, QObject):
                 for ind, channel in enumerate(self.plot_channels):
                     self.legend.addItem(channel, self._labels[ind])
         except Exception as e:
-            logger.exception(str(e))
-            self.update_status('plot channels not yet declared', wait_time=self.wait_time)
+            logger.warning(str(e) + 'plot channels not yet declared')
 
     def update_status(self, txt, wait_time=0):
-        self.ui.statusbar.showMessage(txt, wait_time)
+        logger.info(txt)
 
     def update_x_axis(self, Nhistory):
         self.Nsamples = Nhistory

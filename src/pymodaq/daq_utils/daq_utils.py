@@ -1373,9 +1373,8 @@ def ftAxis_time(Npts, time_max):
     ----------
     Npts : number
       A number of points defining the length of both grids
-    omega_max : number
-      The maximum circular frequency in the spectral domain. its unit defines
-      the temporal units. ex: omega_max in rad/fs implies time_grid in fs
+    time_max : number
+      The maximum tmporal window
 
     Returns
     -------

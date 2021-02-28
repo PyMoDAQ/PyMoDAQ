@@ -329,12 +329,12 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
-                self.ui.viewers[-1].ui.auto_levels_pb.click()
+                self.ui.viewers[-1].auto_levels_action.trigger()
 
             self.detector_types = [plugin['name'] for plugin in DAQ_2DViewer_Det_types]
             self.settings.child('main_settings', 'axes').show()
             self.ui.viewers[0].ROI_select_signal.connect(self.update_ROI)
-            self.ui.viewers[0].ui.ROIselect_pb.clicked.connect(self.show_ROI)
+            self.ui.viewers[0].ROIselect_action.triggered.connect(self.show_ROI)
 
         elif DAQ_type == "DAQND":
             for ind in range(Nviewers):
@@ -729,8 +729,8 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         except Exception as e:
                             self.logger.exception(str(e))
                         if self.settings.child('detector_settings', 'ROIselect', 'use_ROI').value():
-                            if not self.ui.viewers[0].ui.ROIselect_pb.isChecked():
-                                self.ui.viewers[0].ui.ROIselect_pb.clicked()
+                            if not self.ui.viewers[0].ROIselect_action.isChecked():
+                                self.ui.viewers[0].ROIselect_action.clicked()
                                 QtWidgets.QApplication.processEvents()
                         self.ui.viewers[0].ui.ROIselect.setPos(
                             self.settings.child('detector_settings', 'ROIselect', 'x0').value(),
@@ -1441,7 +1441,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     def show_ROI(self):
         if self.DAQ_type == "DAQ2D":
             self.settings.child('detector_settings', 'ROIselect').setOpts(
-                visible=self.ui.viewers[0].ui.ROIselect_pb.isChecked())
+                visible=self.ui.viewers[0].ROIselect_action.isChecked())
             pos = self.ui.viewers[0].ui.ROIselect.pos()
             size = self.ui.viewers[0].ui.ROIselect.size()
             self.update_ROI(QRectF(pos[0], pos[1], size[0], size[1]))
@@ -1724,7 +1724,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
-                self.ui.viewers[-1].ui.auto_levels_pb.click()
+                self.ui.viewers[-1].auto_levels_action.trigger()
 
             else:  # for multideimensional data 0 up to dimension 4
                 self.viewer_widgets.append(QtWidgets.QWidget())

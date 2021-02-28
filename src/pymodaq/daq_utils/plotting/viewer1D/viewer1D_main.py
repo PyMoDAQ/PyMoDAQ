@@ -11,6 +11,7 @@ from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.gui_utils import QAction
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
 import datetime
@@ -78,27 +79,23 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.parent.setLayout(QtWidgets.QVBoxLayout())
         splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
 
-        self.ui.statusbar = QtWidgets.QStatusBar()
-        self.ui.statusbar.setMaximumHeight(15)
+        # self.ui.statusbar = QtWidgets.QStatusBar()
+        # self.ui.statusbar.setMaximumHeight(15)
 
         self.parent.layout().addWidget(splitter_hor)
-        self.parent.layout().addWidget(self.ui.statusbar)
+        #self.parent.layout().addWidget(self.ui.statusbar)
 
-        graph_widget = QtWidgets.QWidget()
-        graph_widget.setLayout(QtWidgets.QVBoxLayout())
 
-        splitter_hor.addWidget(graph_widget)
+        splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
+        splitter_hor.addWidget(splitter_ver)
         splitter_hor.addWidget(self.roi_manager.roiwidget)
         self.roi_manager.roiwidget.hide()
 
-        self.ui.button_widget = QtWidgets.QWidget()
-        self.ui.button_widget.setLayout(QtWidgets.QHBoxLayout())
-        self.ui.button_widget.setMaximumHeight(50)
 
-        splitter_ver = QtWidgets.QSplitter(Qt.Vertical)
+        self.ui.button_widget = QtWidgets.QToolBar()
 
-        graph_widget.layout().addWidget(self.ui.button_widget)
-        graph_widget.layout().addWidget(splitter_ver)
+
+        splitter_ver.addWidget(self.ui.button_widget)
 
         self.ui.Graph_Lineouts = pg.PlotWidget()
 
@@ -138,39 +135,41 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.ui.scatter.clicked.connect(self.do_scatter)
 
     def setup_buttons(self, button_widget):
-        buttons_layout = button_widget.layout()
 
-        self.ui.zoom_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Zoom_to_Selection.png")), '')
+        self.ui.zoom_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/Zoom_to_Selection.png")), 'Zoom Widget')
         self.ui.zoom_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.zoom_pb)
+        button_widget.addAction(self.ui.zoom_pb)
 
-        self.ui.Do_math_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Calculator.png")), '')
+        self.ui.Do_math_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/Calculator.png")), 'Do Math using ROI')
         self.ui.Do_math_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.Do_math_pb)
+        button_widget.addAction(self.ui.Do_math_pb)
 
-        self.ui.do_measurements_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/MeasurementStudio_32.png")), '')
+        self.ui.do_measurements_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/MeasurementStudio_32.png")),
+                                             'Do Advanced measurements (fits,...)')
         self.ui.do_measurements_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.do_measurements_pb)
+        button_widget.addAction(self.ui.do_measurements_pb)
 
-        self.ui.crosshair_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/reset.png")), '')
+        self.ui.crosshair_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/reset.png")),
+                                       'Show data cursor')
         self.ui.crosshair_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.crosshair_pb)
+        button_widget.addAction(self.ui.crosshair_pb)
 
-        self.ui.aspect_ratio_pb = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/zoomReset.png")), '')
+        self.ui.aspect_ratio_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/zoomReset.png")),
+                                          'Fix the aspect ratio')
         self.ui.aspect_ratio_pb.setCheckable(True)
-        buttons_layout.addWidget(self.ui.aspect_ratio_pb)
+        button_widget.addAction(self.ui.aspect_ratio_pb)
 
-        self.ui.scatter = QPushButton(QIcon(QPixmap(":/icons/Icon_Library/Marker.png")), '')
+        self.ui.scatter = QAction(QIcon(QPixmap(":/icons/Icon_Library/Marker.png")),
+                                  'Switch between line or scatter plots')
         self.ui.scatter.setCheckable(True)
-        buttons_layout.addWidget(self.ui.scatter)
+        button_widget.addAction(self.ui.scatter)
 
-        self.ui.x_label = QLabel('x:')
-        buttons_layout.addWidget(self.ui.x_label)
+        self.ui.x_label = QAction('x:')
+        button_widget.addAction(self.ui.x_label)
 
-        self.ui.y_label = QLabel('y:')
-        buttons_layout.addWidget(self.ui.y_label)
+        self.ui.y_label = QAction('y:')
+        button_widget.addAction(self.ui.y_label)
 
-        buttons_layout.addStretch()
 
     def setup_zoom(self):
         # create and set the zoom widget
@@ -252,7 +251,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.lo_data[k] = np.zeros((1,))
             self.update_lineouts()
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     def clear_lo(self):
         self.lo_data = [[] for ind in range(len(self.lo_data))]
@@ -281,7 +280,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.roi_manager.roiwidget.hide()
 
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     def do_zoom(self):
         bounds = self.ui.zoom_region.getRegion()
@@ -308,7 +307,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.ui.zoom_widget.show()
                 self.ui.zoom_region.sigRegionChanged.connect(self.do_zoom)
         except Exception as e:
-            self.update_status(str(e), self.wait_time)
+            logger.exception(str(e))
 
     def ini_data_plots(self, Nplots):
         try:
@@ -331,7 +330,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 channels.append(ind)
                 self.plot_channels.append(channel)
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     def update_labels(self, labels=[]):
         try:
@@ -368,7 +367,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                             self.labels[0])
 
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     @property
     def labels(self):
@@ -445,7 +444,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.update_measurement_module()
 
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     @pyqtSlot(list)
     def show_data_temp(self, datas):
@@ -473,7 +472,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
                 self.plot_channels[ind_plot].setData(x=x_axis, y=data)
         except Exception as e:
-            self.update_status(str(e), wait_time=self.wait_time)
+            logger.exception(str(e))
 
     @pyqtSlot(list)
     def show_math(self, data_lo):
@@ -563,7 +562,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.show_math(data_lo)
 
         except Exception as e:
-            self.update_status(str(e), self.wait_time)
+            logger.exception(str(e))
 
     def update_measurement_module(self):
         xdata = self.measurement_dict['x_axis']
@@ -573,8 +572,8 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         else:
             self.measurement_module.update_data(xdata=xdata, ydata=ydata)
 
-    def update_status(self, txt, wait_time=0):
-        self.ui.statusbar.showMessage(txt, wait_time)
+    def update_status(self, txt):
+        logger.info(txt)
 
     @property
     def x_axis(self):

@@ -62,6 +62,7 @@ class Viewer1DBasic(QObject):
         self.plotwidget = pg.PlotWidget()
         self.parent.setLayout(vboxlayout)
         vboxlayout.addWidget(self.plotwidget)
+        vboxlayout.setContentsMargins(0, 0, 0, 0)
 
         self.legend = self.plotwidget.addLegend()
         self.roi_region = pg.LinearRegionItem()
