@@ -127,13 +127,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.time_array = None
         self.channel_arrays = []
         self.grab_done = False
+        self.start_grab_time = 0.  # used for the refreshing rate
         self.navigator = None
         self.scanner = None
         self.received_data = 0
         self.lcd = None
         self.parent_scan = parent_scan  # to use if one need the DAQ_Scan object
 
-        self.ini_time = 0
+        self.ini_time = 0  # used for the continuous saving
         self.wait_time = 1000
 
         self.dockarea = parent
@@ -513,6 +514,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.send_to_tcpip = send_to_tcpip
         self.grab_done = False
         self.ui.data_ready_led.set_as_false()
+        self.start_grab_time = time.perf_counter()
         if not (grab_state):
             self.update_status(f'{self.title}: Snap')
             self.command_detector.emit(
@@ -1321,7 +1323,13 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.data_to_save_export['data2D'] = data2D
             self.data_to_save_export['dataND'] = dataND
 
-            if self.settings.child('main_settings', 'show_data').value():
+            if self.ui.grab_pb.isChecked():  # if live
+                refresh = time.perf_counter() - self.start_grab_time > self.settings.child('main_settings',
+                                                                                           'refresh_time').value() /\
+                          1000
+            else:
+                refresh = True  # if single
+            if self.settings.child('main_settings', 'show_data').value() and refresh:
                 self.received_data = 0  # so that data send back from viewers can be properly counted
                 self.set_datas_to_viewers(datas)
             else:
@@ -1649,6 +1657,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 show = status.attributes[0]
             self.show_scanner(show)
             QtWidgets.QApplication.processEvents()
+
+        elif status.command == 'stop':
+            self.stop()
 
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
