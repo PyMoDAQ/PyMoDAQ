@@ -551,7 +551,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.viewer1D.viewer.plotwidget.plotItem.addItem(self.ROI1D)
         self.ui.combomath = QtWidgets.QComboBox()
         self.ui.combomath.addItems(['Sum', 'Mean', 'Half-life'])
-        self.ui.viewer1D.ui.button_widget.layout().insertWidget(4, self.ui.combomath)
+        self.ui.viewer1D.ui.button_widget.addWidget(self.ui.combomath)
         self.ui.combomath.currentIndexChanged.connect(self.update_Navigator)
 
         self.ROI1D.sigRegionChangeFinished.connect(self.update_Navigator)
@@ -633,10 +633,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.set_signals_pb_2D_bis.setToolTip('Change navigation/signal axes')
         self.ui.set_signals_pb_2D_bis.setIcon(icon)
 
-        self.ui.navigator1D.ui.button_widget.layout().insertWidget(0, self.ui.set_signals_pb_1D)
-        self.ui.navigator2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D)
-        self.ui.viewer1D.ui.button_widget.layout().insertWidget(0, self.ui.set_signals_pb_1D_bis)
-        self.ui.viewer2D.ui.buttons_layout.insertWidget(0, self.ui.set_signals_pb_2D_bis)
+        self.ui.navigator1D.ui.button_widget.addWidget(self.ui.set_signals_pb_1D)
+        self.ui.navigator2D.toolbar_button.addWidget(self.ui.set_signals_pb_2D)
+        self.ui.viewer1D.ui.button_widget.addWidget(self.ui.set_signals_pb_1D_bis)
+        self.ui.viewer2D.toolbar_button.addWidget(self.ui.set_signals_pb_2D_bis)
 
         # main_layout.addWidget(vsplitter)
 

@@ -1,13 +1,14 @@
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QPointF
+from PyQt5.QtGui import QIcon, QPixmap
 from collections import OrderedDict
 
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
-
+from pymodaq.daq_utils.gui_utils import QAction
 from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
@@ -188,17 +189,14 @@ class ROIManager(QObject):
         vlayout = QtWidgets.QVBoxLayout()
         self.roiwidget.setLayout(vlayout)
 
-        horwidget = QtWidgets.QWidget()
-        horlayout = QtWidgets.QHBoxLayout()
-        horwidget.setLayout(horlayout)
-        self.save_ROI_pb = QtWidgets.QPushButton('Save ROIs')
-        self.load_ROI_pb = QtWidgets.QPushButton('Load ROIs')
-        self.clear_ROI_pb = QtWidgets.QPushButton('Clear ROIs')
-        horlayout.addWidget(self.save_ROI_pb)
-        horlayout.addWidget(self.load_ROI_pb)
-        horlayout.addWidget(self.clear_ROI_pb)
+        self.toolbar = QtWidgets.QToolBar()
+        vlayout.addWidget(self.toolbar)
 
-        vlayout.addWidget(horwidget)
+        self.save_ROI_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/save_ROI.png")), 'Save ROIs')
+        self.load_ROI_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/load_ROI.png")), 'Load ROIs')
+        self.clear_ROI_pb = QAction(QIcon(QPixmap(":/icons/Icon_Library/clear_ROI.png")), 'Clear ROIs')
+        self.toolbar.addActions([self.save_ROI_pb, self.load_ROI_pb, self.clear_ROI_pb])
+
 
         self.roitree = ParameterTree()
         vlayout.addWidget(self.roitree)

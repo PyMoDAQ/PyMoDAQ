@@ -1,4 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
+from PyQt5.QtWidgets import QAction
 from PyQt5 import QtGui, QtWidgets, QtCore
 import numpy as np
 from pathlib import Path
@@ -21,6 +22,17 @@ dashboard_submodules_params = [
     {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
 ]
 
+
+class QAction(QAction):
+    """
+    QAction subclass to miicmic signals as pushbuttons. Done to be sure of backcompatibility when I moved from
+    pushbuttons to QAction
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.click = self.trigger
+        self.clicked = self.triggered
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -82,8 +94,10 @@ def h5tree_to_QTree(base_node, base_tree_elt=None, pixmap_items=[]):
         child = QtWidgets.QTreeWidgetItem([node_name, "", node.path])
         if 'pixmap' in node.attrs.attrs_name:
             pixmap_items.append(dict(node=node, item=child))
-        if node.attrs['CLASS'] == 'GROUP':
+        klass = node.attrs['CLASS']
+        if klass == 'GROUP':
             h5tree_to_QTree(node, child, pixmap_items)
+
         base_tree_elt.addChild(child)
     return base_tree_elt, pixmap_items
 
