@@ -2412,13 +2412,9 @@ def browse_data(fname=None, ret_all=False, message=None):
         browser = H5Browser(form, h5file_path=fname)
 
         dialog = QtWidgets.QDialog()
-        dialog.setWindowTitle('Select a data node in the tree')
         vlayout = QtWidgets.QVBoxLayout()
 
         vlayout.addWidget(form)
-        dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-
         dialog.setLayout(vlayout)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
 
@@ -2426,9 +2422,8 @@ def browse_data(fname=None, ret_all=False, message=None):
         buttonBox.accepted.connect(dialog.accept)
         buttonBox.addButton('Cancel', buttonBox.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
-
         vlayout.addWidget(buttonBox)
-        dialog = QtWidgets.QDialog()
+
         dialog.setWindowTitle('Select a data node in the tree')
         if message is None or not isinstance(message, str):
             dialog.setWindowTitle('Select a data node in the tree')
