@@ -42,7 +42,7 @@ def linspace_this_vect(x, y=None, Npts=None):
     if not Npts:
         Npts = np.size(x)
     xlin = np.linspace(np.min(x), np.max(x), Npts)
-    if not (not (y)):
+    if y is not None:
         ylin = np.interp(xlin, x, y)
         return xlin, ylin
     else:
@@ -121,7 +121,7 @@ def crop_vector_to_axis(x, V, xlim):
 
     x_c = x[ixx]
     V_c = V[ixx]
-    return (x_c, V_c)
+    return x_c, V_c
 
 
 def crop_array_to_axis(x, y, M, cropbox):

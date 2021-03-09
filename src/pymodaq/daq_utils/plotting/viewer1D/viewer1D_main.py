@@ -375,8 +375,8 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     @labels.setter
     def labels(self, labels):
-        self._labels = labels
         self.update_labels(labels)
+        self._labels = labels
 
     def lock_aspect_ratio(self):
         if self.ui.aspect_ratio_pb.isChecked():
