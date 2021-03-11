@@ -339,23 +339,24 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 if self.labels == [] or len(self.labels) < len(self.datas):
                     self._labels = ["CH{}".format(ind) for ind in range(len(self.datas))]
             else:
-                flag = True
-                while flag:
-                    items = [item[1].text for item in self.legend.items]
-                    if len(items) == 0:
-                        flag = False
-                    else:
-                        self.legend.removeItem(items[0])
+                if self.legend is not None:
+                    flag = True
+                    while flag:
+                        items = [item[1].text for item in self.legend.items]
+                        if len(items) == 0:
+                            flag = False
+                        else:
+                            self.legend.removeItem(items[0])
 
-                if len(labels) < len(self.plot_channels):
-                    for ind in range(len(labels), len(self.plot_channels)):
-                        labels_tmp.append('CH{:02d}'.format(ind))
+                    if len(labels) < len(self.plot_channels):
+                        for ind in range(len(labels), len(self.plot_channels)):
+                            labels_tmp.append('CH{:02d}'.format(ind))
 
-                if len(labels_tmp) == len(self.plot_channels):
-                    for ind, channel in enumerate(self.plot_channels):
-                        self.legend.addItem(channel, labels_tmp[ind])
+                    if len(labels_tmp) == len(self.plot_channels):
+                        for ind, channel in enumerate(self.plot_channels):
+                            self.legend.addItem(channel, labels_tmp[ind])
 
-                self._labels = labels_tmp
+                    self._labels = labels_tmp
 
             if self.labels != labels:
                 for ind in range(len(self.roi_manager.ROIs)):

@@ -2067,13 +2067,14 @@ class DAQ_Detector(QObject):
 
             # for live mode:two possibilities: either snap one data and regrab softwarewise (while True) or if
             # self.detector.live_mode_available is True all data is continuously emited from the plugin
-
+            if self.detector.live_mode_available:
+                kwargs['wait_time'] = self.wait_time
+            else:
+                kwargs['wait_time'] = 0
             while True:
                 try:
                     if not self.waiting_for_data:
                         self.waiting_for_data = True
-                        QThread.msleep(self.wait_time)
-                        kwargs['wait_time'] = self.wait_time
                         self.detector.grab_data(Naverage, live=live, **kwargs)
                     QtWidgets.QApplication.processEvents()
                     if self.single_grab:
@@ -2082,6 +2083,8 @@ class DAQ_Detector(QObject):
                         else:
                             if self.average_done:
                                 break
+                    else:
+                        QThread.msleep(self.wait_time) #if in live mode apply a waiting time after acquisition
                     if not self.grab_state:
                         break
                     if self.detector.live_mode_available:

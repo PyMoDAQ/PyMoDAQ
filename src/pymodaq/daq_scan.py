@@ -1867,6 +1867,7 @@ class DAQ_Scan_Acquisition(QObject):
 
                 else:
                     logger.warning('Adaptive for more than 2 axis is not currently done (sequential adaptive)')
+                    return
 
             self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
 
@@ -1879,7 +1880,7 @@ class DAQ_Scan_Acquisition(QObject):
                     if not self.isadaptive:
                         if self.ind_scan >= len(self.scan_parameters.positions):
                             break
-                        positions = self.scan_parameters.positions[self.ind_scan]  # move motors of modules
+                        positions = self.scan_parameters.positions[self.ind_scan]  # get positions
                     else:
                         positions = learner.ask(1)[0][-1]  # next point to probe
                         if self.scan_parameters.scan_type == 'Tabular':  # translate normalized curvilinear position to real coordinates
@@ -1900,8 +1901,10 @@ class DAQ_Scan_Acquisition(QObject):
                     if self.stop_scan_flag or self.timeout_scan_flag:
                         break
 
+                    #move motors of modules and wait for move completion
                     positions = self.modules_manager.order_positions(self.modules_manager.move_actuators(positions))
 
+                    #grab datas and wait for grab completion
                     self.det_done(self.modules_manager.grab_datas(positions=positions), positions)
 
                     if self.isadaptive:
@@ -1916,6 +1919,9 @@ class DAQ_Scan_Acquisition(QObject):
                             new_positions = positions[:]
 
                         learner.tell(new_positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])
+
+                    # daq_scan wait time
+                    QThread.msleep(self.settings.child('time_flow', 'wait_time').value())
 
             self.h5saver.h5_file.flush()
             self.modules_manager.connect_actuators(False)

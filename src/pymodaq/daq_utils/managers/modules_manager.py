@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt5 import QtWidgets
 import time
 from pymodaq.daq_utils import daq_utils as utils
@@ -292,12 +292,14 @@ class ModulesManager(QObject):
 
         tzero = time.perf_counter()
 
-        while not self.move_done_flag:
+        while not self.move_done_flag: #polling move done
+
             QtWidgets.QApplication.processEvents()
             if time.perf_counter() - tzero > self.timeout:
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
+            QThread.msleep(20)
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
