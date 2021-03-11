@@ -55,7 +55,10 @@ class DAQ_Scan(QObject):
 
     params = [
         {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
-            {'title': 'Wait time (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0},
+            {'title': 'Wait time step (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0,
+             'tip': 'Wait time in ms after each step of acquisition (move and grab)'},
+            {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int', 'value': 0,
+             'tip': 'Wait time in ms between move and grab processes'},
             {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
@@ -1903,6 +1906,8 @@ class DAQ_Scan_Acquisition(QObject):
 
                     #move motors of modules and wait for move completion
                     positions = self.modules_manager.order_positions(self.modules_manager.move_actuators(positions))
+
+                    QThread.msleep(self.settings.child('time_flow', 'wait_time_between').value())
 
                     #grab datas and wait for grab completion
                     self.det_done(self.modules_manager.grab_datas(positions=positions), positions)
