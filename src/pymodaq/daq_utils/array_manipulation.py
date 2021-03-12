@@ -123,6 +123,114 @@ def crop_vector_to_axis(x, V, xlim):
     V_c = V[ixx]
     return x_c, V_c
 
+def rescale(x, window=[0.0, 1.0]):
+    """ Rescales a numpy array to the range specified by ``window``.
+
+    Default is [0, 1].
+    """
+    maxx = np.max(x)
+    minx = np.min(x)
+    return (x - minx) / (maxx - minx) * (window[1] - window[0]) + window[0]
+
+
+def marginals(data, normalize=False, axes=None):
+    """ Calculates the marginals of the data array.
+
+    axes specifies the axes of the marginals, e.g., the axes on which the
+    sum is projected.
+
+    If axis is None a list of all marginals is returned.
+    """
+    if axes is None:
+        axes = range(data.ndim)
+    axes = list(axes)
+    full_axes = list(range(data.ndim))
+    m = []
+    for i in axes:
+        # for the marginal sum over all axes except the specified one
+        margin_axes = tuple(j for j in full_axes if j != i)
+        m.append(np.sum(data, axis=margin_axes))
+    if normalize:
+        m = [rescale(mx) for mx in m]
+    return tuple(m) if len(m) != 1 else m[0]
+
+
+def find(x, condition, n=1):
+    """ Return the index of the nth element that fulfills the condition.
+    """
+    search_n = 1
+    for i in range(len(x)):
+        if condition(x[i]):
+            if search_n == n:
+                return i
+            search_n += 1
+    return -1
+
+
+def arglimit(y, threshold=1e-3, padding=0.0, normalize=True):
+    """ Returns the first and last index where `y >= threshold * max(abs(y))`.
+    """
+    t = np.abs(y)
+    if normalize:
+        t /= np.max(t)
+
+    idx1 = find(t, lambda x: x >= threshold)
+    if idx1 == -1:
+        idx1 = 0
+    idx2 = find(t[::-1], lambda x: x >= threshold)
+    if idx2 == -1:
+        idx2 = t.shape[0] - 1
+    else:
+        idx2 = t.shape[0] - 1 - idx2
+
+    return (idx1, idx2)
+
+
+def limit(x, y=None, threshold=1e-3, padding=0.25, extend=True):
+    """ Returns the maximum x-range where the y-values are sufficiently large.
+
+    Parameters
+    ----------
+    x : array_like
+        The x values of the graph.
+    y : array_like, optional
+        The y values of the graph. If `None` the maximum range of `x` is
+        used. That is only useful if `padding > 0`.
+    threshold : float
+        The threshold relative to the maximum of `y` of values that should be
+        included in the bracket.
+    padding : float
+        The relative padding on each side in fractions of the bracket size.
+    extend : bool, optional
+        Signals if the returned range can be larger than the values in ``x``.
+        Default is `True`.
+
+    Returns
+    -------
+    xl, xr : float
+        Lowest and biggest value of the range.
+
+    """
+    if y is None:
+        x1, x2 = np.min(x), np.max(x)
+        if not extend:
+            return (x1, x2)
+    else:
+        idx1, idx2 = arglimit(y, threshold=threshold)
+        x1, x2 = sorted([x[idx1], x[idx2]])
+
+    # calculate the padding
+    if padding != 0.0:
+        pad = (x2 - x1) * padding
+        x1 -= pad
+        x2 += pad
+
+    if not extend:
+        x1 = max(x1, np.min(x))
+        x2 = min(x2, np.max(x))
+
+    return (x1, x2)
+
 
 def crop_array_to_axis(x, y, M, cropbox):
     """crops an array M with given cropbox as a tuple (xmin,xmax,ymin,ymax).
