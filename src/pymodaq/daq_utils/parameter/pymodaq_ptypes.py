@@ -522,7 +522,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         # # If widget is a SpinBox, pass options straight through
         if isinstance(self.widget, SpinBoxCustom) or isinstance(self.widget, SliderSpinBox):
             if 'visible' in opts:
-                #opts.pop('visible')
+                opts.pop('visible')
                 self.widget.hide()  # so that only the display label is shown when visible option is toggled
             if 'units' in opts and 'suffix' not in opts:
                 opts['suffix'] = opts['units']
