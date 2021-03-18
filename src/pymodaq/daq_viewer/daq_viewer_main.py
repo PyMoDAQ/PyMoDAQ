@@ -1503,7 +1503,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         """
         if status.command == "Update_Status":
             if len(status.attributes) > 1:
-                self.update_status(status.attributes[0], wait_time=self.wait_time, log_type=status.attributes[1])
+                self.update_status(status.attributes[0], wait_time=self.wait_time, log=status.attributes[1])
             else:
                 self.update_status(status.attributes[0], wait_time=self.wait_time)
 
