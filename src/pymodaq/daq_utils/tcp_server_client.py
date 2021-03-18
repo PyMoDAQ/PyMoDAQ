@@ -458,7 +458,7 @@ class TCPClient(QObject):
         else:
             raise IOError('Unknown TCP client command')
 
-    def init_connection(self):
+    def init_connection(self, extra_commands=[]):
         # %%
         try:
             # create an INET, STREAMing socket
@@ -469,7 +469,9 @@ class TCPClient(QObject):
             self.socket.send_string(self.client_type)
 
             self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
-            self.cmd_signal.emit(ThreadCommand('get_axis'))
+            for command in extra_commands:
+                if isinstance(command, ThreadCommand):
+                    self.cmd_signal.emit(command)
             self.connected = True
             # %%
 

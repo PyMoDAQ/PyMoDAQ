@@ -604,7 +604,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
             self.tcpclient_thread.start()
-            tcpclient.init_connection()
+            tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis')])
 
     def load_data(self):
 

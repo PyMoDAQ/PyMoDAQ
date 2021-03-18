@@ -1080,7 +1080,8 @@ class H5Saver(H5Backend, QObject):
         """
         self.new_file_sig.emit(status)
 
-    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([])):
+    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([]),
+                  raw_group_name='Raw_datas'):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
@@ -1157,7 +1158,7 @@ class H5Saver(H5Backend, QObject):
             self.close_file()
             self.open_file(fullpathname, 'a', title='PyMoDAQ file')
 
-        self.raw_group = self.get_set_group(self.root(), 'Raw_datas', title='Data from PyMoDAQ modules')
+        self.raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
         self.get_set_logger(self.raw_group)
 
         if scan_group is not None:
