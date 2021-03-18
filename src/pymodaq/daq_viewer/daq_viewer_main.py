@@ -1502,7 +1502,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             update_status, set_enabled_grab_buttons, raise_timeout
         """
         if status.command == "Update_Status":
-            if len(status.attributes) > 2:
+            if len(status.attributes) > 1:
                 self.update_status(status.attributes[0], wait_time=self.wait_time, log_type=status.attributes[1])
             else:
                 self.update_status(status.attributes[0], wait_time=self.wait_time)
