@@ -133,6 +133,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.ui.do_measurements_pb.clicked.connect(self.open_measurement_module)
         self.ui.zoom_pb.clicked.connect(self.enable_zoom)
         self.ui.scatter.clicked.connect(self.do_scatter)
+        self.ui.xyplot_action.triggered.connect(self.do_xy)
 
     def setup_buttons(self, button_widget):
 
@@ -164,6 +165,11 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.ui.scatter.setCheckable(True)
         button_widget.addAction(self.ui.scatter)
 
+        self.ui.xyplot_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/2d.png")),
+                                  'Switch between normal or XY representation (valid for 2 channels)')
+        self.ui.xyplot_action.setCheckable(True)
+        button_widget.addAction(self.ui.xyplot_action)
+
         self.ui.x_label = QAction('x:')
         button_widget.addAction(self.ui.x_label)
 
@@ -191,6 +197,9 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.ui.zoom_widget.setVisible(False)
 
     def do_scatter(self):
+        self.update_graph1D(self.datas)
+
+    def do_xy(self):
         self.update_graph1D(self.datas)
 
     def update_lineouts(self):
@@ -536,22 +545,31 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
                     symbolBrushs.append(None)
 
-            for ind_plot, data in enumerate(datas):
-                if self.x_axis is None:
-                    self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
-                elif len(self.x_axis) != len(data):
-                    self._x_axis = np.linspace(0, len(data), len(data), endpoint=False)
+            if self.x_axis is None:
+                self._x_axis = np.linspace(0, len(datas[0]), len(datas[0]), endpoint=False)
+            elif len(self.x_axis) != len(datas[0]):
+                self._x_axis = np.linspace(0, len(datas[0]), len(datas[0]), endpoint=False)
 
-                self.plot_channels[ind_plot].setData(x=self.x_axis, y=data, pen=pens[ind_plot], symbol=symbol,
+            for ind_plot, data in enumerate(datas):
+                if not self.ui.xyplot_action.isChecked() or len(datas) == 0:
+                    self.plot_channels[ind_plot].setData(x=self.x_axis, y=data, pen=pens[ind_plot], symbol=symbol,
                                                      symbolBrush=symbolBrushs[ind_plot], symbolSize=symbolSize,
                                                      pxMode=True)
-
+                else:
+                    self.plot_channels[ind_plot].setData(x=np.array([]), y=np.array([]), pen=pens[ind_plot], symbol=symbol,
+                                                         symbolBrush=symbolBrushs[ind_plot], symbolSize=symbolSize,
+                                                         pxMode=True)
                 if self.ui.zoom_pb.isChecked():
                     self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
                 x_axis = utils.Axis(data=self.x_axis, units=self.axis_settings['units'],
                                     label=self.axis_settings['label'])
                 self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(
                     OrderedDict(name=self.title, data=data, x_axis=x_axis, source='raw'))  # to be saved or exported
+
+            if self.ui.xyplot_action.isChecked() and len(datas) > 1:
+                self.plot_channels[0].setData(x=datas[0], y=datas[1], pen=pens[0], symbol=symbol,
+                                              symbolBrush=symbolBrushs[0], symbolSize=symbolSize,
+                                              pxMode=True)
 
             if not self.ui.Do_math_pb.isChecked():  # otherwise math is done and then data is exported
                 self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
