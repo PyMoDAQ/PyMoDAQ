@@ -200,6 +200,18 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.update_graph1D(self.datas)
 
     def do_xy(self):
+        if self.ui.xyplot_action.isChecked():
+            axis = self.viewer.plotwidget.plotItem.getAxis('bottom')
+            axis.setLabel(text=self.labels[0], units='')
+            axis = self.viewer.plotwidget.plotItem.getAxis('left')
+            axis.setLabel(text=self.labels[1], units='')
+            self.legend.setVisible(False)
+        else:
+            self.set_axis_label(dict(orientation='bottom', label=self.axis_settings['label'],
+                                     units=self.axis_settings['units']))
+            axis = self.viewer.plotwidget.plotItem.getAxis('left')
+            axis.setLabel(text='', units='')
+            self.legend.setVisible(True)
         self.update_graph1D(self.datas)
 
     def update_lineouts(self):

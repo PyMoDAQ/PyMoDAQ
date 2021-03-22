@@ -280,6 +280,17 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.DAQ_type_combo.setCurrentText(self.DAQ_type)
         self.ui.log_pb.clicked.connect(self.show_log)
 
+    @property
+    def detector(self):
+        return self.ui.Detector_type_combo.currentText()
+
+    @detector.setter
+    def detector(self, det):
+        try:
+            self.ui.Detector_type_combo.setCurrentText(det)
+        except:
+            pass
+
     def change_viewer(self):
         """
             Change the viewer type from DAQ_Type value between :
@@ -534,6 +545,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.update_status(f'{self.title}: Continuous Grab')
                 self.command_detector.emit(
                     ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
+
+    def init_det(self):
+        self.ui.IniDet_pb.click()
 
     def ini_det_fun(self):
         """
