@@ -35,6 +35,13 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 from packaging import version as version_mod
 
+try:
+    from pymodaq_femto.retriever import Retriever
+    isretriever = True
+except:
+    isretriever = False
+
+
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 config = utils.load_config()
@@ -71,6 +78,8 @@ class DashBoard(QObject):
         self.preset_path = preset_path
         self.wait_time = 1000
         self.scan_module = None
+        self.log_module = None
+        self.retriever_module = None
         self.database_module = None
 
         self.dockarea = dockarea
@@ -162,6 +171,15 @@ class DashBoard(QObject):
     def load_log_module(self):
         self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
         self.log_module.status_signal.connect(self.add_status)
+
+    def load_retriever_module(self):
+        win = QtWidgets.QMainWindow()
+        area = gutils.DockArea()
+        win.setCentralWidget(area)
+        win.resize(1000, 500)
+        win.setWindowTitle('PyMoDAQ Retriever')
+        self.retriever_module = Retriever(dockarea=area, dashboard=self)
+        win.show()
 
     def create_menu(self, menubar):
         """
@@ -264,6 +282,9 @@ class DashBoard(QObject):
         action_scan.triggered.connect(self.load_scan_module)
         action_log = self.actions_menu.addAction('Log data')
         action_log.triggered.connect(self.load_log_module)
+        if isretriever:
+            action_retriever = self.actions_menu.addAction('Femto Retriever')
+            action_retriever.triggered.connect(self.load_retriever_module)
 
         # help menu
         help_menu = menubar.addMenu('?')
@@ -1155,7 +1176,7 @@ class DashBoard(QObject):
     def check_version(self, show=True):
         try:
             current_version = version_mod.parse(get_version())
-            available_version = [version_mod.parse(ver['version']) for ver in get_pypi_pymodaq()]
+            available_version = [version_mod.parse(ver) for ver in get_pypi_pymodaq('pymodaq')['versions']]
             msgBox = QtWidgets.QMessageBox()
             if max(available_version) > current_version:
                 msgBox.setText(f"A new version of PyMoDAQ is available, {str(max(available_version))}!")
