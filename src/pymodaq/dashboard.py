@@ -17,7 +17,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes  # to be placed after importing Parameter
 
 from pymodaq.daq_utils import daq_utils as utils
-
+from time import perf_counter
 
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
@@ -650,10 +650,7 @@ class DashBoard(QObject):
                                 if plug_init:
                                     move_modules[-1].ui.IniStage_pb.click()
                                     QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_type:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
+                                    self.poll_init(move_modules[-1])
                                     QtWidgets.QApplication.processEvents()
                                     master_controller = move_modules[-1].controller
                             else:
@@ -663,10 +660,7 @@ class DashBoard(QObject):
                                     move_modules[-1].controller = master_controller
                                     move_modules[-1].ui.IniStage_pb.click()
                                     QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_type:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
+                                    self.poll_init(move_modules[-1])
                                     QtWidgets.QApplication.processEvents()
                         except Exception as e:
                             logger.exception(str(e))
@@ -702,10 +696,7 @@ class DashBoard(QObject):
                                 if plug_init:
                                     detector_modules[-1].ui.IniDet_pb.click()
                                     QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_subtype:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
+                                    self.poll_init(detector_modules[-1])
                                     QtWidgets.QApplication.processEvents()
                                     master_controller = detector_modules[-1].controller
                             else:
@@ -715,10 +706,7 @@ class DashBoard(QObject):
                                     detector_modules[-1].controller = master_controller
                                     detector_modules[-1].ui.IniDet_pb.click()
                                     QtWidgets.QApplication.processEvents()
-                                    if 'Mock' in plug_subtype:
-                                        QThread.msleep(500)
-                                    else:
-                                        QThread.msleep(4000)  # to let enough time for real hardware to init properly
+                                    self.poll_init(detector_modules[-1])
                                     QtWidgets.QApplication.processEvents()
                         except Exception as e:
                             logger.exception(str(e))
@@ -740,6 +728,18 @@ class DashBoard(QObject):
         else:
             logger.error('Invalid file selected')
             return move_modules, detector_modules
+
+    def poll_init(self, module):
+        is_init = False
+        tstart = perf_counter()
+        while not is_init:
+            QThread.msleep(1000)
+            QtWidgets.QApplication.processEvents()
+            is_init = module.initialized_state
+            if perf_counter() - tstart > 60:  # timeout of 60sec
+                break
+        return is_init
+
 
     def set_roi_configuration(self, filename):
         if not isinstance(filename, Path):
