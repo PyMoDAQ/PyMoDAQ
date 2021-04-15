@@ -1210,6 +1210,7 @@ if __name__ == '__main__':
         scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
         scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
+    prog.auto_levels_action.setChecked(True)
     # data = np.load('triangulation_data.npy')
     prog.setImage(data_red=data_red, data_blue=data_blue, )
     # prog.setImage(data_spread=data)
