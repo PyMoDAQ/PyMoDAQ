@@ -615,7 +615,6 @@ class DashBoard(QObject):
             ind_det = -1
             for plug_IDs in plugins_sorted:
                 for ind_plugin, plugin in enumerate(plug_IDs):
-
                     plug_name = plugin['value'].child(('name')).value()
                     plug_init = plugin['value'].child(('init')).value()
                     plug_settings = plugin['value'].child(('params'))
@@ -635,8 +634,13 @@ class DashBoard(QObject):
                         mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
                         mov_mod_tmp.ui.Quit_pb.setEnabled(False)
                         QtWidgets.QApplication.processEvents()
-
-                        utils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
+                        try:
+                            utils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
+                        except KeyError as e:
+                            mssg = f'Could not set this setting: {str(e)}\n'\
+                                   f'The Preset is no more compatible with the plugin {plug_type}'
+                            logger.warning(mssg)
+                            self.splash_sc.showMessage(mssg, color=Qt.white)
                         QtWidgets.QApplication.processEvents()
 
                         mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
@@ -686,7 +690,14 @@ class DashBoard(QObject):
                         detector_modules.append(det_mod_tmp)
                         detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
                         detector_modules[-1].ui.Quit_pb.setEnabled(False)
-                        utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
+                        try:
+                            utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
+                        except KeyError as e:
+                            mssg = f'Could not set this setting: {str(e)}\n'\
+                                   f'The Preset is no more compatible with the plugin {plug_subtype}'
+                            logger.warning(mssg)
+                            self.splash_sc.showMessage(mssg, color=Qt.white)
+
                         QtWidgets.QApplication.processEvents()
 
                         try:
