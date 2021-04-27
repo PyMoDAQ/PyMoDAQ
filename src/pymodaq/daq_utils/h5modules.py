@@ -937,8 +937,8 @@ class H5LogHandler(logging.StreamHandler):
         self.h5saver.add_log(msg)
 
 
-class H5Saver(H5Backend, QObject):
-    """QObject containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
+class H5SaverBase(H5Backend):
+    """Object containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
     on a UI using the widget self.settings_tree. At the creation of a new file, a node
     group named **Raw_datas** and represented by the attribute ``raw_group`` is created and set with a metadata attribute:
@@ -973,10 +973,6 @@ class H5Saver(H5Backend, QObject):
 
     Attributes
     ----------
-    status_sig: pyqtSignal
-                emits a signal of type Threadcommand in order to senf log information to a main UI
-    new_file_sig: pyqtSignal
-                  emits a boolean signal to let the program know when the user pressed the new file button on the UI
 
     settings: Parameter
                Parameter instance (pyqtgraph) containing all settings (could be represented using the settings_tree widget)
@@ -985,8 +981,6 @@ class H5Saver(H5Backend, QObject):
                    Widget representing as a Tree structure, all the settings defined in the class preamble variable ``params``
 
     """
-    status_sig = pyqtSignal(utils.ThreadCommand)
-    new_file_sig = pyqtSignal(bool)
 
     params = [
         {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True},
@@ -1035,8 +1029,6 @@ class H5Saver(H5Backend, QObject):
         https://github.com/HDFGroup/hsds
         """
         H5Backend.__init__(self, backend)
-        QObject.__init__(self)
-
         if save_type not in save_types:
             raise InvalidSave('Invalid saving type')
 
@@ -1052,9 +1044,6 @@ class H5Saver(H5Backend, QObject):
 
         self.settings = Parameter.create(title='Saving settings', name='save_settings', type='group',
                                          children=self.params)
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setMinimumHeight(310)
-        self.settings_tree.setParameters(self.settings, showTop=False)
         self.settings.child(('current_h5_file')).sigActivated.connect(lambda: self.emit_new_file(True))
 
         self.settings.child(('save_type')).setValue(save_type)
@@ -1070,15 +1059,6 @@ class H5Saver(H5Backend, QObject):
     def h5_file(self):
         return self._h5file
 
-    def emit_new_file(self, status):
-        """Emits the new_file_sig
-
-        Parameters
-        ----------
-        status: bool
-                emits True if a new file has been asked by the user pressing the new file button on the UI
-        """
-        self.new_file_sig.emit(status)
 
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([]),
                   raw_group_name='Raw_datas'):
@@ -1788,8 +1768,9 @@ class H5Saver(H5Backend, QObject):
                 pass
 
     def update_status(self, status):
-        self.status_sig.emit(utils.ThreadCommand("Update_Status", [status, 'log']))
-        logger.info(status)
+        #self.status_sig.emit(utils.ThreadCommand("Update_Status", [status, 'log']))
+        #logger.info(status)
+        pass
 
     def show_file_content(self):
         form = QtWidgets.QWidget()
@@ -1805,6 +1786,36 @@ class H5Saver(H5Backend, QObject):
             self.flush()
             self.analysis_prog = H5Browser(form, h5file=self.h5file)
         form.show()
+
+
+class H5Saver(H5SaverBase, QObject):
+    """
+    status_sig: pyqtSignal
+                emits a signal of type Threadcommand in order to senf log information to a main UI
+    new_file_sig: pyqtSignal
+                  emits a boolean signal to let the program know when the user pressed the new file button on the UI
+    """
+
+    status_sig = pyqtSignal(utils.ThreadCommand)
+    new_file_sig = pyqtSignal(bool)
+
+    def __init__(self, *args, **kwargs):
+        QObject.__init__(self)
+        H5SaverBase.__init__(self, *args, **kwargs)
+
+        self.settings_tree = ParameterTree()
+        self.settings_tree.setMinimumHeight(310)
+        self.settings_tree.setParameters(self.settings, showTop=False)
+
+    def emit_new_file(self, status):
+        """Emits the new_file_sig
+
+        Parameters
+        ----------
+        status: bool
+                emits True if a new file has been asked by the user pressing the new file button on the UI
+        """
+        self.new_file_sig.emit(status)
 
 
 def find_scan_node(scan_node):

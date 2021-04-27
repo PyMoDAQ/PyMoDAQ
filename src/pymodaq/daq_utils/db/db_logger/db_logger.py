@@ -160,7 +160,7 @@ class DbLogger:
                                        channel=f"{datas['data2D'][channel]['name']}:{channel}",
                                        value=datas['data2D'][channel]['data'].tolist()))
 
-            # not yet dataND as db should not be where to save these datas
+            # not yet dataND as db should not know where to save these datas
 
 
 class DbLoggerGUI(DbLogger, QtCore.QObject):
