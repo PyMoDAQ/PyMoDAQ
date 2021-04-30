@@ -470,12 +470,12 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                                 #
                                 # self.data_to_save_export[key][name].update(datas[key][k])
 
-                if self.received_data == len(self.ui.viewers):
-                    if self.do_continuous_save:
-                        self.do_save_continuous(self.data_to_save_export)
+            if self.received_data == len(self.ui.viewers):
+                if self.do_continuous_save:
+                    self.do_save_continuous(self.data_to_save_export)
 
-                    self.grab_done = True
-                    self.grab_done_signal.emit(self.data_to_save_export)
+                self.grab_done = True
+                self.grab_done_signal.emit(self.data_to_save_export)
 
     def get_scaling_options(self):
         """
