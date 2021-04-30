@@ -1007,7 +1007,8 @@ class H5SaverBase(H5Backend):
         {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
             'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
-        {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text_pb', 'value': '', 'readonly': True},
+        {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '', 'readonly': True},
+        {'title': 'New file', 'name': 'new_file', 'type': 'action'},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
                 'values': ['zlib', 'gzip']},
@@ -1044,8 +1045,6 @@ class H5SaverBase(H5Backend):
 
         self.settings = Parameter.create(title='Saving settings', name='save_settings', type='group',
                                          children=self.params)
-        self.settings.child(('current_h5_file')).sigActivated.connect(lambda: self.emit_new_file(True))
-
         self.settings.child(('save_type')).setValue(save_type)
 
         # self.settings.child('saving_options', 'save_independent').show(save_type == 'scan')
@@ -1105,11 +1104,12 @@ class H5SaverBase(H5Backend):
                 self.settings.child(('current_scan_path')).setValue(str(scan_path))
 
                 if not scan_type:
-                    self.h5_file_path = save_path  # will remove the dataset part used for DAQ_scan datas
+                    self.h5_file_path = save_path.parent  # will remove the dataset part used for DAQ_scan datas
                     self.h5_file_name = base_name + datetime_now.strftime('_%Y%m%d_%H_%M_%S.h5')
                 else:
-                    self.h5_file_path = save_path
                     self.h5_file_name = save_path.name + ".h5"
+                    self.h5_file_path = save_path.parent
+
             else:
                 self.h5_file_name = select_file(start_path=base_name, save=True, ext='h5')
                 self.h5_file_path = self.h5_file_name.parent
@@ -1219,10 +1219,10 @@ class H5SaverBase(H5Backend):
 
             scan_path, current_filename, dataset_path = self.set_current_scan_path(base_path, base_name, update_h5,
                                                                                    next_scan_index,
-                                                                                   create_dataset_folder=scan_type,
+                                                                                   create_dataset_folder=False,
                                                                                    curr_date=curr_date,
                                                                                    ind_dataset=ind_dataset)
-            self.settings.child(('current_scan_path')).setValue(str(scan_path))
+            self.settings.child(('current_scan_path')).setValue(str(dataset_path))
 
             return scan_path, current_filename, dataset_path
 
@@ -1230,7 +1230,7 @@ class H5SaverBase(H5Backend):
             logger.exception(str(e))
 
     @classmethod
-    def find_part_in_path_and_subpath(cls, base_dir, part='', create=False):
+    def find_part_in_path_and_subpath(cls, base_dir, part='', create=False, increment=True):
         """
         Find path from part time.
 
@@ -1260,11 +1260,12 @@ class H5SaverBase(H5Backend):
             subfolders_year_name = [x.name for x in base_dir.iterdir() if x.is_dir()]
             subfolders_found_path = [x for x in base_dir.iterdir() if x.is_dir()]
             if part not in subfolders_year_name:
-                if create:
+                if increment:
                     found_path = base_dir.joinpath(part)
-                    found_path.mkdir()
                 else:
                     found_path = base_dir
+                if create:
+                    found_path.mkdir()
             else:
                 ind_path = subfolders_year_name.index(part)
                 found_path = subfolders_found_path[ind_path]
@@ -1298,7 +1299,7 @@ class H5SaverBase(H5Backend):
         day_path = cls.find_part_in_path_and_subpath(year_path, part=curr_date.strftime('%Y%m%d'),
                                                      create=True)  # create directory of the day if it doen't exist and return it
         dataset_base_name = curr_date.strftime('Dataset_%Y%m%d')
-        dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*") if path.is_dir()])
+        dataset_paths = sorted([path for path in day_path.glob(dataset_base_name + "*"+".h5") if path.is_file()])
 
         if ind_dataset is None:
             if dataset_paths == []:
@@ -1306,13 +1307,13 @@ class H5SaverBase(H5Backend):
                 ind_dataset = 0
             else:
                 if update_h5:
-                    ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2]) + 1
+                    ind_dataset = int(dataset_paths[-1].stem.partition(dataset_base_name + "_")[2]) + 1
                 else:
-                    ind_dataset = int(dataset_paths[-1].name.partition(dataset_base_name + "_")[2])
+                    ind_dataset = int(dataset_paths[-1].stem.partition(dataset_base_name + "_")[2])
 
         dataset_path = cls.find_part_in_path_and_subpath(day_path,
                                                          part=dataset_base_name + "_{:03d}".format(ind_dataset),
-                                                         create=create_dataset_folder)
+                                                         create=False, increment=True)
         scan_paths = sorted([path for path in dataset_path.glob(base_name + '*') if path.is_dir()])
         # if scan_paths==[]:
         #     ind_scan=0
@@ -1322,10 +1323,11 @@ class H5SaverBase(H5Backend):
         #     else:
         #         ind_scan=int(scan_paths[-1].name.partition(base_name)[2])+1
         ind_scan = next_scan_index
-
-        scan_path = cls.find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
-                                                      create=create_scan_folder)
-        return scan_path, base_name + '{:03d}'.format(ind_scan), dataset_path
+        #
+        # scan_path = cls.find_part_in_path_and_subpath(dataset_path, part=base_name + '{:03d}'.format(ind_scan),
+        #                                               create=create_scan_folder)
+        scan_path = ''
+        return dataset_path, base_name + '{:03d}'.format(ind_scan), dataset_path
 
     def get_last_scan(self):
         """Gets the last scan node within the h5_file and under the the **raw_group**
@@ -1806,6 +1808,7 @@ class H5Saver(H5SaverBase, QObject):
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumHeight(310)
         self.settings_tree.setParameters(self.settings, showTop=False)
+        self.settings.child(('new_file')).sigActivated.connect(lambda: self.emit_new_file(True))
 
     def emit_new_file(self, status):
         """Emits the new_file_sig

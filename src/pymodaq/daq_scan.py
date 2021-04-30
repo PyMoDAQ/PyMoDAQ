@@ -117,7 +117,11 @@ class DAQ_Scan(QObject):
 
         self.setupUI()
         self.setup_modules(self.dashboard.title)
+        self.scanner.set_config()
+
         logger.info('DAQ_Scan Initialized')
+
+
 
     @pyqtSlot(list)
     def update_actuators(self, actuators):

@@ -383,6 +383,36 @@ class Scanner(QObject):
         if fname is not None and fname != '':
             ioxml.parameter_to_xml_file(self.settings, fname)
 
+    def set_config(self):
+        scan_type = config['scan']['default']
+        self.settings.child('scan_options', 'scan_type').setValue(scan_type)
+
+        self.settings.child('scan_options', 'scan1D_settings', 'scan1D_type').setValue(config['scan']['scan1D']['type'])
+        self.settings.child('scan_options', 'scan1D_settings', 'start_1D').setValue(config['scan']['scan1D']['start'])
+        self.settings.child('scan_options', 'scan1D_settings', 'stop_1D').setValue(config['scan']['scan1D']['stop'])
+        self.settings.child('scan_options', 'scan1D_settings', 'step_1D').setValue(config['scan']['scan1D']['step'])
+
+        self.settings.child('scan_options', 'scan2D_settings', 'scan2D_type').setValue(config['scan']['scan2D']['type'])
+        self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setValue(
+            config['scan']['scan2D']['start1'])
+        self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setValue(
+            config['scan']['scan2D']['start2'])
+        self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').setValue(
+            config['scan']['scan2D']['step1'])
+        self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').setValue(
+            config['scan']['scan2D']['step2'])
+        self.settings.child('scan_options', 'scan2D_settings', 'npts_by_axis').setValue(
+            config['scan']['scan2D']['npts'])
+        self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setValue(
+            config['scan']['scan2D']['stop1'])
+        self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setValue(
+            config['scan']['scan2D']['stop2'])
+
+        self.settings.child('scan_options', 'tabular_settings', 'tabular_subtype').setValue(
+            config['scan']['tabular']['type'])
+        self.settings.child('scan_options', 'tabular_settings', 'tabular_step').setValue(
+            config['scan']['tabular']['curvilinear'])
+
     @property
     def actuators(self):
         """
@@ -393,6 +423,17 @@ class Scanner(QObject):
     @actuators.setter
     def actuators(self, act_list):
         self._actuators = act_list
+        if len(act_list) >= 1:
+            tip = f'Ax1 corresponds to the {act_list[0]} actuator'
+            self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis1').setOpts(tip=tip)
+            self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis1').setOpts(tip=tip)
+            self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis1').setOpts(tip=tip)
+            if len(act_list) >= 2:
+                tip = f'Ax2 corresponds to the {act_list[1]} actuator'
+            self.settings.child('scan_options', 'scan2D_settings', 'start_2d_axis2').setOpts(tip=tip)
+            self.settings.child('scan_options', 'scan2D_settings', 'stop_2d_axis2').setOpts(tip=tip)
+            self.settings.child('scan_options', 'scan2D_settings', 'step_2d_axis2').setOpts(tip=tip)
+
         self.update_model()
 
     def update_model(self, init_data=None):
