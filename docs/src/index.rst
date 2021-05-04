@@ -87,8 +87,11 @@ See :ref:`feedback`
 Citation
 ********
 
-By using PyMoDAQ, you are being asked to cite it (this website) when publishing results obtained with the help of its interface.
+By using PyMoDAQ, you are being asked to cite the article published in Review of Scientific
+Instruments `RSI 92, 045104 (2021)`__ when publishing results obtained with the help of its interface.
 In that way, you're also helping in its promotion and amelioration.
+
+__ https://doi.org/10.1063/5.0032116
 
 Changelog
 *********
