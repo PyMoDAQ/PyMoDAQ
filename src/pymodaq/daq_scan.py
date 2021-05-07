@@ -415,10 +415,10 @@ class DAQ_Scan(QObject):
             # save contents of given parameter object into an xml string under the attribute settings
             settings_str = b'<All_settings title="All Settings" type="group">' + \
                            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params) + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings) + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                               self.dashboard.preset_manager.preset_params) + b'</All_settings>'
-
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+                           # pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                           #     self.dashboard.preset_manager.preset_params) +\
+            settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 
         elif type_info == 'scan_info':
@@ -428,7 +428,6 @@ class DAQ_Scan(QObject):
                            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings) + \
                            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
                                self.scanner.settings) + b'</All_settings>'
-
             attr['settings'] = settings_str
 
     def parameter_tree_changed(self, param, changes):
