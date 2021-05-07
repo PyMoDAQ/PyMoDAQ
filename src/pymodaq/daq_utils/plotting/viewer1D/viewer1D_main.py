@@ -588,7 +588,8 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.data_to_export_signal.emit(self.data_to_export)
             else:
                 self.measurement_dict['datas'] = datas
-
+                if self.measurement_dict['x_axis'] is None:
+                    self.measurement_dict['x_axis'] = self._x_axis
                 data_lo = self.math_module.update_math(self.measurement_dict)
                 self.show_math(data_lo)
 
@@ -664,9 +665,9 @@ class Viewer1D_math(QObject):
                 sub_xaxis = self.x_axis[ind1:ind2]
 
                 if self.operations[ind_meas] == "Mean":
-                    data_lo.append(np.mean(sub_data))
+                    data_lo.append(float(np.mean(sub_data)))
                 elif self.operations[ind_meas] == "Sum":
-                    data_lo.append(np.sum(sub_data))
+                    data_lo.append(float(np.sum(sub_data)))
                 elif self.operations[ind_meas] == 'half-life' or self.operations[ind_meas] == 'expotime':
                     ind_x0 = utils.find_index(sub_data, np.max(sub_data))[0][0]
                     x0 = sub_xaxis[ind_x0]
