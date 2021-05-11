@@ -57,7 +57,8 @@ class DAQ_Scan(QObject):
         {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
             {'title': 'Wait time step (ms)', 'name': 'wait_time', 'type': 'int', 'value': 0,
              'tip': 'Wait time in ms after each step of acquisition (move and grab)'},
-            {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int', 'value': 0,
+            {'title': 'Wait time between (ms)', 'name': 'wait_time_between', 'type': 'int',
+             'value': 0,
              'tip': 'Wait time in ms between move and grab processes'},
             {'title': 'Timeout (ms)', 'name': 'timeout', 'type': 'int', 'value': 10000},
         ]},
@@ -117,11 +118,17 @@ class DAQ_Scan(QObject):
 
         self.setupUI()
         self.setup_modules(self.dashboard.title)
+        self.set_config()
         self.scanner.set_config()
 
         logger.info('DAQ_Scan Initialized')
 
+    def set_config(self):
+        self.settings.child('time_flow', 'wait_time').setValue(config['scan']['timeflow']['wait_time'])
+        self.settings.child('time_flow', 'wait_time_between').setValue(config['scan']['timeflow']['wait_time'])
+        self.settings.child('time_flow', 'timeout').setValue(config['scan']['timeflow']['timeout'])
 
+        self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
 
     @pyqtSlot(list)
     def update_actuators(self, actuators):

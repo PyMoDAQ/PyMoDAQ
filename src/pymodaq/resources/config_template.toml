@@ -43,6 +43,12 @@ default_preset_for_logger = "preset_default"
 
 [scan]
     default = "Scan1D"
+    Naverage = 1  # minimum is 1
+
+    [scan.timeflow]
+    wait_time = 0
+    wait_time_between = 0
+    timeout = 10000  # in millisecond
 
     [scan.scan1D]
     type = "Linear" # either "Linear", "Adaptive", "Linear back to start", "Random" see pymodaq.daq_utils.scanner.py
