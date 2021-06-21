@@ -186,7 +186,7 @@ def Enm2cmrel(E_nm, ref_wavelength=515):
 
     Examples
     --------
-    >>> Enm2cmrel(520, 515)
+    >>> Enm2cmrel(530, 515)
     549.551199853453
     """
     return 1 / (ref_wavelength * 1e-7) - 1 / (E_nm * 1e-7)
@@ -1160,7 +1160,7 @@ def linspace_step(start, stop, step):
         The computed distribution axis as an array.
     """
     if np.abs(step) < 1e-12 or np.sign(stop - start) != np.sign(step) or start == stop:
-        raise ValueError('Invalid value for one paramater')
+        raise ValueError('Invalid value for one parameter')
     Nsteps = int(np.ceil((stop - start) / step))
     new_stop = start + (Nsteps - 1) * step
     if np.abs(new_stop + step - stop) < 1e-12:

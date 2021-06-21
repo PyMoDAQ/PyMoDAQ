@@ -32,4 +32,9 @@ jobs:
         # flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --cov=pymodaq --cov-report=xml --cov-report=html tests/
+        pytest --cov=pymodaq --cov-report=html
+    - name: Upload coverage to codecov.io
+      run: bash <(curl -s https://codecov.io/bash)
+      if: always()
+      env:
+        CODECOV_TOKEN='4f8b791b-eb60-4a46-8fe9-3bd2ebf36c6e'
