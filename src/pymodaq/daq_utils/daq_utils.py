@@ -1413,6 +1413,8 @@ def ft(x, dim=-1):
     """
     if not isinstance(dim, int):
         raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
+    if isinstance(dim, bool):
+        raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
     assert isinstance(x, np.ndarray)
     assert dim >= -1
     assert dim <= len(x.shape) - 1
@@ -1436,6 +1438,8 @@ def ift(x, dim=0):
     ftAxis, ftAxis_time, ift, ft2, ift2
     """
     if not isinstance(dim, int):
+        raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
+    if isinstance(dim, bool):
         raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
     assert isinstance(x, np.ndarray)
     assert dim >= -1

@@ -61,8 +61,8 @@ class TestString:
 
 
 def test_get_data_dimension():
-    shapes = [(), (1,), (10,), (5, 5)]
-    scan_types = ['scan1D', 'scan2D']
+    shapes = [(), (1,), (10,), (5, 5), (2, 2, 2)]
+    scan_types = ['scan1D', 'scan2D', 'scanND']
     remove = [False, True]
     for shape in shapes:
         for scan in scan_types:
@@ -77,7 +77,10 @@ def test_get_data_dimension():
                         dim -= 1
                     if scan.lower() == 'scan2d':
                         dim -= 2
-                assert utils.get_data_dimension(arr, scan, rem) == (shape, '{:d}D'.format(dim), size)
+                else:
+                    if dim > 2:
+                        dim = 'N'
+                assert utils.get_data_dimension(arr, scan, rem) == (shape, f'{dim}D', size)
 
 
 class TestScroll:
@@ -85,7 +88,7 @@ class TestScroll:
         min_val = 50
         max_val = 51
         for scroll_val in range(101):
-            assert utils.scroll_linear(scroll_val, min_val, max_val) == \
+            assert utils.scroll_log(scroll_val, min_val, max_val) == \
                    pytest.approx(10 ** (scroll_val * (np.log10(max_val) - np.log10(min_val)) / 100 + np.log10(min_val)),
                                  rel=1e-4)
 
@@ -125,6 +128,7 @@ def test_elt_as_first_element():
         assert elts_sorted[ind] in elts
     elts_sorted = utils.elt_as_first_element(elts[:], elts[1])
     assert elts_sorted[0] == elts[1]
+    assert utils.elt_as_first_element([]) == []
 
 
 def test_check_vals_in_iterable():
@@ -234,6 +238,10 @@ class TestMath():
             assert utils.greater2n(True)
         with pytest.raises(TypeError):
             assert utils.greater2n([10.4, 248, True])
+        with pytest.raises(TypeError):
+            assert utils.greater2n([45, 72.4, "51"])
+        with pytest.raises(TypeError):
+            assert utils.greater2n(1j)
 
         assert utils.greater2n([10.4, 248, 1020]) == [16, 256, 1024]
         assert np.all(utils.greater2n(np.array([10.4, 248, 1020])) == np.array([16, 256, 1024]))
@@ -296,6 +304,11 @@ class TestMath():
         assert len(time_grid) == Npts
         assert np.max(time_grid) == (Npts - 1) * np.pi / (2 * omega_max)
 
+        with pytest.raises(TypeError):
+            assert utils.ftAxis("40", omega_max)
+        with pytest.raises(ValueError):
+            assert utils.ftAxis(0, omega_max)
+
     def test_ftAxis_time(self):
         time_max = 10000  # fs
         Npts = 1024
@@ -303,6 +316,11 @@ class TestMath():
         assert len(omega_grid) == Npts
         assert len(time_grid) == Npts
         assert np.max(omega_grid) == (Npts - 1) / 2 * 2 * np.pi / time_max
+
+        with pytest.raises(TypeError):
+            assert utils.ftAxis_time("40", time_max)
+        with pytest.raises(ValueError):
+            assert utils.ftAxis_time(0, time_max)
 
     def test_ft(self):
         omega_max = utils.l2w(300)
@@ -316,6 +334,13 @@ class TestMath():
         with pytest.raises(Exception):
             utils.ft(signal_temp, 2)
 
+        with pytest.raises(TypeError):
+            utils.ft(signal_temp, 1.5)
+        with pytest.raises(TypeError):
+            utils.ft(signal_temp, True)
+        with pytest.raises(TypeError):
+            utils.ft(signal_temp, "40")
+
     def test_ift(self):
         omega_max = utils.l2w(300)
         omega0 = utils.l2w(800)
@@ -326,3 +351,10 @@ class TestMath():
         assert np.all(signal_temp == pytest.approx(np.real(utils.ift(signal_omega))))
         with pytest.raises(Exception):
             utils.ift(signal_temp, 2)
+
+        with pytest.raises(TypeError):
+            utils.ift(signal_temp, 1.5)
+        with pytest.raises(TypeError):
+            utils.ift(signal_temp, True)
+        with pytest.raises(TypeError):
+            utils.ift(signal_temp, "40")
