@@ -2,12 +2,13 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import QVariant
 import sys
 from packaging import version as version_mod
+
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
     # standard lib
     from importlib import metadata
 else:
-    import importlib_metadata as metadata
+    import importlib_metadata as metadata  # pragma: no cover
 import pkgutil
 
 import traceback
@@ -37,10 +38,12 @@ Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
 
+
 def get_version():
     with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
         version = fvers.read().strip()
     return version
+
 
 def get_set_local_dir(basename='pymodaq_local'):
     """Defines, creates abd returns a local folder where configurations files will be saved
@@ -130,7 +133,7 @@ class JsonConverter:
                     return eval(dic['data'])
                 else:
                     return dic
-            else:
+            else:                                               # pragma: no cover
                 return dic
         except Exception:
             return jsonstring
@@ -293,10 +296,44 @@ def eV2cm(E_eV):
 
 
 def nm2cm(E_nm):
+    """Converts photon energy from wavelength to absolute cm-1
+
+        Parameters
+        ----------
+        E_nm: float
+              Photon energy in nm
+
+        Returns
+        -------
+        float
+             photon energy in cm-1
+
+        Examples
+        --------
+        >>> nm2cm(0.04)
+        0.000025
+        """
     return 1 / (E_nm * 1e7)
 
 
 def cm2nm(E_cm):
+    """Converts photon energy from absolute cm-1 to wavelength
+
+            Parameters
+            ----------
+            E_cm: float
+                  photon energy in cm-1
+
+            Returns
+            -------
+            float
+                 Photon energy in nm
+
+            Examples
+            --------
+            >>> cm2nm(1e5)
+            100
+            """
     return 1 / (E_cm * 1e-7)
 
 
@@ -710,9 +747,13 @@ def rint(x):
 
 
 def elt_as_first_element(elt_list, match_word='Mock'):
-    if elt_list != []:
+    if not hasattr(elt_list, '__iter__'):
+        raise TypeError('elt_list must be an iterable')
+    if elt_list:
         ind_elt = 0
         for ind, elt in enumerate(elt_list):
+            if not isinstance(elt, str):
+                raise TypeError('elt_list must be a list of str')
             if match_word in elt:
                 ind_elt = ind
                 break
@@ -726,9 +767,13 @@ def elt_as_first_element(elt_list, match_word='Mock'):
 
 
 def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
-    if elt_list != []:
+    if not hasattr(elt_list, '__iter__'):
+        raise TypeError('elt_list must be an iterable')
+    if elt_list:
         ind_elt = 0
         for ind, elt in enumerate(elt_list):
+            if not isinstance(elt, dict):
+                raise TypeError('elt_list must be a list of dicts')
             if match_word in elt[key]:
                 ind_elt = ind
                 break
@@ -809,7 +854,7 @@ def get_set_config_path(config_name='config'):
     local_path = get_set_local_dir()
     path = local_path.joinpath(config_name)
     if not path.is_dir():
-        path.mkdir()
+        path.mkdir()  # pragma: no cover
     return path
 
 
@@ -1085,10 +1130,12 @@ def my_moment(x, y):
     m.extend([np.sqrt(np.sum((x - m[0]) ** 2 * y) * dx / norm)])
     return m
 
+
 def normalize(x):
     x = x - np.min(x)
     x = x / np.max(x)
     return x
+
 
 def odd_even(x):
     """
@@ -1168,6 +1215,7 @@ def linspace_step(start, stop, step):
     new_stop = start + (Nsteps - 1) * step
     return np.linspace(start, new_stop, Nsteps)
 
+
 def find_dict_if_matched_key_val(dict_tmp, key, value):
     """
     check if a key/value pair match in a given dictionnary
@@ -1187,6 +1235,7 @@ def find_dict_if_matched_key_val(dict_tmp, key, value):
             return True
     return False
 
+
 def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
     """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
 
@@ -1202,14 +1251,15 @@ def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
     """
     for ind, dict_tmp in enumerate(dicts):
         if find_dict_if_matched_key_val(dict_tmp, key, value):
-                if return_index:
-                    return dict_tmp, ind
-                else:
-                    return dict_tmp
+            if return_index:
+                return dict_tmp, ind
+            else:
+                return dict_tmp
     if return_index:
         return None, -1
     else:
         return None
+
 
 def find_index(x, threshold):
     """
@@ -1413,8 +1463,6 @@ def ft(x, dim=-1):
     """
     if not isinstance(dim, int):
         raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
-    if isinstance(dim, bool):
-        raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
     assert isinstance(x, np.ndarray)
     assert dim >= -1
     assert dim <= len(x.shape) - 1
@@ -1438,8 +1486,6 @@ def ift(x, dim=0):
     ftAxis, ftAxis_time, ift, ft2, ift2
     """
     if not isinstance(dim, int):
-        raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
-    if isinstance(dim, bool):
         raise TypeError('dim should be an integer specifying the array dimension over which to do the calculation')
     assert isinstance(x, np.ndarray)
     assert dim >= -1
@@ -1514,5 +1560,5 @@ if __name__ == '__main__':
     #     print(str(p))
     # v = get_version()
     # pass
-    plugins = get_plugins()
+    plugins = get_plugins()  # pragma: no cover
     pass
