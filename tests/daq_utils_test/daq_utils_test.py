@@ -13,6 +13,22 @@ def test_get_version():
     assert bool(re.match("[0-9].[0-9].[0-9]", version))
 
 
+def test_get_set_local_dir():
+    local_path = utils.get_set_local_dir()
+    assert Path(local_path).is_dir()
+
+
+def test_check_config():
+    dict1 = {'name': 'test', 'status': True}
+    dict2 = {'name': 'test_2', 'status': False}
+    dict3 = {'status': None}
+    assert not utils.check_config(dict1, dict2)
+    assert utils.check_config(dict1, dict3)
+    assert dict1 == {'name': 'test', 'status': True}
+    assert dict2 == {'name': 'test_2', 'status': False}
+    assert dict3 == {'status': None, 'name': 'test'}
+
+
 class TestJsonConverter:
     def test_object2json(self):
         conv = utils.JsonConverter()
@@ -125,6 +141,13 @@ class TestScroll:
                    pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
 
 
+def test_getLineInfo():
+    try:
+        1 / 0
+    except Exception:
+        assert utils.getLineInfo()
+
+
 def test_ThreadCommand():
     command = 'abc'
     attributes = [1, 3]
@@ -164,40 +187,89 @@ def test_NavAxis():
         utils.NavAxis()
 
 
-def test_Data():
-    name = 'data_test'
-    x = utils.linspace_step(1, 100, 1)
-    y = utils.linspace_step(0.01, 1, 0.01)
-    data_test = utils.Data(name=name, x_axis=x, y_axis=y)
-    assert isinstance(data_test, utils.Data)
-    assert data_test['name'] == name
-    assert data_test['x_axis'] == utils.Axis(data=x)
-    assert data_test['y_axis'] == utils.Axis(data=y)
+class TestData:
+    def test_Data(self):
+        name = 'data_test'
+        x = utils.linspace_step(1, 100, 1)
+        y = utils.linspace_step(0.01, 1, 0.01)
+        data_test = utils.Data(name=name, x_axis=x, y_axis=y)
+        assert isinstance(data_test, utils.Data)
+        assert data_test['name'] == name
+        assert data_test['x_axis'] == utils.Axis(data=x)
+        assert data_test['y_axis'] == utils.Axis(data=y)
 
-    x = utils.Axis(x)
-    y = utils.Axis(y)
-    kwargs = [1, 2.0, 'kwargs', True, None]
-    data_test = utils.Data(name=name, x_axis=x, y_axis=y, kwargs=kwargs)
-    assert data_test['x_axis'] == x
-    assert data_test['y_axis'] == y
-    assert data_test['kwargs'] == kwargs
+        x = utils.Axis(x)
+        y = utils.Axis(y)
+        kwargs = [1, 2.0, 'kwargs', True, None]
+        data_test = utils.Data(name=name, x_axis=x, y_axis=y, kwargs=kwargs)
+        assert data_test['x_axis'] == x
+        assert data_test['y_axis'] == y
+        assert data_test['kwargs'] == kwargs
 
-    with pytest.raises(TypeError):
-        utils.Data(name=None)
-    with pytest.raises(TypeError):
-        utils.Data(source=None)
-    with pytest.raises(ValueError):
-        utils.Data(source='source')
+        with pytest.raises(TypeError):
+            utils.Data(name=None)
+        with pytest.raises(TypeError):
+            utils.Data(source=None)
+        with pytest.raises(ValueError):
+            utils.Data(source='source')
 
-    with pytest.raises(TypeError):
-        utils.Data(distribution=None)
-    with pytest.raises(ValueError):
-        utils.Data(distribution='distribution')
+        with pytest.raises(TypeError):
+            utils.Data(distribution=None)
+        with pytest.raises(ValueError):
+            utils.Data(distribution='distribution')
 
-    with pytest.raises(TypeError):
-        utils.Data(x_axis=10)
-    with pytest.raises(TypeError):
-        utils.Data(y_axis=10)
+        with pytest.raises(TypeError):
+            utils.Data(x_axis=10)
+        with pytest.raises(TypeError):
+            utils.Data(y_axis=10)
+
+    def test_DataFromPlugins(self):
+        data = [utils.linspace_step(1, 100, 1), utils.linspace_step(0.01, 1, 0.01)]
+        nav_axes = ["test"]
+        x_axis = utils.Axis(data=utils.linspace_step(1, 100, 1))
+        y_axis = utils.Axis(data=utils.linspace_step(1, 100, 1))
+        data_test = utils.DataFromPlugins(data=data, nav_axes=nav_axes, nav_x_axis=x_axis, nav_y_axis=y_axis)
+        assert isinstance(data_test, utils.DataFromPlugins)
+        assert data_test['data'] == data
+        assert data_test['nav_axes'] == nav_axes
+        assert data_test['nav_x_axis'] == x_axis
+        assert data_test['nav_y_axis'] == y_axis
+        assert data_test['dim'] == 'Data1D'
+        data = [np.array([1])]
+        data_test = utils.DataFromPlugins(data=data)
+        assert data_test['dim'] == 'Data0D'
+        data = [np.array([[1, 1], [1, 2]])]
+        data_test = utils.DataFromPlugins(data=data)
+        assert data_test['dim'] == 'Data2D'
+        data = [np.array([[[1, 1], [1, 2]], [[2, 1], [2, 2]]])]
+        data_test = utils.DataFromPlugins(data=data)
+        assert data_test['dim'] == 'DataND'
+
+        with pytest.raises(TypeError):
+            utils.DataFromPlugins(data=[1, 2, 3, 4, 5])
+        with pytest.raises(TypeError):
+            utils.DataFromPlugins(data="str")
+
+    def test_DataToExport(self):
+        data = np.array([1])
+        data_test = utils.DataToExport(data=data)
+        assert isinstance(data_test, utils.DataToExport)
+        assert data_test['data'] == data
+        assert data_test['dim'] == 'Data0D'
+        data_test = utils.DataToExport()
+        assert data_test['dim'] == 'Data0D'
+        data = np.array([1, 1])
+        data_test = utils.DataToExport(data=data)
+        assert data_test['dim'] == 'Data1D'
+        data = np.array([[1, 1], [1, 2]])
+        data_test = utils.DataToExport(data=data)
+        assert data_test['dim'] == 'Data2D'
+        data = np.array([[[1, 1], [1, 2]], [[2, 1], [2, 2]]])
+        data_test = utils.DataToExport(data=data)
+        assert data_test['dim'] == 'DataND'
+
+        with pytest.raises(TypeError):
+            utils.DataToExport(data="data")
 
 
 def test_ScaledAxis():
@@ -275,27 +347,62 @@ def test_check_vals_in_iterable():
     assert not utils.check_vals_in_iterable(np.array([1, 2.0, 4]), np.array((1, 2, 4)))
 
 
-def test_get_set_local_dir():
-    local_path = utils.get_set_local_dir()
-    assert Path(local_path).is_dir()
+class TestGetSet:
+    def test_get_set_config_path(self):
+        local_path = utils.get_set_local_dir()
+        config_path = utils.get_set_config_path()
+        assert Path(config_path) == Path(local_path).joinpath('config')
+        assert Path(config_path).is_dir()
 
+    def test_get_set_preset_path(self):
+        local_path = utils.get_set_local_dir()
+        preset_path = utils.get_set_preset_path()
+        assert Path(preset_path) == Path(local_path).joinpath('preset_configs')
+        assert Path(preset_path).is_dir()
 
-def test_get_set_log_path():
-    local_path = utils.get_set_local_dir()
-    log_path = utils.get_set_log_path()
-    assert Path(log_path) == Path(local_path).joinpath('log')
-    assert Path(log_path).is_dir()
+    def test_get_set_pid_path(self):
+        local_path = utils.get_set_local_dir()
+        pid_path = utils.get_set_pid_path()
+        assert Path(pid_path) == Path(local_path).joinpath('pid_configs')
+        assert Path(pid_path).is_dir()
 
+    def test_get_set_log_path(self):
+        local_path = utils.get_set_local_dir()
+        log_path = utils.get_set_log_path()
+        assert Path(log_path) == Path(local_path).joinpath('log')
+        assert Path(log_path).is_dir()
 
-def test_get_set_pid_path():
-    local_path = utils.get_set_local_dir()
-    pid_path = utils.get_set_pid_path()
-    assert Path(pid_path) == Path(local_path).joinpath('pid_configs')
-    assert Path(pid_path).is_dir()
+    def test_get_set_layout_path(self):
+        local_path = utils.get_set_local_dir()
+        layout_path = utils.get_set_layout_path()
+        assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
+        assert Path(layout_path).is_dir()
+
+    def test_get_set_remote_path(self):
+        local_path = utils.get_set_local_dir()
+        remote_path = utils.get_set_remote_path()
+        assert Path(remote_path) == Path(local_path).joinpath('remote_configs')
+        assert Path(remote_path).is_dir()
+
+    def test_get_set_overshoot_path(self):
+        local_path = utils.get_set_local_dir()
+        overshoot_path = utils.get_set_overshoot_path()
+        assert Path(overshoot_path) == Path(local_path).joinpath('overshoot_configs')
+        assert Path(overshoot_path).is_dir()
+
+    def test_get_set_roi_path(self):
+        local_path = utils.get_set_local_dir()
+        roi_path = utils.get_set_roi_path()
+        assert Path(roi_path) == Path(local_path).joinpath('roi_configs')
+        assert Path(roi_path).is_dir()
+
+    def test_get_module_name(self):
+        config_path = utils.get_set_config_path()
+        assert utils.get_module_name(config_path) == 'config'
 
 
 def test_zeros_aligned():
-    # just one exemple...
+    # just one example...
     align = 64
     data = utils.zeros_aligned(1230, align, np.uint32)
     assert data.ctypes.data % align == 0

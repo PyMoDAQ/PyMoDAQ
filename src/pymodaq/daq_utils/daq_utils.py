@@ -58,7 +58,7 @@ def get_set_local_dir(basename='pymodaq_local'):
     """
     local_path = Path.home().joinpath(basename)
 
-    if not local_path.is_dir():
+    if not local_path.is_dir():                            # pragma: no cover
         try:
             local_path.mkdir()
         except Exception as e:
@@ -71,14 +71,14 @@ def get_set_local_dir(basename='pymodaq_local'):
     return local_path
 
 
-def copy_preset():
+def copy_preset():                          # pragma: no cover
     path = get_set_preset_path().joinpath('preset_default.xml')
     if not path.exists():  # copy the preset_default from pymodaq folder and create one in pymodad's local folder
         with open(str(Path(__file__).parent.parent.joinpath('resources/preset_default.xml')), 'r') as file:
             path.write_text(file.read())
 
 
-def load_config(config_path=None):
+def load_config(config_path=None):          # pragma: no cover
     if not config_path:
         config_path = get_set_local_dir().joinpath('config.toml')
     config_base = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
@@ -455,19 +455,6 @@ def getLineInfo():
         res += t
     return res
 
-    def __repr__(self):
-        if self.axis_seq_indexes == []:
-            return 'Scanner with {:d} positions and shape:({:d}, {:d})'.format(self.Nsteps, len(self.axis_2D_1),
-                                                                               len(self.axis_2D_2))
-        else:
-            shape = ''
-            for ind, axis in enumerate(self.axis_seq):
-                if ind != len(self.axis_seq) - 1:
-                    shape += '{:d}, '.format(len(axis))
-                else:
-                    shape += '{:d}'.format(len(axis))
-            return 'Scanner with {:d} positions and shape:({:s})'.format(self.Nsteps, shape)
-
 
 class ThreadCommand(object):
     """ | Micro class managing the thread commands.
@@ -642,16 +629,6 @@ class DataToExport(Data):
             self['data'] = data
         else:
             raise TypeError('data for the DataToExport class should be a scalar or a ndarray')
-
-        iscorrect = True
-        if data is not None:
-            if not (isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int)):
-                iscorrect = False
-
-        if iscorrect:
-            self['data'] = data
-        else:
-            raise TypeError('data for the DataToExport class should be a scalar or a numpy array')
 
         if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') or data is not None:
             if isinstance(data, np.ndarray):
