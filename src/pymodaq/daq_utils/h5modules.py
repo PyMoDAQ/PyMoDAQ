@@ -1009,6 +1009,12 @@ class H5SaverBase(H5Backend):
             'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '', 'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
+        {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list', 'values': ['uint8', 'int8',
+                                                                                  'uint16', 'int16',
+                                                                                  'uint32', 'int32',
+                                                                                  'uint64', 'int64',
+                                                                                  'float64'],
+         'value': 'float64'},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
                 'values': ['zlib', 'gzip']},
@@ -1549,7 +1555,7 @@ class H5SaverBase(H5Backend):
 
         shape, dimension, size = utils.get_data_dimension(data_dict['data'])
         tmp_data_dict = copy.deepcopy(data_dict)
-
+        array_type = getattr(np, self.settings.child('dynamic').value())
         # save axis
         # this loop covers all type of axis : x_axis, y_axis... nav_x_axis, ...
         axis_keys = [k for k in tmp_data_dict.keys() if 'axis' in k]
@@ -1562,14 +1568,15 @@ class H5SaverBase(H5Backend):
                 array_to_save = tmp_dict.pop('data')
                 tmp_data_dict.pop(key)
 
-            self.add_array(channel_group, key, 'axis', array_type=np.float, array_to_save=array_to_save,
+            self.add_array(channel_group, key, 'axis', array_type=None, array_to_save=array_to_save,
                            enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
         array_to_save = tmp_data_dict.pop('data')
         if 'type' in tmp_data_dict:
             tmp_data_dict.pop('type')  # otherwise this metadata would overide mandatory attribute 'type' for a h5 node
         tmp_data_dict.update(metadata)
-        data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
+        array_to_save = array_to_save.astype(array_type)
+        data_array = self.add_array(channel_group, 'Data', 'data', array_type=array_type,
                                     title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension,
                                     scan_type=scan_type, scan_subtype=scan_subtype, scan_shape=scan_shape,
                                     array_to_save=array_to_save,
@@ -1614,7 +1621,7 @@ class H5SaverBase(H5Backend):
         """
         if array_type is None:
             if array_to_save is None:
-                array_type = np.float
+                array_type = getattr(np, self.settings.child('dynamic').value())
             else:
                 array_type = array_to_save.dtype
 
@@ -1636,7 +1643,7 @@ class H5SaverBase(H5Backend):
                 shape = list(scan_shape[:])
                 shape.extend(data_shape)
                 if init or array_to_save is None:
-                    array_to_save = np.zeros(shape)
+                    array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
 
             array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
         self.set_attr(array, 'type', data_type)
