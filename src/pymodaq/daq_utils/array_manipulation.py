@@ -9,14 +9,19 @@ import numpy as np
 def random_step(start, stop, step):
     tmp = start
     out = np.array([tmp])
-    if step >= 0:
+    sign = stop - start
+    if step == 0:
+        raise ValueError('step must be strictly positive or negative')
+    if step > 0 and sign > 0:
         while tmp <= stop:
             tmp = tmp + (np.random.random() + 0.5) * step
             out = np.append(out, tmp)
-    else:
+    elif step < 0 and sign < 0:
         while tmp >= stop:
             tmp = tmp + (np.random.random() + 0.5) * step
             out = np.append(out, tmp)
+    else:
+        raise ValueError(f'the step value {step} is not of the same sign as stop - start : {sign}')
     return out[0:-1]
 
 
@@ -172,7 +177,7 @@ def arglimit(y, threshold=1e-3, padding=0.0, normalize=True):
     """
     t = np.abs(y)
     if normalize:
-        t /= np.max(t)
+        t = t / np.max(t)
 
     idx1 = find(t, lambda x: x >= threshold)
     if idx1 == -1:
@@ -342,18 +347,18 @@ def min_ind(x, axis=None):
     ----------
     x : vector
     axis : optional dimension to check the function
-      
+
     Returns
     -------
     ind_min : index of the minimum value
     min_val : minimum value
     """
-    ind_min = np.argmax(x, axis=axis)
+    ind_min = np.argmin(x, axis=axis)
     min_val = np.min(x, axis=axis)
     return ind_min, min_val
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':                                          # pragma: no cover
     from pymodaq.daq_utils import daq_utils as utils
     import matplotlib.pyplot as plt
 
