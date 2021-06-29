@@ -84,17 +84,17 @@ def test_rescale():
     rescaled_x = array.rescale(test_x)
     result = np.array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
     for val1, val2 in zip(rescaled_x, result):
-        assert pytest.approx(val1, val2)
+        assert pytest.approx(val1) == val2
         
     rescaled_x = array.rescale(test_x, [1, 0])
     result = np.flip(result)
     for val1, val2 in zip(rescaled_x, result):
-        assert pytest.approx(val1, val2)
+        assert pytest.approx(val1) == val2
     
     rescaled_x = array.rescale(test_x, [0, 5])
     result = np.array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5])
     for val1, val2 in zip(rescaled_x, result):
-        assert pytest.approx(val1, val2)
+        assert pytest.approx(val1) == val2
 
 
 def test_marginals():
@@ -103,7 +103,7 @@ def test_marginals():
     result = tuple([np.array([6, 0.6]), np.array([1.1, 2.2, 3.3])])
     for array1, array2 in zip(marginalised, result):
         for val1, val2 in zip(array1, array2):
-            assert pytest.approx(val1, val2)
+            assert pytest.approx(val1) == val2
     
     marginalised = array.marginals(test_x, axes=[2])
     assert marginalised == 6.6
@@ -112,7 +112,7 @@ def test_marginals():
     result = tuple([np.array([1, 0]), np.array([0, 0.5, 1])])
     for array1, array2 in zip(marginalised, result):
         for val1, val2 in zip(array1, array2):
-            assert pytest.approx(val1, val2)
+            assert pytest.approx(val1) == val2
 
 
 def test_find():
