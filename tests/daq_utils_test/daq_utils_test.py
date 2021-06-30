@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import pytest
 import re
 
@@ -292,6 +293,20 @@ def test_ScalingOptions():
         utils.ScalingOptions(scaled_xaxis=None)
     with pytest.raises(AssertionError):
         utils.ScalingOptions(scaled_yaxis=None)
+
+
+def test_recursive_find_files_extension():
+    path = Path(os.path.dirname(os.path.realpath(__file__)))
+    assert path.is_dir()
+    ext = 'py'
+    assert utils.recursive_find_files_extension(path, ext)
+
+
+def test_recursive_find_exp_in_files():
+    path = Path(os.path.dirname(os.path.realpath(__file__)))
+    assert path.is_dir()
+    exp = 'import pytest'
+    assert utils.recursive_find_expr_in_files(path, exp)
 
 
 def test_remove_spaces():
