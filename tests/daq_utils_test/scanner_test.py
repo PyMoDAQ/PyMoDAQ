@@ -3,6 +3,7 @@ import pytest
 
 import pymodaq.daq_utils
 from pymodaq.daq_utils import scanner
+from pymodaq.daq_utils import exceptions as exceptions
 
 
 class TestScanInfo:
@@ -27,6 +28,8 @@ class TestScanInfo:
         scan_param = scanner.ScanInfo(Nsteps, positions, axes_indexes, axes_unique)
         assert scan_param.__repr__()
 
+        scan_param = scanner.ScanInfo()
+        assert scan_param.__repr__()
 
 class TestScanParameters:
     def test_ScanParameters(self):
@@ -60,6 +63,32 @@ class TestScanParameters:
         assert np.array_equal(scan_param.__getattr__('axes_indexes'), axes_indexes)
         assert np.array_equal(scan_param.__getattr__('axes_unique'), axes_unique)
         assert scan_param.__getattr__('adaptive_loss') == None
+
+        with pytest.raises(ValueError):
+            scan_param.__getattr__('test')
+
+    def test_get_info_from_positions(self):
+        positions = np.array([1, 2, 3, 4])
+        scan_param = scanner.ScanParameters(positions=positions)
+        result = scan_param.get_info_from_positions(positions)
+        assert np.array_equal(result.positions, np.expand_dims(positions, 1))
+        assert np.array_equal(result.axes_unique, [positions])
+        assert scan_param.get_info_from_positions(None)
+
+    def test_set_scan(self):
+        # Scan1D
+        positions = np.array([[1], [2], [3], [4]])
+        scan_param = scanner.ScanParameters(positions=positions)
+        result = scan_param.set_scan()
+        assert np.array_equal(result.positions, scan_param.get_info_from_positions(positions).positions)
+
+        scan_param = scanner.ScanParameters(positions=positions, scan_subtype='Random')
+        result = scan_param.set_scan()
+        for value in positions:
+            assert value in result.positions
+
+        # Scan2D
+        np.array([[1, 2], [2, 3], [3, 4], [4, 5]])
 
     def test_set_scan_spiral(self):
         nsteps = 10
