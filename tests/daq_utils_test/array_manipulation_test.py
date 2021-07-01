@@ -165,12 +165,29 @@ def test_crop_array_to_axis():
     
 
 
-# def test_interp1D():
-#     return array.interp1D()
+def test_interp1D():
+    x = np.linspace(1, 10, 10)
+    xlin = np.linspace(10, 1, 10)
+    M = np.linspace(x, x + 90, 10)
+    result = array.interp1D(x, M, xlin, axis=0)
+    expected = np.linspace(x + 90, x, 10)
+    assert np.array_equal(result, expected)
+
+    result = array.interp1D(x, M, xlin, axis=1)
+    expected = np.linspace(xlin, xlin + 90, 10)
+    assert np.array_equal(result, expected)
 
 
-# def test_linspace_this_image():
-#     return array.linspace_this_image()
+def test_linspace_this_image():
+    x = np.linspace(1, 10, 10)
+    M = np.linspace(x, x + 90, 10)
+    result = array.linspace_this_image(x, M)
+    assert np.array_equal(result[1], M)
+
+    y = np.linspace(10, 1, 10)
+    result = array.linspace_this_image(y, M, axis=0)
+    expected = np.append([x], np.linspace(x + 90, x + 90, 9), axis=0)
+    assert np.array_equal(result[1], expected)
 
 
 def test_max_ind():
