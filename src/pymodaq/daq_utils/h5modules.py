@@ -38,7 +38,7 @@ is_tables = True
 try:
     import tables
     backends_available.append('tables')
-except Exception as e:
+except Exception as e:                              # pragma: no cover
     logger.exception(str(e))
     is_tables = False
 
@@ -47,7 +47,7 @@ is_h5py = True
 try:
     import h5py
     backends_available.append('h5py')
-except Exception as e:
+except Exception as e:                              # pragma: no cover
     logger.exception(str(e))
     is_h5y = False
 
@@ -55,9 +55,8 @@ is_h5pyd = True
 # this one is to be used for remote reading/writing towards a HSDS server (or h5serv), see HDFGroup
 try:
     import h5pyd
-
     backends_available.append('h5pyd')
-except Exception as e:
+except Exception as e:                              # pragma: no cover
     logger.warning(str(e))
     is_h5yd = False
 
