@@ -361,9 +361,9 @@ def test_elt_as_first_element_dicts():
         utils.elt_as_first_element_dicts([1, 2, 3])
 
 
-def test_get_plugins():
-    assert utils.get_plugins()
-    assert utils.get_plugins('daq_move')
+# def test_get_plugins():  # run on local with pytest option --import-mode=importlib
+#     assert utils.get_plugins()
+#     assert utils.get_plugins('daq_move')
     
 
 def test_check_vals_in_iterable():
