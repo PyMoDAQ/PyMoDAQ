@@ -3,13 +3,9 @@ import os
 import pytest
 import re
 
-import importlib
-from importlib import metadata
-
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pathlib import Path
-from unittest import mock
 import datetime
 
 
