@@ -10,7 +10,7 @@ from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, Socket
 
 from pyqtgraph.parametertree import Parameter
 
-from gevent import server, socket
+# from gevent import server, socket
 from time import sleep
 from collections import OrderedDict
 
