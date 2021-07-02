@@ -798,9 +798,9 @@ def get_plugins(plugin_type='daq_0Dviewer'):
                     else:
                         importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
                     plugins_import.append(mod)
-                except Exception:
+                except Exception:  # pragma: no cover
                     pass
-        except Exception:
+        except Exception:  # pragma: no cover
             pass
     plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
     return plugins_import

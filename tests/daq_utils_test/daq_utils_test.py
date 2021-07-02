@@ -3,10 +3,19 @@ import os
 import pytest
 import re
 
+import importlib
+from importlib import metadata
+
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pathlib import Path
+from unittest import mock
 import datetime
+
+
+class MockEntryPoints:
+    def __init__(self, value):
+        self.value = value
 
 
 def test_get_version():
@@ -93,7 +102,6 @@ class TestString:
     def test_capitalize(self):
         string = 'abcdef'
         assert utils.capitalize(string) == 'Abcdef'
-
         assert utils.capitalize(string, 3) == 'ABCdef'
 
     def test_uncapitalize(self):
@@ -276,6 +284,8 @@ class TestData:
 def test_ScaledAxis():
     scaled_axis = utils.ScaledAxis()
     assert isinstance(scaled_axis, utils.ScaledAxis)
+    assert scaled_axis['offset'] == 0
+    assert scaled_axis['scaling'] == 1
 
     with pytest.raises(TypeError):
         utils.ScaledAxis(offset=None)
@@ -288,6 +298,8 @@ def test_ScaledAxis():
 def test_ScalingOptions():
     scaling_options = utils.ScalingOptions()
     assert isinstance(scaling_options, utils.ScalingOptions)
+    assert isinstance(scaling_options['scaled_xaxis'], utils.ScaledAxis)
+    assert isinstance(scaling_options['scaled_yaxis'], utils.ScaledAxis)
 
     with pytest.raises(AssertionError):
         utils.ScalingOptions(scaled_xaxis=None)
@@ -352,6 +364,11 @@ def test_elt_as_first_element_dicts():
     with pytest.raises(TypeError):
         utils.elt_as_first_element_dicts([1, 2, 3])
 
+
+def test_get_plugins():
+    assert utils.get_plugins()
+    assert utils.get_plugins('daq_move')
+    
 
 def test_check_vals_in_iterable():
     with pytest.raises(Exception):
@@ -646,3 +663,21 @@ class TestMath:
             utils.ift(signal_temp, 1.5)
         with pytest.raises(TypeError):
             utils.ift(signal_temp, "40")
+            
+            
+    def test_ft2(self):
+        x = np.array([np.linspace(1, 10, 10), np.linspace(10, 1, 10)])
+
+
+        with pytest.raises(TypeError):
+            utils.ft2(x, dim=(1.1, 1.2))
+        with pytest.raises(TypeError):
+            utils.ft2(x, dim=1.1)
+            
+    
+    def test_ift2(self):
+        x = np.array([np.linspace(1, 10, 10), np.linspace(10, 1, 10)])
+        with pytest.raises(TypeError):
+            utils.ift2(x, dim=(1.1, 1.2))
+        with pytest.raises(TypeError):
+            utils.ift2(x, dim=1.1)
