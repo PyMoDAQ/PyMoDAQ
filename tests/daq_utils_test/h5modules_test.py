@@ -10,8 +10,7 @@ import pymodaq.daq_utils.parameter.ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils import h5modules as h5
-from pymodaq.daq_utils.h5modules import H5Saver, H5Backend, H5BrowserUtil, H5Browser, save_types, group_types, \
-    group_data_types, InvalidGroupType, CARRAY, EARRAY, StringARRAY, Node, Attributes
+
 import csv
 
 tested_backend = ['tables', 'h5py']  # , 'h5pyd']
@@ -28,26 +27,26 @@ def generate_random_data(shape, dtype=np.float):
 
 @pytest.fixture(params=tested_backend)
 def get_backend(request, tmp_path):
-    bck = H5Backend(request.param)
+    bck = h5.H5Backend(request.param)
     title = 'this is a test file'
     start_path = get_temp_path(tmp_path, request.param)
     bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
     return bck
 
 
-@pytest.fixture(params=save_types)
+@pytest.fixture(params=h5.save_types)
 def get_save_type(request):
     return request.param
 
 
 @pytest.fixture(params=tested_backend)
 def get_h5saver(get_save_type, request, qtbot):
-    return H5Saver(save_type=get_save_type, backend=request.param)
+    return h5.H5Saver(save_type=get_save_type, backend=request.param)
 
 
 @pytest.fixture(params=tested_backend)
 def get_h5saver_scan(request, qtbot):
-    return H5Saver(save_type='scan', backend=request.param)
+    return h5.H5Saver(save_type='scan', backend=request.param)
 
 
 def get_temp_path(tmp_path, backend='h5pyd'):
@@ -83,10 +82,9 @@ class TestNode:
 
 
 class TestH5Backend:
-
     @pytest.mark.parametrize('backend', tested_backend)
     def test_file_open_close(self, tmp_path, backend):
-        bck = H5Backend(backend)
+        bck = h5.H5Backend(backend)
         title = 'this is a test file'
         start_path = get_temp_path(tmp_path, backend)
         h5_file = bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
@@ -98,6 +96,9 @@ class TestH5Backend:
         assert bck.root().attrs['TITLE'] == title
         assert bck.root().attrs['pymodaq_version'] == utils.get_version()
         bck.close_file()
+        assert bck.isopen() is False
+
+        bck = h5.H5Backend(backend)
         assert bck.isopen() is False
 
     def test_attrs(self, get_backend):
@@ -518,7 +519,7 @@ class TestH5Backend:
 #
 # @pytest.fixture(params=tested_backend)
 # def create_test_file(request, qtbot):
-#     bck = H5Saver(backend=request.param)
+#     bck = h5.H5Saver(backend=request.param)
 #     basepath = Path(__file__).parent
 #     filepath = basepath.joinpath(f'data/data_test_{request.param}.h5')
 #     bck.init_file(update_h5=True, addhoc_file_path=filepath)
