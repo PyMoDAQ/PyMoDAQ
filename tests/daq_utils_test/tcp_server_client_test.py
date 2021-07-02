@@ -1,20 +1,51 @@
-# import pytest
-# import numpy as np
-# import socket as native_socket
-#
-# from pymodaq.daq_utils.parameter import ioxml
-# from pymodaq.daq_utils.parameter import utils as putils
-# from pymodaq.daq_utils import daq_utils as utils
-# from PyQt5.QtCore import pyqtSignal, QObject
-# from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, Socket
-#
-# from pyqtgraph.parametertree import Parameter
-#
-# from gevent import server, socket
-# from time import sleep
-# from collections import OrderedDict
-#
-#
+import pytest
+import numpy as np
+import socket as native_socket
+
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_utils.parameter import utils as putils
+from pymodaq.daq_utils import daq_utils as utils
+from PyQt5.QtCore import pyqtSignal, QObject
+from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, Socket
+
+from pyqtgraph.parametertree import Parameter
+
+from gevent import server, socket
+from time import sleep
+from collections import OrderedDict
+
+class TestSocket:
+    def test_init(self):
+        test_socket = Socket('test')
+        assert isinstance(test_socket, Socket)
+        assert test_socket.socket == 'test'
+        assert test_socket.__eq__('test')
+        assert not test_socket.__eq__('tcp')
+        
+    def test_message_to_bytes(self):
+        message = 10
+        bytes_message = Socket.message_to_bytes(message)
+        assert isinstance(bytes_message[0], bytes)
+        assert isinstance(bytes_message[1], bytes)
+
+    def test_int_to_bytes(self):
+        integer = 5
+        bytes_integer = Socket.int_to_bytes(integer)
+        assert isinstance(bytes_integer, bytes)
+
+        with pytest.raises(TypeError):
+            Socket.int_to_bytes('test')
+            
+    def test_bytes_to_int(self):
+        integer = 5
+        bytes_integer = Socket.int_to_bytes(integer)
+        integer_2 = Socket.bytes_to_int(bytes_integer)
+        assert isinstance(integer_2, int)
+        assert integer_2 == integer
+        
+        with pytest.raises(TypeError):
+            Socket.bytes_to_int(integer)
+
 # class SimpleServer(server.StreamServer):
 #     def __init__(self, *args, handle_fun=lambda x: print('nothing as an handle'), **kwargs):
 #         super().__init__(*args, **kwargs)
