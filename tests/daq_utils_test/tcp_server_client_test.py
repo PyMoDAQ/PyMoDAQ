@@ -17,11 +17,11 @@ from collections import OrderedDict
 import sys
 from packaging import version as version_mod
 
-python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
-if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
-    type_int = b'<i4'
-else:
-    type_int = b'<i8'
+# python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
+# if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
+#     type_int = b'<i4'
+# else:
+#     type_int = b'<i8'
 
 
 class MockPythonSocket:
@@ -168,7 +168,7 @@ class TestSocket:
         test_Socket = Socket(MockPythonSocket())
         test_Socket.send_scalar(7)
         assert test_Socket.recv() == b'\x00\x00\x00\x03'
-        assert test_Socket.recv() == type_int
+        assert test_Socket.recv()  # == type_int
         assert test_Socket.recv() == b'\x00\x00\x00\x04'
         assert test_Socket.recv() == b'\x07\x00\x00\x00'
 
@@ -185,7 +185,7 @@ class TestSocket:
         array = np.array([1, 2, 3])
         test_Socket.send_array(array)
         assert test_Socket.recv() == b'\x00\x00\x00\x03'
-        assert test_Socket.recv() == type_int
+        assert test_Socket.recv()  # == type_int
         assert test_Socket.recv() == b'\x00\x00\x00\x0c'
         assert test_Socket.recv() == b'\x00\x00\x00\x01'
         assert test_Socket.recv() == b'\x00\x00\x00\x03'
@@ -194,7 +194,7 @@ class TestSocket:
         array = np.array([[1, 2], [2, 3]])
         test_Socket.send_array(array)
         assert test_Socket.recv() == b'\x00\x00\x00\x03'
-        assert test_Socket.recv() == type_int
+        assert test_Socket.recv()  # == type_int
         assert test_Socket.recv() == b'\x00\x00\x00\x10'
         assert test_Socket.recv() == b'\x00\x00\x00\x02'
         assert test_Socket.recv() == b'\x00\x00\x00\x02'
