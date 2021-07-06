@@ -14,7 +14,10 @@ from pyqtgraph.parametertree import Parameter
 
 from time import sleep
 from collections import OrderedDict
+import sys
+from packaging import version as version_mod
 
+python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
     type_int = b'<i4'
 else:
