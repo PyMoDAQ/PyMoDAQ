@@ -1,7 +1,9 @@
 import pytest
 import numpy as np
+import socket
 import socket as native_socket
 
+from unittest import mock
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils import daq_utils as utils
@@ -10,17 +12,87 @@ from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, Socket
 
 from pyqtgraph.parametertree import Parameter
 
-# from gevent import server, socket
 from time import sleep
 from collections import OrderedDict
 
+
+class MockPythonSocket:
+    def __init__(self):
+        self._send = []
+        self._sendall = []
+        self._recv = []
+        self._closed = False
+
+    def bind(self, *args, **kwargs):
+        arg = args[0]
+        if len(arg) != 2:
+            raise TypeError(f'{args} must be a tuple of two elements')
+        else:
+            if arg[0] == '':
+                self._sockname = ('0.0.0.0', arg[1])
+            else:
+                self._sockname = (arg[0], arg[1])
+
+    def listen(self):
+        pass
+
+    def accept(self):
+        return (MockPythonSocket(), '0.0.0.0')
+
+    def getsockname(self):
+        return self._sockname
+
+    def connect(self):
+        pass
+
+    def send(self, *args, **kwargs):
+        self._send.append(args[0])
+        return len(str(self._send[-1]))
+
+    def sendall(self, *args, **kwargs):
+        self._sendall.append(args[0])
+
+    def recv(self, *args, **kwargs):
+        if len(self._send) > 0:
+            self._recv.append(self._send.pop(0))
+            return self._recv.pop(0)
+
+    def close(self):
+        self._closed = True
+
+
 class TestSocket:
     def test_init(self):
-        test_socket = Socket('test')
-        assert isinstance(test_socket, Socket)
-        assert test_socket.socket == 'test'
-        assert test_socket.__eq__('test')
-        assert not test_socket.__eq__('tcp')
+        test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        test_Socket = Socket(test_socket)
+        assert isinstance(test_Socket, Socket)
+        assert test_Socket.socket == test_socket
+        assert test_Socket.__eq__(test_Socket)
+    
+    def test_base_fun(self):
+        test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        test_Socket = Socket(test_socket)
+        test_Socket.bind(('', 5544))
+        test_Socket.listen
+        assert test_Socket.getsockname() == ('0.0.0.0', 5544)
+        assert test_Socket.accept
+        assert test_Socket.connect
+        assert test_Socket.send
+        assert test_Socket.sendall
+        assert test_Socket.recv
+        test_Socket.close()
+
+        test_socket = MockPythonSocket()
+        test_Socket = Socket(test_socket)
+        test_Socket.bind(('', 5544))
+        test_Socket.listen()
+        test_Socket.getsockname() == ('0.0.0.0', 5544)
+        test_Socket.accept()
+        test_Socket.connect()
+        test_Socket.send(b'test')
+        test_Socket.sendall(b'test')
+        test_Socket.recv(4)
+        test_Socket.close()
         
     def test_message_to_bytes(self):
         message = 10
@@ -34,7 +106,7 @@ class TestSocket:
         assert isinstance(bytes_integer, bytes)
 
         with pytest.raises(TypeError):
-            Socket.int_to_bytes('test')
+            Socket.int_to_bytes(1.5)
             
     def test_bytes_to_int(self):
         integer = 5
@@ -46,210 +118,134 @@ class TestSocket:
         with pytest.raises(TypeError):
             Socket.bytes_to_int(integer)
 
-# class SimpleServer(server.StreamServer):
-#     def __init__(self, *args, handle_fun=lambda x: print('nothing as an handle'), **kwargs):
-#         super().__init__(*args, **kwargs)
-#         self.handle_fun = handle_fun
-#
-#     def handle(self, sock, address):
-#         self.handle_fun(sock)
-#
-#
-# # class Test:
-# #     """check the test server is working"""
-# #     def test(self):
-# #         server = SimpleServer(('127.0.0.1', 0), handle_fun=
-# #                               lambda x: Socket(x).check_sended(b'hello and goodbye!'))
-# #         server.start()
-# #         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-# #         response = client.recv(4096)
-# #         assert response == b'hello and goodbye!'
-# #         server.stop()
-#
-#
-# class TestTCPIP:
-#
-#     def test_int_to_bytes(self):
-#         one_integer = 254
-#         assert Socket.int_to_bytes(one_integer) == one_integer.to_bytes(4, 'big')
-#
-#     def test_message_to_bytes(self):
-#         string = 'this is a message'
-#         assert Socket.message_to_bytes(string)[0] == string.encode()
-#         assert Socket.message_to_bytes(string)[1] == Socket.int_to_bytes(len(string))
-#
-#     def test_check_sended(self):
-#         string = 'this is a message of a given length'
-#         server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).check_sended(string.encode()))
-#         server.start()
-#         client = socket.create_connection(('127.0.0.1', server.server_port))
-#         response = client.recv(4096)
-#         assert response == b'this is a message of a given length'
-#         client.close()
-#         server.stop()
-#
-#     def test_check_received_length(self):
-#         string = 'this is a message'
-#         server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).check_sended(string.encode()))
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         assert client.check_received_length(len(string.encode())) == string.encode()
-#         client.close()
-#         server.stop()
-#
-#     def test_send_string(self):
-#         string = 'this is a message'
-#         server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).send_string(string))
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         len_string = int.from_bytes(client.check_received_length(4), 'big')
-#         assert len_string == len(string)
-#         assert client.check_received_length(len_string) == string.encode()
-#         client.close()
-#         server.stop()
-#
-#     def test_get_string(self):
-#         string = 'this is a message'
-#         server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).send_string(string))
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         assert client.get_string() == string
-#         client.close()
-#         server.stop()
-#
-#     def test_get_int(self):
-#         one_integer = 15489
-#         server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: x.sendall(Socket.int_to_bytes(one_integer)))
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         assert client.get_int() == one_integer
-#         client.close()
-#         server.stop()
-#
-#     def test_send_scalar(self):
-#         scalars = [15489, 2.4589]
-#
-#         server = SimpleServer(('127.0.0.1', 0), )
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         sleep(0.1)
-#         server_socket = Socket(server.do_read()[0])
-#
-#         for scalar in scalars:
-#             server_socket.send_scalar(scalar)
-#             data_type = client.get_string()
-#             data_len = client.get_int()
-#             data_bytes = client.check_received_length(data_len)
-#             data = np.frombuffer(data_bytes, dtype=data_type)[0]
-#             assert data == scalar
-#         client.close()
-#         server.stop()
-#
-#     def test_get_scalar(self):
-#         scalars = [15489, 2.4589]
-#         server = SimpleServer(('127.0.0.1', 0), )
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         sleep(0.1)
-#         server_socket = Socket(server.do_read()[0])
-#
-#         for scalar in scalars:
-#             server_socket.send_scalar(scalar)
-#             assert client.get_scalar() == scalar
-#         client.close()
-#         server.stop()
-#
-#     def test_send_array(self):
-#         arrays = [np.random.rand(7, 1),
-#                   np.random.rand(10, 2),
-#                   np.random.rand(10, 2, 4),
-#                   np.random.rand(10, 1, 3),
-#                   np.random.rand(10, 4, 3, 1),
-#                   ]
-#         server = SimpleServer(('127.0.0.1', 0), )
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         sleep(0.1)
-#         server_socket = Socket(server.do_read()[0])
-#         for array in arrays:
-#             server_socket.send_array(array)
-#
-#             data_type = client.get_string()
-#             data_len = client.get_int()
-#             shape_len = client.get_int()
-#             shape = []
-#             for ind in range(shape_len):
-#                 shape.append(client.get_int())
-#             data_bytes = client.check_received_length(data_len)
-#
-#             data = np.frombuffer(data_bytes, dtype=data_type)
-#             data = data.reshape(tuple(shape))
-#             assert np.all(data == array)
-#         client.close()
-#         server.stop()
-#
-#     def test_get_array(self):
-#         arrays = [np.random.rand(7, 1),
-#                   np.random.rand(10, 2),
-#                   np.random.rand(10, 2, 4),
-#                   np.random.rand(10, 1, 3),
-#                   np.random.rand(10, 4, 3, 1),
-#                   ]
-#         server = SimpleServer(('127.0.0.1', 0), )
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         server_socket = Socket(server.do_read()[0])
-#         for array in arrays:
-#             server_socket.send_array(array)
-#
-#             data = client.get_array()
-#             assert np.all(data == array)
-#         client.close()
-#         server.stop()
-#
-#     def test_send_list(self):
-#         listing = [np.random.rand(7, 2),
-#                    'Hello World',
-#                    1,
-#                    2.654,
-#                    ]
-#
-#         server = SimpleServer(('127.0.0.1', 0), handle_fun=lambda x: Socket(x).send_list(listing))
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#
-#         sleep(0.1)
-#
-#         data = []
-#         list_len = client.get_int()
-#
-#         for ind in range(list_len):
-#             data_type = client.get_string()
-#             if data_type == 'scalar':
-#                 data.append(client.get_scalar())
-#             elif data_type == 'string':
-#                 data.append(client.get_string())
-#             elif data_type == 'array':
-#                 data.append(client.get_array())
-#         utils.check_vals_in_iterable(data, listing)
-#
-#         client.close()
-#         server.stop()
-#
-#     def test_send_another_list(self):
-#         listing = ['another list that should raise an exception because there is a boolean that is not a valid type',
-#                    ['gg', ],
-#                    ]
-#         server = SimpleServer(('127.0.0.1', 0), )
-#         server.start()
-#         client = Socket(socket.create_connection(('127.0.0.1', server.server_port)))
-#         sleep(0.1)
-#         server_socket = Socket(server.do_read()[0])
-#         with pytest.raises(TypeError):
-#             assert server_socket.send_list(listing)
-#
-#         server.stop()
-#
+    def test_check_sended(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.check_sended(b'test')
+
+        with pytest.raises(TypeError):
+            test_Socket.check_sended('test')
+
+    def test_check_received_length(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send(b'test')
+        test_Socket.check_received_length(4)
+
+        for i in range(1025):
+            test_Socket.send(b'test')
+        test_Socket.check_received_length(4100)
+
+        with pytest.raises(TypeError):
+            test_Socket.check_received_length(100)
+
+        with pytest.raises(TypeError):
+            test_Socket.check_received_length(1.5)
+
+    def test_send_string(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_string('test')
+        assert test_Socket.recv() == b'\x00\x00\x00\x04'
+        assert test_Socket.recv() == b'test'
+
+    def test_get_string(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_string('test')
+        assert test_Socket.get_string() == 'test'
+
+    def test_get_int(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_string('test')
+        assert test_Socket.get_int() == 4
+
+    def test_send_scalar(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_scalar(7)
+        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv() == b'<i4'
+        assert test_Socket.recv() == b'\x00\x00\x00\x04'
+        assert test_Socket.recv() == b'\x07\x00\x00\x00'
+
+        with pytest.raises(TypeError):
+            test_Socket.send_scalar('5')
+
+    def test_get_scalar(self):
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_scalar(7.5)
+        assert test_Socket.get_scalar() == 7.5
+
+    def test_send_array(self):
+        test_Socket = Socket(MockPythonSocket())
+        array = np.array([1, 2, 3])
+        test_Socket.send_array(array)
+        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv() == b'<i4'
+        assert test_Socket.recv() == b'\x00\x00\x00\x0c'
+        assert test_Socket.recv() == b'\x00\x00\x00\x01'
+        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv() == b'\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+
+        array = np.array([[1, 2], [2, 3]])
+        test_Socket.send_array(array)
+        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv() == b'<i4'
+        assert test_Socket.recv() == b'\x00\x00\x00\x10'
+        assert test_Socket.recv() == b'\x00\x00\x00\x02'
+        assert test_Socket.recv() == b'\x00\x00\x00\x02'
+        assert test_Socket.recv() == b'\x00\x00\x00\x02'
+        assert test_Socket.recv() == b'\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+
+        with pytest.raises(TypeError):
+            test_Socket.send_array(10)
+
+    def test_get_array(self):
+        test_Socket = Socket(MockPythonSocket())
+        array = np.array([1, 2.1, 3.0])
+        test_Socket.send_array(array)
+        result = test_Socket.get_array()
+        assert np.array_equal(array, result)
+
+    def test_send_list(self):
+        test_Socket = Socket(MockPythonSocket())
+        data_list = [np.array([1, 2]), 'test', 47]
+        test_Socket.send_list(data_list)
+        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.get_string() == 'array'
+        assert np.array_equal(test_Socket.get_array(), data_list[0])
+        assert test_Socket.get_string() == 'string'
+        assert test_Socket.get_string() == data_list[1]
+        assert test_Socket.get_string() == 'scalar'
+        assert test_Socket.get_scalar() == data_list[2]
+
+        with pytest.raises(TypeError):
+            test_Socket.send_list([test_Socket])
+
+        with pytest.raises(TypeError):
+            test_Socket.send_list(15)
+
+    def test_get_list(self):
+        test_Socket = Socket(MockPythonSocket())
+        data_list = [np.array([1, 2]), 'test', 47]
+        test_Socket.send_list(data_list)
+        np_list = np.array(data_list)
+        result = np.array(test_Socket.get_list())
+        for elem1, elem2 in zip(np_list, result):
+            if isinstance(elem1, np.ndarray):
+                assert np.array_equal(elem1, elem2)
+            else :
+                assert elem1 == elem2
+
+
+class TestTCPClient:
+    def test_init(self):
+        params_state = {'Name': 'test_params', 'value': None}
+        test_TCP_Client = TCPClient(params_state=params_state)
+
+        params_state = Parameter(name='test')
+        test_TCP_Client = TCPClient(params_state=params_state)
+
+    def test_socket(self):
+        test_TCP_Client = TCPClient()
+        assert test_TCP_Client.socket == None
+
 #
 # # will be used to test any kind of server derived from TCPServer
 # servers = [MockServer, ]
@@ -462,3 +458,7 @@ class TestSocket:
 #         utils.check_vals_in_iterable(self.attributes, [3.2])
 #
 #         server.stop()
+
+class TestMockServer:
+    def test_init(self):
+        test_MockServer = MockServer()

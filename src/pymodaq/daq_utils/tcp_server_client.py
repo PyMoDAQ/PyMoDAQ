@@ -897,7 +897,7 @@ class MockServer(TCPServer):
         self.settings = Parameter.create(name='settings', type='group', children=tcp_parameters)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
