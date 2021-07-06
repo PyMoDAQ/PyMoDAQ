@@ -28,12 +28,20 @@ scan_subtypes = dict(Scan1D=['Linear', 'Adaptive', 'Linear back to start', 'Rand
 
 try:
     import adaptive
+    from adaptive.learner import learner1D
+    from adaptive.learner import learner2D
+    adaptive_losses = dict(
+        loss1D=['default', 'curvature', 'uniform'],
+        loss2D=['default', 'resolution', 'uniform', 'triangle'])
+
 except Exception:
     scan_subtypes['Scan1D'].pop(scan_subtypes['Scan1D'].index('Adaptive'))
     scan_subtypes['Scan2D'].pop(scan_subtypes['Scan2D'].index('Adaptive'))
     scan_subtypes['Tabular'].pop(scan_subtypes['Tabular'].index('Adaptive'))
-
+    adaptive_losses = None
     logger.info('adaptive module is not present, no adaptive scan possible')
+
+
 
 
 class ScanInfo:
@@ -739,9 +747,9 @@ class Scanner(QObject):
                     np.mean((pos_dl_scaled[1], pos_ur_scaled[1])))
 
                 nsteps = 2 * np.min((np.abs((pos_ur_scaled[0] - pos_dl_scaled[0]) / 2) / self.settings.child(
-                    'scan_options', 'scan2D_settings', 'step_2d_axis1').value(), np.abs(
+                     'scan2D_settings', 'step_2d_axis1').value(), np.abs(
                     (pos_ur_scaled[1] - pos_dl_scaled[1]) / 2) / self.settings.child(
-                    'scan_options', 'scan2D_settings', 'step_2d_axis2').value()))
+                     'scan2D_settings', 'step_2d_axis2').value()))
 
                 self.settings.child('scan2D_settings', 'npts_by_axis').setValue(nsteps)
 
@@ -818,12 +826,12 @@ class Scanner(QObject):
 
                 self.settings.child('scan2D_settings', 'stop_2d_axis1').setValue(
                     np.rint(self.settings.child(
-                        'scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
+                         'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
                         self.settings.child('scan2D_settings', 'step_2d_axis1').value()))
 
                 self.settings.child('scan2D_settings', 'stop_2d_axis2').setValue(
                     np.rint(self.settings.child(
-                        'scan_options', 'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
+                         'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
                         self.settings.child('scan2D_settings', 'step_2d_axis2').value()))
                 QtWidgets.QApplication.processEvents()
                 self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)

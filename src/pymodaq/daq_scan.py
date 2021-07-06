@@ -13,7 +13,7 @@ from pathlib import Path
 import os
 
 import pymodaq.daq_utils.parameter.ioxml
-from pyqtgraph.dockarea import Dock
+
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
@@ -22,7 +22,7 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
-from pymodaq.daq_utils.scanner import Scanner
+from pymodaq.daq_utils.scanner import Scanner, adaptive_losses
 from pymodaq.daq_utils.plotting.qled import QLED
 
 from pymodaq.daq_utils import daq_utils as utils
@@ -33,18 +33,6 @@ from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as G
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
-try:
-    import adaptive
-    from adaptive.learner import learner1D
-    from adaptive.learner import learner2D
-
-    adaptive_losses = dict(
-        loss1D=['default', 'curvature', 'uniform'],
-        loss2D=['default', 'resolution', 'uniform', 'triangle'])
-
-except Exception:
-    adaptive_losses = None
-    logger.info('Adaptive module is not present, no adaptive scan possible')
 
 
 class DAQ_Scan(QObject):
@@ -136,7 +124,7 @@ class DAQ_Scan(QObject):
         self.scanner.actuators = actuators
 
     def create_average_dock(self):
-        self.ui.average_dock = Dock("Averaging")
+        self.ui.average_dock = gutils.Dock("Averaging")
         average_tab = QtWidgets.QTabWidget()
         average1D_widget = QtWidgets.QWidget()
         average2D_widget = QtWidgets.QWidget()
@@ -698,7 +686,7 @@ class DAQ_Scan(QObject):
         ##################################################################
 
         # %% create scan dock and make it a floating window
-        self.ui.scan_dock = Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
+        self.ui.scan_dock = gutils.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
         self.ui.scan_dock.setOrientation('vertical')
         self.ui.scan_dock.addWidget(widgetsettings)
 
