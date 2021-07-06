@@ -28,6 +28,7 @@ from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
+from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
 
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -201,7 +202,7 @@ class DAQ_Scan(QObject):
             else:
                 nav_bool = False
             if self.ui.move_to_crosshair_cb.isChecked() or nav_bool:
-                if "2D" in self.scanner.settings.child('scan_options', 'scan_type').value():
+                if "2D" in self.scanner.settings.child('scan_type').value():
                     if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
                         posx_real = posx * self.ui.scan2D_graph.scaled_xaxis.scaling + self.ui.scan2D_graph.scaled_xaxis.offset
                         posy_real = posy * self.ui.scan2D_graph.scaled_yaxis.scaling + self.ui.scan2D_graph.scaled_yaxis.offset
@@ -1401,7 +1402,7 @@ class DAQ_Scan(QObject):
 
             # set attributes to the current group, such as scan_type....
             self.scan_attributes.child('scan_info', 'scan_type').setValue(
-                self.scanner.settings.child('scan_options', 'scan_type').value())
+                self.scanner.settings.child('scan_type').value())
             self.scan_attributes.child('scan_info', 'scan_name').setValue(self.h5saver.current_scan_group.name)
             self.scan_attributes.child('scan_info', 'description').setValue(
                 self.h5saver.current_scan_group.attrs['description'])
