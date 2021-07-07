@@ -6,9 +6,9 @@ import socket as native_socket
 from unittest import mock
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.daq_utils import ThreadCommand
 from PyQt5.QtCore import pyqtSignal, QObject
-from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, Socket
+from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, TCPServer, Socket
 
 from pyqtgraph.parametertree import Parameter
 
@@ -29,6 +29,9 @@ class MockPythonSocket:  # pragma: no cover
         self._send = []
         self._sendall = []
         self._recv = []
+        self._socket = None
+        self.AF_INET = None
+        self.SOCK_STREAM = None
         self._closed = False
 
     def bind(self, *args, **kwargs):
@@ -50,7 +53,7 @@ class MockPythonSocket:  # pragma: no cover
     def getsockname(self):
         return self._sockname
 
-    def connect(self):
+    def connect(self, *args, **kwargs):
         pass
 
     def send(self, *args, **kwargs):
@@ -384,9 +387,44 @@ class TestTCPClient:
         with pytest.raises(IOError):
             test_TCP_Client.queue_command(command)
 
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.Socket')
+    def test_init_connection(self, mock_Socket):
+        mock_Socket.return_value = Socket(MockPythonSocket())
+        test_TCP_Client = TCPClient()
+        test_TCP_Client.init_connection(extra_commands=[ThreadCommand('test')])
+
+        command = mock.Mock()
+        command.command = 'ini_connection'
+        test_TCP_Client.queue_command(command)
+
+    def test_get_data(self):
+        test_TCP_Client = TCPClient()
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        data_list = [1, 2, 3]
+        data_param = 'test'
+        test_TCP_Client.socket.send_list(data_list)
+        test_TCP_Client.socket.send_string(data_param)
+        test_TCP_Client.get_data('set_info')
+
+        test_TCP_Client.socket.send_scalar(10)
+        test_TCP_Client.get_data('move_abs')
+
+        test_TCP_Client.socket.send_scalar(7)
+        test_TCP_Client.get_data('move_rel')
 
 
+class TestTCPServer:
+    def test_init(self):
+        test_TCP_Server = TCPServer()
+        assert isinstance(test_TCP_Server, TCPServer)
 
+    def test_close_server(self):
+        test_TCP_Server = TCPServer()
+        test_TCP_Server.close_server()
+
+    def test_print_status(self):
+        test_TCP_Server = TCPServer()
+        test_TCP_Server.print_status('test')
 
 
 
