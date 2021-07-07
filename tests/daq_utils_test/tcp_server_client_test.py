@@ -167,10 +167,11 @@ class TestSocket:
     def test_send_scalar(self):
         test_Socket = Socket(MockPythonSocket())
         test_Socket.send_scalar(7)
-        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
         assert test_Socket.recv()  # == type_int
         assert test_Socket.recv()  # == b'\x00\x00\x00\x04'
-        assert test_Socket.recv() == b'\x07\x00\x00\x00'
+        assert test_Socket.recv()  # == b'\x07\x00\x00\x00'
+        assert not test_Socket.recv()
 
         with pytest.raises(TypeError):
             test_Socket.send_scalar('5')
@@ -184,22 +185,24 @@ class TestSocket:
         test_Socket = Socket(MockPythonSocket())
         array = np.array([1, 2, 3])
         test_Socket.send_array(array)
-        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
         assert test_Socket.recv()  # == type_int
         assert test_Socket.recv()  # == b'\x00\x00\x00\x0c'
-        assert test_Socket.recv() == b'\x00\x00\x00\x01'
-        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x01'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
         assert test_Socket.recv()  # == b'\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+        assert not test_Socket.recv()
 
         array = np.array([[1, 2], [2, 3]])
         test_Socket.send_array(array)
-        assert test_Socket.recv() == b'\x00\x00\x00\x03'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
         assert test_Socket.recv()  # == type_int
         assert test_Socket.recv()  # == b'\x00\x00\x00\x10'
-        assert test_Socket.recv() == b'\x00\x00\x00\x02'
-        assert test_Socket.recv() == b'\x00\x00\x00\x02'
-        assert test_Socket.recv() == b'\x00\x00\x00\x02'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x02'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x02'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x02'
         assert test_Socket.recv()  # == b'\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+        assert not test_Socket.recv()
 
         with pytest.raises(TypeError):
             test_Socket.send_array(10)
