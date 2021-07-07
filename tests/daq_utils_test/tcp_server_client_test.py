@@ -189,17 +189,17 @@ class TestSocket:
         assert test_Socket.recv()  # == b'\x00\x00\x00\x0c'
         assert test_Socket.recv() == b'\x00\x00\x00\x01'
         assert test_Socket.recv() == b'\x00\x00\x00\x03'
-        assert test_Socket.recv() == b'\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+        assert test_Socket.recv()  # == b'\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
 
         array = np.array([[1, 2], [2, 3]])
         test_Socket.send_array(array)
         assert test_Socket.recv() == b'\x00\x00\x00\x03'
         assert test_Socket.recv()  # == type_int
-        assert test_Socket.recv() == b'\x00\x00\x00\x10'
+        assert test_Socket.recv()  # == b'\x00\x00\x00\x10'
         assert test_Socket.recv() == b'\x00\x00\x00\x02'
         assert test_Socket.recv() == b'\x00\x00\x00\x02'
         assert test_Socket.recv() == b'\x00\x00\x00\x02'
-        assert test_Socket.recv() == b'\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+        assert test_Socket.recv()  # == b'\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
 
         with pytest.raises(TypeError):
             test_Socket.send_array(10)
