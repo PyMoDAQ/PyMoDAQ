@@ -24,7 +24,7 @@ from packaging import version as version_mod
 #     type_int = b'<i8'
 
 
-class MockPythonSocket:
+class MockPythonSocket:  # pragma: no cover
     def __init__(self):
         self._send = []
         self._sendall = []
@@ -62,8 +62,7 @@ class MockPythonSocket:
 
     def recv(self, *args, **kwargs):
         if len(self._send) > 0:
-            self._recv.append(self._send.pop(0))
-            return self._recv.pop(0)
+            return self._send.pop(0)
 
     def close(self):
         self._closed = True
@@ -256,6 +255,141 @@ class TestTCPClient:
     def test_socket(self):
         test_TCP_Client = TCPClient()
         assert test_TCP_Client.socket == None
+
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        assert isinstance(test_TCP_Client.socket, Socket)
+
+    def test_close(self):
+        test_TCP_Client = TCPClient()
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        test_TCP_Client.close()
+        assert test_TCP_Client.socket.socket._closed
+
+    def test_send_data(self):
+        test_TCP_Client = TCPClient()
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        data_list = [14, 1.1, 'test', np.array([1, 2, 3])]
+        test_TCP_Client.send_data(data_list)
+        assert test_TCP_Client.socket.get_string() == 'Done'
+        np_list = np.array(data_list)
+        result = test_TCP_Client.socket.get_list()
+        for elem1, elem2 in zip(np_list, result):
+            if isinstance(elem1, np.ndarray):
+                assert np.array_equal(elem1, elem2)
+            else:
+                assert elem1 == elem2
+
+        with pytest.raises(TypeError):
+            test_TCP_Client.send_data([1j])
+
+    def test_send_infos_xml(self):
+        test_TCP_Client = TCPClient()
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        test_TCP_Client.send_infos_xml('test_send_infos_xml')
+        assert test_TCP_Client.socket.get_string() == 'Infos'
+        assert test_TCP_Client.socket.get_string() == 'test_send_infos_xml'
+
+    def test_send_infos_string(self):
+        test_TCP_Client = TCPClient()
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        info_to_display = 'info to display'
+        value_as_string = 192.7654
+        test_TCP_Client.send_info_string(info_to_display, value_as_string)
+        assert test_TCP_Client.socket.get_string() == 'Info'
+        assert test_TCP_Client.socket.get_string() == info_to_display
+        assert test_TCP_Client.socket.get_string() == str(value_as_string)
+
+    def test_queue_command(self):
+        test_TCP_Client = TCPClient()
+        command = mock.Mock()
+        command.attributes = {'ipaddress': '0.0.0.0', 'port': 5544, 'path': [1, 2, 3],
+                              'param': Parameter(name='test_param')}
+        command.command = 'quit'
+        test_TCP_Client.queue_command(command)
+
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.socket._closed
+
+        test_TCP_Client.socket = Socket(MockPythonSocket())
+        command.command = 'update_connection'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.ipaddress == command.attributes['ipaddress']
+        assert test_TCP_Client.port == command.attributes['port']
+
+        command.command = 'send_info'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'Info_xml'
+        assert test_TCP_Client.socket.get_list() == command.attributes['path']
+        assert test_TCP_Client.socket.get_string()
+
+        command.attributes = [{'data': [1, 1.1, 5]}]
+        command.command = 'data_ready'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'Done'
+        assert test_TCP_Client.socket.get_list() == command.attributes[0]['data']
+
+        command.attributes = [10]
+        command.command = 'position_is'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'position_is'
+        assert test_TCP_Client.socket.get_scalar() == command.attributes[0]
+
+        command.command = 'move_done'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'move_done'
+        assert test_TCP_Client.socket.get_scalar() == command.attributes[0]
+
+        command.attributes = [np.array([1, 2, 3])]
+        command.command = 'x_axis'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'x_axis'
+        array = command.attributes[0]
+        result = test_TCP_Client.socket.get_array()
+        for val1, val2 in zip(array, result):
+            assert val1 == val2
+        assert test_TCP_Client.socket.get_string() == ''
+        assert test_TCP_Client.socket.get_string() == ''
+
+        command.command = 'y_axis'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'y_axis'
+        result = test_TCP_Client.socket.get_array()
+        for val1, val2 in zip(array, result):
+            assert val1 == val2
+        assert test_TCP_Client.socket.get_string() == ''
+        assert test_TCP_Client.socket.get_string() == ''
+
+        command.command = 'x_axis'
+        command.attributes = [{'data': np.array([1, 2, 3]), 'label': 'test', 'units': 'cm'}]
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'x_axis'
+        array = command.attributes[0]['data']
+        result = test_TCP_Client.socket.get_array()
+        for val1, val2 in zip(array, result):
+            assert val1 == val2
+        assert test_TCP_Client.socket.get_string() == 'test'
+        assert test_TCP_Client.socket.get_string() == 'cm'
+
+        command.command = 'y_axis'
+        test_TCP_Client.queue_command(command)
+        assert test_TCP_Client.socket.get_string() == 'y_axis'
+        result = test_TCP_Client.socket.get_array()
+        for val1, val2 in zip(array, result):
+            assert val1 == val2
+        assert test_TCP_Client.socket.get_string() == 'test'
+        assert test_TCP_Client.socket.get_string() == 'cm'
+
+        command.command = 'test'
+        with pytest.raises(IOError):
+            test_TCP_Client.queue_command(command)
+
+
+
+
+
+
+
 
 #
 # # will be used to test any kind of server derived from TCPServer
