@@ -27,6 +27,7 @@ class MockPythonSocket:  # pragma: no cover
         self.AF_INET = None
         self.SOCK_STREAM = None
         self._closed = False
+        self._fileno = 1
 
     def bind(self, *args, **kwargs):
         arg = args[0]
@@ -42,7 +43,7 @@ class MockPythonSocket:  # pragma: no cover
         pass
 
     def accept(self):
-        return (MockPythonSocket(), '0.0.0.0')
+        return (self, '0.0.0.0')
 
     def getsockname(self):
         return self._sockname
@@ -63,6 +64,9 @@ class MockPythonSocket:  # pragma: no cover
 
     def close(self):
         self._closed = True
+
+    def fileno(self):
+        return self._fileno
 
 
 class TestSocket:
@@ -401,15 +405,30 @@ class TestTCPClient:
         with pytest.raises(IOError):
             test_TCP_Client.queue_command(command)
 
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.QtWidgets.QApplication.processEvents')
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.select.select')
     @mock.patch('pymodaq.daq_utils.tcp_server_client.Socket')
-    def test_init_connection(self, mock_Socket):
+    def test_init_connection(self, mock_Socket, mock_select, mock_events):
         mock_Socket.return_value = Socket(MockPythonSocket())
+        mock_select.side_effect = [([], [], []), Exception]
+        mock_events.return_value = None
         test_TCP_Client = TCPClient()
         test_TCP_Client.init_connection(extra_commands=[ThreadCommand('test')])
 
         command = mock.Mock()
         command.command = 'ini_connection'
         test_TCP_Client.queue_command(command)
+
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_string('init')
+        mock_Socket.return_value = test_Socket
+        mock_select.side_effect = [(['init'], [], ['error'])]
+        test_TCP_Client.init_connection()
+
+        assert not test_TCP_Client.connected
+
+        mock_Socket.side_effect = [ConnectionRefusedError]
+        test_TCP_Client.init_connection()
 
     def test_get_data(self):
         test_TCP_Client = TCPClient()
@@ -439,7 +458,13 @@ class TestTCPServer:
     # @mock.patch('pymodaq.daq_utils.tcp_server_client.Socket')
     # def test_init_server(self, mock_Socket):
     #     mock_Socket.return_value = Socket(MockPythonSocket())
+    #
+    #     value = mock.Mock()
+    #     value.value.return_value = 'test'
+    #     child = mock.Mock()
+    #     child.return_value = value
     #     test_TCP_Server = TCPServer()
+    #     test_TCP_Server.settings = child
     #     test_TCP_Server.init_server()
 
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.select')
@@ -524,6 +549,91 @@ class TestTCPServer:
 
         test_TCP_Server.remove_client(socket_except)
 
+    def test_select(self):
+        test_TCP_Server = TCPServer()
+        test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        test_mock_socket = MockPythonSocket()
+        test_mock_socket.socket = test_socket
+        result = np.array(test_TCP_Server.select([test_mock_socket]))
+        assert np.array_equal(result, np.array(([], [], [])))
+
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.select')
+    def test_listen_client(self, mock_select):
+        socket_1 = Socket(MockPythonSocket())
+        socket_1.bind(('0.0.0.1', 4455))
+        socket_2 = Socket(MockPythonSocket())
+        socket_2.bind(('0.0.0.2', 4456))
+        socket_3 = Socket(MockPythonSocket())
+        socket_3.bind(('0.0.0.3', 4457))
+        socket_4 = Socket(MockPythonSocket())
+        socket_4.bind(('0.0.0.4', 4458))
+        socket_5 = Socket(MockPythonSocket())
+        socket_5.bind(('0.0.0.5', 4459))
+        socket_6 = Socket(MockPythonSocket())
+        socket_6.bind(('0.0.0.6', 4460))
+
+        socket_1.send_string('')
+        socket_2.send_string('Done')
+        socket_3.send_string('Quit')
+        socket_4.send_string('unknown')
+        socket_5.send_string('test')
+        socket_6.send_string('Server')
+        mock_select.return_value = [[socket_2, socket_3, socket_4, socket_5],
+                                    [],
+                                    [socket_1]]
+
+        test_TCP_Server = TCPServer()
+        dict_list = [{'socket': socket_1, 'type': 'Server'},
+                     {'socket': socket_2, 'type': 'Client'},
+                     {'socket': socket_3, 'type': 'Client'},
+                     {'socket': socket_4, 'type': 'Unknown'},
+                     {'socket': socket_5, 'type': 'test'},
+                     {'socket': socket_6, 'type': 'serversocket'}]
+
+        test_TCP_Server.connected_clients = dict_list
+        settings = mock.Mock()
+        test_TCP_Server.settings = settings
+        test_TCP_Server.serversocket = socket_5
+        test_TCP_Server.socket_types = []
+        test_TCP_Server.listen_client()
+
+        is_removed = True
+        for socket_dict in test_TCP_Server.connected_clients:
+            if 'Server' in socket_dict['type']:
+                is_removed = False
+        assert is_removed
+
+        mock_select.return_value = [[socket_6], [], []]
+
+        test_TCP_Server.serversocket = socket_6
+        test_TCP_Server.socket_types = ['Server']
+        test_TCP_Server.listen_client()
+
+    def test_send_command(self):
+        test_TCP_Server = TCPServer()
+        test_Socket = Socket(MockPythonSocket())
+        test_TCP_Server.message_list = []
+        test_TCP_Server.send_command(test_Socket)
+
+        test_TCP_Server.message_list = ['move_at']
+        test_TCP_Server.send_command(test_Socket)
+
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.print')
+    def test_emit_status(self, mock_print):
+        mock_print.side_effect = [ValueError]
+        test_TCP_Server = TCPServer()
+
+        with pytest.raises(TypeError):
+            test_TCP_Server.emit_status()
+
+    def test_read_data(self):
+        test_TCP_Server = TCPServer()
+        assert not test_TCP_Server.read_data(MockPythonSocket())
+
+    def test_send_data(self):
+        test_TCP_Server = TCPServer()
+        assert not test_TCP_Server.send_data(MockPythonSocket(), [1, 2, 3])
+
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.find_socket_within_connected_clients')
     def test_process_cmds(self, mock_find_socket):
         mock_find_socket.return_value = Socket(MockPythonSocket())
@@ -554,6 +664,7 @@ class TestTCPServer:
         test_TCP_Server.process_cmds('Info')
 
         assert not test_TCP_Server.process_cmds('test')
+
 #
 # # will be used to test any kind of server derived from TCPServer
 # servers = [MockServer, ]

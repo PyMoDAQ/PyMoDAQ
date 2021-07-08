@@ -496,7 +496,7 @@ class TCPClient(QObject):
                         self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
                         self.socket.send_string('Quit')
                         self.socket.close()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         pass
                     finally:
                         break
