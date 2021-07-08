@@ -12,6 +12,7 @@ import numpy as np
 
 import pymodaq.daq_utils.parameter.ioxml
 import pymodaq.daq_utils.parameter.utils
+import pymodaq.daq_utils.parameter.pymodaq_ptypes
 from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand, load_config
 from pyqtgraph.parametertree import Parameter
 from collections import OrderedDict
