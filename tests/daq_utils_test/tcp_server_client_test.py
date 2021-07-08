@@ -442,9 +442,87 @@ class TestTCPServer:
     #     test_TCP_Server = TCPServer()
     #     test_TCP_Server.init_server()
 
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.select')
+    def test_timerEvent(self, mock_select):
+        mock_select.return_value = Exception
+        test_TCP_Server = TCPServer()
+        test_TCP_Server.timerEvent(None)
+
+    def test_find_socket_within_connected_clients(self):
+        test_TCP_Server = TCPServer()
+        dict_list = [{'socket': 'Client_1', 'type': 'Server'},
+                     {'socket': 'Client_2', 'type': 'Client'}]
+        test_TCP_Server.connected_clients = dict_list
+
+        assert not test_TCP_Server.find_socket_within_connected_clients(None)
+        assert test_TCP_Server.find_socket_within_connected_clients('Server') == 'Client_1'
+        assert test_TCP_Server.find_socket_within_connected_clients('Client') == 'Client_2'
+
+    def test_find_socket_type_within_connected_clients(self):
+        test_TCP_Server = TCPServer()
+        dict_list = [{'socket': 'Client_1', 'type': 'Server'},
+                     {'socket': 'Client_2', 'type': 'Client'}]
+        test_TCP_Server.connected_clients = dict_list
+
+        assert not test_TCP_Server.find_socket_type_within_connected_clients(None)
+        assert test_TCP_Server.find_socket_type_within_connected_clients('Client_1') == 'Server'
+        assert test_TCP_Server.find_socket_type_within_connected_clients('Client_2') == 'Client'
+
+    def test_set_connected_clients_table(self):
+        test_TCP_Server = TCPServer()
+
+        socket_1 = Socket(MockPythonSocket())
+        socket_1.bind(('0.0.0.1', 4455))
+        socket_2 = Socket(MockPythonSocket())
+        socket_2.bind(('0.0.0.2', 4456))
+        dict_list = [{'socket': socket_1, 'type': 'Server'},
+                     {'socket': socket_2, 'type': 'Client'}]
+        test_TCP_Server.connected_clients = dict_list
+        result = test_TCP_Server.set_connected_clients_table()
+        assert isinstance(result, OrderedDict)
+        assert result['Server'] == "('0.0.0.1', 4455)"
+        assert result['Client'] == "('0.0.0.2', 4456)"
+
+        socket_except = Socket(MockPythonSocket())
+        socket_except._sockname = Exception
+        test_TCP_Server.connected_clients = [{'socket': socket_except, 'type': None}]
+        result = test_TCP_Server.set_connected_clients_table()
+        assert result[None] == 'unconnected invalid socket'
+
     def test_print_status(self):
         test_TCP_Server = TCPServer()
         test_TCP_Server.print_status('test')
+
+    def test_remove_client(self):
+        test_TCP_Server = TCPServer()
+
+        socket_1 = Socket(MockPythonSocket())
+        socket_1.bind(('0.0.0.1', 4455))
+        socket_2 = Socket(MockPythonSocket())
+        socket_2.bind(('0.0.0.2', 4456))
+        dict_list = [{'socket': socket_1, 'type': 'Server'},
+                     {'socket': socket_2, 'type': 'Client'}]
+        test_TCP_Server.connected_clients = dict_list
+
+        settings = mock.Mock()
+        test_TCP_Server.settings = settings
+
+        test_TCP_Server.remove_client(socket_1)
+
+        is_removed = True
+        for socket_dict in test_TCP_Server.connected_clients:
+            if 'Server' in socket_dict['type']:
+                is_removed = False
+
+        assert is_removed
+
+        socket_except = mock.Mock()
+        socket_except.close.side_effect = [Exception]
+
+        dict_list = [{'socket': socket_except, 'type': 'Exception'}]
+        test_TCP_Server.connected_clients = dict_list
+
+        test_TCP_Server.remove_client(socket_except)
 
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.find_socket_within_connected_clients')
     def test_process_cmds(self, mock_find_socket):
@@ -476,9 +554,6 @@ class TestTCPServer:
         test_TCP_Server.process_cmds('Info')
 
         assert not test_TCP_Server.process_cmds('test')
-
-
-
 #
 # # will be used to test any kind of server derived from TCPServer
 # servers = [MockServer, ]
