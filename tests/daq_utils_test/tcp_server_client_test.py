@@ -549,13 +549,15 @@ class TestTCPServer:
 
         test_TCP_Server.remove_client(socket_except)
 
-    def test_select(self):
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.select.select')
+    def test_select(self, mock_select):
+        mock_select.return_value = ([1], [2], [3])
         test_TCP_Server = TCPServer()
         test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         test_mock_socket = MockPythonSocket()
         test_mock_socket.socket = test_socket
         result = np.array(test_TCP_Server.select([test_mock_socket]))
-        assert np.array_equal(result, np.array(([], [], [])))
+        assert np.array_equal(result, np.array([[1], [2], [3]]))
 
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.select')
     def test_listen_client(self, mock_select):
