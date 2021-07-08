@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, Qt
+from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 from .plot_utils import makeAlphaTriangles, makePolygons
 
