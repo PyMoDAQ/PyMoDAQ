@@ -496,7 +496,7 @@ class TCPClient(QObject):
                         self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
                         self.socket.send_string('Quit')
                         self.socket.close()
-                    except Exception:
+                    except Exception:  # pragma: no cover
                         pass
                     finally:
                         break
@@ -817,7 +817,7 @@ class TCPServer(QObject):
             self.command_done(command_sock)
 
         elif command == "Infos":
-            """replace entirely the client settings information onthe server widget
+            """replace entirely the client settings information on the server widget
             should be done as the init of the client module"""
             try:
                 sock = self.find_socket_within_connected_clients(self.client_type)
