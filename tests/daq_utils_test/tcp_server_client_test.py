@@ -162,11 +162,18 @@ class TestSocket:
 
     def test_send_scalar(self):
         test_Socket = Socket(MockPythonSocket())
-        test_Socket.send_scalar(7)
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
-        assert test_Socket.recv()  # == type_int
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x04'
-        assert test_Socket.recv()  # == b'\x07\x00\x00\x00'
+        scalar = 7
+        test_Socket.send_scalar(scalar)
+
+        data = np.array(scalar)
+        data_bytes = data.tobytes()
+        data_type = data.dtype.descr[0][1]
+        cmd_bytes, cmd_length_bytes = test_Socket.message_to_bytes(data_type)
+
+        assert test_Socket.recv() == cmd_length_bytes
+        assert test_Socket.recv() == cmd_bytes
+        assert test_Socket.recv() == test_Socket.int_to_bytes(len(data_bytes))
+        assert test_Socket.recv() == data_bytes
         assert not test_Socket.recv()
 
         with pytest.raises(TypeError):
@@ -179,25 +186,36 @@ class TestSocket:
 
     def test_send_array(self):
         test_Socket = Socket(MockPythonSocket())
-        array = np.array([1, 2, 3])
-        test_Socket.send_array(array)
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
-        assert test_Socket.recv()  # == type_int
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x0c'
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x01'
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
-        assert test_Socket.recv()  # == b'\x01\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+        data = np.array([1, 2, 3])
+        test_Socket.send_array(data)
+
+        data_bytes = data.tobytes()
+        data_type = data.dtype.descr[0][1]
+        cmd_bytes, cmd_length_bytes = test_Socket.message_to_bytes(data_type)
+
+        assert test_Socket.recv() == cmd_length_bytes
+        assert test_Socket.recv() == cmd_bytes
+        assert test_Socket.recv() == test_Socket.int_to_bytes(len(data_bytes))
+        assert test_Socket.recv() == test_Socket.int_to_bytes(len(data.shape))
+        for i in range(len(data.shape)):
+            assert test_Socket.recv() == test_Socket.int_to_bytes(data.shape[i])
+        assert test_Socket.recv() == data_bytes
         assert not test_Socket.recv()
 
-        array = np.array([[1, 2], [2, 3]])
-        test_Socket.send_array(array)
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x03'
-        assert test_Socket.recv()  # == type_int
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x10'
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x02'
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x02'
-        assert test_Socket.recv()  # == b'\x00\x00\x00\x02'
-        assert test_Socket.recv()  # == b'\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00'
+        data = np.array([[1, 2], [2, 3]])
+        test_Socket.send_array(data)
+
+        data_bytes = data.tobytes()
+        data_type = data.dtype.descr[0][1]
+        cmd_bytes, cmd_length_bytes = test_Socket.message_to_bytes(data_type)
+
+        assert test_Socket.recv() == cmd_length_bytes
+        assert test_Socket.recv() == cmd_bytes
+        assert test_Socket.recv() == test_Socket.int_to_bytes(len(data_bytes))
+        assert test_Socket.recv() == test_Socket.int_to_bytes(len(data.shape))
+        for i in range(len(data.shape)):
+            assert test_Socket.recv() == test_Socket.int_to_bytes(data.shape[i])
+        assert test_Socket.recv() == data_bytes
         assert not test_Socket.recv()
 
         with pytest.raises(TypeError):
