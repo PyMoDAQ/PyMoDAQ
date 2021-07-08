@@ -17,12 +17,6 @@ from collections import OrderedDict
 import sys
 from packaging import version as version_mod
 
-# python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
-# if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
-#     type_int = b'<i4'
-# else:
-#     type_int = b'<i8'
-
 
 class MockPythonSocket:  # pragma: no cover
     def __init__(self):
@@ -251,9 +245,11 @@ class TestTCPClient:
     def test_init(self):
         params_state = {'Name': 'test_params', 'value': None}
         test_TCP_Client = TCPClient(params_state=params_state)
+        assert isinstance(test_TCP_Client, TCPClient)
 
         params_state = Parameter(name='test')
         test_TCP_Client = TCPClient(params_state=params_state)
+        assert isinstance(test_TCP_Client, TCPClient)
 
     def test_socket(self):
         test_TCP_Client = TCPClient()
@@ -422,10 +418,46 @@ class TestTCPServer:
         test_TCP_Server = TCPServer()
         test_TCP_Server.close_server()
 
+    # @mock.patch('pymodaq.daq_utils.tcp_server_client.Socket')
+    # def test_init_server(self, mock_Socket):
+    #     mock_Socket.return_value = Socket(MockPythonSocket())
+    #     test_TCP_Server = TCPServer()
+    #     test_TCP_Server.init_server()
+
     def test_print_status(self):
         test_TCP_Server = TCPServer()
         test_TCP_Server.print_status('test')
 
+    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.find_socket_within_connected_clients')
+    def test_process_cmds(self, mock_find_socket):
+        mock_find_socket.return_value = Socket(MockPythonSocket())
+        test_TCP_Server = TCPServer()
+        commands = ['Done', 'Infos', 'Info_xml', 'Info', 'test']
+
+        test_TCP_Server.message_list = commands
+        assert not test_TCP_Server.process_cmds('unknown')
+
+        assert not test_TCP_Server.process_cmds('Done')
+
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_string('test')
+        mock_find_socket.return_value = test_Socket
+        test_TCP_Server.process_cmds('Infos')
+
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_list([1, 2, 3])
+        test_Socket.send_string('test')
+        mock_find_socket.return_value = test_Socket
+        with pytest.raises(Exception):
+            test_TCP_Server.process_cmds('Info_xml')
+
+        test_Socket = Socket(MockPythonSocket())
+        test_Socket.send_string('info')
+        test_Socket.send_string('data')
+        mock_find_socket.return_value = test_Socket
+        test_TCP_Server.process_cmds('Info')
+
+        assert not test_TCP_Server.process_cmds('test')
 
 
 

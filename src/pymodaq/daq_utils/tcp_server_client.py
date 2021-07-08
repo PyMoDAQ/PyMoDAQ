@@ -817,7 +817,7 @@ class TCPServer(QObject):
             self.command_done(command_sock)
 
         elif command == "Infos":
-            """replace entirely the client settings information onthe server widget
+            """replace entirely the client settings information on the server widget
             should be done as the init of the client module"""
             try:
                 sock = self.find_socket_within_connected_clients(self.client_type)
