@@ -508,6 +508,7 @@ class TestTCPClient:
         assert np.array_equal(np.array(data), result)
         assert not test_TCP_Client.socket.socket._send
 
+
 class TestTCPServer:
     def test_init(self):
         test_TCP_Server = TCPServer()
