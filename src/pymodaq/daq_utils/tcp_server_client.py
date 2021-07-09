@@ -577,7 +577,7 @@ class TCPServer(QObject):
             self.serversocket.bind(
                 (self.settings.child(('socket_ip')).value(), self.settings.child(('port_id')).value()))
             # self.serversocket.bind((socket.gethostname(), self.settings.child(('port_id')).value()))
-        except socket.error as msg:
+        except socket.error as msg:  # pragma: no cover
             self.emit_status(ThreadCommand("Update_Status",
                                            ['Bind failed. Error Code : ' + str(msg.errno) + ' Message ' + msg.strerror,
                                             'log']))
