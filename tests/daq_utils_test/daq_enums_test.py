@@ -3,14 +3,17 @@ import pytest
 
 from pymodaq.daq_utils import daq_enums as enums
 
+
 class Test_Items_Lockin_SR830:
     def test_item(self):
-        x = np.random.randint(0, 9 + 1)
+
+        x = np.random.randint(0, len(enums.Items_Lockin_SR830))
         item = enums.Items_Lockin_SR830(x)
         assert isinstance(item, enums.Items_Lockin_SR830)
+        assert item.value == x
 
     def test_names(self):
-        x = np.random.randint(0, 9 + 1)
+        x = np.random.randint(0, len(enums.Items_Lockin_SR830))
         item = enums.Items_Lockin_SR830(x)
         assert item.names()
         assert item.name == item.names()[x]
@@ -18,12 +21,13 @@ class Test_Items_Lockin_SR830:
 
 class Test_Measurement_type:
     def test_item(self):
-        x = np.random.randint(0, 5 + 1)
+        x = np.random.randint(0, len(enums.Measurement_type))
         item = enums.Measurement_type(x)
         assert isinstance(item, enums.Measurement_type)
+        assert item.value == x
 
     def test_names(self):
-        x = np.random.randint(0, 5 + 1)
+        x = np.random.randint(0, len(enums.Measurement_type))
         item = enums.Measurement_type(x)
         assert item.names()
         assert item.name == item.names()[x]
@@ -35,13 +39,19 @@ class Test_Measurement_type:
         assert result == expected
 
         item = enums.Measurement_type(3)
-        assert item.update_measurement_subtype(item.name)
+        result = item.update_measurement_subtype(item.name)
+        assert result[1]
+        assert result[2] == result[0].split(', ')
 
         item = enums.Measurement_type(4)
-        assert item.update_measurement_subtype(item.name)
+        result = item.update_measurement_subtype(item.name)
+        assert result[1]
+        assert result[2] == result[0].split(', ')
 
         item = enums.Measurement_type(5)
-        assert item.update_measurement_subtype(item.name)
+        result = item.update_measurement_subtype(item.name)
+        assert result[1]
+        assert result[2] == result[0].split(', ')
 
     def test_gaussian_func(self):
         item = enums.Measurement_type(0)
@@ -114,12 +124,19 @@ class Test_Measurement_type:
         
         item = enums.Measurement_type(3)
         result = item.update_measurement(xmin, xmax, xaxis, data1D, 0)
-        assert result['value'] == pytest.approx(8.026917)
+        expected = {'xaxis': xaxis[1:5], 'value': 8.026917, 'datafit': data1D[1:5]}
+        assert np.array_equal(result['xaxis'], expected['xaxis'])
+        assert result['value'] == pytest.approx(expected['value'])
+        for val_1, val_2 in zip(result['datafit'], expected['datafit']):
+            assert val_1 == pytest.approx(val_2)
 
         xmax = 6
         item = enums.Measurement_type(4)
+        expected = {'xaxis': xaxis[1:6], 'value': 1.128095}
         result = item.update_measurement(xmin, xmax, xaxis, data1D, 0)
-        assert result['value'] == pytest.approx(1.128095)
+        assert np.array_equal(result['xaxis'], expected['xaxis'])
+        assert result['value'] == pytest.approx(expected['value'])
+        assert len(result['xaxis']) == len(result['datafit'])
 
         result = item.update_measurement(xmin, xmax, xaxis, data1D, 4)
         assert result['value'] == pytest.approx(0.0321364)
