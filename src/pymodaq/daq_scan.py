@@ -23,6 +23,7 @@ from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner, adaptive_losses
+from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
 from pymodaq.daq_utils.plotting.qled import QLED
 
 from pymodaq.daq_utils import daq_utils as utils
@@ -72,6 +73,7 @@ class DAQ_Scan(QObject):
         if dashboard is None:
             raise Exception('No valid dashboard initialized')
         self.mainwindow = self.dockarea.parent()
+
         self.wait_time = 1000
         self.navigator = None
         self.scan_x_axis = None
@@ -98,8 +100,13 @@ class DAQ_Scan(QObject):
         self.h5saver.settings.child(('custom_name')).hide()
         self.h5saver.new_file_sig.connect(self.create_new_file)
         self.h5arrays = OrderedDict([])
+
         self.scanner = Scanner(actuators=self.move_modules, adaptive_losses=adaptive_losses)
         self.scan_parameters = None
+
+        self.batcher = None
+        self.batch_started = False
+        self.ind_batch = 0
 
         self.modules_manager = self.dashboard.modules_manager
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
@@ -164,6 +171,15 @@ class DAQ_Scan(QObject):
         self.settings_menu = menubar.addMenu('Settings')
         action_navigator = self.settings_menu.addAction('Show Navigator')
         action_navigator.triggered.connect(self.show_navigator)
+        action_batcher = self.settings_menu.addAction('Show Batch Scanner')
+        action_batcher.triggered.connect(lambda: self.show_batcher(menubar))
+
+    def show_batcher(self, menubar):
+        self.batcher = BatchScanner(self.dockarea, self.modules_manager.actuators_name,
+                                    self.modules_manager.detectors_name)
+        self.batcher.create_menu(menubar)
+        self.batcher.setupUI()
+        self.ui.start_batch_pb.setVisible(True)
 
     def load_file(self):
         self.h5saver.load_file(self.h5saver.h5_file_path)
@@ -478,7 +494,10 @@ class DAQ_Scan(QObject):
         self.scan_attributes.child('scan_info', 'date_time').setValue(date)
         self.scan_attributes.child('scan_info', 'author').setValue(
             self.dataset_attributes.child('dataset_info', 'author').value())
-        res = self.show_file_attributes('scan')
+        if not self.batch_started:
+            res = self.show_file_attributes('scan')
+        else:
+            res = True
         return res
 
     def set_metadata_about_dataset(self):
@@ -551,7 +570,7 @@ class DAQ_Scan(QObject):
             self.ui.stop_scan_pb.setEnabled(False)
         return res
 
-    def set_scan(self):
+    def set_scan(self, scan=None):
         """
         Sets the current scan given the selected settings. Makes some checks, increments the h5 file scans.
         In case the dialog is cancelled, return False and aborts the scan
@@ -568,23 +587,18 @@ class DAQ_Scan(QObject):
             self.scan_data_2D = []
             self.scan_data_2D_average = []
 
+
             self.scanner.set_scan()
 
             if len(self.modules_manager.actuators) != self.scanner.scan_parameters.Naxes:
-                msgBox = QtWidgets.QMessageBox(parent=None)
-                msgBox.setWindowTitle("Error")
-                msgBox.setText("There are not enough or too much selected move modules for this scan")
-                ret = msgBox.exec()
+                gutils.show_message("There are not enough or too much selected move modules for this scan")
                 return
 
             if self.scanner.scan_parameters.scan_subtype == 'Adaptive':
                 if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
-                    msgBox = QtWidgets.QMessageBox(parent=None)
-                    msgBox.setWindowTitle("Error")
-                    msgBox.setText("In adaptive mode, you have to pick a 0D signal from which the algorithm will"
+                    gutils.show_message("In adaptive mode, you have to pick a 0D signal from which the algorithm will"
                                    " determine the next positions to scan, see 'probe_data' in the modules selector"
                                    " panel")
-                    ret = msgBox.exec()
                     return
 
             self.ui.N_scan_steps_sb.setValue(self.scanner.scan_parameters.Nsteps)
@@ -650,10 +664,17 @@ class DAQ_Scan(QObject):
         self.ui.set_ini_positions_pb.setToolTip(
             'Set Move Modules to their initial position as defined in the current scan')
 
+        iconstartbatch = QtGui.QIcon()
+        iconstartbatch.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run_all.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.start_batch_pb = QtWidgets.QPushButton(iconstartbatch, '')
+        self.ui.start_batch_pb.setToolTip('Start the batch of scans defined in the batch manager')
+        self.ui.start_batch_pb.setVisible(False)
+
         self.ui.horizontalLayout_2.addWidget(self.ui.quit_pb)
         self.ui.horizontalLayout_2.addStretch()
         self.ui.horizontalLayout_2.addWidget(self.ui.set_scan_pb)
         self.ui.horizontalLayout_2.addWidget(self.ui.set_ini_positions_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.start_batch_pb)
         self.ui.horizontalLayout_2.addWidget(self.ui.start_scan_pb)
         self.ui.horizontalLayout_2.addWidget(self.ui.stop_scan_pb)
 
@@ -822,6 +843,7 @@ class DAQ_Scan(QObject):
         self.ui.quit_pb.clicked.connect(self.quit_fun)
 
         self.ui.start_scan_pb.clicked.connect(self.start_scan)
+        self.ui.start_batch_pb.clicked.connect(self.start_scan_batch)
         self.ui.stop_scan_pb.clicked.connect(self.stop_scan)
         self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
 
@@ -901,6 +923,27 @@ class DAQ_Scan(QObject):
 
             self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.addTab(self.ui.tab_navigator, 'Navigator'))
             self.set_scan()  # to load current scans into the navigator
+
+    def start_scan_batch(self):
+        self.batch_started = True
+        self.ind_batch = 0
+        self.loop_scan_batch()
+
+    def loop_scan_batch(self):
+        if self.ind_batch >= len(self.batcher.scans_names):
+            self.stop_scan()
+            return
+        self.scanner = self.batcher.scans[self.batcher.scans_names[self.ind_batch]]
+        actuators, detectors = self.batcher.get_act_dets()
+        self.set_scan_batch(actuators[self.batcher.scans_names[self.ind_batch]],
+                            detectors[self.batcher.scans_names[self.ind_batch]])
+        self.start_scan()
+
+    def set_scan_batch(self, actuators, detectors):
+        self.modules_manager.selected_detectors_name = detectors
+        self.modules_manager.selected_actuators_name = actuators
+        QtWidgets.QApplication.processEvents()
+
 
     def start_scan(self):
         """
@@ -1046,16 +1089,20 @@ class DAQ_Scan(QObject):
         elif status[0] == "Scan_done":
             self.ui.scan_done_LED.set_as_true()
             self.save_scan()
-            if not self.dashboard.overshoot:
-                self.set_ini_positions()
-            self.ui.set_scan_pb.setEnabled(True)
-            self.ui.set_ini_positions_pb.setEnabled(True)
-            self.ui.start_scan_pb.setEnabled(True)
+            if not self.batch_started:
+                if not self.dashboard.overshoot:
+                    self.set_ini_positions()
+                self.ui.set_scan_pb.setEnabled(True)
+                self.ui.set_ini_positions_pb.setEnabled(True)
+                self.ui.start_scan_pb.setEnabled(True)
 
-            # reactivate module controls usiong remote_control
-            if hasattr(self.dashboard, 'remote_manager'):
-                remote_manager = getattr(self.dashboard, 'remote_manager')
-                remote_manager.activate_all(True)
+                # reactivate module controls usiong remote_control
+                if hasattr(self.dashboard, 'remote_manager'):
+                    remote_manager = getattr(self.dashboard, 'remote_manager')
+                    remote_manager.activate_all(True)
+            else:
+                self.ind_batch += 1
+                self.loop_scan_batch()
 
         elif status[0] == "Timeout":
             self.ui.status_message.setText('Timeout occurred')

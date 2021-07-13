@@ -609,6 +609,14 @@ class TreeFromToml(QObject):
         return params
 
 
+def show_message(message="blabla", title="Error"):
+    msgBox = QtWidgets.QMessageBox(parent=None)
+    msgBox.setWindowTitle(title)
+    msgBox.setText(message)
+    ret = msgBox.exec()
+    return ret
+
+
 if __name__ == '__main__':
     import sys
 

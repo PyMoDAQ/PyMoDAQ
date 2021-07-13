@@ -1052,25 +1052,23 @@ class DashBoard(QObject):
 
     def update_init_tree(self):
         for act in self.move_modules:
-            if act.title not in putils.iter_children(self.settings.child(('actuators')), []):
-                title = act.title
-                name = ''.join(title.split())  # remove empty spaces
-                self.settings.child(('actuators')).addChild(
-                    {'title': title, 'name': name, 'type': 'led', 'value': False})
-                QtWidgets.QApplication.processEvents()
-                self.settings.child('actuators', name).setValue(act.initialized_state)
+            name = ''.join(act.title.split())  # remove empty spaces
+            if act.title not in [ac.title() for ac in putils.iter_children_params(self.settings.child(('actuators')), [])]:
 
-        for act in self.detector_modules:
-            if act.title not in putils.iter_children(self.settings.child(('detectors')), []):
-                title = act.title
-                name = ''.join(title.split())  # remove empty spaces
-                self.settings.child(('detectors')).addChild(
-                    {'title': title, 'name': name, 'type': 'led', 'value': False})
+                self.settings.child(('actuators')).addChild(
+                    {'title': act.title, 'name': name, 'type': 'led', 'value': False})
                 QtWidgets.QApplication.processEvents()
-                self.settings.child('detectors', name).setValue(act.initialized_state)
+            self.settings.child('actuators', name).setValue(act.initialized_state)
+
+        for det in self.detector_modules:
+            name = ''.join(det.title.split())  # remove empty spaces
+            if det.title not in [de.title() for de in putils.iter_children_params(self.settings.child(('detectors')), [])]:
+                self.settings.child(('detectors')).addChild(
+                    {'title': det.title, 'name': name, 'type': 'led', 'value': False})
+                QtWidgets.QApplication.processEvents()
+            self.settings.child('detectors', name).setValue(det.initialized_state)
 
     pyqtSlot(bool)
-
     def stop_moves(self, overshoot):
         """
             Foreach module of the move module object list, stop motion.
