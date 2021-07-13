@@ -138,6 +138,11 @@ class ScanParameters:
             return ScanInfo()
 
     def set_scan(self):
+        steps_limit = config['scan']['steps_limit']
+        Nsteps = self.evaluate_Nsteps()
+        if Nsteps > steps_limit:
+            self.scan_info = ScanInfo(Nsteps=Nsteps)
+            return self.scan_info
 
         if self.scan_type == "Scan1D":
             if self.positions is not None:
@@ -165,6 +170,9 @@ class ScanParameters:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
         elif self.scan_type == "Scan2D":
+            if np.abs((self.stops[0]-self.starts[0]) / self.steps[0]) > steps_limit:
+                return ScanInfo()
+
             if self.scan_subtype == 'Spiral':
                 positions = set_scan_spiral(self.starts, self.stops, self.steps)
                 self.scan_info = self.get_info_from_positions(positions)
@@ -218,6 +226,16 @@ class ScanParameters:
             else:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
         return self.scan_info
+
+    def evaluate_Nsteps(self):
+        Nsteps = 1
+        for ind in range(len(self.starts)):
+            if self.scan_subtype != 'Spiral':
+                Nsteps *= np.abs((self.stops[ind] - self.starts[ind]) / self.steps[ind])+1
+            else:
+                Nsteps *= np.abs(2 * (self.stops[ind] / self.steps[ind]) + 1)
+        return Nsteps
+
 
     def __repr__(self):
         if self.vectors is not None:

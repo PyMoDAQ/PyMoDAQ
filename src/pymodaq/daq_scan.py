@@ -579,7 +579,13 @@ class DAQ_Scan(QObject):
             self.scan_data_2D = []
             self.scan_data_2D_average = []
 
-            self.scanner.set_scan()
+            scan_params = self.scanner.set_scan()
+            if scan_params.scan_info.positions is None:
+                gutils.show_message(f"An error occurred when establishing the scan steps. Actual settings "
+                                    f"gives approximately {int(scan_params.Nsteps)} steps."
+                                    f" Please check the steps number "
+                                    f"limit in the config file ({config['scan']['steps_limit']}) or modify"
+                                    f" your scan settings.")
 
             if len(self.modules_manager.actuators) != self.scanner.scan_parameters.Naxes:
                 msgBox = QtWidgets.QMessageBox(parent=None)
