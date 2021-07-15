@@ -58,14 +58,27 @@ class TestViewer1D:
         assert not prog.ui.do_measurements_pb.isChecked()
         assert prog.ui.Do_math_pb.isChecked()
 
-    # def test_zoom_pb(self, qtbot):
-    #     prog = Viewer1D(None)
-    #
-    #     qtbot.addWidget(prog)
-    #
-    #     assert not prog.ui.zoom_pb.isChecked()
-    #     prog.ui.zoom_pb.trigger()
-    #     assert prog.ui.zoom_pb.isChecked()
+    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
+    def test_zoom_pb(self, mock_exception, qtbot):
+        mock_exception.return_value = None
+        prog = Viewer1D(None)
+
+        x = np.linspace(0, 200, 201)
+        data1D = np.linspace(x, x + 190, 20)
+        colors = np.linspace(1, 20, 20)
+
+        prog.datas = data1D
+        prog.measurement_dict['datas'] = data1D
+        prog.plot_colors = colors
+        prog.x_axis = np.linspace(0, 200, 201)
+
+        qtbot.addWidget(prog)
+
+        assert not prog.ui.zoom_pb.isChecked()
+        prog.ui.zoom_pb.trigger()
+        assert prog.ui.zoom_pb.isChecked()
+        prog.ui.zoom_pb.trigger()
+        assert not prog.ui.zoom_pb.isChecked()
 
     def test_scatter(self, qtbot):
         prog = Viewer1D(None)
