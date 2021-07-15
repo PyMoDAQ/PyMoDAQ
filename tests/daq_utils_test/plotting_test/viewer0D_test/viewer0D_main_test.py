@@ -1,29 +1,28 @@
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
-import sys
 import numpy as np
 import pytest
 from unittest import mock
 
 from pymodaq.daq_utils.daq_utils import gauss1D
-from pymodaq.daq_utils.plotting.viewer0D import viewer0D_main as v_0D
+from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.exceptions import ExpectedError
 
 
 class TestViewer0D:
     def test_init(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
         qtbot.addWidget(prog)
-        assert isinstance(prog, v_0D.Viewer0D)
+        assert isinstance(prog, Viewer0D)
         assert prog.parent == Form
         assert prog.title == 'viewer0D'
         
-        prog = v_0D.Viewer0D(None)
+        prog = Viewer0D(None)
         assert isinstance(prog.parent, QtWidgets.QWidget)
 
     def test_clear_pb(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         x = np.linspace(0, 200, 201)
         y1 = gauss1D(x, 75, 25)
@@ -46,7 +45,7 @@ class TestViewer0D:
 
     def test_Nhistory_sb(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         qtbot.addWidget(prog)
         assert prog.ui.Nhistory_sb.value() == 200
@@ -56,7 +55,7 @@ class TestViewer0D:
 
     def test_show_datalist_pb(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         Form.show()
 
@@ -68,7 +67,7 @@ class TestViewer0D:
         
     def test_clear_data(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         x = np.linspace(0, 200, 201)
         y1 = gauss1D(x, 75, 25)
@@ -93,15 +92,15 @@ class TestViewer0D:
     @mock.patch('pymodaq.daq_utils.plotting.viewer0D.viewer0D_main.Viewer0D.update_Graph1D')
     def test_show_data(self, mock_update, mock_logger, qtbot):
         mock_update.side_effect = [None, Exception]
-        mock_logger.side_effect = [Exception]
+        mock_logger.side_effect = [ExpectedError]
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         x = np.linspace(0, 200, 2)
         y1 = gauss1D(x, 75, 25)
         y2 = gauss1D(x, 120, 50, 2)
         Form.show()
-        with pytest.raises(Exception):
+        with pytest.raises(ExpectedError):
             for ind, data in enumerate(y1):
                 prog.show_data([[data], [y2[ind]]])
                 QtWidgets.QApplication.processEvents()
@@ -110,7 +109,7 @@ class TestViewer0D:
 
     def test_show_data_list(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
         Form.show()
 
         prog.ui.show_datalist_pb.setChecked(True)
@@ -122,7 +121,7 @@ class TestViewer0D:
         
     def test_show_data_temp(self, qtbot):       
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
         
         assert not prog.show_data_temp(None)
 
@@ -130,13 +129,13 @@ class TestViewer0D:
         
     # def test_update_Graph1D(self, qtbot):
     #     Form = QtWidgets.QWidget()
-    #     prog = v_0D.Viewer0D(Form)
+    #     prog = Viewer0D(Form)
     #
     #     qtbot.addWidget(prog)
         
     def test_update_channels(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         x = np.linspace(0, 200, 2)
         y1 = gauss1D(x, 75, 25)
@@ -153,7 +152,7 @@ class TestViewer0D:
         
     def test_update_labels(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         x = np.linspace(0, 200, 2)
         y1 = gauss1D(x, 75, 25)
@@ -173,7 +172,7 @@ class TestViewer0D:
         
     def test_update_status(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
         
         assert not prog.update_status(txt='test')
         
@@ -181,7 +180,7 @@ class TestViewer0D:
         
     def test_update_x_axis(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
         
         Nhistory = 50
         prog.update_x_axis(Nhistory=Nhistory)
@@ -193,7 +192,7 @@ class TestViewer0D:
     
     def test_labels(self, qtbot):
         Form = QtWidgets.QWidget()
-        prog = v_0D.Viewer0D(Form)
+        prog = Viewer0D(Form)
 
         assert not prog.labels
         prog.labels = 'test_label'

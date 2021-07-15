@@ -7,19 +7,7 @@ from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, TCPServer, Socket
 from pyqtgraph.parametertree import Parameter
 from collections import OrderedDict
-
-
-class ExpectedError(Exception):
-    pass
-
-class Expected_1(ExpectedError):
-    pass
-
-class Expected_2(ExpectedError):
-    pass
-
-class Expected_3(ExpectedError):
-    pass
+from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2, Expected_3
 
 class MockPythonSocket:  # pragma: no cover
     def __init__(self):
