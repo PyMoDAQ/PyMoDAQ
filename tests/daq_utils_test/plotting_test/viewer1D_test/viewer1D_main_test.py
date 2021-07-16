@@ -1,4 +1,5 @@
 from PyQt5 import QtWidgets, QtCore
+import pyqtgraph as pg
 import numpy as np
 import pytest
 from unittest import mock
@@ -299,13 +300,44 @@ class TestViewer1D:
         qtbot.addWidget(prog)
 
     def test_lock_aspect_ratio(self, qtbot):
-        pass
+        prog = Viewer1D(None)
+
+        prog.ui.aspect_ratio_pb.setChecked(False)
+        prog.lock_aspect_ratio()
+        assert not prog.viewer.plotwidget.plotItem.vb.state['aspectLocked']
+
+        prog.ui.aspect_ratio_pb.setChecked(True)
+        prog.lock_aspect_ratio()
+        assert prog.viewer.plotwidget.plotItem.vb.state['aspectLocked']
+
+        qtbot.addWidget(prog)
 
     def test_open_measurement_module(self, qtbot):
         pass
 
     def test_remove_plots(self, qtbot):
-        pass
+        prog = Viewer1D(None)
+
+        item1 = pg.PlotItem()
+        item_legend = pg.PlotItem()
+        channels = [item1]
+        prog.plot_channels = channels
+        prog.legend = item_legend
+        prog.viewer.plotwidget.plotItem.items = []
+        assert prog.plot_channels
+
+        for channel in channels:
+            prog.viewer.plotwidget.addItem(channel)
+        prog.viewer.plotwidget.addItem(prog.legend)
+
+        assert len(prog.viewer.plotwidget.plotItem.items) == 2
+
+        prog.remove_plots()
+
+        assert not prog.plot_channels
+        assert len(prog.viewer.plotwidget.plotItem.items) == 0
+
+        qtbot.addWidget(prog)
 
     def test_set_axis_labels(self, qtbot):
         pass

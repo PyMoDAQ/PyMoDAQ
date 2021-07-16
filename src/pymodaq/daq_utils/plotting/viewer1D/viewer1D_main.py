@@ -687,7 +687,7 @@ class Viewer1D_math(QObject):
             return []
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = Viewer1D(Form)
