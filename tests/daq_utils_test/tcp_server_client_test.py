@@ -6,6 +6,7 @@ from unittest import mock
 from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_utils.tcp_server_client import MockServer, TCPClient, TCPServer, Socket
 from pyqtgraph.parametertree import Parameter
+from pyqtgraph import SRTTransform
 from collections import OrderedDict
 from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2, Expected_3
 
@@ -337,7 +338,7 @@ class TestTCPClient:
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPClient.init_connection')
     def test_queue_command(self, mock_connection):
         mock_connection.side_effect = [Expected_1]
-        command = mock.Mock()
+        command = ThreadCommand()
         command.attributes = {'ipaddress': '0.0.0.0', 'port': 5544, 'path': [1, 2, 3],
                               'param': Parameter(name='test_param')}
 
@@ -507,12 +508,6 @@ class TestTCPServer:
     def test_close_server(self):
         test_TCP_Server = TCPServer()
 
-        child = mock.Mock()
-        child.setValue.return_value = None
-        settings = mock.Mock()
-        settings.child.return_value = child
-        test_TCP_Server.settings = settings
-
         socket_1 = Socket(MockPythonSocket())
         socket_1.bind(('0.0.0.1', 4455))
         socket_2 = Socket(MockPythonSocket())
@@ -521,9 +516,15 @@ class TestTCPServer:
                      {'socket': socket_2, 'type': 'Client'}]
         test_TCP_Server.connected_clients = dict_list
 
+        params = [{'name': 'conn_clients', 'value': dict_list}]
+        test_TCP_Server.settings = Parameter.create(name='Settings', type='group', children=params)
+
         test_TCP_Server.close_server()
         for socket_dict in test_TCP_Server.connected_clients:
             assert socket_dict['type'] != 'server'
+
+        for socket in test_TCP_Server.settings.child(('conn_clients')).value():
+            assert not 'server' in socket
 
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.startTimer')
     @mock.patch('pymodaq.daq_utils.tcp_server_client.socket')
@@ -531,13 +532,13 @@ class TestTCPServer:
         mock_socket.socket.return_value = MockPythonSocket()
         mock_timer.side_effect = [Expected_1]
 
-        child = mock.Mock()
-        child.value.side_effect = ['0.0.0.0', 4455, '0.0.0.0', 4455]
-        settings = mock.Mock()
-        settings.child.return_value = child
-
         test_TCP_Server = TCPServer()
-        test_TCP_Server.settings = settings
+
+        params = [{'name': 'socket_ip', 'value': '0.0.0.0'},
+                  {'name': 'port_id', 'value': 4455},
+                  {'name': 'conn_clients', 'value': None}]
+
+        test_TCP_Server.settings = Parameter.create(name='Settings', type='group', children=params)
 
         with pytest.raises(Expected_1):
             test_TCP_Server.init_server()
@@ -612,18 +613,18 @@ class TestTCPServer:
                      {'socket': socket_2, 'type': 'Client'}]
         test_TCP_Server.connected_clients = dict_list
 
-        settings = mock.Mock()
-        test_TCP_Server.settings = settings
+        params = [{'name': 'conn_clients', 'value': dict_list}]
+        test_TCP_Server.settings = Parameter.create(name='Settings', type='group', children=params)
 
         with pytest.raises(Expected_1):
             test_TCP_Server.remove_client(socket_1)
 
-        is_removed = True
-        for socket_dict in test_TCP_Server.connected_clients:
-            if 'Server' in socket_dict['type']:
-                is_removed = False
+        clients = test_TCP_Server.settings.child('conn_clients').value()
+        assert not 'Server' in clients
+        assert 'Client' in clients
 
-        assert is_removed
+        for socket_dict in test_TCP_Server.connected_clients:
+            assert not 'Server' in socket_dict['type']
 
         socket_except = mock.Mock()
         socket_except.close.side_effect = [Exception]
@@ -679,19 +680,21 @@ class TestTCPServer:
                      {'socket': socket_6, 'type': 'serversocket'}]
 
         test_TCP_Server.connected_clients = dict_list
-        settings = mock.Mock()
-        test_TCP_Server.settings = settings
+
+        params = [{'name': 'conn_clients', 'value': dict_list}]
+        test_TCP_Server.settings = Parameter.create(name='Settings', type='group', children=params)
+
         test_TCP_Server.serversocket = socket_5
         test_TCP_Server.socket_types = []
+        test_TCP_Server.message_list = ['Done']
         test_TCP_Server.listen_client()
 
-        is_removed = True
         for socket_dict in test_TCP_Server.connected_clients:
-            if 'Server' in socket_dict['type']:
-                is_removed = False
-            elif 'Quit' in socket_dict['type']:
-                is_removed = False
-        assert is_removed
+            assert not 'Server' in socket_dict['type']
+            assert not 'Quit' in socket_dict['type']
+
+        clients = test_TCP_Server.settings.child('conn_clients').value()
+        assert len(clients) == 4
 
         assert test_TCP_Server.serversocket.socket._closed
 
@@ -703,6 +706,9 @@ class TestTCPServer:
                      {'socket': socket_5, 'type': 'test'},
                      {'socket': socket_6, 'type': 'serversocket'}]
 
+        params = [{'name': 'conn_clients', 'value': dict_list}]
+        test_TCP_Server.settings = Parameter.create(name='Settings', type='group', children=params)
+
         test_TCP_Server.serversocket = socket_6
         test_TCP_Server.socket_types = ['Server']
         test_TCP_Server.connected_clients = dict_list
@@ -713,6 +719,8 @@ class TestTCPServer:
             if 'Server' in socket_dict['type']:
                 is_added = True
         assert is_added
+
+        assert len(test_TCP_Server.settings.child('conn_clients').value()) == 6
 
     @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.emit_status')
     def test_send_command(self, mock_emit):
@@ -795,17 +803,14 @@ class TestTCPServer:
 
     @mock.patch('pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter')
     def test_read_infos(self, mock_string):
-        mock_string.return_value = 'test'
-        settings = mock.Mock()
-        child = mock.Mock()
-        child.restoreState.side_effect = [ExpectedError]
-        settings.child.return_value = child
+        mock_string.return_value = []
 
         test_TCP_Server = TCPServer()
-        test_TCP_Server.settings = settings
 
-        with pytest.raises(ExpectedError):
-            test_TCP_Server.read_infos()
+        params = [{'name': 'settings_client'}]
+        test_TCP_Server.settings = Parameter.create(name='Settings', children=params)
+
+        test_TCP_Server.read_infos()
 
     @mock.patch('pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter')
     def test_read_info_xml(self, mock_string):
