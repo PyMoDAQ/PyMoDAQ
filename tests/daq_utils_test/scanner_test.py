@@ -37,6 +37,7 @@ class TestScanParameters:
         stops = [10, 20]
         steps = [1, 2]
         scan_param = scanner.ScanParameters(starts=starts, stops=stops, steps=steps)
+        scan_param.vectors = None
         assert scan_param.Naxes == 1
         assert scan_param.scan_type == 'Scan1D'
         assert scan_param.scan_subtype == 'Linear'
@@ -68,8 +69,11 @@ class TestScanParameters:
             scan_param.__getattr__('test')
 
     def test_get_info_from_positions(self):
+        starts = [1, 2]
+        stops = [10, 20]
+        steps = [1, 2]
         positions = np.array([1, 2, 3, 4])
-        scan_param = scanner.ScanParameters(positions=positions)
+        scan_param = scanner.ScanParameters(starts=starts, stops=stops, steps=steps, positions=positions)
         result = scan_param.get_info_from_positions(positions)
         assert np.array_equal(result.positions, np.expand_dims(positions, 1))
         assert np.array_equal(result.axes_unique, [positions])
@@ -77,12 +81,16 @@ class TestScanParameters:
 
     def test_set_scan(self):
         # Scan1D
+        starts = [1, 2]
+        stops = [10, 20]
+        steps = [1, 2]
         positions = np.array([[1], [2], [3], [4]])
-        scan_param = scanner.ScanParameters(positions=positions)
+        scan_param = scanner.ScanParameters(starts=starts, stops=stops, steps=steps, positions=positions)
         result = scan_param.set_scan()
         assert np.array_equal(result.positions, scan_param.get_info_from_positions(positions).positions)
 
-        scan_param = scanner.ScanParameters(positions=positions, scan_subtype='Random')
+        scan_param = scanner.ScanParameters(starts=starts, stops=stops, steps=steps,
+                                            positions=positions, scan_subtype='Random')
         result = scan_param.set_scan()
         for value in positions:
             assert value in result.positions
