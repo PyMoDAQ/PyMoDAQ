@@ -243,7 +243,6 @@ class ScanParameters:
                 Nsteps *= np.abs(2 * (self.stops[ind] / self.steps[ind]) + 1)
         return Nsteps
 
-
     def __repr__(self):
         if self.vectors is not None:
             bounds = f'bounds as vectors: {self.vectors} and curvilinear step: {self.steps}'
