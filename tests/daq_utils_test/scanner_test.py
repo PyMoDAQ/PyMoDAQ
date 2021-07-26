@@ -6,6 +6,7 @@ from pymodaq.daq_utils import scanner
 from pymodaq.daq_utils import exceptions as exceptions
 
 
+
 class TestScanInfo:
     def test_ScanInfo(self):
         Nsteps = 10
