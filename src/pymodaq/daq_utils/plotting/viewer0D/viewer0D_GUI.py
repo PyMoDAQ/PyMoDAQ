@@ -79,7 +79,7 @@ class Ui_Form(object):
         self.show_datalist_pb.setToolTip(_translate("Form", "Show current data in a list"))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()

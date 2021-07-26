@@ -56,7 +56,12 @@ class ScanInfo:
             setattr(self, k, kwargs[k])
 
     def __repr__(self):
-        return f'[ScanInfo with {self.Nsteps} positions of shape {self.positions.shape})'
+        if self.positions is not None:
+            return f'[ScanInfo with {self.Nsteps} positions of shape {self.positions.shape})'
+        else:
+            return '[ScanInfo with position is None)'
+
+
 
 
 class ScanParameters:
@@ -119,6 +124,8 @@ class ScanParameters:
         else:
             if hasattr(self.scan_info, item):
                 return getattr(self.scan_info, item)
+            else:
+                raise ValueError(f'no attribute named {item}')
 
     def get_info_from_positions(self, positions):
         if positions is not None:
@@ -166,7 +173,7 @@ class ScanParameters:
                 self.scan_info = ScanInfo(Nsteps=0, positions=np.array([0, 1]), axes_unique=[np.array([])],
                                           axes_indexes=np.array([]), adaptive_loss=self.adaptive_loss)
 
-            else:
+            else:               # pragma: no cover
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
         elif self.scan_type == "Scan2D":

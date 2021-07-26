@@ -18,8 +18,8 @@ class Items_Lockin_SR830(Enum):
     Aux_In_4 = 9
 
     def names(self):
-        names = self.__members__.items()
-        return [name for name, member in self.__members__.items()]
+        names = Items_Lockin_SR830.__members__.items()
+        return [name for name, member in names]
 
 
 class Measurement_type(Enum):
@@ -42,19 +42,19 @@ class Measurement_type(Enum):
         variables = ", "
         formula = ""
         subitems = []
-        if mtype == self.names(self)[0]:  # "Cursor integration":
+        if mtype == self.names()[0]:  # "Cursor integration":
             subitems = measurement_cursor_subitems
 
-        if mtype == self.names(self)[3]:  # "Gaussian Fit":
+        if mtype == self.names()[3]:  # "Gaussian Fit":
             subitems = measurement_gaussian_subitems
             formula = "amp*exp(-2*ln(2)*(x-x0)^2/dx^2)+offset"
             variables = variables.join(measurement_gaussian_subitems)
 
-        elif mtype == self.names(self)[4]:  # "Lorentzian Fit":
+        elif mtype == self.names()[4]:  # "Lorentzian Fit":
             subitems = measurement_laurentzian_subitems
             variables = variables.join(measurement_laurentzian_subitems)
             formula = "alpha/pi*gamma/2/((x-x0)^2+(gamma/2)^2)+offset"
-        elif mtype == self.names(self)[5]:  # "Exponential Decay Fit":
+        elif mtype == self.names()[5]:  # "Exponential Decay Fit":
             subitems = measurement_decay_subitems
             variables = variables.join(measurement_decay_subitems)
             formula = "N0*exp(-gamma*x)+offset"
@@ -104,9 +104,10 @@ class Measurement_type(Enum):
 
             elif mtype == names[4]:  # "Lorentzian Fit":
                 offset = np.min(sub_data)
+                gamma = 1
                 amp = np.max(sub_data) - np.min(sub_data)
                 m = my_moment(sub_xaxis, sub_data)
-                p0 = [amp, m[1], m[0], offset]
+                p0 = [gamma, amp, m[1], m[0], offset]
                 popt, pcov = curve_fit(self.laurentzian_func, sub_xaxis, sub_data, p0=p0)
                 result_measurement['xaxis'] = sub_xaxis
                 result_measurement['datafit'] = self.laurentzian_func(sub_xaxis, *popt)

@@ -9,8 +9,8 @@ PyMoDAQ
    :target: https://pymodaq.readthedocs.io/en/stable/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
-    :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
+.. image:: https://codecov.io/gh/pierrejannot/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
+    :target: https://codecov.io/gh/pierrejannot/PyMoDAQ
     
 .. image:: https://github.com/CEMES-CNRS/PyMoDAQ/workflows/Python%20package/badge.svg
     :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions?query=workflow%3A%22Python+package%22

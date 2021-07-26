@@ -187,7 +187,7 @@ class Viewer0D(QtWidgets.QWidget, QObject):
         self.update_labels(labels)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = Viewer0D(Form)
