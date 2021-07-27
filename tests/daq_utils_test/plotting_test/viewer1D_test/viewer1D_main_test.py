@@ -2,8 +2,10 @@ from pyqtgraph.parametertree import Parameter
 import pyqtgraph as pg
 import numpy as np
 import pytest
-from unittest import mock
+import sys
 
+from PyQt5 import QtWidgets
+from unittest import mock
 from collections import OrderedDict
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
@@ -711,17 +713,20 @@ class TestViewer1D:
 
 
 class TestViewer1D_math:
-    def test_init(self, qtbot):
-        prog = Viewer1D_math()
+    def test_init(self):
+        app = QtWidgets.QApplication(sys.argv)
+        prog = Viewer1D_math(None)
 
         assert prog.datas == prog.ROI_bounds == prog.operations == prog.channels == []
         assert not prog.x_axis
 
-        qtbot.addWidget(prog)
+        sys.exit(app.exec_())
 
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_update_math(self, mock_except, qtbot):
+    def test_update_math(self, mock_except):
         mock_except.side_effect = [None, ExpectedError]
+
+        app = QtWidgets.QApplication(sys.argv)
 
         prog = Viewer1D_math()
 
@@ -752,4 +757,4 @@ class TestViewer1D_math:
         with pytest.raises(ExpectedError):
             prog.update_math(None)
 
-        qtbot.addWidget(prog)
+        sys.exit(app.exec_())
