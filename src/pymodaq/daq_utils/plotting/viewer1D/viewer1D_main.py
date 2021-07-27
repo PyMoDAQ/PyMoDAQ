@@ -51,7 +51,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
         self.math_module = Viewer1D_math()
 
-        if DAQ_Measurement is None:
+        if DAQ_Measurement is None:  # pragma: no cover
             self.ui.do_measurements_pb.setVisible(False)
 
         self._labels = []
@@ -687,7 +687,7 @@ class Viewer1D_math(QObject):
             return []
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = Viewer1D(Form)
