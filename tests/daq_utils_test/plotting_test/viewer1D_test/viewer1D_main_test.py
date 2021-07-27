@@ -7,8 +7,9 @@ from unittest import mock
 from collections import OrderedDict
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D, Viewer1D_math
 from pymodaq.daq_utils.managers.roi_manager import LinearROI
+from pymodaq.daq_utils.gui_utils import QAction
 from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2
 
 
@@ -382,6 +383,10 @@ class TestViewer1D:
         assert prog._labels == ['x_axis', 'y_axis']
         assert len(prog.legend.items) == 2
 
+        prog.datas = [np.linspace(1, 10, 10)]
+
+        prog.update_labels()
+
         qtbot.addWidget(prog)
         pass
 
@@ -570,10 +575,63 @@ class TestViewer1D:
         qtbot.addWidget(prog)
 
     def test_show_math(self, qtbot):
-        pass
+        prog = Viewer1D()
+
+        item = mock.Mock()
+        item.setData.return_value = None
+
+        data_to_export_signal = mock.Mock()
+        data_to_export_signal.emit.side_effect = [ExpectedError]
+
+        prog.data_to_export_signal = data_to_export_signal
+
+        prog.data_to_export = {'data0D': {}}
+
+        prog.measure_data_dict = {}
+
+        prog.lo_items = {'key_0': item, 'key_1': item, 'key_2': item,
+                    'key_3': item, 'key_4': item, 'key_5': item}
+
+        prog.lo_data = {'key_0': 1, 'key_1': 2, 'key_2': 3,
+                    'key_3': 4, 'key_4': 5, 'key_5': 6}
+
+        data_lo = [10, 20, 30, 40, 50, 60]
+        result = [[1, 10], [2, 20], [3, 30], [4, 40], [5, 50], [6, 60]]
+
+        prog.ui.do_measurements_pb.setChecked(False)
+
+        with pytest.raises(ExpectedError):
+            prog.show_math(data_lo)
+
+        for ind, key in enumerate(prog.lo_data):
+            assert np.array_equal(prog.lo_data[key], result[ind])
+
+        assert prog.data_to_export['acq_time_s']
+
+        qtbot.addWidget(prog)
 
     def test_show_measurement(self, qtbot):
-        pass
+        prog = Viewer1D()
+
+        prog.measure_data_dict = {'Meas.0:': 0, 'Meas.1:': 0, 'Meas.2:': 0,
+                                  'Meas.3:': 0, 'Meas.4:': 0, 'Meas.5:': 0}
+
+        export = {'Measure_000': 0, 'Measure_001': 0, 'Measure_002': 0,
+                  'Measure_003': 0, 'Measure_004': 0, 'Measure_005': 0}
+
+        prog.data_to_export = OrderedDict(data0D=export, acq_time_s=None)
+
+        data_meas = [1, 2, 3, 4, 5, 6]
+
+        prog.show_measurement(data_meas)
+
+        assert prog.roi_manager.settings.child('measurements').value() == prog.measure_data_dict
+        assert prog.data_to_export['acq_time_s']
+
+        for ind in range(len(data_meas)):
+            assert prog.measure_data_dict['Meas.{}:'.format(ind)] == data_meas[ind]
+
+        qtbot.addWidget(prog)
 
     def test_update_crosshair_data(self, qtbot):
         prog = Viewer1D()
@@ -648,5 +706,50 @@ class TestViewer1D:
         assert np.array_equal(prog.measurement_dict['x_axis'], data)
         assert prog.axis_settings['label'] == 'Pxls'
         assert prog.axis_settings['units'] == ''
+
+        qtbot.addWidget(prog)
+
+
+class TestViewer1D_math:
+    def test_init(self, qtbot):
+        prog = Viewer1D_math()
+
+        assert prog.datas == prog.ROI_bounds == prog.operations == prog.channels == []
+        assert not prog.x_axis
+
+        qtbot.addWidget(prog)
+
+    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
+    def test_update_math(self, mock_except, qtbot):
+        mock_except.side_effect = [None, ExpectedError]
+
+        prog = Viewer1D_math()
+
+        datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
+        ROI_bounds = [[12, 17], [12, 17], [12, 17], [12, 17]]
+        x_axis = datas[1]
+        operations = ['Mean', 'Sum', 'half-life', 'expotime']
+        channels = [0, 1, 0, 0]
+
+        measurement_dict = dict(datas=datas, ROI_bounds=ROI_bounds, x_axis=x_axis,
+                                operations=operations, channels=channels)
+
+        result = prog.update_math(measurement_dict=measurement_dict)
+
+        sub_data = []
+        indexes = utils.find_index(x_axis, ROI_bounds[0])
+        ind1, ind2 = indexes[0][0], indexes[1][0]
+
+        for ind in range(len(operations)):
+            sub_data.append(datas[channels[ind]][ind1:ind2])
+
+        assert result[0] == float(np.mean(sub_data[0]))
+        assert result[1] == float(np.sum(sub_data[1]))
+        assert result[2] == result[3] == 0
+
+        assert not prog.update_math(None)
+
+        with pytest.raises(ExpectedError):
+            prog.update_math(None)
 
         qtbot.addWidget(prog)
