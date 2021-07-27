@@ -713,20 +713,21 @@ class TestViewer1D:
 
 
 class TestViewer1D_math:
-    def test_init(self):
-        app = QtWidgets.QApplication(sys.argv)
-        prog = Viewer1D_math(None)
+    def test_init(self, qtbot):
+        prog_quit = Viewer1D(None)
+
+        prog = Viewer1D_math()
 
         assert prog.datas == prog.ROI_bounds == prog.operations == prog.channels == []
         assert not prog.x_axis
 
-        sys.exit(app.exec_())
+        qtbot.addWidget(prog_quit)
 
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_update_math(self, mock_except):
+    def test_update_math(self, mock_except, qtbot):
         mock_except.side_effect = [None, ExpectedError]
 
-        app = QtWidgets.QApplication(sys.argv)
+        prog_quit = Viewer1D(None)
 
         prog = Viewer1D_math()
 
@@ -757,4 +758,4 @@ class TestViewer1D_math:
         with pytest.raises(ExpectedError):
             prog.update_math(None)
 
-        sys.exit(app.exec_())
+        qtbot.addWidget(prog_quit)
