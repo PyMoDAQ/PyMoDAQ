@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import sys
 
+from pyqtgraph import ROI
 from PyQt5 import QtWidgets
 from unittest import mock
 from collections import OrderedDict
@@ -145,72 +146,54 @@ class TestViewer1D:
 
         qtbot.addWidget(prog)
 
-    # @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.show_math')
-    # def test_update_lineouts(self, mock_math, qtbot):
-    #     mock_math.side_effect = [None]
-    #     prog = Viewer1D(None)
-    #     datas = [4, 5, 6]
-    #     prog.datas = datas
-    #
-    #     opts = mock.Mock()
-    #     opts.index.return_value = 'index'
-    #
-    #     child = mock.Mock()
-    #     child.value.return_value = [1, 2, 3]
-    #     child.opts = {'limits': opts}
-    #
-    #     settings = mock.Mock()
-    #     settings.child.return_value = child
-    #
-    #     prog.roi_manager.settings = settings
-    #
-    #     mock_obj = mock.Mock()
-    #     mock_obj.getRegion.side_effect = [1, 2, 3]
-    #     mock_obj.setPen.return_value = None
-    #
-    #     ind1 = mock_obj
-    #     ind2 = mock_obj
-    #     ind3 = mock_obj
-    #
-    #     params = [{'name': 'type', 'type': None, 'value': '1D'},
-    #               {'name': 'Color', 'value': 2}]
-    #
-    #     ind1 = Parameter.create(name='ROI_01', type='group', children=params)
-    #     # ind2 = pg.PlotItem(name='ind2')
-    #     # ind3 = pg.PlotItem(name='ind3')
-    #
-    #     parameter_list = {'ind1': ind1, 'ind2': ind2, 'ind3': ind3}
-    #
-    #     ROI_01 = LinearROI()
-    #     ROI_02 = LinearROI(pos=[0, 2])
-    #     ROI_03 = LinearROI(pos=[5, 7])
-    #
-    #     ROI = {'ROI_01': ROI_01, 'ROI_02': ROI_02, 'ROI_03': ROI_03}
-    #
-    #     # prog.roi_manager.setupUI()
-    #
-    #     prog.roi_manager.ROIs = ROI
-    #
-    #     assert prog.roi_manager.ROIs['ROI_01'].getRegion() == (0, 10)
-    #     assert prog.roi_manager.ROIs['ROI_02'].getRegion() == (0, 2)
-    #     assert prog.roi_manager.ROIs['ROI_03'].getRegion() == (5, 7)
-    #
-    #     prog.lo_items = ROI
-    #
-    #     # for ind, key in enumerate(parameter_list):
-    #     #     prog.roi_manager.settings.addChild(parameter_list[key])
-    #     #     assert prog.roi_manager.settings.child('ROIs', key, 'math_function')
-    #
-    #     prog.update_lineouts()
-    #
-    #     meas_dict = prog.measurement_dict
-    #
-    #     assert meas_dict['datas'] == datas  # DONE
-    #     assert meas_dict['ROI_bounds'] == [(0, 10), (0, 2), (5, 7)]  # DONE
-    #     assert meas_dict['channels'] == ['index', 'index', 'index']
-    #     assert meas_dict['operations'] == [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
-    #
-    #     qtbot.addWidget(prog)
+    def test_update_lineouts(self, qtbot):
+        prog = Viewer1D()
+
+        ROI_m = mock.Mock()
+        ROI_m.getRegion.return_value = 1
+
+        prog.data_to_export = OrderedDict()
+
+        prog.datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
+
+        ROI_dict = {'ROI_00': ROI_m((0, 0)), 'ROI_01': ROI_m((1, 1)),
+                    'ROI_02': ROI_m((2, 2)), 'ROI_03': ROI_m((3, 3))}
+
+        prog.roi_manager.ROIs = ROI_dict
+
+        item_param_0 = Parameter(name='ROI_00')
+        item_param_1 = Parameter(name='ROI_01')
+        item_param_2 = Parameter(name='ROI_02')
+        item_param_3 = Parameter(name='ROI_03')
+
+        item_params = [item_param_0, item_param_1, item_param_2, item_param_3]
+
+        for ind, item_param in enumerate(item_params):
+            math_param = Parameter(name='math_function')
+            math_param.setValue('Mean')
+            channel_param = Parameter(name='use_channel')
+            channel_param.setValue(1)
+            L = [0, 1, 2, 3]
+            channel_param.opts['limits'] = L
+            color_param = Parameter(name='Color')
+            color_param.setValue(1)
+
+            children = [math_param, channel_param, color_param]
+            item_param.addChildren(children)
+
+        rois_param = Parameter(name='ROIs', children=item_params)
+
+        prog.roi_manager.settings = Parameter(name='settings', children=[rois_param])
+
+        prog.lo_items = prog.roi_manager.ROIs
+
+        prog.update_lineouts()
+
+        assert np.array_equal(prog.measurement_dict['datas'], prog.datas)
+        assert prog.measurement_dict['channels'] == [1, 1, 1, 1]
+        assert prog.measurement_dict['operations'] == ['Mean', 'Mean', 'Mean', 'Mean']
+
+        qtbot.addWidget(prog)
 
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_lineouts')
     def test_remove_ROI(self, mock_update, qtbot):
@@ -242,8 +225,62 @@ class TestViewer1D:
 
         qtbot.addWidget(prog)
 
-    def test_add_lineout(self, qtbot):
-        pass
+    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
+    def test_add_lineout(self, mock_except, qtbot):
+        mock_except.side_effect = [None, ExpectedError]
+
+        prog = Viewer1D()
+
+        ROI_dict = {'ROI_00': ROI((0, 0)), 'ROI_01': ROI((1, 1)),
+                    'ROI_02': ROI((2, 2)), 'ROI_03': ROI((3, 3))}
+
+        prog.roi_manager.ROIs = ROI_dict
+
+        item_param_0 = Parameter(name='ROI_00')
+        item_param_1 = Parameter(name='ROI_01')
+        item_param_2 = Parameter(name='ROI_02')
+        item_param_3 = Parameter(name='ROI_03')
+
+        item_params = [item_param_0, item_param_1, item_param_2, item_param_3]
+
+        for item_param in item_params:
+            channel_param = Parameter(name='use_channel', type=[])
+            color_param = Parameter(name='Color', type=[])
+
+            children = [channel_param, color_param]
+            item_param.addChildren(children)
+
+        rois_param = Parameter(name='ROIs', children=item_params)
+
+        prog.roi_manager.settings = Parameter(name='settings', children=[rois_param])
+
+        prog.labels = ['label_0', 'label_1', 'label_2', 'label_3']
+
+        prog.add_lineout(1)
+
+        item = prog.roi_manager.ROIs['ROI_01']
+        item_param = prog.roi_manager.settings.child('ROIs', 'ROI_01')
+
+        assert item_param.child('use_channel').value() == prog.labels[0]
+        for ind in prog.lo_items:
+            assert np.array_equal(prog.lo_data[ind], np.zeros((1,)))
+
+        item_param_4 = Parameter(name='ROI_04')
+
+        channel_param = Parameter(name='use_channel')
+        color_param = Parameter(name='Color')
+
+        children = [channel_param, color_param]
+        item_param_4.addChildren(children)
+
+        prog.roi_manager.settings.child('ROIs').addChild(item_param_4)
+
+        prog._labels = []
+
+        with pytest.raises(ExpectedError):
+            prog.add_lineout(4)
+
+        qtbot.addWidget(prog)
 
     def test_clear_lo(self, qtbot):
         prog = Viewer1D(None)
@@ -658,7 +695,67 @@ class TestViewer1D:
         qtbot.addWidget(prog)
 
     def test_update_graph1D(self, qtbot):
-        pass
+        prog = Viewer1D()
+
+        datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
+
+        prog.datas = datas
+        prog.update_labels(prog.labels)
+        prog.data_to_export = OrderedDict(name=prog.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
+        for ind, data in enumerate(datas):
+            prog.data_to_export['data1D']['CH{:03d}'.format(ind)] = utils.DataToExport()
+
+        prog.ini_data_plots(len(datas))
+
+        prog.zoom_plot = []
+        for ind, data in enumerate(datas):
+            channel = prog.ui.Graph_zoom.plot()
+            channel.setPen(prog.plot_colors[ind])
+            prog.zoom_plot.append(channel)
+
+        prog.ui.zoom_pb.setChecked(True)
+        prog.ui.Do_math_pb.setChecked(True)
+        prog.ui.scatter.setChecked(True)
+
+        prog.update_graph1D(datas)
+
+        x_axis = np.linspace(0, len(datas[0]), len(datas[0]), endpoint=False)
+
+        assert np.array_equal(prog.x_axis, x_axis)
+
+        for ind, data in enumerate(datas):
+            data1D = prog.data_to_export['data1D']['CH{:03d}'.format(ind)]
+            dx_axis = data1D['x_axis']
+
+            assert np.array_equal(prog.plot_channels[ind].getData()[0], prog.x_axis)
+            assert np.array_equal(prog.plot_channels[ind].getData()[1], data)
+            assert np.array_equal(prog.zoom_plot[ind].getData()[0], prog.x_axis)
+            assert np.array_equal(prog.zoom_plot[ind].getData()[1], data)
+            assert data1D['name'] == prog.title
+            assert np.array_equal(data1D['name'], prog.title)
+            assert np.array_equal(dx_axis['data'], prog.x_axis)
+            assert np.array_equal(dx_axis['units'], prog.axis_settings['units'])
+            assert np.array_equal(dx_axis['label'], prog.axis_settings['label'])
+
+        assert np.array_equal(prog.measurement_dict['datas'], datas)
+        assert np.array_equal(prog.measurement_dict['x_axis'], prog.x_axis)
+
+        datas = np.linspace(np.linspace(1, 10, 5), np.linspace(11, 20, 5), 2)
+        prog.datas = datas
+
+        prog.ui.xyplot_action.setChecked(True)
+
+        prog.update_graph1D(datas)
+
+        x_axis = np.linspace(0, len(datas[0]), len(datas[0]), endpoint=False)
+
+        assert np.array_equal(prog.x_axis, x_axis)
+        assert not prog.plot_channels[1].getData()[0]
+        assert not prog.plot_channels[1].getData()[1]
+        assert np.array_equal(prog.plot_channels[0].getData()[0], datas[0])
+        assert np.array_equal(prog.plot_channels[0].getData()[1], datas[1])
+
+        qtbot.addWidget(prog)
 
     def test_update_measurement_module(self, qtbot):
         prog = Viewer1D()

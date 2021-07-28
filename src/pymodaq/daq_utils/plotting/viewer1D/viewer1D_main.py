@@ -253,7 +253,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             item = self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
             item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(index))
             item_param.child(('use_channel')).setOpts(limits=self.labels)
-            if len(self.labels) == 0:
+            if len(self.labels) == 0:  # pragma: no cover
                 lab = ''
             else:
                 lab = self.labels[0]
