@@ -1186,7 +1186,7 @@ class Viewer2D(QObject):
         self.set_scaling_axes(self.scaling_options)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
     Form = DockArea()
     Form = QtWidgets.QWidget()
