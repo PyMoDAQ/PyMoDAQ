@@ -1,3 +1,4 @@
+from PyQt5 import QtWidgets
 from pymodaq.daq_utils.plotting.viewer2D import Viewer2D
 from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2
 
@@ -7,11 +8,12 @@ import numpy as np
 
 class TestViewer2D:
     def test_init(self, qtbot):
+        Form = QtWidgets.QWidget()
         prog = Viewer2D()
 
         assert isinstance(prog, Viewer2D)
 
-        qtbot.addWidget(prog)
+        qtbot.addWidget(Form)
 
     @pytest.mark.skip(reason="Test not implemented")
     def test_remove_ROI(self, qtbot):
@@ -146,15 +148,17 @@ class TestViewer2D:
         pass
 
     def test_x_axis(self, qtbot):
+        Form = QtWidgets.QWidget()
         prog = Viewer2D()
 
         prog.x_axis_scaled = 'x_axis_scaled'
 
         assert prog.x_axis == 'x_axis_scaled'
 
-        qtbot.addWidget(prog)
+        qtbot.addWidget(Form)
 
     def test_x_axis_setter(self, qtbot):
+        Form = QtWidgets.QWidget()
         prog = Viewer2D()
 
         data = np.linspace(1, 10, 10)
@@ -189,9 +193,10 @@ class TestViewer2D:
         assert scaled_axis['offset'] == 0
         assert scaled_axis['scaling'] == 1
 
-        qtbot.addWidget(prog)
+        qtbot.addWidget(Form)
 
     def test_set_axis_label(self, qtbot):
+        Form = QtWidgets.QWidget()
         prog = Viewer2D()
 
         prog.set_axis_label()
@@ -201,7 +206,7 @@ class TestViewer2D:
         assert scaled_xaxis['label'] == 'x axis'
         assert scaled_xaxis['units'] == 'pxls'
 
-        qtbot.addWidget(prog)
+        qtbot.addWidget(Form)
         pass
 
     @pytest.mark.skip(reason="Test not implemented")
