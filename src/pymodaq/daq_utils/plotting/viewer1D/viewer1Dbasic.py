@@ -189,7 +189,7 @@ class Viewer1DBasic(QObject):
         self.set_axis_label(dict(orientation='bottom', label=label, units=units))
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
 
     def print_region(xx):
