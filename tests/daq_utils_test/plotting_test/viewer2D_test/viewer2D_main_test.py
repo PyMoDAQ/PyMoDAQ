@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets
 from pymodaq.daq_utils.plotting.viewer2D import Viewer2D
 from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2
+from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
 from pyqtgraph import ROI
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
@@ -638,20 +639,74 @@ class TestViewer2D:
     def test_show_lineouts(self, init_prog):
         prog = init_prog
 
-    @pytest.mark.skip(reason="Test not implemented")
     def test_show_ROI_select(self, init_prog):
         prog = init_prog
 
-    @pytest.mark.skip(reason="Test not implemented")
+        prog.setupUI()
+        prog.parent.show()
+
+        prog.ui.ROIselect.setVisible(False)
+        prog.ROIselect_action.setChecked(True)
+
+        prog.show_ROI_select()
+
+        assert prog.ui.ROIselect.isVisible()
+
     def test_update_image(self, init_prog):
         prog = init_prog
 
-    @pytest.mark.skip(reason="Test not implemented")
+        data_blue = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
+        data_green = np.linspace(np.linspace(11, 20, 10), np.linspace(21, 30, 10), 2)
+        data_red = np.linspace(np.linspace(21, 30, 10), np.linspace(31, 40, 10), 2)
+        data_spread = np.linspace(np.linspace(31, 40, 10), np.linspace(41, 50, 10), 2)
+
+        prog.raw_data = {}
+        prog.raw_data['blue'] = data_blue
+        prog.raw_data['green'] = data_green
+        prog.raw_data['red'] = data_red
+        prog.raw_data['spread'] = data_spread
+
+        prog.update_image()
+
+        assert prog.isdata['blue']
+        assert prog.isdata['green']
+        assert prog.isdata['red']
+        assert prog.isdata['spread']
+
+        assert np.array_equal(prog.ui.img_blue.image, data_blue)
+        assert np.array_equal(prog.ui.img_green.image, data_green)
+        assert np.array_equal(prog.ui.img_red.image, data_red)
+        assert np.array_equal(prog.ui.img_spread.image, data_spread)
+
     def test_update_selection_area_visibility(self, init_prog):
         prog = init_prog
 
+        prog.ui.img_blue.setVisible(False)
+        prog.ui.img_green.setVisible(False)
+        prog.ui.img_red.setVisible(False)
+
+        prog.blue_action.setChecked(True)
+        prog.green_action.setChecked(True)
+        prog.red_action.setChecked(True)
+
+        prog.update_selection_area_visibility()
+
+        assert prog.ui.img_blue.isVisible()
+        assert prog.ui.img_green.isVisible()
+        assert prog.ui.img_red.isVisible()
+
+        prog.blue_action.setChecked(False)
+        prog.green_action.setChecked(False)
+        prog.red_action.setChecked(False)
+
+        prog.update_selection_area_visibility()
+
+        assert not prog.ui.img_blue.isVisible()
+        assert not prog.ui.img_green.isVisible()
+        assert not prog.ui.img_red.isVisible()
+
     @pytest.mark.skip(reason="Test not implemented")
-    def test_update_crosshair_data(self, init_prog):
+    def test_update_crosshair_data(self, mock_crosshair, init_prog):
         prog = init_prog
 
     def test_updateIsocurve(self, init_prog):

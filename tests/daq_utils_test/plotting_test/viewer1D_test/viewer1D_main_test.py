@@ -10,7 +10,6 @@ from collections import OrderedDict
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D, Viewer1D_math
-from pymodaq.daq_utils.managers.roi_manager import LinearROI
 from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2
 
 
