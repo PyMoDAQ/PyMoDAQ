@@ -481,8 +481,8 @@ class TestViewer2D:
         assert y_axis.labelText == scaled_yaxis['label']
         assert y_axis.labelUnits == scaled_yaxis['units']
 
-        assert x_axis.range == pytest.approx([-4.1981733, 10.1981733])
-        assert y_axis.range == pytest.approx([-14.0014728, 19.0014728])
+        assert x_axis.range == pytest.approx([-4.1981733, 10.1981733], 0.01)
+        assert y_axis.range == pytest.approx([-14.0014728, 19.0014728], 0.01)
 
     def test_transform_image(self, init_prog):
         prog = init_prog
