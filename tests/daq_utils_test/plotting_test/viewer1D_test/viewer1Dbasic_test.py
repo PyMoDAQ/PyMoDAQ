@@ -9,10 +9,18 @@ from pyqtgraph.graphicsItems.LinearRegionItem import LinearRegionItem
 from pymodaq.daq_utils.exceptions import ExpectedError
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 
+
+@pytest.fixture
+def init_prog(qtbot):
+    form = QtWidgets.QWidget()
+    prog = Viewer1DBasic(form)
+    qtbot.addWidget(form)
+    return prog
+
+
 class TestViewer1DBasic:
-    def test_init(self, qtbot):
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+    def test_init(self, init_prog):
+        prog = init_prog
 
         assert isinstance(prog.parent, QtWidgets.QWidget)
         assert not prog.data_to_export
@@ -20,11 +28,8 @@ class TestViewer1DBasic:
         assert not prog._x_axis
         assert not prog.labels
 
-        qtbot.addWidget(Form)
-
-    def test_show(self, qtbot):
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+    def test_show(self, init_prog):
+        prog = init_prog
 
         prog.parent.setVisible(False)
         assert not prog.parent.isVisible()
@@ -35,34 +40,25 @@ class TestViewer1DBasic:
         prog.show(False)
         assert not prog.parent.isVisible()
 
-        qtbot.addWidget(Form)
-
-    def test_update_region(self, qtbot):
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+    def test_update_region(self, init_prog):
+        prog = init_prog
 
         ROI = LinearRegionItem()
 
         prog.update_region(ROI)
 
-        qtbot.addWidget(Form)
-
-    def test_update_line(self, qtbot):
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+    def test_update_line(self, init_prog):
+        prog = init_prog
 
         IL = InfiniteLine()
 
         prog.update_line(IL)
 
-        qtbot.addWidget(Form)
-
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic.logger.exception')
-    def test_update_labels(self, mock_except, qtbot):
+    def test_update_labels(self, mock_except, init_prog):
         mock_except.side_effect = [ExpectedError]
 
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+        prog = init_prog
 
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
         prog.datas = datas
@@ -82,11 +78,8 @@ class TestViewer1DBasic:
         with pytest.raises(ExpectedError):
             prog.update_labels(labels)
 
-        qtbot.addWidget(Form)
-
-    def test_show_data(self, qtbot):
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+    def test_show_data(self, init_prog):
+        prog = init_prog
 
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
 
@@ -97,11 +90,8 @@ class TestViewer1DBasic:
 
         prog.show_data(datas)
 
-        qtbot.addWidget(Form)
-
-    def test_x_axis(self, qtbot):
-        Form = QtWidgets.QWidget()
-        prog = Viewer1DBasic()
+    def test_x_axis(self, init_prog):
+        prog = init_prog
 
         data = np.linspace(1, 10, 10)
         label = ['CH_00', 'CH_01']
@@ -112,5 +102,3 @@ class TestViewer1DBasic:
         prog.x_axis = x_axis
 
         assert np.array_equal(prog._x_axis, data)
-
-        qtbot.addWidget(Form)
