@@ -7,6 +7,7 @@ from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
 
 import pytest
 import numpy as np
+import pyqtgraph as pg
 
 from pyqtgraph import ROI
 
@@ -484,19 +485,60 @@ class TestViewer2D:
 
         qtbot.addWidget(form)
 
-    @pytest.mark.skip(reason="Test not implemented")
     def test_show_hide_histogram(self, qtbot):
-        form = QtWidgets.QWidget()
+        Form = QtWidgets.QWidget()
         prog = Viewer2D()
 
-        qtbot.addWidget(form)
+        prog.raw_data = {}
+        prog.raw_data['blue'] = np.linspace(1, 10, 10)
+        prog.raw_data['green'] = np.linspace(11, 20, 10)
+        prog.raw_data['red'] = np.linspace(21, 30, 10)
+        prog.raw_data['spread'] = np.linspace(31, 40, 10)
 
-    @pytest.mark.skip(reason="Test not implemented")
+        prog.isdata = {}
+        prog.isdata['blue'] = True
+        prog.isdata['green'] = True
+        prog.isdata['red'] = True
+        prog.isdata['spread'] = True
+
+        prog.blue_action.setChecked(True)
+        prog.green_action.setChecked(True)
+        prog.red_action.setChecked(True)
+        prog.spread_action.setChecked(True)
+
+        prog.histo_action.setChecked(True)
+
+        prog.show_hide_histogram()
+
+        # assert prog.ui.histogram_blue.isVisible()
+        # assert prog.ui.histogram_blue.levels == (1, 10)
+        # assert prog.ui.histogram_green.isVisible()
+        # assert prog.ui.histogram_green.levels == (11, 20)
+        # assert prog.ui.histogram_red.isVisible()
+        # assert prog.ui.histogram_red.levels == (21, 30)
+        # assert prog.ui.histogram_spread.isVisible()
+        # assert prog.ui.histogram_spread.levels == (31, 40)
+
+        qtbot.addWidget(Form)
+
     def test_show_hide_iso(self, qtbot):
-        form = QtWidgets.QWidget()
+        Form = QtWidgets.QWidget()
         prog = Viewer2D()
 
-        qtbot.addWidget(form)
+        prog.isocurve_action.setChecked(True)
+        prog.histo_action.setChecked(False)
+
+        prog.raw_data = {}
+        prog.raw_data['red'] = np.linspace(1, 10, 10)
+
+        prog.show_hide_iso()
+
+        assert prog.histo_action.isChecked()
+        result = pg.gaussianFilter(prog.raw_data['red'], (2, 2))
+        for val1, val2 in zip(prog.ui.iso.data, result):
+            assert val1 == pytest.approx(val2)
+
+        qtbot.addWidget(Form)
 
     @pytest.mark.skip(reason="Test not implemented")
     def test_show_lineouts(self, qtbot):
