@@ -840,6 +840,11 @@ def get_set_preset_path():
     """
     return get_set_config_path('preset_configs')
 
+def get_set_batch_path():
+    """ creates and return the config folder path for managers files
+    """
+    return get_set_config_path('batch_configs')
+
 
 def get_set_pid_path():
     """ creates and return the config folder path for PID files
