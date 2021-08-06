@@ -150,7 +150,7 @@ at the same time as configured in the :ref:`preset_manager` interface.
 Bounds
 ^^^^^^
 if this section is activated (by clicking the *Set Bounds* entry) then the actuator *positions* will
-be software limited bewteen *min* and *max*. This can be used to prevent the actuator to reach dangerous
+be software limited between *min* and *max*. This can be used to prevent the actuator to reach dangerous
 values for the experiment or anything else.
 
 Scaling

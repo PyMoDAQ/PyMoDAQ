@@ -50,7 +50,7 @@ Overshoot manager
 -----------------
 
 The *Overshoot* menu is used to configure actions (for instance the absolute positionning of one or more
-actuators, such as a beam block to stop a laser eam) when a detected value (from a running detector module) gets
+actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module) gets
 out of range with respect to some predefined bounds. For details, see :ref:`overshoot_manager`.
 
 
