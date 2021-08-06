@@ -146,9 +146,10 @@ class Pixmap_check(QtWidgets.QWidget):
 
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Pixmap_check, self).__init__()
-        self.path = ""
+        super().__init__()
+        self.path = ''
         self.data = None
+        self.checked = False
         self.initUI()
 
     def initUI(self):
@@ -568,7 +569,7 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
             'time': QTime,
             'led': bool,
             'pixmap': QtWidgets.QLabel,
-            'pixmap_check': Pixmap_check,
+            'pixmap_check': dict,
             'slide': float
         }[self.opts['type']]
         return fn(v)

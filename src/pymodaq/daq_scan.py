@@ -184,7 +184,6 @@ class DAQ_Scan(QObject):
     def load_file(self):
         self.h5saver.load_file(self.h5saver.h5_file_path)
 
-    @pyqtSlot(float, float)
     def move_to_crosshair(self, posx=None, posy=None):
         """
             Compute the scaled position from the given x/y position and send the command_DAQ signal with computed values as attributes.
@@ -201,22 +200,21 @@ class DAQ_Scan(QObject):
             update_status
         """
         try:
-            if self.navigator is not None:
-                nav_bool = self.navigator.moveat_action.isChecked()
-            else:
-                nav_bool = False
-            if self.ui.move_to_crosshair_cb.isChecked() or nav_bool:
+            if self.ui.move_to_crosshair_cb.isChecked():
                 if "2D" in self.scanner.settings.child('scan_type').value():
                     if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
                         posx_real = posx * self.ui.scan2D_graph.scaled_xaxis.scaling + self.ui.scan2D_graph.scaled_xaxis.offset
                         posy_real = posy * self.ui.scan2D_graph.scaled_yaxis.scaling + self.ui.scan2D_graph.scaled_yaxis.offset
-                        self.command_DAQ_signal.emit(["move_stages", [posx_real, posy_real]])
+                        self.move_at(posx_real, posy_real)
                     else:
                         self.update_status("not valid configuration, check number of stages and scan2D option",
                                            log_type='log')
         except Exception as e:
             logger.exception(str(e))
             # self.update_status(getLineInfo()+ str(e),log_type='log')
+
+    def move_at(self, posx_real, posy_real):
+        self.command_DAQ_signal.emit(["move_stages", [posx_real, posy_real]])
 
     def quit_fun(self):
         """
@@ -920,7 +918,7 @@ class DAQ_Scan(QObject):
             self.navigator.loadaction.setVisible(False)
 
             self.ui.navigator_layout.addWidget(widgnav)
-            self.navigator.sig_double_clicked.connect(self.move_to_crosshair)
+            self.navigator.sig_double_clicked.connect(self.move_at)
 
             self.scanner.scan_selector.remove_scan_selector()
             items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
