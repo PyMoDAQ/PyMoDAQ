@@ -143,7 +143,8 @@ class Navigator(QObject):
                     self.settings.child(('scans')).removeChild(child)
             for scan in scans:
                 params.append({'name': scan['scan_name'], 'type': 'pixmap_check',
-                               'value': dict(data=scan['data'], checked=False, path=scan['path'])})
+                               'value': dict(data=scan['data'], checked=False, path=scan['path'],
+                                             info=scan['scan_name'])})
             self.settings.child(('scans')).addChildren(params)
 
             for child in self.settings.child(('scans')).children():
@@ -453,7 +454,8 @@ class Navigator(QObject):
             for scan in scans:
                 if scan['scan_name'] not in children:
                     params.append({'name': scan['scan_name'], 'type': 'pixmap_check',
-                                   'value': dict(data=scan['data'], checked=False, path=scan['path'])})
+                                   'value': dict(data=scan['data'], checked=False, path=scan['path'],
+                                                 info=scan['scan_name'])})
             self.settings.child(('scans')).addChildren(params)
 
             for child in self.settings.child(('scans')).children():
