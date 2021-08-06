@@ -1,3 +1,9 @@
+import importlib
+
+if importlib.util.find_spec('clr') is not None:
+    import pythoncom
+    pythoncom.CoInitialize()
+
 from pathlib import Path
 
 try:

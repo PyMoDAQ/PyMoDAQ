@@ -114,7 +114,7 @@ def get_param_dict_from_name(parent_list, name, pop=False):
 
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':              # pragma: no cover
     parent = [
         {'title': 'Spectro Settings:', 'name': 'spectro_settings', 'type': 'group', 'expanded': True,
             'children': [
