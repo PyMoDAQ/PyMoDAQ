@@ -63,7 +63,24 @@ The top of the settings panel is comprised of buttons to set, start and stop a s
 * **Set Scan**: take into account the selected scanner settings and valid them or not.
 * **Init. Positions**: will move all selected actuators to their initial positions as defined by the currently set scan.
 * |start|: will start the currently set scan (first it will set it then start it)
-* |stop|: stop the currently running scan.
+* |stop|: stop the currently running scan (in case of a batch of scans, it will skips the current one).
+
+Menu Bar Description
+********************
+There are two entries in the menu bar: *File* and *Settings*
+
+The *File* entry will let you:
+
+* load a previously saved scan file (and keep saving scans on it)
+* Save the current file in another filename than the default one
+* Load the content of the current file into the *H5Browser*
+
+The *Settings* entry will let you:
+
+* display the *Navigator* see :ref:`navigator_paragrah`
+* Display and activate the *Scan Batch Manager*
+
+.. _settings_paragraph:
 
 Settings
 ********
@@ -227,3 +244,25 @@ quickly explore and select areas to scan on a 2D phase space.
    An example of dataset displaying several 2D scans at their respective locations (up and right axis)
 
 
+Scan Batch Manager
+------------------
+
+If the *Scan Batch Manager* is activated, a new menu entry will appear: *Batch Configs*, that let the user
+define, modify or load scan batch configurations. When loaded, a particular configuration will
+be displayed in the batch window. This window (see :numref:`scanbatch`) displays (in a tree) a list of scans to perform.
+Each scan is defined by a set of actuators/detectors to use and scan settings (*Scan1D*, *Linear*... just as described in
+:ref:`settings_paragraph`).
+
+   .. _scanbatch:
+
+.. figure:: /image/DAQ_Scan/scanbatch.png
+   :alt: scanbatch
+
+   An example of a Scan Batch configuration displaying several scans to perform
+
+A new start button |startbatch| will also appear on the main window to start the currently loaded
+scan batch.
+
+.. |startbatch| image:: /image/DAQ_Scan/start_scanbatch.PNG
+    :width: 20pt
+    :height: 20pt
