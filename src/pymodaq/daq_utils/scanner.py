@@ -106,6 +106,7 @@ class ScanParameters:
         self.scan_type = scan_type
         self.scan_subtype = scan_subtype
         self.adaptive_loss = adaptive_loss
+        self.vectors = None
 
         # if positions is not None:
         #     self.starts = np.min(positions, axis=0)
@@ -227,16 +228,16 @@ class ScanParameters:
             elif self.scan_subtype == 'Adaptive':
                 # return an "empty" ScanInfo as positions will be "set" during the scan
                 # but adds some usefull info such as total length and list of vectors
-                vectors = []
+                self.vectors = []
                 length = 0.
 
                 for ind in range(len(self.starts)):
-                    vectors.append(QVector(self.starts[ind][0], self.starts[ind][1],
+                    self.vectors.append(QVector(self.starts[ind][0], self.starts[ind][1],
                                            self.stops[ind][0], self.stops[ind][1]))
-                    length += vectors[-1].norm()
+                    length += self.vectors[-1].norm()
 
                 self.scan_info = ScanInfo(Nsteps=0, positions=np.zeros([0, self.Naxes]), axes_unique=[np.array([])],
-                                          axes_indexes=np.array([]), vectors=vectors, length=length,
+                                          axes_indexes=np.array([]), vectors=self.vectors, length=length,
                                           adaptive_loss=self.adaptive_loss)
             else:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')

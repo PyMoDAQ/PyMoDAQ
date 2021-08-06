@@ -662,7 +662,7 @@ class DAQ_Scan(QObject):
         iconstop = QtGui.QIcon()
         iconstop.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.ui.stop_scan_pb = QtWidgets.QPushButton(iconstop, '')
-        self.ui.stop_scan_pb.setToolTip('Stop Scan')
+        self.ui.stop_scan_pb.setToolTip('Stop Scan (or skip current one if Batch scan running)')
 
         self.ui.set_scan_pb = QtWidgets.QPushButton('Set Scan')
         self.ui.set_scan_pb.setToolTip('Process the scanner settings and prepare the modules for coming scan')

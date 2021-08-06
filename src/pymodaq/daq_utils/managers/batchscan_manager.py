@@ -305,7 +305,8 @@ if __name__ == '__main__':
     # prog.set_file_batch('C:\\Users\\weber\\pymodaq_local\\batch_configs\\batch_default.xml', show=False)
     # prog.set_scans()
 
-    main = BatchScanner(area, actuators=['Xaxis', 'Yaxis'], detectors=['Det0D', 'Det1D'])
+    main = BatchScanner(area, actuators=['Xaxis', 'Yaxis', 'theta axis'],
+                        detectors=['Det 2D', 'Det 0D', 'Det 1D'])
     main.setupUI()
     main.create_menu()
     win.show()
