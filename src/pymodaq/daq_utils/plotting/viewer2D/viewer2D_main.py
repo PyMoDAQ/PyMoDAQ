@@ -1110,7 +1110,6 @@ class Viewer2D(QObject):
 
             self.position_action.setText(dat)
 
-
         except Exception as e:
             print(e)
 
