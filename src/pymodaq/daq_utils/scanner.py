@@ -39,6 +39,7 @@ except Exception:
     scan_subtypes['Scan2D'].pop(scan_subtypes['Scan2D'].index('Adaptive'))
     scan_subtypes['Tabular'].pop(scan_subtypes['Tabular'].index('Adaptive'))
     adaptive_losses = None
+    adaptive = None
     logger.info('adaptive module is not present, no adaptive scan possible')
 
 

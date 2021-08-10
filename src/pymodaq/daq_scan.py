@@ -22,7 +22,7 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
-from pymodaq.daq_utils.scanner import Scanner, adaptive_losses
+from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
 from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
 from pymodaq.daq_utils.plotting.qled import QLED
 
