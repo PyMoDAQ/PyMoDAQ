@@ -310,7 +310,7 @@ class DAQ_Scan(QObject):
                     string = gutils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
                 live_group.attrs['pixmap1D'] = string
 
-            if self.scan_data_2D != []:
+            elif self.scan_data_2D != []:  #if live data is saved as 1D not needed to save as 2D
 
                 if len(self.modules_manager.actuators) == 1:
                     scan_type = 'scan1D'
@@ -1021,8 +1021,8 @@ class DAQ_Scan(QObject):
 
             scan_acquisition = DAQ_Scan_Acquisition(self.settings, self.scanner.settings, self.h5saver.settings,
                                                     self.modules_manager, self.scanner.scan_parameters)
-
-            scan_acquisition.moveToThread(self.scan_thread)
+            if config['scan']['scan_in_thread']:
+                scan_acquisition.moveToThread(self.scan_thread)
             self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[OrderedDict].connect(self.update_scan_GUI)
             scan_acquisition.status_sig[list].connect(self.thread_status)
@@ -1135,16 +1135,14 @@ class DAQ_Scan(QObject):
         """
         try:
             scan_type = self.scanner.scan_parameters.scan_type
-            self.scan_y_axis = np.array([])
+            ##self.scan_y_axis = np.array([])
             if not self.plot_1D_ini:  # init the datas
                 self.plot_1D_ini = True
-                if display_as_sequence:
-                    self.ui.scan1D_subgraph.show()
+                self.ui.scan1D_subgraph.show(display_as_sequence)
                 if isadaptive:
                     self.scan_data_1D = np.expand_dims(np.array([datas[key]['data'] for key in datas]), 0)
                 else:
                     if not display_as_sequence:
-                        self.ui.scan1D_subgraph.show(False)
                         if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
                             self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
                         else:
@@ -1261,23 +1259,25 @@ class DAQ_Scan(QObject):
         try:
             scan_type = self.scanner.scan_parameters.scan_type
             if scan_type == 'Scan2D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2) or \
+                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2):
+
                 if not self.plot_2D_ini:  # init the data
-                    self.ui.scan1D_subgraph.show(False)
+                    #self.ui.scan1D_subgraph.show(False)
                     self.plot_2D_ini = True
                     if isadaptive:
-                        self.scan_x_axis = np.array(self.scan_positions)[:, 0]
+                        self.scan_x_axis2D = np.array(self.scan_positions)[:, 0]
                         self.scan_y_axis = np.array(self.scan_positions)[:, 1]
                         key = list(datas.keys())[0]
                         self.scan_data_2D = np.hstack((self.scan_positions[-1], datas[key]['data']))
 
                     else:
-                        self.scan_x_axis = self.scanner.scan_parameters.axes_unique[0]
+                        self.scan_x_axis2D = self.scanner.scan_parameters.axes_unique[0]
                         self.scan_y_axis = self.scanner.scan_parameters.axes_unique[1]
                         self.scan_data_2D = [np.zeros((len(self.scan_y_axis),
-                                                       len(self.scan_x_axis)))
+                                                       len(self.scan_x_axis2D)))
                                              for ind in range(min((3, len(datas))))]
-                    self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis,
+                    self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis2D,
                                                        units=self.modules_manager.actuators[0].settings.child(
                                                            'move_settings', 'units').value(),
                                                        label=self.modules_manager.actuators[0].title)
@@ -1287,7 +1287,7 @@ class DAQ_Scan(QObject):
                                                        label=self.modules_manager.actuators[1].title)
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.ui.average2D_graph.x_axis = dict(data=self.scan_x_axis,
+                        self.ui.average2D_graph.x_axis = dict(data=self.scan_x_axis2D,
                                                               units=self.modules_manager.actuators[0].settings.child(
                                                                   'move_settings', 'units').value(),
                                                               label=self.modules_manager.actuators[0].title)
@@ -1342,20 +1342,20 @@ class DAQ_Scan(QObject):
                     if not display_as_sequence:
 
                         if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
+                            self.scan_x_axis2D = np.array(self.scanner.scan_parameters.positions[0::2, 0])
                         else:
-                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
+                            self.scan_x_axis2D = np.array(self.scanner.scan_parameters.positions[:, 0])
 
-                        x_axis = utils.Axis(data=self.scan_x_axis,
+                        x_axis = utils.Axis(data=self.scan_x_axis2D,
                                             label=self.modules_manager.actuators[0].title,
                                             units=self.modules_manager.actuators[0].settings.child('move_settings',
                                                                                                    'units').value())
 
                     else:
-                        x_axis = utils.Axis(data=self.scan_x_axis,
+                        x_axis = utils.Axis(data=self.scan_x_axis2D,
                                             label='Scan index',
                                             units='')
-                        self.scan_x_axis = np.linspace(0, Nx - 1, Nx)
+                        self.scan_x_axis2D = np.linspace(0, Nx - 1, Nx)
 
                     self.ui.scan2D_graph.x_axis = x_axis
                     self.ui.scan2D_subgraph.x_axis = x_axis
@@ -1477,8 +1477,9 @@ class DAQ_Scan(QObject):
 
         display_as_sequence = (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
                               (scan_type == 'Tabular' and not self.scanner.scan_parameters.Naxes == 1)
-        isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
 
+        tabular2D = scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2
+        isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
         if 'curvilinear' in datas:
             self.curvilinear_values.append(datas['curvilinear'])
 
@@ -1498,17 +1499,18 @@ class DAQ_Scan(QObject):
                     if not (datas['datas']['data1D'] is None or datas['datas']['data1D'] == OrderedDict()):
                         self.update_2D_graph(datas['datas']['data1D'], display_as_sequence=display_as_sequence,
                                              isadaptive=isadaptive)
-                    else:
-                        self.scan_data_2D = []
+                    # else:
+                    #     self.scan_data_2D = []
 
-            elif scan_type == 'Scan2D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
+            if scan_type == 'Scan2D' or \
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2) or \
+                    tabular2D:
                 # means 2D cartography type scan
 
                 if 'data0D' in datas['datas'].keys():
                     if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
                         self.update_2D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive)
+                                             isadaptive=isadaptive or tabular2D)
                     else:
                         self.scan_data_2D = []
 
@@ -1567,6 +1569,7 @@ class DAQ_Scan_Acquisition(QObject):
         self.curvilinear = None  # used for adaptive/Tabular scan mode
 
         self.scan_x_axis = None
+        self.scan_x_axis2D = None
         self.scan_y_axis = None
         self.scan_z_axis = None
         self.scan_x_axis_unique = None

@@ -201,8 +201,6 @@ class DashBoard(QObject):
         docked_menu = self.settings_menu.addMenu('Docked windows')
         action_load = docked_menu.addAction('Load Layout')
         action_save = docked_menu.addAction('Save Layout')
-        action_clear = self.settings_menu.addAction('Clear moves/Detectors')
-        action_clear.triggered.connect(self.clear_move_det_controllers)
 
         action_load.triggered.connect(self.load_layout_state)
         action_save.triggered.connect(self.save_layout_state)

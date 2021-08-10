@@ -246,11 +246,12 @@ class ScanParameters:
 
     def evaluate_Nsteps(self):
         Nsteps = 1
-        for ind in range(len(self.starts)):
-            if self.scan_subtype != 'Spiral':
-                Nsteps *= np.abs((self.stops[ind] - self.starts[ind]) / self.steps[ind])+1
-            else:
-                Nsteps *= np.abs(2 * (self.stops[ind] / self.steps[ind]) + 1)
+        if self.starts is not None:
+            for ind in range(len(self.starts)):
+                if self.scan_subtype != 'Spiral':
+                    Nsteps *= np.abs((self.stops[ind] - self.starts[ind]) / self.steps[ind])+1
+                else:
+                    Nsteps *= np.abs(2 * (self.stops[ind] / self.steps[ind]) + 1)
         return Nsteps
 
     def __repr__(self):
