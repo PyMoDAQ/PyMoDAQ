@@ -99,12 +99,14 @@ Changelog
 Please see :doc:`the changelog </changelog>`.
 
 .. toctree::
+   :numbered:
    :maxdepth: 6
    :caption: Contents:
 
    usage/Features
    usage/Installation
    usage/How_to_start
+   usage/configuration
    usage/Description
    usage/CustomApp
    usage/tcpip

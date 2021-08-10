@@ -414,3 +414,11 @@ Navigator
 ---------
 
 See :ref:`navigator_paragrah`
+
+
+.. _Remote_module:
+
+Remote Manager
+--------------
+
+In construction

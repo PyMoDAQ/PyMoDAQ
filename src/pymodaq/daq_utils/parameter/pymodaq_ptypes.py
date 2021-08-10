@@ -579,6 +579,7 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
             'date': QDate,
             'time': QTime,
             'led': bool,
+            'led_push': bool,
             'pixmap': QtWidgets.QLabel,
             'pixmap_check': dict,
             'slide': float

@@ -35,29 +35,68 @@ different actions.
 .. figure:: /image/dashboard.PNG
    :alt: dashboard
 
-   DAQ_Scan dashboard containing all declared modules and log.
+   Dashboard user interface containing all declared control modules (actuators/detectors) and some initialization info.
 
 .. :download:`png <dashboard.png>`
 
 
-Preset manager
---------------
+Menu Bar Description
+--------------------
 
-The *Preset modes* menu is used to create, modify and load preset. A preset is a set of
-actuators and detectors represented in a tree like structure, see :ref:`preset_manager`.
+Figure :numref:`dashboard_menu` displays the menu of the *Dashboard* window with access to all the *Managers* useful
+within PyMoDAQ and described below:
 
-Overshoot manager
------------------
+  .. _dashboard_menu:
 
-The *Overshoot* menu is used to configure actions (for instance the absolute positionning of one or more
-actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module) gets
+.. figure:: /image/dashboard_menu.png
+   :alt: dashboard_menu
+
+   Dashboard menu bar.
+
+The **file** menu will allow you to quickly display, in a default text editor, the current log file (older logs can be found
+in the *pymodaq_local* folder, see :ref:`section_configuration`. The user can also access and edit the general
+configuration file *config.toml* selecting the *Show configuration file* entry that will open a popup window (see
+Fig. :numref:`edit_config`) allowing the user to modify all its fields. Finally, the user can *Quit* the application
+or *Restart* it if changes have to be applied (for instance when modifying a *Preset*)
+
+
+  .. _edit_config:
+
+.. figure:: /image/configuration/edit_config.png
+   :alt: config_file
+
+   Configuration popup window.
+
+The **Settings** menu is allowing the user to save/load layouts of docked windows within the *Dashboard*.
+
+.. note::
+
+    Docked Windows Layout: when a *Preset* has been loaded and if the arrangement of the *Control Modules* (their docked panels) is
+    modified, then a *layout* configuration file whose name derive from the loaded preset filename will be created.
+    At each later loading of this preset, the *Control Modules* arrangement will then be restored.
+
+The **Preset Modes** menu enables to create or modify (using the :ref:`preset_manager`) *presets* that are XML
+files defining a set of actuators and detectors used for a given experiment. Each experiment has therefore a corresponding
+preset file. At startup, the program checks for existing preset files and create a menu entry for each of them.
+
+The **Overshoot Modes** menu is used to configure actions like stoping the acquisition orseting hte value of a given
+actuator when a detected value (from a running detector module) gets
 out of range with respect to some predefined bounds. For details, see :ref:`overshoot_manager`.
 
+The **ROI Modes** menu, see :ref:`roi_manager`, is used to save the state of all regions of interest defined by a user
+within the 1D or 2D viewers declared in the *DAQ_Viewers* control modules in the *Dashboard*. You can then, in one go,
+recall a particular complex configuration for data acquisition.
 
-ROI manager
------------
-The *ROI menu*, see :ref:`roi_manager`, is used to configure the layout of region of interest in all 1D and 2D viewers
-of all detectors in the dashboard. You can then, in one go, recall a particular complex configuration for data acquisition.
+The **Remote/Shortcuts Control** menu, see :ref:`Remote_module`, is used to define key sequences on a keyboard or buttons/joysticks on a gamepad to
+trigger specific actions from the *Control modules*, for instance jogging of the actuator values using a joystick or grabing
+data from a detector using a button.
+
+The **Extensions** menu let the user load a specific installed extensions. Default ones are the *DAQ_Scan* and
+*DAQ_Logger* ones. More specific ones can be installed, for instance the package `Pymodaq Femto`__
+
+__ https://pymodaq-femto.readthedocs.io/en/latest/
+
+
 
 .. _multiple_hardware:
 
@@ -73,6 +112,4 @@ in :numref:`daq_move_gui_settings`). This feature can be enabled for both DAQ_Mo
 most often encountered with actuators, so see for more details: :ref:`multiaxes_controller`. This has to be done using the Preset Manager
 
 
-Menu Bar Description
---------------------
 
