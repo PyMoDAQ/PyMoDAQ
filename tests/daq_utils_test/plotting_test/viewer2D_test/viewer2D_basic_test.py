@@ -37,6 +37,10 @@ class TestViewer2DBasic:
 
         assert isinstance(prog, Viewer2DBasic)
 
+        prog = Viewer2DBasic()
+
+        assert isinstance(prog.parent, QtWidgets.QWidget)
+
     def test_scale_axis(self, init_prog):
         prog = init_prog
 
