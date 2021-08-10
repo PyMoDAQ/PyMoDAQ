@@ -1,10 +1,8 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from pymodaq.daq_utils.plotting.viewer2D import Viewer2D
-from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2
-from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
-from pyqtgraph import ROI
+from pymodaq.daq_utils.exceptions import ExpectedError
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem, ImageItem
+from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
 from unittest import mock
 
 import pytest
@@ -37,6 +35,8 @@ def init_raw_data(request):
 
 
 def init_roi(request):
+    request.data_to_export = dict(data0D=dict(), data1D=dict(), data2D=dict())
+
     roi_dict = dict()
 
     request.roi_manager.ROIs = roi_dict
@@ -64,9 +64,32 @@ def init_roi(request):
 
         item_params.append(item_param)
 
+        request.ui.RoiCurve_H['ROI_{:02d}'.format(ind)] = PlotCurveItem(pen=1)
+        request.ui.Lineout_H.plotItem.addItem(request.ui.RoiCurve_H['ROI_{:02d}'.format(ind)])
+
+        request.ui.RoiCurve_V['ROI_{:02d}'.format(ind)] = PlotCurveItem(pen=1)
+        request.ui.Lineout_V.plotItem.addItem(request.ui.RoiCurve_V['ROI_{:02d}'.format(ind)])
+
+        request.ui.RoiCurve_integrated['ROI_{:02d}'.format(ind)] = PlotCurveItem(pen=1)
+        request.ui.Lineout_integrated.plotItem.addItem(request.ui.RoiCurve_integrated['ROI_{:02d}'.format(ind)])
+
+        request.data_integrated_plot['ROI_{:02d}'.format(ind)] = np.zeros((2, 1))
+
     rois_param = Parameter(name='ROIs', children=item_params)
 
     request.roi_manager.settings = Parameter(name='settings', children=[rois_param])
+
+    for ind, key in enumerate(request.roi_manager.ROIs):
+        color = request.roi_manager.settings.child('ROIs', key, 'use_channel').value()
+
+        if color == 'blue':
+            request.ui.img_blue.scene().addItem(request.roi_manager.ROIs[key])
+        elif color == 'green':
+            request.ui.img_green.scene().addItem(request.roi_manager.ROIs[key])
+        elif color == 'red':
+            request.ui.img_red.scene().addItem(request.roi_manager.ROIs[key])
+        if color is not None:
+            request.data_integrated_plot[key] = request.raw_data[color]
 
 
 class TestViewer2D:
@@ -75,10 +98,212 @@ class TestViewer2D:
 
         assert isinstance(prog, Viewer2D)
 
+    def test_red_action(self, init_prog):
+        prog = init_prog
+
+        prog.red_action.setChecked(False)
+        prog.ui.img_red.setVisible(False)
+
+        prog.red_action.trigger()
+
+        assert prog.red_action.isChecked()
+        assert prog.ui.img_red.isVisible()
+
+    def test_green_action(self, init_prog):
+        prog = init_prog
+
+        prog.green_action.setChecked(False)
+        prog.ui.img_green.setVisible(False)
+
+        prog.green_action.trigger()
+
+        assert prog.green_action.isChecked()
+        assert prog.ui.img_green.isVisible()
+
+    def test_blue_action(self, init_prog):
+        prog = init_prog
+
+        prog.blue_action.setChecked(False)
+        prog.ui.img_blue.setVisible(False)
+
+        prog.blue_action.trigger()
+
+        assert prog.blue_action.isChecked()
+        assert prog.ui.img_blue.isVisible()
+
+    def test_spread_action(self, init_prog):
+        prog = init_prog
+
+        prog.spread_action.setChecked(False)
+        prog.ui.img_spread.setVisible(False)
+
+        prog.spread_action.trigger()
+
+        assert prog.spread_action.isChecked()
+        assert prog.ui.img_spread.isVisible()
+
+    def test_histo_action(self, init_prog):
+        prog = init_prog
+
+        prog.parent.show()
+
+        init_raw_data(prog)
+        prog.blue_action.setChecked(True)
+
+        prog.histo_action.trigger()
+
+        assert prog.histo_action.isChecked()
+        assert prog.ui.histogram_blue.isVisible()
+        assert prog.ui.histogram_blue.region.getRegion() == (1, 20)
+
+    def test_roi_action(self, init_prog):
+        prog = init_prog
+
+        prog.parent.show()
+
+        prog.roi_action.setChecked(False)
+        prog.roi_manager.roiwidget.setVisible(False)
+
+        prog.roi_action.trigger()
+
+        assert prog.roi_action.isChecked()
+        assert prog.roi_manager.roiwidget.isVisible()
+
+    def test_isocurve_action(self, init_prog):
+        prog = init_prog
+
+        init_raw_data(prog)
+
+        prog.isocurve_action.setChecked(False)
+        prog.histo_action.setChecked(False)
+
+        prog.isocurve_action.trigger()
+
+        assert prog.isocurve_action.isChecked()
+        assert prog.histo_action.isChecked()
+
+    def test_ini_plot_action(self, init_prog):
+        prog = init_prog
+
+        prog.data_integrated_plot = dict(a=None, b=None, c=None)
+
+        prog.ini_plot_action.trigger()
+
+        for k in prog.data_integrated_plot:
+            assert np.array_equal(prog.data_integrated_plot[k], np.zeros((2, 1)))
+
+    def test_aspect_ratio_action(self, init_prog):
+        prog = init_prog
+
+        prog.aspect_ratio_action.setChecked(False)
+        prog.image_widget.plotitem.vb.setAspectLocked(lock=False)
+
+        prog.aspect_ratio_action.trigger()
+
+        assert prog.aspect_ratio_action.isChecked()
+        assert prog.image_widget.plotitem.vb.state['aspectLocked']
+
+    def test_auto_levels_action(self, init_prog):
+        prog = init_prog
+
+        prog.auto_levels_action.setChecked(True)
+        prog.ui.histogram_red.region.setVisible(False)
+        prog.ui.histogram_green.region.setVisible(False)
+        prog.ui.histogram_blue.region.setVisible(False)
+
+        prog.auto_levels_action.trigger()
+
+        assert not prog.auto_levels_action.isChecked()
+        assert prog.ui.histogram_red.region.isVisible()
+        assert prog.ui.histogram_green.region.isVisible()
+        assert prog.ui.histogram_blue.region.isVisible()
+
+    def test_crosshair_action(self, init_prog):
+        prog = init_prog
+
+        prog.crosshair_action.setChecked(False)
+        prog.ui.crosshair.setVisible(False)
+        prog.position_action.setVisible(False)
+
+        prog.crosshair_action.trigger()
+
+        assert prog.crosshair_action.isChecked()
+        assert prog.ui.crosshair.isVisible()
+        assert prog.position_action.isVisible()
+
+    def test_ROIselect_action(self, init_prog):
+        prog = init_prog
+
+        prog.ROIselect_action.setChecked(False)
+        prog.ui.ROIselect.setVisible(False)
+
+        prog.ROIselect_action.trigger()
+
+        assert prog.ROIselect_action.isChecked()
+        assert prog.ui.ROIselect.isVisible()
+
+    def test_FlipUD_action(self, init_prog):
+        prog = init_prog
+
+        init_raw_data(prog)
+        prog.isdata['red'] = False
+        prog.isdata['green'] = False
+        prog.isdata['blue'] = False
+        prog.isdata['spread'] = False
+
+        prog.FlipUD_action.setChecked(False)
+
+        prog.FlipUD_action.trigger()
+
+        assert prog.FlipUD_action.isChecked()
+        assert prog.isdata['red']
+        assert prog.isdata['green']
+        assert prog.isdata['blue']
+        assert prog.isdata['spread']
+
+    def test_FlipLR_action(self, init_prog):
+        prog = init_prog
+
+        init_raw_data(prog)
+        prog.isdata['red'] = False
+        prog.isdata['green'] = False
+        prog.isdata['blue'] = False
+        prog.isdata['spread'] = False
+
+        prog.FlipLR_action.setChecked(False)
+
+        prog.FlipLR_action.trigger()
+
+        assert prog.FlipLR_action.isChecked()
+        assert prog.isdata['red']
+        assert prog.isdata['green']
+        assert prog.isdata['blue']
+        assert prog.isdata['spread']
+
+    def test_rotate_action(self, init_prog):
+        prog = init_prog
+
+        init_raw_data(prog)
+        prog.isdata['red'] = False
+        prog.isdata['green'] = False
+        prog.isdata['blue'] = False
+        prog.isdata['spread'] = False
+
+        prog.rotate_action.setChecked(False)
+
+        prog.rotate_action.trigger()
+
+        assert prog.rotate_action.isChecked()
+        assert prog.isdata['red']
+        assert prog.isdata['green']
+        assert prog.isdata['blue']
+        assert prog.isdata['spread']
+
     def test_remove_ROI(self, init_prog):
         prog = init_prog
         prog.setupROI()
 
+        init_raw_data(prog)
         init_roi(prog)
 
         prog.lo_items = prog.roi_manager.ROIs
@@ -95,6 +320,7 @@ class TestViewer2D:
         prog = init_prog
         prog.setupROI()
 
+        init_raw_data(prog)
         init_roi(prog)
 
         prog.lo_items = prog.roi_manager.ROIs
@@ -258,7 +484,7 @@ class TestViewer2D:
     def test_restore_state(self, init_prog):
         prog = init_prog
 
-    @pytest.mark.skip(reason="Test not finished")
+    # @pytest.mark.skip(reason="Test not finished")
     def test_roi_changed(self, init_prog):
         prog = init_prog
 
@@ -266,11 +492,14 @@ class TestViewer2D:
 
         init_roi(prog)
 
+        prog.data_to_export = dict(data0D=dict(), data1D=dict(), data2D=dict())
+
         prog.roi_changed()
 
     def test_update_roi(self, init_prog):
         prog = init_prog
 
+        init_raw_data(prog)
         init_roi(prog)
 
         for ind in range(4):
@@ -768,7 +997,6 @@ class TestViewer2D:
         assert not prog.ui.img_green.isVisible()
         assert not prog.ui.img_red.isVisible()
 
-    @pytest.mark.skip(reason="Test not implemented")
     def test_update_crosshair_data(self, init_prog):
         prog = init_prog
 
@@ -776,6 +1004,16 @@ class TestViewer2D:
 
         data_red = prog.raw_data['red']
         prog.ui.img_red.setImage(data_red, autoLevels=prog.autolevels)
+
+        prog.isdata['spread'] = False
+
+        prog.position_action.setText('')
+
+        prog.update_crosshair_data(1, 1)
+
+        assert 'r' in prog.position_action.text()
+        assert 'b' in prog.position_action.text()
+        assert 'g' in prog.position_action.text()
 
     def test_updateIsocurve(self, init_prog):
         prog = init_prog

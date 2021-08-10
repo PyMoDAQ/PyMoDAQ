@@ -1075,6 +1075,10 @@ class Viewer2D(QObject):
         self.ui.img_red.setVisible(redstate)
         # self.ui.histogram_red.setVisible(redstate)
 
+        spreadstate = self.spread_action.isChecked()
+        self.ui.img_spread.setVisible(spreadstate)
+        # self.ui.histogram_red.setVisible(redstate)
+
     def update_crosshair_data(self, posx, posy, name=""):
         try:
             (posx_scaled, posy_scaled) = self.scale_axis(posx, posy)
@@ -1097,12 +1101,12 @@ class Viewer2D(QObject):
             if self.isdata["green"]:
                 indx, indy = self.mapfromview('green', posx, posy)
                 z_green = self.transform_image(self.raw_data["green"])[utils.rint(indy), utils.rint(indx)]
-                dat += f' b={z_green:.1e},'
+                dat += f' g={z_green:.1e},'
 
             if self.isdata["blue"]:
                 indx, indy = self.mapfromview('blue', posx, posy)
                 z_blue = self.transform_image(self.raw_data["blue"])[utils.rint(indy), utils.rint(indx)]
-                dat += f' g={z_blue:.1e},'
+                dat += f' b={z_blue:.1e},'
 
             if self.isdata["spread"]:
                 z_spread = self.ui.img_spread.get_val_at(self.mapfromview('spread', posx, posy))
