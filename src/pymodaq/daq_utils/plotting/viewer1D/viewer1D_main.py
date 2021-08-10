@@ -51,7 +51,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
         self.math_module = Viewer1D_math()
 
-        if DAQ_Measurement is None:
+        if DAQ_Measurement is None:  # pragma: no cover
             self.ui.do_measurements_pb.setVisible(False)
 
         self._labels = []
@@ -254,7 +254,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             item = self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
             item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(index))
             item_param.child(('use_channel')).setOpts(limits=self.labels)
-            if len(self.labels) == 0:
+            if len(self.labels) == 0:  # pragma: no cover
                 lab = ''
             else:
                 lab = self.labels[0]
@@ -691,7 +691,7 @@ class Viewer1D_math(QObject):
             return []
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = Viewer1D(Form)
