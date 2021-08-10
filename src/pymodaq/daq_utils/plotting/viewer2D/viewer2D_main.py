@@ -1077,7 +1077,7 @@ class Viewer2D(QObject):
 
         spreadstate = self.spread_action.isChecked()
         self.ui.img_spread.setVisible(spreadstate)
-        # self.ui.histogram_red.setVisible(redstate)
+        # self.ui.histogram_spread.setVisible(spreadstate)
 
     def update_crosshair_data(self, posx, posy, name=""):
         try:
