@@ -35,19 +35,56 @@ different actions.
 .. figure:: /image/dashboard.PNG
    :alt: dashboard
 
-   DAQ_Scan dashboard containing all declared modules and log.
+   Dashboard user interface containing all declared control modules (actuators/detectors) and some initialization info.
 
 .. :download:`png <dashboard.png>`
 
 
+Menu Bar Description
+--------------------
+
+Figure :numref:`dashboard_menu` displays the menu of the *Dashboard* window with access to all the *Managers* useful
+within PyMoDAQ and described below:
+
+  .. _dashboard_menu:
+
+.. figure:: /image/dashboard_menu.png
+   :alt: dashboard_menu
+
+   Dashboard menu bar.
+
+The file menu will allow you to quickly display, in a default text editor, the current log file (older logs can be found
+in the *pymodaq_local* folder, see :ref:`section_configuration`). The user can also access and edit the general
+configuration file *config.toml* selecting the *Show configuration file* entry that will open a popup window (see
+Fig. :numref:`edit_config`) allowing the user to modify all its fields. Finally, the user can *Quit* the application
+or *Restart* it is changes have to be applied (for instance when modifying a *Preset*)
+
+
+  .. _edit_config:
+
+.. figure:: /image/configuration/edit_config.png
+   :alt: config_file
+
+   Configuration popup window.
+
+The *Settings* entry is allowing the user to save/load layouts of docked windows within the *Dashboard*.
+
+..note
+
+    When a *Preset* has been loaded and if the arrangement of the *Control Modules* (their docked panels) is
+    modified, then a *layout* configuration file whose name derive from the loaded preset filename will be created.
+    At each later loading of this preset, the *Control Modules* arrangement will then be restored.
+
+
+
 Preset manager
---------------
+++++++++++++++
 
 The *Preset modes* menu is used to create, modify and load preset. A preset is a set of
 actuators and detectors represented in a tree like structure, see :ref:`preset_manager`.
 
 Overshoot manager
------------------
++++++++++++++++++
 
 The *Overshoot* menu is used to configure actions (for instance the absolute positionning of one or more
 actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module) gets
@@ -55,7 +92,7 @@ out of range with respect to some predefined bounds. For details, see :ref:`over
 
 
 ROI manager
------------
++++++++++++
 The *ROI menu*, see :ref:`roi_manager`, is used to configure the layout of region of interest in all 1D and 2D viewers
 of all detectors in the dashboard. You can then, in one go, recall a particular complex configuration for data acquisition.
 
@@ -73,6 +110,4 @@ in :numref:`daq_move_gui_settings`). This feature can be enabled for both DAQ_Mo
 most often encountered with actuators, so see for more details: :ref:`multiaxes_controller`. This has to be done using the Preset Manager
 
 
-Menu Bar Description
---------------------
 
