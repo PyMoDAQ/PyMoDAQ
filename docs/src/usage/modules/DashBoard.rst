@@ -50,7 +50,7 @@ Overshoot manager
 -----------------
 
 The *Overshoot* menu is used to configure actions (for instance the absolute positionning of one or more
-actuators, such as a beam block to stop a laser eam) when a detected value (from a running detector module) gets
+actuators, such as a beam block to stop a laser beam) when a detected value (from a running detector module) gets
 out of range with respect to some predefined bounds. For details, see :ref:`overshoot_manager`.
 
 
@@ -71,3 +71,8 @@ address represented in the settings tree by the *Controller ID* entry. These set
 within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
 in :numref:`daq_move_gui_settings`). This feature can be enabled for both DAQ_Move and DAQ_Viewer modules but will be
 most often encountered with actuators, so see for more details: :ref:`multiaxes_controller`. This has to be done using the Preset Manager
+
+
+Menu Bar Description
+--------------------
+

@@ -169,6 +169,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                                   'Switch between normal or XY representation (valid for 2 channels)')
         self.ui.xyplot_action.setCheckable(True)
         button_widget.addAction(self.ui.xyplot_action)
+        self.ui.xyplot_action.setVisible(False)
 
         self.ui.x_label = QAction('x:')
         button_widget.addAction(self.ui.x_label)
@@ -387,6 +388,9 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                     if val not in self.labels:
                         self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind), 'use_channel').setValue(
                             self.labels[0])
+
+            self.ui.xyplot_action.setVisible(len(self.labels) == 2)
+
 
         except Exception as e:
             logger.exception(str(e))

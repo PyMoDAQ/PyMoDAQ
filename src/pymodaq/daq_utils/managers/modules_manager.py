@@ -132,6 +132,12 @@ class ModulesManager(QObject):
     def selected_detectors_name(self):
         return self.settings.child('modules', 'detectors').value()['selected']
 
+    @selected_detectors_name.setter
+    def selected_detectors_name(self, detectors):
+        if set(detectors).issubset(self.detectors_name):
+            self.settings.child('modules', 'detectors').setValue(dict(all_items=self.detectors_name,
+                                                                      selected=detectors))
+
     @property
     def actuators_name(self):
         return self.settings.child('modules', 'actuators').value()['all_items']
@@ -139,6 +145,13 @@ class ModulesManager(QObject):
     @property
     def selected_actuators_name(self):
         return self.settings.child('modules', 'actuators').value()['selected']
+
+    @selected_actuators_name.setter
+    def selected_actuators_name(self, actuators):
+        if set(actuators).issubset(self.actuators_name):
+            self.settings.child('modules', 'actuators').setValue(dict(all_items=self.actuators_name,
+                                                                      selected=actuators))
+
 
     def parameter_tree_changed(self, param, changes):
         """

@@ -7,6 +7,7 @@ import numpy as np
 import tables
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.daq_utils.parameter import pymodaq_ptypes
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic
 from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
 from pymodaq.daq_utils import daq_utils as utils
@@ -34,7 +35,7 @@ class Navigator(QObject):
     sig_double_clicked = pyqtSignal(float, float)
 
     def __init__(self, parent=None, h5file_path=None):
-        super(Navigator, self).__init__(parent)
+        super().__init__(parent)
 
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -142,7 +143,8 @@ class Navigator(QObject):
                     self.settings.child(('scans')).removeChild(child)
             for scan in scans:
                 params.append({'name': scan['scan_name'], 'type': 'pixmap_check',
-                               'value': dict(data=scan['data'], checked=False, path=scan['path'])})
+                               'value': dict(data=scan['data'], checked=False, path=scan['path'],
+                                             info=scan['scan_name'])})
             self.settings.child(('scans')).addChildren(params)
 
             for child in self.settings.child(('scans')).children():
@@ -444,7 +446,7 @@ class Navigator(QObject):
     def update_2Dscans(self):
         try:
             if not self.h5module.isopen():
-                self.h5module.open_file(self.h5module.filename, 'a')
+                self.h5module.open_file(self.h5module.file_path, 'a')
             scans = self.h5module.get_h5file_scans(self.h5module.root())
             # settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
             params = []
@@ -452,7 +454,8 @@ class Navigator(QObject):
             for scan in scans:
                 if scan['scan_name'] not in children:
                     params.append({'name': scan['scan_name'], 'type': 'pixmap_check',
-                                   'value': dict(data=scan['data'], checked=False, path=scan['path'])})
+                                   'value': dict(data=scan['data'], checked=False, path=scan['path'],
+                                                 info=scan['scan_name'])})
             self.settings.child(('scans')).addChildren(params)
 
             for child in self.settings.child(('scans')).children():

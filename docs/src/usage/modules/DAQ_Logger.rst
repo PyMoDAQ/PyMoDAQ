@@ -3,7 +3,7 @@
 DAQ Logger
 ==========
 
-This module is an extension of hte dashboard, it will:
+This module is an extension of the dashboard, it will:
 
 * ask you where to log data from all selected detectors
 * save log datas in hierarchical binary files (compatible with the :ref:`H5Browser_module`)

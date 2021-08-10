@@ -146,9 +146,10 @@ class Pixmap_check(QtWidgets.QWidget):
 
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(Pixmap_check, self).__init__()
-        self.path = ""
+        super().__init__()
+        self.path = ''
         self.data = None
+        self.checked = False
         self.initUI()
 
     def initUI(self):
@@ -158,8 +159,11 @@ class Pixmap_check(QtWidgets.QWidget):
         self.ver_layout = QtWidgets.QVBoxLayout()
         self.label = QtWidgets.QLabel()
         self.checkbox = QtWidgets.QCheckBox('Show/Hide')
+        self.info = QtWidgets.QLineEdit()
+        self.info.setReadOnly(True)
         self.checkbox.setChecked(False)
         self.ver_layout.addWidget(self.label)
+        self.ver_layout.addWidget(self.info)
         self.ver_layout.addWidget(self.checkbox)
         self.ver_layout.setSpacing(0)
         self.ver_layout.setContentsMargins(0, 0, 0, 0)
@@ -175,9 +179,17 @@ class Pixmap_check(QtWidgets.QWidget):
                 a = dic['data']
         else:
             a = dic['pixmap']
+        if 'path' in dic:
+            self.path = dic['path']
+        else:
+            self.path = ''
+        if 'info' in dic:
+            info = dic['info']
+        else:
+            info = ''
         self.label.setPixmap(a)
         self.checkbox.setChecked(dic['checked'])
-        self.path = dic['path']
+        self.info.setText(info)
         # self.valuechanged.emit(dic)
 
     def value(self):
@@ -568,7 +580,7 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
             'time': QTime,
             'led': bool,
             'pixmap': QtWidgets.QLabel,
-            'pixmap_check': Pixmap_check,
+            'pixmap_check': dict,
             'slide': float
         }[self.opts['type']]
         return fn(v)

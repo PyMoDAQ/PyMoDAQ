@@ -349,8 +349,7 @@ Preset manager
 --------------
 
 The *Preset manager* is an object that helps to generate, modify and save preset configurations of :ref:`Dashboard_module`.
-A preset is a set of actuators and detectors represented in a tree like structure, see :numref:`preset_fig`, as well as
-saving options if the *DAQ_Scan* extension is to be used.
+A preset is a set of actuators and detectors represented in a tree like structure, see :numref:`preset_fig`.
 
 
    .. _preset_fig:
@@ -363,7 +362,7 @@ saving options if the *DAQ_Scan* extension is to be used.
 
 Each added module load on the fly its settings so that one can set them to our need, for instance COM
 port selection, channel activation, exposure time... Every time a preset is created, it is then *loadable*.
-The *init?* boolean specifies if DAQ_Scan should try to initialize the hardware while loading the module in the
+The *init?* boolean specifies if the *Dashboard* should try to initialize the hardware while loading the module in the
 dashboard.
 
 .. _overshoot_manager:
