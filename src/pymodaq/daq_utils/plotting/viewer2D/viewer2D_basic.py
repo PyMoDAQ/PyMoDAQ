@@ -114,7 +114,7 @@ class View_cust(pg.ViewBox):
             self.sig_double_clicked.emit(pos.x(), pos.y())
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     from pymodaq.daq_utils.plotting.viewer2D.triangulationitem import TriangulationItem
 
     app = QtWidgets.QApplication(sys.argv)
