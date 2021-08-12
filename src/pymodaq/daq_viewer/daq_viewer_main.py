@@ -1247,18 +1247,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         data_dims = [data['dim'] for data in datas]
         if data_dims != self.viewer_types:
             self.update_viewer_pannels(data_dims)
-        if self.ui.take_bkg_cb.isChecked():
-            self.ui.take_bkg_cb.setChecked(False)
-            self.bkg = datas
-        # process bkg if needed
-        if self.ui.do_bkg_cb.isChecked() and self.bkg is not None:
-            try:
-                for ind_channels, channels in enumerate(datas):
-                    for ind_channel, channel in enumerate(channels['data']):
-                        datas[ind_channels]['data'][ind_channel] = datas[ind_channels]['data'][ind_channel] - \
-                            self.bkg[ind_channels]['data'][ind_channel]
-            except Exception as e:
-                self.logger.exception(str(e))
 
     @pyqtSlot(list)
     def show_data(self, datas):
@@ -1336,6 +1324,18 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             self.data_to_save_export['data1D'] = data1D
             self.data_to_save_export['data2D'] = data2D
             self.data_to_save_export['dataND'] = dataND
+
+            if self.ui.take_bkg_cb.isChecked():
+                self.ui.take_bkg_cb.setChecked(False)
+                self.bkg = copy.deepcopy(datas)
+            # process bkg if needed
+            if self.ui.do_bkg_cb.isChecked() and self.bkg is not None:
+                try:
+                    for ind_channels, channels in enumerate(datas):
+                        for ind_channel, channel in enumerate(channels['data']):
+                            datas[ind_channels]['data'][ind_channel] -= self.bkg[ind_channels]['data'][ind_channel]
+                except Exception as e:
+                    self.logger.exception(str(e))
 
             if self.ui.grab_pb.isChecked():  # if live
                 refresh = time.perf_counter() - self.start_grab_time > self.settings.child('main_settings',
