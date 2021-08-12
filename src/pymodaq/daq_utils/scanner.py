@@ -910,6 +910,8 @@ class TableModelTabular(gutils.TableModel):
                 self.remove_row(0)
 
             data = np.loadtxt(fname)
+            if len(data.shape) == 1:
+                data = data.reshape((data.size, 1))
             self.set_data_all(data)
 
     def save_txt(self):
