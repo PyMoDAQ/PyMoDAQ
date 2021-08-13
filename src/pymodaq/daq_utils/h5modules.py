@@ -64,7 +64,7 @@ version = '0.0.1'
 save_types = ['scan', 'detector', 'logger', 'custom']
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
-data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings']
+data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings', 'bkg']
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['']
 scan_types.extend(stypes)
@@ -1531,7 +1531,8 @@ class H5SaverBase(H5Backend):
         Parameters
         ----------
         channel_group: (hdf5 node) node where to save the array, in general within a channel type group
-        data_dict: (dict) dictionnary containing the data to save and all the axis and metadata mandatory key: 'data': (ndarray) data to save other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....)
+        data_dict: (dict) dictionnary containing the data to save and all the axis and metadata mandatory key: 'data':
+         (ndarray) data to save other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....) or background
         scan_type: (str) either '', 'scan1D' or 'scan2D' or Tabular or sequential
         scan_subtype: (str) see scanner module
         scan_shape: (iterable) the shape of the scan dimensions
@@ -1542,6 +1543,7 @@ class H5SaverBase(H5Backend):
         add_scan_dim: (bool) if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
                       In that case, the array is usually initialized as zero and further populated
         metadata: (dict) dictionnary whose keys will be saved as the array attributes
+
 
         Returns
         -------
@@ -1573,6 +1575,11 @@ class H5SaverBase(H5Backend):
         array_to_save = tmp_data_dict.pop('data')
         if 'type' in tmp_data_dict:
             tmp_data_dict.pop('type')  # otherwise this metadata would overide mandatory attribute 'type' for a h5 node
+
+        if 'bkg' in tmp_data_dict:
+            bkg = tmp_data_dict.pop('bkg')
+            self.add_array(channel_group, 'Bkg', 'bkg', array_type=array_type, array_to_save=bkg,
+                           data_dimension=dimension)
         tmp_data_dict.update(metadata)
         array_to_save = array_to_save.astype(array_type)
         data_array = self.add_array(channel_group, 'Data', 'data', array_type=array_type,
@@ -1580,6 +1587,7 @@ class H5SaverBase(H5Backend):
                                     scan_type=scan_type, scan_subtype=scan_subtype, scan_shape=scan_shape,
                                     array_to_save=array_to_save,
                                     init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
+
 
         self.flush()
         return data_array
@@ -1593,7 +1601,7 @@ class H5SaverBase(H5Backend):
         ----------
         where: (hdf5 node) node where to save the array
         name: (str) name of the array in the hdf5 file
-        data_type: (str) one of ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings'], mandatory
+        data_type: (str) one of ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings', 'bkg'], mandatory
             so that the h5Browsr interpret correctly the array (see add_data)
         data_shape: (iterable) the shape of the array to save, mandatory if array_to_save is None
         data_dimension: (str) one of ['0D', '1D', '2D', 'ND']
@@ -1947,7 +1955,6 @@ class H5BrowserUtil(H5Backend):
         """
         """
         node = self.get_node(node_path)
-        data = None
         is_spread = False
         if 'ARRAY' in node.attrs['CLASS']:
             data = node.read()
@@ -1955,6 +1962,13 @@ class H5BrowserUtil(H5Backend):
             axes = dict([])
             if isinstance(data, np.ndarray):
                 data = np.squeeze(data)
+                if 'Bkg' in node.parent_node.children_name() and node.name != 'Bkg':
+                    bkg = np.squeeze(self.get_node(node.parent_node.path, 'Bkg').read())
+                    try:
+                        data = data - bkg
+                    except:
+                        logger.warning(f'Could not substract bkg from data node {node_path} as their shape are '
+                                       f'incoherent {bkg.shape} and {data.shape}')
                 if 'type' in node.attrs.attrs_name:
                     if 'data' in node.attrs['type'] or 'channel' in node.attrs['type'].lower():
                         parent_path = node.parent_node.path

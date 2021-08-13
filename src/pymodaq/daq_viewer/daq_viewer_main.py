@@ -891,6 +891,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                                                      ext='h5')  # see daq_utils
         self.save_export_data(self.data_to_save_export)
 
+    @property
+    def is_bkg(self):
+        return self.ui.do_bkg_cb.isChecked()
+
     def save_datas(self, path=None, datas=None):
         """
             Save procedure of .h5 file data.
@@ -937,6 +941,11 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             data_dims = ['data1D']  # we don't recrod 0D data in this mode (only in continuous)
             if h5saver.settings.child(('save_2D')).value():
                 data_dims.extend(['data2D', 'dataND'])
+
+            if self.bkg is not None and self.is_bkg:
+                bkg_container = OrderedDict([])
+                self.process_data(self.bkg, bkg_container)
+
             for data_dim in data_dims:
                 if datas[data_dim] is not None:
                     if data_dim in datas.keys() and len(datas[data_dim]) != 0:
@@ -949,6 +958,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                                 channel_group = h5saver.add_CH_group(data_group, title=channel)
 
                                 self.channel_arrays[data_dim]['parent'] = channel_group
+                                if self.bkg is not None and self.is_bkg:
+                                    if channel in bkg_container[data_dim]:
+                                        datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
                                 self.channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
                                                                                           datas[data_dim][channel],
                                                                                           scan_type='',
@@ -1248,6 +1260,55 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         if data_dims != self.viewer_types:
             self.update_viewer_pannels(data_dims)
 
+    def process_data(self, datas, container):
+
+        data0D = OrderedDict([])
+        data1D = OrderedDict([])
+        data2D = OrderedDict([])
+        dataND = OrderedDict([])
+
+        for ind_data, data in enumerate(datas):
+            if 'external_h5' in data.keys():
+                container['external_h5'] = data.pop('external_h5')
+            data_tmp = copy.deepcopy(data)
+            data_dim = data_tmp['dim']
+            if data_dim.lower() != 'datand':
+                self.set_xy_axis(data_tmp, ind_data)
+            data_arrays = data_tmp.pop('data')
+
+            name = data_tmp.pop('name')
+            for ind_sub_data, dat in enumerate(data_arrays):
+                if 'labels' in data_tmp:
+                    data_tmp.pop('labels')
+                subdata_tmp = utils.DataToExport(name=self.title, data=dat, **data_tmp)
+                sub_name = f'{self.title}_{name}_CH{ind_sub_data:03}'
+                if data_dim.lower() == 'data0d':
+                    subdata_tmp['data'] = subdata_tmp['data'][0]
+                    data0D[sub_name] = subdata_tmp
+                elif data_dim.lower() == 'data1d':
+                    if 'x_axis' not in subdata_tmp:
+                        Nx = len(dat)
+                        x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
+                        subdata_tmp['x_axis'] = x_axis
+                    data1D[sub_name] = subdata_tmp
+                elif data_dim.lower() == 'data2d':
+                    if 'x_axis' not in subdata_tmp:
+                        Nx = dat.shape[1]
+                        x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
+                        subdata_tmp['x_axis'] = x_axis
+                    if 'y_axis' not in subdata_tmp:
+                        Ny = dat.shape[0]
+                        y_axis = utils.Axis(data=np.linspace(0, Ny - 1, Ny))
+                        subdata_tmp['y_axis'] = y_axis
+                    data2D[sub_name] = subdata_tmp
+                elif data_dim.lower() == 'datand':
+                    dataND[sub_name] = subdata_tmp
+
+        container['data0D'] = data0D
+        container['data1D'] = data1D
+        container['data2D'] = data2D
+        container['dataND'] = dataND
+
     @pyqtSlot(list)
     def show_data(self, datas):
         """
@@ -1278,58 +1339,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             acq_time = datetime.datetime.now().timestamp()
             name = self.title
             self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name)
-            data0D = OrderedDict([])
-            data1D = OrderedDict([])
-            data2D = OrderedDict([])
-            dataND = OrderedDict([])
 
-            for ind_data, data in enumerate(datas):
-                if 'external_h5' in data.keys():
-                    self.data_to_save_export['external_h5'] = data.pop('external_h5')
-                data_tmp = copy.deepcopy(data)
-                data_dim = data_tmp['dim']
-                if data_dim.lower() != 'datand':
-                    self.set_xy_axis(data_tmp, ind_data)
-                data_arrays = data_tmp.pop('data')
-
-                name = data_tmp.pop('name')
-                for ind_sub_data, dat in enumerate(data_arrays):
-                    if 'labels' in data_tmp:
-                        data_tmp.pop('labels')
-                    subdata_tmp = utils.DataToExport(name=self.title, data=dat, **data_tmp)
-                    sub_name = f'{self.title}_{name}_CH{ind_sub_data:03}'
-                    if data_dim.lower() == 'data0d':
-                        subdata_tmp['data'] = subdata_tmp['data'][0]
-                        data0D[sub_name] = subdata_tmp
-                    elif data_dim.lower() == 'data1d':
-                        if 'x_axis' not in subdata_tmp:
-                            Nx = len(dat)
-                            x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
-                            subdata_tmp['x_axis'] = x_axis
-                        data1D[sub_name] = subdata_tmp
-                    elif data_dim.lower() == 'data2d':
-                        if 'x_axis' not in subdata_tmp:
-                            Nx = dat.shape[1]
-                            x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
-                            subdata_tmp['x_axis'] = x_axis
-                        if 'y_axis' not in subdata_tmp:
-                            Ny = dat.shape[0]
-                            y_axis = utils.Axis(data=np.linspace(0, Ny - 1, Ny))
-                            subdata_tmp['y_axis'] = y_axis
-                        data2D[sub_name] = subdata_tmp
-                    elif data_dim.lower() == 'datand':
-                        dataND[sub_name] = subdata_tmp
-
-            self.data_to_save_export['data0D'] = data0D
-            self.data_to_save_export['data1D'] = data1D
-            self.data_to_save_export['data2D'] = data2D
-            self.data_to_save_export['dataND'] = dataND
+            self.process_data(datas, self.data_to_save_export)
 
             if self.ui.take_bkg_cb.isChecked():
                 self.ui.take_bkg_cb.setChecked(False)
                 self.bkg = copy.deepcopy(datas)
             # process bkg if needed
-            if self.ui.do_bkg_cb.isChecked() and self.bkg is not None:
+            if self.is_bkg and self.bkg is not None:
                 try:
                     for ind_channels, channels in enumerate(datas):
                         for ind_channel, channel in enumerate(channels['data']):
@@ -1486,7 +1503,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             save_new
         """
         if self.ui.take_bkg_cb.isChecked():
-            self.save_new()
+            self.snap()
 
     @pyqtSlot(ThreadCommand)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
