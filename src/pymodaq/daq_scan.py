@@ -226,8 +226,9 @@ class DAQ_Scan(QObject):
         """
         try:
             self.h5saver.close_file()
+            self.ui.average_dock.close()
             self.ui.scan_dock.close()
-            # self.dashboard.quit_fun()
+
         except Exception as e:
             logger.exception(str(e))
 
@@ -1136,7 +1137,7 @@ class DAQ_Scan(QObject):
         """
         try:
             scan_type = self.scanner.scan_parameters.scan_type
-            ##self.scan_y_axis = np.array([])
+            # self.scan_y_axis = np.array([])
             if not self.plot_1D_ini:  # init the datas
                 self.plot_1D_ini = True
                 self.ui.scan1D_subgraph.show(display_as_sequence)
@@ -1180,12 +1181,10 @@ class DAQ_Scan(QObject):
 
             if isadaptive:
                 if self.ind_scan != 0:
-                    if bkg is not None:
-                        self.scan_data_1D = np.vstack(
-                            (self.scan_data_1D, np.array([datas[key]['data'] - bkg[key]['data'] for key in datas])))
-                    else:
-                        self.scan_data_1D = np.vstack(
-                            (self.scan_data_1D, np.array([datas[key]['data'] for key in datas])))
+
+                    self.scan_data_1D = np.vstack((self.scan_data_1D, np.array([
+                        self.get_data_live_bkg(datas, key, bkg) for key in datas])))
+
                 if not display_as_sequence:
                     self.scan_x_axis = np.array(self.scan_positions)
                 else:
@@ -1197,12 +1196,9 @@ class DAQ_Scan(QObject):
             else:
                 if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
                     if not utils.odd_even(self.ind_scan):
-                        if bkg is not None:
-                            self.scan_data_1D[int(self.ind_scan / 2), :] = \
-                                np.array([datas[key]['data'] - bkg[key]['data'] for key in datas])
-                        else:
-                            self.scan_data_1D[int(self.ind_scan / 2), :] = \
-                                np.array([datas[key]['data'] for key in datas])
+
+                        self.scan_data_1D[int(self.ind_scan / 2), :] = \
+                            np.array([self.get_data_live_bkg(datas, key, bkg) for key in datas])
 
                         if self.settings.child('scan_options', 'scan_average').value() > 1:
                             self.scan_data_1D_average[self.ind_scan, :] = \
@@ -1211,12 +1207,9 @@ class DAQ_Scan(QObject):
                                     int(self.ind_scan / 2), :]) / (self.ind_average + 1)
 
                 else:
-                    if bkg is not None:
-                        self.scan_data_1D[self.ind_scan, :] = \
-                            np.array([datas[key]['data']-bkg[key]['data'] for key in datas])
-                    else:
-                        self.scan_data_1D[self.ind_scan, :] = \
-                            np.array([datas[key]['data'] for key in datas])
+                    self.scan_data_1D[self.ind_scan, :] = \
+                        np.array([self.get_data_live_bkg(datas, key, bkg) for key in datas])
+
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
                         self.scan_data_1D_average[self.ind_scan, :] = \
                             (self.ind_average * self.scan_data_1D_average[self.ind_scan, :] + self.scan_data_1D[
@@ -1249,6 +1242,17 @@ class DAQ_Scan(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+    def get_data_live_bkg(self, datas, key, bkg):
+        bkg_flag = False
+        if bkg is not None:
+            if key in bkg:
+                bkg_flag = True
+        if bkg_flag:
+            data = datas[key]['data'] - bkg[key]['data']
+        else:
+            data = datas[key]['data']
+        return data
+
     def update_2D_graph(self, datas, display_as_sequence=False, isadaptive=False, bkg=None):
         """
             Update the 2D graphic window in the Graphic Interface with the given datas (if not none).
@@ -1280,7 +1284,7 @@ class DAQ_Scan(QObject):
                     (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2):
 
                 if not self.plot_2D_ini:  # init the data
-                    #self.ui.scan1D_subgraph.show(False)
+                    # self.ui.scan1D_subgraph.show(False)
                     self.plot_2D_ini = True
                     if isadaptive:
                         self.scan_x_axis2D = np.array(self.scan_positions)[:, 0]
@@ -1325,11 +1329,9 @@ class DAQ_Scan(QObject):
                     ind_pos_axis_2 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 1]
                     for ind_plot in range(min((3, len(datas)))):
                         keys = list(datas.keys())
-                        if bkg is not None:
-                            self.scan_data_2D[ind_plot][ind_pos_axis_2, ind_pos_axis_1] = \
-                                datas[keys[ind_plot]]['data'] - bkg[keys[ind_plot]]['data']
-                        else:
-                            self.scan_data_2D[ind_plot][ind_pos_axis_2, ind_pos_axis_1] = datas[keys[ind_plot]]['data']
+
+                        self.scan_data_2D[ind_plot][ind_pos_axis_2, ind_pos_axis_1] = \
+                            self.get_data_live_bkg(datas, keys[ind_plot], bkg)
 
                         if self.settings.child('scan_options', 'scan_average').value() > 1:
                             self.scan_data_2D_average[ind_plot][ind_pos_axis_2, ind_pos_axis_1] = \
@@ -1344,13 +1346,11 @@ class DAQ_Scan(QObject):
                 else:
                     if self.ind_scan != 0:
                         key = list(datas.keys())[0]
-                        if bkg is not None:
-                            self.scan_data_2D = np.vstack((self.scan_data_2D,
-                                                       np.hstack((self.scan_positions[-1], datas[key]['data'] -
-                                                                  bkg[key]['data']))))
-                        else:
-                            self.scan_data_2D = np.vstack((self.scan_data_2D,
-                                                           np.hstack((self.scan_positions[-1], datas[key]['data']))))
+
+                        self.scan_data_2D = np.vstack((self.scan_data_2D,
+                                                       np.hstack((self.scan_positions[-1],
+                                                                  self.get_data_live_bkg(datas, key, bkg)))))
+
                     if len(self.scan_data_2D) > 3:  # at least 3 point to make a triangulation image
                         self.ui.scan2D_graph.setImage(data_spread=self.scan_data_2D)
 
@@ -1422,11 +1422,10 @@ class DAQ_Scan(QObject):
                 if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
                     if not utils.odd_even(self.ind_scan):
                         for ind_plot, key in enumerate(datas.keys()):
-                            if bkg is not None:
-                                self.scan_data_2D[ind_plot][:, int(self.ind_scan / 2)] = datas[key]['data'] - \
-                                                                                         bkg[key]['data']
-                            else:
-                                self.scan_data_2D[ind_plot][:, int(self.ind_scan / 2)] = datas[key]['data']
+
+                            self.scan_data_2D[ind_plot][:, int(self.ind_scan / 2)] = \
+                                self.get_data_live_bkg(datas, key, bkg)
+
                             if self.settings.child('scan_options', 'scan_average').value() > 1:
                                 self.scan_data_2D_average[ind_plot][:, int(self.ind_scan / 2)] = \
                                     (self.ind_average * self.scan_data_2D_average[ind_plot][
@@ -1441,10 +1440,7 @@ class DAQ_Scan(QObject):
                     for ind_plot, key in enumerate(datas.keys()):
                         if ind_plot >= 3:
                             break
-                        if bkg is not None:
-                            self.scan_data_2D[ind_plot][:, ind_pos_axis] = datas[key]['data'] - bkg[key]['data']
-                        else:
-                            self.scan_data_2D[ind_plot][:, ind_pos_axis] = datas[key]['data']
+                        self.scan_data_2D[ind_plot][:, ind_pos_axis] = self.get_data_live_bkg(datas, key, bkg)
 
                         if self.settings.child('scan_options', 'scan_average').value() > 1:
                             self.scan_data_2D_average[ind_plot][:, self.ind_scan] = \
