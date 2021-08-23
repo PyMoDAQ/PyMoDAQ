@@ -404,6 +404,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 if self.h5saver_continuous.settings.child(('save_2D')).value():
                     data_dims.extend(['data2D', 'dataND'])
 
+                if self.bkg is not None and self.is_bkg:
+                    bkg_container = OrderedDict([])
+                    self.process_data(self.bkg, bkg_container)
+
                 for data_dim in data_dims:
                     if data_dim in datas.keys() and len(datas[data_dim]) != 0:
                         if not self.h5saver_continuous.is_node_in_group(self.continuous_group, data_dim):
@@ -414,12 +418,12 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
                                 channel_group = self.h5saver_continuous.add_CH_group(data_group, title=channel)
                                 self.channel_arrays[data_dim]['parent'] = channel_group
-                                self.channel_arrays[data_dim][channel] = self.h5saver_continuous.add_data(channel_group,
-                                                                                                          datas[
-                                                                                                              data_dim][
-                                                                                                              channel],
-                                                                                                          scan_type='scan1D',
-                                                                                                          enlargeable=True)
+                                if self.bkg is not None and self.is_bkg:
+                                    if channel in bkg_container[data_dim]:
+                                        datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
+                                self.channel_arrays[data_dim][channel] = \
+                                    self.h5saver_continuous.add_data(channel_group, datas[data_dim][channel],
+                                                                     scan_type='scan1D', enlargeable=True)
                 self.is_continuous_initialized = True
 
             dt = np.array([time.perf_counter() - self.ini_time])
