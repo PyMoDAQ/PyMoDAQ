@@ -184,6 +184,17 @@ class DAQ_Move(Ui_Form, QObject):
         if init:
             self.ui.IniStage_pb.click()
 
+    @property
+    def actuator(self):
+        return self.ui.Stage_type_combo.currentText
+
+    @actuator.setter
+    def actuator(self, actuator):
+        self.ui.Stage_type_combo.setCurrentText(actuator)
+
+    def init(self):
+        self.ui.IniStage_pb.click()
+
     def ini_stage_fun(self):
         """
             Init :
@@ -692,6 +703,23 @@ class DAQ_Move(Ui_Form, QObject):
             self.splash_sc.close()
             self.ui.settings_tree.setEnabled(True)
 
+        elif status.command == 'set_allowed_values':
+            if 'decimals' in status.attributes:
+                self.ui.Current_position_sb.setDecimals(status.attributes['decimals'])
+                self.ui.Abs_position_sb.setDecimals(status.attributes['decimals'])
+                self.ui.Abs_position_sb_bis.setDecimals(status.attributes['decimals'])
+            if 'minimum'in status.attributes:
+                self.ui.Current_position_sb.setMinimum(status.attributes['minimum'])
+                self.ui.Abs_position_sb.setMinimum(status.attributes['minimum'])
+                self.ui.Abs_position_sb_bis.setMinimum(status.attributes['minimum'])
+            if 'maximum'in status.attributes:
+                self.ui.Current_position_sb.setMaximum(status.attributes['maximum'])
+                self.ui.Abs_position_sb.setMaximum(status.attributes['maximum'])
+                self.ui.Abs_position_sb_bis.setMaximum(status.attributes['maximum'])
+            if 'step'in status.attributes:
+                self.ui.Current_position_sb.setSingleStep(status.attributes['step'])
+                self.ui.Abs_position_sb.setSingleStep(status.attributes['step'])
+                self.ui.Abs_position_sb_bis.setSingleStep(status.attributes['step'])
 
     def update_status(self, txt, wait_time=0):
         """

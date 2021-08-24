@@ -9,7 +9,7 @@ from pymodaq.daq_utils.gui_utils import clickable
 class QLED(QLabel):
     value_changed = pyqtSignal(bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, scale=1):
         QLabel.__init__(self, parent)
         # self.setText("")
         self.red_icon = QtGui.QPixmap(":/icons/Icon_Library/red_light.png")
@@ -21,7 +21,15 @@ class QLED(QLabel):
             self.LED_Clicked)  # clickable is a function importing a filter class to deal with mouse down event as a signal see GUI_utils
         self.setText("empty")
         self.setMaximumWidth(self.height())
+        if scale != 1:
+            self.scale(scale)
         self.set_as_false()
+
+    def scale(self, scale):
+        self.green_icon = self.green_icon.scaled(scale * self.green_icon.width(),
+                                                 scale * self.green_icon.height())
+        self.red_icon = self.red_icon.scaled(scale * self.red_icon.width(),
+                                             scale * self.red_icon.height())
 
     def get_state(self):
         return self.state

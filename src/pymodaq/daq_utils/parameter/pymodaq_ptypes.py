@@ -7,7 +7,7 @@ Created on Mon Dec  4 10:59:53 2017
 """
 import sys
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray, QSize
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
@@ -226,10 +226,10 @@ class QTimeCustom(QtWidgets.QTimeEdit):
 
 class SliderSpinBox(QtWidgets.QWidget):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subtype='lin', **kwargs):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__()
-        self.subtype = kwargs['subtype']
+        self.subtype = subtype
         self.initUI(*args, **kwargs)
 
         self.valueChanged = self.spinbox.valueChanged  # (value)  for compatibility with QSpinBox
@@ -249,22 +249,32 @@ class SliderSpinBox(QtWidgets.QWidget):
         if 'visible' in opts:
             self.slider.setVisible(opts['visible'])
 
+    def insert_widget(self,widget, row=0):
+        self.vlayout.insertWidget(row, widget)
+
     def initUI(self, *args, **kwargs):
         """
             Init the User Interface.
         """
-        self.hor_layout = QtWidgets.QVBoxLayout()
+        self.vlayout = QtWidgets.QVBoxLayout()
         self.slider = QtWidgets.QSlider(Qt.Horizontal)
+        self.slider.setMinimumWidth(50)
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
+        if 'value' in kwargs:
+            value = kwargs.pop('value')
+        else:
+            if 'bounds' in kwargs:
+                value = kwargs['bounds'][0]
+            else:
+                value = 1
+        self.spinbox = SpinBoxCustom(parent=None, value=value, **kwargs)
 
-        self.spinbox = SpinBoxCustom(parent=None, value=1, **kwargs)
-
-        self.hor_layout.addWidget(self.slider)
-        self.hor_layout.addWidget(self.spinbox)
-        self.hor_layout.setSpacing(0)
-        self.hor_layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.hor_layout)
+        self.vlayout.addWidget(self.slider)
+        self.vlayout.addWidget(self.spinbox)
+        self.vlayout.setSpacing(0)
+        self.vlayout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.vlayout)
 
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
@@ -319,7 +329,6 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
-
         if 'enabled' in self.param.opts:
             self.displayLabel.setEnabled(self.param.opts['enabled'])
 
@@ -361,6 +370,8 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                 if 'limits' not in opts:
                     defs['bounds'] = (0., self.param.value())  #max value set to default value when no max given
                 w = SliderSpinBox(subtype=opts['subtype'])
+                self.setSizeHint(1, QSize(50, 50))
+
 
             w.setOpts(**defs)
             w.sigChanged = w.sigValueChanged
@@ -489,6 +500,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
         self.widget.setFocus(Qt.OtherFocusReason)
         if isinstance(self.widget, SpinBox.SpinBox):
             self.widget.selectNumber()  # select the numerical portion of the text for quick editing
+
 
     def hideEditor(self):
         """
