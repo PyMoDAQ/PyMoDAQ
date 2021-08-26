@@ -946,7 +946,7 @@ class DAQ_Move_stage(QObject):
 
             else:  # custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
                 if hasattr(self.hardware, command.command):
-                    cmd = getattr(self.detector, command.command)
+                    cmd = getattr(self.hardware, command.command)
                     cmd(*command.attributes)
         except Exception as e:
             self.logger.exception(str(e))

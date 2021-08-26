@@ -194,6 +194,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         self.show_settings()
 
+    @property
+    def viewer_docks(self):
+        return self.ui.viewer_docks
+
     def setupUI(self, parent, dock_settings, dock_viewer):
         self.ui = Ui_Form()
         widgetsettings = QtWidgets.QWidget()

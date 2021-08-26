@@ -369,7 +369,10 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
                     opts['subtype'] = 'linear'
                 if 'limits' not in opts:
                     defs['bounds'] = (0., self.param.value())  #max value set to default value when no max given
-                w = SliderSpinBox(subtype=opts['subtype'])
+                else:
+                    defs['bounds'] = opts['limits']
+
+                w = SliderSpinBox(subtype=opts['subtype'], bounds=defs['bounds'], value=defs['value'])
                 self.setSizeHint(1, QSize(50, 50))
 
 
