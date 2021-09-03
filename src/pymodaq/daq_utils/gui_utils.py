@@ -496,6 +496,20 @@ class TableModel(QtCore.QAbstractTableModel):
         self.endRemoveRows()
         return True
 
+class BooleanDelegate(QtWidgets.QItemEditorFactory):
+    """
+    TO implement custom widget editor for cells in a tableview
+    """
+
+    def __init__(self):
+        super().__init__()
+
+    def createEditor(self, userType, parent):
+        if userType == QVariant.Bool:
+            boolean = QtWidgets.QCheckBox(parent)
+            return boolean
+        else:
+            return super().createEditor(userType, parent)
 
 class SpinBoxDelegate(QtWidgets.QItemEditorFactory):
     # http://doc.qt.io/qt-5/qstyleditemdelegate.html#subclassing-qstyleditemdelegate

@@ -520,6 +520,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     def stop(self):
         self.ui.stop_pb.click()
 
+    @property
+    def grab_state(self):
+        return self.ui.grab_pb.isChecked()
+
     def grab_data(self, grab_state=False, send_to_tcpip=False):
         """
             Do a grab session using 2 profile :
@@ -1699,6 +1703,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         elif status.command == 'stop':
             self.stop()
+
 
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
