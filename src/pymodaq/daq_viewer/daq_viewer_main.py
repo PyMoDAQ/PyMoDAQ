@@ -285,6 +285,14 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.ui.log_pb.clicked.connect(self.show_log)
 
     @property
+    def daq_type(self):
+        return self.ui.DAQ_type_combo.CurrentText()
+
+    @daq_type.setter
+    def daq_type(self, daq_typ):
+        self.ui.DAQ_type_combo.setCurrentText(daq_typ)
+
+    @property
     def detector(self):
         return self.ui.Detector_type_combo.currentText()
 
@@ -1703,7 +1711,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         elif status.command == 'stop':
             self.stop()
-
 
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 

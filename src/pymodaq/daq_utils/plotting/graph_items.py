@@ -174,6 +174,107 @@ class ImageItem(pg.ImageItem):
             p.setPen(self.border)
             p.drawRect(self.boundingRect())
 
+    def setImage(self, image=None, autoLevels=None, **kargs):
+        """
+        Update the image displayed by this item. For more information on how the image
+        is processed before displaying, see :func:`makeARGB <pyqtgraph.makeARGB>`
+
+        =================  =========================================================================
+        **Arguments:**
+        image              (numpy array) Specifies the image data. May be 2D (width, height) or
+                           3D (width, height, RGBa). The array dtype must be integer or floating
+                           point of any bit depth. For 3D arrays, the third dimension must
+                           be of length 3 (RGB) or 4 (RGBA). See *notes* below.
+        autoLevels         (bool) If True, this forces the image to automatically select
+                           levels based on the maximum and minimum values in the data.
+                           By default, this argument is true unless the levels argument is
+                           given.
+        lut                (numpy array) The color lookup table to use when displaying the image.
+                           See :func:`setLookupTable <pyqtgraph.ImageItem.setLookupTable>`.
+        levels             (min, max) The minimum and maximum values to use when rescaling the image
+                           data. By default, this will be set to the minimum and maximum values
+                           in the image. If the image array has dtype uint8, no rescaling is necessary.
+        opacity            (float 0.0-1.0)
+        compositionMode    See :func:`setCompositionMode <pyqtgraph.ImageItem.setCompositionMode>`
+        border             Sets the pen used when drawing the image border. Default is None.
+        autoDownsample     (bool) If True, the image is automatically downsampled to match the
+                           screen resolution. This improves performance for large images and
+                           reduces aliasing. If autoDownsample is not specified, then ImageItem will
+                           choose whether to downsample the image based on its size.
+       symautolevel        (bool) if True the autolevel is set symetric with respect to 0 with the
+                           maximum value as level
+        =================  =========================================================================
+
+
+        **Notes:**
+
+        For backward compatibility, image data is assumed to be in column-major order (column, row).
+        However, most image data is stored in row-major order (row, column) and will need to be
+        transposed before calling setImage()::
+
+            imageitem.setImage(imagedata.T)
+
+        This requirement can be changed by calling ``image.setOpts(axisOrder='row-major')`` or
+        by changing the ``imageAxisOrder`` :ref:`global configuration option <apiref_config>`.
+
+
+        """
+        profile = debug.Profiler()
+
+        gotNewData = False
+        if image is None:
+            if self.image is None:
+                return
+        else:
+            gotNewData = True
+            shapeChanged = (self.image is None or image.shape != self.image.shape)
+            image = image.view(np.ndarray)
+            if self.image is None or image.dtype != self.image.dtype:
+                self._effectiveLut = None
+            self.image = image
+            if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
+                if 'autoDownsample' not in kargs:
+                    kargs['autoDownsample'] = True
+            if shapeChanged:
+                self.prepareGeometryChange()
+                self.informViewBoundsChanged()
+
+        profile()
+
+        if autoLevels is None:
+            if 'levels' in kargs:
+                autoLevels = False
+            else:
+                autoLevels = True
+        if autoLevels:
+            img = self.image
+            while img.size > 2**16:
+                img = img[::2, ::2]
+            mn, mx = np.nanmin(img), np.nanmax(img)
+
+            # mn and mx can still be NaN if the data is all-NaN
+            if mn == mx or np.isnan(mn) or np.isnan(mx):
+                mn = 0
+                mx = 255
+            if 'symautolevel' in kargs:
+                if kargs['symautolevel']:
+                    mn, mx = -max([abs(mn), abs(mx)]), max([abs(mn), abs(mx)])
+            kargs['levels'] = [mn,mx]
+
+        profile()
+
+        self.setOpts(update=False, **kargs)
+
+        profile()
+
+        self.qimage = None
+        self.update()
+
+        profile()
+
+        if gotNewData:
+            self.sigImageChanged.emit()
+
 
 class TriangulationItem(ImageItem):
     """

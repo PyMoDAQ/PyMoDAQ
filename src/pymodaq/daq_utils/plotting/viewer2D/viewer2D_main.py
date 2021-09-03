@@ -28,6 +28,7 @@ Gradients.update(OrderedDict([
     ('green', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}),
     ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}), ]))
 
+utils.set_logger(utils.get_module_name(__file__))
 
 class Viewer2D(QObject):
     data_to_export_signal = pyqtSignal(
@@ -129,6 +130,12 @@ class Viewer2D(QObject):
         self.auto_levels_action.setCheckable(True)
         self.toolbar_button.addAction(self.auto_levels_action)
 
+        self.auto_levels_action_sym = QAction(QIcon(QPixmap(":/icons/Icon_Library/autoscale.png")),
+                                          'Make the autoscale of the histograms symetric with respect to 0 ')
+        self.auto_levels_action_sym.setCheckable(True)
+        self.toolbar_button.addAction(self.auto_levels_action_sym)
+
+
         self.crosshair_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/reset.png")), 'Show/Hide data Crosshair')
         self.ui.crosshair_pb = self.crosshair_action  # for backcompatibility
         self.crosshair_action.setCheckable(True)
@@ -217,6 +224,17 @@ class Viewer2D(QObject):
         self.ui.img_red.setOpts(axisOrder='row-major')
         self.ui.img_green.setOpts(axisOrder='row-major')
         self.ui.img_blue.setOpts(axisOrder='row-major')
+
+    def setGradient(self, histo='red', gradient='grey'):
+        if gradient in Gradients:
+            if histo == 'red' or histo == 'all':
+                self.ui.histogram_red.item.gradient.loadPreset(gradient)
+            if histo == 'blue' or histo == 'all':
+                self.ui.histogram_blue.item.gradient.loadPreset(gradient)
+            if histo == 'green' or histo == 'all':
+                self.ui.histogram_green.item.gradient.loadPreset(gradient)
+            if histo == 'spread' or histo == 'all':
+                self.ui.histogram_spread.item.gradient.loadPreset(gradient)
 
     def setupHisto(self, histo_layout):
         self.ui.widget_histo.setLayout(histo_layout)
@@ -874,8 +892,9 @@ class Viewer2D(QObject):
                 self.x_axis_scaled, self.y_axis_scaled = self.scale_axis(self._x_axis, self._y_axis)
 
             ind = 0
+            symautolevel = self.auto_levels_action_sym.isChecked()
             if red_flag:
-                self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
+                self.ui.img_red.setImage(data_red, autoLevels=self.autolevels, symautolevel=symautolevel)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
                     utils.DataToExport(data=data_red, source='raw',
                                        x_axis=utils.Axis(data=self.x_axis_scaled,
@@ -887,7 +906,7 @@ class Viewer2D(QObject):
                 ind += 1
 
             if green_flag:
-                self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
+                self.ui.img_green.setImage(data_green, autoLevels=self.autolevels, symautolevel=symautolevel)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
                     utils.DataToExport(data=data_green, source='raw',
                                        x_axis=utils.Axis(data=self.x_axis_scaled,
@@ -899,7 +918,7 @@ class Viewer2D(QObject):
                 ind += 1
 
             if blue_flag:
-                self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
+                self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels, symautolevel=symautolevel)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
                     utils.DataToExport(data=data_blue, source='raw',
                                        x_axis=utils.Axis(data=self.x_axis_scaled,
@@ -910,7 +929,8 @@ class Viewer2D(QObject):
                                                          label=self.scaling_options['scaled_yaxis']['label']))
                 ind += 1
             if spread_flag:
-                self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels)
+                self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels,
+                                            symautolevel=symautolevel)
                 self.data_to_export['data2D']['CH{:03d}'.format(ind)] = \
                     utils.DataToExport(data=data_spread[:, 2], source='raw',
                                        x_axis=utils.Axis(data=data_spread[:, 0],
@@ -953,15 +973,15 @@ class Viewer2D(QObject):
 
         data_red, data_blue, data_green = self.set_image_transform()
         self.set_visible_items()
-
+        symautolevel = self.auto_levels_action_sym.isChecked()
         if data_red is not None:
-            self.ui.img_red.setImage(data_red, autoLevels=self.autolevels)
+            self.ui.img_red.setImage(data_red, autoLevels=self.autolevels, symautolevel=symautolevel)
         if data_green is not None:
-            self.ui.img_green.setImage(data_green, autoLevels=self.autolevels)
+            self.ui.img_green.setImage(data_green, autoLevels=self.autolevels, symautolevel=symautolevel)
         if data_blue is not None:
-            self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels)
+            self.ui.img_blue.setImage(data_blue, autoLevels=self.autolevels, symautolevel=symautolevel)
         if data_spread is not None:
-            self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels)
+            self.ui.img_spread.setImage(self.raw_data['spread'], autoLevels=self.autolevels, symautolevel=symautolevel)
 
     def mapfromview(self, graphitem, x, y):
         """
@@ -1213,7 +1233,9 @@ if __name__ == '__main__':  # pragma: no cover
         scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
         scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
-    prog.auto_levels_action.setChecked(True)
+    prog.auto_levels_action_sym.trigger()
+    prog.auto_levels_action.trigger()
+
     # data = np.load('triangulation_data.npy')
     prog.setImage(data_red=data_red, data_blue=data_blue, )
     # prog.setImage(data_spread=data)
