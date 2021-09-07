@@ -40,7 +40,7 @@ params = [
         {'title': 'epsilon', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
          'tooltip': 'Precision at which move is considered as done'},
         {'title': 'PID controls:', 'name': 'pid_controls', 'type': 'group', 'children': [
-            {'title': 'Set Point:', 'name': 'set_point', 'type': 'float', 'value': 0., ',readonly': True},
+            {'title': 'Set Point:', 'name': 'set_point', 'type': 'list', 'values': [0.], ',readonly': True},
             {'title': 'Sample time (ms):', 'name': 'sample_time', 'type': 'int', 'value': 10},
             {'title': 'Refresh plot time (ms):', 'name': 'refresh_plot_time', 'type': 'int', 'value': 200},
             {'title': 'Output limits:', 'name': 'output_limits', 'expanded': True, 'type': 'group', 'children': [
@@ -56,7 +56,7 @@ params = [
             {'title': 'Auto mode:', 'name': 'auto_mode', 'type': 'bool', 'value': False, 'readonly': True},
             {'title': 'Prop. on measurement:', 'name': 'proportional_on_measurement', 'type': 'bool', 'value': False},
             {'title': 'PID constants:', 'name': 'pid_constants', 'type': 'group', 'children': [
-                {'title': 'Kp:', 'name': 'kp', 'type': 'float', 'value': 5, 'min': 0},
+                {'title': 'Kp:', 'name': 'kp', 'type': 'float', 'value': 0.1, 'min': 0},
                 {'title': 'Ki:', 'name': 'ki', 'type': 'float', 'value': 0.01, 'min': 0},
                 {'title': 'Kd:', 'name': 'kd', 'type': 'float', 'value': 0.001, 'min': 0},
             ]},

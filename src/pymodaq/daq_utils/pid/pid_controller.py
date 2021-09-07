@@ -142,7 +142,8 @@ class DAQ_PID(QObject):
     def process_output(self, datas):
         self.output_viewer.show_data([[dat] for dat in datas['output']])
         self.input_viewer.show_data([[dat] for dat in datas['input']])
-        self.currpoint_sb.setValue(np.mean(datas['input']))
+        for ind, sb in enumerate(self.currpoints_sb):
+            sb.setValue(datas['input'][ind])
 
         if self.check_moving:
             if np.abs(np.mean(datas['input']) - self.settings.child('main_settings', 'pid_controls',
@@ -158,12 +159,13 @@ class DAQ_PID(QObject):
         """
         if command.command == "move_Abs":
             self.check_moving = True
-            self.setpoint_sb.setValue(command.attributes[0])
+            for ind, sb in enumerate(self.setpoints_sb):
+                sb.setValue(command.attributes[ind])
             QtWidgets.QApplication.processEvents()
 
     def enable_controls_pid(self, enable=False):
         self.ini_PID_action.setEnabled(enable)
-        self.setpoint_sb.setOpts(enabled=enable)
+        #self.setpoint_sb.setOpts(enabled=enable)
 
     def enable_controls_pid_run(self, enable=False):
         self.run_action.setEnabled(enable)
@@ -178,15 +180,15 @@ class DAQ_PID(QObject):
         widget_toolbar = QtWidgets.QWidget()
         verlayout = QtWidgets.QVBoxLayout()
         widget.setLayout(verlayout)
-        toolbar_layout = QtWidgets.QGridLayout()
-        widget_toolbar.setLayout(toolbar_layout)
+        self.toolbar_layout = QtWidgets.QGridLayout()
+        widget_toolbar.setLayout(self.toolbar_layout)
 
         iconquit = QtGui.QIcon()
         iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         self.quit_action = QtWidgets.QPushButton(iconquit, "Quit")
         self.quit_action.setToolTip('Quit the application')
-        toolbar_layout.addWidget(self.quit_action, 0, 0, 1, 2)
+        self.toolbar_layout.addWidget(self.quit_action, 0, 0, 1, 2)
         self.quit_action.clicked.connect(self.quit_fun)
 
         iconini = QtGui.QIcon()
@@ -194,18 +196,18 @@ class DAQ_PID(QObject):
                           QtGui.QIcon.Off)
         self.ini_model_action = QtWidgets.QPushButton(iconini, "Init Model")
         self.ini_model_action.setToolTip('Initialize the chosen model')
-        toolbar_layout.addWidget(self.ini_model_action, 2, 0)
+        self.toolbar_layout.addWidget(self.ini_model_action, 2, 0)
         self.ini_model_action.clicked.connect(self.ini_model)
         self.model_led = QLED()
-        toolbar_layout.addWidget(self.model_led, 2, 1)
+        self.toolbar_layout.addWidget(self.model_led, 2, 1)
 
         self.ini_PID_action = QtWidgets.QPushButton(iconini, "Init PID")
         self.ini_PID_action.setToolTip('Initialize the PID loop')
-        toolbar_layout.addWidget(self.ini_PID_action, 2, 2)
+        self.toolbar_layout.addWidget(self.ini_PID_action, 2, 2)
         self.ini_PID_action.setCheckable(True)
         self.ini_PID_action.clicked.connect(self.ini_PID)
         self.pid_led = QLED()
-        toolbar_layout.addWidget(self.pid_led, 2, 3)
+        self.toolbar_layout.addWidget(self.pid_led, 2, 3)
 
         self.iconrun = QtGui.QIcon()
         self.iconrun.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal,
@@ -215,7 +217,7 @@ class DAQ_PID(QObject):
         self.run_action = QtWidgets.QPushButton(self.iconrun, "", None)
         self.run_action.setToolTip('Start PID loop')
         self.run_action.setCheckable(True)
-        toolbar_layout.addWidget(self.run_action, 0, 2)
+        self.toolbar_layout.addWidget(self.run_action, 0, 2)
         self.run_action.clicked.connect(self.run_PID)
 
         iconpause = QtGui.QIcon()
@@ -224,35 +226,17 @@ class DAQ_PID(QObject):
         self.pause_action = QtWidgets.QPushButton(iconpause, "", None)
         self.pause_action.setToolTip('Pause PID')
         self.pause_action.setCheckable(True)
-        toolbar_layout.addWidget(self.pause_action, 0, 3)
+        self.toolbar_layout.addWidget(self.pause_action, 0, 3)
         self.pause_action.setChecked(True)
         self.pause_action.clicked.connect(self.pause_PID)
 
         lab = QtWidgets.QLabel('Set Point:')
-        toolbar_layout.addWidget(lab, 3, 0, 1, 2)
+        self.toolbar_layout.addWidget(lab, 3, 0, 1, 2)
 
-        self.setpoint_sb = custom_tree.SpinBoxCustom()
-        self.setpoint_sb.setMinimumHeight(40)
-        font = self.setpoint_sb.font()
-        font.setPointSizeF(20)
-        self.setpoint_sb.setFont(font)
-        self.setpoint_sb.setDecimals(6)
-        toolbar_layout.addWidget(self.setpoint_sb, 3, 2, 1, 2)
-        self.setpoint_sb.valueChanged.connect(
-            self.settings.child('main_settings', 'pid_controls', 'set_point').setValue)
 
         lab1 = QtWidgets.QLabel('Current Point:')
-        toolbar_layout.addWidget(lab1, 4, 0, 1, 2)
+        self.toolbar_layout.addWidget(lab1, 4, 0, 1, 2)
 
-        self.currpoint_sb = custom_tree.SpinBoxCustom()
-        self.currpoint_sb.setMinimumHeight(40)
-        self.currpoint_sb.setReadOnly(True)
-        self.currpoint_sb.setDecimals(6)
-        self.currpoint_sb.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-        font = self.currpoint_sb.font()
-        font.setPointSizeF(20)
-        self.currpoint_sb.setFont(font)
-        toolbar_layout.addWidget(self.currpoint_sb, 4, 2, 1, 2)
 
         # create main parameter tree
         self.settings_tree = ParameterTree()
@@ -527,12 +511,41 @@ class DAQ_PID(QObject):
             self.module_manager.selected_actuators_name = self.model_class.actuators_name
             self.module_manager.selected_detectors_name = self.model_class.detectors_name
 
+            self.set_setpoints_buttons()
+
             self.enable_controls_pid(True)
             self.model_led.set_as_true()
             self.ini_model_action.setEnabled(False)
 
         except Exception as e:
             self.update_status(getLineInfo() + str(e), log_type='log')
+
+    def set_setpoints_buttons(self):
+        self.setpoints_sb = []
+        self.currpoints_sb = []
+        for ind_set in range(self.model_class.Nsetpoint):
+
+            self.setpoints_sb.append(custom_tree.SpinBoxCustom())
+            self.setpoints_sb[-1].setMinimumHeight(40)
+            font = self.setpoints_sb[-1].font()
+            font.setPointSizeF(20)
+            self.setpoints_sb[-1].setFont(font)
+            self.setpoints_sb[-1].setDecimals(6)
+            self.toolbar_layout.addWidget(self.setpoints_sb[-1], 3, 2+ind_set, 1, 1)
+            self.setpoints_sb[-1].valueChanged.connect(
+                self.settings.child('main_settings', 'pid_controls', 'set_point').setValue)
+
+
+            self.currpoints_sb.append(custom_tree.SpinBoxCustom())
+            self.currpoints_sb[-1].setMinimumHeight(40)
+            self.currpoints_sb[-1].setReadOnly(True)
+            self.currpoints_sb[-1].setDecimals(6)
+            self.currpoints_sb[-1].setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+            font = self.currpoints_sb[-1].font()
+            font.setPointSizeF(20)
+            self.currpoints_sb[-1].setFont(font)
+            self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2+ind_set, 1, 1)
+
 
     def quit_fun(self):
         """
@@ -854,7 +867,7 @@ def main():
     win.setWindowTitle('PyMoDAQ Dashboard')
 
     dashboard = DashBoard(area)
-    file = Path(get_set_preset_path()).joinpath("preset_pid.xml")
+    file = Path(get_set_preset_path()).joinpath("BeamSteering.xml")
     if file.exists():
         dashboard.set_preset_mode(file)
         # prog.load_scan_module()
