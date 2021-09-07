@@ -196,7 +196,7 @@ def select_file(start_path=config['data_saving']['h5file']['save_path'], save=Tr
 
 
 class Dock(Dock):
-
+    dock_focused = pyqtSignal(str)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -220,6 +220,7 @@ class Dock(Dock):
                 self.orientation = o
                 self.label.setOrientation(o)
                 self.updateStyle()
+
 
 class DockArea(DockArea, QObject):
     """
