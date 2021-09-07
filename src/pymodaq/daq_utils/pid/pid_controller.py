@@ -9,11 +9,11 @@ from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, get
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
-from pymodaq.daq_utils.gui_utils import DockArea
+from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
-from pyqtgraph.dockarea import Dock
+
 
 import importlib
 from simple_pid import PID
@@ -61,21 +61,20 @@ class DAQ_PID(QObject):
     if len(models) == 0:
         logger.warning('No valid installed models')
 
-    def __init__(self, area, detector_modules=[], actuator_modules=[]):
+    def __init__(self, area, module_manager=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(DAQ_PID, self).__init__()
+        super().__init__()
 
         self.settings = Parameter.create(title='PID settings', name='pid_settings', type='group', children=params)
         self.title = 'PyMoDAQ PID'
+
         self.Initialized_state = False
         self.model_class = None
-        self.detector_modules = detector_modules
-        self.actuator_modules = actuator_modules
+        self.module_manager = module_manager
         self.dock_area = area
-        self.overshoot = None
         self.check_moving = False
-        self.preset_manager = PresetManager()
         self.setupUI()
+
         self.command_stage.connect(self.move_Abs)  # to be compatible with actuator modules within daq scan
 
         self.enable_controls_pid(False)
@@ -96,11 +95,7 @@ class DAQ_PID(QObject):
                                                        'output_limit_max').value()
 
             self.PIDThread = QThread()
-            pid_runner = PIDRunner(self.model_class,
-                                   [mod.move_done_signal for mod in self.actuator_modules],
-                                   [mod.grab_done_signal for mod in self.detector_modules],
-                                   [mod.command_stage for mod in self.actuator_modules],
-                                   [mod.command_detector for mod in self.detector_modules],
+            pid_runner = PIDRunner(self.model_class, self.module_manager,
                                    dict(Kp=self.settings.child('main_settings', 'pid_controls', 'pid_constants',
                                                                'kp').value(),
                                         Ki=self.settings.child('main_settings', 'pid_controls', 'pid_constants',
@@ -117,8 +112,6 @@ class DAQ_PID(QObject):
                                                                           'filter_enable').value(),
                                                value=self.settings.child('main_settings', 'pid_controls', 'filter',
                                                                          'filter_step').value()),
-                                   det_averaging=[mod.settings.child('main_settings', 'Naverage').value() for mod in
-                                                  self.detector_modules],
                                    )
 
             self.PIDThread.pid_runner = pid_runner
@@ -178,16 +171,8 @@ class DAQ_PID(QObject):
 
     def setupUI(self):
 
-        self.dock_pid = Dock('PID controller', self.dock_area)
+        self.dock_pid = gutils.Dock('PID controller', self.dock_area)
         self.dock_area.addDock(self.dock_pid)
-
-        # %% create logger dock
-        self.logger_dock = Dock("Logger")
-        self.logger_list = QtWidgets.QListWidget()
-        self.logger_list.setMinimumWidth(300)
-        self.logger_dock.addWidget(self.logger_list)
-        self.dock_area.addDock(self.logger_dock, 'right')
-        self.logger_dock.setVisible(True)
 
         widget = QtWidgets.QWidget()
         widget_toolbar = QtWidgets.QWidget()
@@ -276,13 +261,13 @@ class DAQ_PID(QObject):
         verlayout.addWidget(widget_toolbar)
         verlayout.addWidget(self.settings_tree)
 
-        self.dock_output = Dock('PID output')
+        self.dock_output = gutils.Dock('PID output')
         widget_output = QtWidgets.QWidget()
         self.output_viewer = Viewer0D(widget_output)
         self.dock_output.addWidget(widget_output)
         self.dock_area.addDock(self.dock_output, 'right')
 
-        self.dock_input = Dock('PID input')
+        self.dock_input = gutils.Dock('PID input')
         widget_input = QtWidgets.QWidget()
         self.input_viewer = Viewer0D(widget_input)
         self.dock_input.addWidget(widget_input)
@@ -335,26 +320,11 @@ class DAQ_PID(QObject):
         try:
             if log_type is not None:
                 self.log_signal.emit(txt)
-                logging.info(txt)
+            logging.info(txt)
         except Exception as e:
             pass
 
-    @pyqtSlot(str)
-    def add_log(self, txt):
-        """
-            Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
 
-            =============== =========== ======================
-            **Parameters**    **Type**   **Description**
-            *txt*             string     the log info to add.
-            =============== =========== ======================
-        """
-        try:
-            now = datetime.datetime.now()
-            new_item = QtWidgets.QListWidgetItem(now.strftime('%Y/%m/%d %H:%M:%S') + ": " + txt)
-            self.logger_list.addItem(new_item)
-        except Exception:
-            pass
 
     def set_file_preset(self, model):
         """
@@ -427,7 +397,7 @@ class DAQ_PID(QObject):
                 if plugin['type'] == 'move':
                     ind_move += 1
                     plug_type = plug_settings.child('main_settings', 'move_type').value()
-                    self.move_docks.append(Dock(plug_name, size=(150, 250)))
+                    self.move_docks.append(gutils.Dock(plug_name, size=(150, 250)))
                     if ind_move == 0:
                         self.dock_area.addDock(self.move_docks[-1], 'top', self.logger_dock)
                     else:
@@ -479,8 +449,8 @@ class DAQ_PID(QObject):
                     plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
                     plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
 
-                    self.det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
-                    self.det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
+                    self.det_docks_settings.append(gutils.Dock(plug_name + " settings", size=(150, 250)))
+                    self.det_docks_viewer.append(gutils.Dock(plug_name + " viewer", size=(350, 350)))
 
                     if ind_det == 0:
                         self.logger_dock.area.addDock(self.det_docks_settings[-1], 'bottom',
@@ -544,45 +514,8 @@ class DAQ_PID(QObject):
             stop_scan,  DAQ_Move_main.daq_move.stop_Motion
         """
         self.overshoot = overshoot
-        for mod in self.actuator_modules:
+        for mod in self.module_manager.actuators:
             mod.stop_Motion()
-
-    def set_default_preset(self):
-        actuators = self.model_class.actuators
-        actuator_names = self.model_class.actuators_name
-
-        detectors_type = self.model_class.detectors_type
-        detectors = self.model_class.detectors
-        detectors_name = self.model_class.detectors_name
-
-        detector_modules = []
-        for ind_det, det in enumerate(detectors):
-            detector_modules.append(DAQ_Viewer(area, title=detectors_name[ind_det], DAQ_type=detectors_type[ind_det]))
-            # self.detector_modules[-1].ui.IniDet_pb.click()
-            QtWidgets.QApplication.processEvents()
-            detector_modules[-1].ui.Detector_type_combo.setCurrentText(detectors[ind_det])
-            detector_modules[-1].ui.Quit_pb.setEnabled(False)
-
-        self.dock_area.addDock(self.dock_output, 'bottom')
-        self.dock_area.moveDock(self.dock_input, 'bottom', self.dock_output)
-        self.dock_area.addDock(self.dock_pid, 'left')
-
-        dock_moves = []
-        actuator_modules = []
-        for ind_act, act in enumerate(actuators):
-            form = QtWidgets.QWidget()
-            dock_moves.append(Dock(actuator_names[ind_act]))
-            area.addDock(dock_moves[-1], 'bottom', self.dock_pid)
-            dock_moves[-1].addWidget(form)
-            actuator_modules.append(DAQ_Move(form))
-            QtWidgets.QApplication.processEvents()
-            actuator_modules[-1].ui.Stage_type_combo.setCurrentText(actuators[ind_act])
-            actuator_modules[-1].ui.Quit_pb.setEnabled(False)
-            # self.actuator_modules[-1].ui.IniStage_pb.click()
-            # QThread.msleep(1000)
-            QtWidgets.QApplication.processEvents()
-
-        return actuator_modules, detector_modules
 
     def ini_model(self):
         try:
@@ -590,21 +523,9 @@ class DAQ_PID(QObject):
             model = importlib.import_module('.' + model_name, self.model_mod.__name__ + '.models')
             self.model_class = getattr(model, model_name)(self)
 
-            # try to get corresponding managers file
-            filename = os.path.join(get_set_pid_path(), model_name + '.xml')
-            if os.path.isfile(filename):
-                self.actuator_modules, self.detector_modules = self.set_file_preset(model_name)
-            else:
-                self.actuator_modules, self.detector_modules = self.set_default_preset()
-
-            # # connecting to logger
-            # for mov in self.actuator_modules:
-            #     mov.log_signal[str].connect(self.add_log)
-            # for det in self.detector_modules:
-            #     det.log_signal[str].connect(self.add_log)
-            # self.log_signal[str].connect(self.add_log)
-
             self.model_class.ini_model()
+            self.module_manager.selected_actuators_name = self.model_class.actuators_name
+            self.module_manager.selected_detectors_name = self.model_class.detectors_name
 
             self.enable_controls_pid(True)
             self.model_led.set_as_true()
@@ -621,26 +542,6 @@ class DAQ_PID(QObject):
                 self.PIDThread.exit()
             except Exception as e:
                 print(e)
-
-            for module in self.actuator_modules:
-                try:
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except Exception as e:
-                    print(e)
-
-            for module in self.detector_modules:
-                try:
-                    module.stop_all()
-                    QtWidgets.QApplication.processEvents()
-                    module.quit_fun()
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    QtWidgets.QApplication.processEvents()
-                except Exception as e:
-                    print(e)
 
             areas = self.dock_area.tempAreas[:]
             for area in areas:
@@ -680,13 +581,6 @@ class DAQ_PID(QObject):
                 if param.name() == 'model_class':
                     self.get_set_model_params(param.value())
 
-                elif param.name() == 'module_settings':
-                    if param.value():
-                        self.settings.sigTreeStateChanged.disconnect(self.parameter_tree_changed)
-                        param.setValue(False)
-                        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-                        self.preset_manager.set_PID_preset(self.settings.child('models', 'model_class').value())
-
                 elif param.name() == 'refresh_plot_time' or param.name() == 'timeout':
                     self.command_pid.emit(ThreadCommand('update_timer', [param.name(), param.value()]))
 
@@ -695,8 +589,13 @@ class DAQ_PID(QObject):
                         self.command_pid.emit(ThreadCommand('update_options', dict(setpoint=param.value())))
                     else:
                         output = self.model_class.convert_output(param.value(), 0, stab=False)
-                        for ind_act, act in enumerate(self.actuator_modules):
-                            act.move_Abs(output[ind_act])
+                        was_connected = self.module_manager.actuators_connected
+                        if not was_connected:
+                            self.module_manager.connect_actuators()
+                        self.module_manager.move_actuators(output)
+                        if not was_connected:
+                            self.module_manager.connect_actuators(False)
+
 
                 elif param.name() == 'sample_time':
                     self.command_pid.emit(ThreadCommand('update_options', dict(sample_time=param.value())))
@@ -761,10 +660,7 @@ class PIDRunner(QObject):
     pid_output_signal = pyqtSignal(dict)
 
     def __init__(self, model_class,
-                 move_done_signals=[],
-                 grab_done_signals=[],
-                 move_modules_commands=[],
-                 detector_modules_commands=[],
+                 module_manager,
                  params=dict([]), filter=dict([]),
                  det_averaging=[]
                  ):
@@ -779,11 +675,7 @@ class PIDRunner(QObject):
         """
         super().__init__()
         self.model_class = model_class
-        self.move_done_signals = move_done_signals
-        self.grab_done_signals = grab_done_signals
-        self.det_averaging = det_averaging
-        self.move_modules_commands = move_modules_commands
-        self.detector_modules_commands = detector_modules_commands
+        self.module_manager = module_manager
 
         self.current_time = 0
         self.input = 0
@@ -797,41 +689,23 @@ class PIDRunner(QObject):
         self.refreshing_ouput_time = 200
         self.running = True
         self.timer = self.startTimer(self.refreshing_ouput_time)
-        self.det_done_datas = OrderedDict()
-        self.move_done_positions = OrderedDict()
-        self.move_done_flag = False
-        self.det_done_flag = False
-        self.paused = True
-        self.timeout_timer = QtCore.QTimer()
-        self.timeout_timer.setInterval(10000)
-        self.timeout_scan_flag = False
-        self.timeout_timer.timeout.connect(self.timeout)
 
+        self.paused = True
+
+    #     self.timeout_timer = QtCore.QTimer()
+    #     self.timeout_timer.setInterval(10000)
+    #     self.timeout_scan_flag = False
+    #     self.timeout_timer.timeout.connect(self.timeout)
+    #
     def timerEvent(self, event):
         if self.output_to_actuator is not None:
             self.pid_output_signal.emit(dict(output=self.output_to_actuator, input=[self.input]))
         else:
             self.pid_output_signal.emit(dict(output=[0], input=[self.input]))
-
-    def timeout(self):
-        self.status_sig.emit(["Update_Status", 'Timeout occured', 'log'])
-        self.timeout_scan_flag = True
-
-    def wait_for_det_done(self):
-        self.timeout_scan_flag = False
-        self.timeout_timer.start()
-        while not (self.det_done_flag or self.timeout_scan_flag):
-            # wait for grab done signals to end
-            QtWidgets.QApplication.processEvents()
-        self.timeout_timer.stop()
-
-    def wait_for_move_done(self):
-        self.timeout_scan_flag = False
-        self.timeout_timer.start()
-        while not (self.move_done_flag or self.timeout_scan_flag):
-            # wait for move done signals to end
-            QtWidgets.QApplication.processEvents()
-        self.timeout_timer.stop()
+    #
+    # def timeout(self):
+    #     self.status_sig.emit(["Update_Status", 'Timeout occured', 'log'])
+    #     self.timeout_scan_flag = True
 
     @pyqtSlot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
@@ -874,10 +748,9 @@ class PIDRunner(QObject):
 
     def start_PID(self, input=None):
         try:
-            for sig in self.move_done_signals:
-                sig.connect(self.move_done)
-            for sig in self.grab_done_signals:
-                sig.connect(self.det_done)
+            self.module_manager.connect_actuators()
+            self.module_manager.connect_detectors()
+
 
             self.current_time = time.perf_counter()
             self.status_sig.emit(["Update_Status", 'PID loop starting', 'log'])
@@ -885,13 +758,7 @@ class PIDRunner(QObject):
                 # print('input: {}'.format(self.input))
                 # # GRAB DATA FIRST AND WAIT ALL DETECTORS RETURNED
 
-                self.det_done_flag = False
-                self.det_done_datas = OrderedDict()
-                for ind_det, cmd in enumerate(self.detector_modules_commands):
-                    cmd.emit(ThreadCommand("single",
-                                           [self.det_averaging[ind_det]]))
-                    QtWidgets.QApplication.processEvents()
-                self.wait_for_det_done()
+                self.det_done_datas = self.module_manager.grab_datas()
 
                 self.input = self.model_class.convert_input(self.det_done_datas)
 
@@ -921,56 +788,15 @@ class PIDRunner(QObject):
                 self.output_to_actuator = self.model_class.convert_output(self.output, dt, stab=True)
 
                 if not self.paused:
-                    self.move_done_positions = OrderedDict()
-                    for ind_mov, cmd in enumerate(self.move_modules_commands):
-                        cmd.emit(ThreadCommand('move_Abs', [self.output_to_actuator[ind_mov]]))
-                        QtWidgets.QApplication.processEvents()
-                    self.wait_for_move_done()
+                    self.move_done_positions = self.module_manager.move_actuators(self.output_to_actuator)
 
                 self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()
                 QThread.msleep(int(self.pid.sample_time * 1000))
 
             self.status_sig.emit(["Update_Status", 'PID loop exiting', 'log'])
-            for sig in self.move_done_signals:
-                sig.disconnect(self.move_done)
-            for sig in self.grab_done_signals:
-                sig.disconnect(self.det_done)
-        except Exception as e:
-            self.status_sig.emit(["Update_Status", str(e), 'log'])
-
-    pyqtSlot(OrderedDict)  # OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
-
-    def det_done(self, data):
-        """
-        """
-        try:
-            if data['name'] not in list(self.det_done_datas.keys()):
-                self.det_done_datas[data['name']] = data
-            if len(self.det_done_datas.items()) == len(self.grab_done_signals):
-                self.det_done_flag = True
-        except Exception as e:
-            self.status_sig.emit(["Update_Status", str(e), 'log'])
-
-    pyqtSlot(str, float)
-
-    def move_done(self, name, position):
-        """
-            | Update the move_done_positions attribute if needed.
-            | If position attribute is setted, for all move modules launched, update scan_read_positions with a [modulename, position] list.
-
-            ============== ============ =================
-            **Parameters**    **Type**    **Description**
-            *name*            string     the module name
-            *position*        float      ???
-            ============== ============ =================
-        """
-        try:
-            if name not in list(self.move_done_positions.keys()):
-                self.move_done_positions[name] = position
-
-            if len(self.move_done_positions.items()) == len(self.move_done_signals):
-                self.move_done_flag = True
+            self.module_manager.connect_actuators(False)
+            self.module_manager.connect_detectors(False)
 
         except Exception as e:
             self.status_sig.emit(["Update_Status", str(e), 'log'])
@@ -986,9 +812,12 @@ class PIDRunner(QObject):
                 dt = time.perf_counter() - self.current_time
                 self.output = option[key]
                 self.output_to_actuator = self.model_class.convert_output(self.output, dt, stab=False)
-
-                for ind_move, cmd in enumerate(self.move_modules_commands):
-                    cmd.emit(ThreadCommand('move_Abs', [self.output_to_actuator[ind_move]]))
+                was_connected = self.module_manager.actuators_connected
+                if not was_connected:
+                    self.module_manager.connect_actuators()
+                self.module_manager.move_actuators(self.output_to_actuator)
+                if not was_connected:
+                    self.module_manager.connect_actuators(False)
                 self.current_time = time.perf_counter()
             if key == 'output_limits':
                 self.output_limits = option[key]
@@ -1012,38 +841,46 @@ class PIDRunner(QObject):
         self.status_sig.emit(["Update_Status", 'PID loop exiting', 'log'])
 
 
-if __name__ == '__main__':
+def main():
+    from pymodaq.dashboard import DashBoard
+    from pymodaq.daq_utils.daq_utils import get_set_preset_path
+    from pathlib import Path
     import sys
-
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = DockArea()
-
+    area = gutils.DockArea()
     win.setCentralWidget(area)
-    # win.resize(1000,500)
-    win.setWindowTitle('pymodaq PID')
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ Dashboard')
 
-    # viewer1 = DAQ_Viewer(area, title="Testing2D", DAQ_type='DAQ2D')
-    # viewer1.ui.IniDet_pb.click()
-    # #QThread.msleep(1000)
-    # QtWidgets.QApplication.processEvents()
-    # viewer1.settings.child('main_settings','wait_time').setValue(100)
-    #
-    # viewer2 = DAQ_Viewer(area, title="Testing 1D", DAQ_type='DAQ1D')
-    # viewer2.ui.IniDet_pb.click()
-    # #QThread.msleep(1000)
-    # QtWidgets.QApplication.processEvents()
-    # viewer2.settings.child('main_settings', 'wait_time').setValue(100)
-    #
-    # Form = QtWidgets.QWidget()
-    # dock_move = Dock('Move')
-    # area.addDock(dock_move)
-    # dock_move.addWidget(Form)
-    # move = DAQ_Move(Form)
-    # move.ui.IniStage_pb.click()
-    # #QThread.msleep(1000)
-    # QtWidgets.QApplication.processEvents()
+    dashboard = DashBoard(area)
+    file = Path(get_set_preset_path()).joinpath("preset_pid.xml")
+    if file.exists():
+        dashboard.set_preset_mode(file)
+        # prog.load_scan_module()
+        pid_area = gutils.DockArea()
+        pid_window = QtWidgets.QMainWindow()
+        pid_window.setCentralWidget(pid_area)
 
-    prog = DAQ_PID(area, [], [])
-    win.show()
+        prog = DAQ_PID(pid_area, dashboard.modules_manager)
+        pid_window.show()
+        pid_window.setWindowTitle('PidController')
+        QtWidgets.QApplication.processEvents()
+
+
+    else:
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
+                       f"{file}\n"
+                       f"Impossible to load the DAQ_PID Module")
+        msgBox.setStandardButtons(msgBox.Ok)
+        ret = msgBox.exec()
+
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
+
+
+

@@ -69,6 +69,9 @@ class ModulesManager(QObject):
         self.grab_done_signals = []
         self.det_commands_signal = []
 
+        self.actuators_connected = False
+        self.detectors_connected = False
+
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
 
@@ -113,8 +116,16 @@ class ModulesManager(QObject):
         return self.get_mods_from_names(self.selected_detectors_name)
 
     @property
+    def detectors_all(self):
+        return self._detectors
+
+    @property
     def actuators(self):
         return self.get_mods_from_names(self.selected_actuators_name, mod='act')
+
+    @property
+    def actuators_all(self):
+        return self._actuators
 
     @property
     def Ndetectors(self):
@@ -241,12 +252,15 @@ class ModulesManager(QObject):
         if connect:
             for sig in [mod.move_done_signal for mod in self.actuators]:
                 sig.connect(slot)
+
         else:
             try:
                 for sig in [mod.move_done_signal for mod in self.actuators]:
                     sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
+
+        self.actuators_connected = connect
 
     def connect_detectors(self, connect=True, slot=None):
         if slot is None:
@@ -261,6 +275,8 @@ class ModulesManager(QObject):
                     sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
+
+        self.detectors_connected = connect
 
     def test_move_actuators(self):
         positions = dict()

@@ -28,8 +28,6 @@ if len(models) == 0:
 params = [
     {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True, 'children': [
         {'title': 'Models class:', 'name': 'model_class', 'type': 'list', 'values': models},
-        {'title': 'Modules managers:', 'name': 'module_settings',
-         'tooltip': 'Get/Set managers settings for each module in the current model', 'type': 'bool', 'value': False},
         {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
     ]},
     {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group', 'visible': False,
@@ -39,7 +37,8 @@ params = [
 
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group', 'children': [
         {'title': 'Acquisition Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000},
-        {'name': 'epsilon', 'type': 'float', 'value': 0.01, 'tooltip': 'Precision at which move is considered as done'},
+        {'title': 'epsilon', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
+         'tooltip': 'Precision at which move is considered as done'},
         {'title': 'PID controls:', 'name': 'pid_controls', 'type': 'group', 'children': [
             {'title': 'Set Point:', 'name': 'set_point', 'type': 'float', 'value': 0., ',readonly': True},
             {'title': 'Sample time (ms):', 'name': 'sample_time', 'type': 'int', 'value': 10},
