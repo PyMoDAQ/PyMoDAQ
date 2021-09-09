@@ -9,7 +9,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils
 from pymodaq.daq_utils.h5modules import H5Saver
 import importlib
-from pymodaq.daq_utils.pid.pid_params import params as pid_params
+from pymodaq_pid.pid_params import params as pid_params
 from pathlib import Path
 
 logger = utils.set_logger(utils.get_module_name(__file__))

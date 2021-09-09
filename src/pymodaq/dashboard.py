@@ -21,7 +21,7 @@ from time import perf_counter
 
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
+from pymodaq_pid.pid_controller import DAQ_PID
 from pymodaq.daq_utils.daq_utils import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
