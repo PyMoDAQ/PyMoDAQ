@@ -69,6 +69,9 @@ class ModulesManager(QObject):
         self.grab_done_signals = []
         self.det_commands_signal = []
 
+        self.actuators_connected = False
+        self.detectors_connected = False
+
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
 
@@ -113,8 +116,16 @@ class ModulesManager(QObject):
         return self.get_mods_from_names(self.selected_detectors_name)
 
     @property
+    def detectors_all(self):
+        return self._detectors
+
+    @property
     def actuators(self):
         return self.get_mods_from_names(self.selected_actuators_name, mod='act')
+
+    @property
+    def actuators_all(self):
+        return self._actuators
 
     @property
     def Ndetectors(self):
@@ -241,12 +252,15 @@ class ModulesManager(QObject):
         if connect:
             for sig in [mod.move_done_signal for mod in self.actuators]:
                 sig.connect(slot)
+
         else:
             try:
                 for sig in [mod.move_done_signal for mod in self.actuators]:
                     sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
+
+        self.actuators_connected = connect
 
     def connect_detectors(self, connect=True, slot=None):
         if slot is None:
@@ -261,6 +275,8 @@ class ModulesManager(QObject):
                     sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
+
+        self.detectors_connected = connect
 
     def test_move_actuators(self):
         positions = dict()
@@ -281,10 +297,36 @@ class ModulesManager(QObject):
 
         self.connect_actuators(False)
 
-    def move_actuators(self, positions):
+    def move_actuators(self, positions, mode='abs', poll=True):
+        """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
+
+        Parameters
+        ----------
+        positions: (list) the list of position to apply. Its length must be equal to the number of selected actutors
+        mode: (str) either 'abs' for absolute positionning or 'rel' for relative
+        poll: (bool) if True will wait for the selected actuators to reach their target positions (they have to be
+        connected to a method checking for the position and letting the programm know the move is done (default
+        connection is this object `move_done` method)
+
+        Returns
+        -------
+        (OrderedDict) with the selected actuators's name as key and current actuators's value as value
+
+        See Also
+        --------
+        move_done
+        """
         self.move_done_positions = OrderedDict()
         self.move_done_flag = False
         self.settings.child(('move_done')).setValue(self.move_done_flag)
+
+        if mode == 'abs':
+            command = 'move_Abs'
+        elif mode == 'rel':
+            command = 'move_Rel'
+        else:
+            logger.error(f'Invalid positioning mode: {mode}')
+            return self.move_done_positions
 
         if not hasattr(positions, '__iter__'):
             positions = [positions]
@@ -294,25 +336,25 @@ class ModulesManager(QObject):
                 for k in positions:
                     act = self.get_mod_from_name(k, 'act')
                     if act is not None:
-                        act.command_stage.emit(utils.ThreadCommand(command="move_Abs", attributes=[positions[k]]))
+                        act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[k]]))
             else:
                 for ind, act in enumerate(self.actuators):
-                    act.command_stage.emit(utils.ThreadCommand(command="move_Abs", attributes=[positions[ind]]))
+                    act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[ind]]))
 
         else:
             logger.error('Invalid number of positions compared to selected actuators')
             return self.move_done_positions
 
         tzero = time.perf_counter()
+        if poll:
+            while not self.move_done_flag: #polling move done
 
-        while not self.move_done_flag: #polling move done
-
-            QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tzero > self.timeout:
-                self.timeout_signal.emit(True)
-                logger.error('Timeout Fired during waiting for data to be acquired')
-                break
-            QThread.msleep(20)
+                QtWidgets.QApplication.processEvents()
+                if time.perf_counter() - tzero > self.timeout:
+                    self.timeout_signal.emit(True)
+                    logger.error('Timeout Fired during waiting for data to be acquired')
+                    break
+                QThread.msleep(20)
 
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions

@@ -7,7 +7,7 @@ import subprocess
 import pickle
 import logging
 from pathlib import Path
-
+from importlib import import_module
 from PyQt5 import QtGui, QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 
@@ -21,14 +21,15 @@ from time import perf_counter
 
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.pid.pid_controller import DAQ_PID
 from pymodaq.daq_utils.daq_utils import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.managers.remote_manager import RemoteManager
 from pymodaq.daq_utils.plotting.roi_saver import ROISaver
+
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
 from pymodaq_plugin_manager.manager import PluginManager
@@ -56,6 +57,7 @@ overshoot_path = utils.get_set_overshoot_path()
 roi_path = utils.get_set_roi_path()
 remote_path = utils.get_set_remote_path()
 
+extensions = utils.get_extensions()
 
 class DashBoard(QObject):
     """
@@ -81,6 +83,8 @@ class DashBoard(QObject):
         self.log_module = None
         self.retriever_module = None
         self.database_module = None
+        self.extensions = dict([])
+        self.extension_windows= []
 
         self.dockarea = dockarea
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
@@ -166,20 +170,25 @@ class DashBoard(QObject):
 
     def load_scan_module(self):
         self.scan_module = DAQ_Scan(dockarea=self.dockarea, dashboard=self)
+        self.extensions['DAQ_Scan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
 
     def load_log_module(self):
         self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
+        self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
 
-    def load_retriever_module(self):
-        win = QtWidgets.QMainWindow()
+    def load_extensions_module(self, ext):
+        self.extension_windows.append(QtWidgets.QMainWindow())
         area = gutils.DockArea()
-        win.setCentralWidget(area)
-        win.resize(1000, 500)
-        win.setWindowTitle('PyMoDAQ Retriever')
-        self.retriever_module = Retriever(dockarea=area, dashboard=self)
-        win.show()
+        self.extension_windows[-1].setCentralWidget(area)
+        self.extension_windows[-1].resize(1000, 500)
+        self.extension_windows[-1].setWindowTitle(ext['name'])
+        pkg = ext['module']
+        module = import_module(f'{pkg.__name__}.{pkg.module_name}', pkg)
+        klass = getattr(module, pkg.klass_name)
+        self.extensions[pkg.klass_name] = klass(dockarea=area, dashboard=self)
+        self.extension_windows[-1].show()
 
     def create_menu(self, menubar):
         """
@@ -280,9 +289,12 @@ class DashBoard(QObject):
         action_scan.triggered.connect(self.load_scan_module)
         action_log = self.actions_menu.addAction('Log data')
         action_log.triggered.connect(self.load_log_module)
-        if isretriever:
-            action_retriever = self.actions_menu.addAction('Femto Retriever')
-            action_retriever.triggered.connect(self.load_retriever_module)
+
+        extensions_actions = []
+        for ext in extensions:
+            extensions_actions.append(self.actions_menu.addAction(ext['name']))
+            extensions_actions[-1].triggered.connect(self.create_ext_menu_slot(ext))
+
 
         # help menu
         help_menu = menubar.addMenu('?')
@@ -311,6 +323,9 @@ class DashBoard(QObject):
 
     def create_menu_slot(self, filename):
         return lambda: self.set_preset_mode(filename)
+
+    def create_ext_menu_slot(self, ext):
+        return lambda: self.load_extensions_module(ext)
 
     def create_menu_slot_roi(self, filename):
         return lambda: self.set_roi_configuration(filename)
