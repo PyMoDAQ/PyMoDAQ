@@ -32,18 +32,13 @@ from logging.handlers import TimedRotatingFileHandler
 import inspect
 import json
 
+
+
 plot_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
-
-
-def get_version():
-    with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
-        version = fvers.read().strip()
-    return version
-
 
 def get_set_local_dir(basename='pymodaq_local'):
     """Defines, creates abd returns a local folder where configurations files will be saved
@@ -69,6 +64,78 @@ def get_set_local_dir(basename='pymodaq_local'):
             if not local_path.is_dir():
                 local_path.mkdir()
     return local_path
+
+def get_set_config_path(config_name='config'):
+    """Creates a folder in the local config directory to store specific configuration files
+
+    Parameters
+    ----------
+    config_name: (str) name of the configuration folder
+
+    Returns
+    -------
+
+    See Also
+    --------
+    get_set_local_dir
+    """
+    local_path = get_set_local_dir()
+    path = local_path.joinpath(config_name)
+    if not path.is_dir():
+        path.mkdir()  # pragma: no cover
+    return path
+
+def get_set_log_path():
+    """ creates and return the config folder path for log files
+    """
+    return get_set_config_path('log')
+
+def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
+    """defines a logger of a given name and eventually add an handler to it
+
+    Parameters
+    ----------
+    logger_name: (str) the name of the logger (usually it is the module name as returned by get_module_name
+    add_handler (bool) if True adds a TimedRotatingFileHandler to the logger instance (should be True if logger set from
+                main app
+    base_logger: (bool) specify if this is the parent logger (usually where one defines the handler)
+
+    Returns
+    -------
+    logger: (logging.logger) logger instance
+    See Also
+    --------
+    get_module_name, logging.handlers.TimedRotatingFileHandler
+    """
+    if not base_logger:
+        logger_name = f'pymodaq.{logger_name}'
+
+    logger = logging.getLogger(logger_name)
+    log_path = get_set_config_path('log')
+    if add_handler:
+        if log_level is None:
+            config = load_config()
+            log_level = config['general']['debug_level']
+        logger.setLevel(log_level)
+        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    if add_to_console:
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    return logger
+
+logger = set_logger('daq_utils')
+
+
+def get_version():
+    with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
+        version = fvers.read().strip()
+    return version
+
 
 
 def copy_preset():                          # pragma: no cover
@@ -763,6 +830,32 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     return plugins
 
 
+def get_extensions():
+    """
+    Get pymodaq extensions as a list
+
+    Returns
+    -------
+    list: list of disct containting the name and module of the found extension
+    """
+    extension_import = []
+    discovered_extension = metadata.entry_points()['pymodaq.extensions']
+
+    for pkg in discovered_extension:
+        try:
+            module = importlib.import_module(pkg.value)
+            if hasattr(module, 'NICE_NAME'):
+                name = module.NICE_NAME
+            else:
+                name = pkg.value
+            extension = {'name': name, 'module': module}
+            extension_import.append(extension)
+
+        except Exception as e:  # pragma: no cover
+            logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
+
+    return extension_import
+
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     Get plugins names as a list
@@ -814,25 +907,6 @@ def check_vals_in_iterable(iterable1, iterable2):
         assert val1 == val2
 
 
-def get_set_config_path(config_name='config'):
-    """Creates a folder in the local config directory to store specific configuration files
-
-    Parameters
-    ----------
-    config_name: (str) name of the configuration folder
-
-    Returns
-    -------
-
-    See Also
-    --------
-    get_set_local_dir
-    """
-    local_path = get_set_local_dir()
-    path = local_path.joinpath(config_name)
-    if not path.is_dir():
-        path.mkdir()  # pragma: no cover
-    return path
 
 
 def get_set_preset_path():
@@ -852,10 +926,6 @@ def get_set_pid_path():
     return get_set_config_path('pid_configs')
 
 
-def get_set_log_path():
-    """ creates and return the config folder path for log files
-    """
-    return get_set_config_path('log')
 
 
 def get_set_layout_path():
@@ -887,44 +957,6 @@ def get_module_name(module__file__path):
     path = Path(module__file__path)
     return path.stem
 
-
-def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
-    """defines a logger of a given name and eventually add an handler to it
-
-    Parameters
-    ----------
-    logger_name: (str) the name of the logger (usually it is the module name as returned by get_module_name
-    add_handler (bool) if True adds a TimedRotatingFileHandler to the logger instance (should be True if logger set from
-                main app
-    base_logger: (bool) specify if this is the parent logger (usually where one defines the handler)
-
-    Returns
-    -------
-    logger: (logging.logger) logger instance
-    See Also
-    --------
-    get_module_name, logging.handlers.TimedRotatingFileHandler
-    """
-    if not base_logger:
-        logger_name = f'pymodaq.{logger_name}'
-
-    logger = logging.getLogger(logger_name)
-    log_path = get_set_config_path('log')
-    if add_handler:
-        if log_level is None:
-            config = load_config()
-            log_level = config['general']['debug_level']
-        logger.setLevel(log_level)
-        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    if add_to_console:
-        console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-    return logger
 
 
 def caller_name(skip=2):
@@ -1542,5 +1574,6 @@ if __name__ == '__main__':
     #     print(str(p))
     # v = get_version()
     # pass
-    plugins = get_plugins()  # pragma: no cover
+    #plugins = get_plugins()  # pragma: no cover
+    extensions = get_extension()
     pass
