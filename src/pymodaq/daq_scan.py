@@ -1528,7 +1528,8 @@ class DAQ_Scan(QObject):
             if scan_type == 'Scan1D' or \
                     (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or \
                     (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
-                    scan_type == 'Tabular':
+                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 1) or \
+                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes > 2):
 
                 if 'data0D' in datas['datas'].keys():
                     if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
