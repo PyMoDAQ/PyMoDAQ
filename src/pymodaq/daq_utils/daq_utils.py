@@ -22,7 +22,6 @@ from ctypes import CFUNCTYPE
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 
-import enum
 import os
 
 import importlib
@@ -856,6 +855,41 @@ def get_extensions():
 
     return extension_import
 
+def get_models():
+    """
+    Get PID Models as a list to instantiate Control Actuators per degree of liberty in the model
+
+    Returns
+    -------
+    list: list of disct containting the name and python module of the found models
+    """
+    from pymodaq.pid.utils import PIDModelGeneric
+    models_import = []
+    discovered_models = metadata.entry_points()['pymodaq.pid_models']
+
+    for pkg in discovered_models:
+        try:
+            module = importlib.import_module(pkg.value)
+            module_name = pkg.value
+
+            for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
+                try:
+                    model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
+                    classes = inspect.getmembers(model_module, inspect.isclass)
+                    for name, klass in classes:
+                        if klass.__base__ is PIDModelGeneric:
+                            models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
+                            break
+
+                except Exception as e:  # pragma: no cover
+                    logger.warning(str(e))
+
+        except Exception as e:  # pragma: no cover
+            logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
+
+    return models_import
+
+
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     Get plugins names as a list
@@ -897,6 +931,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
             pass
     plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
     return plugins_import
+
 
 
 def check_vals_in_iterable(iterable1, iterable2):
@@ -1575,5 +1610,6 @@ if __name__ == '__main__':
     # v = get_version()
     # pass
     #plugins = get_plugins()  # pragma: no cover
-    extensions = get_extension()
+    #extensions = get_extension()
+    models = get_models()
     pass

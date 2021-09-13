@@ -92,8 +92,7 @@ class DAQ_Scan(QObject):
         self.plot_2D_ini = False
 
         self.scan_thread = None
-        self.move_modules = self.dashboard.move_modules
-        self.detector_modules = self.dashboard.detector_modules
+        self.modules_manager = self.dashboard.modules_manager
 
         self.h5saver = H5Saver()
         self.h5saver.settings.child(('do_save')).hide()
@@ -101,14 +100,14 @@ class DAQ_Scan(QObject):
         self.h5saver.new_file_sig.connect(self.create_new_file)
         self.h5arrays = OrderedDict([])
 
-        self.scanner = Scanner(actuators=self.move_modules, adaptive_losses=adaptive_losses)
+        self.scanner = Scanner(actuators=self.modules_manager.actuators, adaptive_losses=adaptive_losses)
         self.scan_parameters = None
 
         self.batcher = None
         self.batch_started = False
         self.ind_batch = 0
 
-        self.modules_manager = self.dashboard.modules_manager
+
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.detectors_changed[list].connect(self.update_plot_det_items)
 
@@ -524,7 +523,7 @@ class DAQ_Scan(QObject):
             items = OrderedDict()
             if self.navigator is not None:
                 items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
-            for det in self.detector_modules:
+            for det in self.modules_manager.detectors_all:
                 if len([view for view in det.ui.viewers if view.viewer_type == 'Data2D']) != 0:
                     items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
                                             names=[view.title for view in det.ui.viewers if
@@ -544,7 +543,7 @@ class DAQ_Scan(QObject):
             self.scanner.scan_selector.show_scan_selector(visible=False)
 
             # setting moves and det in tree
-            preset_items_det = [mod for ind, mod in enumerate(self.detector_modules) if ind == 0]
+            preset_items_det = [mod for ind, mod in enumerate(self.modules_manager.detectors_all) if ind == 0]
             self.settings.child('scan_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
             if preset_items_det != []:
                 self.settings.child('scan_options', 'plot_from').setValue(preset_items_det[0].title)
@@ -1390,7 +1389,7 @@ class DAQ_Scan(QObject):
                     self.ui.scan2D_graph.x_axis = x_axis
                     self.ui.scan2D_subgraph.x_axis = x_axis
 
-                    det_names = [det.title for det in self.detector_modules]
+                    det_names = [det.title for det in self.modules_manager.detectors_all]
                     ind_plot_det = det_names.index(self.settings.child('scan_options', 'plot_from').value())
                     if 'x_axis' in data.keys():
                         self.scan_y_axis = data['x_axis']['data']
@@ -1401,15 +1400,15 @@ class DAQ_Scan(QObject):
                         label = 'pixels'
                         units = 'index'
 
-                    if self.detector_modules[ind_plot_det].ui.viewers[0].viewer_type == 'Data1D':
+                    if self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].viewer_type == 'Data1D':
                         if label == '':
-                            label = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['label']
+                            label = self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].axis_settings['label']
                         if units == '':
-                            units = self.detector_modules[ind_plot_det].ui.viewers[0].axis_settings['units']
+                            units = self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].axis_settings['units']
 
                     self.ui.scan2D_graph.y_axis = dict(data=self.scan_y_axis,
                                                        units=units,
-                                                       label=f'{self.detector_modules[ind_plot_det].title} {label}')
+                                                       label=f'{self.modules_manager.detectors_all[ind_plot_det].title} {label}')
                     self.scan_data_2D = []
                     self.scan_data_2D_average = []
                     for ind, key in enumerate(datas):
