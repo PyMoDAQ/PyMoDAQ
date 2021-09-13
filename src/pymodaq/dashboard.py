@@ -536,10 +536,6 @@ class DashBoard(QObject):
             path = layout_path.joinpath(self.preset_file.stem + '.dock')
             self.save_layout_state(path)
 
-    def open_PID(self):
-        area = self.dockarea.addTempArea()
-        self.pid_controller = DAQ_PID(area, [], [])
-
     def set_file_preset(self, filename):
         """
             Set a file managers from the converted xml file given by the filename parameter.
@@ -577,20 +573,20 @@ class DashBoard(QObject):
             # except Exception as e:
             #     logger.exception(str(e))
 
-            # # set PID if checked in managers
-            try:
-                if self.preset_manager.preset_params.child(('use_pid')).value():
-                    self.open_PID()
-                    QtWidgets.QApplication.processEvents()
-                    for child in putils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')),
-                                                             []):
-                        preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
-                        self.pid_controller.settings.child(*preset_path).setValue(child.value())
-
-                    move_modules.append(self.pid_controller)
-
-            except Exception as e:
-                logger.exception(str(e))
+            # # # set PID if checked in managers
+            # try:
+            #     if self.preset_manager.preset_params.child(('use_pid')).value():
+            #         self.open_PID()
+            #         QtWidgets.QApplication.processEvents()
+            #         for child in putils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')),
+            #                                                  []):
+            #             preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
+            #             self.pid_controller.settings.child(*preset_path).setValue(child.value())
+            #
+            #         move_modules.append(self.pid_controller)
+            #
+            # except Exception as e:
+            #     logger.exception(str(e))
 
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
