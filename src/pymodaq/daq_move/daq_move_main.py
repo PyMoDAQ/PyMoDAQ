@@ -757,6 +757,7 @@ class DAQ_Move_stage(QObject):
     def __init__(self, stage_name, position, title='actuator'):
         super().__init__()
         self.logger = utils.set_logger(f'{logger.name}.{title}.actuator')
+        self.title = title
         self.hardware = None
         self.stage_name = stage_name
         self.current_position = position

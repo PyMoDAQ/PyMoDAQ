@@ -35,7 +35,9 @@ class DAQ_PID(QObject):
     """
     """
     command_pid = pyqtSignal(ThreadCommand)
-    values_signal = pyqtSignal(list)
+    curr_points_signal = pyqtSignal(dict)
+    setpoints_signal = pyqtSignal(dict)
+    emit_curr_points_sig = pyqtSignal()
 
     models = get_models()
 
@@ -88,6 +90,8 @@ class DAQ_PID(QObject):
 
         self.Initialized_state = False
         self.model_class = None
+        self._curr_points = dict([])
+        self._setpoints = dict([])
 
         self.module_manager = None
         if dashboard is not None:
@@ -100,6 +104,8 @@ class DAQ_PID(QObject):
         self.enable_controls_pid(False)
 
         self.enable_controls_pid_run(False)
+
+        self.emit_curr_points_sig.connect(self.emit_curr_points)
 
     def ini_PID(self):
 
@@ -154,9 +160,7 @@ class DAQ_PID(QObject):
     def process_output(self, datas):
         self.output_viewer.show_data([[dat] for dat in datas['output']])
         self.input_viewer.show_data([[dat] for dat in datas['input']])
-        for ind, sb in enumerate(self.currpoints_sb):
-            sb.setValue(datas['input'][ind])
-        self.values_signal.emit(datas['input'])
+        self.curr_points = datas['input']
 
     def enable_controls_pid(self, enable=False):
         self.ini_PID_action.setEnabled(enable)
@@ -244,7 +248,7 @@ class DAQ_PID(QObject):
         widget_output = QtWidgets.QWidget()
         self.output_viewer = Viewer0D(widget_output)
         self.dock_output.addWidget(widget_output)
-        self.dock_area.addDock(self.dock_output, 'right')
+        self.dock_area.addDock(self.dock_output, 'right', self.dock_pid)
 
         self.dock_input = gutils.Dock('PID input')
         widget_input = QtWidgets.QWidget()
@@ -503,6 +507,24 @@ class DAQ_PID(QObject):
         for ind, sp in enumerate(self.setpoints_sb):
             sp.setValue(values[ind])
 
+    def setpoints_external(self, values_dict):
+        for key in values_dict:
+            index = self.model_class.setpoints_names.index(key)
+            self.setpoints_sb[index].setValue(values_dict[key])
+
+    @property
+    def curr_points(self):
+        return [sp.value() for sp in self.currpoints_sb]
+
+    @curr_points.setter
+    def curr_points(self, values):
+        for ind, sp in enumerate(self.currpoints_sb):
+            sp.setValue(values[ind])
+
+    def emit_curr_points(self):
+        if self.model_class is not None:
+            self.curr_points_signal.emit(dict(zip(self.model_class.setpoints_names, self.curr_points)))
+
     def set_setpoints_buttons(self):
         self.setpoints_sb = []
         self.currpoints_sb = []
@@ -528,6 +550,7 @@ class DAQ_PID(QObject):
             self.currpoints_sb[-1].setFont(font)
             self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2+ind_set, 1, 1)
 
+        self.setpoints_signal.connect(self.setpoints_external)
 
     def quit_fun(self):
         """

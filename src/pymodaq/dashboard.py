@@ -32,6 +32,7 @@ from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger
+from pymodaq.pid.pid_controller import DAQ_PID
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 from packaging import version as version_mod
@@ -81,6 +82,7 @@ class DashBoard(QObject):
         self.wait_time = 1000
         self.scan_module = None
         self.log_module = None
+        self.pid_module = None
         self.retriever_module = None
         self.database_module = None
         self.extensions = dict([])
@@ -177,6 +179,10 @@ class DashBoard(QObject):
         self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
         self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
+
+    def load_pid_module(self):
+        self.pid_module = DAQ_PID(dockarea=self.dockarea.addTempArea(), dashboard=self)
+        self.extensions['DAQ_PID'] = self.pid_module
 
     def load_extensions_module(self, ext):
         self.extension_windows.append(QtWidgets.QMainWindow())
@@ -289,11 +295,13 @@ class DashBoard(QObject):
         action_scan.triggered.connect(self.load_scan_module)
         action_log = self.actions_menu.addAction('Log data')
         action_log.triggered.connect(self.load_log_module)
+        action_pid = self.actions_menu.addAction('PID module')
+        action_pid.triggered.connect(self.load_pid_module)
 
         extensions_actions = []
         for ext in extensions:
             extensions_actions.append(self.actions_menu.addAction(ext['name']))
-            extensions_actions[-1].triggered.connect(self.create_ext_menu_slot(ext))
+            extensions_actions[-1].triggered.connect(self.create_menu_slot_ext(ext))
 
 
         # help menu
@@ -324,7 +332,7 @@ class DashBoard(QObject):
     def create_menu_slot(self, filename):
         return lambda: self.set_preset_mode(filename)
 
-    def create_ext_menu_slot(self, ext):
+    def create_menu_slot_ext(self, ext):
         return lambda: self.load_extensions_module(ext)
 
     def create_menu_slot_roi(self, filename):
@@ -536,6 +544,34 @@ class DashBoard(QObject):
             path = layout_path.joinpath(self.preset_file.stem + '.dock')
             self.save_layout_state(path)
 
+    def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms, move_modules):
+
+        move_docks.append(Dock(plug_name, size=(150, 250)))
+        if len(move_docks) == 1:
+            self.dockarea.addDock(move_docks[-1], 'right', self.logger_dock)
+        else:
+            self.dockarea.addDock(move_docks[-1], 'above', move_docks[-2])
+        move_forms.append(QtWidgets.QWidget())
+        mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name)
+
+        mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
+        mov_mod_tmp.ui.Quit_pb.setEnabled(False)
+        QtWidgets.QApplication.processEvents()
+        if plug_settings is not None:
+            try:
+                utils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
+            except KeyError as e:
+                mssg = f'Could not set this setting: {str(e)}\n' \
+                       f'The Preset is no more compatible with the plugin {plug_type}'
+                logger.warning(mssg)
+                self.splash_sc.showMessage(mssg, color=Qt.white)
+        QtWidgets.QApplication.processEvents()
+
+        mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
+        move_docks[-1].addWidget(move_forms[-1])
+        move_modules.append(mov_mod_tmp)
+
+
     def set_file_preset(self, filename):
         """
             Set a file managers from the converted xml file given by the filename parameter.
@@ -573,20 +609,36 @@ class DashBoard(QObject):
             # except Exception as e:
             #     logger.exception(str(e))
 
-            # # # set PID if checked in managers
-            # try:
-            #     if self.preset_manager.preset_params.child(('use_pid')).value():
-            #         self.open_PID()
-            #         QtWidgets.QApplication.processEvents()
-            #         for child in putils.iter_children_params(self.preset_manager.preset_params.child(('pid_settings')),
-            #                                                  []):
-            #             preset_path = self.preset_manager.preset_params.child(('pid_settings')).childPath(child)
-            #             self.pid_controller.settings.child(*preset_path).setValue(child.value())
-            #
-            #         move_modules.append(self.pid_controller)
-            #
-            # except Exception as e:
-            #     logger.exception(str(e))
+            # # set PID if checked in managers
+            try:
+                if self.preset_manager.preset_params.child('use_pid').value():
+                    self.load_pid_module()
+
+                    self.pid_module.settings.child('models', 'model_class').setValue(
+                        self.preset_manager.preset_params.child('pid_models').value())
+
+                    QtWidgets.QApplication.processEvents()
+                    for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
+                                                             []):
+                        preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
+                        path = ['models', 'model_params']
+                        path.extend(preset_path)
+                        self.pid_module.settings.child(*path).setValue(child.value())
+
+                    model_class = utils.get_models(
+                        self.preset_manager.preset_params.child('pid_models').value())['class']
+                    for setp in model_class.setpoints_names:
+                        self.add_move(setp, None, 'PID', move_docks, move_forms, move_modules)
+                        move_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
+                                                           setpoint=self.pid_module.setpoints_signal,
+                                                           emit_curr_points=self.pid_module.emit_curr_points_sig)
+                        move_modules[-1].ui.IniStage_pb.click()
+                        QtWidgets.QApplication.processEvents()
+                        self.poll_init(move_modules[-1])
+                        QtWidgets.QApplication.processEvents()
+
+            except Exception as e:
+                logger.exception(str(e))
 
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
@@ -620,41 +672,17 @@ class DashBoard(QObject):
             #################################################################
             #######################
 
-            ind_move = -1
             ind_det = -1
             for plug_IDs in plugins_sorted:
                 for ind_plugin, plugin in enumerate(plug_IDs):
-                    plug_name = plugin['value'].child(('name')).value()
-                    plug_init = plugin['value'].child(('init')).value()
-                    plug_settings = plugin['value'].child(('params'))
+                    plug_name = plugin['value'].child('name').value()
+                    plug_init = plugin['value'].child('init').value()
+                    plug_settings = plugin['value'].child('params')
                     self.splash_sc.showMessage('Loading {:s} module: {:s}'.format(plugin['type'], plug_name),
                                                color=Qt.white)
                     if plugin['type'] == 'move':
-                        ind_move += 1
                         plug_type = plug_settings.child('main_settings', 'move_type').value()
-                        move_docks.append(Dock(plug_name, size=(150, 250)))
-                        if ind_move == 0:
-                            self.dockarea.addDock(move_docks[-1], 'right', self.logger_dock)
-                        else:
-                            self.dockarea.addDock(move_docks[-1], 'above', move_docks[-2])
-                        move_forms.append(QtWidgets.QWidget())
-                        mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name)
-
-                        mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
-                        mov_mod_tmp.ui.Quit_pb.setEnabled(False)
-                        QtWidgets.QApplication.processEvents()
-                        try:
-                            utils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
-                        except KeyError as e:
-                            mssg = f'Could not set this setting: {str(e)}\n'\
-                                   f'The Preset is no more compatible with the plugin {plug_type}'
-                            logger.warning(mssg)
-                            self.splash_sc.showMessage(mssg, color=Qt.white)
-                        QtWidgets.QApplication.processEvents()
-
-                        mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
-                        move_docks[-1].addWidget(move_forms[-1])
-                        move_modules.append(mov_mod_tmp)
+                        self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms, move_modules)
 
                         try:
                             if ind_plugin == 0:  # should be a master type plugin
@@ -1006,6 +1034,10 @@ class DashBoard(QObject):
                 self.detector_modules = detector_modules
 
                 self.modules_manager = ModulesManager(self.detector_modules, self.move_modules)
+
+                if self.preset_manager.preset_params.child('use_pid').value():
+                    self.pid_module.module_manager = self.modules_manager
+                    self.pid_module.ini_model()
 
                 #####################################################
                 self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],

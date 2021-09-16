@@ -1,5 +1,4 @@
 from pymodaq.daq_utils.daq_utils import get_plugins, set_logger, get_module_name
-
 logger = set_logger(get_module_name(__file__))
 
 DAQ_Move_Stage_type = get_plugins('daq_move')
@@ -19,6 +18,7 @@ class InputFromDetector:
     def __repr__(self):
         return f'Inputs with current values: {self.values}'
 
+
 class OutputToActuator:
     def __init__(self, mode='rel', values=[]):
         super().__init__()
@@ -31,6 +31,7 @@ class OutputToActuator:
     def __repr__(self):
         return f'Output in {self.mode} mode with current values: {self.values}'
 
+
 class PIDModelGeneric:
     limits = dict(max=dict(state=False, value=1),
                   min=dict(state=False, value=0),)
@@ -39,14 +40,13 @@ class PIDModelGeneric:
 
     Nsetpoints = 1
     setpoint_ini = [0. for ind in range(Nsetpoints)]
+    setpoints_names = ['' for ind in range(Nsetpoints)]
 
     actuators_name = []
     detectors_name = []
 
     def __init__(self, pid_controller):
         self.pid_controller = pid_controller  # instance of the pid_controller using this model
-        self.get_mod_from_name = pid_controller.module_manager.get_mod_from_name
-
         self.settings = self.pid_controller.settings.child('models', 'model_params')  # set of parameters
         self.data_names = None
         self.curr_output = [0. for ind in range(self.Nsetpoints)]
@@ -131,6 +131,7 @@ class PIDModelGeneric:
         out_put_to_actuator = OutputToActuator('rel', values=[output])
 
         return out_put_to_actuator
+
 
 def main(xmlfile):
     from pymodaq.dashboard import DashBoard

@@ -5,6 +5,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils
+from pymodaq.daq_utils.managers import preset_manager_utils
 import importlib
 from pathlib import Path
 
@@ -17,6 +18,7 @@ preset_path = utils.get_set_preset_path()
 overshoot_path = utils.get_set_overshoot_path()
 layout_path = utils.get_set_layout_path()
 
+pid_models = [mod['name'] for mod in utils.get_models()]
 
 class PresetManager:
     def __init__(self, msgbox=False, path=None, extra_params=[], param_options=[]):
@@ -63,57 +65,12 @@ class PresetManager:
             status = self.show_preset()
         return status
 
-    def set_PID_preset(self, pid_model):
-        self.pid_type = True
-        filename = os.path.join(utils.get_set_pid_path(), pid_model + '.xml')
-        if os.path.isfile(filename):
-            children = ioxml.XML_file_to_parameter(filename)
-            self.preset_params = Parameter.create(title='Preset', name='Preset', type='group', children=children)
-
-        else:
-            model_mod = importlib.import_module('pymodaq_pid_models')
-            model = importlib.import_module('.' + pid_model, model_mod.__name__ + '.models')
-            model_class = getattr(model, pid_model)
-            actuators = model_class.actuators
-            actuators_name = model_class.actuators_name
-            detectors_type = model_class.detectors_type
-            detectors_name = model_class.detectors_name
-            detectors = model_class.detectors
-
-            param = [
-                {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': pid_model, 'readonly': True},
-            ]
-
-            params_move = [
-                {'title': 'Actuators:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
-            params_det = [{'title': 'Detectors:', 'name': 'Detectors',
-                           'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
-            self.preset_params = Parameter.create(title='Preset', name='Preset', type='group',
-                                                  children=param + params_move + params_det)
-
-            QtWidgets.QApplication.processEvents()
-            for ind_act, act in enumerate(actuators):
-                self.preset_params.child(('Moves')).addNew(act)
-                self.preset_params.child('Moves', 'move{:02.0f}'.format(ind_act), 'name').setValue(
-                    actuators_name[ind_act])
-                QtWidgets.QApplication.processEvents()
-
-            for ind_det, det in enumerate(detectors):
-                self.preset_params.child(('Detectors')).addNew(detectors_type[ind_det] + '/' + det)
-                self.preset_params.child('Detectors', 'det{:02.0f}'.format(ind_det), 'name').setValue(
-                    detectors_name[ind_det])
-                QtWidgets.QApplication.processEvents()
-
-        status = self.show_preset()
-        return status
-
     def get_set_pid_model_params(self, model_file):
-        model_mod = importlib.import_module('pymodaq_pid_models')
-        self.preset_params.child('pid_settings', 'models', 'model_params').clearChildren()
-        model = importlib.import_module('.' + model_file, model_mod.__name__ + '.models')
-        model_class = getattr(model, model_file)
-        params = getattr(model_class, 'params')
-        self.preset_params.child('pid_settings', 'models', 'model_params').addChildren(params)
+        self.preset_params.child('model_settings').clearChildren()
+        model = utils.get_models(model_file)
+        if model is not None:
+            params = model['class'].params
+            self.preset_params.child('model_settings').addChildren(params)
 
     def set_new_preset(self):
         self.pid_type = False
@@ -121,8 +78,9 @@ class PresetManager:
             {'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'preset_default'},
             {'title': 'Use PID as actuator:', 'name': 'use_pid', 'type': 'bool', 'value': False},
             # {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
-            {'title': 'PID Settings:', 'name': 'pid_settings', 'type': 'group', 'visible': False,
-             'children': pid_params},
+            {'title': 'PID models:', 'name': 'pid_models', 'type': 'list', 'visible': False,
+             'values': pid_models},
+            {'title': 'Model Settings:', 'name': 'model_settings', 'type': 'group', 'visible': False, 'children': []},
         ]
         params_move = [
             {'title': 'Moves:', 'name': 'Moves', 'type': 'groupmove'}]  # PresetScalableGroupMove(name="Moves")]
@@ -130,21 +88,15 @@ class PresetManager:
                        'type': 'groupdet'}]  # [PresetScalableGroupDet(name="Detectors")]
         self.preset_params = Parameter.create(title='Preset', name='Preset', type='group',
                                               children=param + self.extra_params + params_move + params_det)
-        # self.preset_params.child('saving_options', 'save_type').hide()
-        # self.preset_params.child('saving_options', 'save_2D').hide()
-        # self.preset_params.child('saving_options', 'do_save').hide()
-        # self.preset_params.child('saving_options', 'N_saved').hide()
-        # self.preset_params.child('saving_options', 'custom_name').hide()
-        # self.preset_params.child('saving_options', 'show_file').hide()
-        # self.preset_params.child('saving_options', 'current_scan_name').hide()
-        # self.preset_params.child('saving_options', 'current_scan_path').hide()
-        # self.preset_params.child('saving_options', 'current_h5_file').hide()
         try:
             for option in self.param_options:
                 if 'path' in option and 'options_dict' in option:
                     self.preset_params.child(option['path']).setOpts(**option['options_dict'])
         except Exception as e:
             logger.exception(str(e))
+
+        if len(pid_models) != 0:
+            self.get_set_pid_model_params(pid_models[0])
 
         self.preset_params.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
@@ -170,8 +122,9 @@ class PresetManager:
             elif change == 'value':
 
                 if param.name() == 'use_pid':
-                    self.preset_params.child(('pid_settings')).show(param.value())
-                if param.name() == 'model_class' and param.value() != '':
+                    self.preset_params.child('pid_models').show(param.value())
+                    self.preset_params.child('model_settings').show(param.value())
+                if param.name() == 'pid_models' and param.value() != '':
                     self.get_set_pid_model_params(param.value())
 
             elif change == 'parent':

@@ -27,6 +27,22 @@ comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value':
                         {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                         {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
+
+def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
+    params = [{'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
+        {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
+         'default': False},
+        {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
+         'values': ['Master', 'Slave']},
+        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'values': stage_names},
+
+    ]}] + comon_parameters
+    return params
+
+
+
+
+
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
