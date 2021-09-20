@@ -83,6 +83,7 @@ class DashBoard(QObject):
         self.scan_module = None
         self.log_module = None
         self.pid_module = None
+        self.pid_window = None
         self.retriever_module = None
         self.database_module = None
         self.extensions = dict([])
@@ -110,7 +111,7 @@ class DashBoard(QObject):
 
         self.overshoot = False
         self.preset_file = None
-        self.move_modules = []
+        self.actuators_modules = []
         self.detector_modules = []
         self.setupUI()
 
@@ -156,17 +157,17 @@ class DashBoard(QObject):
         """
         try:
             # remove all docks containing Moves or Viewers
-            if hasattr(self, 'move_modules'):
-                if self.move_modules is not None:
-                    for module in self.move_modules:
+            if hasattr(self, 'actuators_modules'):
+                if self.actuators_modules is not None:
+                    for module in self.actuators_modules:
                         module.quit_fun()
-                self.move_modules = None
+                self.actuators_modules = []
 
             if hasattr(self, 'detector_modules'):
                 if self.detector_modules is not None:
                     for module in self.detector_modules:
                         module.quit_fun()
-                self.detector_modules = None
+                self.detector_modules = []
         except Exception as e:
             logger.exception(str(e))
 
@@ -181,8 +182,14 @@ class DashBoard(QObject):
         self.log_module.status_signal.connect(self.add_status)
 
     def load_pid_module(self):
-        self.pid_module = DAQ_PID(dockarea=self.dockarea.addTempArea(), dashboard=self)
+        self.pid_window = QtWidgets.QMainWindow()
+        dockarea = gutils.DockArea()
+        self.pid_window.setCentralWidget(dockarea)
+        self.pid_window.setWindowTitle('PID Controller')
+        self.pid_module = DAQ_PID(dockarea=dockarea)
+        self.pid_module.set_module_manager(self.detector_modules, self.actuators_modules)
         self.extensions['DAQ_PID'] = self.pid_module
+
 
     def load_extensions_module(self, ext):
         self.extension_windows.append(QtWidgets.QMainWindow())
@@ -450,12 +457,12 @@ class DashBoard(QObject):
         try:
             self.remote_timer.stop()
 
-            for mov in self.move_modules:
+            for mov in self.actuators_modules:
                 mov.init_signal.disconnect(self.update_init_tree)
             for det in self.detector_modules:
                 det.init_signal.disconnect(self.update_init_tree)
 
-            for module in self.move_modules:
+            for module in self.actuators_modules:
                 try:
                     module.quit_fun()
                     QtWidgets.QApplication.processEvents()
@@ -481,6 +488,9 @@ class DashBoard(QObject):
 
             if hasattr(self, 'mainwindow'):
                 self.mainwindow.close()
+
+            if self.pid_window is not None:
+                self.pid_window.close()
 
         except Exception as e:
             logger.exception(str(e))
@@ -544,7 +554,7 @@ class DashBoard(QObject):
             path = layout_path.joinpath(self.preset_file.stem + '.dock')
             self.save_layout_state(path)
 
-    def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms, move_modules):
+    def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules):
 
         move_docks.append(Dock(plug_name, size=(150, 250)))
         if len(move_docks) == 1:
@@ -569,7 +579,7 @@ class DashBoard(QObject):
 
         mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
         move_docks[-1].addWidget(move_forms[-1])
-        move_modules.append(mov_mod_tmp)
+        actuators_modules.append(mov_mod_tmp)
 
 
     def set_file_preset(self, filename):
@@ -588,7 +598,7 @@ class DashBoard(QObject):
                 The updated (Move modules list, Detector modules list).
 
            """
-        move_modules = []
+        actuators_modules = []
         detector_modules = []
         if not isinstance(filename, Path):
             filename = Path(filename)
@@ -628,13 +638,13 @@ class DashBoard(QObject):
                     model_class = utils.get_models(
                         self.preset_manager.preset_params.child('pid_models').value())['class']
                     for setp in model_class.setpoints_names:
-                        self.add_move(setp, None, 'PID', move_docks, move_forms, move_modules)
-                        move_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
+                        self.add_move(setp, None, 'PID', move_docks, move_forms, actuators_modules)
+                        actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
                                                            setpoint=self.pid_module.setpoints_signal,
                                                            emit_curr_points=self.pid_module.emit_curr_points_sig)
-                        move_modules[-1].ui.IniStage_pb.click()
+                        actuators_modules[-1].ui.IniStage_pb.click()
                         QtWidgets.QApplication.processEvents()
-                        self.poll_init(move_modules[-1])
+                        self.poll_init(actuators_modules[-1])
                         QtWidgets.QApplication.processEvents()
 
             except Exception as e:
@@ -682,26 +692,26 @@ class DashBoard(QObject):
                                                color=Qt.white)
                     if plugin['type'] == 'move':
                         plug_type = plug_settings.child('main_settings', 'move_type').value()
-                        self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms, move_modules)
+                        self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules)
 
                         try:
                             if ind_plugin == 0:  # should be a master type plugin
                                 if plugin['status'] != "Master":
                                     logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
-                                    move_modules[-1].ui.IniStage_pb.click()
+                                    actuators_modules[-1].ui.IniStage_pb.click()
                                     QtWidgets.QApplication.processEvents()
-                                    self.poll_init(move_modules[-1])
+                                    self.poll_init(actuators_modules[-1])
                                     QtWidgets.QApplication.processEvents()
-                                    master_controller = move_modules[-1].controller
+                                    master_controller = actuators_modules[-1].controller
                             else:
                                 if plugin['status'] != "Slave":
                                     logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
-                                    move_modules[-1].controller = master_controller
-                                    move_modules[-1].ui.IniStage_pb.click()
+                                    actuators_modules[-1].controller = master_controller
+                                    actuators_modules[-1].ui.IniStage_pb.click()
                                     QtWidgets.QApplication.processEvents()
-                                    self.poll_init(move_modules[-1])
+                                    self.poll_init(actuators_modules[-1])
                                     QtWidgets.QApplication.processEvents()
                         except Exception as e:
                             logger.exception(str(e))
@@ -771,11 +781,12 @@ class DashBoard(QObject):
                 self.load_layout_state(path)
 
             self.mainwindow.setWindowTitle(f'PyMoDAQ Dashboard: {self.title}')
-
-            return move_modules, detector_modules
+            if self.pid_module is not None:
+                self.pid_module.set_module_manager(detector_modules, actuators_modules)
+            return actuators_modules, detector_modules
         else:
             logger.error('Invalid file selected')
-            return move_modules, detector_modules
+            return actuators_modules, detector_modules
 
     def poll_init(self, module):
         is_init = False
@@ -965,7 +976,7 @@ class DashBoard(QObject):
                 self.overshoot_manager.set_file_overshoot(filename, show=False)
 
                 det_titles = [det.title for det in self.detector_modules]
-                move_titles = [move.title for move in self.move_modules]
+                move_titles = [move.title for move in self.actuators_modules]
 
                 for det_param in self.overshoot_manager.overshoot_params.child(('Detectors')).children():
                     if det_param.child(('trig_overshoot')).value():
@@ -977,7 +988,7 @@ class DashBoard(QObject):
                         for move_param in det_param.child(('params')).children():
                             if move_param.child(('move_overshoot')).value():
                                 move_index = move_titles.index(move_param.opts['title'])
-                                move_module = self.move_modules[move_index]
+                                move_module = self.actuators_modules[move_index]
                                 det_module.overshoot_signal.connect(
                                     self.create_overshoot_fun(move_module, move_param.child(('position')).value()))
 
@@ -986,6 +997,13 @@ class DashBoard(QObject):
 
     def create_overshoot_fun(self, move_module, position):
         return lambda: move_module.move_Abs(position)
+
+    @property
+    def move_modules(self):
+        """
+        for back compatibility
+        """
+        return self.actuators_modules
 
     def set_preset_mode(self, filename):
         """
@@ -1026,29 +1044,27 @@ class DashBoard(QObject):
             QtWidgets.QApplication.processEvents()
 
             logger.info(f'Loading Preset file: {filename}')
-            move_modules, detector_modules = self.set_file_preset(filename)
-            if not (not move_modules and not detector_modules):
+            actuators_modules, detector_modules = self.set_file_preset(filename)
+            if not (not actuators_modules and not detector_modules):
                 self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
                 self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
-                self.move_modules = move_modules
+                self.actuators_modules = actuators_modules
                 self.detector_modules = detector_modules
 
-                self.modules_manager = ModulesManager(self.detector_modules, self.move_modules)
+                self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
 
-                if self.preset_manager.preset_params.child('use_pid').value():
-                    self.pid_module.module_manager = self.modules_manager
-                    self.pid_module.ini_model()
+
 
                 #####################################################
                 self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],
-                                                          move_modules=[move.title for move in move_modules])
+                                                          actuators_modules=[move.title for move in actuators_modules])
                 # load overshoot if present
                 file = filename.name
                 path = overshoot_path.joinpath(file)
                 if path.is_file():
                     self.set_overshoot_configuration(path)
 
-                self.remote_manager = RemoteManager(actuators=[move.title for move in move_modules],
+                self.remote_manager = RemoteManager(actuators=[move.title for move in actuators_modules],
                                                     detectors=[det.title for det in detector_modules])
                 # load remote file if present
                 file = filename.name
@@ -1063,7 +1079,7 @@ class DashBoard(QObject):
                     self.set_roi_configuration(path)
 
                 # connecting to logger
-                for mov in move_modules:
+                for mov in actuators_modules:
                     mov.status_signal[str].connect(self.add_status)
                     mov.init_signal.connect(self.update_init_tree)
                 for det in detector_modules:
@@ -1074,6 +1090,8 @@ class DashBoard(QObject):
                 self.mainwindow.setVisible(True)
                 for area in self.dockarea.tempAreas:
                     area.window().setVisible(True)
+                if self.pid_window is not None:
+                    self.pid_window.show()
 
                 self.load_preset.setEnabled(False)
                 self.overshoot_menu.setEnabled(True)
@@ -1092,7 +1110,7 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def update_init_tree(self):
-        for act in self.move_modules:
+        for act in self.actuators_modules:
             name = ''.join(act.title.split())  # remove empty spaces
             if act.title not in [ac.title() for ac in putils.iter_children_params(self.settings.child(('actuators')), [])]:
 
@@ -1122,7 +1140,7 @@ class DashBoard(QObject):
         if self.scan_module is not None:
             self.scan_module.stop_scan()
 
-        for mod in self.move_modules:
+        for mod in self.actuators_modules:
             mod.stop_Motion()
 
     def show_log(self):

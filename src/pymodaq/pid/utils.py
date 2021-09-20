@@ -52,7 +52,7 @@ class PIDModelGeneric:
         self.curr_output = [0. for ind in range(self.Nsetpoints)]
         self.curr_input = None
 
-        self.check_modules(pid_controller.module_manager)
+        self.check_modules(pid_controller.modules_manager)
 
 
 
@@ -71,13 +71,13 @@ class PIDModelGeneric:
             self.pid_controller.settings.child('main_settings', 'pid_controls', 'output_limits',
                                                f'output_limit_{limit}_enabled').setValue(self.limits[limit]['state'])
 
-    def check_modules(self, module_manager):
+    def check_modules(self, modules_manager):
         for act in self.actuators_name:
-            if act not in module_manager.actuators_name:
+            if act not in modules_manager.actuators_name:
                 logger.warning(f'The actuator {act} defined in the PID model is not present in the Dashboard')
                 return False
         for det in self.detectors_name:
-            if det not in module_manager.detectors_name:
+            if det not in modules_manager.detectors_name:
                 logger.warning(f'The detector {det} defined in the PID model is not present in the Dashboard')
 
     def update_detector_names(self):
@@ -158,9 +158,10 @@ def main(xmlfile):
         pid_window = QtWidgets.QMainWindow()
         pid_window.setCentralWidget(pid_area)
 
-        prog = DAQ_PID(pid_area, dashboard)
+        prog = DAQ_PID(pid_area)
         pid_window.show()
         pid_window.setWindowTitle('PidController')
+        prog.set_module_manager(dashboard.detector_modules, dashboard.actuators_modules)
         QtWidgets.QApplication.processEvents()
 
 

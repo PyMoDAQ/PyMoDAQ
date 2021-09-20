@@ -113,11 +113,11 @@ registerParameterType('groupdetover', PresetScalableGroupDet, override=True)
 
 
 class OvershootManager:
-    def __init__(self, msgbox=False, det_modules=[], move_modules=[]):
+    def __init__(self, msgbox=False, det_modules=[], actuators_modules=[]):
 
         self.overshoot_params = None
         self.det_modules = det_modules
-        self.move_modules = move_modules
+        self.actuators_modules = actuators_modules
 
         if msgbox:
             msgBox = QtWidgets.QMessageBox()
@@ -153,7 +153,7 @@ class OvershootManager:
             file = 'overshoot_default'
         param = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': file}]
         params_det = [{'title': 'Detectors:', 'name': 'Detectors', 'type': 'groupdetover', 'detlist': self.det_modules,
-                       'movelist': self.move_modules}]  # [PresetScalableGroupDet(name="Detectors")]
+                       'movelist': self.actuators_modules}]  # [PresetScalableGroupDet(name="Detectors")]
         self.overshoot_params = Parameter.create(title='Preset', name='Preset', type='group',
                                                  children=param + params_det)
 
