@@ -855,7 +855,52 @@ def get_extensions():
 
     return extension_import
 
-def get_models():
+def find_dict_if_matched_key_val(dict_tmp, key, value):
+    """
+    check if a key/value pair match in a given dictionnary
+    Parameters
+    ----------
+    dict_tmp: (dict) the dictionnary to be tested
+    key: (str) a key string to look for in dict_tmp
+    value: (object) any python object
+
+    Returns
+    -------
+    bool: True if the key/value pair has been found in dict_tmp
+
+    """
+    if key in dict_tmp:
+        if dict_tmp[key] == value:
+            return True
+    return False
+
+
+def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
+    """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
+
+    Parameters
+    ----------
+    dicts: (list) list of dictionnaries
+    key: (str) specific key to look for in each dict
+    value: value to match
+
+    Returns
+    -------
+    dict: if found otherwise returns None
+    """
+    for ind, dict_tmp in enumerate(dicts):
+        if find_dict_if_matched_key_val(dict_tmp, key, value):
+            if return_index:
+                return dict_tmp, ind
+            else:
+                return dict_tmp
+    if return_index:
+        return None, -1
+    else:
+        return None
+
+
+def get_models(model_name=None):
     """
     Get PID Models as a list to instantiate Control Actuators per degree of liberty in the model
 
@@ -865,30 +910,33 @@ def get_models():
     """
     from pymodaq.pid.utils import PIDModelGeneric
     models_import = []
-    discovered_models = metadata.entry_points()['pymodaq.pid_models']
+    entry_points = metadata.entry_points()
+    if 'pymodaq.pid_models' in entry_points:
+        discovered_models = entry_points['pymodaq.pid_models']
+        for pkg in discovered_models:
+            try:
+                module = importlib.import_module(pkg.value)
+                module_name = pkg.value
 
-    for pkg in discovered_models:
-        try:
-            module = importlib.import_module(pkg.value)
-            module_name = pkg.value
+                for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
+                    try:
+                        model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
+                        classes = inspect.getmembers(model_module, inspect.isclass)
+                        for name, klass in classes:
+                            if klass.__base__ is PIDModelGeneric:
+                                models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
+                                break
 
-            for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
-                try:
-                    model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
-                    classes = inspect.getmembers(model_module, inspect.isclass)
-                    for name, klass in classes:
-                        if klass.__base__ is PIDModelGeneric:
-                            models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
-                            break
+                    except Exception as e:  # pragma: no cover
+                        logger.warning(str(e))
 
-                except Exception as e:  # pragma: no cover
-                    logger.warning(str(e))
+            except Exception as e:  # pragma: no cover
+                logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
 
-        except Exception as e:  # pragma: no cover
-            logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
-
-    return models_import
-
+    if model_name is None:
+        return models_import
+    else:
+        return find_dict_in_list_from_key_val(models_import, 'name', model_name)
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
@@ -929,6 +977,17 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
                     pass
         except Exception:  # pragma: no cover
             pass
+
+    #add utility plugin for PID
+    if plugin_type == 'daq_move':
+        try:
+            submodule = importlib.import_module('pymodaq.pid')
+
+            plugins_import.append({'name': 'PID', 'module': submodule})
+
+        except Exception:  # pragma: no cover
+            pass
+
     plugins_import = elt_as_first_element_dicts(plugins_import, match_word='Mock', key='name')
     return plugins_import
 
@@ -1264,50 +1323,6 @@ def linspace_step(start, stop, step):
     new_stop = start + (Nsteps - 1) * step
     return np.linspace(start, new_stop, Nsteps)
 
-
-def find_dict_if_matched_key_val(dict_tmp, key, value):
-    """
-    check if a key/value pair match in a given dictionnary
-    Parameters
-    ----------
-    dict_tmp: (dict) the dictionnary to be tested
-    key: (str) a key string to look for in dict_tmp
-    value: (object) any python object
-
-    Returns
-    -------
-    bool: True if the key/value pair has been found in dict_tmp
-
-    """
-    if key in dict_tmp:
-        if dict_tmp[key] == value:
-            return True
-    return False
-
-
-def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
-    """ lookup within a list of dicts. Look for the dict within the list which has the correct key, value pair
-
-    Parameters
-    ----------
-    dicts: (list) list of dictionnaries
-    key: (str) specific key to look for in each dict
-    value: value to match
-
-    Returns
-    -------
-    dict: if found otherwise returns None
-    """
-    for ind, dict_tmp in enumerate(dicts):
-        if find_dict_if_matched_key_val(dict_tmp, key, value):
-            if return_index:
-                return dict_tmp, ind
-            else:
-                return dict_tmp
-    if return_index:
-        return None, -1
-    else:
-        return None
 
 
 def find_index(x, threshold):

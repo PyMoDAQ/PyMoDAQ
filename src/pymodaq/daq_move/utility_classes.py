@@ -27,6 +27,22 @@ comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value':
                         {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                         {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
+
+def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
+    params = [{'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
+        {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
+         'default': False},
+        {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
+         'values': ['Master', 'Slave']},
+        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'values': stage_names},
+
+    ]}] + comon_parameters
+    return params
+
+
+
+
+
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
@@ -44,6 +60,25 @@ params = [
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
 
+def main(plugin_file):
+    """
+    this method start a DAQ_Move object with this defined plugin as actuator
+    Returns
+    -------
+
+    """
+    import sys
+    from PyQt5 import QtWidgets
+    from pymodaq.daq_move.daq_move_main import DAQ_Move
+    from pathlib import Path
+    app = QtWidgets.QApplication(sys.argv)
+    Form = QtWidgets.QWidget()
+    prog = DAQ_Move(Form, title="test",)
+    Form.show()
+    prog.actuator = Path(plugin_file).stem[9:]
+    prog.init()
+
+    sys.exit(app.exec_())
 
 class DAQ_Move_base(QObject):
     """ The base class to be herited by all actuator modules
@@ -93,8 +128,8 @@ class DAQ_Move_base(QObject):
         self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
-        self.current_position = 0
-        self.target_position = 0
+        self.current_position = 0.
+        self.target_position = 0.
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
         # current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
@@ -214,11 +249,12 @@ class DAQ_Move_base(QObject):
         """
         sleep_ms = 50
         ind = 0
-        self.current_position = self.check_position()
-        while np.abs(self.check_position() - self.target_position) > self.settings.child(('epsilon')).value():
+        #self.current_position = self.check_position()
+        while np.abs(self.current_position - self.target_position) > self.settings.child(('epsilon')).value():
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped'))
                 break
+            self.current_position = self.check_position()
             QThread.msleep(sleep_ms)
 
             ind += 1
@@ -226,8 +262,6 @@ class DAQ_Move_base(QObject):
             if ind * sleep_ms >= self.settings.child(('timeout')).value():
                 self.emit_status(ThreadCommand('raise_timeout'))
                 break
-
-            self.current_position = self.check_position()
             QtWidgets.QApplication.processEvents()
 
         self.move_done()

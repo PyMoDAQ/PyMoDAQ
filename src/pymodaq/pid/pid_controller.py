@@ -5,7 +5,7 @@ from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, set_logger, get_module_name, \
     get_set_pid_path, get_models, find_dict_in_list_from_key_val
-
+from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils import gui_utils as gutils
@@ -35,7 +35,9 @@ class DAQ_PID(QObject):
     """
     """
     command_pid = pyqtSignal(ThreadCommand)
-    values_signal = pyqtSignal(list)
+    curr_points_signal = pyqtSignal(dict)
+    setpoints_signal = pyqtSignal(dict)
+    emit_curr_points_sig = pyqtSignal()
 
     models = get_models()
 
@@ -79,7 +81,7 @@ class DAQ_PID(QObject):
         ]},
     ]
 
-    def __init__(self, dockarea, dashboard=None):
+    def __init__(self, dockarea):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__()
 
@@ -88,10 +90,10 @@ class DAQ_PID(QObject):
 
         self.Initialized_state = False
         self.model_class = None
+        self._curr_points = dict([])
+        self._setpoints = dict([])
 
-        self.module_manager = None
-        if dashboard is not None:
-            self.module_manager = dashboard.modules_manager
+        self.modules_manager = None
 
         self.dock_area = dockarea
         self.check_moving = False
@@ -100,6 +102,11 @@ class DAQ_PID(QObject):
         self.enable_controls_pid(False)
 
         self.enable_controls_pid_run(False)
+
+        self.emit_curr_points_sig.connect(self.emit_curr_points)
+
+    def set_module_manager(self, detector_modules, actuator_modules):
+        self.modules_manager = ModulesManager(detector_modules, actuator_modules)
 
     def ini_PID(self):
 
@@ -115,7 +122,7 @@ class DAQ_PID(QObject):
                                                        'output_limit_max').value()
 
             self.PIDThread = QThread()
-            pid_runner = PIDRunner(self.model_class, self.module_manager, setpoints=self.setpoints,
+            pid_runner = PIDRunner(self.model_class, self.modules_manager, setpoints=self.setpoints,
                                    params=dict(Kp=self.settings.child('main_settings', 'pid_controls', 'pid_constants',
                                                                       'kp').value(),
                                                Ki=self.settings.child('main_settings', 'pid_controls', 'pid_constants',
@@ -154,9 +161,7 @@ class DAQ_PID(QObject):
     def process_output(self, datas):
         self.output_viewer.show_data([[dat] for dat in datas['output']])
         self.input_viewer.show_data([[dat] for dat in datas['input']])
-        for ind, sb in enumerate(self.currpoints_sb):
-            sb.setValue(datas['input'][ind])
-        self.values_signal.emit(datas['input'])
+        self.curr_points = datas['input']
 
     def enable_controls_pid(self, enable=False):
         self.ini_PID_action.setEnabled(enable)
@@ -244,7 +249,7 @@ class DAQ_PID(QObject):
         widget_output = QtWidgets.QWidget()
         self.output_viewer = Viewer0D(widget_output)
         self.dock_output.addWidget(widget_output)
-        self.dock_area.addDock(self.dock_output, 'right')
+        self.dock_area.addDock(self.dock_output, 'right', self.dock_pid)
 
         self.dock_input = gutils.Dock('PID input')
         widget_input = QtWidgets.QWidget()
@@ -286,184 +291,6 @@ class DAQ_PID(QObject):
             setp.setEnabled(not self.pause_action.isChecked())
         self.command_pid.emit(ThreadCommand('pause_PID', [self.pause_action.isChecked()]))
 
-    def set_file_preset(self, model):
-        """
-            Set a file managers from the converted xml file given by the filename parameter.
-
-
-            =============== =========== ===================================================
-            **Parameters**    **Type**    **Description**
-            *filename*        string      the name of the xml file to be converted/treated
-            =============== =========== ===================================================
-
-            Returns
-            -------
-            (Object list, Object list) tuple
-                The updated (Move modules list, Detector modules list).
-
-            See Also
-            --------
-            custom_tree.XML_file_to_parameter, set_param_from_param, stop_moves, DAQ_Move_main.daq_move, DAQ_viewer_main.daq_viewer
-        """
-
-        filename = os.path.join(get_set_pid_path(), model + '.xml')
-        self.preset_file = filename
-        self.preset_manager.set_file_preset(filename, show=False)
-        self.move_docks = []
-        self.det_docks_settings = []
-        self.det_docks_viewer = []
-        move_forms = []
-        actuator_modules = []
-        detector_modules = []
-        move_types = []
-
-        # ################################################################
-        # ##### sort plugins by IDs and within the same IDs by Master and Slave status
-        plugins = [{'type': 'move', 'value': child} for child in
-                   self.preset_manager.preset_params.child(('Moves')).children()] + [{'type': 'det', 'value': child} for
-                                                                                     child in
-                                                                                     self.preset_manager.preset_params.child(
-                                                                                         ('Detectors')).children()]
-
-        for plug in plugins:
-            plug['ID'] = plug['value'].child('params', 'main_settings', 'controller_ID').value()
-            if plug["type"] == 'det':
-                plug['status'] = plug['value'].child('params', 'detector_settings', 'controller_status').value()
-            else:
-                plug['status'] = plug['value'].child('params', 'move_settings', 'multiaxes', 'multi_status').value()
-
-        IDs = list(set([plug['ID'] for plug in plugins]))
-        # %%
-        plugins_sorted = []
-        for id in IDs:
-            plug_Ids = []
-            for plug in plugins:
-                if plug['ID'] == id:
-                    plug_Ids.append(plug)
-            plug_Ids.sort(key=lambda status: status['status'])
-            plugins_sorted.append(plug_Ids)
-        #################################################################
-        #######################
-
-        ind_move = -1
-        ind_det = -1
-        for plug_IDs in plugins_sorted:
-            for ind_plugin, plugin in enumerate(plug_IDs):
-
-                plug_name = plugin['value'].child(('name')).value()
-                plug_init = plugin['value'].child(('init')).value()
-                plug_settings = plugin['value'].child(('params'))
-
-                if plugin['type'] == 'move':
-                    ind_move += 1
-                    plug_type = plug_settings.child('main_settings', 'move_type').value()
-                    self.move_docks.append(gutils.Dock(plug_name, size=(150, 250)))
-                    if ind_move == 0:
-                        self.dock_area.addDock(self.move_docks[-1], 'top', self.logger_dock)
-                    else:
-                        self.dock_area.addDock(self.move_docks[-1], 'above', self.move_docks[-2])
-                    move_forms.append(QtWidgets.QWidget())
-                    mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name)
-
-                    mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
-                    mov_mod_tmp.ui.Quit_pb.setEnabled(False)
-                    QtWidgets.QApplication.processEvents()
-
-                    set_param_from_param(mov_mod_tmp.settings, plug_settings)
-                    QtWidgets.QApplication.processEvents()
-
-                    mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
-                    self.move_docks[-1].addWidget(move_forms[-1])
-                    actuator_modules.append(mov_mod_tmp)
-
-                    try:
-                        if ind_plugin == 0:  # should be a master type plugin
-                            if plugin['status'] != "Master":
-                                raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                            if plug_init:
-                                actuator_modules[-1].ui.IniStage_pb.click()
-                                QtWidgets.QApplication.processEvents()
-                                if 'Mock' in plug_type:
-                                    QThread.msleep(500)
-                                else:
-                                    QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                QtWidgets.QApplication.processEvents()
-                                master_controller = actuator_modules[-1].controller
-                        else:
-                            if plugin['status'] != "Slave":
-                                raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                            if plug_init:
-                                actuator_modules[-1].controller = master_controller
-                                actuator_modules[-1].ui.IniStage_pb.click()
-                                QtWidgets.QApplication.processEvents()
-                                if 'Mock' in plug_type:
-                                    QThread.msleep(500)
-                                else:
-                                    QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                QtWidgets.QApplication.processEvents()
-                    except Exception as e:
-                        logger.exception(str(e))
-
-                else:
-                    ind_det += 1
-                    plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
-                    plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
-
-                    self.det_docks_settings.append(gutils.Dock(plug_name + " settings", size=(150, 250)))
-                    self.det_docks_viewer.append(gutils.Dock(plug_name + " viewer", size=(350, 350)))
-
-                    if ind_det == 0:
-                        self.logger_dock.area.addDock(self.det_docks_settings[-1], 'bottom',
-                                                      self.dock_input)  # dock_area of the logger dock
-                    else:
-                        self.dock_area.addDock(self.det_docks_settings[-1], 'bottom', self.det_docks_settings[-2])
-                    self.dock_area.addDock(self.det_docks_viewer[-1], 'right', self.det_docks_settings[-1])
-
-                    det_mod_tmp = DAQ_Viewer(self.dock_area, dock_settings=self.det_docks_settings[-1],
-                                             dock_viewer=self.det_docks_viewer[-1], title=plug_name,
-                                             DAQ_type=plug_type, parent_scan=self)
-                    detector_modules.append(det_mod_tmp)
-                    detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
-                    detector_modules[-1].ui.Quit_pb.setEnabled(False)
-                    set_param_from_param(det_mod_tmp.settings, plug_settings)
-                    QtWidgets.QApplication.processEvents()
-
-                    try:
-                        if ind_plugin == 0:  # should be a master type plugin
-                            if plugin['status'] != "Master":
-                                raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                            if plug_init:
-                                detector_modules[-1].ui.IniDet_pb.click()
-                                QtWidgets.QApplication.processEvents()
-                                if 'Mock' in plug_subtype:
-                                    QThread.msleep(500)
-                                else:
-                                    QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                QtWidgets.QApplication.processEvents()
-                                master_controller = detector_modules[-1].controller
-                        else:
-                            if plugin['status'] != "Slave":
-                                raise Exception('error in the master/slave type for plugin {}'.format(plug_name))
-                            if plug_init:
-                                detector_modules[-1].controller = master_controller
-                                detector_modules[-1].ui.IniDet_pb.click()
-                                QtWidgets.QApplication.processEvents()
-                                if 'Mock' in plug_subtype:
-                                    QThread.msleep(500)
-                                else:
-                                    QThread.msleep(4000)  # to let enough time for real hardware to init properly
-                                QtWidgets.QApplication.processEvents()
-                    except Exception as e:
-                        logger.exception(str(e))
-
-                    detector_modules[-1].settings.child('main_settings', 'overshoot').show()
-                    detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
-
-        QtWidgets.QApplication.processEvents()
-
-        return actuator_modules, detector_modules
-
-    pyqtSlot(bool)
 
     def stop_moves(self, overshoot):
         """
@@ -474,7 +301,7 @@ class DAQ_PID(QObject):
             stop_scan,  DAQ_Move_main.daq_move.stop_Motion
         """
         self.overshoot = overshoot
-        for mod in self.module_manager.actuators:
+        for mod in self.modules_manager.actuators:
             mod.stop_Motion()
 
     def ini_model(self):
@@ -484,8 +311,8 @@ class DAQ_PID(QObject):
 
             self.set_setpoints_buttons()
             self.model_class.ini_model()
-            self.module_manager.selected_actuators_name = self.model_class.actuators_name
-            self.module_manager.selected_detectors_name = self.model_class.detectors_name
+            self.modules_manager.selected_actuators_name = self.model_class.actuators_name
+            self.modules_manager.selected_detectors_name = self.model_class.detectors_name
 
             self.enable_controls_pid(True)
             self.model_led.set_as_true()
@@ -502,6 +329,24 @@ class DAQ_PID(QObject):
     def setpoints(self, values):
         for ind, sp in enumerate(self.setpoints_sb):
             sp.setValue(values[ind])
+
+    def setpoints_external(self, values_dict):
+        for key in values_dict:
+            index = self.model_class.setpoints_names.index(key)
+            self.setpoints_sb[index].setValue(values_dict[key])
+
+    @property
+    def curr_points(self):
+        return [sp.value() for sp in self.currpoints_sb]
+
+    @curr_points.setter
+    def curr_points(self, values):
+        for ind, sp in enumerate(self.currpoints_sb):
+            sp.setValue(values[ind])
+
+    def emit_curr_points(self):
+        if self.model_class is not None:
+            self.curr_points_signal.emit(dict(zip(self.model_class.setpoints_names, self.curr_points)))
 
     def set_setpoints_buttons(self):
         self.setpoints_sb = []
@@ -528,6 +373,7 @@ class DAQ_PID(QObject):
             self.currpoints_sb[-1].setFont(font)
             self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2+ind_set, 1, 1)
 
+        self.setpoints_signal.connect(self.setpoints_external)
 
     def quit_fun(self):
         """
@@ -641,7 +487,7 @@ class PIDRunner(QObject):
         """
         super().__init__()
         self.model_class = model_class
-        self.module_manager = module_manager
+        self.modules_manager = module_manager
         Nsetpoints = model_class.Nsetpoints
         self.current_time = 0
         self.inputs_from_dets = InputFromDetector(values=setpoints)
@@ -720,9 +566,9 @@ class PIDRunner(QObject):
         self.running = True
         try:
             if sync_detectors:
-                self.module_manager.connect_detectors()
+                self.modules_manager.connect_detectors()
             if sync_acts:
-                self.module_manager.connect_actuators()
+                self.modules_manager.connect_actuators()
 
             self.current_time = time.perf_counter()
             logger.info('PID loop starting')
@@ -730,7 +576,7 @@ class PIDRunner(QObject):
                 # print('input: {}'.format(self.input))
                 # # GRAB DATA FIRST AND WAIT ALL DETECTORS RETURNED
 
-                self.det_done_datas = self.module_manager.grab_datas()
+                self.det_done_datas = self.modules_manager.grab_datas()
 
                 self.inputs_from_dets = self.model_class.convert_input(self.det_done_datas)
 
@@ -747,7 +593,7 @@ class PIDRunner(QObject):
                 self.outputs_to_actuators = self.model_class.convert_output(self.outputs, dt, stab=True)
 
                 if not self.paused:
-                    self.module_manager.move_actuators(self.outputs_to_actuators.values,
+                    self.modules_manager.move_actuators(self.outputs_to_actuators.values,
                                                        self.outputs_to_actuators.mode,
                                                        poll=False)
 
@@ -756,8 +602,8 @@ class PIDRunner(QObject):
                 QThread.msleep(int(self.sample_time * 1000))
 
             logger.info('PID loop exiting')
-            self.module_manager.connect_actuators(False)
-            self.module_manager.connect_detectors(False)
+            self.modules_manager.connect_actuators(False)
+            self.modules_manager.connect_detectors(False)
 
         except Exception as e:
             logger.exception(str(e))
@@ -816,9 +662,10 @@ def main():
         pid_window = QtWidgets.QMainWindow()
         pid_window.setCentralWidget(pid_area)
 
-        prog = DAQ_PID(pid_area, dashboard)
+        prog = DAQ_PID(pid_area)
         pid_window.show()
         pid_window.setWindowTitle('PidController')
+        prog.set_module_manager(dashboard.detector_modules, dashboard.actuators_modules)
         QtWidgets.QApplication.processEvents()
 
 

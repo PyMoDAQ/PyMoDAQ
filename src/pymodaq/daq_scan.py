@@ -24,6 +24,7 @@ from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
 from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
+from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.plotting.qled import QLED
 
 from pymodaq.daq_utils import daq_utils as utils
@@ -92,7 +93,7 @@ class DAQ_Scan(QObject):
         self.plot_2D_ini = False
 
         self.scan_thread = None
-        self.modules_manager = self.dashboard.modules_manager
+        self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
 
         self.h5saver = H5Saver()
         self.h5saver.settings.child(('do_save')).hide()
