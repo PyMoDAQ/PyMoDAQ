@@ -70,7 +70,8 @@ Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a CeCILL-B license.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
+__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/
+
 
 
 Contribution
