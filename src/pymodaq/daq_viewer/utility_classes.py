@@ -85,6 +85,33 @@ params = [
     ]}
 ]
 
+def main(plugin_file):
+    """
+    this method start a DAQ_Viewer object with this defined plugin as detector
+    Returns
+    -------
+    """
+    import sys
+    from PyQt5 import QtWidgets
+    from pymodaq.daq_utils.gui_utils import DockArea
+    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+    from pathlib import Path
+
+    app = QtWidgets.QApplication(sys.argv)
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ Viewer')
+    detector = Path(plugin_file).stem[13:]
+    det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
+    prog = DAQ_Viewer(area, title="Testing", DAQ_type=det_type)
+    win.show()
+    prog.detector = detector
+    prog.init_det()
+
+    sys.exit(app.exec_())
+
 
 class DAQ_Viewer_base(QObject):
     """
