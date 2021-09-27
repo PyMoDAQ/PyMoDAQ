@@ -118,6 +118,7 @@ class DAQ_Move_base(QObject):
 
     Move_Done_signal = pyqtSignal(float)
     is_multiaxes = False
+    stage_names = []
     params = []
     _controller_units = ''
 
