@@ -60,7 +60,7 @@ params = [
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
 
-def main(plugin_file):
+def main(plugin_file, init=True):
     """
     this method start a DAQ_Move object with this defined plugin as actuator
     Returns
@@ -76,7 +76,8 @@ def main(plugin_file):
     prog = DAQ_Move(Form, title="test",)
     Form.show()
     prog.actuator = Path(plugin_file).stem[9:]
-    prog.init()
+    if init:
+        prog.init()
 
     sys.exit(app.exec_())
 

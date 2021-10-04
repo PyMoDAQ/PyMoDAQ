@@ -120,3 +120,6 @@ venv.bak/
 
 .tox
 *.h5
+*yacctab.py
+*lextab.py
+

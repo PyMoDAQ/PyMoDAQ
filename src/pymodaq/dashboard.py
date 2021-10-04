@@ -626,8 +626,11 @@ class DashBoard(QObject):
 
                     self.pid_module.settings.child('models', 'model_class').setValue(
                         self.preset_manager.preset_params.child('pid_models').value())
+                    QtWidgets.QApplication.processEvents()
+                    self.pid_module.set_model()
 
                     QtWidgets.QApplication.processEvents()
+
                     for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
                                                              []):
                         preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
@@ -1052,8 +1055,10 @@ class DashBoard(QObject):
                 self.detector_modules = detector_modules
 
                 self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
-
-
+                #
+                if self.pid_module is not None:
+                    self.pid_module.ini_model_action.click()
+                #
 
                 #####################################################
                 self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],

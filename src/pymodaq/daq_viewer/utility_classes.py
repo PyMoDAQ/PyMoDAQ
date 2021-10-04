@@ -85,7 +85,7 @@ params = [
     ]}
 ]
 
-def main(plugin_file):
+def main(plugin_file, init=True):
     """
     this method start a DAQ_Viewer object with this defined plugin as detector
     Returns
@@ -108,7 +108,8 @@ def main(plugin_file):
     prog = DAQ_Viewer(area, title="Testing", DAQ_type=det_type)
     win.show()
     prog.detector = detector
-    prog.init_det()
+    if init:
+        prog.init_det()
 
     sys.exit(app.exec_())
 

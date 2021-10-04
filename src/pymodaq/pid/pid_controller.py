@@ -304,13 +304,17 @@ class DAQ_PID(QObject):
         for mod in self.modules_manager.actuators:
             mod.stop_Motion()
 
+    def set_model(self):
+        model_name = self.settings.child('models', 'model_class').value()
+        self.model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
+        self.set_setpoints_buttons()
+        self.model_class.ini_model()
+
     def ini_model(self):
         try:
-            model_name = self.settings.child('models', 'model_class').value()
-            self.model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
+            if self.model_class is None:
+                self.set_model()
 
-            self.set_setpoints_buttons()
-            self.model_class.ini_model()
             self.modules_manager.selected_actuators_name = self.model_class.actuators_name
             self.modules_manager.selected_detectors_name = self.model_class.detectors_name
 
@@ -452,7 +456,8 @@ class DAQ_PID(QObject):
                     self.command_pid.emit(ThreadCommand('update_options', dict(tunings=(Kp, Ki, Kd))))
 
                 elif param.name() in putils.iter_children(self.settings.child('models', 'model_params'), []):
-                    self.model_class.update_settings(param)
+                    if self.model_class is not None:
+                        self.model_class.update_settings(param)
 
                 elif param.name() == 'detector_modules':
                     self.model_class.update_detector_names()

@@ -1619,7 +1619,7 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', '__version__')
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'visa')
     # for p in paths:
     #     print(str(p))
     # v = get_version()
