@@ -833,6 +833,7 @@ class DAQ_Move_stage(QObject):
             move_Abs
         """
         self.target_position = position
+        self.hardware.move_is_done = False
         pos = self.hardware.move_Abs(position)
 
     def move_Rel(self, rel_position):
@@ -849,6 +850,7 @@ class DAQ_Move_stage(QObject):
             --------
             move_Rel
         """
+        self.hardware.move_is_done = False
         self.target_position = self.current_position + rel_position
         pos = self.hardware.move_Rel(rel_position)
 
@@ -868,6 +870,7 @@ class DAQ_Move_stage(QObject):
             Make the hardware move to the init position.
 
         """
+        self.hardware.move_is_done = False
         self.target_position = 0
         self.hardware.move_Home()
 

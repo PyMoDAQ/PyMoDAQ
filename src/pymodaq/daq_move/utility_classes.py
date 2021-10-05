@@ -6,10 +6,11 @@ from pymodaq.daq_utils.parameter.utils import iter_children
 from pymodaq.daq_utils.parameter import ioxml
 import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config, set_logger, get_module_name
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
 
+logger = set_logger(get_module_name(__file__))
 config = load_config()
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
                     {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
@@ -167,7 +168,6 @@ class DAQ_Move_base(QObject):
         -------
 
         """
-        self.move_is_done = False
         if self.settings.child('bounds', 'is_bounds').value():
             if position > self.settings.child('bounds', 'max_bound').value():
                 position = self.settings.child('bounds', 'max_bound').value()
@@ -237,7 +237,8 @@ class DAQ_Move_base(QObject):
             =============== ========== =============================================================================
 
         """
-        position = self.check_position()
+        if position is None:
+            position = self.check_position()
         self.Move_Done_signal.emit(position)
         self.move_is_done = True
 
@@ -253,20 +254,24 @@ class DAQ_Move_base(QObject):
         ind = 0
         #self.current_position = self.check_position()
         while np.abs(self.current_position - self.target_position) > self.settings.child(('epsilon')).value():
+            logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped'))
+                logger.info(f'Move has been stopped')
                 break
             self.current_position = self.check_position()
+            logger.debug(f'Current position: {self.current_position}')
             QThread.msleep(sleep_ms)
 
             ind += 1
 
             if ind * sleep_ms >= self.settings.child(('timeout')).value():
                 self.emit_status(ThreadCommand('raise_timeout'))
+                logger.info(f'Timeout activated')
                 break
             QtWidgets.QApplication.processEvents()
 
-        self.move_done()
+        self.move_done(self.current_position)
 
     def send_param_status(self, param, changes):
         """

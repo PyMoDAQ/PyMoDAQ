@@ -433,12 +433,19 @@ class DAQ_Scan(QObject):
             attr['settings'] = settings_str
 
         elif type_info == 'scan_info':
-            settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params) + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings) + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings) + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                               self.scanner.settings) + b'</All_settings>'
+            settings_all = [pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params),
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings),
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings),
+                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.scanner.settings)]
+
+            settings_str = b'<All_settings title="All Settings" type="group">'
+            for set in settings_all:
+                if len(settings_str + set) < 60000:
+                    # size limit for any object header (including all the other attributes) is 64kb
+                    settings_str += set
+                else:
+                    break
+            settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 
     def parameter_tree_changed(self, param, changes):

@@ -286,19 +286,21 @@ class ROIManager(QObject):
         self.ROI_changed_finished.emit()
 
     def update_roi(self, roi_key, param):
-
+        self.ROIs[roi_key].index_signal[int].disconnect()
         if param.name() == 'Color':
             self.ROIs[roi_key].setPen(param.value())
         elif param.name() == 'left' or param.name() == 'x':
             pos = self.ROIs[roi_key].pos()
             poss = [param.value(), pos[1]]
-            poss.sort()
+            if self.settings.child('ROIs', roi_key, 'type').value() == '1D':
+                poss.sort()
             self.ROIs[roi_key].setPos(poss)
 
         elif param.name() == 'right' or param.name() == 'y':
             pos = self.ROIs[roi_key].pos()
             poss = [pos[0], param.value()]
-            poss.sort()
+            if self.settings.child('ROIs', roi_key, 'type').value() == '1D':
+                poss.sort()
             self.ROIs[roi_key].setPos(poss)
 
         elif param.name() == 'angle':
@@ -309,6 +311,7 @@ class ROIManager(QObject):
         elif param.name() == 'height':
             size = self.ROIs[roi_key].size()
             self.ROIs[roi_key].setSize((size[0], param.value()))
+        self.ROIs[roi_key].index_signal[int].connect(self.update_roi_tree)
 
     @pyqtSlot(int)
     def update_roi_tree(self, index):
