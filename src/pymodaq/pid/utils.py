@@ -47,14 +47,14 @@ class PIDModelGeneric:
 
     def __init__(self, pid_controller):
         self.pid_controller = pid_controller  # instance of the pid_controller using this model
+        self.modules_manager = pid_controller.modules_manager
+
         self.settings = self.pid_controller.settings.child('models', 'model_params')  # set of parameters
         self.data_names = None
         self.curr_output = [0. for ind in range(self.Nsetpoints)]
         self.curr_input = None
 
-        self.check_modules(pid_controller.modules_manager)
-
-
+        self.check_modules(self.modules_manager)
 
     def setpoint(self, values):
         self.pid_controller.setpoints = values

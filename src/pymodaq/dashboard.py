@@ -189,6 +189,7 @@ class DashBoard(QObject):
         self.pid_module = DAQ_PID(dockarea=dockarea)
         self.pid_module.set_module_manager(self.detector_modules, self.actuators_modules)
         self.extensions['DAQ_PID'] = self.pid_module
+        self.pid_window.show()
 
 
     def load_extensions_module(self, ext):
