@@ -838,20 +838,22 @@ def get_extensions():
     list: list of disct containting the name and module of the found extension
     """
     extension_import = []
-    discovered_extension = metadata.entry_points()['pymodaq.extensions']
+    entry_points = metadata.entry_points()
+    if 'pymodaq.extensions' in entry_points:
+        discovered_extension = entry_points['pymodaq.extensions']
 
-    for pkg in discovered_extension:
-        try:
-            module = importlib.import_module(pkg.value)
-            if hasattr(module, 'NICE_NAME'):
-                name = module.NICE_NAME
-            else:
-                name = pkg.value
-            extension = {'name': name, 'module': module}
-            extension_import.append(extension)
+        for pkg in discovered_extension:
+            try:
+                module = importlib.import_module(pkg.value)
+                if hasattr(module, 'NICE_NAME'):
+                    name = module.NICE_NAME
+                else:
+                    name = pkg.value
+                extension = {'name': name, 'module': module}
+                extension_import.append(extension)
 
-        except Exception as e:  # pragma: no cover
-            logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
+            except Exception as e:  # pragma: no cover
+                logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
 
     return extension_import
 
@@ -1438,9 +1440,7 @@ def gauss2D(x, x0, dx, y, y0, dy, n=1, angle=0):
         for indx, xtmp in enumerate(x):
             for indy, ytmp in enumerate(y):
                 rotatedvect = R.dot(np.array([xtmp, ytmp]))
-                data[indy, indx] = np.exp(
-                    -2 * np.log(2) ** (1 / n) * ((rotatedvect[0] - x0r) / dx) ** (2 * n)) * np.exp(
-                    -2 * np.log(2) ** (1 / n) * ((rotatedvect[1] - y0r) / dy) ** (2 * n))
+                data[indy, indx] = gauss1D(rotatedvect[0], x0r, dx, n) * gauss1D(rotatedvect[1], y0r, dy, n)
 
     return data
 
