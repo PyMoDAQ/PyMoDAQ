@@ -18,7 +18,7 @@ config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class CustomApp(gutils.CustomApp):
+class CustomAppExample(gutils.CustomApp):
 
     # list of dicts enabling the settings tree on the user interface
     params = [
@@ -89,8 +89,9 @@ class CustomApp(gutils.CustomApp):
         dock_detector = gutils.Dock("Detector Viewer", size=(350, 350))
         self.dockarea.addDock(dock_detector, 'right', dock_detector_settings)
         # init one daq_viewer object named detector
+
         self.detector = DAQ_Viewer(self.dockarea, dock_settings=dock_detector_settings,
-                                   dock_viewer=dock_detector, title="A detector", DAQ_type='DAQ0D')
+                               dock_viewer=dock_detector, title="A detector", DAQ_type='DAQ0D')
         # set its type to 'Mock'
         self.detector.daq_type = 'Mock'
         # init the detector and wait 1000ms for the completion
@@ -247,7 +248,7 @@ def main():
     dockarea = gutils.DockArea()
     mainwindow.setCentralWidget(dockarea)
 
-    prog = CustomApp(dockarea)
+    prog = CustomAppExample(dockarea)
 
     mainwindow.show()
     sys.exit(app.exec_())

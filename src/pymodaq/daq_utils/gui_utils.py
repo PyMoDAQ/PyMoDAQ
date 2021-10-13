@@ -69,6 +69,21 @@ class ActionManager:
         self.setup_actions()
 
     def addaction(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
+        """Create a new action and add it to toolbar and menu
+        Parameters
+        ----------
+        short_name: (str) the name as referenced in the dict self.actions
+        name: (str) Displayed name if should be displayed in
+        icon_name: (str) png file name to produce the icon
+        tip: (str) a tooltip to be displayed when hovering above the action
+        checkable: (bool) set the checkable state of the action
+        toolbar: (QToolBar) a toolbar where action should be added. Actions can also be added later see *affect_to*
+        menu: (QMenu) a menu where action should be added. Actions can also be added later see *affect_to*
+
+        See Also
+        --------
+        pymodaq/resources/QtDesigner_Ressources/Icon_Library, affect_to
+        """
         if toolbar is None:
             toolbar = self.toolbar
         if menu is None:
@@ -726,7 +741,7 @@ class CustomApp(ActionManager, QtCore.QObject):
         self.connect_things()
 
     def connect_things(self):
-        pass
+        raise NotImplementedError
 
     def setup_docks(self):
         '''
@@ -742,7 +757,7 @@ class CustomApp(ActionManager, QtCore.QObject):
         ########
         pyqtgraph.dockarea.Dock
         '''
-        pass
+        raise NotImplementedError
 
     def setup_menu(self):
         '''
@@ -758,7 +773,7 @@ class CustomApp(ActionManager, QtCore.QObject):
         file_menu.addSeparator()
         self.actions_manager.affect_to('quit', file_menu)
         '''
-        pass
+        raise NotImplementedError
 
     def setup_UI(self):
         # ##### Manage Docks########
@@ -781,7 +796,7 @@ class CustomApp(ActionManager, QtCore.QObject):
         ----------
         param: (Parameter) the parameter whose value just changed
         '''
-        pass
+        raise NotImplementedError
 
     def param_deleted(self, param):
         ''' to be subclassed for actions to perform when one of the param in self.settings has been deleted
@@ -790,7 +805,7 @@ class CustomApp(ActionManager, QtCore.QObject):
         ----------
         param: (Parameter) the parameter that has been deleted
         '''
-        pass
+        raise NotImplementedError
 
     def child_added(self, param):
         ''' to be subclassed for actions to perform when a param  has been added in self.settings
@@ -799,7 +814,7 @@ class CustomApp(ActionManager, QtCore.QObject):
         ----------
         param: (Parameter) the parameter that has been deleted
         '''
-        pass
+        raise NotImplementedError
 
     def parameter_tree_changed(self, param, changes):
         for param, change, data in changes:
