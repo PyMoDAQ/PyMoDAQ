@@ -269,11 +269,8 @@ class ROIManager(QObject):
 
             elif change == 'value':
                 if param.name() in putils.iter_children(self.settings.child(('ROIs')), []):
-                    if param.name() == 'Color' or param.name() == 'angle':
-                        parent = param.parent().name()
-                    else:
-                        parent = param.parent().parent().name()
-                    self.update_roi(parent, param)
+                    parent_name = putils.get_param_path(param)[putils.get_param_path(param).index('ROIs')+1]
+                    self.update_roi(parent_name, param)
 
             elif change == 'parent':
                 if 'ROI' in param.name():
