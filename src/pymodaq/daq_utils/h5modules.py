@@ -2124,7 +2124,10 @@ class H5Browser(QObject):
         if h5file is None:
             if h5file_path is None:
                 h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
-            self.h5utils.open_file(h5file_path, 'a')
+            if h5file_path != '':
+                self.h5utils.open_file(h5file_path, 'a')
+            else:
+                return
         else:
             self.h5utils.h5file = h5file
 

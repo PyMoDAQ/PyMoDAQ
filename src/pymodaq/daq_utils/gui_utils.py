@@ -9,6 +9,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import datetime
 from pymodaq.daq_utils import daq_utils as utils
 import toml
+from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+
 
 config = utils.load_config()
 
@@ -33,6 +35,60 @@ class QAction(QAction):
 
         self.click = self.trigger
         self.clicked = self.triggered
+
+    def connect(self, slot):
+        self.triggered.connect(slot)
+
+
+def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar=None, menu=None):
+    if icon_name != '':
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
+                           QtGui.QIcon.Off)
+        action = QAction(icon, name, None)
+    else:
+        action = QAction(name)
+
+    if slot is not None:
+        action.connect(slot)
+    action.setCheckable(checkable)
+    action.setToolTip(tip)
+    if toolbar is not None:
+        toolbar.addAction(action)
+    if menu is not None:
+        menu.addAction(action)
+    return action
+
+
+class ActionManager:
+    def __init__(self, toolbar=None, menu=None):
+        self.actions = dict([])
+        self.toolbar = toolbar
+        self.menu = menu
+
+        self.setup_actions()
+
+    def addaction(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
+        if toolbar is None:
+            toolbar = self.toolbar
+        if menu is None:
+            menu = self.menu
+        self.actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
+
+    def setup_actions(self):
+        """
+        self.actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
+        self.actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
+        self.actions['load'] = self.addaction('Load', 'Open',
+                                         "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
+        self.actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
+        """
+        pass
+        # to be subclassed
+
+    def affect_to(self, action_name, obj):
+        if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
+            obj.addAction(self.actions[action_name])
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
@@ -257,6 +313,9 @@ class DockArea(DockArea, QObject):
             area = self.home.addTempArea()
         # print "added temp area", area, area.window()
         return area
+
+
+
 
 
 def set_enable_recursive(children, enable=False):
@@ -630,6 +689,128 @@ def show_message(message="blabla", title="Error"):
     msgBox.setText(message)
     ret = msgBox.exec()
     return ret
+
+
+class CustomApp(ActionManager, QtCore.QObject):
+    # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
+    log_signal = QtCore.pyqtSignal(str)
+
+    # list of dicts enabling the settings tree on the user interface
+    params = []
+
+    def __init__(self, dockarea, dashboard=None):
+        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        QtCore.QObject.__init__(self)
+
+        if not isinstance(dockarea, DockArea):
+            raise Exception('no valid parent container, expected a DockArea')
+
+        self.dockarea = dockarea
+        self.mainwindow = dockarea.parent()
+        self.dashboard = dashboard
+
+        self.docks = dict([])
+
+        self.toolbar = QtWidgets.QToolBar()
+        self.mainwindow.addToolBar(self.toolbar)
+
+        self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
+        # object containing the settings defined in the preamble
+        # # create a settings tree to be shown eventually in a dock
+        self.settings_tree = ParameterTree()
+        self.settings_tree.setParameters(self.settings, showTop=False)  # load the tree with this parameter object
+        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+
+        ActionManager.__init__(self, self.toolbar)  # init the action manager that call the setup_actions method that should be subclassed
+        self.setup_UI()
+        self.connect_things()
+
+    def connect_things(self):
+        pass
+
+    def setup_docks(self):
+        '''
+        to be subclassed to setup the docks layout
+        for instance:
+
+        self.docks['ADock'] = gutils.Dock('ADock name)
+        self.dockarea.addDock(self.docks['ADock"])
+        self.docks['AnotherDock'] = gutils.Dock('AnotherDock name)
+        self.dockarea.addDock(self.docks['AnotherDock"], 'bottom', self.docks['ADock"])
+
+        See Also
+        ########
+        pyqtgraph.dockarea.Dock
+        '''
+        pass
+
+    def setup_menu(self):
+        '''
+        to be subclassed
+        create menu for actions contained into the self.actions_manager, for instance:
+
+        For instance:
+
+        file_menu = self.menubar.addMenu('File')
+        self.actions_manager.affect_to('load', file_menu)
+        self.actions_manager.affect_to('save', file_menu)
+
+        file_menu.addSeparator()
+        self.actions_manager.affect_to('quit', file_menu)
+        '''
+        pass
+
+    def setup_UI(self):
+        # ##### Manage Docks########
+        self.setup_docks()
+
+        self.setup_menu()
+
+        #toolbar is managed within the ActionManager herited class
+
+    def value_changed(self, param):
+        ''' to be subclassed for actions to perform when one of the param's value in self.settings is changed
+
+        For instance:
+        if param.name() == 'do_something':
+            if param.value():
+                print('Do something')
+                self.settings.child('main_settings', 'something_done').setValue(False)
+
+        Parameters
+        ----------
+        param: (Parameter) the parameter whose value just changed
+        '''
+        pass
+
+    def param_deleted(self, param):
+        ''' to be subclassed for actions to perform when one of the param in self.settings has been deleted
+
+        Parameters
+        ----------
+        param: (Parameter) the parameter that has been deleted
+        '''
+        pass
+
+    def child_added(self, param):
+        ''' to be subclassed for actions to perform when a param  has been added in self.settings
+
+        Parameters
+        ----------
+        param: (Parameter) the parameter that has been deleted
+        '''
+        pass
+
+    def parameter_tree_changed(self, param, changes):
+        for param, change, data in changes:
+            if change == 'childAdded':
+                self.child_added(param)
+
+            elif change == 'value':
+                self.value_changed(param)
+
+            elif change == 'parent':
+                self.param_deleted(param)
 
 
 if __name__ == '__main__':

@@ -3,27 +3,22 @@ from collections import OrderedDict
 import datetime
 import numpy as np
 
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, QRectF, QDate, QThread
+from PyQt5 import  QtWidgets
+from PyQt5.QtCore import pyqtSlot, QLocale, QDate, QThread
 
-from pymodaq.daq_utils.parameter import ioxml
-from pyqtgraph.dockarea import Dock
-from pymodaq.daq_utils.gui_utils import DockArea
-from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.daq_utils.daq_utils import getLineInfo, load_config
-
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 from pymodaq.daq_utils import gui_utils as gutils
+from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+
 from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 
-config = load_config()
+config = utils.load_config()
+logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class CustomApp(QtWidgets.QWidget, QObject):
-    # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
-    log_signal = pyqtSignal(str)
+class CustomApp(gutils.CustomApp):
 
     # list of dicts enabling the settings tree on the user interface
     params = [
@@ -49,136 +44,114 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
     def __init__(self, dockarea):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        super(CustomApp, self).__init__()
-        if not isinstance(dockarea, DockArea):
-            raise Exception('no valid parent container, expected a DockArea')
-        self.dockarea = dockarea
-        self.mainwindow = dockarea.parent()
+        super().__init__(dockarea)
 
         # init the object parameters
-        self.detector = None
         self.raw_data = []
 
-        # init the user interface
-        self.setup_UI()
+    def setup_actions(self):
+        '''
+        subclass method from ActionManager
+        '''
+        logger.debug('setting actions')
+        self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
+        self.addaction('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
+        self.addaction('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera",
+                       checkable=False, toolbar=self.toolbar)
+        self.addaction('save', 'Save', 'SaveAs', "Save current data", checkable=False, toolbar=self.toolbar)
+        logger.debug('actions set')
 
-    def setup_UI(self):
-        ###########################################
-        ###########################################
-        # init the docks containing the main widgets
+    def setup_docks(self):
+        '''
+        subclass method from CustomApp
+        '''
+        logger.debug('setting docks')
+        self.dock_settings = gutils.Dock('Settings', size=(350, 350))
+        self.dockarea.addDock(self.dock_settings, 'left')
+        self.dock_settings.addWidget(self.settings_tree, 10)
 
-        #############################################
-        # this one for the custom application settings
-        dock_settings = Dock('Settings', size=(350, 350))
-        self.dockarea.addDock(dock_settings, 'left')
-
-        # create main parameter tree
-        self.settings_tree = ParameterTree()
-        dock_settings.addWidget(self.settings_tree, 10)
-        self.settings_tree.setMinimumWidth(300)
-        # create a Parameter object containing the settings
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-        # load the tree with this parameter object
-        self.settings_tree.setParameters(self.settings, showTop=False)
-        # any change to the tree on the user interface will call the parameter_tree_changed method where all actions will be applied
-        self.settings.sigTreeStateChanged.connect(
-            self.parameter_tree_changed)
-
-        ################################################################
-        # create a logger dock where to store info senf from the programm
-        self.dock_logger = Dock("Logger")
+        self.dock_logger = gutils.Dock("Logger")
         self.logger_list = QtWidgets.QListWidget()
         self.logger_list.setMinimumWidth(300)
         self.dock_logger.addWidget(self.logger_list)
-        self.dockarea.addDock(self.dock_logger, 'bottom', dock_settings)
-        # dock_logger.setVisible(False)
-        # connect together this custom signal with the add_log method
-        self.log_signal[str].connect(self.add_log)
+        self.dockarea.addDock(self.dock_logger, 'bottom', self.dock_settings)
 
-        #######################################################################################################################
         # create a dock containing a viewer object, could be 0D, 1D or 2D depending what kind of data one want to plot here a 0D
-        dock_Viewer0D = Dock('Viewer dock', size=(350, 350))
+        dock_Viewer0D = gutils.Dock('Viewer dock', size=(350, 350))
         self.dockarea.addDock(dock_Viewer0D, 'right', self.dock_logger)
         target_widget = QtWidgets.QWidget()
         self.target_viewer = Viewer0D(target_widget)
         dock_Viewer0D.addWidget(target_widget)
 
-        ###################################################################################
         # create 2 docks to display the DAQ_Viewer (one for its settings, one for its viewer)
-        dock_detector_settings = Dock("Detector Settings", size=(350, 350))
-        self.dockarea.addDock(dock_detector_settings, 'right', dock_settings)
-        dock_detector = Dock("Detector Viewer", size=(350, 350))
+        dock_detector_settings = gutils.Dock("Detector Settings", size=(350, 350))
+        self.dockarea.addDock(dock_detector_settings, 'right', self.dock_settings)
+        dock_detector = gutils.Dock("Detector Viewer", size=(350, 350))
         self.dockarea.addDock(dock_detector, 'right', dock_detector_settings)
         # init one daq_viewer object named detector
         self.detector = DAQ_Viewer(self.dockarea, dock_settings=dock_detector_settings,
                                    dock_viewer=dock_detector, title="A detector", DAQ_type='DAQ0D')
         # set its type to 'Mock'
-        control_type = 'Mock'
-        self.detector.ui.Detector_type_combo.setCurrentText(control_type)
+        self.detector.daq_type = 'Mock'
         # init the detector and wait 1000ms for the completion
-        self.detector.ui.IniDet_pb.click()
+        self.detector.init_det()
         self.detector.settings.child('main_settings', 'wait_time').setValue(100)
         QtWidgets.QApplication.processEvents()
         QThread.msleep(1000)
+
+        logger.debug('docks are set')
+
+    def connect_things(self):
+        '''
+        subclass method from CustomApp
+        '''
+        logger.debug('connecting things')
+        self.log_signal[str].connect(self.add_log)  # connect together this custom signal with the add_log method
+
         self.detector.grab_done_signal.connect(self.data_done)
 
-        #############################
-        # create a dock for a DAQ_Move
-        dock_move = Dock("Move module", size=(350, 350))
-        self.dockarea.addDock(dock_move, 'right', self.dock_logger)
-        move_widget = QtWidgets.QWidget()
-        self.move = DAQ_Move(move_widget)
-        dock_move.addWidget(move_widget)
-        self.move.ui.IniStage_pb.click()
-        QtWidgets.QApplication.processEvents()
-        QThread.msleep(1000)
+        self.actions['quit'].connect(self.quit_function)
+        self.actions['load'].connect(self.load_file)
+        self.actions['save'].connect(self.save_data)
 
-        ############################################
-        # creating a menubar
-        self.menubar = self.mainwindow.menuBar()
-        self.create_menu(self.menubar)
+        self.actions['grab'].connect(self.detector.grab)
 
-        # creating a toolbar
-        self.toolbar = QtWidgets.QToolBar()
-        self.create_toolbar()
-        self.mainwindow.addToolBar(self.toolbar)
+        logger.debug('connecting done')
+
+    def setup_menu(self):
+        '''
+        subclass method from CustomApp
+        '''
+        logger.debug('settings menu')
+        file_menu = self.mainwindow.menuBar().addMenu('File')
+        self.affect_to('quit', file_menu)
+        file_menu.addSeparator()
+        self.affect_to('load', file_menu)
+        self.affect_to('save', file_menu)
+
+        self.affect_to('quit', file_menu)
+
+        logger.debug('menu set')
+
+    def value_changed(self, param):
+        logger.debug(f'calling value_changed with param {param.name()}')
+        if param.name() == 'do_something':
+            if param.value():
+                self.log_signal.emit('Do something')
+                self.detector.grab_done_signal.connect(self.show_data)
+                self.raw_data = []  # init the data to be finally saved
+                self.settings.child('main_settings', 'something_done').setValue(True)
+            else:
+                self.log_signal.emit('Stop Doing something')
+                self.detector.grab_done_signal.disconnect()
+                self.settings.child('main_settings', 'something_done').setValue(False)
+
+        logger.debug(f'Value change applied')
 
     @pyqtSlot(OrderedDict)
     def data_done(self, data):
         # print(data)
         pass
-
-    @pyqtSlot(QRectF)
-    def update_weighted_settings(self, rect):
-        self.settings.child('weighting_settings', 'x0').setValue(int(rect.x()))
-        self.settings.child('weighting_settings', 'y0').setValue(int(rect.y()))
-        self.settings.child('weighting_settings', 'width').setValue(max([1, int(rect.width())]))
-        self.settings.child('weighting_settings', 'height').setValue(max([1, int(rect.height())]))
-
-    def parameter_tree_changed(self, param, changes):
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
-            if change == 'childAdded':
-                pass
-
-            elif change == 'value':
-                if param.name() == 'do_something':
-                    if param.value():
-                        self.log_signal.emit('Do something')
-                        self.detector.grab_done_signal.connect(self.show_data)
-                        self.raw_data = []  # init the data to be finally saved
-                        self.settings.child('main_settings', 'something_done').setValue(True)
-                    else:
-                        self.log_signal.emit('Stop Doing something')
-                        self.detector.grab_done_signal.disconnect()
-                        self.settings.child('main_settings', 'something_done').setValue(False)
-
-            elif change == 'parent':
-                pass
 
     @pyqtSlot(OrderedDict)
     def show_data(self, data):
@@ -200,27 +173,6 @@ class CustomApp(QtWidgets.QWidget, QObject):
 
         self.target_viewer.show_data(data0D)
 
-    def create_menu(self, menubar):
-        """
-        """
-        menubar.clear()
-
-        # %% create file menu
-        file_menu = menubar.addMenu('File')
-        load_action = file_menu.addAction('Load file')
-        load_action.triggered.connect(self.load_file)
-        save_action = file_menu.addAction('Save file')
-        save_action.triggered.connect(self.save_data)
-
-        file_menu.addSeparator()
-        quit_action = file_menu.addAction('Quit')
-        quit_action.triggered.connect(self.quit_function)
-
-        settings_menu = menubar.addMenu('Settings')
-        docked_menu = settings_menu.addMenu('Docked windows')
-        action_load = docked_menu.addAction('Load Layout')
-        action_save = docked_menu.addAction('Save Layout')
-
     def load_file(self):
         # init the data browser module
         widg = QtWidgets.QWidget()
@@ -232,35 +184,6 @@ class CustomApp(QtWidgets.QWidget, QObject):
         self.detector.quit_fun()
         QtWidgets.QApplication.processEvents()
         self.mainwindow.close()
-
-    def create_toolbar(self):
-        iconquit = QtGui.QIcon()
-        iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal,
-                           QtGui.QIcon.Off)
-        self.quit_action = QtWidgets.QAction(iconquit, "Quit program", None)
-        self.toolbar.addAction(self.quit_action)
-        self.quit_action.triggered.connect(self.quit_function)
-
-        icon_detector = QtGui.QIcon()
-        icon_detector.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/camera.png"), QtGui.QIcon.Normal,
-                                QtGui.QIcon.Off)
-        self.detector_action = QtWidgets.QAction(icon_detector, "Grab from camera", None)
-        self.detector_action.setCheckable(True)
-        self.toolbar.addAction(self.detector_action)
-        self.detector_action.triggered.connect(lambda: self.run_detector())
-
-        iconload = QtGui.QIcon()
-        iconload.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Open.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.loadaction = QtWidgets.QAction(iconload, "Load target file (.h5, .png, .jpg) or data from camera", None)
-        self.toolbar.addAction(self.loadaction)
-        self.loadaction.triggered.connect(self.load_file)
-
-        iconsave = QtGui.QIcon()
-        iconsave.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/SaveAs.png"), QtGui.QIcon.Normal,
-                           QtGui.QIcon.Off)
-        self.saveaction = QtWidgets.QAction(iconsave, "Save current data", None)
-        self.toolbar.addAction(self.saveaction)
-        self.saveaction.triggered.connect(self.save_data)
 
     def run_detector(self):
         self.detector.ui.grab_pb.click()
@@ -297,7 +220,7 @@ class CustomApp(QtWidgets.QWidget, QObject):
                 h5saver.close_file()
 
         except Exception as e:
-            self.add_log(getLineInfo() + str(e))
+            logger.exception(str(e))
 
     @pyqtSlot(str)
     def add_log(self, txt):
@@ -314,31 +237,21 @@ class CustomApp(QtWidgets.QWidget, QObject):
         now = datetime.datetime.now()
         new_item = QtWidgets.QListWidgetItem(str(now) + ": " + txt)
         self.logger_list.addItem(new_item)
-        # #to do
-        # #self.save_parameters.logger_array.append(str(now)+": "+txt)
+        logger.info(txt)
 
-    @pyqtSlot(str)
-    def emit_log(self, txt):
-        """
-            Emit a log-signal from the given log index
 
-            =============== ======== =======================
-            **Parameters**  **Type** **Description**
+def main():
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    mainwindow = QtWidgets.QMainWindow()
+    dockarea = gutils.DockArea()
+    mainwindow.setCentralWidget(dockarea)
 
-             *txt*           string   the log to be emitted
-            =============== ======== =======================
+    prog = CustomApp(dockarea)
 
-        """
-        self.log_signal.emit(txt)
+    mainwindow.show()
+    sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    win = QtWidgets.QMainWindow()
-    area = DockArea()
-    win.setCentralWidget(area)
-    win.resize(1000, 500)
-    win.setWindowTitle('pymodaq example')
-    prog = CustomApp(area)
-    win.show()
-    sys.exit(app.exec_())
+    main()

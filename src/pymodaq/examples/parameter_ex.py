@@ -112,7 +112,7 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
 
     parametertree = ParameterTree()
-    ParameterEx(parametertree)
+    ptree = ParameterEx(parametertree)
     parametertree.show()
 
     sys.exit(app.exec_())
