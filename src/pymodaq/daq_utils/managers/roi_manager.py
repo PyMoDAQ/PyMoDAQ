@@ -262,7 +262,7 @@ class ROIManager(QObject):
                 self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
                 self.viewer_widget.plotItem.addItem(newroi)
 
-                self.ROIs["ROI_%02.0d" % newindex] = newroi
+                self.ROIs[f"ROI_{newindex:02.0f}"] = newroi
 
                 self.new_ROI_signal.emit(newindex, roi_type)
                 self.update_roi_tree(newindex)
@@ -412,7 +412,7 @@ class ROIScalableGroup(GroupParameter):
         else:
             newindex = max(child_indexes) + 1
 
-        child = {'name': 'ROI_{:02d}'.format(newindex), 'type': 'group', 'removable': True, 'renamable': False}
+        child = {'name': f'ROI_{newindex:02d}', 'type': 'group', 'removable': True, 'renamable': False}
 
         children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False}, ]
         if self.roi_type == '2D':

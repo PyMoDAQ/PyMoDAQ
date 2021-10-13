@@ -359,7 +359,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             labels_tmp = labels[:]
             if self.labels == labels:
                 if self.labels == [] or len(self.labels) < len(self.datas):
-                    self._labels = ["CH{}".format(ind) for ind in range(len(self.datas))]
+                    self._labels = [f"CH{ind:02d}" for ind in range(len(self.datas))]
             else:
                 if self.legend is not None:
                     flag = True
@@ -372,7 +372,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
                     if len(labels) < len(self.plot_channels):
                         for ind in range(len(labels), len(self.plot_channels)):
-                            labels_tmp.append('CH{:02d}'.format(ind))
+                            labels_tmp.append(f'CH{ind:02d}')
 
                     if len(labels_tmp) == len(self.plot_channels):
                         for ind, channel in enumerate(self.plot_channels):
