@@ -394,7 +394,7 @@ class TestViewer1D:
         prog.datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
 
         prog.update_labels()
-        assert prog._labels == ['CH0', 'CH1']
+        assert prog._labels == ['CH00', 'CH01']
 
         prog.ini_data_plots(2)
 
