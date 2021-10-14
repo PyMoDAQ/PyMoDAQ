@@ -11,7 +11,6 @@ from pymodaq.daq_utils import daq_utils as utils
 import toml
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
-
 config = utils.load_config()
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -98,8 +97,7 @@ class ActionManager:
                                          "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
         self.actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
         """
-        pass
-        # to be subclassed
+        raise NotImplementedError
 
     def affect_to(self, action_name, obj):
         if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
@@ -740,6 +738,11 @@ class CustomApp(ActionManager, QtCore.QObject):
         self.setup_UI()
         self.connect_things()
 
+    @property
+    def modules_manager(self):
+        if self.dashboard is not None:
+            return self.dashboard.modules_manager
+
     def connect_things(self):
         raise NotImplementedError
 
@@ -775,14 +778,6 @@ class CustomApp(ActionManager, QtCore.QObject):
         '''
         raise NotImplementedError
 
-    def setup_UI(self):
-        # ##### Manage Docks########
-        self.setup_docks()
-
-        self.setup_menu()
-
-        #toolbar is managed within the ActionManager herited class
-
     def value_changed(self, param):
         ''' to be subclassed for actions to perform when one of the param's value in self.settings is changed
 
@@ -815,6 +810,24 @@ class CustomApp(ActionManager, QtCore.QObject):
         param: (Parameter) the parameter that has been deleted
         '''
         raise NotImplementedError
+
+    def setup_actions(self):
+        """
+        self.actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
+        self.actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
+        self.actions['load'] = self.addaction('Load', 'Open',
+                                         "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
+        self.actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
+        """
+        raise NotImplementedError
+
+    def setup_UI(self):
+        # ##### Manage Docks########
+        self.setup_docks()
+
+        self.setup_menu()
+
+        #toolbar is managed within the ActionManager herited class
 
     def parameter_tree_changed(self, param, changes):
         for param, change, data in changes:

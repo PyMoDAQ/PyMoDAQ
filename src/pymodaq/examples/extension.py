@@ -4,34 +4,15 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import pymodaq_ptypes
 from PyQt5 import QtWidgets, QtCore
 
+from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
+from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+
+
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class ActionManager(gutils.ActionManager):
-    def __init__(self, toolbar=None, menu=None):
-        super().__init__(toolbar, menu)
-
-    def setup_actions(self):
-        self.actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
-        self.actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
-        self.actions['load'] = self.addaction('Load', 'Open',
-                                                "Load target file (.h5, .png, .jpg) or data from camera",
-                                                checkable=False)
-        self.actions['save'] = gutils.addaction('Save', 'SaveAs', "Save current data", checkable=False)
-
-
-
-        # %% create file menu
-        file_menu = self.menubar.addMenu('File')
-        self.actions.affect_to('load', file_menu)
-        self.actions.affect_to('save', file_menu)
-
-        file_menu.addSeparator()
-        self.actions.affect_to('quit', file_menu)
-
-
-class MyApp(gutils.CustomApp):
+class MyExtension(gutils.CustomApp):
     # list of dicts enabling the settings tree on the user interface
     params = [
         {'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
@@ -53,15 +34,48 @@ class MyApp(gutils.CustomApp):
             {'title': 'one float:', 'name': 'a_float', 'type': 'float', 'value': 2.7, },
         ]},
     ]
+
     def __init__(self, dockarea, dashboard):
         super().__init__(dockarea, dashboard)
 
+    def connect_things(self):
+        pass
 
     def setup_docks(self):
-        '''
+        """
+        to be subclassed to setup the docks layout
+        for instance:
 
-        '''
-        pass
+        self.docks['ADock'] = gutils.Dock('ADock name)
+        self.dockarea.addDock(self.docks['ADock"])
+        self.docks['AnotherDock'] = gutils.Dock('AnotherDock name)
+        self.dockarea.addDock(self.docks['AnotherDock"], 'bottom', self.docks['ADock"])
+
+        See Also
+        ########
+        pyqtgraph.dockarea.Dock
+        """
+        self.docks['settings'] = gutils.Dock('Settings')
+        self.dockarea.addDock(self.docks['settings'])
+        self.docks['settings'].addWidget(self.settings_tree)
+
+        self.docks['modmanager'] = gutils.Dock('Module Manager')
+        self.dockarea.addDock(self.docks['modmanager'], 'right', self.docks['settings'])
+        self.docks['modmanager'].addWidget(self.modules_manager.settings_tree)
+
+        self.docks['viewer1D'] = gutils.Dock('Viewers')
+        self.dockarea.addDock(self.docks['viewer1D'], 'right', self.docks['modmanager'])
+
+        self.docks['viewer2D'] = gutils.Dock('Viewers')
+        self.dockarea.addDock(self.docks['viewer2D'], 'bottom', self.docks['viewer1D'])
+
+        widg = QtWidgets.QWidget()
+        self.viewer1D = Viewer1D(widg)
+        self.docks['viewer1D'].addWidget(widg)
+
+        widg1 = QtWidgets.QWidget()
+        self.viewer2D = Viewer2D(widg1)
+        self.docks['viewer2D'].addWidget(widg1)
 
     def setup_menu(self):
         '''
@@ -79,57 +93,65 @@ class MyApp(gutils.CustomApp):
         '''
         pass
 
-    def setup_settings_tree(self):
-        '''  to be subclassed
-        create a setting tree for actions contained into the self.actions_manager, for instance:
+    def value_changed(self, param):
+        ''' to be subclassed for actions to perform when one of the param's value in self.settings is changed
 
-        for instance:
-        self.docks()['Dock Settings'].addWidget(self.settings_tree, 10)
+        For instance:
+        if param.name() == 'do_something':
+            if param.value():
+                print('Do something')
+                self.settings.child('main_settings', 'something_done').setValue(False)
+
+        Parameters
+        ----------
+        param: (Parameter) the parameter whose value just changed
         '''
+        if param.name() == 'do_something':
+            if param.value():
+                self.modules_manager.det_done_signal.connect(self.show_data)
+            else:
+                self.modules_manager.det_done_signal.disconnect()
+
+    def param_deleted(self, param):
+        ''' to be subclassed for actions to perform when one of the param in self.settings has been deleted
+
+        Parameters
+        ----------
+        param: (Parameter) the parameter that has been deleted
+        '''
+        raise NotImplementedError
+
+    def child_added(self, param):
+        ''' to be subclassed for actions to perform when a param  has been added in self.settings
+
+        Parameters
+        ----------
+        param: (Parameter) the parameter that has been deleted
+        '''
+        raise NotImplementedError
+
+    def setup_actions(self):
         pass
 
-    def setup_UI(self):
-        # ##### Manage Docks########
-        names = ['Dock Settings', 'Dock Other']
-        self.docks = DockedPanels(self.dockarea, names)
+    def show_data(self, data_all):
+        data1D = []
+        data2D = []
+        labels1D = []
+        labels2D = []
+        dims = ['data1D', 'data2D']
+        for det in data_all:
+            for dim in dims:
+                if len(data_all[det][dim]) != 0:
+                    for channel in data_all[det][dim]:
+                        if dim == 'data1D':
+                            labels1D.append(channel)
+                            data1D.append(data_all[det][dim][channel]['data'])
+                        else:
+                            labels2D.append(channel)
+                            data2D.append(data_all[det][dim][channel]['data'])
+        self.viewer1D.show_data(data1D)
+        self.viewer2D.setImage(*data2D[:min(3, len(data2D))])
 
-        # #### Manage actions, toolbar and Menu
-        toolbar = QtWidgets.QToolBar()
-        self.mainwindow.addToolBar(toolbar)
-
-        self.actions = ActionManager(toolbar=toolbar)
-        self.menu = Menu(self.mainwindow.menuBar(), self.actions)
-
-        # #### Manage settings
-        self.settings_tree = ParameterTree()
-        self.docks()['Dock Settings'].addWidget(self.settings_tree, 10)
-
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)  # create a Parameter
-        # object containing the settings
-
-        self.settings_tree.setParameters(self.settings, showTop=False)  # load the tree with this parameter object
-        # any change to the tree on the user interface will call the parameter_tree_changed method where all actions
-        # will be applied
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-    def parameter_tree_changed(self, param, changes):
-        for param, change, data in changes:
-            if change == 'childAdded':
-                pass
-
-            elif change == 'value':
-                if param.name() == 'do_something':
-                    if param.value():
-                        self.log_signal.emit('Do something')
-                        print('Do something')
-                        self.settings.child('main_settings', 'something_done').setValue(False)
-                    else:
-                        self.log_signal.emit('Stop Doing something')
-                        print('Stop Doing something')
-                        self.settings.child('main_settings', 'something_done').setValue(True)
-
-            elif change == 'parent':
-                pass
 
 
 def main():
@@ -142,12 +164,15 @@ def main():
     mainwindow.setCentralWidget(dockarea)
 
     ## init the dashboard
+
+    mainwindow_dash = QtWidgets.QMainWindow()
     area_dash = gutils.DockArea()
+    mainwindow_dash.setCentralWidget(area_dash)
+
     dashboard = DashBoard(area_dash)
     file = Path(utils.get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
     if file.exists():
         dashboard.set_preset_mode(file)
-        dashboard.load_scan_module()
     else:
         msgBox = QtWidgets.QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
@@ -156,7 +181,7 @@ def main():
         msgBox.setStandardButtons(msgBox.Ok)
         ret = msgBox.exec()
 
-    prog = MyApp(dockarea, dashboard)
+    prog = MyExtension(dockarea, dashboard)
 
     mainwindow.show()
     sys.exit(app.exec_())
