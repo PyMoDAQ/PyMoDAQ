@@ -163,12 +163,10 @@ def main():
     dockarea = gutils.DockArea()
     mainwindow.setCentralWidget(dockarea)
 
-    ## init the dashboard
-
+    #  init the dashboard
     mainwindow_dash = QtWidgets.QMainWindow()
     area_dash = gutils.DockArea()
     mainwindow_dash.setCentralWidget(area_dash)
-
     dashboard = DashBoard(area_dash)
     file = Path(utils.get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
     if file.exists():

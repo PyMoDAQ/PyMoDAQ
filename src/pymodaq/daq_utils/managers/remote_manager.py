@@ -15,12 +15,14 @@ remote_types = ['ShortCut', 'Joystick']
 
 actuator_actions = ['move_Rel', 'move_Rel_p', 'move_Rel_m']
 detector_actions = ['snap', 'grab', 'stop']
-
+remote_types = ['Keyboard', 'Joystick']
 try:
     import pygame
+    is_pygame = True
 except ModuleNotFoundError as e:
     remote_types.pop(remote_types.index('Joystick'))
     logger.warning('Could not load pygame module, no joystick configurable')
+    is_pygame = False
 
 
 class ScalableGroupRemote(GroupParameter):
@@ -49,7 +51,7 @@ class ScalableGroupRemote(GroupParameter):
 
         params = [{'title': 'Action:', 'name': 'action', 'type': 'list', 'value': typ, 'values': self.opts['addList']},
                   {'title': 'Remote:', 'name': 'remote_type', 'type': 'list', 'value': 'Keyboard',
-                   'values': ['Keyboard', 'Joystick']},
+                   'values': remote_types},
                   ]
         params.extend([
             {'title': 'Set Shortcut:', 'name': 'set_shortcut', 'type': 'bool_push', 'label': 'Set',
@@ -171,9 +173,10 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
         # width, height = 64 * 10, 64 * 8
         # self.screen = pygame.display.set_mode((width, height))
         joystick_count = pygame.joystick.get_count()
+        self.joysticks = []
         for ind in range(joystick_count):
-            joystick = pygame.joystick.Joystick(ind)
-            joystick.init()
+            self.joysticks.append(pygame.joystick.Joystick(ind))
+            self.joysticks[-1].init()
         self.startTimer(10)
 
     def timerEvent(self, event):
@@ -464,7 +467,7 @@ if __name__ == '__main__':
     actuators = ['act0', 'act1', 'act2']
     detectors = ['det0', 'det1', 'det2']
     app = QtWidgets.QApplication(sys.argv)
-    # prog = RemoteManager(actuators=actuators, detectors=detectors, msgbox=True)
+    #prog = RemoteManager(actuators=actuators, detectors=detectors, msgbox=True)
     msgBox = JoystickButtonsSelection()
     ret = msgBox.exec()
     sys.exit(app.exec_())
