@@ -761,6 +761,26 @@ def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
     return paths
 
 
+def count_lines(ini_path, count=0, filters=['lextab', 'yacctab','pycache', 'pyc']):
+    # if Path(ini_path).is_file():
+    #     with Path(ini_path).open('r') as f:
+    #         count += len(f.readlines())
+    #     return count
+    for child in Path(ini_path).iterdir():
+        if child.is_dir():
+            count = count_lines(child, count)
+        else:
+            try:
+                if not any([filt in child.name for filt in filters]):
+                    if '.py' in child.name:
+                        with child.open('r') as f:
+                            count += len(f.readlines())
+                else:
+                    print(child.stem)
+            except Exception:
+                pass
+    return count
+
 def remove_spaces(string):
     """
     return a string without any white spaces in it
@@ -1619,12 +1639,13 @@ def ift2(x, dim=(-2, -1)):
 
 
 if __name__ == '__main__':
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'visa')
+    #paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'visa')
     # for p in paths:
     #     print(str(p))
     # v = get_version()
     # pass
     #plugins = get_plugins()  # pragma: no cover
     #extensions = get_extension()
-    models = get_models()
+    #models = get_models()
+    count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
     pass

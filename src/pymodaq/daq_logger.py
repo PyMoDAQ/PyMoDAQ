@@ -238,7 +238,7 @@ class DAQ_Logger(QObject):
                             self.h5saver.add_navigation_axis(np.array([0.0, ]),
                                                              det_group, 'time_axis', enlargeable=True,
                                                              title='Time axis',
-                                                             metadata=dict(label='Time axis', units='timestamp',
+                                                             metadata=dict(label='Time axis', units='s',
                                                                            nav_index=0))
 
                     elif self.settings.child(('log_type')).value() == 'SQL DataBase':
