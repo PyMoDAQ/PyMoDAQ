@@ -61,7 +61,7 @@ params = [
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
 
-def main(plugin_file, init=True):
+def main(plugin_file, init=True, title='test'):
     """
     this method start a DAQ_Move object with this defined plugin as actuator
     Returns
@@ -74,7 +74,7 @@ def main(plugin_file, init=True):
     from pathlib import Path
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
-    prog = DAQ_Move(Form, title="test",)
+    prog = DAQ_Move(Form, title=title,)
     Form.show()
     prog.actuator = Path(plugin_file).stem[9:]
     if init:

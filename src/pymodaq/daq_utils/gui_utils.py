@@ -490,7 +490,7 @@ class TableModel(QtCore.QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                if section > len(self.header):
+                if section >= len(self.header):
                     return QVariant()
                 else:
                     return self.header[section]
@@ -502,9 +502,9 @@ class TableModel(QtCore.QAbstractTableModel):
     def flags(self, index):
 
         f = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
-
-        if self.editable[index.column()]:
-            f |= Qt.ItemIsEditable
+        if index.column() < len(self.editable):
+            if self.editable[index.column()]:
+                f |= Qt.ItemIsEditable
 
         if not index.isValid():
             f |= Qt.ItemIsDropEnabled

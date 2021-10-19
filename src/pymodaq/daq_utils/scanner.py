@@ -363,7 +363,7 @@ class Scanner(QObject):
         self.settings.child('scan_type').setValue(scan_type)
         # self.scan_selector.settings.child('scan_options', 'scan_type').hide()
         self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
-        self.scan_selector.scan_select_signal.connect(self.update_tabular_positions)
+        self.scan_selector.scan_select_signal.connect(lambda: self.update_tabular_positions())
 
         self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
             limits=self.scan_selector.sources_names)
@@ -522,6 +522,7 @@ class Scanner(QObject):
             self.table_view.remove_row_signal[int].connect(self.table_model.remove_data)
             self.table_view.load_data_signal.connect(self.table_model.load_txt)
             self.table_view.save_data_signal.connect(self.table_model.save_txt)
+
 
     @property
     def viewers_items(self):
@@ -734,26 +735,31 @@ class Scanner(QObject):
         self.scan_params_signal.emit(self.scan_parameters)
         return self.scan_parameters
 
-    def update_tabular_positions(self):
+    def update_tabular_positions(self, positions=None):
         try:
             if self.settings.child('scan_type').value() == 'Tabular':
-                if self.settings.child('tabular_settings',
-                                       'tabular_selection').value() == 'Polylines':  # from ROI
-                    viewer = self.scan_selector.scan_selector_source
+                if positions is None:
+                    if self.settings.child('tabular_settings',
+                                           'tabular_selection').value() == 'Polylines':  # from ROI
+                        viewer = self.scan_selector.scan_selector_source
 
-                    if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
-                        positions = self.scan_selector.scan_selector.getArrayIndexes(
-                            spacing=self.settings.child('tabular_settings', 'tabular_step').value())
-                    elif self.settings.child('tabular_settings',
-                                             'tabular_subtype').value() == 'Adaptive':
-                        positions = self.scan_selector.scan_selector.get_vertex()
+                        if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
+                            positions = self.scan_selector.scan_selector.getArrayIndexes(
+                                spacing=self.settings.child('tabular_settings', 'tabular_step').value())
+                        elif self.settings.child('tabular_settings',
+                                                 'tabular_subtype').value() == 'Adaptive':
+                            positions = self.scan_selector.scan_selector.get_vertex()
 
-                    steps_x, steps_y = zip(*positions)
-                    steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
-                    positions = np.transpose(np.array([steps_x, steps_y]))
+                        steps_x, steps_y = zip(*positions)
+                        steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
+                        positions = np.transpose(np.array([steps_x, steps_y]))
+                        self.update_model(init_data=positions)
+                    else:
+                        self.update_model()
+                elif isinstance(positions, np.ndarray):
                     self.update_model(init_data=positions)
                 else:
-                    self.update_model()
+                    pass
             else:
                 self.update_model()
         except Exception as e:
