@@ -283,7 +283,7 @@ class DAQ_Viewer_base(QObject):
 
             pass
 
-    def emit_x_axis(self):
+    def emit_x_axis(self, x_axis=None):
         """
             Convenience function
             Emit the thread command "x_axis" with x_axis as an attribute.
@@ -292,7 +292,9 @@ class DAQ_Viewer_base(QObject):
             --------
             daq_utils.ThreadCommand
         """
-        self.emit_status(ThreadCommand("x_axis", [self.x_axis]))
+        if x_axis is None:
+            x_axis = self.x_axis
+        self.emit_status(ThreadCommand("x_axis", [x_axis]))
 
     def emit_y_axis(self):
         """

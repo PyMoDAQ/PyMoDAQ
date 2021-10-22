@@ -67,16 +67,6 @@ class NonLinearScanner(gutils.CustomApp):
 
     def value_changed(self, param):
         logger.debug(f'calling value_changed with param {param.name()}')
-        if param.name() == 'do_something':
-            if param.value():
-                self.log_signal.emit('Do something')
-                self.detector.grab_done_signal.connect(self.show_data)
-                self.raw_data = []  # init the data to be finally saved
-                self.settings.child('main_settings', 'something_done').setValue(True)
-            else:
-                self.log_signal.emit('Stop Doing something')
-                self.detector.grab_done_signal.disconnect()
-                self.settings.child('main_settings', 'something_done').setValue(False)
 
         logger.debug(f'Value change applied')
 

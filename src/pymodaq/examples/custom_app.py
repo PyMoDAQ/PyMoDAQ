@@ -59,6 +59,8 @@ class CustomAppExample(gutils.CustomApp):
         self.addaction('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera",
                        checkable=False, toolbar=self.toolbar)
         self.addaction('save', 'Save', 'SaveAs', "Save current data", checkable=False, toolbar=self.toolbar)
+        self.addaction('show', 'Show/hide', 'read2', "Show Hide DAQViewer", checkable=True, toolbar=self.toolbar)
+
         logger.debug('actions set')
 
     def setup_docks(self):
@@ -84,14 +86,14 @@ class CustomAppExample(gutils.CustomApp):
         dock_Viewer0D.addWidget(target_widget)
 
         # create 2 docks to display the DAQ_Viewer (one for its settings, one for its viewer)
-        dock_detector_settings = gutils.Dock("Detector Settings", size=(350, 350))
-        self.dockarea.addDock(dock_detector_settings, 'right', self.dock_settings)
-        dock_detector = gutils.Dock("Detector Viewer", size=(350, 350))
-        self.dockarea.addDock(dock_detector, 'right', dock_detector_settings)
+        self.dock_detector_settings = gutils.Dock("Detector Settings", size=(350, 350))
+        self.dockarea.addDock(self.dock_detector_settings, 'right', self.dock_settings)
+        self.dock_detector = gutils.Dock("Detector Viewer", size=(350, 350))
+        self.dockarea.addDock(self.dock_detector, 'right', self.dock_detector_settings)
         # init one daq_viewer object named detector
 
-        self.detector = DAQ_Viewer(self.dockarea, dock_settings=dock_detector_settings,
-                               dock_viewer=dock_detector, title="A detector", DAQ_type='DAQ0D')
+        self.detector = DAQ_Viewer(self.dockarea, dock_settings=self.dock_detector_settings,
+                               dock_viewer=self.dock_detector, title="A detector", DAQ_type='DAQ0D')
         # set its type to 'Mock'
         self.detector.daq_type = 'Mock'
         # init the detector and wait 1000ms for the completion
@@ -116,8 +118,12 @@ class CustomAppExample(gutils.CustomApp):
         self.actions['save'].connect(self.save_data)
 
         self.actions['grab'].connect(self.detector.grab)
-
+        self.actions['show'].connect(self.show_detector)
         logger.debug('connecting done')
+
+    def show_detector(self, status):
+        self.dock_detector.setVisible(status)
+        self.dock_detector_settings.setVisible(status)
 
     def setup_menu(self):
         '''
