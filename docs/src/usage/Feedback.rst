@@ -45,3 +45,20 @@ What they think of PyMoDAQ?
 
   If you wish to communicate with users of PyMoDAQ, a mailing list exists:
   `pymodaq@services.cnrs.fr <mailto:pymodaq@services.cnrs.fr>`_
+
+
+Some Scientific publication on/using PyMoDAQ
+********************************************
+
+* Weber, S. J. PyMoDAQ: An open-source Python-based software for modular data acquisition.
+  `Review of Scientific Instruments, 92(4), 045104 (2021)`__.
+* Luttmann, M. *et al.* In Situ Sub-50-Attosecond Active Stabilization of the Delay Between Infrared and Extreme-Ultraviolet Light Pulses.
+  `Physical Review Applied, 15(3), 034036 (2021)`__.
+* S. Meuret *et al.* Time-resolved cathodoluminescence in an ultrafast transmission electron microscope
+  `Appl. Phys. Lett. 119, 062106 (2021)`__
+
+
+__ https://aip.scitation.org/doi/full/10.1063/5.0032116
+__ https://journals.aps.org/prapplied/abstract/10.1103/PhysRevApplied.15.034036
+__ https://doi.org/10.1063/5.0057861
+

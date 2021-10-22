@@ -12,13 +12,13 @@ Functionalities
 ---------------
 
 * Sébastien Weber, Research Engineer at CEMES/CNRS
+* David Bresteau, Research Engineer at Attolab facility, CEA Saclay
 
 Cleaning
 --------
 
 * Sébastien Weber, Research Engineer at CEMES/CNRS
 * David Trémouilles, Researcher at LAAS/CNRS
-
 
 
 Plugins
@@ -28,10 +28,21 @@ Plugins
 * Sophie Meuret, Researcher at CEMES/CNRS
 * David Bresteau, Research Engineer at Attolab facility, CEA Saclay
 
+Extensions
+**********
+* Sébastien Weber, Research Engineer at CEMES/CNRS
+* Romain Geneaux, Researcher at CEA Saclay contributed to the PyMoDAQ-Femto extension
+
 Documentation
 *************
-
+* Sébastien Weber, Research Engineer at CEMES/CNRS
 * Matthieu Cabos helped with this documentation
+
+Testing
+*******
+* Sébastien Weber, Research Engineer at CEMES/CNRS
+* Pierre Jannot wrote tests with a total of 5000 lines of code tested during his internship at CEMES in 2021
+
 
 You want to contribute?
 ***********************
@@ -47,3 +58,7 @@ developer:
 
 Any change on the code will be *seen* by python interpreter. When ready, you can ask to push your code into the main
 development branch. A simpler way is to raise *Issues* on PyMoDAQ's github page.
+
+.. note::
+
+  If you're not in the list and contributed somehow, sorry for that and let us know at sebastien.weber@cemes.fr
