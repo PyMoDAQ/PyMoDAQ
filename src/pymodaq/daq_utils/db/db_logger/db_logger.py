@@ -5,9 +5,9 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
-from .db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, Configuration
+from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, Configuration
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
+from pymodaq.daq_utils.gui_utils import dashboard_submodules_params, messagebox
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -72,8 +72,16 @@ class DbLogger:
             session.close()
 
     def connect_db(self):
-        self.engine = create_engine(f"postgresql://{self.user}:{self.user_pwd}@{self.ip_address}:"
+        try:
+            self.engine = create_engine(f"postgresql://{self.user}:{self.user_pwd}@{self.ip_address}:"
                                     f"{self.port}/{self.database_name}")
+        except ModuleNotFoundError as e:
+            messagebox('warning', 'ModuleError',
+                       f'The postgresql backend *psycopg2* has not been installed.\n'
+                       f'Could not connect to your database')
+            logger.warning(str(e))
+            return False
+
         try:
             if not database_exists(self.engine.url):
                 create_database(self.engine.url)
@@ -168,7 +176,8 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
             'values': ['PostgreSQL', ]},
         {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str',
-            'value': config['network']['logging']['sql']['ip']},
+            'value': config['network']['logging']['sql']['ip'],
+         'tip':'Either localhost if the database server is on the same computer or the IP address of the server'},
         {'title': 'Server port:', 'name': 'server_port', 'type': 'int',
             'value': config['network']['logging']['sql']['port']},
         {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
@@ -224,3 +233,9 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
 
             elif change == 'parent':
                 pass
+
+
+if __name__ == '__main__':
+    db = DbLogger('preset_default')
+    db.connect_db()
+    pass

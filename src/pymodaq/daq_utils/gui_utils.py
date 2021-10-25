@@ -23,6 +23,24 @@ dashboard_submodules_params = [
     {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
 ]
 
+message_severities = ['critical', 'information', 'question', 'warning']
+def messagebox(severity='warning', title='this is a title', text='blabla'):
+    """
+    Display a popup messagebox with a given severity
+    Parameters
+    ----------
+    severity: (str) one in ['critical', 'information', 'question', 'warning']
+    title: (str) the displayed popup title
+    text: (str) the displayed text in the message
+
+    Returns
+    -------
+    bool: True if the user clicks on Ok
+    """
+    assert severity in message_severities
+    messbox = getattr(QtWidgets.QMessageBox, severity)
+    ret = messbox(None, title, text)
+    return ret == QtWidgets.QMessageBox.Ok
 
 class QAction(QAction):
     """

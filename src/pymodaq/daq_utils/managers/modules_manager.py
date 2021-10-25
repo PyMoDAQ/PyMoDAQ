@@ -263,6 +263,17 @@ class ModulesManager(QObject):
         self.actuators_connected = connect
 
     def connect_detectors(self, connect=True, slot=None):
+        """
+        Connect selected DAQ_Viewers's grab_done_signal to the given slot
+        Parameters
+        ----------
+        connect: (bool) if True, connect to the given slot (or default slot)
+                        if False, disconnect all detectors (not only the currently selected ones.
+                        This is made because when selected detectors changed if you only disconnect those ones,
+                        the previously connected ones will stay connected)
+
+        slot: (method) A method that should be connected
+        """
         if slot is None:
             slot = self.det_done
 
@@ -270,11 +281,13 @@ class ModulesManager(QObject):
             for sig in [mod.grab_done_signal for mod in self.detectors]:
                 sig.connect(slot)
         else:
-            try:
-                for sig in [mod.grab_done_signal for mod in self.detectors]:
+
+            for sig in [mod.grab_done_signal for mod in self.detectors_all]:
+                try:
                     sig.disconnect(slot)
-            except Exception as e:
-                logger.error(str(e))
+                except TypeError as e:
+                    # means the slot was not previously connected
+                    logger.info(str(e))
 
         self.detectors_connected = connect
 

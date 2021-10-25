@@ -31,13 +31,14 @@ try:
     is_sql = True
 except Exception as e:
     is_sql = False
-    logger.warning(str(e))
-    logger.info('To enable logging to database install: sqalchemy and sql_alchemy_utils packages')
+    #logger.warning(str(e))
+    logger.info('To enable logging to database install: sqalchemy and sql_alchemy_utils packages as well as the '
+                'backend for your specific database, for instance psycopg2 for PostGreSQL database')
 
 
 class DAQ_Logger(QObject):
     """
-    Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
+    Main class initializing a DAQ_Logger module
     """
     command_DAQ_signal = pyqtSignal(list)
     status_signal = pyqtSignal(str)
@@ -112,6 +113,8 @@ class DAQ_Logger(QObject):
         except Exception as e:
             logger.exception(str(e))
         self.ui.logger_dock.close()
+        self.dockarea.close()
+
 
     def parameter_tree_changed(self, param, changes):
         """
@@ -214,7 +217,7 @@ class DAQ_Logger(QObject):
         """
         status = self.set_continuous_save()
         if status:
-            det_modules_log = self.modules_manager.detectors
+            det_modules_log = self.modules_manager.detectors_all
             if det_modules_log != []:
                 # check if the modules are initialized
                 for module in det_modules_log:
@@ -562,6 +565,7 @@ class DAQ_Logging(QObject):
         self.ini_time = 0
         self.ind_log = 0
         self.modules_manager = modules_manager
+        self.modules_manager.detectors_changed.connect(self.update_connect_detectors)
 
         self.data_logger = logger
         if isinstance(self.data_logger, H5Saver):
@@ -645,9 +649,25 @@ class DAQ_Logging(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+    def connect_detectors(self, status=True):
+        """
+        Connect detectors to DAQ_Logging do_save_continuous method
+        Parameters
+        ----------
+        status: (bool) If True make the connection else disconnect
+        """
+        self.modules_manager.connect_detectors(connect=status, slot=self.do_save_continuous)
+
+    def update_connect_detectors(self):
+        try:
+            self.connect_detectors(False)
+        except :
+            pass
+        self.connect_detectors()
+
     def stop_logging(self):
         try:
-            self.modules_manager.connect_detectors(connect=False, slot=self.do_save_continuous)
+            self.connect_detectors(connect=False)
         except Exception as e:
             logger.exception(str(e))
 
@@ -659,7 +679,7 @@ class DAQ_Logging(QObject):
 
     def start_logging(self):
         try:
-            self.modules_manager.connect_detectors(slot=self.do_save_continuous)
+            self.connect_detectors()
             self.stop_logging_flag = False
             self.status_sig.emit(["Update_Status", "Acquisition has started"])
 

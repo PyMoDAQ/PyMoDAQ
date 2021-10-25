@@ -228,9 +228,11 @@ class DAQ_Scan(QObject):
             self.h5saver.close_file()
             self.ui.average_dock.close()
             self.ui.scan_dock.close()
+            self.dockarea.close()
 
         except Exception as e:
             logger.exception(str(e))
+
 
     def save_scan(self):
         """

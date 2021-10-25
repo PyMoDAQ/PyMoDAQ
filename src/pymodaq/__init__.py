@@ -1,9 +1,4 @@
 import importlib.util
-
-if importlib.util.find_spec('clr') is not None:
-    import pythoncom
-    pythoncom.CoInitialize()
-
 from pathlib import Path
 
 try:
@@ -17,6 +12,19 @@ try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
     except Exception:
         print("Couldn't create the local folder to store logs , presets...")
+
+    # issue on windows when using .NET code within multithreads, this below allows it but requires the
+    # pywin32 (pythoncom) package
+    if importlib.util.find_spec('clr') is not None:
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+        except ModuleNotFoundError as e:
+            infos = "You have installed plugins requiring the pywin32 package to work correctly," \
+                    " please type in *pip install pywin32* and restart PyMoDAQ"
+            print(infos)
+        logger.warning(infos)
+
     config = load_config()  # to ckeck for config file existence, otherwise create one
     copy_preset()
     logger.info('')

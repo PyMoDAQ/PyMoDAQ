@@ -172,12 +172,12 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def load_scan_module(self):
-        self.scan_module = DAQ_Scan(dockarea=self.dockarea, dashboard=self)
+        self.scan_module = DAQ_Scan(dockarea=self.dockarea.addTempArea(), dashboard=self)
         self.extensions['DAQ_Scan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
 
     def load_log_module(self):
-        self.log_module = DAQ_Logger(dockarea=self.dockarea, dashboard=self)
+        self.log_module = DAQ_Logger(dockarea=self.dockarea.addTempArea(), dashboard=self)
         self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
 
