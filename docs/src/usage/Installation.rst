@@ -110,3 +110,36 @@ to interface Andor CCD camera.
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
 
+
+
+What about the Hardware
+-----------------------
+
+So far, you've installed all the software layer managing Instrument control from the user
+up to the manufacturer driver. This means you still have to install properly your specific hardware. For this, there
+is no general recipe but below you'll find some advices/steps you can follow.
+
+Serial/GPIB based hardware
+++++++++++++++++++++++++++
+
+In the case where your instrument is controlled using ASCII commands (basically strings), no more steps
+than plugging you instrument is needed. Just make sur the COM port or GPIB address is correct.
+
+Library based hardware
++++++++++++++++++++++
+
+In the case of instruments using a specific manufacturer driver (*.dll*, *.so* or .NET libraries) then
+you could follow these steps:
+
+* Install the SDK/dll driver from the manufacturer
+* Test the communication is fine using the software provided by the manufacturer (if available)
+* Make sure your OS (Windows, Mac or linux) is able to find the installed library (if needed add the *path* pointing to
+  your library in the **PATH** environment variable of your operating system
+* Install the right PyMoDAQ's plugin
+* You should be good to go!
+
+
+.. tip::
+
+  Example: if you want to use a NI-DAQ instrument. You'll have to first install their driver Ni-DAQmx, then test you hardware
+  using their MAX software and finally configure it using *pymodaq_plugins_daqmx* plugin.
