@@ -126,7 +126,7 @@ In the case where your instrument is controlled using ASCII commands (basically 
 than plugging you instrument is needed. Just make sur the COM port or GPIB address is correct.
 
 Library based hardware
-+++++++++++++++++++++
+++++++++++++++++++++++
 
 In the case of instruments using a specific manufacturer driver (*.dll*, *.so* or .NET libraries) then
 you could follow these steps:
