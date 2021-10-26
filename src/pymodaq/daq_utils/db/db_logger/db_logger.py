@@ -8,6 +8,7 @@ from sqlalchemy_utils import database_exists, create_database
 from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, Configuration
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params, messagebox
+from pymodaq.daq_utils.abc.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -233,6 +234,46 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
 
             elif change == 'parent':
                 pass
+
+
+class DataBaseLogger(AbstractLogger):
+    def __init__(self, database_name):
+        self.dblogger = DbLoggerGUI(database_name)
+
+    @property
+    def settings_tree(self):
+        return self.dblogger.settings_tree
+
+    @property
+    def settings(self):
+        return self.dblogger.settings
+
+    def init_logger(self, settings):
+        if not self.settings.child('connected_db').value():
+            status = self.dblogger.connect_db()
+            if not status:
+                logger.critical('the Database is not and cannot be connnect')
+                return False
+
+        self.dblogger.add_config(settings)
+        return True
+
+    def get_handler(self):
+        return DBLogHandler(self.dblogger)
+
+    def add_detector(self, det_name, settings):
+        self.dblogger.add_detectors([dict(name=det_name, xml_settings=settings)])
+
+    def add_datas(self, datas):
+        self.dblogger.add_datas(datas)
+        self.settings.child(('N_saved')).setValue(
+            self.settings.child(('N_saved')).value() + 1)
+
+    def stop_logger(self):
+        pass
+
+    def close(self):
+        pass
 
 
 if __name__ == '__main__':

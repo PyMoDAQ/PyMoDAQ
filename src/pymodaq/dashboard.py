@@ -172,14 +172,22 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def load_scan_module(self):
-        self.scan_module = DAQ_Scan(dockarea=self.dockarea.addTempArea(), dashboard=self)
+        win = QtWidgets.QMainWindow()
+        area = gutils.DockArea()
+        win.setCentralWidget(area)
+        self.scan_module = DAQ_Scan(dockarea=area, dashboard=self)
         self.extensions['DAQ_Scan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
+        win.show()
 
     def load_log_module(self):
-        self.log_module = DAQ_Logger(dockarea=self.dockarea.addTempArea(), dashboard=self)
+        win = QtWidgets.QMainWindow()
+        area = gutils.DockArea()
+        win.setCentralWidget(area)
+        self.log_module = DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
+        win.show()
 
     def load_pid_module(self):
         self.pid_window = QtWidgets.QMainWindow()
