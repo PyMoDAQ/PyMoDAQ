@@ -139,7 +139,7 @@ you could follow these steps:
 * You should be good to go!
 
 
-.. tip::
+.. note::
 
   Example: if you want to use a NI-DAQ instrument. You'll have to first install their driver Ni-DAQmx, then test you hardware
   using their MAX software and finally configure it using *pymodaq_plugins_daqmx* plugin.
