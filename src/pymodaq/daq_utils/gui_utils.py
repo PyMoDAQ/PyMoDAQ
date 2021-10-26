@@ -287,6 +287,12 @@ class Dock(Dock):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def removeWidgets(self):
+        for widget in self.widgets:
+            self.layout.removeWidget(widget)
+            widget.close()
+        self.widgets = []
+
     def setOrientation(self, o='auto', force=False):
         """
         Sets the orientation of the title bar for this Dock.
@@ -745,6 +751,9 @@ class CustomApp(ActionManager, QtCore.QObject):
         self.toolbar = QtWidgets.QToolBar()
         self.mainwindow.addToolBar(self.toolbar)
 
+        # %% init and set the status bar
+        self.statusbar = self.mainwindow.statusBar()
+
         self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
         # # create a settings tree to be shown eventually in a dock
@@ -842,7 +851,6 @@ class CustomApp(ActionManager, QtCore.QObject):
     def setup_UI(self):
         # ##### Manage Docks########
         self.setup_docks()
-
         self.setup_menu()
 
         #toolbar is managed within the ActionManager herited class

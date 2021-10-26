@@ -5,6 +5,7 @@ from xml.etree import ElementTree as ET
 from collections import OrderedDict
 from PyQt5 import QtGui
 from PyQt5.QtCore import QDateTime
+from pyqtgraph.parametertree import Parameter
 
 
 def walk_parameters_to_xml(parent_elt=None, param=None):
@@ -332,7 +333,7 @@ def parameter_to_xml_file(param, filename):
 
 
 def walk_xml_to_parameter(params=[], XML_elt=None):
-    """ To convert an XML element (and children) to dict enabling creation of parameter object.
+    """ To convert an XML element (and children) to list of dict enabling creation of parameter object.
 
         =============== ================== =======================================
         **Parameters**   **Type**            **Description**
@@ -470,7 +471,7 @@ def XML_file_to_parameter(file_name):
 
 def XML_string_to_parameter(xml_string):
     """
-        Convert a xml string into pyqtgraph parameter object.
+        Convert a xml string into a list of dict for initialize pyqtgraph parameter object.
 
         =============== =========== ================================
         **Parameters**   **Type**    **Description**
@@ -496,3 +497,21 @@ def XML_string_to_parameter(xml_string):
     params = walk_xml_to_parameter(params=[], XML_elt=root)
 
     return params
+
+
+def XML_string_to_pobject(xml_string):
+    """
+    return a Parameter object from its *translated* version as a XML string
+    Parameters
+    ----------
+    xml_string: (str) string representation of a Parameter Object
+
+    Returns
+    -------
+    Parameter
+
+    See Also
+    --------
+    parameter_to_xml_string
+    """
+    return Parameter.create(name='settings', type='group', children=XML_file_to_parameter(xml_string))

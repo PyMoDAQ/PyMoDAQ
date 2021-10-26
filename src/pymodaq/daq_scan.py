@@ -726,7 +726,7 @@ class DAQ_Scan(QObject):
         self.ui.scan_dock.addWidget(widgetsettings)
 
         self.dockarea.addDock(self.ui.scan_dock, 'left')
-        self.ui.scan_dock.float()
+        #self.ui.scan_dock.float()
 
         # %% init the 1D viewer
         self.ui.scan1D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
