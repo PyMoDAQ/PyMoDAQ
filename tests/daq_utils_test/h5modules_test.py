@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 import pytest
 from pathlib import PurePosixPath, Path
-from PyQt5 import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore
 
 
 import pymodaq.daq_utils.parameter.ioxml

@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
+from qtpy import QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal
 import sys
 from collections import OrderedDict
 from pyqtgraph import ROI, RectROI, PolyLineROI, Point
@@ -44,7 +44,7 @@ class PolyLineROI_custom(PolyLineROI):
 
 
 class ScanSelector(QObject):
-    scan_select_signal = pyqtSignal(ROI)
+    scan_select_signal = Signal(ROI)
 
     params = [
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
@@ -194,7 +194,7 @@ class ScanSelector(QObject):
                 logger.exception(str(e))
                 pass
 
-    pyqtSlot(str)
+    Slot(str)
 
     def update_scan_area_type(self):
 

@@ -1,7 +1,7 @@
 import os
 import sys
-from PyQt5.QtCore import QObject, pyqtSignal
-from PyQt5 import QtGui, QtWidgets
+from qtpy.QtCore import QObject, Signal
+from qtpy import QtGui, QtWidgets
 
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils import daq_utils as utils
@@ -248,7 +248,7 @@ class JoystickButtonsSelection(QtWidgets.QDialog):
 
 
 class RemoteManager(QObject):
-    remote_changed = pyqtSignal(dict)
+    remote_changed = Signal(dict)
 
     def __init__(self, actuators=[], detectors=[], msgbox=False):
         super().__init__()

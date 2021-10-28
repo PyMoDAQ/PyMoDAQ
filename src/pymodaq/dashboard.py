@@ -8,8 +8,8 @@ import pickle
 import logging
 from pathlib import Path
 from importlib import import_module
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from qtpy import QtGui, QtWidgets, QtCore
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale
 
 from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.dockarea import Dock
@@ -63,9 +63,9 @@ extensions = utils.get_extensions()
 class DashBoard(QObject):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger """
-    status_signal = pyqtSignal(str)
-    preset_loaded_signal = pyqtSignal(bool)
-    new_preset_created = pyqtSignal()
+    status_signal = Signal(str)
+    preset_loaded_signal = Signal(bool)
+    new_preset_created = Signal()
 
     def __init__(self, dockarea):
         """
@@ -129,7 +129,7 @@ class DashBoard(QObject):
         self.extra_params = params
         self.preset_manager = PresetManager(path=self.preset_path, extra_params=params, param_options=param_options)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def add_status(self, txt):
         """
             Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
@@ -1141,7 +1141,7 @@ class DashBoard(QObject):
                 QtWidgets.QApplication.processEvents()
             self.settings.child('detectors', name).setValue(det.initialized_state)
 
-    pyqtSlot(bool)
+    Slot(bool)
     def stop_moves(self, overshoot):
         """
             Foreach module of the move module object list, stop motion.

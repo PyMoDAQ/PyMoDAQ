@@ -1,15 +1,15 @@
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QObject, pyqtSignal, QLocale
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtCore import QObject, Signal, QLocale
 import sys
 
 
 class Tree_layout(QObject):
     """
-    PyQt5 class object based on QtreeWidget
+    qtpy class object based on QtreeWidget
     The function populate_Tree has to be used in order to populate the tree with structure as nested lists of dicts
 
     """
-    status_sig = pyqtSignal(str)
+    status_sig = Signal(str)
 
     def __init__(self, parent=None, col_counts=1, labels=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))

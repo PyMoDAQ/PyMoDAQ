@@ -3,8 +3,8 @@ from collections import OrderedDict
 import datetime
 import numpy as np
 
-from PyQt5 import  QtWidgets
-from PyQt5.QtCore import pyqtSlot, QLocale, QDate, QThread
+from qtpy import  QtWidgets
+from qtpy.QtCore import Slot, QLocale, QDate, QThread
 
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
@@ -155,12 +155,12 @@ class CustomAppExample(gutils.CustomApp):
 
         logger.debug(f'Value change applied')
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def data_done(self, data):
         # print(data)
         pass
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def show_data(self, data):
         """
         do stuff with data from the detector if its grab_done_signal has been connected
@@ -229,7 +229,7 @@ class CustomAppExample(gutils.CustomApp):
         except Exception as e:
             logger.exception(str(e))
 
-    @pyqtSlot(str)
+    @Slot(str)
     def add_log(self, txt):
         """
             Add a log to the logger list from the given text log and the current time

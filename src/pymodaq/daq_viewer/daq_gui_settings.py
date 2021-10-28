@@ -2,12 +2,12 @@
 
 # Form implementation generated from reading ui file 'daq_gui_settings.ui'
 #
-# Created by: PyQt5 UI code generator 5.13.0
+# Created by: qtpy UI code generator 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 

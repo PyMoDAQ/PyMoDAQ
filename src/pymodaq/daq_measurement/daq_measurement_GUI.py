@@ -2,11 +2,11 @@
 
 # Form implementation generated from reading ui file 'DAQ_Measurement_GUI.ui'
 #
-# Created by: PyQt5 UI code generator 5.9.2
+# Created by: qtpy UI code generator 5.9.2
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 

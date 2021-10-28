@@ -1,6 +1,6 @@
 from collections import OrderedDict
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-from PyQt5 import QtWidgets
+from qtpy.QtCore import QObject, Signal, Slot, QThread
+from qtpy import QtWidgets
 import time
 from pymodaq.daq_utils import daq_utils as utils
 
@@ -10,11 +10,11 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class ModulesManager(QObject):
-    detectors_changed = pyqtSignal(list)
-    actuators_changed = pyqtSignal(list)
-    det_done_signal = pyqtSignal(OrderedDict)
-    move_done_signal = pyqtSignal(OrderedDict)
-    timeout_signal = pyqtSignal(bool)
+    detectors_changed = Signal(list)
+    actuators_changed = Signal(list)
+    det_done_signal = Signal(OrderedDict)
+    move_done_signal = Signal(OrderedDict)
+    timeout_signal = Signal(bool)
 
     params = [
         {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
@@ -379,7 +379,7 @@ class ModulesManager(QObject):
             pos.append(positions_as_dict[act])
         return pos
 
-    pyqtSlot(str, float)
+    Slot(str, float)
 
     def move_done(self, name, position):
         """
@@ -394,7 +394,7 @@ class ModulesManager(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def det_done(self, data):
         try:
             if data['name'] not in list(self.det_done_datas.keys()):
@@ -410,7 +410,7 @@ if __name__ == '__main__':
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
-    from PyQt5.QtCore import QThread
+    from qtpy.QtCore import QThread
     from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer

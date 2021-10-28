@@ -1,6 +1,6 @@
 import sys
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QDateTime, pyqtSignal, QPointF, QObject
+from qtpy import QtWidgets
+from qtpy.QtCore import QDateTime, Signal, QPointF, QObject
 import numpy as np
 import pyqtgraph as pg
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
@@ -41,7 +41,7 @@ class AxisItemDate(pg.AxisItem):
 
 
 class GanttROI(ROIBrushable):
-    index_signal = pyqtSignal(int)
+    index_signal = Signal(int)
 
     def __init__(self, task='No task', index=0, start=0, stop=1, brush=None, *args, **kwargs):
         super().__init__(pos=[start, index], size=[stop - start, 1], brush=brush, pen=brush, snapSize=1, scaleSnap=True,

@@ -1,7 +1,7 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QPushButton, QLabel, QCheckBox
-from PyQt5.QtGui import QPixmap, QIcon
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QRectF, QPointF
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtWidgets import QPushButton, QLabel, QCheckBox
+from qtpy.QtGui import QPixmap, QIcon
+from qtpy.QtCore import QObject, Slot, Signal, QRectF, QPointF
 import sys
 from collections import OrderedDict
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
@@ -31,14 +31,14 @@ Gradients.update(OrderedDict([
 utils.set_logger(utils.get_module_name(__file__))
 
 class Viewer2D(QObject):
-    data_to_export_signal = pyqtSignal(
+    data_to_export_signal = Signal(
         OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-    crosshair_dragged = pyqtSignal(float, float)  # signal used to pass crosshair position to other modules in
+    crosshair_dragged = Signal(float, float)  # signal used to pass crosshair position to other modules in
     # scaled axes units
-    sig_double_clicked = pyqtSignal(float, float)
-    ROI_select_signal = pyqtSignal(QRectF)
-    ROI_changed = pyqtSignal()
-    ROI_changed_finished = pyqtSignal()
+    sig_double_clicked = Signal(float, float)
+    ROI_select_signal = Signal(QRectF)
+    ROI_changed = Signal()
+    ROI_changed_finished = Signal()
 
     def __init__(self, parent=None, scaling_options=utils.ScalingOptions(scaled_xaxis=utils.ScaledAxis(),
                                                                          scaled_yaxis=utils.ScaledAxis())):
@@ -407,7 +407,7 @@ class Viewer2D(QObject):
         self.ui.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.ui.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def remove_ROI(self, roi_name):
         item = self.ui.RoiCurve_H.pop(roi_name)
         self.ui.Lineout_H.plotItem.removeItem(item)
@@ -420,7 +420,7 @@ class Viewer2D(QObject):
 
         self.roi_changed()
 
-    @pyqtSlot(int, str)
+    @Slot(int, str)
     def add_ROI(self, newindex, roi_type):
         item = self.roi_manager.ROIs['ROI_{:02d}'.format(newindex)]
         item.sigRegionChanged.connect(self.roi_changed)
@@ -536,7 +536,7 @@ class Viewer2D(QObject):
         self.show_lineouts()
         # self.show_lineouts()
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def double_clicked(self, posx, posy):
         self.ui.crosshair.set_crosshair_position(posx, posy)
         self.update_crosshair_data(posx, posy)
@@ -552,13 +552,13 @@ class Viewer2D(QObject):
         else:
             self.image_widget.plotitem.vb.setAspectLocked(lock=False)
 
-    @pyqtSlot(int, int)
+    @Slot(int, int)
     def move_left_splitter(self, pos, index):
         self.ui.splitter_VLeft.blockSignals(True)
         self.ui.splitter_VLeft.moveSplitter(pos, index)
         self.ui.splitter_VLeft.blockSignals(False)
 
-    @pyqtSlot(int, int)
+    @Slot(int, int)
     def move_right_splitter(self, pos, index):
         self.ui.splitter_VRight.blockSignals(True)
         self.ui.splitter_VRight.moveSplitter(pos, index)
@@ -701,7 +701,7 @@ class Viewer2D(QObject):
         except Exception as e:
             pass
 
-    @pyqtSlot(list)
+    @Slot(list)
     def update_roi(self, changes):
         for param, change, param_value in changes:
             if change == 'value':

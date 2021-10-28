@@ -6,8 +6,8 @@ Documentation on the added or modified ParameterItem types compared to ``pyqtgra
 ``WidgetParameterItem`` and ``SimpleParameter`` have been subclassed to define more options:
 
 * ``int`` and ``float``: represented by a custom ``Spinbox``, see :py:meth:`~pymodaq.daq_utils.custom_parameter_tree.SpinBoxCustom`
-* ``bool``, ``led``, ``bool_push`` are represented respectively by a :py:meth:`~PyQt5.QtWidgets.QCheckBox`,
-  a :py:meth:`~pymodaq.daq_utils.plotting.QLED.qled.QLED`, :py:meth:`~PyQt5.QtWidgets.QPushButton`
+* ``bool``, ``led``, ``bool_push`` are represented respectively by a :py:meth:`~qtpy.QtWidgets.QCheckBox`,
+  a :py:meth:`~pymodaq.daq_utils.plotting.QLED.qled.QLED`, :py:meth:`~qtpy.QtWidgets.QPushButton`
 * ``str`` displays a QLineEdit widget
 * ``date_time`` displays a QDateTime widget
 * ``date`` displays a QDate widget

@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore
 from pymodaq.daq_utils.plotting.viewer2D import Viewer2D
 from pymodaq.daq_utils.exceptions import ExpectedError
 from pyqtgraph.parametertree import Parameter

@@ -1,6 +1,6 @@
 import pytest
 
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
 
 

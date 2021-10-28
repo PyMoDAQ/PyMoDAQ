@@ -1,8 +1,8 @@
 import sys
 from collections import OrderedDict
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QObject, pyqtSignal, QLocale, pyqtSlot
+from qtpy import QtWidgets, QtCore
+from qtpy.QtCore import QObject, Signal, QLocale, Slot
 
 from pymodaq.daq_utils.parameter import ioxml
 
@@ -267,7 +267,7 @@ class ScanParameters:
 
 
 class Scanner(QObject):
-    scan_params_signal = pyqtSignal(ScanParameters)
+    scan_params_signal = Signal(ScanParameters)
 
     params = [#{'title': 'Scanner settings', 'name': 'scan_options', 'type': 'group', 'children': [
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
@@ -898,14 +898,14 @@ class TableModelTabular(gutils.TableModel):
         editable = [True for name in axes_name]
         super().__init__(data, header, editable=editable, **kwargs)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def add_data(self, row, data=None):
         if data is not None:
             self.insert_data(row, [float(d) for d in data])
         else:
             self.insert_data(row, [0. for name in self.header])
 
-    @pyqtSlot(int)
+    @Slot(int)
     def remove_data(self, row):
         self.remove_row(row)
 
@@ -1192,7 +1192,7 @@ def set_scan_sequential(starts, stops, steps):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    from PyQt5.QtCore import QThread
+    from qtpy.QtCore import QThread
     from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D

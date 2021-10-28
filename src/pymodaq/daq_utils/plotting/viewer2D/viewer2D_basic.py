@@ -1,5 +1,5 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QRectF, QRect, QPointF, QLocale
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QRectF, QRect, QPointF, QLocale
 import sys
 from ..plot_utils import AxisItem_Scaled
 import pyqtgraph as pg
@@ -8,7 +8,7 @@ from easydict import EasyDict as edict
 
 
 class Viewer2DBasic(QObject):
-    sig_double_clicked = pyqtSignal(float, float)
+    sig_double_clicked = Signal(float, float)
 
     def __init__(self, parent=None, **kwargs):
         super(Viewer2DBasic, self).__init__()
@@ -23,7 +23,7 @@ class Viewer2DBasic(QObject):
     def scale_axis(self, xaxis, yaxis):
         return xaxis * self.scaling_options.scaled_xaxis.scaling + self.scaling_options.scaled_xaxis.offset, yaxis * self.scaling_options.scaled_yaxis.scaling + self.scaling_options.scaled_yaxis.offset
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def double_clicked(self, posx, posy):
         self.sig_double_clicked.emit(posx, posy)
 
@@ -98,7 +98,7 @@ class View_cust(pg.ViewBox):
     """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
 
     """
-    sig_double_clicked = pyqtSignal(float, float)
+    sig_double_clicked = Signal(float, float)
 
     def __init__(self, parent=None, border=None, lockAspect=False, enableMouse=True, invertY=False,
                  enableMenu=True, name=None, invertX=False):

@@ -1,7 +1,7 @@
 
 import numpy as np
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import pyqtSignal, QLocale
+from qtpy import QtWidgets
+from qtpy.QtCore import Signal, QLocale
 
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
@@ -13,7 +13,7 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 class NonLinearScanner(gutils.CustomApp):
 
-    positions_signal = pyqtSignal(np.ndarray)
+    positions_signal = Signal(np.ndarray)
 
     # list of dicts enabling the settings tree on the user interface
     params = [

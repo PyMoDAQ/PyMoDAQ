@@ -262,7 +262,7 @@ The code below is derived from *daq_Andor_SDK2* (in *andor* hardware folder) and
 
     class DAQ_AndorSDK2(DAQ_Viewer_base):
 
-        callback_signal = QtCore.pyqtSignal() #used to talk with the callback object
+        callback_signal = QtCore.Signal() #used to talk with the callback object
         ...
 
         def ini_camera(self):
@@ -290,7 +290,7 @@ The code below is derived from *daq_Andor_SDK2* (in *andor* hardware folder) and
 
     class AndorCallback(QtCore.QObject):
 
-        data_sig=QtCore.pyqtSignal()
+        data_sig=QtCore.Signal()
         def __init__(self,wait_fn):
             super(AndorCallback, self).__init__()
             self.wait_fn = wait_fn

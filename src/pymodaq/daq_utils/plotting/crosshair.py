@@ -1,13 +1,13 @@
 import os
 import numpy as np
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import pyqtSignal
+from qtpy import QtCore, QtGui
+from qtpy.QtCore import Signal
 import pyqtgraph as pg
 import numpy as np
 
 
 class Crosshair(pg.GraphicsObject):
-    crosshair_dragged = pyqtSignal(float, float, name='crosshair_dragged')
+    crosshair_dragged = Signal(float, float, name='crosshair_dragged')
     # signal used to pass crosshair position to other methods
 
     def __init__(self, pyqtplot, orientation='both'):

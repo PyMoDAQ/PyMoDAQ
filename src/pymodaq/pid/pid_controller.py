@@ -1,6 +1,6 @@
 import os
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale
 
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, set_logger, get_module_name, \
@@ -34,10 +34,10 @@ def convert_output_limits(lim_min=-10., min_status=False, lim_max=10., max_statu
 class DAQ_PID(QObject):
     """
     """
-    command_pid = pyqtSignal(ThreadCommand)
-    curr_points_signal = pyqtSignal(dict)
-    setpoints_signal = pyqtSignal(dict)
-    emit_curr_points_sig = pyqtSignal()
+    command_pid = Signal(ThreadCommand)
+    curr_points_signal = Signal(dict)
+    setpoints_signal = Signal(dict)
+    emit_curr_points_sig = Signal()
 
     models = get_models()
 
@@ -468,7 +468,7 @@ class DAQ_PID(QObject):
     def update_runner_setpoints(self):
         self.command_pid.emit(ThreadCommand('update_setpoints', self.setpoints))
 
-    @pyqtSlot(list)
+    @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
         """
 
@@ -477,8 +477,8 @@ class DAQ_PID(QObject):
 
 
 class PIDRunner(QObject):
-    status_sig = pyqtSignal(list)
-    pid_output_signal = pyqtSignal(dict)
+    status_sig = Signal(list)
+    pid_output_signal = Signal(dict)
 
     def __init__(self, model_class, module_manager, setpoints=[], params=dict([])):
         """
@@ -522,7 +522,7 @@ class PIDRunner(QObject):
        self.pid_output_signal.emit(dict(output=self.outputs_to_actuators.values,
                                              input=self.inputs_from_dets.values))
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
         """
         """

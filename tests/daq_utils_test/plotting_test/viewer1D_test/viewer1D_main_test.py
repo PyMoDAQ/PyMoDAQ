@@ -3,7 +3,7 @@ import pyqtgraph as pg
 import numpy as np
 import pytest
 
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from pyqtgraph import ROI
 from unittest import mock
 from collections import OrderedDict

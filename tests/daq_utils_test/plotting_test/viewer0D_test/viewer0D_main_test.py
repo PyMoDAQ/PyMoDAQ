@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore
 import numpy as np
 import pytest
 from unittest import mock

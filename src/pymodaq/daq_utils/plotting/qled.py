@@ -1,13 +1,13 @@
 import os
 import numpy as np
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QLabel
-from PyQt5.QtCore import QObject, pyqtSignal
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtWidgets import QLabel
+from qtpy.QtCore import QObject, Signal
 from pymodaq.daq_utils.gui_utils import clickable
 
 
 class QLED(QLabel):
-    value_changed = pyqtSignal(bool)
+    value_changed = Signal(bool)
 
     def __init__(self, parent=None, scale=1):
         QLabel.__init__(self, parent)

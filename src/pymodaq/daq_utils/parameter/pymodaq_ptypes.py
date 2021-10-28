@@ -6,8 +6,8 @@ Created on Mon Dec  4 10:59:53 2017
 
 """
 import sys
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray, QSize
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import Slot, Signal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray, QSize
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
@@ -142,7 +142,7 @@ class Pixmap_check(QtWidgets.QWidget):
     """ value of this parameter is a dict with checked, data for the pixmap and optionally path in h5 node
     """
 
-    # valuechanged=pyqtSignal(dict)
+    # valuechanged=Signal(dict)
 
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -219,7 +219,7 @@ class QTimeCustom(QtWidgets.QTimeEdit):
         self.minutes_increment = minutes_increment
         self.updateTime(self.time())
 
-    @pyqtSlot(QTime)
+    @Slot(QTime)
     def updateTime(self, time):
         self.setTime(time)
 
@@ -769,7 +769,7 @@ class ListParameter_custom(pTypes.ListParameter):
         =============== =======================================
     """
     itemClass = ListParameterItem_custom
-    sigActivated = pyqtSignal(object)
+    sigActivated = Signal(object)
 
     def __init__(self, **opts):
         super(ListParameter_custom, self).__init__(**opts)
@@ -819,7 +819,7 @@ class TableParameterItem(WidgetParameterItemcustom):
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
         self.hideWidget = False
-        self.subItem = QtGui.QTreeWidgetItem()
+        self.subItem = QtWidgets.QTreeWidgetItem()
         self.addChild(self.subItem)
 
     def treeWidgetChanged(self):
@@ -875,7 +875,7 @@ class Table_custom(QtWidgets.QTableWidget):
         ============== ===========================
     """
 
-    valuechanged = pyqtSignal(OrderedDict)
+    valuechanged = Signal(OrderedDict)
 
     def __init__(self):
         QtWidgets.QTableWidget.__init__(self)
@@ -954,7 +954,7 @@ class TableViewParameterItem(WidgetParameterItemcustom):
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
         self.hideWidget = False
-        self.subItem = QtGui.QTreeWidgetItem()
+        self.subItem = QtWidgets.QTreeWidgetItem()
         self.addChild(self.subItem)
 
     def treeWidgetChanged(self):
@@ -1040,11 +1040,11 @@ class TableViewCustom(QtWidgets.QTableView):
         ============== ===========================
     """
 
-    valueChanged = pyqtSignal(list)
-    add_data_signal = pyqtSignal(int)
-    remove_row_signal = pyqtSignal(int)
-    load_data_signal = pyqtSignal()
-    save_data_signal = pyqtSignal()
+    valueChanged = Signal(list)
+    add_data_signal = Signal(int)
+    remove_row_signal = Signal(int)
+    load_data_signal = Signal()
+    save_data_signal = Signal()
 
     def __init__(self, menu=False):
         super().__init__()
@@ -1271,7 +1271,7 @@ class ItemSelectParameter(Parameter):
         =============== ======================================
     """
     itemClass = ItemSelectParameterItem
-    sigActivated = pyqtSignal(object)
+    sigActivated = Signal(object)
 
     def activate(self):
         """
@@ -1364,7 +1364,7 @@ class file_browser(QtWidgets.QWidget):
         --------
         browse_path
     """
-    value_changed = pyqtSignal(str)
+    value_changed = Signal(str)
 
     def __init__(self, init_path='D:/Data', file_type=False):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -1515,7 +1515,7 @@ class Plain_text_pb(QtWidgets.QWidget):
         --------
         initUI, emitsignal
     """
-    value_changed = pyqtSignal(str)
+    value_changed = Signal(str)
 
     def __init__(self):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -1581,7 +1581,7 @@ class Plain_text_pb(QtWidgets.QWidget):
 class Plain_text_pbParameter(Parameter):
     """Editable string; displayed as large text box in the tree."""
     itemClass = Plain_text_pbParameterItem
-    sigActivated = pyqtSignal(object)
+    sigActivated = Signal(object)
 
     def activate(self):
         """

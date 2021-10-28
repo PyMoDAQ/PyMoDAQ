@@ -1,5 +1,5 @@
 import sys
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from pymodaq.daq_utils.h5modules import H5Browser
 
 

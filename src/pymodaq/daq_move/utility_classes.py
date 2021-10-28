@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal
+from qtpy import QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal
 # from enum import IntEnum
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.parameter.utils import iter_children
@@ -69,7 +69,7 @@ def main(plugin_file, init=True, title='test'):
 
     """
     import sys
-    from PyQt5 import QtWidgets
+    from qtpy import QtWidgets
     from pymodaq.daq_move.daq_move_main import DAQ_Move
     from pathlib import Path
     app = QtWidgets.QApplication(sys.argv)
@@ -94,7 +94,7 @@ class DAQ_Move_base(QObject):
     params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the managers)
 
 
-    :ivar Move_Done_signal: pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
+    :ivar Move_Done_signal: Signal signal represented by a float. Is emitted each time the hardware reached the target
                             position within the epsilon precision (see comon_parameters variable)
 
     :ivar controller: the object representing the hardware in the plugin. Used to access hardware functionality
@@ -118,7 +118,7 @@ class DAQ_Move_base(QObject):
 
     """
 
-    Move_Done_signal = pyqtSignal(float)
+    Move_Done_signal = Signal(float)
     is_multiaxes = False
     stage_names = []
     params = []
@@ -328,7 +328,7 @@ class DAQ_Move_base(QObject):
             pos = pos / self.settings.child('scaling', 'scaling').value()
         return pos
 
-    @pyqtSlot(edict)
+    @Slot(edict)
     def update_settings(self, settings_parameter_dict):  # settings_parameter_dict=edict(path=path,param=param)
         """
             Receive the settings_parameter signal from the param_tree_changed method and make hardware updates of mmodified values.
@@ -373,7 +373,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     """
         ================= ==============================
         **Attributes**      **Type**
-        *command_server*    instance of pyqtSignal
+        *command_server*    instance of Signal
         *x_axis*            1D numpy array
         *y_axis*            1D numpy array
         *data*              double precision float array
@@ -384,7 +384,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         utility_classes.DAQ_TCP_server
     """
     params_client = []  # parameters of a client grabber
-    command_server = pyqtSignal(list)
+    command_server = Signal(list)
 
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'check_position', 'stop_motion', 'position_is', 'move_done']

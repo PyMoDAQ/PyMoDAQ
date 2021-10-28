@@ -1,4 +1,4 @@
-from PyQt5 import QtGui, QtCore
+from qtpy import QtGui, QtCore
 import pyqtgraph as pg
 import numpy as np
 from scipy.spatial import Delaunay as Triangulation

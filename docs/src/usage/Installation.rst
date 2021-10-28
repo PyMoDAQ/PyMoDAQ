@@ -12,7 +12,7 @@ Installation
 
 Preamble
 --------
-PyMoDAQ is written in `Python`__ and uses Python 3.5+. It uses the `PyQt5`__ library and the excellent `pyqtgraph`__ package
+PyMoDAQ is written in `Python`__ and uses Python 3.5+. It uses the `qtpy`__ library and the excellent `pyqtgraph`__ package
 for its user interface. For PyMoDAQ to run smoothly, you need a Python distribution to be installed. Here are some advices.
 
 __ https://docs.python-guide.org/

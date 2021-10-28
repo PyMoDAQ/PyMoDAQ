@@ -4,8 +4,8 @@ from collections import OrderedDict
 import warnings
 import logging
 from copy import deepcopy
-from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import Qt, QObject, pyqtSignal, QLocale, QByteArray
+from qtpy import QtGui, QtCore
+from qtpy.QtCore import Qt, QObject, Signal, QLocale, QByteArray
 
 import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -14,9 +14,9 @@ from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter, NavAxis
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
 from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
-from pymodaq.daq_utils.abc.logger import AbstractLogger
+from pymodaq.daq_utils.abstract.logger import AbstractLogger
 import pickle
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.scanner import scan_types as stypes
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
@@ -963,7 +963,7 @@ class H5SaverBase(H5Backend):
     h5_file: pytables hdf5 file
              object used to save all datas and metadas
     h5_file_path: str or Path
-                  pyqtSignal signal represented by a float. Is emitted each time the hardware reached the target
+                  Signal signal represented by a float. Is emitted each time the hardware reached the target
                   position within the epsilon precision (see comon_parameters variable)
     save_type: str
                an element of the list module attribute save_types = ['scan', 'detector', 'custom']
@@ -1807,14 +1807,14 @@ class H5SaverBase(H5Backend):
 
 class H5Saver(H5SaverBase, QObject):
     """
-    status_sig: pyqtSignal
+    status_sig: Signal
                 emits a signal of type Threadcommand in order to senf log information to a main UI
-    new_file_sig: pyqtSignal
+    new_file_sig: Signal
                   emits a boolean signal to let the program know when the user pressed the new file button on the UI
     """
 
-    status_sig = pyqtSignal(utils.ThreadCommand)
-    new_file_sig = pyqtSignal(bool)
+    status_sig = Signal(utils.ThreadCommand)
+    new_file_sig = Signal(bool)
 
     def __init__(self, *args, **kwargs):
         QObject.__init__(self)
@@ -2154,9 +2154,9 @@ class H5BrowserUtil(H5Backend):
 
 class H5Browser(QObject):
     """UI used to explore h5 files, plot and export subdatas"""
-    data_node_signal = pyqtSignal(
+    data_node_signal = Signal(
         str)  # the path of a node where data should be monitored, displayed...whatever use from the caller
-    status_signal = pyqtSignal(str)
+    status_signal = Signal(str)
 
     def __init__(self, parent, h5file=None, h5file_path=None, backend='tables'):
         """

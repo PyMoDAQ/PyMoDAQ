@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QObject, QTimer
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import Qt, QObject, QTimer
 from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.gui_utils import DockArea
 import time

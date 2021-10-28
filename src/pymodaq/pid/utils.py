@@ -138,7 +138,7 @@ def main(xmlfile):
     from pymodaq.daq_utils.daq_utils import get_set_preset_path
     from pymodaq.daq_utils import gui_utils as gutils
     from pathlib import Path
-    from PyQt5 import QtWidgets
+    from qtpy import QtWidgets
     from pymodaq.pid.pid_controller import DAQ_PID
 
     import sys

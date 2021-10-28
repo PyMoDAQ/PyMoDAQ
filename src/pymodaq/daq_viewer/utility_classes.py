@@ -1,6 +1,6 @@
 import os
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal
+from qtpy import QtWidgets
+from qtpy.QtCore import QObject, Slot, Signal
 
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter.utils import get_param_path, get_param_from_name, iter_children
@@ -92,7 +92,7 @@ def main(plugin_file, init=True):
     -------
     """
     import sys
-    from PyQt5 import QtWidgets
+    from qtpy import QtWidgets
     from pymodaq.daq_utils.gui_utils import DockArea
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
     from pathlib import Path
@@ -119,7 +119,7 @@ class DAQ_Viewer_base(QObject):
         ===================== ===================================
         **Attributes**          **Type**
         *hardware_averaging*    boolean
-        *data_grabed_signal*    instance of pyqtSignal
+        *data_grabed_signal*    instance of Signal
         *params*                list
         *settings*              instance of pyqtgraph Parameter
         *parent*                ???
@@ -132,8 +132,8 @@ class DAQ_Viewer_base(QObject):
     """
     hardware_averaging = False
     live_mode_available = False
-    data_grabed_signal = pyqtSignal(list)
-    data_grabed_signal_temp = pyqtSignal(list)
+    data_grabed_signal = Signal(list)
+    data_grabed_signal_temp = Signal(list)
 
     params = []
 
@@ -188,7 +188,7 @@ class DAQ_Viewer_base(QObject):
         else:
             print(*status)
 
-    @pyqtSlot(ScanParameters)
+    @Slot(ScanParameters)
     def update_scanner(self, scan_parameters):
         self.scan_parameters = scan_parameters
 
@@ -201,7 +201,7 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    @pyqtSlot(edict)
+    @Slot(edict)
     def update_settings(self, settings_parameter_dict):
         """
             Update the settings tree from settings_parameter_dict.
@@ -311,7 +311,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
     """
         ================= ==============================
         **Attributes**      **Type**
-        *command_server*    instance of pyqtSignal
+        *command_server*    instance of Signal
         *x_axis*            1D numpy array
         *y_axis*            1D numpy array
         *data*              double precision float array
@@ -322,7 +322,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         utility_classes.DAQ_TCP_server
     """
     params_GRABBER = []  # parameters of a client grabber
-    command_server = pyqtSignal(list)
+    command_server = Signal(list)
 
     message_list = ["Quit", "Send Data 0D", "Send Data 1D", "Send Data 2D", "Send Data ND", "Status", "Done",
                     "Server Closed", "Info",

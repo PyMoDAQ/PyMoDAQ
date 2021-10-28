@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QObject, pyqtSignal, QLocale, QByteArray
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import Qt, QObject, Signal, QLocale, QByteArray
 
 import sys
 import pymodaq
@@ -51,11 +51,11 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
 
         References
         ----------
-        PyQt5, pyqtgraph, QtWidgets, QObject
+        qtpy, pyqtgraph, QtWidgets, QObject
 
     """
-    command_DAQ_signal = pyqtSignal(list)
-    log_signal = pyqtSignal(str)
+    command_DAQ_signal = Signal(list)
+    log_signal = Signal(str)
 
     def __init__(self, parent=None, title=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))

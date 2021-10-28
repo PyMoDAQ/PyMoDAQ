@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QSize, QByteArray, QRectF, \
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale, QDateTime, QSize, QByteArray, QRectF, \
     QPointF
 import sys
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
@@ -48,12 +48,12 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         References
         ----------
-        PyQt5, pyqtgraph, QtWidgets, QObject
+        qtpy, pyqtgraph, QtWidgets, QObject
 
     """
-    command_DAQ_signal = pyqtSignal(list)
-    log_signal = pyqtSignal(str)
-    data_to_export_signal = pyqtSignal(OrderedDict)  # edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+    command_DAQ_signal = Signal(list)
+    log_signal = Signal(str)
+    data_to_export_signal = Signal(OrderedDict)  # edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
 
     def __init__(self, parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -98,7 +98,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                                           data2D=OrderedDict(),
                                           dataND=OrderedDict())
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def export_data(self, datas):
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         for key in datas.keys():
@@ -829,7 +829,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     def update_viewer_data(self, posx=0, posy=0):
         """
-            |PyQt5 slot triggered by the crosshair signal from the 1D or 2D Navigator
+            |qtpy slot triggered by the crosshair signal from the 1D or 2D Navigator
             | Update the viewer informations from an x/y given position and store data.
         Parameters
         ----------

@@ -1,6 +1,6 @@
 import logging
 import datetime
-from PyQt5 import QtCore
+from qtpy import QtCore
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

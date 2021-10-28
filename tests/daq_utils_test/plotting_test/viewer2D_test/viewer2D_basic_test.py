@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic, ImageWidget, View_cust
 
 import pytest

@@ -1,7 +1,7 @@
 import sys
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QPointF
-from PyQt5.QtGui import QIcon, QPixmap
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import QObject, Slot, Signal, QPointF
+from qtpy.QtGui import QIcon, QPixmap
 from collections import OrderedDict
 
 from pymodaq.daq_utils.parameter import ioxml
@@ -48,7 +48,7 @@ class ROIBrushable(pgROI):
 
 
 class LinearROI(pgLinearROI):
-    index_signal = pyqtSignal(int)
+    index_signal = Signal(int)
 
     def __init__(self, index=0, pos=[0, 10], **kwargs):
         super().__init__(values=pos, **kwargs)
@@ -81,7 +81,7 @@ class EllipseROI(pgROI):
     ============== =============================================================
 
     """
-    index_signal = pyqtSignal(int)
+    index_signal = Signal(int)
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10], **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
@@ -149,7 +149,7 @@ class EllipseROI(pgROI):
 
 
 class RectROI(pgROI):
-    index_signal = pyqtSignal(int)
+    index_signal = Signal(int)
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10]):
         super().__init__(pos=pos, size=size)  # , scaleSnap=True, translateSnap=True)
@@ -166,13 +166,13 @@ class RectROI(pgROI):
 
 
 class ROIManager(QObject):
-    ROI_changed = pyqtSignal()
-    ROI_changed_finished = pyqtSignal()
-    new_ROI_signal = pyqtSignal(int, str)
-    remove_ROI_signal = pyqtSignal(str)
-    roi_settings_changed = pyqtSignal(list)
+    ROI_changed = Signal()
+    ROI_changed_finished = Signal()
+    new_ROI_signal = Signal(int, str)
+    remove_ROI_signal = Signal(str)
+    roi_settings_changed = Signal(list)
 
-    roi_update_children = pyqtSignal(list)
+    roi_update_children = Signal(list)
 
     color_list = np.array(plot_colors)
 
@@ -310,7 +310,7 @@ class ROIManager(QObject):
             self.ROIs[roi_key].setSize((size[0], param.value()))
         self.ROIs[roi_key].index_signal[int].connect(self.update_roi_tree)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def update_roi_tree(self, index):
         roi = self.ROIs['ROI_%02.0d' % index]
         par = self.settings.child(*('ROIs', 'ROI_%02.0d' % index))

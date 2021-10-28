@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSlot, QObject, QThread, pyqtSignal, QLocale, QDateTime, QSize
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import Slot, QObject, QThread, Signal, QLocale, QDateTime, QSize
 import sys
 import pyqtgraph as pg
 import numpy as np
@@ -11,8 +11,8 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 class Viewer1DBasic(QObject):
     """this plots 1D data on a plotwidget. one linear region to select data, one infinite line to select point
     """
-    roi_region_signal = pyqtSignal(tuple)
-    roi_line_signal = pyqtSignal(float)
+    roi_region_signal = Signal(tuple)
+    roi_line_signal = Signal(float)
 
     def __init__(self, parent=None, show_region=False, show_line=False):
         """
@@ -122,7 +122,7 @@ class Viewer1DBasic(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_data(self, datas):
         if datas is not None:
             self.datas = datas

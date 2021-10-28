@@ -7,7 +7,7 @@ from pymodaq.daq_viewer.utility_classes import comon_parameters
 from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
-from PyQt5 import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore
 from easydict import EasyDict as edict
 
 #########################################################################################
@@ -47,7 +47,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
     """
 
     #custom signal used to trigger data emission when recording is done
-    callback_signal = QtCore.pyqtSignal()
+    callback_signal = QtCore.Signal()
     hardware_averaging = False #will use the accumulate acquisition mode if averaging is True else averaging is done software
                                # wise by the viewer module
     params= comon_parameters+[
@@ -305,7 +305,7 @@ class DetectorCallback(QtCore.QObject):
     """
 
     """
-    data_sig=QtCore.pyqtSignal()
+    data_sig=QtCore.Signal()
     def __init__(self,wait_fn):
         super(DetectorCallback, self).__init__()
         self.wait_fn = wait_fn

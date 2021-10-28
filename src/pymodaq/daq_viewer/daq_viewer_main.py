@@ -5,8 +5,8 @@ Created on Wed Jan 10 16:54:14 2018
 @author: Weber Sébastien
 """
 import os
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QRectF
+from qtpy import QtGui, QtWidgets, QtCore
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale, QRectF
 import sys
 
 import pymodaq.daq_utils.scanner
@@ -97,16 +97,16 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         *file_continuous_save*     ???
         ========================= =======================================
     """
-    command_detector = pyqtSignal(ThreadCommand)
-    init_signal = pyqtSignal(bool)
-    custom_sig = pyqtSignal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
-    command_tcpip = pyqtSignal(ThreadCommand)
-    grab_done_signal = pyqtSignal(
+    command_detector = Signal(ThreadCommand)
+    init_signal = Signal(bool)
+    custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
+    command_tcpip = Signal(ThreadCommand)
+    grab_done_signal = Signal(
         OrderedDict)  # OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
-    quit_signal = pyqtSignal()
-    update_settings_signal = pyqtSignal(edict)
-    overshoot_signal = pyqtSignal(bool)
-    status_signal = pyqtSignal(str)
+    quit_signal = Signal()
+    update_settings_signal = Signal(edict)
+    overshoot_signal = Signal(bool)
+    status_signal = Signal(str)
 
     params = daq_viewer_params
 
@@ -460,7 +460,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def get_data_from_viewer(self, datas):
         """
             Emit the grab done signal with datas as an attribute.
@@ -809,7 +809,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
                     self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change=change))
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
         if 'Send Data' in status.command:
             self.snapshot('', send_to_tcpip=True)
@@ -887,7 +887,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             if ret == QtWidgets.QMessageBox.Yes:
                 self.dockarea.parent().close()
 
-    @pyqtSlot()
+    @Slot()
     def raise_timeout(self):
         """
             Print the "timeout occured" error message in the status bar via the update_status method.
@@ -1003,7 +1003,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         h5saver.close_file()
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def save_export_data(self, datas):
         """
             Store in data_to_save_export buffer the data to be saved and do save at self.snapshot_pathname.
@@ -1122,7 +1122,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    @pyqtSlot(str)
+    @Slot(str)
     def set_DAQ_type(self, daq_type):
         self.DAQ_type = daq_type
         self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
@@ -1329,7 +1329,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         container['data2D'] = data2D
         container['dataND'] = dataND
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_data(self, datas):
         """
 
@@ -1446,7 +1446,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
         self.widgnav.setVisible(show)
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def move_at_navigator(self, posx, posy):
         self.command_detector.emit(ThreadCommand("move_at_navigator", [posx, posy]))
 
@@ -1460,7 +1460,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         else:
             self.ui.settings_widget.setVisible(False)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_temp_data(self, datas):
         """
             | Show the given datas in the different pannels but do not send processed datas signal.
@@ -1525,7 +1525,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         if self.ui.take_bkg_cb.isChecked():
             self.snap()
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
         """
             General function to get datas/infos from all threads back to the main.
@@ -1717,7 +1717,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     def update_com(self):
         self.command_detector.emit(ThreadCommand('update_com', []))
 
-    @pyqtSlot(pymodaq.daq_utils.scanner.ScanParameters)
+    @Slot(pymodaq.daq_utils.scanner.ScanParameters)
     def update_from_scanner(self, scan_parameters):
         self.command_detector.emit(ThreadCommand('update_scanner', [scan_parameters]))
 
@@ -1807,7 +1807,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
         QtWidgets.QApplication.processEvents()
 
-    @pyqtSlot(QRectF)
+    @Slot(QRectF)
     def update_ROI(self, rect=QRectF(0, 0, 1, 1)):
         if self.DAQ_type == "DAQ2D":
             self.settings.child('detector_settings', 'ROIselect', 'x0').setValue(int(rect.x()))
@@ -1843,9 +1843,9 @@ class DAQ_Detector(QObject):
         *DAQ_type*                  string
         ========================= ==========================
     """
-    status_sig = pyqtSignal(ThreadCommand)
-    data_detector_sig = pyqtSignal(list)
-    data_detector_temp_sig = pyqtSignal(list)
+    status_sig = Signal(ThreadCommand)
+    data_detector_sig = Signal(list)
+    data_detector_temp_sig = Signal(list)
 
     def __init__(self, title, settings_parameter, detector_name):
         super().__init__()
@@ -1866,7 +1866,7 @@ class DAQ_Detector(QObject):
         self.wait_time = settings_parameter.child('main_settings', 'wait_time').value()
         self.DAQ_type = settings_parameter.child('main_settings', 'DAQ_type').value()
 
-    @pyqtSlot(edict)
+    @Slot(edict)
     def update_settings(self, settings_parameter_dict):
         """
             | Set attributes values in case of "main_settings" path with corresponding parameter values.
@@ -1891,7 +1891,7 @@ class DAQ_Detector(QObject):
         elif path[0] == 'detector_settings':
             self.detector.update_settings(settings_parameter_dict)
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
         """
             Treat the given command parameter from his name :
@@ -2017,11 +2017,11 @@ class DAQ_Detector(QObject):
             self.logger.exception(str(e))
             return status
 
-    @pyqtSlot(list)
+    @Slot(list)
     def emit_temp_data(self, datas):
         self.data_detector_temp_sig.emit(datas)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def data_ready(self, datas):
         """
             | Update the local datas attributes from the given datas parameter if the averaging has to be done software wise.

@@ -1,7 +1,7 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale, Qt
-from PyQt5.QtWidgets import QPushButton, QLabel
-from PyQt5.QtGui import QIcon, QPixmap
+from qtpy import QtWidgets
+from qtpy.QtCore import QObject, Slot, Signal, QLocale, Qt
+from qtpy.QtWidgets import QPushButton, QLabel
+from qtpy.QtGui import QIcon, QPixmap
 import sys
 
 from pymodaq.daq_utils.parameter import utils as putils
@@ -24,10 +24,10 @@ class Viewer1D(QtWidgets.QWidget, QObject):
     data_to_export_signal
     """
 
-    data_to_export_signal = pyqtSignal(OrderedDict)  # self.data_to_export=edict(data0D=None,data1D=None,data2D=None)
-    math_signal = pyqtSignal(OrderedDict)  # OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
-    ROI_changed = pyqtSignal()
-    ROI_changed_finished = pyqtSignal()
+    data_to_export_signal = Signal(OrderedDict)  # self.data_to_export=edict(data0D=None,data1D=None,data2D=None)
+    math_signal = Signal(OrderedDict)  # OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
+    ROI_changed = Signal()
+    ROI_changed_finished = Signal()
 
     def __init__(self, parent=None):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -240,7 +240,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         except Exception as e:
             pass
 
-    @pyqtSlot(str)
+    @Slot(str)
     def remove_ROI(self, roi_name):
 
         item = self.lo_items.pop(roi_name)
@@ -248,7 +248,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.measure_data_dict.pop("Lineout_{:s}:".format(roi_name))
         self.update_lineouts()
 
-    @pyqtSlot(int, str)
+    @Slot(int, str)
     def add_lineout(self, index, roi_type=''):
         try:
             item = self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
@@ -441,7 +441,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
         self.axis_settings = axis_settings
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_data(self, datas, labels=None, x_axis=None):
         try:
             self.datas = datas
@@ -472,7 +472,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_data_temp(self, datas):
         """f
         to plot temporary data, for instance when all pixels are not yet populated...
@@ -500,7 +500,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_math(self, data_lo):
         # self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
         if len(data_lo) != 0:
@@ -519,7 +519,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
             self.data_to_export_signal.emit(self.data_to_export)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_measurement(self, data_meas):
         ind_offset = len(self.data_to_export['data0D'])
         for ind, res in enumerate(data_meas):
@@ -636,7 +636,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
 
 class Viewer1D_math(QObject):
-    status_sig = pyqtSignal(list)
+    status_sig = Signal(list)
 
     def __init__(self):
         super(QObject, self).__init__()

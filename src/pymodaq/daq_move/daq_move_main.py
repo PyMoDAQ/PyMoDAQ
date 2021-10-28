@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, Qt
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, Qt
 import sys
 from pymodaq.daq_move.daq_move_gui import Ui_Form
 
@@ -36,11 +36,11 @@ class DAQ_Move(Ui_Form, QObject):
 
         ========================= =================================================
         **Attributes**             **Type**
-        *command_stage*            instance of pyqtSignal
-        *move_done_signal*         instance of pyqtSignal
-        *update_settings_signal*   instance of pyqtSignal
-        *status_signal*               instance of pyqtSignal
-        *bounds_signal*            instance of pyqtSignal
+        *command_stage*            instance of Signal
+        *move_done_signal*         instance of Signal
+        *update_settings_signal*   instance of Signal
+        *status_signal*               instance of Signal
+        *bounds_signal*            instance of Signal
         *params*                   dictionnary list
         *ui*                       instance of UI_Form
         *parent*                   QObject
@@ -62,16 +62,16 @@ class DAQ_Move(Ui_Form, QObject):
 
         References
         ----------
-        QLocale, QObject, pyqtSignal, QStatusBar, ParameterTree
+        QLocale, QObject, Signal, QStatusBar, ParameterTree
     """
-    init_signal = pyqtSignal(bool)
-    command_stage = pyqtSignal(ThreadCommand)
-    command_tcpip = pyqtSignal(ThreadCommand)
-    move_done_signal = pyqtSignal(str,
+    init_signal = Signal(bool)
+    command_stage = Signal(ThreadCommand)
+    command_tcpip = Signal(ThreadCommand)
+    move_done_signal = Signal(str,
                                   float)  # to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
-    update_settings_signal = pyqtSignal(edict)
-    status_signal = pyqtSignal(str)
-    bounds_signal = pyqtSignal(bool)
+    update_settings_signal = Signal(edict)
+    status_signal = Signal(str)
+    bounds_signal = Signal(bool)
     params = daq_move_params
 
     def __init__(self, parent, title="pymodaq Move", preset=None, init=False, controller_ID=-1):
@@ -401,7 +401,7 @@ class DAQ_Move(Ui_Form, QObject):
             self.tcpclient_thread.start()
             tcpclient.init_connection()
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
         if 'move_abs' in status.command:
             self.move_Abs(status.attributes[0], send_to_tcpip=True)
@@ -461,7 +461,7 @@ class DAQ_Move(Ui_Form, QObject):
             if ret == QtWidgets.QMessageBox.Yes:
                 self.parent.close()
 
-    @pyqtSlot()
+    @Slot()
     def raise_timeout(self):
         """
             Update status with "Timeout occured" statement.
@@ -493,7 +493,7 @@ class DAQ_Move(Ui_Form, QObject):
         self.ui.Abs_position_sb_bis.setEnabled(enable)
         self.ui.Current_position_sb.setEnabled(enable)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def set_setting_tree(self, index=0):
         """
             Set the move settings parameters tree, clearing the current tree and setting the 'move_settings' node.
@@ -537,7 +537,7 @@ class DAQ_Move(Ui_Form, QObject):
         else:
             self.ui.settings_tree.setVisible(False)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def stage_changed(self, index=0):
 
         """
@@ -561,7 +561,7 @@ class DAQ_Move(Ui_Form, QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
         """
             | General function to get datas/infos from all threads back to the main0
@@ -742,7 +742,7 @@ class DAQ_Move_stage(QObject):
     """
         ================== ========================
         **Attributes**      **Type**
-        *status_sig*        instance of pyqtSignal
+        *status_sig*        instance of Signal
         *hardware*          ???
         *stage_name*        string
         *current_position*  float
@@ -752,7 +752,7 @@ class DAQ_Move_stage(QObject):
         *motion_stoped*     boolean
         ================== ========================
     """
-    status_sig = pyqtSignal(ThreadCommand)
+    status_sig = Signal(ThreadCommand)
 
     def __init__(self, stage_name, position, title='actuator'):
         super().__init__()
@@ -854,7 +854,7 @@ class DAQ_Move_stage(QObject):
         self.target_position = self.current_position + rel_position
         pos = self.hardware.move_Rel(rel_position)
 
-    @pyqtSlot(float)
+    @Slot(float)
     def Move_Stoped(self, pos):
         """
             Send a "move_done" Thread Command with the given position as an attribute.
@@ -874,7 +874,7 @@ class DAQ_Move_stage(QObject):
         self.target_position = 0
         self.hardware.move_Home()
 
-    @pyqtSlot(float)
+    @Slot(float)
     def Move_Done(self, pos):
         """
             | Send a "move_done" Thread Command with the given position as an attribute and update the current position attribute.
@@ -897,7 +897,7 @@ class DAQ_Move_stage(QObject):
         #    else:
         #        self.status_sig.emit(ThreadCommand("move_done",[pos]))
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
         """
             Interpret the given Thread Command.
@@ -967,7 +967,7 @@ class DAQ_Move_stage(QObject):
         self.motion_stoped = True
         self.hardware.stop_motion()
 
-    @pyqtSlot(edict)
+    @Slot(edict)
     def update_settings(self, settings_parameter_dict):
         """
             Update settings of hardware with dictionnary parameters in case of "Move_Settings" path, else update attributes with dictionnary parameters.

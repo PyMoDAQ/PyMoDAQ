@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore
 import sys
 import os
 from pyqtgraph.parametertree import Parameter, ParameterTree

@@ -6,8 +6,8 @@ from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
 from pymodaq.daq_utils.parameter import pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils.scanner import TableModelTabular
-from PyQt5.QtCore import QObject, Qt, pyqtSlot
-from PyQt5 import QtWidgets
+from qtpy.QtCore import QObject, Qt, Slot
+from qtpy import QtWidgets
 
 
 class ViewerPointList(QObject):
@@ -20,7 +20,7 @@ class ViewerPointList(QObject):
         self.set_point_list()
         self.viewer.sig_double_clicked.connect(self.double_click_action)
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def double_click_action(self, posx, posy):
         xs, ys = self.viewer.scale_axis(posx, posy)
         indx, indy = self.viewer.mapfromview('red', posx, posy)

@@ -15,8 +15,8 @@ import os
 import pymodaq.daq_utils.parameter.ioxml
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QDateTime, QDate, QTime
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, QDateTime, QDate, QTime
 from pymodaq.daq_utils import exceptions
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
@@ -41,8 +41,8 @@ class DAQ_Scan(QObject):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
-    command_DAQ_signal = pyqtSignal(list)
-    status_signal = pyqtSignal(str)
+    command_DAQ_signal = Signal(list)
+    status_signal = Signal(str)
 
     params = [
         {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
@@ -126,7 +126,7 @@ class DAQ_Scan(QObject):
 
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
 
-    @pyqtSlot(list)
+    @Slot(list)
     def update_actuators(self, actuators):
         self.scanner.actuators = actuators
 
@@ -1075,7 +1075,7 @@ class DAQ_Scan(QObject):
         self.ui.set_ini_positions_pb.setEnabled(True)
         self.ui.start_scan_pb.setEnabled(True)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
         """
             | General function to get datas/infos from all threads back to the main.
@@ -1500,7 +1500,7 @@ class DAQ_Scan(QObject):
         """
         self.settings.child('scan_options', 'plot_from').setOpts(limits=dets)
 
-    @pyqtSlot(OrderedDict)
+    @Slot(OrderedDict)
     def update_scan_GUI(self, datas):
         """
             Update the graph in the Graphic Interface from the given datas switching 0D/1D/2D consequently.
@@ -1603,8 +1603,8 @@ class DAQ_Scan_Acquisition(QObject):
         =========================== ========================================
 
     """
-    scan_data_tmp = pyqtSignal(OrderedDict)
-    status_sig = pyqtSignal(list)
+    scan_data_tmp = Signal(OrderedDict)
+    status_sig = Signal(list)
 
     def __init__(self, settings=None, scan_settings=None, h5saver=None, modules_manager=None, scan_parameters=None):
 
@@ -1665,7 +1665,7 @@ class DAQ_Scan_Acquisition(QObject):
             det_group_name = 'Detector{:03d}'.format(ind_det)
             self.h5_det_groups.append(self.h5saver.get_node(self.h5saver.current_scan_group, det_group_name))
 
-    @pyqtSlot(list)
+    @Slot(list)
     def queue_command(self, command):
         """
             Treat the queue of commands from the current command to act, between :

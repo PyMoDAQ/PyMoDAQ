@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, pyqtSignal
+from qtpy import QtGui, QtWidgets, QtCore
+from qtpy.QtCore import Qt, QObject, Slot, Signal
 
 import sys
 import os
@@ -31,8 +31,8 @@ config = utils.load_config()
 
 
 class Navigator(QObject):
-    log_signal = pyqtSignal(str)
-    sig_double_clicked = pyqtSignal(float, float)
+    log_signal = Signal(str)
+    sig_double_clicked = Signal(float, float)
 
     def __init__(self, parent=None, h5file_path=None):
         super().__init__(parent)
@@ -111,7 +111,7 @@ class Navigator(QObject):
         self.histo_action.setCheckable(True)
         self.histo_action.triggered.connect(self.show_histo)
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def move_at(self, posx, posy):
         if self.moveat_action.isChecked():
             self.sig_double_clicked.emit(posx, posy)

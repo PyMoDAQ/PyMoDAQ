@@ -1,5 +1,5 @@
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QObject, pyqtSlot, QThread, pyqtSignal, QLocale, QSize
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale, QSize
 
 import sys
 from pymodaq.daq_measurement.daq_measurement_GUI import Ui_Form
@@ -95,9 +95,9 @@ class DAQ_Measurement(Ui_Form, QObject):
 
         References
         ----------
-        Ui_Form, QObject, PyQt5, pyqtgraph
+        Ui_Form, QObject, qtpy, pyqtgraph
     """
-    measurement_signal = pyqtSignal(list)
+    measurement_signal = Signal(list)
 
     def __init__(self, parent):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
@@ -144,7 +144,7 @@ class DAQ_Measurement(Ui_Form, QObject):
         self.ui.selected_region.sigRegionChanged.connect(self.update_measurement)
         self.ui.result_sb.valueChanged.connect(self.ui.result_lcd.display)
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def update_fft_filter(self, d):
         self.frequency = d['frequency']
         self.phase = d['phase']
@@ -173,7 +173,7 @@ class DAQ_Measurement(Ui_Form, QObject):
         """
         self.ui.statusbar.showMessage(txt, wait_time)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def update_measurement_subtype(self, mtype, update=True):
         """
             | Update the ui-measure_subtype_combo from subitems and formula attributes, if specified by update parameter.

@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
+from qtpy import QtWidgets, QtCore
 import sys
 import pytest
 from pymodaq.daq_utils import daq_utils

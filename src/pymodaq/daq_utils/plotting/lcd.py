@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QObject
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtCore import QObject
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
 import sys
 import numpy as np

@@ -14,8 +14,8 @@ import logging
 import pymodaq.daq_utils.parameter.ioxml
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from PyQt5 import QtGui, QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, QThread, pyqtSignal, QLocale, Qt
+from qtpy import QtGui, QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, Qt
 
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.plotting.qled import QLED
@@ -41,8 +41,8 @@ class DAQ_Logger(gutils.CustomApp):
     """
     Main class initializing a DAQ_Logger module
     """
-    command_DAQ_signal = pyqtSignal(list)
-    status_signal = pyqtSignal(str)
+    command_DAQ_signal = Signal(list)
+    status_signal = Signal(str)
 
     params = [
         {'title': 'Log Type:', 'name': 'log_type', 'type': 'str', 'value': '', 'readonly': True},
@@ -306,7 +306,7 @@ class DAQ_Logger(gutils.CustomApp):
         self.update_status(status)
         self.actions['start'].setEnabled(True)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
         """
             | General function to get datas/infos from all threads back to the main.
@@ -354,8 +354,8 @@ class DAQ_Logging(QObject):
         =========================== ========================================
 
     """
-    scan_data_tmp = pyqtSignal(OrderedDict)
-    status_sig = pyqtSignal(list)
+    scan_data_tmp = Signal(OrderedDict)
+    status_sig = Signal(list)
 
     def __init__(self, settings=None, logger=None, modules_manager=[]):
 
@@ -378,7 +378,7 @@ class DAQ_Logging(QObject):
 
         self.data_logger = logger
 
-    @pyqtSlot(list)
+    @Slot(list)
     def queue_command(self, command):
         """
             Treat the queue of commands from the current command to act, between :

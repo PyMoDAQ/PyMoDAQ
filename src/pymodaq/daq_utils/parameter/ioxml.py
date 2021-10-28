@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from xml.etree import ElementTree as ET
 from collections import OrderedDict
-from PyQt5 import QtGui
-from PyQt5.QtCore import QDateTime
+from qtpy import QtGui
+from qtpy.QtCore import QDateTime
 from pyqtgraph.parametertree import Parameter
 
 

@@ -1,7 +1,7 @@
 import numpy
 import numpy as np
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QObject, pyqtSignal
+from qtpy import QtWidgets, QtGui
+from qtpy.QtCore import QObject, Signal
 from pyqtgraph import LinearRegionItem
 
 from pymodaq.daq_utils.daq_utils import ftAxis_time, ft, find_index, gauss1D, ift, set_logger, get_module_name
@@ -11,7 +11,7 @@ logger = set_logger(get_module_name(__file__))
 
 
 class FourierFilterer(QObject):
-    filter_changed = pyqtSignal(dict)
+    filter_changed = Signal(dict)
 
     def __init__(self, parent=None):
         super(FourierFilterer, self).__init__()

@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt, QObject, QLocale
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, QObject, QLocale
 
 import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree

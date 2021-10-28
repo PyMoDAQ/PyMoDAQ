@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QObject, pyqtSlot, pyqtSignal, QLocale
+from qtpy import QtWidgets
+from qtpy.QtCore import QObject, Slot, Signal, QLocale
 import sys
 import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils.plotting.viewer0D.viewer0D_GUI import Ui_Form
@@ -12,7 +12,7 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class Viewer0D(QtWidgets.QWidget, QObject):
-    data_to_export_signal = pyqtSignal(OrderedDict)  # edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+    data_to_export_signal = Signal(OrderedDict)  # edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
 
     def __init__(self, parent=None, dock=None):
         """
@@ -67,7 +67,7 @@ class Viewer0D(QtWidgets.QWidget, QObject):
         for ind_plot, data in enumerate(self.datas):
             self.plot_channels[ind_plot].setData(x=self.x_axis, y=data)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_data(self, datas):
         """
 
@@ -115,7 +115,7 @@ class Viewer0D(QtWidgets.QWidget, QObject):
             state = self.ui.show_datalist_pb.isChecked()
         self.ui.values_list.setVisible(state)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def show_data_temp(self, datas):
         """
         to plot temporary data, for instance when all pixels are not yet populated...
