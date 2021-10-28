@@ -366,7 +366,7 @@ class DAQ_Logging(QObject):
             --------
             custom_tree.parameter_to_xml_string
         """
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(QObject, self).__init__()
 
         self.stop_logging_flag = False

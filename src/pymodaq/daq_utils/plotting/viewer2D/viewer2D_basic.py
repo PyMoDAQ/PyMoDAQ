@@ -79,7 +79,7 @@ class ImageWidget(pg.GraphicsLayoutWidget):
     """
 
     def __init__(self, parent=None, *args_plotitem, **kwargs_plotitem):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(ImageWidget, self).__init__(parent)
         self.setupUI(*args_plotitem, **kwargs_plotitem)
 

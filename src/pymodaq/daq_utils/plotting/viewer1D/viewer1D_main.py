@@ -30,7 +30,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
     ROI_changed_finished = Signal()
 
     def __init__(self, parent=None):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Viewer1D, self).__init__()
 
         self.viewer_type = 'Data1D'

@@ -27,7 +27,7 @@ class NonLinearScanner(gutils.CustomApp):
     ]
 
     def __init__(self, dockarea):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__(dockarea)
 
     def setup_actions(self):

@@ -43,7 +43,7 @@ class CustomAppExample(gutils.CustomApp):
     ]
 
     def __init__(self, dockarea):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__(dockarea)
 
         # init the object parameters

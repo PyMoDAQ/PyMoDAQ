@@ -66,7 +66,7 @@ class DAQ_Scan(QObject):
         dockarea: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
         dashboard: (DashBoard) instance of the pymodaq dashboard
         """
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         logger.info('Initializing DAQ_Scan')
         super().__init__()
         self.dockarea = dockarea
@@ -1613,7 +1613,7 @@ class DAQ_Scan_Acquisition(QObject):
             getting back data, saviong and letting know th UI about the scan status
 
         """
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(QObject, self).__init__()
 
         self.stop_scan_flag = False

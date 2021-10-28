@@ -12,7 +12,7 @@ class Tree_layout(QObject):
     status_sig = Signal(str)
 
     def __init__(self, parent=None, col_counts=1, labels=None):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Tree_layout, self).__init__()
 
         if parent is None:

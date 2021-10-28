@@ -56,7 +56,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
     data_to_export_signal = Signal(OrderedDict)  # edict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
 
     def __init__(self, parent=None):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(ViewerND, self).__init__()
         # if parent is None:
         #     raise Exception('no valid parent container, expected dockarea')

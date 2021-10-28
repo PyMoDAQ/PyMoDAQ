@@ -100,7 +100,7 @@ class DAQ_Measurement(Ui_Form, QObject):
     measurement_signal = Signal(list)
 
     def __init__(self, parent):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Ui_Form, self).__init__()
         self.ui = Ui_Form()
         self.ui.setupUi(parent)

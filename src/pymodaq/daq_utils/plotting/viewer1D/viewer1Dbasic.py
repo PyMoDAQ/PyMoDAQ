@@ -32,7 +32,7 @@ class Viewer1DBasic(QObject):
         x_axis: (Axis or dict)
 
         """
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__()
         if parent is None:
             parent = QtWidgets.QWidget()

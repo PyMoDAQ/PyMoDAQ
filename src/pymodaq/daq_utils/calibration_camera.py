@@ -20,7 +20,7 @@ if not os.path.isdir(calib_path):
 class CalibrationCamera(QtWidgets.QWidget, QObject):
     def __init__(self, parent=None, h5filepath=None):
 
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(CalibrationCamera, self).__init__()
         if parent is None:
             parent = QtWidgets.QWidget()

@@ -2173,7 +2173,7 @@ class H5Browser(QObject):
         H5Backend, H5Backend
         """
 
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(H5Browser, self).__init__()
         if not (isinstance(parent, QtWidgets.QWidget) or isinstance(parent, QtWidgets.QMainWindow)):
             raise Exception('no valid parent container, expected a QWidget or a QMainWindow')

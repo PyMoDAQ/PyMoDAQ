@@ -18,7 +18,7 @@ class Viewer0D(QtWidgets.QWidget, QObject):
         """
 
         """
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Viewer0D, self).__init__()
         if parent is None:
             parent = QtWidgets.QWidget()

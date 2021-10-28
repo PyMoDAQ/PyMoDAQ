@@ -82,7 +82,7 @@ class DAQ_PID(QObject):
     ]
 
     def __init__(self, dockarea):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__()
 
         self.settings = Parameter.create(title='PID settings', name='pid_settings', type='group', children=self.params)

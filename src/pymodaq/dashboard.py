@@ -74,7 +74,7 @@ class DashBoard(QObject):
         ----------
         parent: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
         """
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__()
         logger.info('Initializing Dashboard')
         self.extra_params = []

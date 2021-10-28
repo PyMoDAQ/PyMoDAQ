@@ -58,7 +58,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
     log_signal = Signal(str)
 
     def __init__(self, parent=None, title=None):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(DAQ_Analysis, self).__init__()
         if parent is None:
             raise Exception('no valid parent container, expected dockarea')

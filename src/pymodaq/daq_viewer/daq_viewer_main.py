@@ -112,7 +112,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
     def __init__(self, parent, dock_settings=None, dock_viewer=None, title="Testing", DAQ_type="DAQ0D",
                  preset=None, init=False, controller_ID=-1, parent_scan=None):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         self.logger = utils.set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
         super(DAQ_Viewer, self).__init__()

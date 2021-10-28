@@ -145,7 +145,7 @@ class Pixmap_check(QtWidgets.QWidget):
     # valuechanged=Signal(dict)
 
     def __init__(self):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__()
         self.path = ''
         self.data = None
@@ -227,7 +227,7 @@ class QTimeCustom(QtWidgets.QTimeEdit):
 class SliderSpinBox(QtWidgets.QWidget):
 
     def __init__(self, *args, subtype='lin', **kwargs):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__()
         self.subtype = subtype
         self.initUI(*args, **kwargs)
@@ -788,7 +788,7 @@ registerParameterType('list', ListParameter_custom, override=True)
 class Combo_pb(QtWidgets.QWidget):
 
     def __init__(self, items=[]):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Combo_pb, self).__init__()
         self.items = items
         self.initUI()
@@ -1194,7 +1194,7 @@ class ItemSelectParameterItem(WidgetParameterItemcustom):
 
 class ItemSelect_pb(QtWidgets.QWidget):
     def __init__(self):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(ItemSelect_pb, self).__init__()
         self.initUI()
 
@@ -1367,7 +1367,7 @@ class file_browser(QtWidgets.QWidget):
     value_changed = Signal(str)
 
     def __init__(self, init_path='D:/Data', file_type=False):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(file_browser, self).__init__()
         self.filetype = file_type
         self.path = init_path
@@ -1518,7 +1518,7 @@ class Plain_text_pb(QtWidgets.QWidget):
     value_changed = Signal(str)
 
     def __init__(self):
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Plain_text_pb, self).__init__()
 
         self.initUI()

@@ -85,7 +85,7 @@ class DAQ_Move(Ui_Form, QObject):
         """
         self.logger = utils.set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Move: {title}')
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super().__init__()
 
         here = Path(__file__).parent

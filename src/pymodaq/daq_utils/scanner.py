@@ -353,7 +353,7 @@ class Scanner(QObject):
         actuators: list of actuators names
         """
 
-        QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
+        
         super(Scanner, self).__init__()
 
         self.settings_tree = None
