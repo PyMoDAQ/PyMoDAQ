@@ -1346,6 +1346,11 @@ class DashBoard(QObject):
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
+
+    if config['style']['darkstyle']:
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
+
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
     win.setCentralWidget(area)

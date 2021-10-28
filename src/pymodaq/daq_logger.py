@@ -23,6 +23,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Logger
 
+config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 try:
     import sqlalchemy
@@ -456,6 +457,10 @@ def main():
 
     config = load_config()
     app = QtWidgets.QApplication(sys.argv)
+    if config['style']['darkstyle']:
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
+
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
     win.setCentralWidget(area)

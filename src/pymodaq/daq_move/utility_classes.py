@@ -73,6 +73,10 @@ def main(plugin_file, init=True, title='test'):
     from pymodaq.daq_move.daq_move_main import DAQ_Move
     from pathlib import Path
     app = QtWidgets.QApplication(sys.argv)
+    if config['style']['darkstyle']:
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
+
     Form = QtWidgets.QWidget()
     prog = DAQ_Move(Form, title=title,)
     Form.show()

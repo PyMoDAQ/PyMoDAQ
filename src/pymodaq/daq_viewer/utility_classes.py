@@ -98,6 +98,10 @@ def main(plugin_file, init=True):
     from pathlib import Path
 
     app = QtWidgets.QApplication(sys.argv)
+    if config['style']['darkstyle']:
+        import qdarkstyle
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
+
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
