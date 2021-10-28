@@ -1,5 +1,5 @@
-from PyQt5 import QtCore
-from PyQt5.QtCore import QVariant
+from qtpy import QtCore
+from qtpy.QtCore import QVariant, QLocale
 import sys
 from packaging import version as version_mod
 
@@ -172,6 +172,27 @@ def check_config(config_base, config_local):
 
 config = load_config()
 
+
+def set_qt_backend():
+    backend_present = True
+    if config['qtbackend']['backend'].lower() not in [mod.lower() for mod in sys.modules]:
+        backend_present = False
+        logger.warning(f"The chosen Qt backend ({config['qtbackend']['backend']}) has not been installed...\n"
+                       f"Trying another...")
+        backends = config['qtbackend']['backends']
+        backends.pop(config['qtbackend']['backend'])
+        for backend in backends:
+            if backend.lower() in [mod.lower() for mod in sys.modules]:
+                backend_present = True
+                break
+
+    if backend_present:
+        os.environ['QT_API'] = config['qtbackend']['backend']
+        logger.info('************************')
+        logger.info(f"{config['qtbackend']['backend']} Qt backend loaded")
+        logger.info('************************')
+    else:
+        logger.critical(f"No Qt backend could be found in your system, plese install either pyqt5/6 or pyside2/6")
 
 class JsonConverter:
     def __init__(self):
@@ -734,6 +755,16 @@ class ScalingOptions(dict):
         self['scaled_yaxis'] = scaled_yaxis
 
 
+def setLocale():
+    """
+    defines the Locale to use to convert numbers to strings representation using language/country conventions
+    Default is English and US
+    """
+    language = getattr(QLocale, config['style']['language'])
+    country = getattr(QLocale, config['style']['country'])
+    QLocale.setDefault(QLocale(language, country))
+
+
 def recursive_find_files_extension(ini_path, ext, paths=[]):
     with os.scandir(ini_path) as it:
         for entry in it:
@@ -745,17 +776,30 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
 
 
 def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
-                                 filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox']):
+                                 filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox'],
+                                 replace=False, replace_str=''):
+
     for child in Path(ini_path).iterdir():
         if not any(filt in str(child) for filt in filters):
             if child.is_dir():
-                recursive_find_expr_in_files(child, exp, paths, filters)
+                recursive_find_expr_in_files(child, exp, paths, filters, replace=replace, replace_str=replace_str)
             else:
                 try:
+                    found = False
                     with child.open('r') as f:
-                        for ind, line in enumerate(f.readlines()):
+                        replacement = ''
+                        for ind, line in enumerate(f):
                             if exp in line:
+                                found = True
                                 paths.append([child, ind])
+                                if replace:
+                                    replacement += line.replace(exp, replace_str)
+                            else:
+                                if replace:
+                                    replacement += line
+                    if replace and found:
+                        with child.open('w') as f:
+                            f.write(replacement)
                 except Exception:
                     pass
     return paths
@@ -1647,5 +1691,9 @@ if __name__ == '__main__':
     #plugins = get_plugins()  # pragma: no cover
     #extensions = get_extension()
     #models = get_models()
-    count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
+    #count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', exp='qtpy',
+                                         paths=[],
+                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox'],
+                                         replace=True, replace_str='qtpy')
     pass
