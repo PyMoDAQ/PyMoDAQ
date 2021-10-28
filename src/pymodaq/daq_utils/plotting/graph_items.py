@@ -226,6 +226,7 @@ class ImageItem(pg.ImageItem):
             if self.image is None:
                 return
         else:
+            self._xp = np
             gotNewData = True
             shapeChanged = (self.image is None or image.shape != self.image.shape)
             image = image.view(np.ndarray)

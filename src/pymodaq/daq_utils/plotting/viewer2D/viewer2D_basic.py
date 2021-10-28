@@ -54,14 +54,14 @@ class Viewer2DBasic(QObject):
         self.histogram_blue = pg.HistogramLUTWidget()
         self.histogram_adaptive = pg.HistogramLUTWidget()
         Ntick = 3
-        colors_red = [(int(r), 0, 0) for r in pg.np.linspace(0, 255, Ntick)]
-        colors_green = [(0, int(g), 0) for g in pg.np.linspace(0, 255, Ntick)]
-        colors_blue = [(0, 0, int(b)) for b in pg.np.linspace(0, 255, Ntick)]
-        colors_adaptive = [(int(b), int(b), int(b)) for b in pg.np.linspace(0, 255, Ntick)]
-        cmap_red = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_red)
-        cmap_green = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_green)
-        cmap_blue = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_blue)
-        cmap_adaptive = pg.ColorMap(pos=pg.np.linspace(0.0, 1.0, Ntick), color=colors_adaptive)
+        colors_red = [(int(r), 0, 0) for r in np.linspace(0, 255, Ntick)]
+        colors_green = [(0, int(g), 0) for g in np.linspace(0, 255, Ntick)]
+        colors_blue = [(0, 0, int(b)) for b in np.linspace(0, 255, Ntick)]
+        colors_adaptive = [(int(b), int(b), int(b)) for b in np.linspace(0, 255, Ntick)]
+        cmap_red = pg.ColorMap(pos=np.linspace(0.0, 1.0, Ntick), color=colors_red)
+        cmap_green = pg.ColorMap(pos=np.linspace(0.0, 1.0, Ntick), color=colors_green)
+        cmap_blue = pg.ColorMap(pos=np.linspace(0.0, 1.0, Ntick), color=colors_blue)
+        cmap_adaptive = pg.ColorMap(pos=np.linspace(0.0, 1.0, Ntick), color=colors_adaptive)
 
         self.histogram_red.gradient.setColorMap(cmap_red)
         self.histogram_green.gradient.setColorMap(cmap_green)
