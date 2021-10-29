@@ -24,6 +24,8 @@ of PyMoDAQ, for instance using the :ref:`preset_manager` for defining Actuators 
 manager user interface to create and modify them.
 
 
+.. _configfile:
+
 Default configuration
 +++++++++++++++++++++
 
