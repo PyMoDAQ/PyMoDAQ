@@ -5,6 +5,7 @@ on: [push]
 jobs:
   call_workflow:
     uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@pyqtgraph
+    name: 'calling workflow'
     with:
       python: '3.7'
       qt5: 'pyqt5'
