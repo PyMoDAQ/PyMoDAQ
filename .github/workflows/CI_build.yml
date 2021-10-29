@@ -10,6 +10,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]  #, macos-latest, windows-latest]
         python-version: ['3.7', '3.8', '3.9', '3.10']
+        qtbackend: ['pyqt5', 'pyside2']
     steps:
     - uses: actions/checkout@master
     - name: Set up Python ${{ matrix.python-version }}
@@ -20,7 +21,8 @@ jobs:
       run: |
         sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
         python -m pip install --upgrade pip
-        pip install flake8 pytest pytest-cov pytest-qt setuptools wheel numpy h5py pyqt5
+        pip install flake8 pytest pytest-cov pytest-qt setuptools wheel numpy h5py ${{ matrix.qtbackend }}
+
     - name: Install package
       run: |
         pip install -e .
