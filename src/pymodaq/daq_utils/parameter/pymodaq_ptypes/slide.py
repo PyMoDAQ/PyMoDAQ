@@ -2,7 +2,7 @@ from qtpy import QtWidgets, QtCore
 from pyqtgraph.widgets.SpinBox import SpinBox
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
-
+import numpy as np
 
 class SliderSpinBox(QtWidgets.QWidget):
 
@@ -15,6 +15,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         self.valueChanged = self.spinbox.valueChanged  # (value)  for compatibility with QSpinBox
         self.sigValueChanged = self.spinbox.sigValueChanged  # (self)
         self.sigValueChanging = self.spinbox.sigValueChanging  # (self, value)  sent immediately; no delay.
+        self.sigChanged = self.spinbox.sigValueChanged
 
     @property
     def opts(self):
@@ -91,7 +92,11 @@ class SliderSpinBox(QtWidgets.QWidget):
             self.spinbox.valueChanged.disconnect(self.update_slide)
         except Exception:
             pass
-        self.slider.setValue(int((val - min_val) / (max_val - min_val) * 100))
+        if self.subtype == 'linear':
+            value = int((val - min_val) / (max_val - min_val) * 100)
+        else:
+            value = int((np.log10(val) - np.log10(min_val)) / (np.log10(max_val) - np.log10(min_val)) * 100)
+        self.slider.setValue(value)
         self.slider.valueChanged.connect(self.update_spinbox)
         self.spinbox.valueChanged.connect(self.update_slide)
 
@@ -114,8 +119,12 @@ class SliderParameterItem(WidgetParameterItem):
         }
         if 'subtype' not in opts:
             opts['subtype'] = 'linear'
+        defs['bounds'] = [0., self.param.value()]  # max value set to default value when no max given
         if 'limits' not in opts:
-            defs['bounds'] = (0., self.param.value())  # max value set to default value when no max given
+            if 'min' in opts:
+                defs['bounds'][0] = opts['min']
+            if 'max' in opts:
+                defs['bounds'][1] = opts['max']
         else:
             defs['bounds'] = opts['limits']
 

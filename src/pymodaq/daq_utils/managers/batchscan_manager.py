@@ -10,8 +10,6 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.exceptions import ScannerException
 from pymodaq.daq_utils.scanner import Scanner, scan_types, adaptive_losses
 from pathlib import Path
-from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
-from pyqtgraph.parametertree.Parameter import registerParameterType
 from collections import OrderedDict
 
 logger = utils.set_logger(utils.get_module_name(__file__))

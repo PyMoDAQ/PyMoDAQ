@@ -7,7 +7,7 @@ from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import select_file
 from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType
-from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
+from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 remote_path = utils.get_set_remote_path()

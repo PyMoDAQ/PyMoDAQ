@@ -30,7 +30,7 @@ from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
-from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
+from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))

@@ -3,9 +3,9 @@ import sys
 import os
 
 from pymodaq.daq_utils.parameter import ioxml
-from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.parametertree.Parameter import registerParameterType
+from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.daq_utils.gui_utils import select_file
 
 # check if overshoot_configurations directory exists on the drive

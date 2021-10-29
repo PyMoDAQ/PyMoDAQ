@@ -32,6 +32,7 @@ class Combo_pb(QtWidgets.QWidget):
         self.setCurrentIndex = self.combo.setCurrentIndex
         self.clear = self.combo.clear
         self.addItem = self.combo.addItem
+        self.findText = self.combo.findText
 
 
 class ListParameterItem(ListParameterItem):

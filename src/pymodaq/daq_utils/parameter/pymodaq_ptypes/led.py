@@ -14,6 +14,8 @@ class LedParameterItem(WidgetParameterItem):
         w.sigChanged = w.value_changed
         w.value = w.get_state
         w.setValue = w.set_as
+        self.hideWidget = False
+        return w
 
 
 class LedPushParameterItem(LedParameterItem):

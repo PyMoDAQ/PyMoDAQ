@@ -4,6 +4,16 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pyqtgraph.parametertree import Parameter, ParameterItem
 import numpy as np
 
+
+class WidgetParameterItem(WidgetParameterItem):
+
+    def updateDisplayLabel(self, value=None):
+        """Update the display label to reflect the value of the parameter."""
+        if value is None:
+            value = self.param.value()
+        self.displayLabel.setText(value.toString(self.param.opts['format']))
+
+
 class DateParameterItem(WidgetParameterItem):
     """Registered parameter type which displays a QLineEdit"""
 
@@ -11,10 +21,10 @@ class DateParameterItem(WidgetParameterItem):
         opts = self.param.opts
         w = QtWidgets.QDateEdit(QtCore.QDate(QtCore.QDate.currentDate()))
         w.setCalendarPopup(True)
-        if 'format' in opts:
-            w.setDisplayFormat(opts['format'])
-        else:
-            w.setDisplayFormat('dd/MM/yyyy')
+        if 'format' not in opts:
+            opts['format'] = 'dd/MM/yyyy'
+        w.setDisplayFormat(opts['format'])
+
         w.sigChanged = w.dateChanged
         w.value = w.date
         w.setValue = w.setDate
@@ -29,10 +39,9 @@ class DateTimeParameterItem(WidgetParameterItem):
         w = QtWidgets.QDateTimeEdit(QtCore.QDateTime(QtCore.QDate.currentDate(),
                                                      QtCore.QTime.currentTime()))
         w.setCalendarPopup(True)
-        if 'format' in opts:
-            w.setDisplayFormat(opts['format'])
-        else:
-            w.setDisplayFormat('dd/MM/yyyy hh:mm')
+        if 'format' not in opts:
+            opts['format'] = 'dd/MM/yyyy hh:mm'
+        w.setDisplayFormat(opts['format'])
         w.sigChanged = w.dateTimeChanged
         w.value = w.dateTime
         w.setValue = w.setDateTime
@@ -75,7 +84,10 @@ class TimeParameterItem(WidgetParameterItem):
         w = QTimeCustom(QtCore.QTime(QtCore.QTime.currentTime()))
         if 'minutes_increment' in opts:
             w.setMinuteIncrement(opts['minutes_increment'])
-        w.setDisplayFormat('hh:mm')
+        if 'format' not in opts:
+            opts['format'] = 'hh:mm'
+        w.setDisplayFormat(opts['format'])
+
         w.sigChanged = w.timeChanged
         w.value = w.time
         w.setValue = w.setTime

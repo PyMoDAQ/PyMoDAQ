@@ -1692,10 +1692,10 @@ if __name__ == '__main__':
     #extensions = get_extension()
     #models = get_models()
     #count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
-    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-    #                                      exp='pyqtSlot',
-    #                                      paths=[],
-    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-    #                                               '.tox', 'daq_utils.py'],
-    #                                      replace=False, replace_str='Slot')
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+                                         exp='abc',
+                                         paths=[],
+                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+                                                  '.tox', 'daq_utils.py'],
+                                         replace=False, replace_str='Slot')
     pass

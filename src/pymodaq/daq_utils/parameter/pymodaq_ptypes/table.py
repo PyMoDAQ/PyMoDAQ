@@ -51,12 +51,12 @@ class TableWidget(QtWidgets.QTableWidget):
             self.setColumnCount(2)
             for ind, (key, value) in enumerate(data_dict.items()):
                 item0 = QtWidgets.QTableWidgetItem(key)
-                item0.setFlags(item0.flags() ^ Qt.ItemIsEditable)
+                item0.setFlags(item0.flags() ^ QtCore.Qt.ItemIsEditable)
                 if isinstance(value, float):
                     item1 = QtWidgets.QTableWidgetItem('{:.6e}'.format(value))
                 else:
                     item1 = QtWidgets.QTableWidgetItem(str(value))
-                item1.setFlags(item1.flags() ^ Qt.ItemIsEditable)
+                item1.setFlags(item1.flags() ^ QtCore.Qt.ItemIsEditable)
                 self.setItem(ind, 0, item0)
                 self.setItem(ind, 1, item1)
             # self.valuechanged.emit(data_dict)
