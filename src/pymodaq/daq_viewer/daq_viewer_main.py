@@ -381,7 +381,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         # #Setting detector types
         try:
             self.ui.Detector_type_combo.currentIndexChanged.disconnect(self.set_setting_tree)
-        except TypeError as e:
+        except (TypeError, RuntimeError) as e:
             pass  # just means it wasn't connected yet
 
         self.ui.Detector_type_combo.clear()

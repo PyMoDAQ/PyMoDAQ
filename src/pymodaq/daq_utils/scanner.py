@@ -144,7 +144,7 @@ class ScanParameters:
             axes_unique = []
             for ax in positions.T:
                 axes_unique.append(np.unique(ax))
-            axes_indexes = np.zeros_like(positions, dtype=np.int)
+            axes_indexes = np.zeros_like(positions, dtype=int)
             for ind in range(positions.shape[0]):
                 for ind_pos, pos in enumerate(positions[ind]):
                     axes_indexes[ind, ind_pos] = utils.find_index(axes_unique[ind_pos], pos)[0][0]

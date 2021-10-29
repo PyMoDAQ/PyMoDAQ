@@ -8,6 +8,7 @@ from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
+from pymodaq.daq_utils.parameter import pymodaq_ptypes
 from pymodaq.daq_utils.gui_utils import QAction
 from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
@@ -252,8 +253,8 @@ class ROIManager(QObject):
                                             size=[width, height])
                     newroi.setPen(par.child(('Color')).value())
 
-                newroi.sigRegionChanged.connect(self.ROI_changed.emit)
-                newroi.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
+                newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
+                newroi.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
                 newroi.index_signal[int].connect(self.update_roi_tree)
                 try:
                     self.settings.sigTreeStateChanged.disconnect()

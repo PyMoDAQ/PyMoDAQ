@@ -1,5 +1,5 @@
 from qtpy import QtCore
-from qtpy.QtCore import QVariant, QLocale
+from qtpy.QtCore import QLocale #, QVariant
 import sys
 from packaging import version as version_mod
 
@@ -250,7 +250,9 @@ def decode_data(encoded_data):
         item = {}
         for ind in range(map_items):
             key = ds.readInt32()
-            value = QVariant()
+            #TODO check this is fine
+            #value = QVariant()
+            value = None
             ds >> value
             item[QtCore.Qt.ItemDataRole(key)] = value.value()
         data.append(item)

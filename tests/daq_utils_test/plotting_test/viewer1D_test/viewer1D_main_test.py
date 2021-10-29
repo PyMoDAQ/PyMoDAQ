@@ -83,8 +83,8 @@ class TestViewer1D:
         data1D = np.linspace(x, x + 190, 20)
         colors = np.linspace(1, 20, 20)
 
-        prog.datas = data1D
-        prog.measurement_dict['datas'] = data1D
+        prog.datas = [data1D]
+        prog.measurement_dict['datas'] = [data1D]
         prog.plot_colors = colors
         prog.x_axis = np.linspace(0, 200, 201)
 
@@ -505,7 +505,7 @@ class TestViewer1D:
 
         prog = init_prog
 
-        datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
+        datas = [np.linspace(1, 10, 10), np.linspace(11, 20, 10)]
         labels = ['CH0', 'CH1']
         x_axis = datas[1]
 
@@ -556,7 +556,7 @@ class TestViewer1D:
         prog.labels = ['CH0', 'CH1']
         prog.x_axis = None
 
-        datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
+        datas = [np.linspace(1, 10, 10), np.linspace(11, 20, 10)]
         x_axis = np.linspace(0, 9, 10)
 
         prog.show_data_temp(datas)

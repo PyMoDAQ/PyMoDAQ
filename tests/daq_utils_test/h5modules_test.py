@@ -21,7 +21,7 @@ def session_path(tmp_path_factory):
     return tmp_path_factory.mktemp('h5data')
 
 
-def generate_random_data(shape, dtype=np.float):
+def generate_random_data(shape, dtype=float):
     return (100 * np.random.rand(*shape)).astype(dtype=dtype)
 
 

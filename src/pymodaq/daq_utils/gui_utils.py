@@ -1,6 +1,7 @@
-from PyQt5.QtCore import QObject, pyqtSignal, QEvent, QBuffer, QIODevice, QLocale, Qt, QVariant, QModelIndex
-from PyQt5.QtWidgets import QAction
-from PyQt5 import QtGui, QtWidgets, QtCore
+from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, QLocale, Qt, QModelIndex
+from qtpy.QtWidgets import QAction
+from qtpy import QtGui, QtWidgets, QtCore
+from pymodaq.daq_utils.qvariant import QVariant
 import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow, Dock
@@ -42,6 +43,7 @@ def messagebox(severity='warning', title='this is a title', text='blabla'):
     ret = messbox(None, title, text)
     return ret == QtWidgets.QMessageBox.Ok
 
+
 class QAction(QAction):
     """
     QAction subclass to miicmic signals as pushbuttons. Done to be sure of backcompatibility when I moved from
@@ -53,7 +55,7 @@ class QAction(QAction):
         self.click = self.trigger
         self.clicked = self.triggered
 
-    def connect(self, slot):
+    def connect_to(self, slot):
         self.triggered.connect(slot)
 
 
@@ -67,7 +69,7 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
         action = QAction(name)
 
     if slot is not None:
-        action.connect(slot)
+        action.connect_to(slot)
     action.setCheckable(checkable)
     action.setToolTip(tip)
     if toolbar is not None:
@@ -131,7 +133,7 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
 
 def clickable(widget):
     class Filter(QObject):
-        clicked = pyqtSignal()
+        clicked = Signal()
 
         def eventFilter(self, obj, event):
             if obj == widget:
@@ -283,7 +285,7 @@ def select_file(start_path=config['data_saving']['h5file']['save_path'], save=Tr
 
 
 class Dock(Dock):
-    dock_focused = pyqtSignal(str)
+    dock_focused = Signal(str)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -323,7 +325,7 @@ class DockArea(DockArea, QObject):
     --------
     pyqtgraph.dockarea
     """
-    dock_signal = pyqtSignal()
+    dock_signal = Signal()
 
     def __init__(self, parent=None, temporary=False, home=None):
         super(DockArea, self).__init__(parent, temporary, home)
@@ -602,32 +604,21 @@ class BooleanDelegate(QtWidgets.QItemEditorFactory):
         super().__init__()
 
     def createEditor(self, userType, parent):
-        if userType == QVariant.Bool:
-            boolean = QtWidgets.QCheckBox(parent)
-            return boolean
-        else:
-            return super().createEditor(userType, parent)
+        boolean = QtWidgets.QCheckBox(parent)
+        return boolean
+
 
 class SpinBoxDelegate(QtWidgets.QItemEditorFactory):
-    # http://doc.qt.io/qt-5/qstyleditemdelegate.html#subclassing-qstyleditemdelegate
-    # It is possible for a custom delegate to provide editors without the use of an editor item factory.
-    # In this case, the following virtual functions must be reimplemented:
-    """
-    TO implement custom widget editor for cells in a tableview
-    """
 
     def __init__(self):
         super().__init__()
 
     def createEditor(self, userType, parent):
-        if userType == QVariant.Double:
-            doubleSpinBox = QtWidgets.QDoubleSpinBox(parent)
-            doubleSpinBox.setDecimals(4)
-            doubleSpinBox.setMaximum(-10000000)
-            doubleSpinBox.setMaximum(10000000)  # The default maximum value is 99.99.所以要设置一下
-            return doubleSpinBox
-        else:
-            return super().createEditor(userType, parent)
+        doubleSpinBox = QtWidgets.QDoubleSpinBox(parent)
+        doubleSpinBox.setDecimals(4)
+        doubleSpinBox.setMaximum(-10000000)
+        doubleSpinBox.setMaximum(10000000)  # The default maximum value is 99.99.所以要设置一下
+        return doubleSpinBox
 
 
 class TreeFromToml(QObject):
@@ -730,7 +721,7 @@ def show_message(message="blabla", title="Error"):
 
 class CustomApp(ActionManager, QtCore.QObject):
     # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
-    log_signal = QtCore.pyqtSignal(str)
+    log_signal = QtCore.Signal(str)
 
     # list of dicts enabling the settings tree on the user interface
     params = []
@@ -871,20 +862,21 @@ if __name__ == '__main__':
     import sys
 
     app = QtWidgets.QApplication([])
-    # QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-    # w = QtWidgets.QMainWindow()
-    # table = TableView(w)
-    # styledItemDelegate = QtWidgets.QStyledItemDelegate()
-    # styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
-    # table.setItemDelegate(styledItemDelegate)
-    #
-    # table.setModel(TableModel([[name, 0., 1., 0.1] for name in ['X_axis', 'Y_axis', 'theta_axis']],
-    #                           header=['Actuator', 'Start', 'Stop', 'Step'],
-    #                           editable=[False, True, True, True]))
-    # w.setCentralWidget(table)
-    # w.show()
-    #
+    w = QtWidgets.QMainWindow()
+    table = TableView(w)
+    styledItemDelegate = QtWidgets.QStyledItemDelegate()
+    #styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
+    styledItemDelegate.setItemEditorFactory(BooleanDelegate())
+    table.setItemDelegate(styledItemDelegate)
 
-    c = TreeFromToml()
-    c.show_dialog()
+    table.setModel(TableModel([[name, True, False, True] for name in ['X_axis', 'Y_axis', 'theta_axis']],
+                              header=['Actuator', 'Start', 'Stop', 'Step'],
+                              editable=[False, True, True, True]))
+    w.setCentralWidget(table)
+    w.show()
+    #
+    #
+    # c = TreeFromToml()
+    # c.show_dialog()
+
     sys.exit(app.exec_())

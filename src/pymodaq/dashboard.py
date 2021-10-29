@@ -320,7 +320,7 @@ class DashBoard(QObject):
         action_about.triggered.connect(self.show_about)
         action_help = help_menu.addAction('Help')
         action_help.triggered.connect(self.show_help)
-        action_help.setShortcut(QtCore.Qt.Key_F1)
+        action_help.setShortcut(QtGui.QKeySequence('F1'))
 
         help_menu.addSeparator()
         action_update = help_menu.addAction('Check Version')

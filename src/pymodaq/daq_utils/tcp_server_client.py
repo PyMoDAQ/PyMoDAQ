@@ -4,8 +4,8 @@ Created on Fri Aug 30 12:21:56 2019
 
 @author: Weber
 """
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-from PyQt5 import QtWidgets
+from qtpy.QtCore import QObject, Signal, Slot, QThread
+from qtpy import QtWidgets
 import socket
 import select
 import numpy as np
@@ -321,7 +321,7 @@ class TCPClient(QObject):
     class defined within this python module
 
     """
-    cmd_signal = pyqtSignal(ThreadCommand)  # signal to connect with a module slot in order to start communication back
+    cmd_signal = Signal(ThreadCommand)  # signal to connect with a module slot in order to start communication back
     params = []
 
     def __init__(self, ipaddress="192.168.1.62", port=6341, params_state=None, client_type="GRABBER"):
@@ -383,7 +383,7 @@ class TCPClient(QObject):
                 value_as_string = str(value_as_string)
             self.socket.send_string(value_as_string)
 
-    @pyqtSlot(ThreadCommand)
+    @Slot(ThreadCommand)
     def queue_command(self, command=ThreadCommand()):
         """
         when this TCPClient object is within a thread, the corresponding module communicate with it with signal and slots
@@ -536,7 +536,7 @@ class TCPClient(QObject):
 
             self.cmd_signal.emit(messg)
 
-    @pyqtSlot(list)
+    @Slot(list)
     def data_ready(self, datas):
         self.send_data(datas[0]['data'])  # datas from viewer 0 and get 'data' key (within the ordereddict list of datas
 
@@ -662,7 +662,7 @@ class TCPServer(QObject):
             con_clients[socket_dict['type']] = address
         return con_clients
 
-    @pyqtSlot(list)
+    @Slot(list)
     def print_status(self, status):
         """
             Print the given status.

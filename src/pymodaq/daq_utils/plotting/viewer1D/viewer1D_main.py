@@ -260,7 +260,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 lab = self.labels[0]
             item_param.child(('use_channel')).setValue(lab)
             item.sigRegionChanged.connect(self.update_lineouts)
-            item.sigRegionChangeFinished.connect(self.ROI_changed_finished.emit)
+            item.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
             for child in putils.iter_children_params(item_param, childlist=[]):
                 if child.type() != 'group':
                     child.sigValueChanged.connect(self.update_lineouts)
@@ -630,7 +630,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             xdata = x_axis
         self._x_axis = xdata
         self.measurement_dict['x_axis'] = self._x_axis
-        if self.datas != []:
+        if self.datas:
             self.show_data_temp(self.datas)
         self.set_axis_label(dict(orientation='bottom', label=label, units=units))
 

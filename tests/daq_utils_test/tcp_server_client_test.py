@@ -263,9 +263,8 @@ class TestSocket:
         test_Socket = Socket(MockPythonSocket())
         data_list = [np.array([1, 2]), 'test', 47]
         test_Socket.send_list(data_list)
-        np_list = np.array(data_list)
-        result = np.array(test_Socket.get_list())
-        for elem1, elem2 in zip(np_list, result):
+        result = test_Socket.get_list()
+        for elem1, elem2 in zip(data_list, result):
             if isinstance(elem1, np.ndarray):
                 assert np.array_equal(elem1, elem2)
             else:
@@ -302,9 +301,8 @@ class TestTCPClient:
         data_list = [14, 1.1, 'test', np.array([1, 2, 3])]
         test_TCP_Client.send_data(data_list)
         assert test_TCP_Client.socket.get_string() == 'Done'
-        np_list = np.array(data_list)
         result = test_TCP_Client.socket.get_list()
-        for elem1, elem2 in zip(np_list, result):
+        for elem1, elem2 in zip(data_list, result):
             if isinstance(elem1, np.ndarray):
                 assert np.array_equal(elem1, elem2)
             else:
