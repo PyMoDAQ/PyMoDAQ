@@ -1,0 +1,9 @@
+name: Python3.7
+
+on: [push]
+
+jobs:
+  call_workflow:
+    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@master
+    with:
+      python-version: '3.7'

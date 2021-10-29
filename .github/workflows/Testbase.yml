@@ -1,6 +1,11 @@
-name: Python package
+name: Python3.7
 
-on: [push]
+on:
+    workflow_call:
+      inputs:
+        python-version:
+          required: true
+          type: string
 
 jobs:
   build:
@@ -9,7 +14,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]  #, macos-latest, windows-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: [${{ inputs.python-version }}]
         qtbackend: ['pyqt5', 'pyside2']
     steps:
     - uses: actions/checkout@v2
