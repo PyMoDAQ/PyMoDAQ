@@ -1,9 +1,0 @@
-name: 3.8
-
-on: [push]
-
-jobs:
-  call_workflow:
-    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@master
-    with:
-      python-version: '3.8'

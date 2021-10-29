@@ -1,4 +1,4 @@
-name: Python3.7
+name: Base
 
 on:
     workflow_call:
