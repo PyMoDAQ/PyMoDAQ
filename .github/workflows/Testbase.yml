@@ -15,4 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Set up Python ${{ inputs.python }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ inputs.python }}
       
