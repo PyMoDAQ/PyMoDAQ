@@ -8,8 +8,9 @@ from sqlalchemy_utils import database_exists, create_database
 from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, Configuration
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params, messagebox
-from pymodaq.daq_utils.abc.logger import AbstractLogger
+from pymodaq.daq_utils.abstract.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
+
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = utils.load_config()
@@ -73,9 +74,12 @@ class DbLogger:
             session.close()
 
     def connect_db(self):
+        url = f"postgresql://{self.user}:{self.user_pwd}@{self.ip_address}:"\
+              f"{self.port}/{self.database_name}"
+        logger.debug(f'Connecting database using: {url}')
         try:
             self.engine = create_engine(f"postgresql://{self.user}:{self.user_pwd}@{self.ip_address}:"
-                                    f"{self.port}/{self.database_name}")
+                                        f"{self.port}/{self.database_name}")
         except ModuleNotFoundError as e:
             messagebox('warning', 'ModuleError',
                        f'The postgresql backend *psycopg2* has not been installed.\n'
@@ -93,6 +97,7 @@ class DbLogger:
 
         self.create_table()
         self.Session = sessionmaker(bind=self.engine)
+        logger.debug(f'Database Connected')
         return True
 
     def close(self):
@@ -182,7 +187,7 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
         {'title': 'Server port:', 'name': 'server_port', 'type': 'int',
             'value': config['network']['logging']['sql']['port']},
         {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
-        {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False, 'readonly': True},
+        {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False},
     ] + dashboard_submodules_params
 
     def __init__(self, database_name):
@@ -226,8 +231,12 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
                     self.port = param.value()
 
                 elif param.name() == 'connect_db':
-                    status = self.connect_db()
-                    self.settings.child(('connected_db')).setValue(status)
+                    if param.value():
+                        status = self.connect_db()
+                        self.settings.child('connected_db').setValue(status)
+                    else:
+                        self.close()
+                        self.settings.child('connected_db').setValue(False)
 
                 elif param.name() == 'save_2D':
                     self.save2D = param.value()

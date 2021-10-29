@@ -33,6 +33,8 @@ class ParameterEx:
         {'title': 'Booleans:', 'name': 'booleans', 'type': 'group', 'children': [
             {'title': 'Standard bool', 'name': 'abool', 'type': 'bool', 'value': True},
             {'title': 'bool push', 'name': 'aboolpush', 'type': 'bool_push', 'value': True, 'label': 'action'},
+            {'title': 'A led', 'name': 'aled', 'type': 'led', 'value': False, 'tip': 'a led you cannot toggle'},
+            {'title': 'A led', 'name': 'anotherled', 'type': 'led_push', 'value': True, 'tip': 'a led you can toggle'},
         ]},
 
         {'title': 'DateTime:', 'name': 'datetimes', 'type': 'group', 'children': [
@@ -66,6 +68,7 @@ class ParameterEx:
              'tip': 'If show_pb is True, user can add items to the list', 'show_pb': True},
         ]},
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
+            {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
             {'title': 'Plain text', 'name': 'textpb', 'type': 'text_pb', 'value': 'this is some text',
              'tip': 'If text_pb type is used, user can add text to the parameter'},

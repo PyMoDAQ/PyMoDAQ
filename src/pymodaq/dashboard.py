@@ -37,12 +37,6 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 from packaging import version as version_mod
 
-try:
-    from pymodaq_femto.retriever import Retriever
-    isretriever = True
-except:
-    isretriever = False
-
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
@@ -666,11 +660,11 @@ class DashBoard(QObject):
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
             if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0],
-                          ptypes.GroupParameterCustom):
+                          ptypes.GroupParameter):
                 plugins += [{'type': 'move', 'value': child} for child in
                             self.preset_manager.preset_params.child(('Moves')).children()]
             if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0],
-                          ptypes.GroupParameterCustom):
+                          ptypes.GroupParameter):
                 plugins += [{'type': 'det', 'value': child} for child in
                             self.preset_manager.preset_params.child(('Detectors')).children()]
 

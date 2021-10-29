@@ -11,9 +11,18 @@ PyMoDAQ
 
 .. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
-    
-.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/workflows/Python%20package/badge.svg
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions?query=workflow%3A%22Python+package%22
+
+.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg
+    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
+
+.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg
+    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
+
+.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg
+    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
+
+.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyside2.yml/badge.svg
+    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyside2.yml
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut

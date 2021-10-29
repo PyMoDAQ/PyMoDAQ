@@ -31,7 +31,7 @@ try:
     is_sql = True
 except Exception as e:
     is_sql = False
-    logger.info('To enable logging to database install: sqalchemy and sql_alchemy_utils packages as well as the '
+    logger.info('To enable logging to database install: sqalchemy and sqlalchemy_utils packages as well as the '
                 'backend for your specific database, for instance psycopg2 for PostGreSQL database')
 
 LOG_TYPES = ['None', 'H5 File']

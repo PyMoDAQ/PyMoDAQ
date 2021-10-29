@@ -80,6 +80,9 @@ Here is an example of such a list of dictionaries corresponding to :numref:`figu
                 {'title': 'Height:', 'name': 'st_height', 'type': 'int', 'value': 1 , 'default':1, 'min':1},
                 ]},]}]}]
 
+
+.. _parameter_tree:
+
 The list of available types of parameters :module:`pymodaq_ptypes`
 (defined in ``pymodaq.daq_utils.parameter.pymodaq_ptypes.py``) is:
 
@@ -89,18 +92,23 @@ The list of available types of parameters :module:`pymodaq_ptypes`
 * ``str`` : a QLineEdit object (see Qt5 documentation)
 * ``list`` : "Readout Modes" :numref:`figure_settings` is a combo box
 * ``bool`` : checkable boolean
-* ``led`` : checkable boolean in the form of a green (True) of red (False) led
+* ``bool_push`` : a checkable boolean in the form of a QPushButton
+* ``led`` : non checkable boolean in the form of a green (True) of red (False) led
+* ``led_push`` : checkable boolean in the form of a green (True) of red (False) led
 * ``date_time`` : a QDateTime object (see Qt5 documentation)
 * ``date`` : a QDate object (see Qt5 documentation)
 * ``time`` : a QTime object (see Qt5 documentation)
-* ``slide`` : a combination of a slide and spinbox for floating point values
+* ``slide`` : a combination of a slide and spinbox for floating point values (linear of log scale)
 * ``itemselect`` : an object to easily select one or more items among a few
 * ``browsepath``: a text area and a pushbutton to select a given path or file
 * ``text`` : a text area (for comments for instance)
 
 **Important**: the *name* key in the dictionnaries must **not** contain any space, please use underscore if necessary!
 
-For a live example of these Parameters nd their widget, type in ``parameter_example`` in your shell.
+.. note::
+
+  For a live example of these Parameters and their widget, type in ``parameter_example`` in your shell or check the
+  example folder
 
 
 Once the module is initialized, any modification on the UI hardware settings will be send to the plugin through

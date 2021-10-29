@@ -12,7 +12,8 @@ from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
 from pyqtgraph.parametertree.Parameter import registerParameterType
-
+from pyqtgraph import functions as fn
+from pyqtgraph.colormap import ColorMap
 from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 from collections import OrderedDict
 from decimal import Decimal as D
@@ -145,7 +146,7 @@ class Pixmap_check(QtWidgets.QWidget):
     # valuechanged=Signal(dict)
 
     def __init__(self):
-        
+
         super().__init__()
         self.path = ''
         self.data = None
@@ -227,7 +228,7 @@ class QTimeCustom(QtWidgets.QTimeEdit):
 class SliderSpinBox(QtWidgets.QWidget):
 
     def __init__(self, *args, subtype='lin', **kwargs):
-        
+
         super().__init__()
         self.subtype = subtype
         self.initUI(*args, **kwargs)
@@ -322,7 +323,7 @@ class SliderSpinBox(QtWidgets.QWidget):
         return self.spinbox.value()
 
 
-class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
+class WidgetParameterItem(pTypes.WidgetParameterItem):
     """
         This is a subclass of widget parameteritem in order to deal with the visiblily of the spinbox when parameter visibility os toggled.
     """
@@ -576,7 +577,7 @@ class WidgetParameterItemcustom(pTypes.WidgetParameterItem):
 
 
 class SimpleParameterCustom(pTypes.SimpleParameter):
-    itemClass = WidgetParameterItemcustom
+    itemClass = WidgetParameterItem
 
     def __init__(self, *args, **kargs):
         pTypes.SimpleParameter.__init__(self, *args, **kargs)
@@ -600,6 +601,14 @@ class SimpleParameterCustom(pTypes.SimpleParameter):
             'slide': float
         }[self.opts['type']]
         return fn(v)
+
+    def _interpColor(self, v):
+        return fn.mkColor(v)
+
+    def _interpColormap(self, v):
+        if not isinstance(v, ColorMap):
+            raise TypeError("Cannot set colormap parameter from object %r" % v)
+        return v
 
     def setLimits(self, limits):
         """Set limits on the acceptable values for this parameter.
@@ -631,7 +640,7 @@ registerParameterType('pixmap_check', SimpleParameterCustom, override=True)
 registerParameterType('slide', SimpleParameterCustom, override=True)
 
 
-# registerParameterType('slide', SimpleParameterCustom , override=True)
+registerParameterType('slide', SimpleParameterCustom , override=True)
 
 class ListParameterItem_custom(pTypes.ListParameterItem):
     """
@@ -640,7 +649,7 @@ class ListParameterItem_custom(pTypes.ListParameterItem):
     """
 
     def __init__(self, param, depth):
-        super(ListParameterItem_custom, self).__init__(param, depth)
+        super().__init__(param, depth)
         if 'tip' in param.opts:
             self.displayLabel.setToolTip(param.opts['tip'])
 
@@ -788,7 +797,7 @@ registerParameterType('list', ListParameter_custom, override=True)
 class Combo_pb(QtWidgets.QWidget):
 
     def __init__(self, items=[]):
-        
+
         super(Combo_pb, self).__init__()
         self.items = items
         self.initUI()
@@ -812,9 +821,10 @@ class Combo_pb(QtWidgets.QWidget):
         self.hor_layout.setContentsMargins(0, 0, 0, 0)
         self.add_pb.setMaximumWidth(25)
         self.setLayout(self.hor_layout)
+        self.currentText = self.combo.currentText
 
 
-class TableParameterItem(WidgetParameterItemcustom):
+class TableParameterItem(WidgetParameterItem):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
@@ -950,7 +960,7 @@ class TableParameter(Parameter):
 registerParameterType('table', TableParameter, override=True)
 
 
-class TableViewParameterItem(WidgetParameterItemcustom):
+class TableViewParameterItem(WidgetParameterItem):
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
         self.hideWidget = False
@@ -1113,7 +1123,7 @@ class TableViewParameter(Parameter):
 registerParameterType('table_view', TableViewParameter, override=True)
 
 
-class ItemSelectParameterItem(WidgetParameterItemcustom):
+class ItemSelectParameterItem(WidgetParameterItem):
 
     def __init__(self, param, depth):
         pTypes.WidgetParameterItem.__init__(self, param, depth)
@@ -1194,7 +1204,7 @@ class ItemSelectParameterItem(WidgetParameterItemcustom):
 
 class ItemSelect_pb(QtWidgets.QWidget):
     def __init__(self):
-        
+
         super(ItemSelect_pb, self).__init__()
         self.initUI()
 
@@ -1303,7 +1313,7 @@ class ActionParameter(pTypes.ActionParameter):
 registerParameterType('action', ActionParameter, override=True)
 
 
-class file_browserParameterItem(WidgetParameterItemcustom):
+class file_browserParameterItem(WidgetParameterItem):
 
     def __init__(self, param, depth):
         self.filetype = False
@@ -1367,7 +1377,7 @@ class file_browser(QtWidgets.QWidget):
     value_changed = Signal(str)
 
     def __init__(self, init_path='D:/Data', file_type=False):
-        
+
         super(file_browser, self).__init__()
         self.filetype = file_type
         self.path = init_path
@@ -1518,7 +1528,7 @@ class Plain_text_pb(QtWidgets.QWidget):
     value_changed = Signal(str)
 
     def __init__(self):
-        
+
         super(Plain_text_pb, self).__init__()
 
         self.initUI()

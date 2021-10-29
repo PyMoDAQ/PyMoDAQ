@@ -12,8 +12,10 @@ Installation
 
 Preamble
 --------
-PyMoDAQ is written in `Python`__ and uses Python 3.5+. It uses the `qtpy`__ library and the excellent `pyqtgraph`__ package
-for its user interface. For PyMoDAQ to run smoothly, you need a Python distribution to be installed. Here are some advices.
+PyMoDAQ is written in `Python`__ and uses Python 3.7+. It uses the `Qt5`__ library (and a python Qt5 backend, see
+:ref:`qt5backend`) and the excellent `pyqtgraph`__ package for its user interface.
+For PyMoDAQ to run smoothly, you need a Python distribution to be installed. Here are some
+advices.
 
 __ https://docs.python-guide.org/
 __ http://doc.qt.io/qt-5/qt5-intro.html
@@ -32,12 +34,12 @@ Setting up a new environment
 
 * Download and install Miniconda3.
 * Open a console, and cd to the location of the *condabin* folder, for instance: ``C:\Miniconda3\condabin``
-* Create a new environment: ``conda create -n my_env python=3.7``, where my_env is your new environment name, could be *pymodaq16*
-  if you plan to install PyMoDAQ version 1.6.0 for instance.. This will create the environment with python version 3.7
-  that is currently the recommended one.
+* Create a new environment: ``conda create -n my_env python=3.8``, where my_env is your new environment name, could be *pymodaq34*
+  if you plan to install PyMoDAQ version 3.4.1 for instance.. This will create the environment with python version 3.8
+  that is currently the recommended one, see :ref:`pythonversions`.
 * Activate your environment so that only packages installed within this environment will be *seen* by Python:
   ``conda activate my_env``
-* Install, using conda manager, some mandatory packages: ``conda install pyqt``
+
 
 Installing PyMoDAQ
 ------------------
@@ -45,8 +47,29 @@ Installing PyMoDAQ
 Easiest part: in your newly created and activated environment enter: ``pip install pymodaq``. This will install the
 latest PyMoDAQ available version and all its dependencies. For a specific version enter:  ``pip install pymodaq==x.y.z``.
 
-  .. _shortcut_section:
 
+.. _qt5backend:
+
+Qt5 backend
++++++++++++
+
+PyMoDAQ source code uses a python package called `qtpy`__ that add an abstraction layer between PyMoDAQ's code
+and the actual Qt5 python implementation (either PyQt5 or PySide2, and soon PyQt6 and PySide6). Qtpy will look on what
+is installed on your environment and load PyQt5 by default (see the :ref:`configfile` to change this default behaviour).
+This means you have to install one of these backends on your environment using either:
+
+* `pip install pyqt5`
+* `pip install pyside2`
+* `pip install pyqt6` (not tested yet)
+* `pip install pyside6` (not tested yet)
+
+
+__ https://pypi.org/project/QtPy/
+
+
+
+
+  .. _shortcut_section:
 
 Creating shortcuts on **Windows**
 ---------------------------------
@@ -143,3 +166,14 @@ you could follow these steps:
 
   Example: if you want to use a NI-DAQ instrument. You'll have to first install their driver Ni-DAQmx, then test you hardware
   using their MAX software and finally configure it using *pymodaq_plugins_daqmx* plugin.
+
+
+
+.. _pythonversions:
+
+Python Versions
++++++++++++++++
+
+As of today (late october 2021), PyMoDAQ has been efficiently used on python 3.7 and 3.8 versions. It's source code
+is regularly tested against those versions. Work is in progress to make it working with python 3.9 and 3.10, but some of
+PyMoDAQ's dependencies are not yet available for these versions.

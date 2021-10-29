@@ -7,7 +7,7 @@ from collections import OrderedDict
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.daq_utils.parameter.pymodaq_ptypes import GroupParameterCustom as GroupParameter
+from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.daq_utils.gui_utils import QAction
 from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
