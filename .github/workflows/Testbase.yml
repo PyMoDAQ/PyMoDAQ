@@ -12,9 +12,9 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     steps:
+    - name: Set
     - uses: actions/checkout@v2
     - name: Set up Python ${{ inputs.python }}
     - uses: actions/setup-python@v2
