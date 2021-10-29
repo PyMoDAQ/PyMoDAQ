@@ -6,4 +6,5 @@ jobs:
   call_workflow:
     uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@pyqtgraph
     with:
-      python-version: '3.7'
+      python: '3.7'
+      qt5: 'pyqt5'
