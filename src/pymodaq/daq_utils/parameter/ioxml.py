@@ -365,8 +365,7 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
         if type(XML_elt) is not ET.Element:
             raise TypeError('not valid XML element')
 
-        elts = XML_elt.getchildren()
-        if len(elts) == 0:
+        if len(XML_elt) == 0:
             param_dict = elt_to_dict(XML_elt)
             param_type = XML_elt.get('type')
 
@@ -374,7 +373,7 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
                 set_txt_from_elt(XML_elt, param_dict)
             params.append(param_dict)
 
-        for el in elts:
+        for el in XML_elt:
             param_dict = elt_to_dict(el)
             param_type = el.get('type')
 
