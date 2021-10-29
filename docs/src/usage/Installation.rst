@@ -58,10 +58,10 @@ and the actual Qt5 python implementation (either PyQt5 or PySide2, and soon PyQt
 is installed on your environment and load PyQt5 by default (see the :ref:`configfile` to change this default behaviour).
 This means you have to install one of these backends on your environment using either:
 
-* `pip install pyqt5`
-* `pip install pyside2`
-* `pip install pyqt6` (not tested yet)
-* `pip install pyside6` (not tested yet)
+* ``pip install pyqt5``
+* ``pip install pyside2``
+* ``pip install pyqt6`` (not tested yet)
+* ``pip install pyside6`` (not tested yet)
 
 
 __ https://pypi.org/project/QtPy/
