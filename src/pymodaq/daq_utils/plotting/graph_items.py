@@ -11,7 +11,7 @@ import collections
 
 class ImageItem(pg.ImageItem):
     def __init__(self, image=None, **kargs):
-        super(ImageItem, self).__init__(image, **kargs)
+        super().__init__(image, **kargs)
         self.flipud = False
         self.fliplr = False
         self.rotate90 = False
@@ -260,7 +260,7 @@ class ImageItem(pg.ImageItem):
             if 'symautolevel' in kargs:
                 if kargs['symautolevel']:
                     mn, mx = -max([abs(mn), abs(mx)]), max([abs(mn), abs(mx)])
-            kargs['levels'] = [mn,mx]
+            kargs['levels'] = [mn, mx]
 
         profile()
 
