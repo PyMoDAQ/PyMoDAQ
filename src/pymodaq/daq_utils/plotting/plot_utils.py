@@ -74,52 +74,6 @@ class QVector(QtCore.QLineF):
         return vec
 
 
-class AxisItem_Scaled(pg.AxisItem):
-    """
-    Subclass of pg.AxisItem enabling scaling of the tick values with respect to the linked viewbox
-    """
-
-    def __init__(self, orientation, scaling=1, offset=0, pen=None, linkView=None, parent=None, maxTickLength=-5,
-                 showValues=True):
-        """
-        ==============  ===============================================================
-        **Arguments:**
-        orientation     one of 'left', 'right', 'top', or 'bottom'
-        scaling         multiplicative coeff applied to the ticks
-        offset          offset applied to the ticks after scaling
-        maxTickLength   (px) maximum length of ticks to draw. Negative values draw
-                        into the plot, positive values draw outward.
-        linkView        (ViewBox) causes the range of values displayed in the axis
-                        to be linked to the visible range of a ViewBox.
-        showValues      (bool) Whether to display values adjacent to ticks
-        pen             (QPen) Pen used when drawing ticks.
-        ==============  ===============================================================
-        """
-        super().__init__(orientation, pen=pen, linkView=linkView, parent=parent, maxTickLength=maxTickLength,
-                         showValues=showValues)
-        self.scaling = scaling
-        self.offset = offset
-
-    def linkedViewChanged(self, view, newRange=None):
-        if self.orientation in ['right', 'left']:
-            if newRange is None:
-                newRange = [pos * self.scaling + self.offset for pos in view.viewRange()[1]]
-            else:
-                newRange = [pos * self.scaling + self.offset for pos in newRange]
-
-            if view.yInverted():
-                self.setRange(*newRange[::-1])
-            else:
-                self.setRange(*newRange)
-        else:
-            if newRange is None:
-                newRange = [pos * self.scaling + self.offset for pos in view.viewRange()[0]]
-            else:
-                newRange = [pos * self.scaling + self.offset for pos in newRange]
-            if view.xInverted():
-                self.setRange(*newRange[::-1])
-            else:
-                self.setRange(*newRange)
 
 
 def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):

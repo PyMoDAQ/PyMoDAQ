@@ -8,14 +8,13 @@ from pymodaq.daq_utils.managers.roi_manager import ROIManager
 import pyqtgraph as pg
 
 from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
-from pymodaq.daq_utils.plotting.plot_utils import AxisItem_Scaled
-from pymodaq.daq_utils.plotting.graph_items import ImageItem, PlotCurveItem, TriangulationItem
+from pymodaq.daq_utils.plotting.graph_items import ImageItem, PlotCurveItem, TriangulationItem, AxisItem_Scaled, AXIS_POSITIONS
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
 
 import numpy as np
 from easydict import EasyDict as edict
 import copy
-from pymodaq.daq_utils.gui_utils import DockArea, QAction
+from pymodaq.daq_utils.gui_utils import DockArea, QAction, addaction
 
 import pymodaq.daq_utils.daq_utils as utils
 import datetime
@@ -29,6 +28,346 @@ Gradients.update(OrderedDict([
     ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}), ]))
 
 utils.set_logger(utils.get_module_name(__file__))
+
+
+class View2D(QObject):
+
+    sig_double_clicked = Signal(float, float)
+
+    def __init__(self, parent):
+        super().__init__()
+        # setting the gui
+
+        self.image_widget = None
+        self.color_list = utils.plot_colors
+        self.setupUI()
+
+    def setupUI(self):
+        vertical_layout = QtWidgets.QVBoxLayout()
+        vertical_layout.setContentsMargins(5, 5, 5, 5)
+        self.parent.setLayout(vertical_layout)
+        splitter_vertical = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        vertical_layout.addWidget(splitter_vertical)
+
+        # ###### Actions ##########
+        self.toolbar = QtWidgets.QToolBar()
+        splitter_vertical.addWidget(self.toolbar)
+        self.setup_actions()
+        # ############################
+
+        # ####### Graphs, ImageItem, Histograms ############
+        graphs_widget = QtWidgets.QWidget()
+        graphs_layout = QtWidgets.QHBoxLayout()
+        graphs_layout.setContentsMargins(0, 0, 0, 0)
+        graphs_widget.setLayout(graphs_layout)
+        self.setupGraphs(graphs_layout)
+        # ################################
+
+        splitter_vertical.addWidget(graphs_widget)
+        self.plotitem.addItem(self.img_red)
+        self.plotitem.addItem(self.img_green)
+        self.plotitem.addItem(self.img_blue)
+        self.plotitem.addItem(self.img_spread)
+        self.graphicsView.setCentralItem(self.plotitem)
+
+        # histograms
+        histo_layout = QtWidgets.QHBoxLayout()
+        self.setupHisto(histo_layout)
+
+        # ROI selects an area and export its bounds as a signal
+        self.ROIselect = pg.RectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+        self.image_widget.plotitem.addItem(self.ROIselect)
+        self.ROIselect.setVisible(False)
+        self.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
+        self.ROIselect_action.triggered.connect(self.show_ROI_select)
+
+        self.setupIsoCurve()
+
+        self.setupCrosshair()
+
+        # flipping
+
+        self.FlipUD_action.triggered.connect(self.update_image)
+        self.FlipLR_action.triggered.connect(self.update_image)
+        self.rotate_action.triggered.connect(self.update_image)
+
+        self.setupROI()
+
+        self.ini_plot_action.triggered.connect(self.ini_plot)
+
+        # #splitter
+
+        self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
+        self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
+
+    def emit_double_clicked(self, posx, posy):
+        self.sig_double_clicked.emit(posx, posy)
+
+    def setupGraphs(self, graphs_layout):
+        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        graphs_layout.addWidget(self.splitter)
+
+        self.widget_histo = QtWidgets.QWidget()
+        graphs_layout.addWidget(self.widget_histo)
+
+        self.splitter_VLeft = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self.splitter_VRight = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+
+        self.splitter.addWidget(self.splitter_VLeft)
+        self.splitter.addWidget(self.splitter_VRight)
+
+        self.image_widget = ImageWidget()
+
+        self.Lineout_H = pg.PlotWidget()
+        self.Lineout_V = pg.PlotWidget()
+        self.Lineout_integrated = pg.PlotWidget()
+
+        self.splitter_VLeft.addWidget(self.image_widget)
+        self.splitter_VLeft.addWidget(self.Lineout_H)
+        self.splitter_VRight.addWidget(self.Lineout_V)
+        self.splitter_VRight.addWidget(self.Lineout_integrated)
+
+        self.set_axis_label('bottom', label='', units='Pxls')
+        self.set_axis_label('left', label='', units='Pxls')
+
+        self.image_widget.add_scaled_axis('right')
+        self.image_widget.add_scaled_axis('top')
+
+        self.image_widget.view.sig_double_clicked.connect(self.emit_double_clicked)
+
+        self.img_red = ImageItem()
+        self.img_green = ImageItem()
+        self.img_blue = ImageItem()
+        self.img_spread = TriangulationItem()
+
+        # self.img_red.sig_double_clicked.connect(self.double_clicked)
+        self.img_red.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+        self.img_green.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+        self.img_blue.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+        self.img_red.setOpts(axisOrder='row-major')
+        self.img_green.setOpts(axisOrder='row-major')
+        self.img_blue.setOpts(axisOrder='row-major')
+
+    def setGradient(self, histo='red', gradient='grey'):
+        """
+        Change the color gradient of the specified histogram
+        Parameters
+        ----------
+        histo: (str) either 'red', 'green', 'blue', 'spread' or 'all'
+        gradient: (str or Gradient)
+        """
+        if gradient in Gradients:
+            if histo == 'red' or histo == 'all':
+                self.histogram_red.item.gradient.loadPreset(gradient)
+            if histo == 'blue' or histo == 'all':
+                self.histogram_blue.item.gradient.loadPreset(gradient)
+            if histo == 'green' or histo == 'all':
+                self.histogram_green.item.gradient.loadPreset(gradient)
+            if histo == 'spread' or histo == 'all':
+                self.histogram_spread.item.gradient.loadPreset(gradient)
+
+    def get_axis(self, position='left'):
+        return self.image_widget.getAxis(position)
+
+    def set_axis_label(self, position, label='', units=''):
+        """
+        Convenience method to set label and unit of any view axes
+        Parameters
+        ----------
+        position: (str) any of AXIS_POSITIONS
+        label: (str) text of the axis label
+        units: (str) units of the axis label
+        """
+        axis = self.get_axis(position)
+        axis.setLabel(text=label, units=units)
+
+    @property
+    def plotitem(self):
+        return self.image_widget.plotitem
+
+    def add_action(self, name='', icon_name='', tip='', checkable=False, slot=None, menu=None):
+        return addaction(name=name, icon_name=icon_name, tip=tip, checkable=checkable, slot=slot,
+                         toolbar=self.toolbar, menu=menu)
+
+    def setup_actions(self):
+
+        self.actions = dict([])
+        self.actions['position'] = addaction('(,)')
+        self.actions['red'] = addaction('Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
+        self.actions['green'] = addaction('Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
+        self.actions['blue'] = addaction('Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
+        self.actions['spread'] = addaction('Spread Channel', 'grey_icon',
+                                           tip='Show/Hide Spread Channel', checkable=True)
+
+        self.actions['histo'] = addaction('Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
+        self.actions['roi'] = addaction('ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
+        self.actions['isocurve'] = addaction('IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
+        self.actions['init_plot'] = addaction('Init. Plot', 'Refresh', tip='Initialize the plots')
+
+        self.actions['aspect_ratio'] = addaction('Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
+        self.actions['auto_levels'] = addaction('AutoLevels', 'autoscale',
+                                                tip='Scale Histogram to Min/Max intensity', checkable=True)
+        self.actions['auto_levels_sym'] = addaction('AutoLevels Sym.', 'autoscale',
+                                                    tip='Make the autoscale of the histograms symetric with'
+                                                        ' respect to 0',
+                                                    checkable=True)
+
+        self.actions['crosshair'] = addaction('CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
+        self.actions['ROIselect'] = addaction('ROI Select', 'Select_24',
+                                              tip='Show/Hide ROI selection area', checkable=True)
+        self.actions['flip_ud'] = addaction('Flip UD', 'scale_vertically',
+                                                tip='Flip the image up/down', checkable=True)
+        self.actions['flip_lr'] = addaction('Flip LR', 'scale_horizontally',
+                                                tip='Flip the image left/right', checkable=True)
+        self.actions['rotate'] = addaction('Rotate', 'rotation2',
+                                                tip='Rotate the image', checkable=True)
+
+    def update_image_visibility(self):
+        self.img_blue.setVisible(self.actions['blue'].isChecked())
+        self.img_green.setVisible(self.actions['green'].isChecked())
+        self.img_red.setVisible(self.actions['red'].isChecked())
+        self.img_spread.setVisible(self.actions['spread'].isChecked())
+
+    def connect_internal_ui(self):
+
+        self.connect_action('red', self.view.update_image_visibility)
+        self.connect_action('blue', self.view.update_image_visibility)
+        self.connect_action('green', self.view.update_image_visibility)
+        self.connect_action('spread', self.view.update_image_visibility)
+
+        self.connect_action('aspect_ratio', self.lock_aspect_ratio)
+        self.connect_action('ROIselect', self.show_ROI_select)
+
+        self.ui.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
+        self.ui.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
+
+    def lock_aspect_ratio(self):
+        if self.actions['aspect_ratio'].isChecked():
+            self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
+        else:
+            self.plotitem.vb.setAspectLocked(lock=False)
+
+    def show_ROI_select(self):
+        self.ROIselect.setVisible(self.actions['ROIselect'].isChecked())
+
+    @Slot(int, int)
+    def move_left_splitter(self, pos, index):
+        self.splitter_VLeft.blockSignals(True)
+        self.splitter_VLeft.moveSplitter(pos, index)
+        self.splitter_VLeft.blockSignals(False)
+
+    @Slot(int, int)
+    def move_right_splitter(self, pos, index):
+        self.splitter_VRight.blockSignals(True)
+        self.splitter_VRight.moveSplitter(pos, index)
+        self.splitter_VRight.blockSignals(False)
+
+    def connect_action(self, name, slot, connect=True):
+        """
+        Connect (or disconnect) the action referenced by name to the given slot
+        Parameters
+        ----------
+        name: (str) key of the action as referenced in the self.actions dict
+        slot: (method) a method/function
+        connect: (bool) if True connect the trigegr signal of the action to the defined slot else disconnect it
+        """
+        if name in self.actions:
+            if connect:
+                self.actions[name].triggered.connect(slot)
+            else:
+                try:
+                    self.actions[name].triggered.disconnect()
+                except (TypeError,) as e:
+                    pass  # the action was not connected
+        else:
+            raise KeyError(f'The action with name: {name} is not referenced in the view actions: {self.actions}')
+
+    def set_action_visible(self, name, visible=True):
+        """
+        Turn the widget representation of the action referenced by name visible or not
+        Parameters
+        ----------
+        name: (str) key of the action as referenced in the self.actions dict
+        visible: (bool) if True, set the widget visible else hide it
+        """
+        if name in self.actions:
+            self.actions[name].setVisible(visible)
+        else:
+            raise KeyError(f'The action with name: {name} is not referenced in the view actions: {self.actions}')
+
+    def set_action_checked(self, name, checked=True):
+        """
+        Turn the widget representation of the action (button) referenced by name as checked or not (if checkable)
+        Parameters
+        ----------
+        name: (str) key of the action as referenced in the self.actions dict
+        checked: (bool) if True, set the widget check state to True else False
+        """
+        if name in self.actions:
+            if self.actions[name].isCheckable():
+                self.actions[name].setChecked(checked)
+        else:
+            raise KeyError(f'The action with name: {name} is not referenced in the view actions: {self.actions}')
+
+    def set_axis_scaling(self, position='top', scaling=1, offset=0, label='', units='Pxls'):
+        """
+        Method used to update the scaling of the right and top axes in order to translate pixels to real coordinates
+        Parameters
+        ----------
+        position: (str) axis position either one of AXIS_POSITIONS
+        scaling: (float) scaling of the axis
+        offset: (float) offset of the axis
+        label: (str) text of the axis label
+        units: (str) units of the axis label
+        """
+
+        self.get_axis(position).scaling = scaling
+        self.get_axis(position).offset = offset
+        self.set_axis_label(position, label=label, units=units)
+
+    @staticmethod
+    def extract_axis_info(axis):
+        label = ''
+        units = ''
+        if isinstance(axis, dict):
+            if 'data' in axis:
+                data = axis['data']
+            if 'label' in axis:
+                label = axis['label']
+            if 'units' in axis:
+                units = axis['units']
+        else:
+            data = axis
+
+        if len(data) > 1:
+            scaling = data[1] - data[0]
+            if scaling > 0:
+                offset = np.min(data)
+            else:
+                offset = np.max(data)
+        else:
+            scaling = 1.
+            offset = 0.
+        return scaling, offset, label, units
+
+    @property
+    def x_axis(self):
+        return self.get_axis('top')
+
+    @x_axis.setter
+    def x_axis(self, axis):
+        scaling, offset, label, units = self.extract_axis_info(axis)
+        self.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
+
+    @property
+    def y_axis(self):
+        return self.get_axis('right')
+
+    @y_axis.setter
+    def y_axis(self, axis):
+        scaling, offset, label, units = self.extract_axis_info(axis)
+        self.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
+
 
 class Viewer2D(QObject):
     data_to_export_signal = Signal(
@@ -45,10 +384,13 @@ class Viewer2D(QObject):
         super().__init__()
         # setting the gui
 
-        self.title = 'viewer2D'
         if parent is None:
             parent = QtWidgets.QWidget()
+            parent.show()
         self.parent = parent
+
+        self.view = View2D(parent)
+        self.view.setupUI()
 
         self.max_size_integrated = 200
         self.scaling_options = copy.deepcopy(scaling_options)
@@ -61,180 +403,14 @@ class Viewer2D(QObject):
         self.y_axis_scaled = None
 
         self.raw_data = None
-        self.image_widget = None
         self.isdata = edict(blue=False, green=False, red=False, spread=False)
-        self.color_list = utils.plot_colors
 
         self.data_to_export = OrderedDict([])
 
         self.setupUI()
 
-    def setupButtons(self):
-
-        self.position_action = QAction('(,)')
-        self.x_label_action = self.position_action  # backcompatibility
-        self.toolbar_button.addAction(self.position_action)
 
 
-        self.red_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/r_icon.png")), 'Show/Hide Red Channel')
-        self.ui.z_label_red = self.red_action  # for backcompatibility
-        self.ui.red_cb = self.red_action  # for backcompatibility
-        self.red_action.setCheckable(True)
-        self.toolbar_button.addAction(self.red_action)
-
-        self.green_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/g_icon.png")), 'Show/Hide Green Channel')
-        self.ui.z_label_green = self.green_action  # for backcompatibility
-        self.ui.green_cb = self.green_action  # for backcompatibility
-        self.green_action.setCheckable(True)
-        self.toolbar_button.addAction(self.green_action)
-
-
-        self.blue_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/b_icon.png")), 'Show/Hide Blue Channel')
-        self.ui.z_label_blue = self.blue_action  # for backcompatibility
-        self.ui.blue_cb = self.blue_action  # for backcompatibility
-        self.blue_action.setCheckable(True)
-        self.toolbar_button.addAction(self.blue_action)
-
-        self.spread_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/grey_icon.png")), 'Show/Hide Spread Channel')
-        self.ui.z_label_spread = self.spread_action  # for backcompatibility
-        self.ui.spread_cb = self.spread_action  # for backcompatibility
-        self.spread_action.setCheckable(True)
-        self.toolbar_button.addAction(self.spread_action)
-
-        self.histo_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Histogram.png")), 'Show/Hide Histogram')
-        self.ui.Show_histogram = self.histo_action
-        self.histo_action.setCheckable(True)
-        self.toolbar_button.addAction(self.histo_action)
-
-        self.roi_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Region.png")), 'Show/Hide ROI manager')
-        self.ui.roiBtn = self.roi_action  # for backcompatibility
-        self.roi_action.setCheckable(True)
-        self.toolbar_button.addAction(self.roi_action)
-
-        self.isocurve_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/meshPlot.png")), 'Show/Hide Isocurve')
-        self.isocurve_action.setCheckable(True)
-        self.toolbar_button.addAction(self.isocurve_action)
-
-        self.ini_plot_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Refresh.png")), 'Initialize the plots')
-        self.ui.Ini_plot_pb = self.ini_plot_action
-        self.toolbar_button.addAction(self.ini_plot_action)
-
-        self.aspect_ratio_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Zoom_1_1.png")), 'Fix Aspect Ratio')
-        self.ui.aspect_ratio_pb = self.aspect_ratio_action  # for backcompatibility
-        self.aspect_ratio_action.setCheckable(True)
-        self.toolbar_button.addAction(self.aspect_ratio_action)
-
-        self.auto_levels_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/autoscale.png")),
-                                          'Scale Histogram to Min/Max intensity ')
-        self.ui.auto_levels_pb = self.auto_levels_action  # for backcompatibility
-        self.auto_levels_action.setCheckable(True)
-        self.toolbar_button.addAction(self.auto_levels_action)
-
-        self.auto_levels_action_sym = QAction(QIcon(QPixmap(":/icons/Icon_Library/autoscale.png")),
-                                          'Make the autoscale of the histograms symetric with respect to 0 ')
-        self.auto_levels_action_sym.setCheckable(True)
-        self.toolbar_button.addAction(self.auto_levels_action_sym)
-
-
-        self.crosshair_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/reset.png")), 'Show/Hide data Crosshair')
-        self.ui.crosshair_pb = self.crosshair_action  # for backcompatibility
-        self.crosshair_action.setCheckable(True)
-        self.toolbar_button.addAction(self.crosshair_action)
-
-        self.ROIselect_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/Select_24.png")),
-                                        'Show/Hide ROI selection area')
-        self.ui.ROIselect_pb = self.ROIselect_action  # for backcompatibility
-        self.ROIselect_action.setCheckable(True)
-        self.toolbar_button.addAction(self.ROIselect_action)
-
-        self.FlipUD_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/scale_vertically.png")),
-                                     'Flip the image up/down')
-        self.ui.FlipUD_pb = self.FlipUD_action  # for backcompatibility
-        self.FlipUD_action.setCheckable(True)
-        self.toolbar_button.addAction(self.FlipUD_action)
-
-        self.FlipLR_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/scale_horizontally.png")),
-                                     'Flip the image left/right')
-        self.ui.FlipLR_pb = self.FlipLR_action  # for backcompatibility
-        self.FlipLR_action.setCheckable(True)
-        self.toolbar_button.addAction(self.FlipLR_action)
-
-        self.rotate_action = QAction(QIcon(QPixmap(":/icons/Icon_Library/rotation2.png")),
-                                     'Rotate the image')
-        self.ui.rotate_pb = self.rotate_action  # for backcompatibility
-        self.rotate_action.setCheckable(True)
-        self.toolbar_button.addAction(self.rotate_action)
-
-
-
-    def setupGraphs(self, graphs_layout):
-        self.ui.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        graphs_layout.addWidget(self.ui.splitter)
-
-        self.ui.widget_histo = QtWidgets.QWidget()
-        graphs_layout.addWidget(self.ui.widget_histo)
-
-        self.ui.splitter_VLeft = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        self.ui.splitter_VRight = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-
-        self.ui.splitter.addWidget(self.ui.splitter_VLeft)
-        self.ui.splitter.addWidget(self.ui.splitter_VRight)
-
-        self.image_widget = ImageWidget()
-        self.ui.graphicsView = self.image_widget
-        self.ui.Lineout_H = pg.PlotWidget()
-        self.ui.Lineout_V = pg.PlotWidget()
-        self.ui.Lineout_integrated = pg.PlotWidget()
-
-        self.ui.splitter_VLeft.addWidget(self.ui.graphicsView)
-        self.ui.splitter_VLeft.addWidget(self.ui.Lineout_H)
-        self.ui.splitter_VRight.addWidget(self.ui.Lineout_V)
-        self.ui.splitter_VRight.addWidget(self.ui.Lineout_integrated)
-
-        self.ui.plotitem = self.image_widget.plotitem  # for backward compatibility
-
-        axis = self.ui.plotitem.getAxis('bottom')
-        axis.setLabel(text='', units='Pxls')
-
-        axisl = self.ui.plotitem.getAxis('left')
-        axisl.setLabel(text='', units='Pxls')
-
-        self.autolevels = False
-        self.auto_levels_action.triggered.connect(self.set_autolevels)
-
-        self.scaled_yaxis = AxisItem_Scaled('right')
-        self.scaled_xaxis = AxisItem_Scaled('top')
-
-        self.image_widget.view.sig_double_clicked.connect(self.double_clicked)
-        self.image_widget.plotitem.layout.addItem(self.scaled_xaxis, *(1, 1))
-        self.image_widget.plotitem.layout.addItem(self.scaled_yaxis, *(2, 2))
-        self.scaled_xaxis.linkToView(self.image_widget.view)
-        self.scaled_yaxis.linkToView(self.image_widget.view)
-        self.set_scaling_axes(self.scaling_options)
-        self.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
-        self.ui.img_red = ImageItem()
-        self.ui.img_green = ImageItem()
-        self.ui.img_blue = ImageItem()
-        self.ui.img_spread = TriangulationItem()
-
-        # self.ui.img_red.sig_double_clicked.connect(self.double_clicked)
-        self.ui.img_red.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-        self.ui.img_green.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-        self.ui.img_blue.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-        self.ui.img_red.setOpts(axisOrder='row-major')
-        self.ui.img_green.setOpts(axisOrder='row-major')
-        self.ui.img_blue.setOpts(axisOrder='row-major')
-
-    def setGradient(self, histo='red', gradient='grey'):
-        if gradient in Gradients:
-            if histo == 'red' or histo == 'all':
-                self.ui.histogram_red.item.gradient.loadPreset(gradient)
-            if histo == 'blue' or histo == 'all':
-                self.ui.histogram_blue.item.gradient.loadPreset(gradient)
-            if histo == 'green' or histo == 'all':
-                self.ui.histogram_green.item.gradient.loadPreset(gradient)
-            if histo == 'spread' or histo == 'all':
-                self.ui.histogram_spread.item.gradient.loadPreset(gradient)
 
     def setupHisto(self, histo_layout):
         self.ui.widget_histo.setLayout(histo_layout)
@@ -333,46 +509,30 @@ class Viewer2D(QObject):
         self.ui.splitter.addWidget(self.roi_manager.roiwidget)
         self.roi_manager.roiwidget.setVisible(False)
 
-    def setupUI(self):
-
-        self.ui = QObject()
-
-        vertical_layout = QtWidgets.QVBoxLayout()
-        vertical_layout.setContentsMargins(5, 5, 5, 5)
-        self.parent.setLayout(vertical_layout)
-        splitter_vertical = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        vertical_layout.addWidget(splitter_vertical)
-        #buttons_widget = QtWidgets.QWidget()
-        self.toolbar_button = QtWidgets.QToolBar()
-        splitter_vertical.addWidget(self.toolbar_button)
-        self.setupButtons()
-
-        graphs_widget = QtWidgets.QWidget()
-        graphs_layout = QtWidgets.QHBoxLayout()
-        graphs_layout.setContentsMargins(0, 0, 0, 0)
-        graphs_widget.setLayout(graphs_layout)
-        self.setupGraphs(graphs_layout)
-        splitter_vertical.addWidget(graphs_widget)
-
+    def prepare_connect_ui(self):
         # selection area checkbox
-        self.blue_action.setVisible(True)
-        self.blue_action.setChecked(True)
-        self.blue_action.triggered.connect(self.update_selection_area_visibility)
-        self.green_action.setVisible(True)
-        self.green_action.setChecked(True)
-        self.green_action.triggered.connect(self.update_selection_area_visibility)
-        self.red_action.setVisible(True)
-        self.red_action.triggered.connect(self.update_selection_area_visibility)
-        self.red_action.setChecked(True)
-        self.spread_action.setVisible(True)
-        self.spread_action.triggered.connect(self.update_selection_area_visibility)
-        self.spread_action.setChecked(True)
+        self.view.set_action_visible('red', True)
+        self.view.set_action_checked('red', True)
+        self.view.set_action_visible('green', True)
+        self.view.set_action_checked('green', True)
+        self.view.set_action_visible('blue', True)
+        self.view.set_action_checked('blue', True)
+        self.view.set_action_visible('spread', True)
+        self.view.set_action_checked('spread', True)
+
+        self.view.connect_action('red', self.view.update_image_visibility)
+
+        self.red_action.triggered.connect(self.view.update_image_visibility)
+        self.green_action.triggered.connect(self.view.update_image_visibility)
+        self.blue_action.triggered.connect(self.view.update_image_visibility)
+        self.spread_action.triggered.connect(self.view.update_image_visibility)
+
 
         self.image_widget.plotitem.addItem(self.ui.img_red)
         self.image_widget.plotitem.addItem(self.ui.img_green)
         self.image_widget.plotitem.addItem(self.ui.img_blue)
         self.image_widget.plotitem.addItem(self.ui.img_spread)
-        self.ui.graphicsView.setCentralItem(self.image_widget.plotitem)
+        self.graphicsView.setCentralItem(self.image_widget.plotitem)
 
         self.aspect_ratio_action.triggered.connect(self.lock_aspect_ratio)
         self.aspect_ratio_action.setChecked(True)
@@ -546,23 +706,9 @@ class Viewer2D(QObject):
         for k in self.data_integrated_plot.keys():
             self.data_integrated_plot[k] = np.zeros((2, 1))
 
-    def lock_aspect_ratio(self):
-        if self.aspect_ratio_action.isChecked():
-            self.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
-        else:
-            self.image_widget.plotitem.vb.setAspectLocked(lock=False)
 
-    @Slot(int, int)
-    def move_left_splitter(self, pos, index):
-        self.ui.splitter_VLeft.blockSignals(True)
-        self.ui.splitter_VLeft.moveSplitter(pos, index)
-        self.ui.splitter_VLeft.blockSignals(False)
 
-    @Slot(int, int)
-    def move_right_splitter(self, pos, index):
-        self.ui.splitter_VRight.blockSignals(True)
-        self.ui.splitter_VRight.moveSplitter(pos, index)
-        self.ui.splitter_VRight.blockSignals(False)
+
 
     def restore_state(self, data_tree):
         self.roi_settings.restoreState(data_tree)
@@ -767,24 +913,6 @@ class Viewer2D(QObject):
         self.ui.histogram_green.region.setVisible(not self.autolevels)
         self.ui.histogram_blue.region.setVisible(not self.autolevels)
 
-    def set_scaling_axes(self, scaling_options=None):
-        """
-        metod used to update the scaling of the right and top axes in order to translate pixels to real coordinates
-        scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))
-        """
-        if scaling_options is not None:
-            self.scaling_options = copy.deepcopy(scaling_options)
-        self.scaled_xaxis.scaling = self.scaling_options['scaled_xaxis']['scaling']
-        self.scaled_xaxis.offset = self.scaling_options['scaled_xaxis']['offset']
-        self.scaled_xaxis.setLabel(text=self.scaling_options['scaled_xaxis']['label'],
-                                   units=self.scaling_options['scaled_xaxis']['units'])
-        self.scaled_yaxis.scaling = self.scaling_options['scaled_yaxis']['scaling']
-        self.scaled_yaxis.offset = self.scaling_options['scaled_yaxis']['offset']
-        self.scaled_yaxis.setLabel(text=self.scaling_options['scaled_yaxis']['label'],
-                                   units=self.scaling_options['scaled_yaxis']['units'])
-
-        self.scaled_xaxis.linkedViewChanged(self.image_widget.view)
-        self.scaled_yaxis.linkedViewChanged(self.image_widget.view)
 
     def transform_image(self, data):
         if data is not None:
@@ -1076,29 +1204,12 @@ class Viewer2D(QObject):
         self.ui.splitter_VLeft.splitterMoved[int, int].emit(int(0.6 * self.parent.height()), 1)
         QtGui.QGuiApplication.processEvents()
 
-    def show_ROI_select(self):
-        self.ui.ROIselect.setVisible(self.ROIselect_action.isChecked())
 
     def update_image(self):
         self.setImageTemp(data_red=self.raw_data['red'], data_green=self.raw_data['green'],
                           data_blue=self.raw_data['blue'], data_spread=self.raw_data['spread'])
 
-    def update_selection_area_visibility(self):
-        bluestate = self.blue_action.isChecked()
-        self.ui.img_blue.setVisible(bluestate)
-        # self.ui.histogram_blue.setVisible(bluestate)
 
-        greenstate = self.green_action.isChecked()
-        self.ui.img_green.setVisible(greenstate)
-        # self.ui.histogram_green.setVisible(greenstate)
-
-        redstate = self.red_action.isChecked()
-        self.ui.img_red.setVisible(redstate)
-        # self.ui.histogram_red.setVisible(redstate)
-
-        spreadstate = self.spread_action.isChecked()
-        self.ui.img_spread.setVisible(spreadstate)
-        # self.ui.histogram_spread.setVisible(spreadstate)
 
     def update_crosshair_data(self, posx, posy, name=""):
         try:
@@ -1141,73 +1252,7 @@ class Viewer2D(QObject):
     def updateIsocurve(self):
         self.ui.iso.setLevel(self.ui.isoLine.value())
 
-    @property
-    def x_axis(self):
-        return self.x_axis_scaled
 
-    @x_axis.setter
-    def x_axis(self, x_axis):
-        label = ''
-        units = ''
-        if isinstance(x_axis, dict):
-            if 'data' in x_axis:
-                xdata = x_axis['data']
-            if 'label' in x_axis:
-                label = x_axis['label']
-            if 'units' in x_axis:
-                units = x_axis['units']
-        else:
-            xdata = x_axis
-
-        if len(xdata) > 1:
-            x_scaling = xdata[1] - xdata[0]
-            if x_scaling > 0:
-                x_offset = np.min(xdata)
-            else:
-                x_offset = np.max(xdata)
-        else:
-            x_scaling = 1.
-            x_offset = 0.
-        self.scaling_options['scaled_xaxis'].update(dict(offset=x_offset, scaling=x_scaling, label=label, units=units))
-        self.set_scaling_axes(self.scaling_options)
-
-    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='pxls')):
-        if axis_settings['orientation'] == 'bottom':
-            axis = 'scaled_xaxis'
-        else:
-            axis = 'scaled_yaxis'
-        self.scaling_options[axis].update(axis_settings)
-        self.set_scaling_axes(self.scaling_options)
-
-    @property
-    def y_axis(self):
-        return self.y_axis_scaled
-
-    @y_axis.setter
-    def y_axis(self, y_axis):
-        label = ''
-        units = ''
-        if isinstance(y_axis, dict):
-            if 'data' in y_axis:
-                ydata = y_axis['data']
-            if 'label' in y_axis:
-                label = y_axis['label']
-            if 'units' in y_axis:
-                units = y_axis['units']
-        else:
-            ydata = y_axis
-
-        if len(ydata) > 1:
-            y_scaling = ydata[1] - ydata[0]
-            if y_scaling > 0:
-                y_offset = np.min(ydata)
-            else:
-                y_offset = np.max(ydata)
-        else:
-            y_scaling = 1.
-            y_offset = 0.
-        self.scaling_options['scaled_yaxis'].update(dict(offset=y_offset, scaling=y_scaling, label=label, units=units))
-        self.set_scaling_axes(self.scaling_options)
 
 
 if __name__ == '__main__':  # pragma: no cover
@@ -1230,7 +1275,7 @@ if __name__ == '__main__':  # pragma: no cover
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
 
     prog = Viewer2D(Form)
-    prog.set_scaling_axes(scaling_options=utils.ScalingOptions(
+    prog.set_axis_scaling(scaling_options=utils.ScalingOptions(
         scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
         scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
