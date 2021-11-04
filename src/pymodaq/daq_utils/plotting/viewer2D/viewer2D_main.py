@@ -583,7 +583,7 @@ class Viewer2D(QObject):
         try:
             if self.raw_data is None:
                 return
-            axes = (0, 1)
+            axes = (1, 0)
             self.data_to_export['data0D'] = OrderedDict([])
             self.data_to_export['data1D'] = OrderedDict([])
             self.measure_data_dict = OrderedDict([])
@@ -755,6 +755,7 @@ class Viewer2D(QObject):
             size = self.ui.ROIselect.size()
             self.ROI_select_signal.emit(QRectF(pos[0], pos[1], size[0], size[1]))
 
+    @Slot()
     def set_autolevels(self):
         self.autolevels = self.auto_levels_action.isChecked()
         if not self.auto_levels_action.isChecked():
@@ -1221,7 +1222,7 @@ if __name__ == '__main__':  # pragma: no cover
     y = np.linspace(0, Ny - 1, Ny)
     from pymodaq.daq_utils.daq_utils import gauss2D
 
-    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)
+    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x/5)**2
     # data_red = pg.gaussianFilter(data_red, (2, 2))
     data_green = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
     # data_green = pg.gaussianFilter(data_green, (2, 2))
@@ -1233,7 +1234,7 @@ if __name__ == '__main__':  # pragma: no cover
         scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
         scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     Form.show()
-    prog.auto_levels_action_sym.trigger()
+    #prog.auto_levels_action_sym.trigger()
     prog.auto_levels_action.trigger()
 
     # data = np.load('triangulation_data.npy')
