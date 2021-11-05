@@ -148,7 +148,6 @@ class EllipseROI(pgROI):
     def width(self):
         return self.size().x()
 
-
 class RectROI(pgROI):
     index_signal = Signal(int)
 
@@ -164,6 +163,62 @@ class RectROI(pgROI):
 
     def emit_index_signal(self):
         self.index_signal.emit(self.index)
+
+
+class ROIScalableGroup(GroupParameter):
+    def __init__(self, roi_type='1D', **opts):
+        opts['type'] = 'group'
+        opts['addText'] = "Add"
+        self.roi_type = roi_type
+        if roi_type != '1D':
+            opts['addList'] = ['RectROI', 'EllipseROI']
+        self.color_list = ROIManager.color_list
+        super().__init__(**opts)
+
+    def addNew(self, typ=''):
+        name_prefix = 'ROI_'
+        child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
+        if not child_indexes:
+            newindex = 0
+        else:
+            newindex = max(child_indexes) + 1
+
+        child = {'name': f'ROI_{newindex:02d}', 'type': 'group', 'removable': True, 'renamable': False}
+
+        children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False}, ]
+        if self.roi_type == '2D':
+            children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
+                             {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
+                              'values': ['red', 'green', 'blue', 'spread']}, ])
+        else:
+            children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
+
+        functions = ['Sum', 'Mean', 'half-life', 'expotime']
+        children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'values': functions,
+                         'value': 'Sum', 'visible': self.roi_type == '1D'})
+        children.extend([
+            {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])}, ])
+        if self.roi_type == '2D':
+            children.extend([{'name': 'position', 'type': 'group', 'children': [
+                {'name': 'x', 'type': 'float', 'value': 0, 'step': 1},
+                {'name': 'y', 'type': 'float', 'value': 0, 'step': 1}
+            ]}, ])
+        else:
+            children.extend([{'name': 'position', 'type': 'group', 'children': [
+                {'name': 'left', 'type': 'float', 'value': 0, 'step': 1},
+                {'name': 'right', 'type': 'float', 'value': 10, 'step': 1}
+            ]}, ])
+        if self.roi_type == '2D':
+            children.extend([
+                {'name': 'size', 'type': 'group', 'children': [
+                    {'name': 'width', 'type': 'float', 'value': 10, 'step': 1},
+                    {'name': 'height', 'type': 'float', 'value': 10, 'step': 1}
+                ]},
+                {'name': 'angle', 'type': 'float', 'value': 0, 'step': 1}])
+
+        child['children'] = children
+
+        self.addChild(child)
 
 
 class ROIManager(QObject):
@@ -394,61 +449,6 @@ class ROIManager(QObject):
             else:
                 self.set_roi(child.children(), new_child.children())
 
-
-class ROIScalableGroup(GroupParameter):
-    def __init__(self, roi_type='1D', **opts):
-        opts['type'] = 'group'
-        opts['addText'] = "Add"
-        self.roi_type = roi_type
-        if roi_type != '1D':
-            opts['addList'] = ['RectROI', 'EllipseROI']
-        self.color_list = ROIManager.color_list
-        super().__init__(**opts)
-
-    def addNew(self, typ=''):
-        name_prefix = 'ROI_'
-        child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
-        if not child_indexes:
-            newindex = 0
-        else:
-            newindex = max(child_indexes) + 1
-
-        child = {'name': f'ROI_{newindex:02d}', 'type': 'group', 'removable': True, 'renamable': False}
-
-        children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False}, ]
-        if self.roi_type == '2D':
-            children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
-                             {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
-                              'values': ['red', 'green', 'blue', 'spread']}, ])
-        else:
-            children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
-
-        functions = ['Sum', 'Mean', 'half-life', 'expotime']
-        children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'values': functions,
-                         'value': 'Sum', 'visible': self.roi_type == '1D'})
-        children.extend([
-            {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])}, ])
-        if self.roi_type == '2D':
-            children.extend([{'name': 'position', 'type': 'group', 'children': [
-                {'name': 'x', 'type': 'float', 'value': 0, 'step': 1},
-                {'name': 'y', 'type': 'float', 'value': 0, 'step': 1}
-            ]}, ])
-        else:
-            children.extend([{'name': 'position', 'type': 'group', 'children': [
-                {'name': 'left', 'type': 'float', 'value': 0, 'step': 1},
-                {'name': 'right', 'type': 'float', 'value': 10, 'step': 1}
-            ]}, ])
-        if self.roi_type == '2D':
-            children.extend([
-                {'name': 'size', 'type': 'group', 'children': [
-                    {'name': 'width', 'type': 'float', 'value': 10, 'step': 1},
-                    {'name': 'height', 'type': 'float', 'value': 10, 'step': 1}
-                ]},
-                {'name': 'angle', 'type': 'float', 'value': 0, 'step': 1}])
-
-        child['children'] = children
-
-        self.addChild(child)
 
 
 if __name__ == '__main__':
