@@ -81,7 +81,7 @@ class DAQ_Logger(gutils.CustomApp):
         log_type_combo = QtWidgets.QComboBox()
         log_type_combo.addItems(LOG_TYPES)
         log_type_combo.currentTextChanged.connect(self.set_log_type)
-        self.actions['log_type'] = self.toolbar.addWidget(log_type_combo)
+        self._actions['log_type'] = self.toolbar.addWidget(log_type_combo)
         self.toolbar.addSeparator()
         self.addaction('grab_all', 'Grab All', 'run_all', "Grab all selected detectors",
                        checkable=True, toolbar=self.toolbar)
@@ -121,13 +121,13 @@ class DAQ_Logger(gutils.CustomApp):
 
     def connect_things(self):
         self.status_signal[str].connect(self.dashboard.add_status)
-        self.actions['quit'].connect(self.quit_fun)
+        self._actions['quit'].connect(self.quit_fun)
 
-        self.actions['start'].connect(self.start_logging)
-        self.actions['stop'].connect(self.stop_logging)
-        self.actions['grab_all'].connect(self.start_all)
+        self._actions['start'].connect(self.start_logging)
+        self._actions['stop'].connect(self.stop_logging)
+        self._actions['grab_all'].connect(self.start_all)
 
-        self.actions['infos'].connect(self.dashboard.show_log)
+        self._actions['infos'].connect(self.dashboard.show_log)
 
     def setup_menu(self):
         """
@@ -226,19 +226,19 @@ class DAQ_Logger(gutils.CustomApp):
 
                     self.logger.add_detector(det.title, settings_str)
 
-                self.actions['start'].setEnabled(True)
-                self.actions['stop'].setEnabled(True)
+                self._actions['start'].setEnabled(True)
+                self._actions['stop'].setEnabled(True)
                 return True
             else:
                 self.update_status('Cannot start logging... No detectors selected')
-                self.actions['start'].setEnabled(False)
-                self.actions['stop'].setEnabled(True)
+                self._actions['start'].setEnabled(False)
+                self._actions['stop'].setEnabled(True)
                 return False
 
         else:
             self.update_status('Cannot start logging... check connections')
-            self.actions['start'].setEnabled(False)
-            self.actions['stop'].setEnabled(True)
+            self._actions['start'].setEnabled(False)
+            self._actions['stop'].setEnabled(True)
             return False
 
     def start_all(self):
@@ -279,7 +279,7 @@ class DAQ_Logger(gutils.CustomApp):
         self.logger_thread.log_acquisition = log_acquisition
         self.logger_thread.start()
 
-        self.actions['start'].setEnabled(False)
+        self._actions['start'].setEnabled(False)
         QtWidgets.QApplication.processEvents()
         self.logging_state.set_as_false()
 
@@ -305,7 +305,7 @@ class DAQ_Logger(gutils.CustomApp):
             status = 'Data Logging has been stopped due to overshoot'
 
         self.update_status(status)
-        self.actions['start'].setEnabled(True)
+        self._actions['start'].setEnabled(True)
 
     @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main

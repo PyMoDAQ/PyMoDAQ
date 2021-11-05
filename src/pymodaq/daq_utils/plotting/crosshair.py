@@ -10,9 +10,14 @@ class Crosshair(pg.GraphicsObject):
     crosshair_dragged = Signal(float, float, name='crosshair_dragged')
     # signal used to pass crosshair position to other methods
 
-    def __init__(self, pyqtplot, orientation='both'):
-        pg.GraphicsObject.__init__(self)
-        self.pyqtplot = pyqtplot
+    def __init__(self, plotitem, orientation='both'):
+        super().__init__()
+        
+        if hasattr(plotitem, 'plotitem'):
+            # in case one pass a plot or image widget
+            self.plotitem = plotitem.plotitem
+        else:
+            self.plotitem = plotitem
 
         # self.crosshair_dragged[float,float].connect(self.print_pos) #exemple on how to use the crosshair_dragged signal
         if orientation == 'both':
@@ -28,8 +33,8 @@ class Crosshair(pg.GraphicsObject):
         self.vLine = pg.InfiniteLine(angle=90, movable=True)
         self.hLine = pg.InfiniteLine(angle=0, movable=True)
 
-        self.pyqtplot.addItem(self.vLine, ignoreBounds=True)
-        self.pyqtplot.addItem(self.hLine, ignoreBounds=True)
+        self.plotitem.addItem(self.vLine, ignoreBounds=True)
+        self.plotitem.addItem(self.hLine, ignoreBounds=True)
 
         self.vLine.sigDragged.connect(self.update_hline)
         self.hLine.sigDragged.connect(self.update_vline)

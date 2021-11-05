@@ -14,7 +14,7 @@ from pymodaq.daq_utils.plotting.crosshair import Crosshair
 import numpy as np
 from easydict import EasyDict as edict
 import copy
-from pymodaq.daq_utils.gui_utils import DockArea, QAction, addaction
+from pymodaq.daq_utils.gui_utils import DockArea, ActionManager
 
 import pymodaq.daq_utils.daq_utils as utils
 import datetime
@@ -22,28 +22,131 @@ from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
+utils.set_logger(utils.get_module_name(__file__))
+
 Gradients.update(OrderedDict([
     ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
     ('green', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 255, 0, 255))], 'mode': 'rgb'}),
-    ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}), ]))
+    ('blue', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (0, 0, 255, 255))], 'mode': 'rgb'}),
+    ('spread', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'}),]))
 
-utils.set_logger(utils.get_module_name(__file__))
-
+COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
 IMAGE_TYPES = ['red', 'green', 'blue', 'spread']
 LINEOUT_WIDGETS = ['hor', 'ver', 'int']
 COLOR_LIST = utils.plot_colors
 
-class View2D(QObject):
-    sig_double_clicked = Signal(float, float)
-    crosshair_clicked = Signal(bool)
 
+def image_item_factory(axisOrder='row-major'):
+    image = ImageItem()
+    image.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+    image.setOpts(axisOrder=axisOrder)
+    return image
+
+
+def histogram_factory(image_item=None, gradient='red'):
+    """
+    Create a pyqtgraph HistogramLUTWidget widget (histogram) and link it to the corresponding image_item
+    Parameters
+    ----------
+    image_item: (ImageItem) the image item to be linked with the histogram
+    gradient: (str) either 'red', 'green', 'blue', 'spread' or one of the Gradients
+
+    Returns
+    -------
+    HistogramLUTWidget instance
+    """
+
+    if gradient not in Gradients:
+        return KeyError(f'Possible gradient are {Gradients} not {gradient}')
+
+    histo = pg.HistogramLUTWidget()
+    if image_item is not None:
+        histo.setImageItem(image_item)
+
+    histo.gradient.loadPreset(gradient)
+    return histo
+
+
+def curve_item_factory(pen='red'):
+    """
+    Create a PlotCurveItem with the given pen
+    Parameters
+    ----------
+    pen: any type of arguments accepted by pyqtgraph.function.mkColor or one of the COLORS_DICT key
+
+    Returns
+    -------
+    PlotCurveItem
+    """
+    if isinstance(pen, str):
+        if pen in COLORS_DICT:
+            pen = COLORS_DICT[pen]
+
+    return PlotCurveItem(pen=pen)
+
+
+class ActionManager(ActionManager):
+    def __init__(self, toolbar=None):
+        super().__init__(toolbar=toolbar)
+
+    def setup_actions(self):
+
+        self.addaction('position', '(,)')
+        self.addaction('red', 'Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
+        self.addaction('green', 'Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
+        self.addaction('blue', 'Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
+        self.addaction('spread', 'Spread Channel', 'grey_icon',
+                       tip='Show/Hide Spread Channel', checkable=True)
+
+        self.addaction('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
+        self.addaction('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
+        self.addaction('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
+        self.addaction('init_plot', 'Init. Plot', 'Refresh', tip='Initialize the plots')
+
+        self.addaction('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
+        self.addaction('auto_levels', 'AutoLevels', 'autoscale',
+                       tip='Scale Histogram to Min/Max intensity', checkable=True)
+        self.addaction('auto_levels_sym', 'AutoLevels Sym.', 'autoscale',
+                       tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
+
+        self.addaction('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
+        self.addaction('ROIselect', 'ROI Select', 'Select_24',
+                       tip='Show/Hide ROI selection area', checkable=True)
+        self.addaction('flip_ud', 'Flip UD', 'scale_vertically',
+                       tip='Flip the image up/down', checkable=True)
+        self.addaction('flip_lr', 'Flip LR', 'scale_horizontally',
+                       tip='Flip the image left/right', checkable=True)
+        self.addaction('rotate', 'Rotate', 'rotation2',
+                       tip='Rotate the image', checkable=True)
+
+
+class View2D(QObject):
     def __init__(self, parent):
         super().__init__()
         # setting the gui
         self.parent = parent
-        self.image_widget = None
+        self.image_widget = ImageWidget()
 
         self.setupUI()
+        self.prepare_connect_internal_ui()
+
+    def prepare_for_lineouts(self, ratio=0.7):
+        QtGui.QGuiApplication.processEvents()
+        self.splitter_VRight.splitterMoved[int, int].emit(int(ratio * self.parent.height()), 1)
+        self.splitter.moveSplitter(int(ratio * self.parent.width()), 1)
+        self.splitter_VLeft.moveSplitter(int(ratio * self.parent.height()), 1)
+        self.splitter_VLeft.splitterMoved[int, int].emit(int(ratio * self.parent.height()), 1)
+        QtGui.QGuiApplication.processEvents()
+
+    def get_view_range(self):
+        return self.image_widget.view.viewRange()
+
+    def lock_aspect_ratio(self, lock=True):
+        self.plotitem.vb.setAspectLocked(lock=lock, ratio=1)
+
+    def prepare_connect_internal_ui(self):
+        self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
+        self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
 
     def setupUI(self):
         vertical_layout = QtWidgets.QVBoxLayout()
@@ -55,7 +158,6 @@ class View2D(QObject):
         # ###### Actions ##########
         self.toolbar = QtWidgets.QToolBar()
         splitter_vertical.addWidget(self.toolbar)
-        self.setup_actions()
         # ############################
 
         # ####### Graphs, ImageItem, Histograms ############
@@ -63,38 +165,27 @@ class View2D(QObject):
         self.graphs_widget.setLayout(QtWidgets.QHBoxLayout())
         self.graphs_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.setupGraphs(self.graphs_widget.layout())
-
         splitter_vertical.addWidget(self.graphs_widget)
-        for image in self.image_items:
-            self.plotitem.addItem(self.image_items[image])
-        #self.graphicsView.setCentralItem(self.plotitem) # doesn't make sense... as self.graphicsView == self.imagewidget
-        # ################################
-
-        # ############## histograms ###############
-        histo_layout = QtWidgets.QHBoxLayout()
-        self.setupHisto(histo_layout)
-        # #########################################
 
         # ############### ROI select an area #####
         self.ROIselect = pg.RectROI([0, 0], [10, 10], centered=True, sideScalers=True)
         self.plotitem.addItem(self.ROIselect)
         # ############################################
 
-        # ######## Isocurve ##########
-        self.setupIsoCurve()
-        ##############################
+    @Slot(int, int)
+    def move_left_splitter(self, pos, index):
+        self.splitter_VLeft.blockSignals(True)
+        self.splitter_VLeft.moveSplitter(pos, index)
+        self.splitter_VLeft.blockSignals(False)
 
-        # ###### Crosshair ###########
-        self.setup_crosshair()
-        ##############################
+    @Slot(int, int)
+    def move_right_splitter(self, pos, index):
+        self.splitter_VRight.blockSignals(True)
+        self.splitter_VRight.moveSplitter(pos, index)
+        self.splitter_VRight.blockSignals(False)
 
-        self._roi_curves = OrderedDict()
-
-        self.prepare_connect_internal_ui()
-
-    def emit_double_clicked(self, posx, posy):
-        self.sig_double_clicked.emit(posx, posy)
-
+    def add_histogram(self, histogram):
+        self.widget_histo.layout().addWidget(histogram)
 
     def setupGraphs(self, graphs_layout):
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -102,6 +193,7 @@ class View2D(QObject):
 
         self.widget_histo = QtWidgets.QWidget()
         graphs_layout.addWidget(self.widget_histo)
+        self.widget_histo.setLayout(QtWidgets.QHBoxLayout())
 
         self.splitter_VLeft = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         self.splitter_VRight = QtWidgets.QSplitter(QtCore.Qt.Vertical)
@@ -109,101 +201,144 @@ class View2D(QObject):
         self.splitter.addWidget(self.splitter_VLeft)
         self.splitter.addWidget(self.splitter_VRight)
 
-        self.image_widget = ImageWidget()
-
-        self.lineout_widgets = {widg_key: pg.PlotWidget() for widg_key in LINEOUT_WIDGETS}
+        self._lineout_widgets = {widg_key: pg.PlotWidget() for widg_key in LINEOUT_WIDGETS}
         
         self.splitter_VLeft.addWidget(self.image_widget)
-        self.splitter_VLeft.addWidget(self.lineout_widgets['hor'])
-        self.splitter_VRight.addWidget(self.lineout_widgets['ver'])
-        self.splitter_VRight.addWidget(self.lineout_widgets['int'])
-
-        self.set_axis_label('bottom', label='', units='Pxls')
-        self.set_axis_label('left', label='', units='Pxls')
+        self.splitter_VLeft.addWidget(self._lineout_widgets['hor'])
+        self.splitter_VRight.addWidget(self._lineout_widgets['ver'])
+        self.splitter_VRight.addWidget(self._lineout_widgets['int'])
 
         self.image_widget.add_scaled_axis('right')
         self.image_widget.add_scaled_axis('top')
 
-        self.image_widget.view.sig_double_clicked.connect(self.emit_double_clicked)
+    def get_double_clicked(self):
+        return self.image_widget.view.sig_double_clicked
 
+    def get_lineout_widget(self, name):
+        if name not in LINEOUT_WIDGETS:
+            raise KeyError(f'The lineout_widget reference should be within {LINEOUT_WIDGETS} not {name}')
+        return self._lineout_widgets[name]
+
+    def get_axis(self, position='left'):
+        return self.image_widget.getAxis(position)
+
+    @property
+    def plotitem(self):
+        return self.image_widget.plotitem
+
+
+class Viewer2D(QObject):
+    crosshair_dragged = Signal(float, float)  # signal used to pass crosshair position to other modules in
+    crosshair_clicked = Signal(bool)
+    # scaled axes units
+    sig_double_clicked = Signal(float, float)
+
+    roi_changed_signal = Signal()
+    roi_change_finished_signal = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__()
+
+        if parent is None:
+            parent = QtWidgets.QWidget()
+            parent.show()
+
+        self.view = View2D(parent)
+        self.action_manager = ActionManager(self.view.toolbar)
+        self.roi_manager = ROIManager(self.image_widget, '2D')
+        self.crosshair = Crosshair(self.image_widget)
+        self.model = Model2D()
+
+        self._crosshair_hcurves = dict([])
+        self._crosshair_vcurves = dict([])
+
+        self.setup_images()
+
+        self.setup_histograms()
+
+        self.setup_iso_curve()
+
+        self.setup_crosshair()
+
+        self._roi_curves = OrderedDict()
+
+        self.setupROI()
+
+        self.set_axis_label('bottom', label='', units='Pxls')
+        self.set_axis_label('left', label='', units='Pxls')
+
+        self.prepare_connect_internal_ui()
+
+        self.prepare_connect_ui()
+
+    def __getattr__(self, item):
+        """
+        If item is not found in self, try to look for an attribute in ActionManager such as:
+        is_action_visible, is_action_checked, set_action_visible, set_action_checked, connect_action
+        """
+        if self.action_manager is not None:
+            if hasattr(self.action_manager, item):
+                return getattr(self.action_manager, item)
+        else:
+            raise AttributeError(f'Attribute {item} cannot be found in self nor in action_manager')
+
+    @property
+    def image_widget(self):
+        return self.view.image_widget
+
+    def setup_images(self):
         self.image_items = dict([])
         for img_key in IMAGE_TYPES:
-            self.image_items[img_key] = self.image_item_factory()
+            self.image_items[img_key] = image_item_factory()
         self.image_items['spread'] = TriangulationItem()
+        for image in self.image_items:
+            self.view.plotitem.addItem(self.image_items[image])
 
-
-
-    def image_item_factory(self, axisOrder='row-major'):
-        image = ImageItem()
-        image.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-        image.setOpts(axisOrder=axisOrder)
-        return image
-
-    def histogram_factory(self, name, Ntick=3):
-        """
-        Create a pyqtgraph HistogramLUTWidget widget (histogram) and link it to the corresponding image_item
-        Parameters
-        ----------
-        name: (str) either 'red', 'green', 'blue', 'spread'
-        Ntick: (int) Number ot ticks in the histogram gradient editor
-
-        Returns
-        -------
-        HistogramLUTWidget instance
-        """
-
-        if name not in IMAGE_TYPES:
-            return KeyError(f'Possible names are {IMAGE_TYPES} not {name}')
-
-        histo = pg.HistogramLUTWidget()
-        histo.setImageItem(self.image_items[name])
-
-        ticks = np.linspace(0, 255, Ntick)
-        if name == 'red':
-            colors = [(int(r), 0, 0) for r in ticks]
-        elif name == 'green':
-            colors = [(0, int(r), 0) for r in ticks]
-        elif name == 'blue':
-            colors = [(0, 0, int(r)) for r in ticks]
-        elif name == 'spread':
-            colors = [(int(r), int(r), int(r)) for r in ticks]
-        cmap = pg.ColorMap(pos=np.linspace(0.0, 1.0, Ntick), color=colors)
-        histo.gradient.setColorMap(cmap)
-        return histo
-
-    def setupHisto(self, histo_layout):
-        self.histograms = dict([])
+    def setup_histograms(self):
+        self._histograms = dict([])
         for histo_key in IMAGE_TYPES:
-            self.histograms[histo_key] = self.histogram_factory(histo_key)
+            self._histograms[histo_key] = histogram_factory(self.image_items[histo_key], gradient=histo_key)
+            self.view.add_histogram(self._histograms[histo_key])
+            self._histograms[histo_key].setVisible(False)
 
-        self.widget_histo.setLayout(histo_layout)
-        for histo_key in IMAGE_TYPES:
-            histo_layout.addWidget(self.histograms[histo_key])
-            self.histograms[histo_key].setVisible(False)
-
-    def curve_item_factory(self, name=None, pen='r'):
-        if name is not None:
-            if name == 'red':
-                pen = 'r'
-            elif name == 'green':
-                pen = 'g'
-            elif name == 'blue':
-                pen = 'b'
-            elif name == 'spread':
-                pen = (128, 128, 128)
-        curve = PlotCurveItem(pen=pen)
-        return curve
+    def show_hide_histogram(self):
+        for key in self._histograms:
+            if self._actions[key].isChecked():
+                self._histograms[key].setVisible(self._actions['histo'].isChecked())
 
     def setup_crosshair(self):
-        self.crosshair = Crosshair(self.image_widget.plotitem)
-        self.crosshair_hcurves = dict([])
-        self.crosshair_vcurves = dict([])
         for img_key in IMAGE_TYPES:
-            self.crosshair_hcurves[img_key] = self.curve_item_factory(img_key)
-            self.crosshair_vcurves[img_key] = self.curve_item_factory(img_key)
+            self._crosshair_hcurves[img_key] = curve_item_factory(img_key)
+            self._crosshair_vcurves[img_key] = curve_item_factory(img_key)
 
         for curve_key in IMAGE_TYPES:
-            self.add_lineout_items(self.crosshair_hcurves[curve_key], self.crosshair_vcurves[curve_key])
+            self.add_lineout_items(self._crosshair_hcurves[curve_key], self._crosshair_vcurves[curve_key])
+
+    def setupROI(self):
+        self.roi_manager.new_ROI_signal.connect(self.add_ROI)
+        self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
+        self.roi_manager.roi_settings_changed.connect(self.update_roi)
+        self.view.splitter.addWidget(self.roi_manager.roiwidget)
+        self.roi_manager.roiwidget.setVisible(False)
+
+    def setup_iso_curve(self):
+        # TODO provide isocurve for the spread points
+        # # Isocurve drawing
+        parent_image_item = 'red'
+
+        self.isocurve_item = pg.IsocurveItem(level=0.8, pen='g', axisOrder='row-major')
+        self.isocurve_item.setParentItem(self.image_items[parent_image_item])
+        self.isocurve_item.setZValue(5)
+
+        # # Draggable line for setting isocurve level
+        self.isoLine = pg.InfiniteLine(angle=0, movable=True, pen='g')
+        self._histograms[parent_image_item].vb.addItem(self.isoLine)
+        self._histograms[parent_image_item].vb.setMouseEnabled(y=False)  # makes user interaction a little easier
+        self.isoLine.setValue(0.8)
+        self.isoLine.setZValue(1000)  # bring iso line above contrast controls
+
+    def update_isocurve(self):
+        self.isocurve_item.setLevel(self.isoLine.value())
 
     def add_roi_lineout_items(self, index, pen):
         """
@@ -214,7 +349,7 @@ class View2D(QObject):
         pen: (str, tuple) any argument able to generate a QPen, see pyqtgraph.functions.mkPen
         """
         self._roi_curves[f'ROI_{index:02d}'] =\
-            {curv_key: self.curve_item_factory(pen) for curv_key in LINEOUT_WIDGETS}
+            {curv_key: curve_item_factory(pen) for curv_key in LINEOUT_WIDGETS}
         self.add_lineout_items(*self._roi_curves[f'ROI_{index:02d}'].values())
 
     def remove_roi_lineout_items(self, index):
@@ -235,7 +370,7 @@ class View2D(QObject):
         curve_items: (PlotCurveItem) at most 3 of them
         """
         for ind, curve_item in enumerate(curve_items):
-            self.lineout_widgets[LINEOUT_WIDGETS[ind]].addItem(curve_item)
+            self.view.get_lineout_widget(LINEOUT_WIDGETS[ind]).addItem(curve_item)
 
     def remove_lineout_items(self, *curve_items):
         """
@@ -246,50 +381,22 @@ class View2D(QObject):
         """
 
         for ind, curve_item in enumerate(curve_items):
-            self.lineout_widgets[LINEOUT_WIDGETS[ind]].removeItem(curve_item)
+            self.view.get_lineout_widget(LINEOUT_WIDGETS[ind]).removeItem(curve_item)
 
     def get_roi_curves(self):
         return self._roi_curves
 
-    def get_roi_state(self):
-        return self.roi_action.isChecked()
-
-
-    def setupIsoCurve(self):
-        # TODO provide isocurve for the spread points
-        # # Isocurve drawing
-        parent_image_item = 'red'
-
-        self.isocurve_item = pg.IsocurveItem(level=0.8, pen='g', axisOrder='row-major')
-        self.isocurve_item.setParentItem(self.image_items[parent_image_item])
-        self.isocurve_item.setZValue(5)
-
-        # # Draggable line for setting isocurve level
-        self.isoLine = pg.InfiniteLine(angle=0, movable=True, pen='g')
-        self.histograms[parent_image_item].vb.addItem(self.isoLine)
-        self.histograms[parent_image_item].vb.setMouseEnabled(y=False)  # makes user interaction a little easier
-        self.isoLine.setValue(0.8)
-        self.isoLine.setZValue(1000)  # bring iso line above contrast controls
-
-    def update_isocurve(self):
-        self.isocurve_item.setLevel(self.isoLine.value())
-
     def show_hide_iso(self):
-        if self.actions['isocurve'].isChecked():
+        if self.is_action_checked('isocurve'):
             self.isocurve_item.show()
             self.isoLine.show()
-            self.actions['histo'].setChecked(True)
+            self.set_action_checked('histo', True)
             self.show_hide_histogram()
         else:
             self.isocurve_item.hide()
             self.isoLine.hide()
 
-    def show_hide_histogram(self):
-        for key in self.histograms:
-            if self.actions[key].isChecked():
-                self.histograms[key].setVisible(self.actions['histo'].isChecked())
-
-    def setGradient(self, histo='red', gradient='grey'):
+    def set_gradient(self, histo='red', gradient='grey'):
         """
         Change the color gradient of the specified histogram
         Parameters
@@ -298,17 +405,14 @@ class View2D(QObject):
         gradient: (str or Gradient)
         """
         if gradient in Gradients:
-            if histo == 'red' or histo == 'all':
-                self.histogram_red.item.gradient.loadPreset(gradient)
-            if histo == 'blue' or histo == 'all':
-                self.histogram_blue.item.gradient.loadPreset(gradient)
-            if histo == 'green' or histo == 'all':
-                self.histogram_green.item.gradient.loadPreset(gradient)
-            if histo == 'spread' or histo == 'all':
-                self.histogram_spread.item.gradient.loadPreset(gradient)
+            if histo == 'all':
+                for key in IMAGE_TYPES:
+                    self._histograms[key].item.gradient.loadPreset(gradient)
+            else:
+                self._histograms[histo].item.gradient.loadPreset(gradient)
 
-    def get_axis(self, position='left'):
-        return self.image_widget.getAxis(position)
+    def get_axis(self, position):
+        return self.view.get_axis(position)
 
     def set_axis_label(self, position, label='', units=''):
         """
@@ -322,198 +426,111 @@ class View2D(QObject):
         axis = self.get_axis(position)
         axis.setLabel(text=label, units=units)
 
-    @property
-    def plotitem(self):
-        return self.image_widget.plotitem
-
-    def addaction(self, name='', icon_name='', tip='', checkable=False, slot=None, menu=None):
-        return addaction(name=name, icon_name=icon_name, tip=tip, checkable=checkable, slot=slot,
-                         toolbar=self.toolbar, menu=menu)
-
-    def is_action_visible(self, action_name):
-        if action_name in self.actions:
-            return self.actions[action_name].isVisible()
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced in the view actions: {self.actions}')
-
-    def is_action_checked(self, action_name):
-        if action_name in self.actions:
-            return self.actions[action_name].isChecked()
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced in the view actions: {self.actions}')
-
-    def set_action_visible(self, action_name, visible=True):
-        if action_name in self.actions:
-            self.actions[action_name].setVisible(visible)
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced in the view actions: {self.actions}')
-
-    def set_action_checked(self, action_name, checked=True):
-        if action_name in self.actions:
-            self.actions[action_name].setChecked(checked)
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced in the view actions: {self.actions}')
-
-    def setup_actions(self):
-
-        self.actions = dict([])
-        self.actions['position'] = self.addaction('(,)')
-        self.actions['red'] = self.addaction('Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
-        self.actions['green'] = self.addaction('Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
-        self.actions['blue'] = self.addaction('Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
-        self.actions['spread'] = self.addaction('Spread Channel', 'grey_icon',
-                                           tip='Show/Hide Spread Channel', checkable=True)
-
-        self.actions['histo'] = self.addaction('Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
-        self.actions['roi'] = self.addaction('ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
-        self.actions['isocurve'] = self.addaction('IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
-        self.actions['init_plot'] = self.addaction('Init. Plot', 'Refresh', tip='Initialize the plots')
-
-        self.actions['aspect_ratio'] = self.addaction('Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
-        self.actions['auto_levels'] = self.addaction('AutoLevels', 'autoscale',
-                                                tip='Scale Histogram to Min/Max intensity', checkable=True)
-        self.actions['auto_levels_sym'] = self.addaction('AutoLevels Sym.', 'autoscale',
-                                                    tip='Make the autoscale of the histograms symetric with'
-                                                        ' respect to 0',
-                                                    checkable=True)
-
-        self.actions['crosshair'] = self.addaction('CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
-        self.actions['ROIselect'] = self.addaction('ROI Select', 'Select_24',
-                                              tip='Show/Hide ROI selection area', checkable=True)
-        self.actions['flip_ud'] = self.addaction('Flip UD', 'scale_vertically',
-                                                tip='Flip the image up/down', checkable=True)
-        self.actions['flip_lr'] = self.addaction('Flip LR', 'scale_horizontally',
-                                                tip='Flip the image left/right', checkable=True)
-        self.actions['rotate'] = self.addaction('Rotate', 'rotation2',
-                                                tip='Rotate the image', checkable=True)
-
     def update_image_visibility(self):
-        self.image_items['blue'].setVisible(self.actions['blue'].isChecked())
-        self.image_items['green'].setVisible(self.actions['green'].isChecked())
-        self.image_items['red'].setVisible(self.actions['red'].isChecked())
-        self.image_items['spread'].setVisible(self.actions['spread'].isChecked())
+        for key in IMAGE_TYPES:
+            self.image_items[key].setVisible(self._actions[key].isChecked())
 
     def prepare_connect_internal_ui(self):
-
-        self.connect_action('red', self.update_image_visibility)
-        self.connect_action('blue', self.update_image_visibility)
-        self.connect_action('green', self.update_image_visibility)
-        self.connect_action('spread', self.update_image_visibility)
+        for key in IMAGE_TYPES:
+            self.connect_action(key, self.update_image_visibility)
 
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
-
-        self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
-        self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
-
         self.connect_action('histo', self.show_hide_histogram)
-        
-        self.ROIselect.setVisible(False)
+
+        self.view.ROIselect.setVisible(False)
         self.connect_action('ROIselect', self.show_ROI_select)
 
         self.connect_action('isocurve', self.show_hide_iso)
         self.isoLine.sigDragged.connect(self.update_isocurve)
-        self.actions['isocurve'].setChecked(False)
+        self._actions['isocurve'].setChecked(False)
         self.show_hide_iso()
 
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.show_hide_crosshair()
 
+        self.show_lineouts()
+
+    def prepare_connect_ui(self):
+        # selection area checkbox
+        self.set_action_visible('red', True)
+        self.set_action_checked('red', True)
+        self.set_action_visible('green', True)
+        self.set_action_checked('green', True)
+        self.set_action_visible('blue', True)
+        self.set_action_checked('blue', True)
+        self.set_action_visible('spread', True)
+        self.set_action_checked('spread', True)
+
+        #self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
+
+        self.connect_action('flip_ud', slot=self.update_image)
+        self.connect_action('flip_lr', slot=self.update_image)
+        self.connect_action('rotate', slot=self.update_image)
+
+
+        self.connect_action('init_plot', self.ini_plot)
+
+        self.get_crosshair_signal().connect(self.update_crosshair_data)
+        self.connect_action('crosshair', self.show_hide_crosshair)
+
+        self.connect_action('roi', self.roi_clicked)
+
+        self.view.get_double_clicked().connect(self.double_clicked)
+
     def get_crosshair_signal(self):
+        """Convenience function from the Crosshair"""
         return self.crosshair.crosshair_dragged
 
     def get_crosshair_position(self):
+        """Convenience function from the Crosshair"""
         return self.crosshair.get_positions()
 
     def set_crosshair_position(self, *positions):
+        """Convenience function from the Crosshair"""
         self.crosshair.set_crosshair_position(*positions)
 
     def show_hide_crosshair(self):
-        if self.actions['crosshair'].isChecked():
+        if self.is_action_checked('crosshair'):
             self.crosshair.setVisible(True)
-            self.actions['position'].setVisible(True)
+            self.set_action_checked('position', True)
 
-            range = self.image_widget.view.viewRange()
+            range = self.view.get_view_range()
             self.set_crosshair_position(np.mean(np.array(range[0])), np.mean(np.array(range[0])))
 
         else:
-            self.actions['position'].setVisible(False)
+            self.set_action_visible('position', False)
             self.crosshair.setVisible(False)
 
-
-        self.crosshair_clicked.emit(self.actions['crosshair'].isChecked())
+        self.crosshair_clicked.emit(self.is_action_checked('crosshair'))
 
     def show_crosshair_curve(self, curve_key, show=True):
-        self.crosshair_hcurves[curve_key].setVisible(show)
-        self.crosshair_vcurves[curve_key].setVisible(show)
+        self._crosshair_hcurves[curve_key].setVisible(show)
+        self._crosshair_vcurves[curve_key].setVisible(show)
 
     def lock_aspect_ratio(self):
-        if self.actions['aspect_ratio'].isChecked():
-            self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
-        else:
-            self.plotitem.vb.setAspectLocked(lock=False)
+        self.view.lock_aspect_ratio(self._actions['aspect_ratio'].isChecked())
 
     def show_ROI_select(self):
-        self.ROIselect.setVisible(self.actions['ROIselect'].isChecked())
+        self.view.ROIselect.setVisible(self._actions['ROIselect'].isChecked())
 
-    @Slot(int, int)
-    def move_left_splitter(self, pos, index):
-        self.splitter_VLeft.blockSignals(True)
-        self.splitter_VLeft.moveSplitter(pos, index)
-        self.splitter_VLeft.blockSignals(False)
+    def show_lineouts(self):
+        state = self.is_action_checked('roi') or self.is_action_checked('crosshair')
 
-    @Slot(int, int)
-    def move_right_splitter(self, pos, index):
-        self.splitter_VRight.blockSignals(True)
-        self.splitter_VRight.moveSplitter(pos, index)
-        self.splitter_VRight.blockSignals(False)
+        for lineout_name in LINEOUT_WIDGETS:
+            lineout = self.view.get_lineout_widget(lineout_name)
+            lineout.setMouseEnabled(state, state)
+            lineout.showAxis('left', state)
+            lineout.setVisible(state)
+            lineout.update()
 
-    def connect_action(self, name, slot, connect=True):
-        """
-        Connect (or disconnect) the action referenced by name to the given slot
-        Parameters
-        ----------
-        name: (str) key of the action as referenced in the self.actions dict
-        slot: (method) a method/function
-        connect: (bool) if True connect the trigegr signal of the action to the defined slot else disconnect it
-        """
-        if name in self.actions:
-            if connect:
-                self.actions[name].triggered.connect(slot)
-            else:
-                try:
-                    self.actions[name].triggered.disconnect()
-                except (TypeError,) as e:
-                    pass  # the action was not connected
-        else:
-            raise KeyError(f'The action with name: {name} is not referenced in the view actions: {self.actions}')
+        self.view.prepare_for_lineouts()
 
-    def set_action_visible(self, name, visible=True):
-        """
-        Turn the widget representation of the action referenced by name visible or not
-        Parameters
-        ----------
-        name: (str) key of the action as referenced in the self.actions dict
-        visible: (bool) if True, set the widget visible else hide it
-        """
-        if name in self.actions:
-            self.actions[name].setVisible(visible)
-        else:
-            raise KeyError(f'The action with name: {name} is not referenced in the view actions: {self.actions}')
-
-    def set_action_checked(self, name, checked=True):
-        """
-        Turn the widget representation of the action (button) referenced by name as checked or not (if checkable)
-        Parameters
-        ----------
-        name: (str) key of the action as referenced in the self.actions dict
-        checked: (bool) if True, set the widget check state to True else False
-        """
-        if name in self.actions:
-            if self.actions[name].isCheckable():
-                self.actions[name].setChecked(checked)
-        else:
-            raise KeyError(f'The action with name: {name} is not referenced in the view actions: {self.actions}')
+    @Slot(float, float)
+    def double_clicked(self, posx, posy):
+        self.crosshair.set_crosshair_position(posx, posy)
+        self.update_crosshair_data(posx, posy)
+        self.sig_double_clicked.emit(posx, posy)
 
     def set_axis_scaling(self, position='top', scaling=1, offset=0, label='', units='Pxls'):
         """
@@ -574,28 +591,85 @@ class View2D(QObject):
         scaling, offset, label, units = self.extract_axis_info(axis)
         self.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
 
+    @Slot(list)
+    def update_roi(self, changes):
+        for param, change, param_value in changes:
+            if change == 'value':
+                if param.name() == 'Color':
+                    key = param.parent().name()
+                    for curve in self._roi_curves[key].values():
+                        curve.setPen(param_value)
 
-class Viewer2D(QObject):
+            elif change == 'childAdded':
+                pass
+            elif change == 'parent':
+                key = param.name()
+                for lineout_name in LINEOUT_WIDGETS:
+                    self.view.get_lineout_widget(lineout_name).removeItem(self._roi_curves[key].pop[lineout_name])
+
+        self.model.roi_changed()
+
+    @Slot(str)
+    def remove_ROI(self, roi_name):
+        index = int(roi_name.split('_')[1])
+        self.remove_roi_lineout_items(index)
+
+        self.model.roi_changed()
+
+    @Slot(int, str)
+    def add_ROI(self, newindex, roi_type):
+        item = self.roi_manager.ROIs['ROI_{:02d}'.format(newindex)]
+        item.sigRegionChanged.connect(self.model.roi_changed)
+        item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(newindex))
+        color = item_param.child(('Color')).value()
+
+        self.add_roi_lineout_items(newindex, color)
+
+        #self.data_integrated_plot[f"ROI_{newindex:02d}"] = np.zeros((2, 1))
+
+        # if self.isdata['red']:
+        #     item_param.child('use_channel').setValue('red')
+        # elif self.isdata['green']:
+        #     item_param.child('use_channel').setValue('green')
+        # elif self.isdata['blue']:
+        #     item_param.child('use_channel').setValue('blue')
+        # elif self.isdata['spread']:
+        #     item_param.child('use_channel').setValue('spread')
+
+        self.model.roi_changed()
+
+    def roi_clicked(self):
+        roistate = self.is_action_checked('roi')
+        self.roi_manager.roiwidget.setVisible(roistate)
+
+        for k, roi in self.roi_manager.ROIs.items():
+            roi.setVisible(roistate)
+            for item in self.get_roi_curves()[k].values():
+                item.setVisible(roistate)
+
+        if self.is_action_checked('roi'):
+            self.model.roi_changed()
+
+        self.show_lineouts()
+
+        # if len(self.ROIs) == 0 and roistate:
+        #     self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
+
+
+class Model2D(QObject):
     data_to_export_signal = Signal(OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
     crosshair_dragged = Signal(float, float)  # signal used to pass crosshair position to other modules in
     # scaled axes units
     sig_double_clicked = Signal(float, float)
 
-    ROI_changed = Signal()
-    ROI_changed_finished = Signal()
+    roi_changed_signal = Signal()
+    roi_change_finished_signal = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self):
         super().__init__()
         # setting the gui
 
-        if parent is None:
-            parent = QtWidgets.QWidget()
-            parent.show()
 
-        self.view = View2D(parent)
-        QtWidgets.QApplication.processEvents()
-
-        self.roi_manager = ROIManager(self.view.image_widget, '2D')
 
         self.max_size_integrated = 200
 
@@ -610,79 +684,13 @@ class Viewer2D(QObject):
 
         self.data_to_export = OrderedDict([])
 
-        self.setupROI()
-
-        self.prepare_connect_ui()
-        
-    def setupROI(self):
-        self.roi_manager.new_ROI_signal.connect(self.add_ROI)
-        self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
-        self.roi_manager.roi_settings_changed.connect(self.update_roi)
-        self.view.splitter.addWidget(self.roi_manager.roiwidget)
-        self.roi_manager.roiwidget.setVisible(False)
-        
-    def prepare_connect_ui(self):
-        # selection area checkbox
-        self.view.set_action_visible('red', True)
-        self.view.set_action_checked('red', True)
-        self.view.set_action_visible('green', True)
-        self.view.set_action_checked('green', True)
-        self.view.set_action_visible('blue', True)
-        self.view.set_action_checked('blue', True)
-        self.view.set_action_visible('spread', True)
-        self.view.set_action_checked('spread', True)
-
-        #self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
-
-        self.view.connect_action('flip_ud', slot=self.update_image)
-        self.view.connect_action('flip_lr', slot=self.update_image)
-        self.view.connect_action('rotate', slot=self.update_image)
-
-
-        self.view.connect_action('init_plot', self.ini_plot)
-
-        self.view.sig_double_clicked.connect(self.double_clicked)
-
-        self.view.get_crosshair_signal().connect(self.update_crosshair_data)
-        self.view.crosshair_clicked.connect(self.show_hide_crosshair)
-
-        self.view.connect_action('roi', self.roi_clicked)
-
-    @Slot(str)
-    def remove_ROI(self, roi_name):
-        index = int(roi_name.split('_')[1])
-        self.view.remove_roi_lineout_items(index)
-
-        self.roi_changed()
-
-    @Slot(int, str)
-    def add_ROI(self, newindex, roi_type):
-        item = self.roi_manager.ROIs['ROI_{:02d}'.format(newindex)]
-        item.sigRegionChanged.connect(self.roi_changed)
-        item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(newindex))
-        color = item_param.child(('Color')).value()
-
-        self.view.add_roi_lineout_items(newindex, color)
-
-        self.data_integrated_plot["ROI_%02.0d" % newindex] = np.zeros((2, 1))
-
-        if self.isdata['red']:
-            item_param.child('use_channel').setValue('red')
-        elif self.isdata['green']:
-            item_param.child('use_channel').setValue('green')
-        elif self.isdata['blue']:
-            item_param.child('use_channel').setValue('blue')
-        elif self.isdata['spread']:
-            item_param.child('use_channel').setValue('spread')
-
-        self.roi_changed()
 
     def crosshairChanged(self, posx=None, posy=None):
         if self.raw_data is None:
             return
         data_red, data_blue, data_green = self.set_image_transform()
         if posx is None or posy is None:
-            (posx, posy) = self.view.get_crosshair_position()
+            (posx, posy) = self.get_crosshair_position()
 
         if self.isdata["red"]:
             indx, indy = self.mapfromview('red', posx, posy)
@@ -734,16 +742,11 @@ class Viewer2D(QObject):
             for curve_key in IMAGE_TYPES:
                 self.view.show_crosshair_curve(curve_key, self.isdata[curve_key])
 
-            self.update_crosshair_data(*self.view.get_crosshair_position())
+            self.update_crosshair_data(*self.get_crosshair_position())
 
             QtWidgets.QApplication.processEvents()
             self.show_lineouts()
 
-    @Slot(float, float)
-    def double_clicked(self, posx, posy):
-        self.crosshair.set_crosshair_position(posx, posy)
-        self.update_crosshair_data(posx, posy)
-        self.sig_double_clicked.emit(posx, posy)
 
     def ini_plot(self):
         for k in self.data_integrated_plot.keys():
@@ -882,46 +885,10 @@ class Viewer2D(QObject):
 
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
             self.data_to_export_signal.emit(self.data_to_export)
-            self.ROI_changed.emit()
+            self.roi_changed_signal.emit()
         except Exception as e:
             pass
 
-    @Slot(list)
-    def update_roi(self, changes):
-        for param, change, param_value in changes:
-            if change == 'value':
-                if param.name() == 'Color':
-                    key = param.parent().name()
-                    self.RoiCurve_H[key].setPen(param_value)
-                    self.RoiCurve_V[key].setPen(param_value)
-                    self.RoiCurve_integrated[key].setPen(param_value)
-
-            elif change == 'childAdded':
-                pass
-            elif change == 'parent':
-                key = param.name()
-                self.lineout_H_widget.removeItem(self.RoiCurve_H.pop(key))
-                self.lineout_V_widget.removeItem(self.RoiCurve_V.pop(key))
-                self.lineout_int_widget.removeItem(self.RoiCurve_integrated.pop(key))
-
-        self.roi_changed()
-
-    def roi_clicked(self):
-        roistate = self.view.get_roi_state()
-        self.roi_manager.roiwidget.setVisible(roistate)
-
-        for k, roi in self.roi_manager.ROIs.items():
-            roi.setVisible(roistate)
-            for item in self.view.get_roi_curves()[k].values():
-                item.setVisible(roistate)
-
-        if self.roi_action.isChecked():
-            self.roi_changed()
-
-        self.show_lineouts()
-
-        # if len(self.ROIs) == 0 and roistate:
-        #     self.roi_manager.settings.child(("ROIs")).addNew('RectROI')
 
     def scale_axis(self, xaxis_pxl, yaxis_pxl):
         return xaxis_pxl * self.scaling_options['scaled_xaxis']['scaling'] + self.scaling_options['scaled_xaxis'][
@@ -1001,14 +968,14 @@ class Viewer2D(QObject):
                 self.view.histograms[key].setVisible(self.view.is_action_checked(key))
 
 
-    def setGradient(self, histo='red', gradient='grey'):
+    def set_gradient(self, histo='red', gradient='grey'):
         """
         Convenience function to set one of the histograms of the view its gradient
         See Also
         -------
-        View2D.setGradient
+        View2D.set_gradient
         """
-        self.view.setGradient(histo, gradient)
+        self.view.set_gradient(histo, gradient)
 
     def set_isocurve_data(self, data):
         self.view.isocurve_item.setData(data)
@@ -1169,46 +1136,6 @@ class Viewer2D(QObject):
                 self.view.histograms[key].setLevels(self.raw_data[key].min(), self.raw_data[key].max())
         QtWidgets.QApplication.processEvents()
 
-    def show_lineouts(self):
-        state = self.roi_action.isChecked() or self.crosshair_action.isChecked()
-        if state:
-            showLineout_H = True
-            showLineout_V = True
-            showroiintegrated = True
-            self.lineout_H_widget.setMouseEnabled(True, True)
-            self.lineout_V_widget.setMouseEnabled(True, True)
-            self.lineout_int_widget.setMouseEnabled(True, True)
-            self.lineout_H_widget.showAxis('left')
-            self.lineout_V_widget.showAxis('left')
-            self.lineout_int_widget.showAxis('left')
-
-        else:
-            showLineout_H = False
-            showLineout_V = False
-            showroiintegrated = False
-
-            self.lineout_H_widget.setMouseEnabled(False, False)
-            self.lineout_V_widget.setMouseEnabled(False, False)
-            self.lineout_int_widget.setMouseEnabled(False, False)
-            self.lineout_H_widget.hideAxis('left')
-            self.lineout_V_widget.hideAxis('left')
-            self.lineout_int_widget.hideAxis('left')
-
-        self.lineout_H_widget.setVisible(showLineout_H)
-        self.lineout_V_widget.setVisible(showLineout_V)
-        self.lineout_int_widget.setVisible(showroiintegrated)
-
-        self.lineout_H_widget.update()
-        self.lineout_V_widget.update()
-        self.lineout_int_widget.update()
-
-        QtGui.QGuiApplication.processEvents()
-        self.splitter_VRight.splitterMoved[int, int].emit(int(0.6 * self.parent.height()), 1)
-        self.splitter.moveSplitter(int(0.6 * self.parent.width()), 1)
-        self.splitter_VLeft.moveSplitter(int(0.6 * self.parent.height()), 1)
-        self.splitter_VLeft.splitterMoved[int, int].emit(int(0.6 * self.parent.height()), 1)
-        QtGui.QGuiApplication.processEvents()
-
 
     def update_image(self):
         self.setImageTemp(data_red=self.raw_data['red'], data_green=self.raw_data['green'],
@@ -1249,13 +1176,24 @@ class Viewer2D(QObject):
                 z_spread = self.img_spread.get_val_at(self.mapfromview('spread', posx, posy))
                 dat += f' s={z_spread:.1e},'
 
-            self.actions['position'].setText(dat)
+            self._actions['position'].setText(dat)
 
         except Exception as e:
             print(e)
 
 
+class test_get():
+    def __init__(self):
+        self.a = 12
 
+    def print(self, string):
+        print(string)
+
+    def __getattr__(self, item):
+        return print
+
+    def __setattr__(self, key, value):
+        super().__setattr__(key, value)
 
 def main_controller():
 
@@ -1282,14 +1220,16 @@ def main_controller():
     #     scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     form.show()
     #prog.auto_levels_action_sym.trigger()
-    prog.view.actions['auto_levels'].trigger()
+    #prog.view.actions['auto_levels'].trigger()
 
     # data = np.load('triangulation_data.npy')
-    prog.show_data_temp(data_red=data_red, data_blue=data_blue, )
+    #prog.show_data_temp(data_red=data_red, data_blue=data_blue, )
     # prog.setImage(data_spread=data)
     #app.processEvents()
 
     sys.exit(app.exec_())
+
+
 
 def main_view():
     app = QtWidgets.QApplication(sys.argv)
@@ -1302,3 +1242,7 @@ if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
     main_controller()
+    # k = test_get()
+    # print(k.a)
+    # k.print('cool')
+    # k.cool('str')

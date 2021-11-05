@@ -17,6 +17,23 @@ from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
+class ActionManager(gutils.ActionManager):
+    def __init__(self, toolbar=None, menu=None):
+        super().__init__(toolbar=toolbar, menu=menu)
+
+    def setup_actions(self):
+        '''
+        subclass method from ActionManager
+        '''
+        logger.debug('setting actions')
+        self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
+        self.addaction('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
+        self.addaction('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera",
+                       checkable=False, toolbar=self.toolbar)
+        self.addaction('save', 'Save', 'SaveAs', "Save current data", checkable=False, toolbar=self.toolbar)
+        self.addaction('show', 'Show/hide', 'read2', "Show Hide DAQViewer", checkable=True, toolbar=self.toolbar)
+
+        logger.debug('actions set')
 
 class CustomAppExample(gutils.CustomApp):
 
@@ -43,25 +60,13 @@ class CustomAppExample(gutils.CustomApp):
     ]
 
     def __init__(self, dockarea):
-        
+
         super().__init__(dockarea)
 
         # init the object parameters
         self.raw_data = []
 
-    def setup_actions(self):
-        '''
-        subclass method from ActionManager
-        '''
-        logger.debug('setting actions')
-        self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-        self.addaction('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
-        self.addaction('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera",
-                       checkable=False, toolbar=self.toolbar)
-        self.addaction('save', 'Save', 'SaveAs', "Save current data", checkable=False, toolbar=self.toolbar)
-        self.addaction('show', 'Show/hide', 'read2', "Show Hide DAQViewer", checkable=True, toolbar=self.toolbar)
-
-        logger.debug('actions set')
+        self.set_action_manager(ActionManager(toolbar=self.toolbar))
 
     def setup_docks(self):
         '''
@@ -112,13 +117,12 @@ class CustomAppExample(gutils.CustomApp):
         self.log_signal[str].connect(self.add_log)  # connect together this custom signal with the add_log method
 
         self.detector.grab_done_signal.connect(self.data_done)
+        self.connect_action('quit', self.quit_function)
+        self.connect_action('load', self.load_file)
+        self.connect_action('save', self.save_data)
 
-        self.actions['quit'].connect(self.quit_function)
-        self.actions['load'].connect(self.load_file)
-        self.actions['save'].connect(self.save_data)
-
-        self.actions['grab'].connect(self.detector.grab)
-        self.actions['show'].connect(self.show_detector)
+        self.connect_action('grab', self.detector.grab)
+        self.connect_action('show', self.show_detector)
         logger.debug('connecting done')
 
     def show_detector(self, status):
