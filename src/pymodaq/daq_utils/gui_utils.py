@@ -117,6 +117,13 @@ class ActionManager(ABC):
             menu = self.menu
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
 
+    def get_action(self, name):
+        if name in self._actions:
+            return self._actions[name]
+        else:
+            raise KeyError(f'The action with name: {name} is not referenced'
+                           f' in the view actions: {self._actions.keys()}')
+
     @abstractmethod
     def setup_actions(self):
         """

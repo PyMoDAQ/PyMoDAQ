@@ -98,7 +98,7 @@ class ImageWidget(pg.GraphicsLayoutWidget):
         self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
 
     def getAxis(self, position):
-        return self.plotitem.getAxis('bottom')
+        return self.plotitem.getAxis(position)
 
     def setupUI(self, *args_plotitem, **kwargs_plotitem):
         layout = QtWidgets.QGridLayout()

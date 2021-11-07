@@ -615,32 +615,32 @@ class Data(OrderedDict):
         ----------
         source: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
         distribution: (str) either 'uniform' or 'spread'
-        x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
+        x_axis: (Axis) Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
          x positions of the spread points)
-        y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
+        y_axis: (Axis) Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
          x positions of the spread points)
         """
 
         if not isinstance(name, str):
-            raise TypeError('name for the DataToExport class should be a string')
+            raise TypeError(f'name for the {self.__class__.__name__} class should be a string')
         self['name'] = name
         if not isinstance(source, str):
-            raise TypeError('source for the DataToExport class should be a string')
+            raise TypeError(f'source for the {self.__class__.__name__} class should be a string')
         elif not ('raw' in source or 'roi' in source):
-            raise ValueError('Invalid "source" for the DataToExport class')
+            raise ValueError(f'Invalid "source" for the {self.__class__.__name__} class')
         self['source'] = source
 
         if not isinstance(distribution, str):
-            raise TypeError('distribution for the DataToExport class should be a string')
+            raise TypeError(f'distribution for the {self.__class__.__name__} class should be a string')
         elif distribution not in ('uniform', 'spread'):
-            raise ValueError('Invalid "distribution" for the DataToExport class')
+            raise ValueError(f'Invalid "distribution" for the {self.__class__.__name__} class')
         self['distribution'] = distribution
 
         if not isinstance(x_axis, Axis):
             if isinstance(x_axis, np.ndarray):
                 x_axis = Axis(data=x_axis)
             else:
-                raise TypeError('x_axis for the DataToExport class should be a Axis class')
+                raise TypeError(f'x_axis for the {self.__class__.__name__} class should be a Axis class')
             self['x_axis'] = x_axis
         elif x_axis['data'] is not None:
             self['x_axis'] = x_axis
@@ -649,13 +649,17 @@ class Data(OrderedDict):
             if isinstance(y_axis, np.ndarray):
                 y_axis = Axis(data=y_axis)
             else:
-                raise TypeError('y_axis for the DataToExport class should be a Axis class')
+                raise TypeError(f'y_axis for the {self.__class__.__name__} class should be a Axis class')
             self['y_axis'] = y_axis
         elif y_axis['data'] is not None:
             self['y_axis'] = y_axis
 
         for k in kwargs:
             self[k] = kwargs[k]
+
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
 
 
 class DataFromPlugins(Data):
