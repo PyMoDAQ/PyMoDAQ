@@ -2,6 +2,7 @@ from qtpy import QtWidgets, QtCore
 from pymodaq.daq_utils.plotting.viewer2D import Viewer2D
 from pymodaq.daq_utils.exceptions import ExpectedError
 from pyqtgraph.parametertree import Parameter
+import pyqtgraph as pg
 from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
 from unittest import mock
 
@@ -18,6 +19,22 @@ def init_prog(qtbot):
     prog = Viewer2D()
     qtbot.addWidget(form)
     return prog
+
+def generate_data():
+    Nx = 100
+    Ny = 200
+    data_random = np.random.normal(size=(Ny, Nx))
+    x = np.linspace(0, Nx - 1, Nx)
+    y = np.linspace(0, Ny - 1, Ny)
+    from pymodaq.daq_utils.daq_utils import gauss2D
+
+    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x/5)**2
+    data_green = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+    data_blue = data_random + 3 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
+    data_blue = pg.gaussianFilter(data_blue, (2, 2))
+    data_spread = np.load('triangulation_data.npy')
+
+    return data_red, data_green, data_blue, data_spread
 
 
 def init_raw_data(request):
@@ -97,6 +114,27 @@ class TestViewer2D:
         prog = init_prog
 
         assert isinstance(prog, Viewer2D)
+
+    def test_show_data_setImagered(self, init_prog):
+        prog = init_prog
+        prog.parent.show()
+        data_red, data_green, data_blue, data_spread = generate_data()
+
+        prog.setImage(data_red=data_red)
+
+    def test_show_data_setImageredgreen(self, init_prog):
+        prog = init_prog
+        prog.parent.show()
+        data_red, data_green, data_blue, data_spread = generate_data()
+
+        prog.setImage(data_red=data_red, data_green=data_green)
+
+    def test_show_data_setImageSpread(self, init_prog):
+        prog = init_prog
+        prog.parent.show()
+        data_red, data_green, data_blue, data_spread = generate_data()
+
+        prog.setImage(data_spread=data_spread)
 
     def test_red_action(self, init_prog):
         prog = init_prog

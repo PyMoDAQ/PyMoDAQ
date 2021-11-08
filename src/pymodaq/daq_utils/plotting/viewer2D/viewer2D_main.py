@@ -987,6 +987,7 @@ class Viewer2D(QObject):
         if parent is None:
             parent = QtWidgets.QWidget()
             parent.show()
+            self.parent = parent
 
         self.view = View2D(parent)
         filter_from_rois = FilterFromRois(self.view.roi_manager.settings, self.view.data_displayer.get_image('red'))
