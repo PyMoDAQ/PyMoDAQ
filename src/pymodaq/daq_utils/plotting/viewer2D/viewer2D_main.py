@@ -1207,6 +1207,8 @@ class Viewer2D(QObject):
         self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export_signal.emit(self.data_to_export)
 
+        QtWidgets.QApplication.processEvents()
+        self.ROI_changed.emit()
 
 class Model2D(QObject):
 
