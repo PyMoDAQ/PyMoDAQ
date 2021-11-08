@@ -926,6 +926,14 @@ class View2D(QObject):
         axis = self.get_axis(position)
         axis.setLabel(text=label, units=units)
 
+    def get_axis_label(self, position):
+        axis = self.get_axis(position)
+        return axis.axis_label, axis.axis_offset
+
+    @property
+    def axis_units(self):
+        return self.labelUnits
+
     def set_axis_scaling(self, position='top', scaling=1, offset=0, label='', units='Pxls'):
         """
         Method used to update the scaling of the right and top axes in order to translate pixels to real coordinates
@@ -992,6 +1000,9 @@ class Viewer2D(QObject):
 
         self.prepare_connect_ui()
 
+    def setImageTemp(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
+        pass
+
     def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
         self.show_data(data_red=data_red, data_green=data_green, data_blue=data_blue, data_spread=data_spread)
 
@@ -1019,6 +1030,10 @@ class Viewer2D(QObject):
         datas = utils.DataFromPlugins(name='', distribution=distribution, data=data_list)
         self.show_data(datas)
 
+    def show_data_temp(self, datas: utils.DataFromPlugins):
+        self.display_temporary = True
+        self.show_data(datas)
+
     @dispatch(utils.DataFromPlugins)
     def show_data(self, datas: utils.DataFromPlugins):
         """
@@ -1030,6 +1045,7 @@ class Viewer2D(QObject):
         """
         self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict())
         self._datas = copy.deepcopy(datas)
+        self.display_temporary = False
 
         self.isdata['red'] = len(datas['data']) > 0
         self.isdata['green'] = len(datas['data']) > 1
@@ -1039,11 +1055,8 @@ class Viewer2D(QObject):
         self.set_visible_items()
         self.update_model_data()
 
-        if self.view.is_action_checked('roi'):
-            self.model.roi_changed()
-        else:
-            self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-            self.data_to_export_signal.emit(self.data_to_export)
+        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
+        self.data_to_export_signal.emit(self.data_to_export)
 
     def set_visible_items(self):
         for key in IMAGE_TYPES:
@@ -1160,52 +1173,32 @@ class Viewer2D(QObject):
 
     @Slot(dict)
     def process_roi_lineouts(self, roi_dict):
-        self.view.display_roi_lineouts(self.scale_lineout_dicts(roi_dict))
+        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
 
-            #TODO
-        #     self.data_integrated_plot[image_source] = np.append(self.data_integrated_plot[image_source], np.array(
-        #         [[self.data_integrated_plot[image_source][0, -1]], [0]]) + np.array([[1], [np.sum(data)]]), axis=1)
-        #
-        #     if self.data_integrated_plot[image_source].shape[1] > self.max_size_integrated:
-        #         self.data_integrated_plot[image_source] = \
-        #             self.data_integrated_plot[image_source][:, self.data_integrated_plot[image_source].shape[1] - 200:]
-        #
-        #     self.RoiCurve_H[image_source].setData(y=data_H, x=data_H_axis)
-        #     self.RoiCurve_V[image_source].setData(y=data_V_axis, x=data_V)
-        #
-        #     self.RoiCurve_integrated[image_source].setData(y=self.data_integrated_plot[image_source][1, :],
-        #                                              x=self.data_integrated_plot[image_source][0, :])
-        #
-        #     self.data_to_export['data2D'][self.title + '_{:s}'.format(image_source)] = \
-        #         utils.DataToExport(name=self.title, data=data, source='roi',
-        #                            x_axis=utils.Axis(data=x_axis,
-        #                                              units=self.scaling_options['scaled_xaxis']['units'],
-        #                                              label=self.scaling_options['scaled_xaxis']['label']),
-        #                            y_axis=utils.Axis(data=y_axis,
-        #                                              units=self.scaling_options['scaled_yaxis']['units'],
-        #                                              label=self.scaling_options['scaled_yaxis']['label']))
-        #
-        #     self.data_to_export['data1D'][self.title + '_Hlineout_{:s}'.format(image_source)] = \
-        #         utils.DataToExport(name=self.title, data=data_H, source='roi',
-        #                            x_axis=utils.Axis(data=data_H_axis,
-        #                                              units=self.scaling_options['scaled_xaxis']['units'],
-        #                                              label=self.scaling_options['scaled_xaxis']['label']))
-        #     self.data_to_export['data1D'][self.title + '_Vlineout_{:s}'.format(image_source)] = \
-        #         utils.DataToExport(name=self.title, data=data_V, source='roi',
-        #                            x_axis=utils.Axis(data=data_V_axis,
-        #                                              units=self.scaling_options['scaled_yaxis']['units'],
-        #                                              label=self.scaling_options['scaled_yaxis']['label']))
-        #
-        #     self.data_to_export['data0D'][self.title + '_Integrated_{:s}'.format(image_source)] = \
-        #         utils.DataToExport(name=self.title, data=np.sum(data), source='roi', )
-        #
-        #     self.measure_data_dict['Lineout {:s}:'.format(image_source)] = np.sum(data)
-        #
-        # self.roi_settings.child('measurements').setValue(self.measure_data_dict)
-        #
-        # self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-        # self.data_to_export_signal.emit(self.data_to_export)
-        # self.roi_changed_signal.emit()
+        roi_dict = self.scale_lineout_dicts(roi_dict)
+        self.view.display_roi_lineouts(roi_dict)
+
+        self.measure_data_dict = dict([])
+        for roi_key, lineout_data in roi_dict.items():
+            self.data_to_export['data1D'][f'{self.title}_Hlineout_{roi_key}'] = \
+                utils.DataToExport(name=self.title, data=lineout_data.hor_data, source='roi',
+                                   x_axis=utils.Axis(data=lineout_data.hor_axis,
+                                                     units=self.x_axis.axis_units,
+                                                     label=self.x_axis.axis_label))
+
+            self.data_to_export['data1D'][f'{self.title}_Vlineout_{roi_key}'] = \
+                utils.DataToExport(name=self.title, data=lineout_data.ver_data, source='roi',
+                                   x_axis=utils.Axis(data=lineout_data.ver_axis,
+                                                     units=self.y_axis.axis_units,
+                                                     label=self.y_axis.axis_units))
+
+            self.data_to_export['data0D'][f'{self.title}_Integrated_{roi_key}'] = \
+                utils.DataToExport(name=self.title, data=lineout_data.int_data, source='roi', )
+
+            self.measure_data_dict[f'Lineout {roi_key}:'] = lineout_data.int_data
+
+        self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
+        self.data_to_export_signal.emit(self.data_to_export)
 
 
 class Model2D(QObject):
@@ -1229,7 +1222,7 @@ class Model2D(QObject):
             self.data_to_show_signal.emit(self._datas)
 
             if self.view.is_action_checked('roi'):
-                self.roi_changed(self.view.roi_selection.ROIs)
+                self.model.roi_changed(self.view.roi_selection.ROIs)
 
             if self.view.is_action_checked('crosshair'):
                 self.crosshair_changed(*self.view.crosshair.get_positions())
