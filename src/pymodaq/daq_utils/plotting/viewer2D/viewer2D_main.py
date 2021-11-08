@@ -976,6 +976,7 @@ class Viewer2D(QObject):
 
     roi_changed_signal = Signal()
     roi_change_finished_signal = Signal()
+    ROI_select_signal = Signal(QtCore.QRectF)
 
     def __init__(self, parent=None):
         super().__init__()
@@ -1124,7 +1125,7 @@ class Viewer2D(QObject):
         self.view.set_action_visible('blue', True)
         self.view.set_action_checked('blue', True)
 
-        #self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
+        self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
 
         self.view.connect_action('flip_ud', slot=self.update_model_data)
         self.view.connect_action('flip_lr', slot=self.update_model_data)
@@ -1135,6 +1136,12 @@ class Viewer2D(QObject):
         self.view.get_crosshair_signal().connect(self.model.crosshair_changed)
 
         self.view.get_double_clicked().connect(self.double_clicked)
+
+    def selected_region_changed(self):
+        if self.view.is_action_checked('ROIselect'):
+            pos = self.view.ROIselect.pos()
+            size = self.view.ROIselect.size()
+            self.ROI_select_signal.emit(QtCore.QRectF(pos[0], pos[1], size[0], size[1]))
 
     @Slot(float, float)
     def double_clicked(self, posx, posy):
