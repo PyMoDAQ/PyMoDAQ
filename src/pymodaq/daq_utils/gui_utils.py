@@ -95,6 +95,13 @@ class ActionManager(ABC):
     def set_menu(self, menu):
         self.menu = menu
 
+    def set_action_text(self, action_name, text: str):
+        if action_name in self._actions:
+            self._actions[action_name].setText(text)
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the view actions: {self._actions.keys()}')
+
     def addaction(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
         """Create a new action and add it to toolbar and menu
         Parameters
