@@ -974,8 +974,7 @@ class Viewer2D(QObject):
     # scaled axes units
     sig_double_clicked = Signal(float, float)
 
-    roi_changed_signal = Signal()
-    roi_change_finished_signal = Signal()
+    ROI_changed = Signal()
     ROI_select_signal = Signal(QtCore.QRectF)
 
     def __init__(self, parent=None):
