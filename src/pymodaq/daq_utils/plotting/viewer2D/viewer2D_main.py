@@ -484,9 +484,10 @@ class Histogrammer(QObject):
         self.histogram_container.layout().addWidget(histogram)
 
     def show_hide_histogram(self, checked, are_items_visible):
-        if checked:
-            for ind_histo, histo_name in enumerate(IMAGE_TYPES):
-                self._histograms[histo_name].setVisible(are_items_visible[ind_histo])
+        for ind_histo, histo_name in enumerate(IMAGE_TYPES):
+            self._histograms[histo_name].setVisible(are_items_visible[ind_histo] and checked)
+
+
 
 
 class IsoCurver(QObject):
@@ -700,7 +701,7 @@ class View2D(QObject):
         self.action_manager.connect_action('histo', self.histogrammer.activated)
         self.action_manager.connect_action('autolevels', self.histogrammer.set_autolevels)
         self.action_manager.connect_action('isocurve', self.isocurver.show_hide_iso)
-        self.action_manager.connect_action('isocurve', self.action_manager.get_action('histo').trigger())
+        self.action_manager.connect_action('isocurve', self.action_manager.get_action('histo').trigger)
 
         self.setupROI()
 
@@ -1045,6 +1046,8 @@ class Viewer2D(QObject):
 
         """
         self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict())
+        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
+
         self._datas = copy.deepcopy(datas)
         self.display_temporary = False
 
@@ -1052,12 +1055,10 @@ class Viewer2D(QObject):
         self.isdata['green'] = len(datas['data']) > 1
         self.isdata['blue'] = len(datas['data']) > 2
 
-
         self.set_visible_items()
         self.update_model_data()
-
-        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-        self.data_to_export_signal.emit(self.data_to_export)
+        if not self.view.is_action_checked('roi'):
+            self.data_to_export_signal.emit(self.data_to_export)
 
     def set_visible_items(self):
         for key in IMAGE_TYPES:
@@ -1070,7 +1071,7 @@ class Viewer2D(QObject):
                 self.view.set_action_visible(key, True)
 
             self.view.notify_visibility_data_displayer()
-            self.view.show_hide_histogram(True)
+            self.view.show_hide_histogram(False)
 
 
     def update_model_data(self):
@@ -1117,14 +1118,6 @@ class Viewer2D(QObject):
             print(e)
 
     def prepare_connect_ui(self):
-        # selection area checkbox
-        self.view.set_action_visible('red', True)
-        self.view.set_action_checked('red', True)
-        self.view.set_action_visible('green', True)
-        self.view.set_action_checked('green', True)
-        self.view.set_action_visible('blue', True)
-        self.view.set_action_checked('blue', True)
-
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
 
         self.view.connect_action('flip_ud', slot=self.update_model_data)
@@ -1180,8 +1173,6 @@ class Viewer2D(QObject):
 
     @Slot(dict)
     def process_roi_lineouts(self, roi_dict):
-        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-
         roi_dict = self.scale_lineout_dicts(roi_dict)
         self.view.display_roi_lineouts(roi_dict)
 
@@ -1204,11 +1195,13 @@ class Viewer2D(QObject):
 
             self.measure_data_dict[f'Lineout {roi_key}:'] = lineout_data.int_data
 
+            QtWidgets.QApplication.processEvents()
+
+
         self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export_signal.emit(self.data_to_export)
-
-        QtWidgets.QApplication.processEvents()
         self.ROI_changed.emit()
+
 
 class Model2D(QObject):
 
@@ -1261,13 +1254,6 @@ class Model2D(QObject):
 
         self.crosshair_lineout_signal.emit(crosshair_lineout_dict)
 
-    def show_hide_histogram_with_data(self):
-        for key in self.view.histograms:
-            if self.isdata[key] and self.view.actions[key].isChecked():
-                self.view.histograms[key].setVisible(self.view.actions['histo'].isChecked())
-                self.view.histograms[key].setLevels(self.raw_data[key].min(), self.raw_data[key].max())
-        QtWidgets.QApplication.processEvents()
-
 
 def main_controller():
 
@@ -1283,9 +1269,9 @@ def main_controller():
 
     data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x/5)**2
     # data_red = pg.gaussianFilter(data_red, (2, 2))
-    data_green = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+    data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
     # data_green = pg.gaussianFilter(data_green, (2, 2))
-    data_blue = data_random + 3 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
+    data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
 
     prog = Viewer2D(form)
@@ -1296,10 +1282,15 @@ def main_controller():
     #prog.auto_levels_action_sym.trigger()
     #prog.view.actions['autolevels'].trigger()
 
-    # data = np.load('triangulation_data.npy')
-    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform',
-    #                                     data=[data_red, data_blue]))
-    prog.show_data(data_red=data_red, data_blue=data_blue)
+    data = np.load('triangulation_data.npy')
+    data_shuffled = data
+    np.random.shuffle(data_shuffled)
+    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',
+                                         data=[data, data_shuffled]))
+    prog.view.get_action('histo').trigger()
+    prog.view.get_action('autolevels').trigger()
+    QtWidgets.QApplication.processEvents()
+    #prog.show_data(data_red=data_red, data_blue=data_blue)
     # prog.setImage(data_spread=data)
     #app.processEvents()
 

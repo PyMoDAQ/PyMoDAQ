@@ -660,6 +660,11 @@ class Data(OrderedDict):
     def __getattr__(self, name):
         if name in self:
             return self[name]
+        else:
+            raise AttributeError(f'{name} if not a key of {self}')
+
+    def __repr__(self):
+        return f'Data Object: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
 
 
 class DataFromPlugins(Data):
@@ -708,6 +713,10 @@ class DataFromPlugins(Data):
                 dim = 'DataND'
         self['dim'] = dim
 
+    def __repr__(self):
+        return f'Data Object: <name: {self.name}> - <distribution: {self.distribution}>' \
+               f' - <source: {self.source}> - <dim: {self.dim}>'
+
 
 class DataToExport(Data):
     def __init__(self, data=None, dim='', **kwargs):
@@ -740,6 +749,9 @@ class DataToExport(Data):
                 dim = 'Data0D'
         self['dim'] = dim
 
+    def __repr__(self):
+        return f'Data Object: <name: {self.name}> - <distribution: {self.distribution}>' \
+               f' - <source: {self.source}> - <dim: {self.dim}>'
 
 class ScaledAxis(Axis):
     def __init__(self, label='', units='', offset=0, scaling=1):

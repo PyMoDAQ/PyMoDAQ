@@ -377,6 +377,7 @@ class TriangulationItem(ImageItem):
         self.qimage = None
         self.triangulation = None
         self.tri_data = None
+        self.mesh_pen = [255, 255, 255]
 
     def width(self):
         if self.image is None:
@@ -447,6 +448,7 @@ class TriangulationItem(ImageItem):
             if self.image is None:
                 return
         else:
+            self._xp = np
             gotNewData = True
             shapeChanged = (self.image is None or image.shape != self.image.shape)
             image = image.view(np.ndarray)
@@ -512,7 +514,7 @@ class TriangulationItem(ImageItem):
         profile = debug.Profiler()
         if self.image is None or self.image.size == 0:
             return
-        if isinstance(self.lut, collections.Callable):
+        if isinstance(self.lut, collections.abc.Callable):
             lut = self.lut(self.image)
         else:
             lut = self.lut
@@ -596,6 +598,16 @@ class TriangulationItem(ImageItem):
             tr.rotate(-90)
         return tr
 
+    def setLookupTable(self, lut, update=True):
+        super().setLookupTable(lut,update=update)
+        if self.lut is not None and self.image is not None:
+            lu = np.mean(self.lut(self.image), axis=0).astype(np.uint8)
+            lu[lu > 0] = 255
+            lu = list(lu)
+        else:
+            lu = [255, 255, 255]
+        self.mesh_pen = lu
+
     def paint(self, p, *args):
         profile = debug.Profiler()
         if self.image is None:
@@ -612,7 +624,8 @@ class TriangulationItem(ImageItem):
         self.setTransform(self.dataTransform())
 
         for pol, color in zip(self.qimage['polygons'], self.qimage['values']):
-            p.setPen(fn.mkPen(255, 255, 255, 100, width=0.75))
+
+            p.setPen(fn.mkPen(*self.mesh_pen, 100, width=0.75))
             p.setBrush(fn.mkBrush(*color))
             p.drawPolygon(pol)
 
