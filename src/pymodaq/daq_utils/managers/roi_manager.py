@@ -165,25 +165,29 @@ class RectROI(pgROI):
         self.index_signal.emit(self.index)
 
 
+ROI_NAME_PREFIX = 'ROI_'
+ROI2D_TYPES = ['RectROI', 'EllipseROI']
+
+
 class ROIScalableGroup(GroupParameter):
     def __init__(self, roi_type='1D', **opts):
         opts['type'] = 'group'
         opts['addText'] = "Add"
         self.roi_type = roi_type
         if roi_type != '1D':
-            opts['addList'] = ['RectROI', 'EllipseROI']
+            opts['addList'] = ROI2D_TYPES
         self.color_list = ROIManager.color_list
         super().__init__(**opts)
 
     def addNew(self, typ=''):
-        name_prefix = 'ROI_'
+        name_prefix = ROI_NAME_PREFIX
         child_indexes = [int(par.name()[len(name_prefix) + 1:]) for par in self.children()]
         if not child_indexes:
             newindex = 0
         else:
             newindex = max(child_indexes) + 1
 
-        child = {'name': f'ROI_{newindex:02d}', 'type': 'group', 'removable': True, 'renamable': False}
+        child = {'name': ROIManager.roi_format(newindex), 'type': 'group', 'removable': True, 'renamable': False}
 
         children = [{'name': 'type', 'type': 'str', 'value': self.roi_type, 'readonly': True, 'visible': False}, ]
         if self.roi_type == '2D':
@@ -237,8 +241,34 @@ class ROIManager(QObject):
         self.ROI_type = ROI_type
         self.roiwidget = QtWidgets.QWidget()
         self.viewer_widget = viewer_widget  # either a PlotWidget or a ImageWidget
-        self.ROIs = OrderedDict([])
+        self._ROIs = OrderedDict([])
         self.setupUI()
+
+    @staticmethod
+    def roi_format(index):
+        return f'{ROI_NAME_PREFIX}{index:02d}'
+
+    @property
+    def ROIs(self):
+        return self._ROIs
+
+    def get_roi_from_index(self, index: int):
+        return self.ROIs[self.roi_format(index)]
+
+    def _set_roi_from_index(self, index: int, roi):
+        self.ROIs[self.roi_format(index)] = roi
+
+    def get_roi(self, roi_key):
+        if roi_key in self.ROIs:
+            return self.ROIs[roi_key]
+        else:
+            raise KeyError(f'{roi_key} is not a valid ROI identifier for {self.ROIs}')
+
+    def add_roi_programmatically(self, roitype=ROI2D_TYPES[0]):
+        self.settings.child('ROIs').addNew(roitype)
+
+    def remove_roi_programmatically(self, index: int):
+        self.settings.child('ROIs').removeChild(self.settings.child('ROIs', self.roi_format(index)))
 
     def setupUI(self):
 
@@ -318,7 +348,7 @@ class ROIManager(QObject):
                 self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
                 self.viewer_widget.plotItem.addItem(newroi)
 
-                self.ROIs[f"ROI_{newindex:02.0f}"] = newroi
+                self._set_roi_from_index(newindex, newroi)
 
                 self.new_ROI_signal.emit(newindex, roi_type)
                 self.update_roi_tree(newindex)
@@ -330,7 +360,7 @@ class ROIManager(QObject):
 
             elif change == 'parent':
                 if 'ROI' in param.name():
-                    roi = self.ROIs.pop(param.name())
+                    roi = self._ROIs.pop(param.name())
                     self.viewer_widget.plotItem.removeItem(roi)
                     self.remove_ROI_signal.emit(param.name())
 
@@ -339,37 +369,37 @@ class ROIManager(QObject):
         self.ROI_changed_finished.emit()
 
     def update_roi(self, roi_key, param):
-        self.ROIs[roi_key].index_signal[int].disconnect()
+        self._ROIs[roi_key].index_signal[int].disconnect()
         if param.name() == 'Color':
-            self.ROIs[roi_key].setPen(param.value())
+            self._ROIs[roi_key].setPen(param.value())
         elif param.name() == 'left' or param.name() == 'x':
-            pos = self.ROIs[roi_key].pos()
+            pos = self._ROIs[roi_key].pos()
             poss = [param.value(), pos[1]]
             if self.settings.child('ROIs', roi_key, 'type').value() == '1D':
                 poss.sort()
-            self.ROIs[roi_key].setPos(poss)
+            self._ROIs[roi_key].setPos(poss)
 
         elif param.name() == 'right' or param.name() == 'y':
-            pos = self.ROIs[roi_key].pos()
+            pos = self._ROIs[roi_key].pos()
             poss = [pos[0], param.value()]
             if self.settings.child('ROIs', roi_key, 'type').value() == '1D':
                 poss.sort()
-            self.ROIs[roi_key].setPos(poss)
+            self._ROIs[roi_key].setPos(poss)
 
         elif param.name() == 'angle':
-            self.ROIs[roi_key].setAngle(param.value())
+            self._ROIs[roi_key].setAngle(param.value())
         elif param.name() == 'width':
-            size = self.ROIs[roi_key].size()
-            self.ROIs[roi_key].setSize((param.value(), size[1]))
+            size = self._ROIs[roi_key].size()
+            self._ROIs[roi_key].setSize((param.value(), size[1]))
         elif param.name() == 'height':
-            size = self.ROIs[roi_key].size()
-            self.ROIs[roi_key].setSize((size[0], param.value()))
-        self.ROIs[roi_key].index_signal[int].connect(self.update_roi_tree)
+            size = self._ROIs[roi_key].size()
+            self._ROIs[roi_key].setSize((size[0], param.value()))
+        self._ROIs[roi_key].index_signal[int].connect(self.update_roi_tree)
 
     @Slot(int)
     def update_roi_tree(self, index):
-        roi = self.ROIs['ROI_%02.0d' % index]
-        par = self.settings.child(*('ROIs', 'ROI_%02.0d' % index))
+        roi = self.get_roi_from_index(index)
+        par = self.settings.child(*('ROIs', self.roi_format(index)))
         if isinstance(roi, LinearROI):
             pos = roi.getRegion()
         else:
@@ -406,9 +436,9 @@ class ROIManager(QObject):
             print(e)
 
     def clear_ROI(self):
-        indexes = [roi.index for roi in self.ROIs.values()]
+        indexes = [roi.index for roi in self._ROIs.values()]
         for index in indexes:
-            self.settings.child(*('ROIs', 'ROI_%02.0d' % index)).remove()
+            self.settings.child(*('ROIs', self.roi_format(index))).remove()
             # self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
     def load_ROI(self, path=None, params=None):
@@ -458,11 +488,13 @@ if __name__ == '__main__':
 
     im = ImageWidget()
     im = PlotWidget()
-    prog = ROIManager(im, '1D')
+    prog = ROIManager(im, '2D')
     widget = QtWidgets.QWidget()
     layout = QtWidgets.QHBoxLayout()
     widget.setLayout(layout)
     layout.addWidget(im)
     layout.addWidget(prog.roiwidget)
     widget.show()
+    prog.add_roi_programmatically(ROI2D_TYPES[0])
+    prog.add_roi_programmatically(ROI2D_TYPES[1])
     sys.exit(app.exec_())

@@ -135,7 +135,7 @@ class View_cust(pg.ViewBox):
 
     def __init__(self, parent=None, border=None, lockAspect=False, enableMouse=True, invertY=False,
                  enableMenu=True, name=None, invertX=False):
-        super(View_cust, self).__init__(parent, border, lockAspect, enableMouse, invertY, enableMenu, name,
+        super().__init__(parent, border, lockAspect, enableMouse, invertY, enableMenu, name,
                                         invertX)
 
     def mouseClickEvent(self, ev):
