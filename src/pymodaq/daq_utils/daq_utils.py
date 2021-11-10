@@ -794,6 +794,18 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
     return paths
 
 
+def recursive_find_files(ini_path, exp='make_enum', paths=[],
+                         filters=['build']):
+    for child in Path(ini_path).iterdir():
+        if child.is_dir():
+            recursive_find_files(child, exp, paths, filters)
+        else:
+            if exp in child.stem:
+                if not any([filt in str(child) for filt in filters]):
+                    paths.append(child)
+    return paths
+
+
 def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
                                  filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation', '.tox'],
                                  replace=False, replace_str=''):
@@ -1715,10 +1727,30 @@ if __name__ == '__main__':
     #extensions = get_extension()
     #models = get_models()
     #count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='abc',
-                                         paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py'],
-                                         replace=False, replace_str='Slot')
-    pass
+
+
+    # import license
+    # mit = license.find('MIT')
+    #
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+    #                                      exp='License :: CeCILL-B Free Software License Agreement (CECILL-B)',
+    #                                      paths=[],
+    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+    #                                               '.tox', 'daq_utils.py'],
+    #                                      replace=True, replace_str=mit.python)
+    # pass
+    paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+                         exp='VERSION', paths=[])
+    import version
+    for file in paths:
+        with open(str(file), 'r') as f:
+            v = version.Version(f.read())
+            v.minor += 1
+            v.patch = 0
+        with open(str(file), 'w') as f:
+            f.write(str(v))
+
+    # for file in paths:
+    #     with open(str(file), 'w') as f:
+    #         f.write(mit.render(name='Sebastien Weber', email='sebastien.weber@cemes.fr'))
+
