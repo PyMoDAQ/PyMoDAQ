@@ -539,6 +539,14 @@ class TestMath:
         with pytest.raises(ValueError):
             utils.linspace_step(0, 10, 0.)
 
+    def test_linspace_step_N(self):
+        START = -1.
+        STEP = 0.25
+        LENGTH = 5
+        data = utils.linspace_step_N(START, STEP, LENGTH)
+        assert len(data) == LENGTH
+        assert np.any(data == pytest.approx(np.array([-1, -0.75, -0.5, -0.25, -0.])))
+
     def test_find_dict_if_matched_key_val(self):
         dict_tmp = {1: 'abc', 2: 'def'}
         assert utils.find_dict_if_matched_key_val(dict_tmp, 1, 'abc')

@@ -1409,6 +1409,10 @@ def linspace_step(start, stop, step):
     return np.linspace(start, new_stop, Nsteps)
 
 
+def linspace_step_N(start, step, Npts):
+    stop = (Npts - 1) * step + start
+    return linspace_step(start, stop, step)
+
 
 def find_index(x, threshold):
     """

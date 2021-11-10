@@ -1,4 +1,3 @@
-from functools import singledispatchmethod
 from collections import OrderedDict
 import copy
 import datetime
@@ -150,30 +149,63 @@ class Data0DWithHistory:
         self._xaxis = np.array([])
 
 
-def extract_axis_info(axis: utils.Axis):
-    label = ''
-    units = ''
-    if isinstance(axis, utils.Axis):
-        if 'data' in axis:
-            data = axis['data']
-        if 'label' in axis:
-            label = axis['label']
-        if 'units' in axis:
-            units = axis['units']
-    else:
+class AxisInfosExtractor:
+
+    @staticmethod
+    @dispatch(np.ndarray)
+    def extract_axis_info(axis: np.ndarray):
+        label = ''
+        units = ''
         data = axis
 
-    scaling = 1
-    offset = 0
-    if data is not None:
-        if len(data) > 1:
-            scaling = data[1] - data[0]
-            if scaling > 0:
-                offset = np.min(data)
-            else:
-                offset = np.max(data)
+        scaling = 1
+        offset = 0
+        if data is not None:
+            if len(data) > 1:
+                scaling = data[1] - data[0]
+                if scaling > 0:
+                    offset = np.min(data)
+                else:
+                    offset = np.max(data)
 
-    return scaling, offset, label, units
+        return scaling, offset, label, units
+
+    @staticmethod
+    @dispatch(utils.Axis)
+    def extract_axis_info(axis: utils.Axis):
+        label = ''
+        units = ''
+        if isinstance(axis, utils.Axis):
+            if 'data' in axis:
+                data = axis['data']
+            if 'label' in axis:
+                label = axis['label']
+            if 'units' in axis:
+                units = axis['units']
+        else:
+            data = axis
+
+        scaling = 1
+        offset = 0
+        if data is not None:
+            if len(data) > 1:
+                scaling = data[1] - data[0]
+                if scaling > 0:
+                    offset = np.min(data)
+                else:
+                    offset = np.max(data)
+
+        return scaling, offset, label, units
+
+    @staticmethod
+    @dispatch(AxisItem_Scaled)
+    def extract_axis_info(axis: AxisItem_Scaled):
+        label = axis.axis_label
+        units = axis.axis_units
+        scaling = axis.axis_scaling
+        offset = axis.axis_offset
+
+        return scaling, offset, label, units
 
 
 class LineoutData:
@@ -464,6 +496,9 @@ class Histogrammer(QObject):
             self._histograms[histo_key] = histogram_factory(None, gradient=histo_key)
             self.add_histogram(self._histograms[histo_key])
             self._histograms[histo_key].setVisible(False)
+
+    def get_histograms(self):
+        return self._histograms
 
     def get_histogram(self, name):
         if name not in self._histograms:
@@ -1011,6 +1046,7 @@ class Viewer2D(QObject):
         self._datas = None
         self._raw_datas = None
         self.isdata = dict([])
+        self._display_temporary = False  # if True, data_to_export_signal is not emited
         
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -1037,22 +1073,26 @@ class Viewer2D(QObject):
         View2D and ActionManager
         """
         for attribute in ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
-                          'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair'):
+                          'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
+                          'image_widget', 'scale_axis'):
             if hasattr(self.view, attribute):
                 setattr(self, attribute, getattr(self.view, attribute))
 
+    def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
+        logger.warning("setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with"
+                       "one argument as utils.DataFromPlugins")
+        datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
+                                                    data_blue=data_blue, data_spread=data_spread)
+        self.show_data(datas)
 
     def setImageTemp(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        pass
+        logger.warning("setImageTemp for PyMoDAQ Viewer2D is deprecated, use *show_data_temp* with"
+                       "one argument as utils.DataFromPlugins")
+        datas = self.format_data_as_datafromplugins(data_red=None, data_green=None, data_blue=None, data_spread=None)
+        self.show_data_temp(datas)
 
-    def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        self.show_data(data_red=data_red, data_green=data_green, data_blue=data_blue, data_spread=data_spread)
-
-    @dispatch()
-    def show_data(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        """
-        for back compatibility
-        """
+    @staticmethod
+    def format_data_as_datafromplugins(data_red=None, data_green=None, data_blue=None, data_spread=None):
         if data_spread is None:
             distribution = 'uniform'
             shape = (0, 0)
@@ -1070,13 +1110,12 @@ class Viewer2D(QObject):
             data_list = [data_spread]
 
         datas = utils.DataFromPlugins(name='', distribution=distribution, data=data_list)
-        self.show_data(datas)
+        return datas
 
     def show_data_temp(self, datas: utils.DataFromPlugins):
-        self.display_temporary = True
+        self._display_temporary = True
         self.show_data(datas)
 
-    @dispatch(utils.DataFromPlugins)
     def show_data(self, datas: utils.DataFromPlugins):
         """
         numpy arrays to be plotted and eventually filtered using ROI...
@@ -1089,7 +1128,7 @@ class Viewer2D(QObject):
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self._raw_datas = datas
 
-        self.display_temporary = False
+        self._display_temporary = False
 
         self.isdata['red'] = len(datas['data']) > 0
         self.isdata['green'] = len(datas['data']) > 1
@@ -1192,13 +1231,31 @@ class Viewer2D(QObject):
             self.crosshair_changed(posx, posy)
         self.sig_double_clicked.emit(posx, posy)
 
+    def set_scaling_axes(self, scaling_options=None):
+        """
+        metod used to update the scaling of the right and top axes in order to translate pixels to real coordinates
+        scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))
+        """
+        if scaling_options is not None:
+            self.x_axis.axis_scaling = scaling_options['scaled_xaxis']['scaling']
+            self.x_axis.axis_offset = scaling_options['scaled_xaxis']['offset']
+            self.x_axis.setLabel(text=scaling_options['scaled_xaxis']['label'],
+                                       units=scaling_options['scaled_xaxis']['units'])
+            self.y_axis.axis_scaling = scaling_options['scaled_yaxis']['scaling']
+            self.y_axis.axis_offset = scaling_options['scaled_yaxis']['offset']
+            self.y_axis.setLabel(text=scaling_options['scaled_yaxis']['label'],
+                                       units=scaling_options['scaled_yaxis']['units'])
+
+            self.x_axis.linkedViewChanged(self.view.image_widget.view)
+            self.y_axis.linkedViewChanged(self.view.image_widget.view)
+
     @property
     def x_axis(self):
         return self.view.get_axis('top')
 
     @x_axis.setter
     def x_axis(self, axis):
-        scaling, offset, label, units = extract_axis_info(axis)
+        scaling, offset, label, units = AxisInfosExtractor.extract_axis_info(axis)
         self.view.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
 
     @property
@@ -1207,7 +1264,7 @@ class Viewer2D(QObject):
 
     @y_axis.setter
     def y_axis(self, axis):
-        scaling, offset, label, units = extract_axis_info(axis)
+        scaling, offset, label, units = AxisInfosExtractor.extract_axis_info(axis)
         self.view.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
 
     def scale_lineout_dicts(self, lineout_dicts):
@@ -1229,28 +1286,29 @@ class Viewer2D(QObject):
 
         self.measure_data_dict = dict([])
         for roi_key, lineout_data in roi_dict.items():
-            self.data_to_export['data1D'][f'{self.title}_Hlineout_{roi_key}'] = \
-                utils.DataToExport(name=self.title, data=lineout_data.hor_data, source='roi',
-                                   x_axis=utils.Axis(data=lineout_data.hor_axis,
-                                                     units=self.x_axis.axis_units,
-                                                     label=self.x_axis.axis_label))
+            if not self._display_temporary:
+                self.data_to_export['data1D'][f'{self.title}_Hlineout_{roi_key}'] = \
+                    utils.DataToExport(name=self.title, data=lineout_data.hor_data, source='roi',
+                                       x_axis=utils.Axis(data=lineout_data.hor_axis,
+                                                         units=self.x_axis.axis_units,
+                                                         label=self.x_axis.axis_label))
 
-            self.data_to_export['data1D'][f'{self.title}_Vlineout_{roi_key}'] = \
-                utils.DataToExport(name=self.title, data=lineout_data.ver_data, source='roi',
-                                   x_axis=utils.Axis(data=lineout_data.ver_axis,
-                                                     units=self.y_axis.axis_units,
-                                                     label=self.y_axis.axis_units))
+                self.data_to_export['data1D'][f'{self.title}_Vlineout_{roi_key}'] = \
+                    utils.DataToExport(name=self.title, data=lineout_data.ver_data, source='roi',
+                                       x_axis=utils.Axis(data=lineout_data.ver_axis,
+                                                         units=self.y_axis.axis_units,
+                                                         label=self.y_axis.axis_units))
 
-            self.data_to_export['data0D'][f'{self.title}_Integrated_{roi_key}'] = \
-                utils.DataToExport(name=self.title, data=lineout_data.int_data, source='roi', )
+                self.data_to_export['data0D'][f'{self.title}_Integrated_{roi_key}'] = \
+                    utils.DataToExport(name=self.title, data=lineout_data.int_data, source='roi', )
 
             self.measure_data_dict[f'Lineout {roi_key}:'] = lineout_data.int_data
 
             QtWidgets.QApplication.processEvents()
 
-
         self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
-        self.data_to_export_signal.emit(self.data_to_export)
+        if not self._display_temporary:
+            self.data_to_export_signal.emit(self.data_to_export)
         self.ROI_changed.emit()
 
     @Slot(dict)

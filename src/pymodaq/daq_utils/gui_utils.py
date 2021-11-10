@@ -13,6 +13,7 @@ import datetime
 from pymodaq.daq_utils import daq_utils as utils
 import toml
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from multipledispatch import dispatch
 
 config = utils.load_config()
 
@@ -176,39 +177,66 @@ class ActionManager(ABC):
         else:
             raise KeyError(f'The action with name: {name} is not referenced'
                            f' in the view actions: {self._actions.keys()}')
-
-    def is_action_visible(self, action_name):
+    @dispatch(str)
+    def is_action_visible(self, action_name: str):
         if action_name in self._actions:
             return self._actions[action_name].isVisible()
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    def is_action_checked(self, action_name):
+    @dispatch(list)
+    def is_action_visible(self, actions_name: list):
+        isvisible = False
+        for action_name in actions_name:
+            isvisible = isvisible and self.is_action_visible(action_name)
+        return isvisible
+
+    @dispatch(str)
+    def is_action_checked(self, action_name: str):
         if action_name in self._actions:
             return self._actions[action_name].isChecked()
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    def set_action_visible(self, action_name, visible=True):
+    @dispatch(list)
+    def is_action_checked(self, actions_name: list):
+        ischecked = False
+        for action_name in actions_name:
+            ischecked = ischecked and self.is_action_checked(action_name)
+        return ischecked
+
+    @dispatch(str, bool)
+    def set_action_visible(self, action_name: str, visible=True):
         if action_name in self._actions:
             self._actions[action_name].setVisible(visible)
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
-    def set_action_checked(self, action_name, checked=True):
+    @dispatch(list, bool)
+    def set_action_visible(self, actions_name: list, visible=True):
+        for action_name in actions_name:
+            self.set_action_visible(action_name, visible)
+
+    @dispatch(str, bool)
+    def set_action_checked(self, action_name: str, checked=True):
         if action_name in self._actions:
             self._actions[action_name].setChecked(checked)
         else:
             raise KeyError(f'The action with name: {action_name} is not referenced'
                            f' in the actions list: {self._actions}')
 
+    @dispatch(list, bool)
+    def set_action_checked(self, actions_name: list, checked=True):
+        for action_name in actions_name:
+            self.set_action_checked(action_name, checked)
+
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
-        super(QtWidgets.QSpinBox, self).__init__()
+        super().__init__()
         self.setMaximum(100000)
         self.setReadOnly(True)
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)

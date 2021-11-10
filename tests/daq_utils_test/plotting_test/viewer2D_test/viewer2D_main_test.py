@@ -113,19 +113,19 @@ class TestData0DWithHistory:
 class TestExtractAxis:
     def test_info_data_is_None(self):
         axis = utils.Axis(label='mylabel', units='myunits')
-        assert v2d.extract_axis_info(axis) == (1, 0, 'mylabel', 'myunits')
+        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (1, 0, 'mylabel', 'myunits')
 
     def test_info(self):
         axis = utils.Axis(label='mylabel', units='myunits', data=np.array([5, 20, 35]))
-        assert v2d.extract_axis_info(axis) == (15, 5, 'mylabel', 'myunits')
+        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, 'mylabel', 'myunits')
 
     def test_info_data_is_ndarray(self):
         axis = np.array([5, 20, 35])
-        assert v2d.extract_axis_info(axis) == (15, 5, '', '')
+        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, '', '')
 
     def test_info_neg_scaling(self):
         axis = utils.Axis(label='mylabel', units='myunits', data=np.array([35, 20, 5]))
-        assert v2d.extract_axis_info(axis) == (-15, 35, 'mylabel', 'myunits')
+        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, 'mylabel', 'myunits')
 
 
 class TestLineoutData:
@@ -531,8 +531,25 @@ class TestModifyImages:
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))
 
+
 class TestScaling:
-    pass
+    def test_set_scaling(self, init_prog):
+        prog, qtbot, (data_red, data_green, data_blue, data_spread) = init_prog
+        xscalingoption = 2, 123, 'myxlabel', 'myxunits'
+        yscalingoption = 0.1, -200, 'myylabel', 'myyunits'
+
+        scaling_options = utils.ScalingOptions(
+            scaled_xaxis=utils.ScaledAxis(label=xscalingoption[2],
+                                          units=xscalingoption[3],
+                                          offset=xscalingoption[1],
+                                          scaling=xscalingoption[0]),
+            scaled_yaxis=utils.ScaledAxis(label=yscalingoption[2],
+                                          units=yscalingoption[3],
+                                          offset=yscalingoption[1],
+                                          scaling=yscalingoption[0]))
+        prog.set_scaling_axes(scaling_options)
+        assert xscalingoption == v2d.AxisInfosExtractor.extract_axis_info(prog.x_axis)
+        assert yscalingoption == v2d.AxisInfosExtractor.extract_axis_info(prog.y_axis)
 
 class TestMiscellanous:
     pass

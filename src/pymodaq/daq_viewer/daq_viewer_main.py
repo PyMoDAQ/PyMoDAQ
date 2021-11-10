@@ -353,12 +353,12 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
-                self.ui.viewers[-1].auto_levels_action.trigger()
+                self.ui.viewers[-1].get_action('autolevels').trigger()
 
             self.detector_types = [plugin['name'] for plugin in DAQ_2DViewer_Det_types]
             self.settings.child('main_settings', 'axes').show()
             self.ui.viewers[0].ROI_select_signal.connect(self.update_ROI)
-            self.ui.viewers[0].ROIselect_action.triggered.connect(self.show_ROI)
+            self.ui.viewers[0].get_action('ROIselect').triggered.connect(self.show_ROI)
 
         elif DAQ_type == "DAQND":
             for ind in range(Nviewers):
@@ -2166,10 +2166,11 @@ def main(init_qt=True):
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
-    DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
+    viewer = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
     win.show()
     if init_qt:
         sys.exit(app.exec_())
+    return viewer, win
 
 
 if __name__ == '__main__':
