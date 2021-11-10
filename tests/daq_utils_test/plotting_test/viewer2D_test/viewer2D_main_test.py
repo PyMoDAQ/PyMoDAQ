@@ -8,7 +8,7 @@ import pyqtgraph as pg
 from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
 from unittest import mock
-
+from pathlib import Path
 import pytest
 from pytest import fixture, approx
 import numpy as np
@@ -37,7 +37,8 @@ def init_prog(qtbot):
     data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
     data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
-    data_spread = np.load('triangulation_data.npy')
+    here = Path(__file__).parent
+    data_spread = np.load(str(here.joinpath('triangulation_data.npy')))
     prog.parent.show()
     
     return prog, qtbot, (data_red, data_green, data_blue, data_spread)
@@ -82,7 +83,9 @@ class TestData0DWithHistory:
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
             assert data_histo._data_length == ind+1
-            assert np.any(data_histo.xaxis == approx(np.linspace(0, ind+1, ind+1, endpoint=False)))
+            assert np.any(data_histo.xaxis == approx(np.linspace(max(0, ind+1-Nsamplesinhisto), ind+1,
+                                                                 min(Nsamplesinhisto, ind+1)
+                                                                 , endpoint=False, dtype=float)))
             assert 'data_00' in data_histo.datas
             assert 'data_01' in data_histo.datas
 

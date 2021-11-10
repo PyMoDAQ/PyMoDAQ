@@ -10,11 +10,11 @@ from collections import OrderedDict
 import numpy as np
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.daq_utils as utils
+
 from pyqtgraph import LinearRegionItem
-from pymodaq.daq_utils.gui_utils import DockArea
-from pyqtgraph.dockarea import Dock
+from pymodaq.daq_utils import gui_utils as gutils
 import copy
-from pymodaq.daq_utils.plotting.viewerND.signal_manager import Signal
+from pymodaq.daq_utils.plotting.viewerND.signal_manager import Signal as SignalND
 import datetime
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -26,8 +26,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
         ======================== =========================================
         **Attributes**            **Type**
 
-        *dockarea*                instance of pyqtgraph.DockArea
-        *mainwindow*              instance of pyqtgraph.DockArea
+        *DockArea*                instance of gutils.DockArea
+        *mainwindow*              instance of gutils.DockArea
         *title*                   string
         *waitime*                 int
         *x_axis*                  float array
@@ -58,19 +58,16 @@ class ViewerND(QtWidgets.QWidget, QObject):
     def __init__(self, parent=None):
         
         super(ViewerND, self).__init__()
-        # if parent is None:
-        #     raise Exception('no valid parent container, expected dockarea')
-        # parent=DockArea()
-        # exit(0)
+
 
         if parent is None:
-            area = DockArea()
+            area = gutils.DockArea()
             area.show()
             self.area = area
-        elif isinstance(parent, DockArea):
+        elif isinstance(parent, gutils.DockArea):
             self.area = parent
         elif isinstance(parent, QtWidgets.QWidget):
-            area = DockArea()
+            area = gutils.DockArea()
             self.area = area
             parent.setLayout(QtWidgets.QVBoxLayout())
             parent.layout().addWidget(area)
@@ -187,7 +184,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         if nav_axes is None:
             N_nav_axes = len(self.datas.data.shape)
         else:
-            N_nav_axes = len(nav_axes)
+            N_nav_axes = len([ax for ax in navigation_axes if 'nav' in ax])
         nav_axes_dicts = []
         sorted_indexes = []
         for k in navigation_axes:
@@ -263,7 +260,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             if len(axes_nav) == 0 or len(axes_nav) == 1:
                 self.update_viewer_data(*self.ui.navigator1D.ui.crosshair.get_positions())
             elif len(axes_nav) == 2:
-                self.update_viewer_data(*self.ui.navigator2D.ui.crosshair.get_positions())
+                self.update_viewer_data(*self.ui.navigator2D.crosshair.get_positions())
 
             # #get ROI bounds from viewers if any
             ROI_bounds_1D = []
@@ -454,7 +451,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             if len(nav_axes) > 1:
                 x, y = self.ui.navigator2D.unscale_axis(np.mean(nav_axes[0]['data']),
                                                         np.mean(nav_axes[1]['data']))
-                self.ui.navigator2D.ui.crosshair.set_crosshair_position(x, y)
+                self.ui.navigator2D.crosshair.set_crosshair_position(x, y)
 
             if self.x_axis['data'] is not None:
                 self.ROI1D.setRegion((np.min(self.x_axis['data']), np.max(self.x_axis['data'])))
@@ -503,7 +500,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         self.settings.child('data_shape_settings', 'navigator_axes').setValue(
             dict(all_items=[ax['label'] for ax in self.nav_axes_dicts],
-                 selected=[self.nav_axes_dicts[ind]['label'] for ind in nav_axes]))
+                 selected=[self.    nav_axes_dicts[ind]['label']
+    for ind in nav_axes]))
 
     def set_GUI(self):
         """
@@ -518,10 +516,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # Hsplitter=QtWidgets.QSplitter(Qt.Horizontal)
 
         params = [
-            {'title': 'set data:', 'name': 'set_data_4D', 'type': 'action', 'visible': False},
-            {'title': 'set data:', 'name': 'set_data_3D', 'type': 'action', 'visible': False},
-            {'title': 'set data:', 'name': 'set_data_2D', 'type': 'action', 'visible': False},
-            {'title': 'set data:', 'name': 'set_data_1D', 'type': 'action', 'visible': False},
+            {'title': 'Set data 4D', 'name': 'set_data_4D', 'type': 'action', 'visible': False},
+            {'title': 'Set data 3D', 'name': 'set_data_3D', 'type': 'action', 'visible': False},
+            {'title': 'Set data 2D', 'name': 'set_data_2D', 'type': 'action', 'visible': False},
+            {'title': 'Set data 1D', 'name': 'set_data_1D', 'type': 'action', 'visible': False},
             {'title': 'Signal shape', 'name': 'data_shape_settings', 'type': 'group', 'children': [
                 {'title': 'Initial Data shape:', 'name': 'data_shape_init', 'type': 'str', 'value': "",
                  'readonly': True},
@@ -559,18 +557,17 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # % 2D viewer Dock
         viewer2D_widget = QtWidgets.QWidget()
         self.ui.viewer2D = Viewer2D(viewer2D_widget)
-        self.ui.viewer2D.ui.Ini_plot_pb.setVisible(False)
-        self.ui.viewer2D.ui.FlipUD_pb.setVisible(False)
-        self.ui.viewer2D.ui.FlipLR_pb.setVisible(False)
-        self.ui.viewer2D.ui.rotate_pb.setVisible(False)
-        self.ui.viewer2D.ui.auto_levels_pb.click()
-        self.ui.viewer2D.ui.ROIselect_pb.click()
-        self.ROI2D = self.ui.viewer2D.ui.ROIselect
+        self.ui.viewer2D.set_action_visible('flip_ud', False)
+        self.ui.viewer2D.set_action_visible('flip_lr', False)
+        self.ui.viewer2D.set_action_visible('rotate', False)
+        self.ui.viewer2D.get_action('autolevels').trigger()
+        self.ui.viewer2D.get_action('ROIselect').trigger()
+        self.ROI2D = self.ui.viewer2D.ROIselect
         self.ui.viewer2D.ROI_select_signal.connect(self.update_Navigator)
 
-        dock_signal = Dock('Signal')
-        dock_signal.addWidget(viewer1D_widget)
-        dock_signal.addWidget(viewer2D_widget)
+        Dock_signal = gutils.Dock('Signal')
+        Dock_signal.addWidget(viewer1D_widget)
+        Dock_signal.addWidget(viewer2D_widget)
 
         # #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         # #% Navigator viewer Dock
@@ -581,10 +578,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.navigator1D.data_to_export_signal.connect(self.export_data)
         navigator2D_widget = QtWidgets.QWidget()
         self.ui.navigator2D = Viewer2D(navigator2D_widget)
-        self.ui.navigator2D.ui.auto_levels_pb.click()
+        self.ui.navigator2D.get_action('autolevels').trigger()
         self.ui.navigator2D.crosshair_dragged.connect(
             self.update_viewer_data)  # export scaled position in conjonction with 2D scaled axes
-        self.ui.navigator2D.ui.crosshair_pb.click()
+        self.ui.navigator2D.get_action('crosshair').trigger()
         self.ui.navigator2D.data_to_export_signal.connect(self.export_data)
 
         self.ui.navigation_widget = QtWidgets.QWidget()
@@ -601,12 +598,12 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # self.ui.navigation_widget.setLayout(vlayout_navigation)
         # vsplitter.insertWidget(0, self.ui.navigation_widget)
 
-        dock_navigation = Dock('Navigation')
-        dock_navigation.addWidget(navigator1D_widget)
-        dock_navigation.addWidget(navigator2D_widget)
+        Dock_navigation = gutils.Dock('Navigation')
+        Dock_navigation.addWidget(navigator1D_widget)
+        Dock_navigation.addWidget(navigator2D_widget)
 
-        self.area.addDock(dock_navigation)
-        self.area.addDock(dock_signal, 'right', dock_navigation)
+        self.area.addDock(Dock_navigation)
+        self.area.addDock(Dock_signal, 'right', Dock_navigation)
 
         # self.ui.signal_widget = QtWidgets.QWidget()
         # VLayout1 = QtWidgets.QVBoxLayout()
@@ -618,25 +615,20 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # self.ui.signal_widget.setLayout(VLayout1)
         # vsplitter.insertWidget(1, self.ui.signal_widget)
 
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/cartesian.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.set_signals_pb_1D = QtWidgets.QPushButton('')
-        self.ui.set_signals_pb_1D.setToolTip('Change navigation/signal axes')
-        self.ui.set_signals_pb_1D_bis = QtWidgets.QPushButton('')
-        self.ui.set_signals_pb_1D_bis.setToolTip('Change navigation/signal axes')
-        self.ui.set_signals_pb_1D.setIcon(icon)
-        self.ui.set_signals_pb_1D_bis.setIcon(icon)
-        self.ui.set_signals_pb_2D = QtWidgets.QPushButton('')
-        self.ui.set_signals_pb_2D.setToolTip('Change navigation/signal axes')
-        self.ui.set_signals_pb_2D.setIcon(icon)
-        self.ui.set_signals_pb_2D_bis = QtWidgets.QPushButton('')
-        self.ui.set_signals_pb_2D_bis.setToolTip('Change navigation/signal axes')
-        self.ui.set_signals_pb_2D_bis.setIcon(icon)
+        self.ui.set_signals_pb_1D = gutils.addaction('', icon_name='cartesian', checkable=True,
+                                                     tip='Change navigation/signal axes')
 
-        self.ui.navigator1D.ui.button_widget.addWidget(self.ui.set_signals_pb_1D)
-        self.ui.navigator2D.toolbar_button.addWidget(self.ui.set_signals_pb_2D)
-        self.ui.viewer1D.ui.button_widget.addWidget(self.ui.set_signals_pb_1D_bis)
-        self.ui.viewer2D.toolbar_button.addWidget(self.ui.set_signals_pb_2D_bis)
+        self.ui.set_signals_pb_1D_bis = gutils.addaction('', icon_name='cartesian', checkable=True,
+                                                     tip='Change navigation/signal axes')
+        self.ui.set_signals_pb_2D = gutils.addaction('', icon_name='cartesian', checkable=True,
+                                                     tip='Change navigation/signal axes')
+        self.ui.set_signals_pb_2D_bis = gutils.addaction('', icon_name='cartesian', checkable=True,
+                                                         tip='Change navigation/signal axes')
+
+        self.ui.navigator1D.ui.button_widget.addAction(self.ui.set_signals_pb_1D)
+        self.ui.navigator2D.toolbar.addAction(self.ui.set_signals_pb_2D)
+        self.ui.viewer1D.ui.button_widget.addAction(self.ui.set_signals_pb_1D_bis)
+        self.ui.viewer2D.toolbar.addAction(self.ui.set_signals_pb_2D_bis)
 
         # main_layout.addWidget(vsplitter)
 
@@ -661,10 +653,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # todo: better connection as discussed
         self.ui.spread_viewer_1D.ui.crosshair.crosshair_dragged.connect(self.get_nav_position)
         self.ui.spread_viewer_1D.ui.crosshair_pb.click()
-        self.ui.spread_viewer_2D.ui.auto_levels_pb.click()
+        self.ui.spread_viewer_2D.get_action('autolevels').click()
         # todo: better connection as discussed
         self.ui.spread_viewer_2D.crosshair_dragged.connect(self.get_nav_position)
-        self.ui.spread_viewer_2D.ui.crosshair_pb.click()
+        self.ui.spread_viewer_2D.get_action('crosshair').trigger()
 
         self.ui.spread_widget.show()
         self.ui.spread_widget.setVisible(False)
@@ -699,7 +691,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         for key in kwargs:
             self.data_to_export['dataND']['CH000'][key] = kwargs[key]
         self._datas = datas
-        self.datas = Signal(datas)
+        self.datas = SignalND(datas)
         self.datas_settings = kwargs
         self.restore_nav_axes(kwargs, nav_axes=nav_axes)
         self.set_nav_shapes()
@@ -771,7 +763,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         try:
             axes_nav = [len(self.data_axes) - ind - 1 for ind in self.get_selected_axes_indexes()]
             axes_signal = [ax for ax in self.data_axes if ax not in axes_nav]
-            self.datas = Signal(self._datas)
+            self.datas = SignalND(self._datas)
             self.datas = self.datas.transpose(signal_axes=axes_signal, navigation_axes=axes_nav)
 
         except Exception as e:
@@ -890,7 +882,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    area = DockArea()
+    area = gutils.DockArea()
     prog = ViewerND(area)
     prog.settings.child(('set_data_4D')).show(True)
     prog.settings.child(('set_data_3D')).show(True)

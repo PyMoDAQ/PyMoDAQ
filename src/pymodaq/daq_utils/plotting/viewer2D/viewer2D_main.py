@@ -1015,7 +1015,7 @@ class Viewer2D(QObject):
         if parent is None:
             parent = QtWidgets.QWidget()
             parent.show()
-            self.parent = parent
+        self.parent = parent
 
         self.view = View2D(parent)
         self.filter_from_rois = FilterFromRois(self.view.roi_manager.settings, self.view.data_displayer.get_image('red'))
@@ -1027,6 +1027,20 @@ class Viewer2D(QObject):
         self.crosshair_lineout_signal.connect(self.process_crosshair_lineouts)
 
         self.prepare_connect_ui()
+
+        self.add_convenience_attributes()
+
+    def add_convenience_attributes(self):
+        """Convenience function to set attributes to self for the public API
+        See Also
+        --------
+        View2D and ActionManager
+        """
+        for attribute in ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
+                          'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair'):
+            if hasattr(self.view, attribute):
+                setattr(self, attribute, getattr(self.view, attribute))
+
 
     def setImageTemp(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
         pass

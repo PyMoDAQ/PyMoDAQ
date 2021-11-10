@@ -2158,8 +2158,9 @@ class DAQ_Detector(QObject):
         return status
 
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
+def main(init_qt=True):
+    if init_qt: # used for the test suite
+        app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
@@ -2167,8 +2168,10 @@ def main():
     win.setWindowTitle('PyMoDAQ Viewer')
     DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
     win.show()
-    sys.exit(app.exec_())
+    if init_qt:
+        sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
+
     main()

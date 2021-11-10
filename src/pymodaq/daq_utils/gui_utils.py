@@ -54,8 +54,14 @@ class QAction(QAction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.click = self.trigger
-        self.clicked = self.triggered
+    def click(self):
+        logger.warning("click for PyMoDAQ's QAction is deprecated, use *trigger*")
+        self.trigger()
+
+    @property
+    def clicked(self):
+        logger.warning("clicked for PyMoDAQ's QAction is deprecated, use *trigger*")
+        return self.triggered
 
     def connect_to(self, slot):
         self.triggered.connect(slot)
@@ -84,16 +90,16 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
 class ActionManager(ABC):
     def __init__(self, toolbar=None, menu=None):
         self._actions = dict([])
-        self.toolbar = toolbar
-        self.menu = menu
+        self._toolbar = toolbar
+        self._menu = menu
 
         self.setup_actions()
 
     def set_toolbar(self, toolbar):
-        self.toolbar = toolbar
+        self._toolbar = toolbar
 
     def set_menu(self, menu):
-        self.menu = menu
+        self._menu = menu
 
     def set_action_text(self, action_name, text: str):
         if action_name in self._actions:
@@ -119,9 +125,9 @@ class ActionManager(ABC):
         pymodaq/resources/QtDesigner_Ressources/Icon_Library, affect_to
         """
         if toolbar is None:
-            toolbar = self.toolbar
+            toolbar = self._toolbar
         if menu is None:
-            menu = self.menu
+            menu = self._menu
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
 
     def get_action(self, name):
@@ -141,6 +147,10 @@ class ActionManager(ABC):
         self._actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
         """
         pass
+
+    @property
+    def toolbar(self):
+        return self._toolbar
 
     def affect_to(self, action_name, obj):
         if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
@@ -813,8 +823,8 @@ class CustomApp(QtCore.QObject):
         self.docks = dict([])
 
         self.action_manager = None
-        self.toolbar = QtWidgets.QToolBar()
-        self.mainwindow.addToolBar(self.toolbar)
+        self._toolbar = QtWidgets.QToolBar()
+        self.mainwindow.addToolBar(self._toolbar)
 
         # %% init and set the status bar
         self.statusbar = self.mainwindow.statusBar()
@@ -830,7 +840,7 @@ class CustomApp(QtCore.QObject):
 
     def set_action_manager(self, action_manager):
         self.action_manager = action_manager
-        self.action_manager.set_toolbar(self.toolbar)
+        self.action_manager.set_toolbar(self._toolbar)
         self.connect_things()
         
     def connect_action(self, action_name, slot, connect=True):
@@ -874,7 +884,7 @@ class CustomApp(QtCore.QObject):
 
         For instance:
 
-        file_menu = self.menubar.addMenu('File')
+        file_menu = self._menubar.addMenu('File')
         self.affect_to('load', file_menu)
         self.affect_to('save', file_menu)
 
