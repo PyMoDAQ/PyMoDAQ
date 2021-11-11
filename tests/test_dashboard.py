@@ -14,7 +14,7 @@ def init_qt(qtbot):
 
 
 class TestGeneral:
-
+    @mark.skip
     def test_main_setfilepreset_quit(self, init_qt):
         qtbot = init_qt
         dashboard, win = dashmod.main(False)
