@@ -18,6 +18,7 @@ class TestGeneral:
     def test_main_set_daqtype_init_snap_desinit_quit(self, init_qt, daq_type):
         qtbot = init_qt
         viewer, win = daqvm.main(False)
+        qtbot.addWidget(win)
         viewer.daq_type = daq_type
         with qtbot.waitSignal(viewer.init_signal) as blocker:
             viewer.init_det()

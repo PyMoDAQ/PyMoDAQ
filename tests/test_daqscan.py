@@ -35,7 +35,8 @@ def main(qtbot):
     daq_scan = DAQ_Scan(dockarea=areascan, dashboard=dashboard, show_popup=False)
     daq_scan.status_signal.connect(dashboard.add_status)
     winscan.show()
-
+    qtbot.addWidget(win)
+    qtbot.addWidget(winscan)
     return dashboard, daq_scan, win
 
 

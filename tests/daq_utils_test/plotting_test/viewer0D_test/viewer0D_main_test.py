@@ -13,7 +13,7 @@ from collections import OrderedDict
 def init_prog(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer0D(form)
-    qtbot.addWidget(prog)
+    qtbot.addWidget(form)
     return prog
 
 

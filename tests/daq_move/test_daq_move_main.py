@@ -12,6 +12,7 @@ class TestGeneral:
     def test_main_set_daqtype_init_snap_desinit_quit(self, init_qt):
         qtbot = init_qt
         mover, win = daqmm.main(False)
+        qtbot.addWidget(win)
         with qtbot.waitSignal(mover.init_signal) as blocker:
             mover.init()
         assert blocker.args[0]

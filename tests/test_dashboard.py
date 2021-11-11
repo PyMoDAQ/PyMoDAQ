@@ -15,10 +15,10 @@ def init_qt(qtbot):
 
 class TestGeneral:
 
-    @mark.skip
     def test_main_setfilepreset_quit(self, init_qt):
         qtbot = init_qt
         dashboard, win = dashmod.main(False)
+        qtbot.addWidget(win)
         with qtbot.waitSignal(dashboard.preset_loaded_signal, timeout=20000) as blocker:
             dashboard.set_preset_mode(preset_path.joinpath('preset_default.xml'))
         assert blocker.args[0]
