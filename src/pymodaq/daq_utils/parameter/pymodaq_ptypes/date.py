@@ -13,22 +13,6 @@ class WidgetParameterItem(WidgetParameterItem):
             value = self.param.value()
         self.displayLabel.setText(value.toString(self.param.opts['format']))
 
-    def valueChanged(self, param, val, force=False):
-        ## called when the parameter's value has changed
-        ParameterItem.valueChanged(self, param, val)
-        try:
-            if self.widget.sigChanged is not None:
-                self.widget.sigChanged.disconnect(self.widgetValueChanged)
-            self.param.sigValueChanged.disconnect(self.valueChanged)
-            self.widget.setValue(val)
-            self.param.setValue(self.widget.value())
-        finally:
-            if self.widget.sigChanged is not None:
-                self.widget.sigChanged.connect(self.widgetValueChanged)
-            self.param.sigValueChanged.connect(self.valueChanged)
-        self.updateDisplayLabel()  ## always make sure label is updated, even if values match!
-        self.updateDefaultBtn()
-
 
 class DateParameterItem(WidgetParameterItem):
     """Registered parameter type which displays a QLineEdit"""
