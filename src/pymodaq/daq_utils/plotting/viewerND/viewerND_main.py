@@ -464,16 +464,16 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
     def set_data_test(self, data_shape='3D'):
 
-        x = utils.linspace_step(0, 20, 1)
-        y = utils.linspace_step(0, 30, 1)
-        t = utils.linspace_step(0, 200, 1)
-        z = utils.linspace_step(0, 200, 1)
+        x = utils.linspace_step(-10, 10, 0.2)
+        y = utils.linspace_step(-30, 30, 2)
+        t = utils.linspace_step(-200, 200, 2)
+        z = utils.linspace_step(-50, 50, 0.5)
         datas = np.zeros((len(y), len(x), len(t), len(z)))
-        amp = utils.gauss2D(x, 7, 5, y, 12, 10)
+        amp = utils.gauss2D(x, 0, 1, y, 0, 2)
         for indx in range(len(x)):
             for indy in range(len(y)):
                 datas[indy, indx, :, :] = amp[indy, indx] * (
-                    utils.gauss2D(z, 50 + indx * 2, 20, t, 50 + 3 * indy, 30) + np.random.rand(len(t), len(z)) / 10)
+                    utils.gauss2D(z, 0 + indx * 2, 20, t, 0 + 3 * indy, 30) + np.random.rand(len(t), len(z)) / 10)
 
         nav_axis = dict(nav00=Axis(data=y, nav_index=0, label='y_axis', units='yunits'),
                         nav01=Axis(data=x, nav_index=1, label='x_axis', units='xunits'),

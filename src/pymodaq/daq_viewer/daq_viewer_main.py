@@ -1164,9 +1164,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
             elif data['dim'] == 'Data2D':
                 if temp:
-                    self.ui.viewers[ind].setImageTemp(*data['data'])
+                    self.ui.viewers[ind].show_data_temp(data)
                 else:
-                    self.ui.viewers[ind].setImage(*data['data'])
+                    self.ui.viewers[ind].show_data(data)
 
             else:
                 if 'nav_axes' in data.keys():

@@ -217,6 +217,9 @@ class TestViewer2D:
         assert prog.view.is_action_checked('green')
         assert not prog.view.is_action_checked('blue')
 
+
+class TestActions:
+
     @pytest.mark.parametrize('color', ['red', 'green', 'blue'])
     def test_color_action(self, init_prog, color):
         prog, qtbot, (data_red, data_green, data_blue, data_spread) = init_prog
@@ -262,6 +265,15 @@ class TestViewer2D:
         assert prog.view.histogrammer.get_histogram('blue').getLevels() ==\
                approx((5.693320370703248e-09, 9.83017824174412))
 
+    def test_autolevel_action(self, init_prog):
+        prog, qtbot, (data_red, data_green, data_blue, data_spread) = init_prog
+        prog.view.get_action('autolevels').trigger()
+        assert prog.view.histogrammer.autolevels
+        assert prog.view.data_displayer.autolevels
+
+        prog.view.get_action('autolevels').trigger()
+        assert not prog.view.histogrammer.autolevels
+        assert not prog.view.data_displayer.autolevels
 
 class TestHistogrammer:
     def test_histo_connected_to_image(self, init_prog):

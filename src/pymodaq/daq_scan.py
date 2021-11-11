@@ -58,7 +58,7 @@ class DAQ_Scan(QObject):
             {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'}, ]},
     ]
 
-    def __init__(self, dockarea=None, dashboard=None):
+    def __init__(self, dockarea=None, dashboard=None, show_popup=True):
         """
 
         Parameters
@@ -75,6 +75,7 @@ class DAQ_Scan(QObject):
             raise Exception('No valid dashboard initialized')
         self.mainwindow = self.dockarea.parent()
 
+        self.show_popup = show_popup  # used to deactivate popups when testing with pytest
         self.wait_time = 1000
         self.navigator = None
         self.scan_x_axis = None
@@ -761,8 +762,8 @@ class DAQ_Scan(QObject):
         self.ui.scan2D_subgraph.show(False)
 
         self.ui.scan2D_graph.set_action_checked('histo', False)
-        self.ui.scan2D_graph.set_action_visible(['histo', 'flip_ud', 'flip_lr', 'rotate'], False)
-        self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
+        self.ui.scan2D_graph.set_action_visible(['flip_ud', 'flip_lr', 'rotate'], False)
+        #self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
 
 
         self.move_to_crosshair_action = gutils.QAction(
@@ -884,27 +885,30 @@ class DAQ_Scan(QObject):
             --------
             custom_tree.parameter_to_xml_file, create_menu
         """
-        dialog = QtWidgets.QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
-        tree = ParameterTree()
-        tree.setMinimumWidth(400)
-        tree.setMinimumHeight(500)
-        if type_info == 'scan':
-            tree.setParameters(self.scan_attributes, showTop=False)
-        elif type_info == 'dataset':
-            tree.setParameters(self.dataset_attributes, showTop=False)
+        if self.show_popup:
+            dialog = QtWidgets.QDialog()
+            vlayout = QtWidgets.QVBoxLayout()
+            tree = ParameterTree()
+            tree.setMinimumWidth(400)
+            tree.setMinimumHeight(500)
+            if type_info == 'scan':
+                tree.setParameters(self.scan_attributes, showTop=False)
+            elif type_info == 'dataset':
+                tree.setParameters(self.dataset_attributes, showTop=False)
 
-        vlayout.addWidget(tree)
-        dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-        buttonBox.addButton('Cancel', buttonBox.RejectRole)
-        buttonBox.addButton('Apply', buttonBox.AcceptRole)
-        buttonBox.rejected.connect(dialog.reject)
-        buttonBox.accepted.connect(dialog.accept)
+            vlayout.addWidget(tree)
+            dialog.setLayout(vlayout)
+            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+            buttonBox.addButton('Cancel', buttonBox.RejectRole)
+            buttonBox.addButton('Apply', buttonBox.AcceptRole)
+            buttonBox.rejected.connect(dialog.reject)
+            buttonBox.accepted.connect(dialog.accept)
 
-        vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
-        res = dialog.exec()
+            vlayout.addWidget(buttonBox)
+            dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
+            res = dialog.exec()
+        else:
+            res = True
         return res
 
     def show_file_content(self):
@@ -1612,7 +1616,7 @@ class DAQ_Scan_Acquisition(QObject):
 
         """
         
-        super(QObject, self).__init__()
+        super().__init__()
 
         self.stop_scan_flag = False
         self.settings = settings
@@ -2072,9 +2076,8 @@ class DAQ_Scan_Acquisition(QObject):
             QtWidgets.QApplication.processEvents()
 
 
-
 def main(init_qt=True):
-    if init_qt: # used for the test suite
+    if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
         if config['style']['darkstyle']:
             import qdarkstyle

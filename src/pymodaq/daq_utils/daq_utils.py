@@ -159,6 +159,13 @@ def load_config(config_path=None):          # pragma: no cover
     return config
 
 
+def set_config(config_as_dict, config_path=None):
+    if not config_path:
+        config_path = get_set_local_dir().joinpath('config.toml')
+
+    config_path.write_text(toml.dumps(config_as_dict))
+
+
 def check_config(config_base, config_local):
     status = False
     for key in config_base:
@@ -664,7 +671,7 @@ class Data(OrderedDict):
             raise AttributeError(f'{name} if not a key of {self}')
 
     def __repr__(self):
-        return f'Data Object: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
+        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
 
 
 class DataFromPlugins(Data):
@@ -714,7 +721,7 @@ class DataFromPlugins(Data):
         self['dim'] = dim
 
     def __repr__(self):
-        return f'Data Object: <name: {self.name}> - <distribution: {self.distribution}>' \
+        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
                f' - <source: {self.source}> - <dim: {self.dim}>'
 
 
@@ -750,7 +757,7 @@ class DataToExport(Data):
         self['dim'] = dim
 
     def __repr__(self):
-        return f'Data Object: <name: {self.name}> - <distribution: {self.distribution}>' \
+        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
                f' - <source: {self.source}> - <dim: {self.dim}>'
 
 class ScaledAxis(Axis):

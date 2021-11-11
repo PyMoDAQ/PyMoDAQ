@@ -463,7 +463,8 @@ class ImageDisplayer(QObject):
             self.display_type = datas['distribution']
             self.update_display_items()
         for ind_data, data in enumerate(datas['data']):
-            self._image_items[IMAGE_TYPES[ind_data]].setImage(data, self.autolevels)
+            if data.size > 0:
+                self._image_items[IMAGE_TYPES[ind_data]].setImage(data, self.autolevels)
 
     def update_display_items(self):
         if not self._image_items:
@@ -513,14 +514,14 @@ class Histogrammer(QObject):
     @Slot(bool)
     def set_autolevels(self, isautolevels=True):
         self._autolevels = isautolevels
+        for histo in self._histograms.values():
+            histo.region.setVisible(not isautolevels)
 
     @Slot(bool)
     def activated(self, histo_action_checked):
         if histo_action_checked:
             for histo in self._histograms.values():
                 histo.regionChanged()
-        for histo in self._histograms.values():
-            histo.region.setVisible(not self.autolevels)
 
     def affect_histo_to_imageitems(self, image_items):
         for img_key in IMAGE_TYPES:
@@ -752,7 +753,7 @@ class View2D(QObject):
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
 
         self.data_displayer.updated_item.connect(self.histogrammer.affect_histo_to_imageitems)
-        self.action_manager.connect_action('histo', self.data_displayer.set_autolevels)
+        self.action_manager.connect_action('autolevels', self.data_displayer.set_autolevels)
         self.action_manager.connect_action('histo', self.histogrammer.activated)
         self.action_manager.connect_action('autolevels', self.histogrammer.set_autolevels)
         self.action_manager.connect_action('isocurve', self.isocurver.show_hide_iso)
@@ -1030,7 +1031,7 @@ class Viewer2D(QObject):
     roi_lineout_signal = Signal(dict)
     crosshair_lineout_signal = Signal(dict)
 
-    crosshair_dragged = Signal(float, float)  # signal used to pass crosshair position to other modules in
+    crosshair_dragged = Signal(float, float)  # Crosshai position in units of scaled top/right axes
     crosshair_clicked = Signal(bool)
     # scaled axes units
     sig_double_clicked = Signal(float, float)
@@ -1074,7 +1075,7 @@ class Viewer2D(QObject):
         """
         for attribute in ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
                           'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
-                          'image_widget', 'scale_axis'):
+                          'image_widget', 'scale_axis', 'unscale_axis'):
             if hasattr(self.view, attribute):
                 setattr(self, attribute, getattr(self.view, attribute))
 
@@ -1145,7 +1146,7 @@ class Viewer2D(QObject):
             self.data_to_show_signal.emit(self._datas)
 
             if self.view.is_action_checked('roi'):
-                self.roi_changed(self.view.roi_selection.ROIs)
+                self.roi_changed(self.view.roi_manager.ROIs)
 
             if self.view.is_action_checked('crosshair'):
                 self.crosshair_changed(*self.view.crosshair.get_positions())
@@ -1187,7 +1188,7 @@ class Viewer2D(QObject):
                 self.view.set_action_visible(key, True)
 
             self.view.notify_visibility_data_displayer()
-            self.view.show_hide_histogram(False)
+            #self.view.show_hide_histogram(False)
 
 
     def update_crosshair_data(self, crosshair_dict):
@@ -1195,10 +1196,10 @@ class Viewer2D(QObject):
             posx, posy = self.view.get_crosshair_position()
             (posx_scaled, posy_scaled) = self.view.scale_axis(posx, posy)
 
-            dat = f'({posx_scaled:.1e}, {posy_scaled:.1e})'
+            dat = f'({posx_scaled:.1e}{posy_scaled:.1e})\n'
             for image_key in IMAGE_TYPES:
                 if self.view.is_action_checked(image_key):
-                    dat += f' {image_key}={crosshair_dict[image_key].int_data:.1e},'
+                    dat += f' {image_key[0]}:{crosshair_dict[image_key].int_data:.1e}\n'
 
             self.view.set_action_text('position', dat)
 
@@ -1265,7 +1266,7 @@ class Viewer2D(QObject):
     @y_axis.setter
     def y_axis(self, axis):
         scaling, offset, label, units = AxisInfosExtractor.extract_axis_info(axis)
-        self.view.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
+        self.view.set_axis_scaling('right', scaling=scaling, offset=offset, label=label, units=units)
 
     def scale_lineout_dicts(self, lineout_dicts):
         for lineout_data in lineout_dicts.values():
@@ -1277,7 +1278,7 @@ class Viewer2D(QObject):
     def process_crosshair_lineouts(self, crosshair_dict):
         self.view.display_crosshair_lineouts(self.scale_lineout_dicts(crosshair_dict))
         self.update_crosshair_data(crosshair_dict)
-        self.crosshair_dragged.emit(*self.view.crosshair.get_positions())
+        self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
 
     @Slot(dict)
     def process_roi_lineouts(self, roi_dict):
@@ -1365,7 +1366,6 @@ def main_controller():
     # np.random.shuffle(data_shuffled)
     # prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',
     #                                      data=[data, data_shuffled]))
-    histogram_factory(gradient='yuipof135748f')
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
     prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
