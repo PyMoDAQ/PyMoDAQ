@@ -2,3 +2,4 @@ releases
 sphinx-csv-filter
 pillow
 toml
+pyqt5
