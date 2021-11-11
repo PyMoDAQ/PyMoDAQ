@@ -19,7 +19,7 @@ positions of the actuators (see :numref:`overview`). The Dashboard has functiona
 all its detectors and actuators and
 save the configuration in a file that will, at startup, load and initialize all modules. Then
 Dashboard's extensions can be used to perform advanced and automated tasks on the detectors and actuators
-(see :numref:`overview_submodules`):
+(see :numref:`overview_submodules_bis`):
 
 * The first of these extensions is called :ref:`DAQ_Scan_module` and is used to perform automated and synchronized data
   acquisition as a function of multiple actuators *positions*. Many kind of *scans* are possible: 1Ds, 2Ds, NDs, set of
