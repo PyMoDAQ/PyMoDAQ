@@ -39,7 +39,7 @@ Dashboard's extensions can be used to perform advanced and automated tasks on th
   * PID closed loop interface
   * A possibility to program a batch of scans.
 
-   .. _overview_submodules:
+   .. _overview_submodules_bis:
 
 .. figure:: /image/pymodaq_diagram.png
    :alt: overview
