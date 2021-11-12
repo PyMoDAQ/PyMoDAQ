@@ -48,8 +48,8 @@ class ParameterEx:
         {'title': 'An action', 'name': 'action', 'type': 'action'},  # action whose displayed text corresponds to title
 
         {'title': 'Lists:', 'name': 'lists', 'type': 'group', 'children': [
-            {'title': 'Standard list:', 'name': 'alist', 'type': 'list', 'values': ['a value', 'another one']},
-            {'title': 'List with add:', 'name': 'anotherlist', 'type': 'list', 'values': ['a value', 'another one'],
+            {'title': 'Standard list:', 'name': 'alist', 'type': 'list', 'limits': ['a value', 'another one']},
+            {'title': 'List with add:', 'name': 'anotherlist', 'type': 'list', 'limits': ['a value', 'another one'],
              'show_pb': True, 'tip': 'when using the "show_pb" option, displays a plus button to add elt to the list'},
         ]},
         {'title': 'Browsing files:', 'name': 'browser', 'type': 'group', 'children': [
@@ -76,7 +76,7 @@ class ParameterEx:
 
         {'title': 'Tables:', 'name': 'tables', 'type': 'group', 'children': [
             {'title': 'Table widget', 'name': 'tablewidget', 'type': 'table', 'value':
-                OrderedDict(key1='data1', key2=24), 'header': ['keys', 'values'], 'height': 100},
+                OrderedDict(key1='data1', key2=24), 'header': ['keys', 'limits'], 'height': 100},
             {'title': 'Table view', 'name': 'tabular_table', 'type': 'table_view',
              'delegate': gutils.SpinBoxDelegate, 'menu': True,
              'value': gutils.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),

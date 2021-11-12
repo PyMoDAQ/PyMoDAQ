@@ -273,30 +273,30 @@ class Scanner(QObject):
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
         {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
 
-        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': scan_types,
+        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': scan_types,
          'value': config['scan']['default']},
         {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
             {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
-             'values': scan_subtypes['Scan1D'], 'value': config['scan']['scan1D']['type'],
+             'limits': scan_subtypes['Scan1D'], 'value': config['scan']['scan1D']['type'],
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
             {'title': 'Loss type', 'name': 'scan1D_loss', 'type': 'list',
-             'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
+             'limits': [], 'tip': 'Type of loss used by the algo. to determine next points'},
             {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': config['scan']['scan1D']['start']},
             {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': config['scan']['scan1D']['stop']},
             {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': config['scan']['scan1D']['step']}
         ]},
         {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'scan2D_type', 'type': 'list',
-             'values': scan_subtypes['Scan2D'], 'value': config['scan']['scan2D']['type'],
+             'limits': scan_subtypes['Scan2D'], 'value': config['scan']['scan2D']['type'],
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
             {'title': 'Loss type', 'name': 'scan2D_loss', 'type': 'list',
-             'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
-            {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list', 'values': ['Manual', 'FromROI']},
-            {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'values': [], 'visible': False},
+             'limits': [], 'tip': 'Type of loss used by the algo. to determine next points'},
+            {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list', 'limits': ['Manual', 'FromROI']},
+            {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'limits': [], 'visible': False},
             {'title': 'Start Ax1:', 'name': 'start_2d_axis1', 'type': 'float',
              'value': config['scan']['scan2D']['start1'], 'visible': True},
             {'title': 'Start Ax2:', 'name': 'start_2d_axis2', 'type': 'float',
@@ -318,21 +318,21 @@ class Scanner(QObject):
         ]},
         {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'scanseq_type', 'type': 'list',
-             'values': scan_subtypes['Sequential'], 'value': scan_subtypes['Sequential'][0], },
+             'limits': scan_subtypes['Sequential'], 'value': scan_subtypes['Sequential'][0], },
             {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view',
              'delegate': gutils.SpinBoxDelegate},
         ]},
         {'title': 'Tabular settings', 'name': 'tabular_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'tabular_subtype', 'type': 'list',
-             'values': scan_subtypes['Tabular'], 'value': config['scan']['tabular']['type'],
+             'limits': scan_subtypes['Tabular'], 'value': config['scan']['tabular']['type'],
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
             {'title': 'Loss type', 'name': 'tabular_loss', 'type': 'list',
-             'values': [], 'tip': 'Type of loss used by the algo. to determine next points'},
+             'limits': [], 'tip': 'Type of loss used by the algo. to determine next points'},
             {'title': 'Selection:', 'name': 'tabular_selection', 'type': 'list',
-             'values': ['Manual', 'Polylines']},
-            {'title': 'From module:', 'name': 'tabular_roi_module', 'type': 'list', 'values': [],
+             'limits': ['Manual', 'Polylines']},
+            {'title': 'From module:', 'name': 'tabular_roi_module', 'type': 'list', 'limits': [],
              'visible': False},
             {'title': 'Curvilinear Step:', 'name': 'tabular_step', 'type': 'float',
              'value': config['scan']['tabular']['curvilinear']},

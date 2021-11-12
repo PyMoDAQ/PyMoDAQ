@@ -56,12 +56,12 @@ class QAction(QAction):
         super().__init__(*args, **kwargs)
 
     def click(self):
-        logger.warning("click for PyMoDAQ's QAction is deprecated, use *trigger*")
+        utils.deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*")
         self.trigger()
 
     @property
     def clicked(self):
-        logger.warning("clicked for PyMoDAQ's QAction is deprecated, use *trigger*")
+        utils.deprecation_msg("clicked for PyMoDAQ's QAction is deprecated, use *trigger*")
         return self.triggered
 
     def connect_to(self, slot):

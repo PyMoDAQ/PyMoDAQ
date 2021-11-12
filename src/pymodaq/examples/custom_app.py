@@ -51,9 +51,9 @@ class CustomAppExample(gutils.CustomApp):
         ]},
         {'title': 'Other settings:', 'name': 'other_settings', 'type': 'group', 'children': [
             {'title': 'List of stuffs:', 'name': 'list_stuff', 'type': 'list', 'value': 'first',
-                'values': ['first', 'second', 'third'], 'tip': 'choose a stuff from the list'},
+                'limits': ['first', 'second', 'third'], 'tip': 'choose a stuff from the list'},
             {'title': 'List of integers:', 'name': 'list_int', 'type': 'list', 'value': 0,
-                'values': [0, 256, 512], 'tip': 'choose a stuff from this int list'},
+                'limits': [0, 256, 512], 'tip': 'choose a stuff from this int list'},
             {'title': 'one integer:', 'name': 'an_integer', 'type': 'int', 'value': 500, },
             {'title': 'one float:', 'name': 'a_float', 'type': 'float', 'value': 2.7, },
         ]},

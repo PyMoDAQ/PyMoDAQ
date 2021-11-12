@@ -1101,15 +1101,15 @@ class Viewer2D(QObject):
                 setattr(self, attribute, getattr(self.view, attribute))
 
     def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        logger.warning("setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with"
-                       "one argument as utils.DataFromPlugins")
+        utils.deprecation_msg(f'setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with'
+                         f'one argument as utils.DataFromPlugins')
         datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
                                                     data_blue=data_blue, data_spread=data_spread)
         self.show_data(datas)
 
     def setImageTemp(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        logger.warning("setImageTemp for PyMoDAQ Viewer2D is deprecated, use *show_data_temp* with"
-                       "one argument as utils.DataFromPlugins")
+        utils.deprecation_msg(f'setImageTemp for PyMoDAQ Viewer2D is deprecated, use *show_data_temp* with'
+                         f'one argument as utils.DataFromPlugins')
         datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
                                                     data_blue=data_blue, data_spread=data_spread)
         self.show_data_temp(datas)

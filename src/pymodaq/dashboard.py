@@ -1179,7 +1179,7 @@ class DashBoard(QObject):
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
             {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config['general']['debug_level'],
-             'values': config['general']['debug_levels']},
+             'limits': config['general']['debug_levels']},
 
             {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
                 {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},

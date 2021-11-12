@@ -44,7 +44,7 @@ class DAQ_PID(QObject):
     params = [
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True, 'children': [
             {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
-             'values': [d['name'] for d in models]},
+             'limits': [d['name'] for d in models]},
             {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
         ]},
         {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group', 'visible': False,

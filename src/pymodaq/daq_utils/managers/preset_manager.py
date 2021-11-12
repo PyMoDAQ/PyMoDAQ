@@ -79,7 +79,7 @@ class PresetManager:
             {'title': 'Use PID as actuator:', 'name': 'use_pid', 'type': 'bool', 'value': False},
             # {'title': 'Saving options:', 'name': 'saving_options', 'type': 'group', 'children': H5Saver.params},
             {'title': 'PID models:', 'name': 'pid_models', 'type': 'list', 'visible': False,
-             'values': pid_models},
+             'limits': pid_models},
             {'title': 'Model Settings:', 'name': 'model_settings', 'type': 'group', 'visible': False, 'children': []},
         ]
         params_move = [

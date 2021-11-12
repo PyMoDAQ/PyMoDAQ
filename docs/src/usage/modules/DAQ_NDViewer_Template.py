@@ -60,7 +60,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             {'title': 'Camera SN:', 'name': 'camera_serialnumber', 'type': 'int', 'value': 0, 'readonly': True},
             {'title': 'Camera Model:', 'name': 'camera_model', 'type': 'str', 'value': '', 'readonly': True},
 
-            {'title': 'Readout Modes:', 'name': 'readout', 'type': 'list', 'values': Orsay_Camera_ReadOut.names(), 'value': 'FullVertBinning'},
+            {'title': 'Readout Modes:', 'name': 'readout', 'type': 'list', 'limits': Orsay_Camera_ReadOut.names(), 'value': 'FullVertBinning'},
             {'title': 'Readout Settings:', 'name': 'readout_settings', 'type': 'group', 'children':[
 
                 {'title': 'single Track Settings:', 'name': 'st_settings', 'type': 'group', 'visible': False, 'children':[

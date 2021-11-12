@@ -639,7 +639,7 @@ class TriangulationItem(ImageItem):
 
         self.setTransform(self.dataTransform())
 
-        for pol, color in zip(self.qimage['polygons'], self.qimage['values']):
+        for pol, color in zip(self.qimage['polygons'], self.qimage['limits']):
 
             p.setPen(fn.mkPen(*self.mesh_pen, 100, width=0.75))
             p.setBrush(fn.mkBrush(*color))

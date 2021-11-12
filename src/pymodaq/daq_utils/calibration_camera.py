@@ -41,7 +41,7 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
 
         params = [{'title': 'Load data:', 'name': 'Load data', 'type': 'action', },
                   {'title': 'Set Measurement:', 'name': 'Do measurement', 'type': 'action', },
-                  {'title': 'Calib from:', 'name': 'calib_from', 'type': 'list', 'values': ['Hlineout', 'Vlineout'], },
+                  {'title': 'Calib from:', 'name': 'calib_from', 'type': 'list', 'limits': ['Hlineout', 'Vlineout'], },
                   {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
                       {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "µm"},
                       {'title': 'dx (units):', 'name': 'dx_units', 'type': 'float', 'value': 0, },

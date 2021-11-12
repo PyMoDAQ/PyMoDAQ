@@ -50,7 +50,7 @@ class ScanSelector(QObject):
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Sources:', 'name': 'sources', 'type': 'list', },
             {'title': 'Viewers:', 'name': 'viewers', 'type': 'list', },
-            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Tabular', 'Scan2D'],
+            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': ['Tabular', 'Scan2D'],
              'value': 'Scan2D'},
         ]},
         {'title': 'Scan Area', 'name': 'scan_area', 'type': 'group', 'children': [
