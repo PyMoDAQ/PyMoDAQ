@@ -326,7 +326,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         if hasattr(self.ui, 'viewers'):  # this basically means we are at the initialization satge of the class
             if self.ui.viewers != []:
                 for ind in range(Nviewers):
-                    viewer = self.ui.viewers.pop()
+                    self.ui.viewers.pop()
                     widget = self.viewer_widgets.pop()
                     widget.close()
                     if len(self.ui.viewer_docks) > 1:
@@ -1500,9 +1500,9 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
     def show_ROI(self):
         if self.DAQ_type == "DAQ2D":
             self.settings.child('detector_settings', 'ROIselect').setOpts(
-                visible=self.ui.viewers[0].ROIselect_action.isChecked())
-            pos = self.ui.viewers[0].ui.ROIselect.pos()
-            size = self.ui.viewers[0].ui.ROIselect.size()
+                visible=self.ui.viewers[0].is_action_checked('ROIselect'))
+            pos = self.ui.viewers[0].ROIselect.pos()
+            size = self.ui.viewers[0].ROIselect.size()
             self.update_ROI(QRectF(pos[0], pos[1], size[0], size[1]))
 
     def stop_all(self):
@@ -1786,7 +1786,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                 self.viewer_widgets.append(QtWidgets.QWidget())
                 self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
                 self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
-                self.ui.viewers[-1].auto_levels_action.trigger()
+                self.ui.viewers[-1].get_action('autolevels').trigger()
 
             else:  # for multideimensional data 0 up to dimension 4
                 self.viewer_widgets.append(QtWidgets.QWidget())

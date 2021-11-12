@@ -3,6 +3,7 @@ from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
 from pymodaq.daq_utils.plotting.viewer2D import viewer2D_main as v2d
 from pymodaq.daq_utils.exceptions import ExpectedError
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.exceptions import ViewerError
 from pyqtgraph.parametertree import Parameter
 import pyqtgraph as pg
 from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
@@ -36,6 +37,7 @@ def init_data():
     data_spread = np.load(str(here.joinpath('triangulation_data.npy')))
     return data_red, data_green, data_blue, data_spread
 
+
 @fixture
 def init_prog(qtbot):
     form = QtWidgets.QWidget()
@@ -45,6 +47,17 @@ def init_prog(qtbot):
     prog.parent.show()
     
     return prog, qtbot
+
+@fixture
+def init_prog_show_data(init_prog, distribution='uniform'):
+    prog, qtbot = init_prog
+    data_red, data_green, data_blue, data_spread = init_data()
+    if distribution == 'uniform':
+        data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green, data_blue])
+    else:
+        data = utils.DataFromPlugins(distribution='uniform', data=[data_spread])
+    prog.show_data(data)
+    return prog, qtbot, (data_red, data_green, data_blue, data_spread)
 
 
 def create_one_roi(prog, qtbot, roitype='RectROI'):
@@ -175,18 +188,23 @@ class TestLineoutData:
     def test_intdataisnone(self):
         v2d.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
 
+
+class TestLineoutPlotter:
+    pass
+
+
 class TestViewer2D:
     def test_init(self, init_prog):
         prog, qtbot = init_prog
         assert isinstance(prog, Viewer2D)
 
-    def test_double_clicked(self, init_prog):
+    @pytest.mark.parametrize('dim', [(0,), (10,), (3, 3, 3)])
+    def test_viewer_error(self, init_prog, dim):
         prog, qtbot = init_prog
-        with qtbot.waitSignal(prog.sig_double_clicked, timeout=10000) as blocker:
-            prog.view.get_double_clicked().emit(10.5, 20.9)
+        data = prog.format_data_as_datafromplugins(data_red=np.zeros(dim))
+        with pytest.raises(ViewerError):
+            prog.show_data(data)
 
-        assert blocker.args[0] == approx(10.5)
-        assert blocker.args[1] == approx(20.9)
 
     def test_show_data_triggers_data_to_export_signal(self, init_prog):
         prog, qtbot = init_prog
@@ -214,6 +232,13 @@ class TestViewer2D:
         assert prog.data_to_export['name'] == prog.title
         assert len(data_to_export_from_signal['data0D']) == 0
         assert len(data_to_export_from_signal['data1D']) == 0
+
+    @pytest.mark.xfail
+    def test_setimage_temp(self, init_prog):
+        prog, qtbot = init_prog
+        data_red, data_green, data_blue, data_spread = init_data()
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=500) as blocker:
+            prog.setImageTemp(data_red=data_red)
 
     def test_show_data_setImageredblue(self, init_prog):
         prog, qtbot = init_prog
@@ -258,6 +283,85 @@ class TestViewer2D:
         assert prog.view.is_action_checked('red')
         assert prog.view.is_action_checked('green')
         assert not prog.view.is_action_checked('blue')
+
+    def test_update_data_roi(self, init_prog_show_data):
+        prog, qtbot, _ = init_prog_show_data
+        create_one_roi(prog, qtbot)
+        QtWidgets.QApplication.processEvents()
+
+        with qtbot.waitSignal(prog.roi_lineout_signal, timeout=1000) as blocker:
+            prog.update_data()
+
+    def test_update_data_crosshair(self, init_prog_show_data):
+        prog, qtbot, _ = init_prog_show_data
+        prog.view.get_action('crosshair').trigger()
+        QtWidgets.QApplication.processEvents()
+
+        with qtbot.waitSignal(prog.crosshair_lineout_signal, timeout=1000) as blocker:
+            prog.update_data()
+
+
+class TestAxis:
+    @pytest.mark.parametrize('position', ('left', 'bottom', 'right', 'top'))
+    def test_axis_label(self, init_prog, position):
+        prog, qtbot = init_prog
+        UNITS= 'myunits'
+        LABEL = 'mylabel'
+
+        prog.view.set_axis_label(position, label=LABEL, units=UNITS)
+        assert prog.view.get_axis_label(position) == (LABEL, UNITS)
+
+    def test_get_axis_error(self, init_prog):
+        prog, qtbot = init_prog
+
+        with pytest.raises(KeyError):
+            prog.view.get_axis_label('unvalid key')
+
+    def test_set_scaling_axes(self, init_prog):
+        prog, qtbot = init_prog
+        XUNITS= 'myxunits'
+        XLABEL = 'myxlabel'
+        XSCALING = 0.1
+        XOFFSET = 24
+
+        YUNITS= 'myyunits'
+        YLABEL = 'myylabel'
+        YSCALING = -2.1
+        YOFFSET = 0.87
+
+        x_scaling_options = utils.ScaledAxis(scaling=XSCALING, offset=XOFFSET, label=XLABEL, units=XUNITS)
+        y_scaling_options = utils.ScaledAxis(scaling=YSCALING, offset=YOFFSET, label=YLABEL, units=YUNITS)
+        prog.set_scaling_axes(utils.ScalingOptions(x_scaling_options, y_scaling_options))
+
+        assert prog.x_axis.axis_units == XUNITS
+        assert prog.x_axis.axis_label == XLABEL
+        assert prog.x_axis.axis_offset == XOFFSET
+        assert prog.x_axis.axis_scaling == XSCALING
+        assert prog.y_axis.axis_units == YUNITS
+        assert prog.y_axis.axis_label == YLABEL
+        assert prog.y_axis.axis_offset == YOFFSET
+        assert prog.y_axis.axis_scaling == YSCALING
+
+    def test_scale_axis(self, init_prog):
+        prog, qtbot = init_prog
+        XSCALING = 0.1
+        XOFFSET = 24
+        YSCALING = -2.1
+        YOFFSET = 0.87
+        prog.x_axis.axis_scaling = XSCALING
+        prog.x_axis.axis_offset = XOFFSET
+        prog.y_axis.axis_scaling = YSCALING
+        prog.y_axis.axis_offset = YOFFSET
+
+        xaxis = np.linspace(0., 10., 20)
+        yaxis = np.linspace(0, 20., 10)
+        xscaled , yscaled = prog.view.scale_axis(xaxis, yaxis)
+        assert np.any(xscaled == approx(xaxis * XSCALING + XOFFSET))
+        assert np.any(yscaled == approx(yaxis * YSCALING + YOFFSET))
+
+        xaxis_bis, yaxis_bis = prog.view.unscale_axis(*prog.view.scale_axis(xaxis, yaxis))
+        assert np.any(xaxis_bis == approx(xaxis))
+        assert np.any(yaxis_bis == approx(yaxis))
 
 
 class TestActions:
@@ -327,7 +431,20 @@ class TestActions:
         assert not prog.view.histogrammer.autolevels
         assert not prog.view.data_displayer.autolevels
 
+
 class TestHistogrammer:
+    @pytest.mark.parametrize('color', ['red', 'green', 'blue'])
+    def test_get_histogram(self, init_prog, color):
+        prog, qtbot = init_prog
+
+        assert color in prog.view.histogrammer.get_histograms()
+        assert prog.view.histogrammer.get_histogram(color) == prog.view.histogrammer.get_histograms()[color]
+
+    def test_get_histogram_name_error(self, init_prog):
+        prog, qtbot = init_prog
+        with pytest.raises(KeyError):
+            prog.view.histogrammer.get_histogram('not a valid identifier')
+
     def test_histo_connected_to_image(self, init_prog):
         prog, qtbot = init_prog
         data_red, data_green, data_blue, data_spread = init_data()
@@ -349,6 +466,12 @@ class TestHistogrammer:
         for color in ['red', 'green', 'blue']:
             assert prog.view.histogrammer.get_histogram(color).getLookupTable == \
                    prog.view.data_displayer.get_image(color).lut
+
+    @pytest.mark.parametrize('histo', ['red', 'blue', 'green', 'all'])
+    @pytest.mark.parametrize('gradient', ['blue', 'green', 'spread'])
+    def test_setgradient(self, init_prog_show_data, histo, gradient):
+        prog, qtbot, _ = init_prog_show_data
+        prog.view.histogrammer.set_gradient(histo, gradient)
 
 
 class TestROI:
@@ -374,12 +497,12 @@ class TestROI:
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
         assert roi_type == 'RectROI'
         assert index_roi == 0
-        assert len(prog.view.lineout_plotter.get_roi_curves()) == 1
+        assert len(prog.view.lineout_plotter.get_roi_curves_triplet()) == 1
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='EllipseROI')
         assert roi_type == 'EllipseROI'
         assert index_roi == 1
-        assert len(prog.view.lineout_plotter.get_roi_curves()) == 2
+        assert len(prog.view.lineout_plotter.get_roi_curves_triplet()) == 2
 
     def test_remove_roi(self, init_prog):
         prog, qtbot = init_prog
@@ -487,6 +610,27 @@ class TestIsocurve:
         assert prog.view.is_action_checked('isocurve')
         assert prog.view.is_action_checked('histo')
 
+    @pytest.mark.parametrize('histo', ['blue', 'green', 'red'])
+    @pytest.mark.parametrize('im_source', ['blue', 'green', 'red'])
+    def test_isocurve_parent(self, init_prog, im_source, histo):
+        prog, qtbot = init_prog
+        prog.view.isocurver.update_image_source(prog.view.data_displayer.get_image(im_source))
+        prog.view.isocurver.update_histogram_parent(prog.view.histogrammer.get_histogram(histo))
+
+    def test_change_isoline(self, init_prog):
+        prog, qtbot = init_prog
+        data_red, data_green, data_blue, data_spread = init_data()
+        data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
+        prog.show_data(data)
+
+        ISOLEVEL = 0.1
+
+        prog.view.get_action('isocurve').trigger()
+        prog.view.isocurver._isoLine.setValue(ISOLEVEL)
+        prog.view.isocurver._isoLine.sigDragged.emit(prog.view.isocurver._isoLine)
+        QtWidgets.QApplication.processEvents()
+        assert prog.view.isocurver._isocurve_item.level == ISOLEVEL
+
 
 class TestAspectRatio:
     def test_aspect_ratio_action(self, init_prog):
@@ -519,8 +663,9 @@ class TestCrosshair:
         assert prog.view.is_action_visible('position')
         assert prog.view.crosshair.isVisible()
         for image_key in v2d.IMAGE_TYPES:
-            for curve in prog.view.lineout_plotter.get_crosshair_curves()[image_key].values():
+            for curve_key, curve in prog.view.lineout_plotter.get_crosshair_curves_triplet()[image_key].items():
                 assert curve.isVisible()
+                assert curve == prog.view.lineout_plotter.get_crosshair_curve_triplet(image_key)[curve_key]
 
         prog.view.get_action('crosshair').trigger()
         QtWidgets.QApplication.processEvents()
@@ -533,7 +678,7 @@ class TestCrosshair:
         assert not prog.view.is_action_visible('position')
         assert not prog.view.crosshair.isVisible()
         for image_key in v2d.IMAGE_TYPES:
-            for curve in prog.view.lineout_plotter.get_crosshair_curves()[image_key].values():
+            for curve in prog.view.lineout_plotter.get_crosshair_curves_triplet()[image_key].values():
                 assert not curve.isVisible()
 
     def test_setpos_crosshair(self, init_prog):
@@ -718,25 +863,11 @@ class TestModifyImages:
             assert np.any(data_to_show == approx(data['data'][ind]))
 
 
-class TestScaling:
-    def test_set_scaling(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        xscalingoption = 2, 123, 'myxlabel', 'myxunits'
-        yscalingoption = 0.1, -200, 'myylabel', 'myyunits'
-
-        scaling_options = utils.ScalingOptions(
-            scaled_xaxis=utils.ScaledAxis(label=xscalingoption[2],
-                                          units=xscalingoption[3],
-                                          offset=xscalingoption[1],
-                                          scaling=xscalingoption[0]),
-            scaled_yaxis=utils.ScaledAxis(label=yscalingoption[2],
-                                          units=yscalingoption[3],
-                                          offset=yscalingoption[1],
-                                          scaling=yscalingoption[0]))
-        prog.set_scaling_axes(scaling_options)
-        assert xscalingoption == v2d.AxisInfosExtractor.extract_axis_info(prog.x_axis)
-        assert yscalingoption == v2d.AxisInfosExtractor.extract_axis_info(prog.y_axis)
-
 class TestMiscellanous:
-    pass
+    def test_double_clicked(self, init_prog):
+        prog, qtbot = init_prog
+        with qtbot.waitSignal(prog.sig_double_clicked, timeout=10000) as blocker:
+            prog.view.get_double_clicked().emit(10.5, 20.9)
+
+        assert blocker.args[0] == approx(10.5)
+        assert blocker.args[1] == approx(20.9)

@@ -3,6 +3,7 @@ from collections import OrderedDict
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pyqtgraph.parametertree import Parameter
 
+
 class TableWidget(QtWidgets.QTableWidget):
     """
         ============== ===========================

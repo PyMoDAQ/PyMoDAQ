@@ -4,7 +4,7 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
-from pymodaq.daq_utils.parameter import pymodaq_ptypes as custom_tree
+from pymodaq.daq_utils.parameter.pymodaq_ptypes.tableview import TableViewCustom
 from pymodaq.daq_utils.scanner import TableModelTabular
 from qtpy.QtCore import QObject, Qt, Slot
 from qtpy import QtWidgets
@@ -23,9 +23,8 @@ class ViewerPointList(QObject):
     @Slot(float, float)
     def double_click_action(self, posx, posy):
         xs, ys = self.viewer.scale_axis(posx, posy)
-        indx, indy = self.viewer.mapfromview('red', posx, posy)
-        z = self.viewer.transform_image(self.viewer.raw_data["red"])[utils.rint(indy), utils.rint(indx)]
-        self.table_model.add_data(self.table_view.currentIndex().row() + 1, [xs, ys, z])
+        data_at = self.viewer.get_data_at_along(posx, posy)['red'].int_data
+        self.table_model.add_data(self.table_view.currentIndex().row() + 1, [xs, ys, data_at])
 
     def setData(self, data):
         self.viewer.setImage(data_red=data)
@@ -55,7 +54,7 @@ class ViewerPointList(QObject):
 
         init_data = [[0., 0., 0.]]
         self.table_model = TableModelTabular(init_data, ['x', 'y', 'data'])
-        self.table_view = pymodaq.daq_utils.parameter.utils.get_widget_from_tree(self.settings_tree, custom_tree.TableViewCustom)[0]
+        self.table_view = pymodaq.daq_utils.parameter.utils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)
 
         self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)

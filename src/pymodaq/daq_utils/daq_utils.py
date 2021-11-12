@@ -32,8 +32,7 @@ import inspect
 import json
 
 
-
-plot_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
+plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
 
 Cb = 1.602176e-19  # coulomb
@@ -571,7 +570,41 @@ class ThreadCommand(object):
         self.attributes = attributes
 
 
-class Axis(dict):
+class AxisBase(dict):
+    """
+    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys or class
+    type attributes
+    """
+
+    def __init__(self, label='', units='', **kwargs):
+        """
+
+        Parameters
+        ----------
+        data
+        label
+        units
+        """
+        if units is None:
+            units = ''
+        if label is None:
+            label = ''
+        if not isinstance(label, str):
+            raise TypeError('label for the Axis class should be a string')
+        self['label'] = label
+        if not isinstance(units, str):
+            raise TypeError('units for the Axis class should be a string')
+        self['units'] = units
+        self.update(kwargs)
+
+    def __getattr__(self, item):
+        if item in self:
+            return self[item]
+        else:
+            raise AttributeError(f'{item} is not a valid attribute')
+
+
+class Axis(AxisBase):
     """
     Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
     """
@@ -585,21 +618,11 @@ class Axis(dict):
         label
         units
         """
-        if units is None:
-            units = ''
-        if label is None:
-            label = ''
-
+        super().__init__(label=label, units=units, **kwargs)
         if data is None or isinstance(data, np.ndarray):
             self['data'] = data
         else:
             raise TypeError('data for the Axis class should be a ndarray')
-        if not isinstance(label, str):
-            raise TypeError('label for the Axis class should be a string')
-        self['label'] = label
-        if not isinstance(units, str):
-            raise TypeError('units for the Axis class should be a string')
-        self['units'] = units
         self.update(kwargs)
 
 
@@ -612,6 +635,26 @@ class NavAxis(Axis):
                              'navigation axes')
         self['nav_index'] = nav_index
 
+
+class ScaledAxis(AxisBase):
+    def __init__(self, label='', units='', offset=0, scaling=1):
+        super().__init__(label=label, units=units)
+        if not (isinstance(offset, float) or isinstance(offset, int)):
+            raise TypeError('offset for the ScalingAxis class should be a float (or int)')
+        self['offset'] = offset
+        if not (isinstance(scaling, float) or isinstance(scaling, int)):
+            raise TypeError('scaling for the ScalingAxis class should be a non null float (or int)')
+        if scaling == 0 or scaling == 0.:
+            raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
+        self['scaling'] = scaling
+
+
+class ScalingOptions(dict):
+    def __init__(self, scaled_xaxis: ScaledAxis, scaled_yaxis: ScaledAxis):
+        assert isinstance(scaled_xaxis, ScaledAxis)
+        assert isinstance(scaled_yaxis, ScaledAxis)
+        self['scaled_xaxis'] = scaled_xaxis
+        self['scaled_yaxis'] = scaled_yaxis
 
 class Data(OrderedDict):
     def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis(), **kwargs):
@@ -759,26 +802,6 @@ class DataToExport(Data):
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
                f' - <source: {self.source}> - <dim: {self.dim}>'
-
-class ScaledAxis(Axis):
-    def __init__(self, label='', units='', offset=0, scaling=1):
-        super().__init__(label=label, units=units)
-        if not (isinstance(offset, float) or isinstance(offset, int)):
-            raise TypeError('offset for the ScalingAxis class should be a float (or int)')
-        self['offset'] = offset
-        if not (isinstance(scaling, float) or isinstance(scaling, int)):
-            raise TypeError('scaling for the ScalingAxis class should be a non null float (or int)')
-        if scaling == 0 or scaling == 0.:
-            raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
-        self['scaling'] = scaling
-
-
-class ScalingOptions(dict):
-    def __init__(self, scaled_xaxis=ScaledAxis(), scaled_yaxis=ScaledAxis()):
-        assert isinstance(scaled_xaxis, ScaledAxis)
-        assert isinstance(scaled_yaxis, ScaledAxis)
-        self['scaled_xaxis'] = scaled_xaxis
-        self['scaled_yaxis'] = scaled_yaxis
 
 
 def setLocale():

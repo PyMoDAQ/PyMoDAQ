@@ -148,6 +148,7 @@ class EllipseROI(pgROI):
     def width(self):
         return self.size().x()
 
+
 class RectROI(pgROI):
     index_signal = Signal(int)
 
@@ -228,9 +229,10 @@ class ROIScalableGroup(GroupParameter):
 class ROIManager(QObject):
     ROI_changed = Signal()
     ROI_changed_finished = Signal()
+
     new_ROI_signal = Signal(int, str)
     remove_ROI_signal = Signal(str)
-    roi_settings_changed = Signal(list)
+    roi_value_changed = Signal(str, list)
 
     roi_update_children = Signal(list)
 
@@ -286,7 +288,7 @@ class ROIManager(QObject):
 
         self.roitree = ParameterTree()
         vlayout.addWidget(self.roitree)
-        self.roiwidget.setMinimumWidth(100)
+        self.roiwidget.setMinimumWidth(250)
         self.roiwidget.setMaximumWidth(300)
 
         params = [
@@ -357,6 +359,7 @@ class ROIManager(QObject):
                 if param.name() in putils.iter_children(self.settings.child(('ROIs')), []):
                     parent_name = putils.get_param_path(param)[putils.get_param_path(param).index('ROIs')+1]
                     self.update_roi(parent_name, param)
+                    self.roi_value_changed.emit(parent_name, (param, param.value()))
 
             elif change == 'parent':
                 if 'ROI' in param.name():
@@ -364,8 +367,6 @@ class ROIManager(QObject):
                     self.viewer_widget.plotItem.removeItem(roi)
                     self.remove_ROI_signal.emit(param.name())
 
-            if param.name() != 'measurements':
-                self.roi_settings_changed.emit([(param, 'value', param.value())])
         self.ROI_changed_finished.emit()
 
     def update_roi(self, roi_key, param):

@@ -167,6 +167,8 @@ def test_Axis():
     assert 'label' in ax
     assert 'units' in ax
 
+    assert ax.label == ax['label']
+
     ax = utils.Axis(np.array([1, 2, 3, 5, 7]), 'a label', 'seconds')
     assert np.all(ax['data'] == np.array([1, 2, 3, 5, 7]))
     assert ax['label'] == 'a label'
@@ -289,6 +291,8 @@ def test_ScaledAxis():
         utils.ScaledAxis(scaling=None)
     with pytest.raises(ValueError):
         utils.ScaledAxis(scaling=0)
+
+    assert scaled_axis['scaling'] == scaled_axis.scaling
 
 
 def test_ScalingOptions():

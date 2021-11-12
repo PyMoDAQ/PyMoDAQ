@@ -307,13 +307,26 @@ class AxisItem_Scaled(pg.AxisItem):
     def axis_data(self, Npts):
         return utils.linspace_step_N(self.axis_offset, self.axis_scaling, Npts)
 
+    def set_scaling_and_label(self, axis_info: utils.ScaledAxis):
+        self.setLabel(axis_info.label, axis_info.units)
+        self.axis_offset = axis_info.offset
+        self.axis_scaling = axis_info.scaling
+
     @property
     def axis_label(self):
         return self.labelText
 
+    @axis_label.setter
+    def axis_label(self, label: str):
+        self.setLabel(text=label, units=self.axis_units)
+
     @property
     def axis_units(self):
         return self.labelUnits
+
+    @axis_units.setter
+    def axis_units(self, units: str):
+        self.setLabel(text=self.axis_label, units=units)
 
     @property
     def axis_scaling(self):
