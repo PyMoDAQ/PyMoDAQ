@@ -1,7 +1,7 @@
 from qtpy import QtCore, QtGui
 import pyqtgraph as pg
 from .plot_utils import makeAlphaTriangles, makePolygons
-
+from pymodaq.daq_utils import daq_utils as utils
 import numpy as np
 from pyqtgraph import debug as debug
 from pyqtgraph import Point
@@ -11,95 +11,95 @@ import collections
 
 class ImageItem(pg.ImageItem):
     def __init__(self, image=None, **kargs):
-        super(ImageItem, self).__init__(image, **kargs)
+        super().__init__(image, **kargs)
         self.flipud = False
         self.fliplr = False
         self.rotate90 = False
         self.rescale = None
 
-    def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
-        """Returns x and y arrays containing the histogram values for the current image.
-        For an explanation of the return format, see numpy.histogram().
+    # def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+    #     """Returns x and y arrays containing the histogram values for the current image.
+    #     For an explanation of the return format, see numpy.histogram().
+    #
+    #     The *step* argument causes pixels to be skipped when computing the histogram to save time.
+    #     If *step* is 'auto', then a step is chosen such that the analyzed data has
+    #     dimensions roughly *targetImageSize* for each axis.
+    #
+    #     The *bins* argument and any extra keyword arguments are passed to
+    #     np.histogram(). If *bins* is 'auto', then a bin number is automatically
+    #     chosen based on the image characteristics:
+    #
+    #     * Integer images will have approximately *targetHistogramSize* bins,
+    #       with each bin having an integer width.
+    #     * All other types will have *targetHistogramSize* bins.
+    #
+    #     This method is also used when automatically computing levels.
+    #     """
+    #     if self.image is None:
+    #         return None, None
+    #     if step == 'auto':
+    #         step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
+    #                 int(np.ceil(self.image.shape[1] / targetImageSize)))
+    #     if np.isscalar(step):
+    #         step = (step, step)
+    #     stepData = self.image[::step[0], ::step[1]]
+    #
+    #     if bins == 'auto':
+    #         try:
+    #             if stepData.dtype.kind in "ui":
+    #                 mn = stepData.min()
+    #                 mx = stepData.max()
+    #                 step = np.ceil((mx - mn) / 500.)
+    #                 bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
+    #                 if len(bins) == 0:
+    #                     bins = [mn, mx]
+    #         except Exception:
+    #             bins = 500
+    #         else:
+    #             bins = 500
+    #
+    #     kwds['bins'] = bins
+    #     stepData = stepData[np.isfinite(stepData)]
+    #     hist = np.histogram(stepData, **kwds)
+    #
+    #     return hist[1][:-1], hist[0]
 
-        The *step* argument causes pixels to be skipped when computing the histogram to save time.
-        If *step* is 'auto', then a step is chosen such that the analyzed data has
-        dimensions roughly *targetImageSize* for each axis.
-
-        The *bins* argument and any extra keyword arguments are passed to
-        np.histogram(). If *bins* is 'auto', then a bin number is automatically
-        chosen based on the image characteristics:
-
-        * Integer images will have approximately *targetHistogramSize* bins,
-          with each bin having an integer width.
-        * All other types will have *targetHistogramSize* bins.
-
-        This method is also used when automatically computing levels.
-        """
-        if self.image is None:
-            return None, None
-        if step == 'auto':
-            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
-                    int(np.ceil(self.image.shape[1] / targetImageSize)))
-        if np.isscalar(step):
-            step = (step, step)
-        stepData = self.image[::step[0], ::step[1]]
-
-        if bins == 'auto':
-            try:
-                if stepData.dtype.kind in "ui":
-                    mn = stepData.min()
-                    mx = stepData.max()
-                    step = np.ceil((mx - mn) / 500.)
-                    bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
-                    if len(bins) == 0:
-                        bins = [mn, mx]
-            except Exception:
-                bins = 500
-            else:
-                bins = 500
-
-        kwds['bins'] = bins
-        stepData = stepData[np.isfinite(stepData)]
-        hist = np.histogram(stepData, **kwds)
-
-        return hist[1][:-1], hist[0]
-
-    def setOpts(self, update=True, **kargs):
-        if 'axisOrder' in kargs:
-            val = kargs['axisOrder']
-            if val not in ('row-major', 'col-major'):
-                raise ValueError('axisOrder must be either "row-major" or "col-major"')
-            self.axisOrder = val
-        if 'rescale' in kargs:
-            self.rescale = kargs['rescale']
-
-        if 'flipud' in kargs:
-            self.flipud = kargs['flipud']
-
-        if 'fliplr' in kargs:
-            self.fliplr = kargs['fliplr']
-        if 'rotate90' in kargs:
-            self.rotate90 = kargs['rotate90']
-
-        if 'lut' in kargs:
-            self.setLookupTable(kargs['lut'], update=update)
-        if 'levels' in kargs:
-            self.setLevels(kargs['levels'], update=update)
-        # if 'clipLevel' in kargs:
-        # self.setClipLevel(kargs['clipLevel'])
-        if 'opacity' in kargs:
-            self.setOpacity(kargs['opacity'])
-        if 'compositionMode' in kargs:
-            self.setCompositionMode(kargs['compositionMode'])
-        if 'border' in kargs:
-            self.setBorder(kargs['border'])
-        if 'removable' in kargs:
-            self.removable = kargs['removable']
-            self.menu = None
-        if 'autoDownsample' in kargs:
-            self.setAutoDownsample(kargs['autoDownsample'])
-        if update:
-            self.update()
+    # def setOpts(self, update=True, **kargs):
+    #     if 'axisOrder' in kargs:
+    #         val = kargs['axisOrder']
+    #         if val not in ('row-major', 'col-major'):
+    #             raise ValueError('axisOrder must be either "row-major" or "col-major"')
+    #         self.axisOrder = val
+    #     if 'rescale' in kargs:
+    #         self.rescale = kargs['rescale']
+    #
+    #     if 'flipud' in kargs:
+    #         self.flipud = kargs['flipud']
+    #
+    #     if 'fliplr' in kargs:
+    #         self.fliplr = kargs['fliplr']
+    #     if 'rotate90' in kargs:
+    #         self.rotate90 = kargs['rotate90']
+    #
+    #     if 'lut' in kargs:
+    #         self.setLookupTable(kargs['lut'], update=update)
+    #     if 'levels' in kargs:
+    #         self.setLevels(kargs['levels'], update=update)
+    #     # if 'clipLevel' in kargs:
+    #     # self.setClipLevel(kargs['clipLevel'])
+    #     if 'opacity' in kargs:
+    #         self.setOpacity(kargs['opacity'])
+    #     if 'compositionMode' in kargs:
+    #         self.setCompositionMode(kargs['compositionMode'])
+    #     if 'border' in kargs:
+    #         self.setBorder(kargs['border'])
+    #     if 'removable' in kargs:
+    #         self.removable = kargs['removable']
+    #         self.menu = None
+    #     if 'autoDownsample' in kargs:
+    #         self.setAutoDownsample(kargs['autoDownsample'])
+    #     if update:
+    #         self.update()
 
     def setRect(self, rect):
         """Scale and translate the image to fit within rect (must be a QRect or QRectF)."""
@@ -107,174 +107,264 @@ class ImageItem(pg.ImageItem):
         self.translate(rect.left(), rect.top())
         self.scale(rect.width() / self.width(), rect.height() / self.height())
 
-    def dataTransform(self):
-        """Return the transform that maps from this image's input array to its
-        local coordinate system.
+    # def dataTransform(self):
+    #     """Return the transform that maps from this image's input array to its
+    #     local coordinate system.
+    #
+    #     This transform corrects for the transposition that occurs when image data
+    #     is interpreted in row-major order.
+    #     """
+    #     # Might eventually need to account for downsampling / clipping here
+    #     tr = QtGui.QTransform()
+    #     # if self.axisOrder == 'row-major':
+    #     #     # transpose
+    #     #     tr.scale(1, -1)
+    #     #     tr.rotate(-90)
+    #
+    #     if self.flipud or self.fliplr or self.rotate90:
+    #         if self.rotate90:
+    #             tr.translate(self.height() / 2, self.width() / 2)
+    #         else:
+    #             tr.translate(self.width() / 2, self.height() / 2)
+    #     if self.flipud:
+    #         tr.scale(1, -1)
+    #     if self.fliplr:
+    #         tr.scale(-1, 1)
+    #     if self.rotate90:
+    #         tr.rotate(90)
+    #     if self.flipud or self.fliplr or self.rotate90:
+    #         tr.translate(-self.width() / 2, -self.height() / 2)
+    #
+    #     return tr
 
-        This transform corrects for the transposition that occurs when image data
-        is interpreted in row-major order.
+    # def inverseDataTransform(self):
+    #     """Return the transform that maps from this image's local coordinate
+    #     system to its input array.
+    #
+    #     See dataTransform() for more information.
+    #     """
+    #     tr = self.dataTransform()
+    #     tr.inverted()[0]
+    #     if self.axisOrder == 'row-major':
+    #         # transpose
+    #         tr.scale(1, -1)
+    #         tr.rotate(-90)
+    #     return tr
+
+    # def paint(self, p, *args):
+    #     if self.image is None:
+    #         return
+    #     if self.qimage is None:
+    #         self.render()
+    #         if self.qimage is None:
+    #             return
+    #
+    #     if self.paintMode is not None:
+    #         p.setCompositionMode(self.paintMode)
+    #
+    #     self.setTransform(self.dataTransform())
+    #
+    #     shape = self.image.shape[:2] if self.axisOrder == 'col-major' else self.image.shape[:2][::-1]
+    #     p.drawImage(QtCore.QRectF(0, 0, self.qimage.width(), self.qimage.height()), self.qimage)
+    #     if self.rescale is not None:
+    #         self.translate(self.rescale.left(), self.rescale.top())
+    #         self.scale(self.rescale.width() / self.width(), self.rescale.height() / self.height())
+    #
+    #     if self.border is not None:
+    #         p.setPen(self.border)
+    #         p.drawRect(self.boundingRect())
+
+    # def setImage(self, image=None, autoLevels=None, **kargs):
+    #     """
+    #     Update the image displayed by this item. For more information on how the image
+    #     is processed before displaying, see :func:`makeARGB <pyqtgraph.makeARGB>`
+    #
+    #     =================  =========================================================================
+    #     **Arguments:**
+    #     image              (numpy array) Specifies the image data. May be 2D (width, height) or
+    #                        3D (width, height, RGBa). The array dtype must be integer or floating
+    #                        point of any bit depth. For 3D arrays, the third dimension must
+    #                        be of length 3 (RGB) or 4 (RGBA). See *notes* below.
+    #     autoLevels         (bool) If True, this forces the image to automatically select
+    #                        levels based on the maximum and minimum values in the data.
+    #                        By default, this argument is true unless the levels argument is
+    #                        given.
+    #     lut                (numpy array) The color lookup table to use when displaying the image.
+    #                        See :func:`setLookupTable <pyqtgraph.ImageItem.setLookupTable>`.
+    #     levels             (min, max) The minimum and maximum values to use when rescaling the image
+    #                        data. By default, this will be set to the minimum and maximum values
+    #                        in the image. If the image array has dtype uint8, no rescaling is necessary.
+    #     opacity            (float 0.0-1.0)
+    #     compositionMode    See :func:`setCompositionMode <pyqtgraph.ImageItem.setCompositionMode>`
+    #     border             Sets the pen used when drawing the image border. Default is None.
+    #     autoDownsample     (bool) If True, the image is automatically downsampled to match the
+    #                        screen resolution. This improves performance for large images and
+    #                        reduces aliasing. If autoDownsample is not specified, then ImageItem will
+    #                        choose whether to downsample the image based on its size.
+    #    symautolevel        (bool) if True the autolevel is set symetric with respect to 0 with the
+    #                        maximum value as level
+    #     =================  =========================================================================
+    #
+    #
+    #     **Notes:**
+    #
+    #     For backward compatibility, image data is assumed to be in column-major order (column, row).
+    #     However, most image data is stored in row-major order (row, column) and will need to be
+    #     transposed before calling setImage()::
+    #
+    #         imageitem.setImage(imagedata.T)
+    #
+    #     This requirement can be changed by calling ``image.setOpts(axisOrder='row-major')`` or
+    #     by changing the ``imageAxisOrder`` :ref:`global configuration option <apiref_config>`.
+    #
+    #
+    #     """
+    #     profile = debug.Profiler()
+    #
+    #     gotNewData = False
+    #     if image is None:
+    #         if self.image is None:
+    #             return
+    #     else:
+    #         self._xp = np
+    #         gotNewData = True
+    #         shapeChanged = (self.image is None or image.shape != self.image.shape)
+    #         image = image.view(np.ndarray)
+    #         if self.image is None or image.dtype != self.image.dtype:
+    #             self._effectiveLut = None
+    #         self.image = image
+    #         if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
+    #             if 'autoDownsample' not in kargs:
+    #                 kargs['autoDownsample'] = True
+    #         if shapeChanged:
+    #             self.prepareGeometryChange()
+    #             self.informViewBoundsChanged()
+    #
+    #     profile()
+    #
+    #     if autoLevels is None:
+    #         if 'levels' in kargs:
+    #             autoLevels = False
+    #         else:
+    #             autoLevels = True
+    #     if autoLevels:
+    #         img = self.image
+    #         while img.size > 2**16:
+    #             img = img[::2, ::2]
+    #         mn, mx = np.nanmin(img), np.nanmax(img)
+    #
+    #         # mn and mx can still be NaN if the data is all-NaN
+    #         if mn == mx or np.isnan(mn) or np.isnan(mx):
+    #             mn = 0
+    #             mx = 255
+    #         if 'symautolevel' in kargs:
+    #             if kargs['symautolevel']:
+    #                 mn, mx = -max([abs(mn), abs(mx)]), max([abs(mn), abs(mx)])
+    #         kargs['levels'] = [mn, mx]
+    #
+    #     profile()
+    #
+    #     self.setOpts(update=False, **kargs)
+    #
+    #     profile()
+    #
+    #     self.qimage = None
+    #     self.update()
+    #
+    #     profile()
+    #
+    #     if gotNewData:
+    #         self.sigImageChanged.emit()
+
+
+AXIS_POSITIONS = ['top', 'bottom', 'right', 'left']
+
+
+class AxisItem_Scaled(pg.AxisItem):
+    """
+    Subclass of pg.AxisItem enabling scaling of the tick values with respect to the linked viewbox
+    """
+
+    def __init__(self, *args, scaling=1, offset=0, **kwargs):
         """
-        # Might eventually need to account for downsampling / clipping here
-        tr = QtGui.QTransform()
-        # if self.axisOrder == 'row-major':
-        #     # transpose
-        #     tr.scale(1, -1)
-        #     tr.rotate(-90)
-
-        if self.flipud or self.fliplr or self.rotate90:
-            if self.rotate90:
-                tr.translate(self.height() / 2, self.width() / 2)
-            else:
-                tr.translate(self.width() / 2, self.height() / 2)
-        if self.flipud:
-            tr.scale(1, -1)
-        if self.fliplr:
-            tr.scale(-1, 1)
-        if self.rotate90:
-            tr.rotate(90)
-        if self.flipud or self.fliplr or self.rotate90:
-            tr.translate(-self.width() / 2, -self.height() / 2)
-
-        return tr
-
-    def inverseDataTransform(self):
-        """Return the transform that maps from this image's local coordinate
-        system to its input array.
-
-        See dataTransform() for more information.
-        """
-        tr = self.dataTransform()
-        tr.inverted()[0]
-        if self.axisOrder == 'row-major':
-            # transpose
-            tr.scale(1, -1)
-            tr.rotate(-90)
-        return tr
-
-    def paint(self, p, *args):
-        if self.image is None:
-            return
-        if self.qimage is None:
-            self.render()
-            if self.qimage is None:
-                return
-
-        if self.paintMode is not None:
-            p.setCompositionMode(self.paintMode)
-
-        self.setTransform(self.dataTransform())
-
-        shape = self.image.shape[:2] if self.axisOrder == 'col-major' else self.image.shape[:2][::-1]
-        p.drawImage(QtCore.QRectF(0, 0, self.qimage.width(), self.qimage.height()), self.qimage)
-        if self.rescale is not None:
-            self.translate(self.rescale.left(), self.rescale.top())
-            self.scale(self.rescale.width() / self.width(), self.rescale.height() / self.height())
-
-        if self.border is not None:
-            p.setPen(self.border)
-            p.drawRect(self.boundingRect())
-
-    def setImage(self, image=None, autoLevels=None, **kargs):
-        """
-        Update the image displayed by this item. For more information on how the image
-        is processed before displaying, see :func:`makeARGB <pyqtgraph.makeARGB>`
-
-        =================  =========================================================================
+        ==============  ===============================================================
         **Arguments:**
-        image              (numpy array) Specifies the image data. May be 2D (width, height) or
-                           3D (width, height, RGBa). The array dtype must be integer or floating
-                           point of any bit depth. For 3D arrays, the third dimension must
-                           be of length 3 (RGB) or 4 (RGBA). See *notes* below.
-        autoLevels         (bool) If True, this forces the image to automatically select
-                           levels based on the maximum and minimum values in the data.
-                           By default, this argument is true unless the levels argument is
-                           given.
-        lut                (numpy array) The color lookup table to use when displaying the image.
-                           See :func:`setLookupTable <pyqtgraph.ImageItem.setLookupTable>`.
-        levels             (min, max) The minimum and maximum values to use when rescaling the image
-                           data. By default, this will be set to the minimum and maximum values
-                           in the image. If the image array has dtype uint8, no rescaling is necessary.
-        opacity            (float 0.0-1.0)
-        compositionMode    See :func:`setCompositionMode <pyqtgraph.ImageItem.setCompositionMode>`
-        border             Sets the pen used when drawing the image border. Default is None.
-        autoDownsample     (bool) If True, the image is automatically downsampled to match the
-                           screen resolution. This improves performance for large images and
-                           reduces aliasing. If autoDownsample is not specified, then ImageItem will
-                           choose whether to downsample the image based on its size.
-       symautolevel        (bool) if True the autolevel is set symetric with respect to 0 with the
-                           maximum value as level
-        =================  =========================================================================
-
-
-        **Notes:**
-
-        For backward compatibility, image data is assumed to be in column-major order (column, row).
-        However, most image data is stored in row-major order (row, column) and will need to be
-        transposed before calling setImage()::
-
-            imageitem.setImage(imagedata.T)
-
-        This requirement can be changed by calling ``image.setOpts(axisOrder='row-major')`` or
-        by changing the ``imageAxisOrder`` :ref:`global configuration option <apiref_config>`.
-
-
+        orientation     one of 'left', 'right', 'top', or 'bottom'
+        scaling         multiplicative coeff applied to the ticks
+        offset          offset applied to the ticks after scaling
+        maxTickLength   (px) maximum length of ticks to draw. Negative values draw
+                        into the plot, positive values draw outward.
+        linkView        (ViewBox) causes the range of values displayed in the axis
+                        to be linked to the visible range of a ViewBox.
+        showValues      (bool) Whether to display values adjacent to ticks
+        pen             (QPen) Pen used when drawing ticks.
+        ==============  ===============================================================
         """
-        profile = debug.Profiler()
+        super().__init__(*args, **kwargs)
+        self._scaling = scaling
+        self._offset = offset
 
-        gotNewData = False
-        if image is None:
-            if self.image is None:
-                return
-        else:
-            self._xp = np
-            gotNewData = True
-            shapeChanged = (self.image is None or image.shape != self.image.shape)
-            image = image.view(np.ndarray)
-            if self.image is None or image.dtype != self.image.dtype:
-                self._effectiveLut = None
-            self.image = image
-            if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
-                if 'autoDownsample' not in kargs:
-                    kargs['autoDownsample'] = True
-            if shapeChanged:
-                self.prepareGeometryChange()
-                self.informViewBoundsChanged()
+    def axis_data(self, Npts):
+        return utils.linspace_step_N(self.axis_offset, self.axis_scaling, Npts)
 
-        profile()
+    def set_scaling_and_label(self, axis_info: utils.ScaledAxis):
+        self.setLabel(axis_info.label, axis_info.units)
+        self.axis_offset = axis_info.offset
+        self.axis_scaling = axis_info.scaling
 
-        if autoLevels is None:
-            if 'levels' in kargs:
-                autoLevels = False
+    @property
+    def axis_label(self):
+        return self.labelText
+
+    @axis_label.setter
+    def axis_label(self, label: str):
+        self.setLabel(text=label, units=self.axis_units)
+
+    @property
+    def axis_units(self):
+        return self.labelUnits
+
+    @axis_units.setter
+    def axis_units(self, units: str):
+        self.setLabel(text=self.axis_label, units=units)
+
+    @property
+    def axis_scaling(self):
+        return self._scaling
+
+    @axis_scaling.setter
+    def axis_scaling(self, scaling_factor=1):
+        self._scaling = scaling_factor
+        self.linkedViewChanged()
+
+    @property
+    def axis_offset(self):
+        return self._offset
+
+    @axis_offset.setter
+    def axis_offset(self, offset=0):
+        self._offset = offset
+        self.linkedViewChanged()
+
+    def linkedViewChanged(self, view=None, newRange=None):
+        if view is None:
+            if self.linkedView() is not None:
+                view = self.linkedView()
             else:
-                autoLevels = True
-        if autoLevels:
-            img = self.image
-            while img.size > 2**16:
-                img = img[::2, ::2]
-            mn, mx = np.nanmin(img), np.nanmax(img)
+                return
 
-            # mn and mx can still be NaN if the data is all-NaN
-            if mn == mx or np.isnan(mn) or np.isnan(mx):
-                mn = 0
-                mx = 255
-            if 'symautolevel' in kargs:
-                if kargs['symautolevel']:
-                    mn, mx = -max([abs(mn), abs(mx)]), max([abs(mn), abs(mx)])
-            kargs['levels'] = [mn,mx]
+        if self.orientation in ['right', 'left']:
+            if newRange is None:
+                newRange = [pos * self._scaling + self._offset for pos in view.viewRange()[1]]
+            else:
+                newRange = [pos * self._scaling + self._offset for pos in newRange]
+        else:
+            if newRange is None:
+                newRange = [pos * self._scaling + self._offset for pos in view.viewRange()[0]]
+            else:
+                newRange = [pos * self._scaling + self._offset for pos in newRange]
 
-        profile()
-
-        self.setOpts(update=False, **kargs)
-
-        profile()
-
-        self.qimage = None
-        self.update()
-
-        profile()
-
-        if gotNewData:
-            self.sigImageChanged.emit()
+        super().linkedViewChanged(view, newRange=newRange)
 
 
 class TriangulationItem(ImageItem):
@@ -303,6 +393,7 @@ class TriangulationItem(ImageItem):
         self.qimage = None
         self.triangulation = None
         self.tri_data = None
+        self.mesh_pen = [255, 255, 255]
 
     def width(self):
         if self.image is None:
@@ -373,6 +464,7 @@ class TriangulationItem(ImageItem):
             if self.image is None:
                 return
         else:
+            self._xp = np
             gotNewData = True
             shapeChanged = (self.image is None or image.shape != self.image.shape)
             image = image.view(np.ndarray)
@@ -438,7 +530,7 @@ class TriangulationItem(ImageItem):
         profile = debug.Profiler()
         if self.image is None or self.image.size == 0:
             return
-        if isinstance(self.lut, collections.Callable):
+        if isinstance(self.lut, collections.abc.Callable):
             lut = self.lut(self.image)
         else:
             lut = self.lut
@@ -522,6 +614,16 @@ class TriangulationItem(ImageItem):
             tr.rotate(-90)
         return tr
 
+    def setLookupTable(self, lut, update=True):
+        super().setLookupTable(lut,update=update)
+        if self.lut is not None and self.image is not None:
+            lu = np.mean(self.lut(self.image), axis=0).astype(np.uint8)
+            lu[lu > 0] = 255
+            lu = list(lu)
+        else:
+            lu = [255, 255, 255]
+        self.mesh_pen = lu
+
     def paint(self, p, *args):
         profile = debug.Profiler()
         if self.image is None:
@@ -538,7 +640,8 @@ class TriangulationItem(ImageItem):
         self.setTransform(self.dataTransform())
 
         for pol, color in zip(self.qimage['polygons'], self.qimage['values']):
-            p.setPen(fn.mkPen(255, 255, 255, 100, width=0.75))
+
+            p.setPen(fn.mkPen(*self.mesh_pen, 100, width=0.75))
             p.setBrush(fn.mkBrush(*color))
             p.drawPolygon(pol)
 
@@ -600,72 +703,72 @@ class PlotCurveItem(pg.PlotCurveItem):
 
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs)
-        self.flipud = False
-        self.fliplr = False
-        self.flipudbis = False
-
-    def paint(self, p, opt, widget):
-        if self.xData is None or len(self.xData) == 0:
-            return
-
-        x = None
-        y = None
-        path = self.getPath()
-
-        if self._exportOpts is not False:
-            aa = self._exportOpts.get('antialias', True)
-        else:
-            aa = self.opts['antialias']
-
-        p.setRenderHint(p.Antialiasing, aa)
-
-        if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
-            if self.fillPath is None:
-                if x is None:
-                    x, y = self.getData()
-                p2 = QtGui.QPainterPath(self.path)
-                p2.lineTo(x[-1], self.opts['fillLevel'])
-                p2.lineTo(x[0], self.opts['fillLevel'])
-                p2.lineTo(x[0], y[0])
-                p2.closeSubpath()
-                self.fillPath = p2
-
-            p.fillPath(self.fillPath, self.opts['brush'])
-
-        sp = pg.functions.mkPen(self.opts['shadowPen'])
-        cp = pg.functions.mkPen(self.opts['pen'])
-
-        self.setTransform(self.dataTransform())
-
-        if sp is not None and sp.style() != QtCore.Qt.NoPen:
-            p.setPen(sp)
-            p.drawPath(path)
-        p.setPen(cp)
-        p.drawPath(path)
-
-    def setOpts(self, update=True, **kargs):
-        if 'flipud' in kargs:
-            self.flipud = kargs['flipud']
-        if 'fliplr' in kargs:
-            self.fliplr = kargs['fliplr']
-        if 'flipudbis' in kargs:
-            self.flipudbis = kargs['flipudbis']
-        if update:
-            self.update()
-
-    def dataTransform(self):
-        """Return the transform that maps from this image's input array to its
-        local coordinate system.
-
-        This transform corrects for the transposition that occurs when image data
-        is interpreted in row-major order.
-        """
-        # Might eventually need to account for downsampling / clipping here
-        tr = QtGui.QTransform()
-        if self.flipudbis:
-            tr.scale(1, -1)
-        if self.flipud:
-            tr.scale(1, -1)
-        if self.fliplr:
-            tr.scale(-1, 1)
-        return tr
+    #     self.flipud = False
+    #     self.fliplr = False
+    #     self.flipudbis = False
+    #
+    # def paint(self, p, opt, widget):
+    #     if self.xData is None or len(self.xData) == 0:
+    #         return
+    #
+    #     x = None
+    #     y = None
+    #     path = self.getPath()
+    #
+    #     if self._exportOpts is not False:
+    #         aa = self._exportOpts.get('antialias', True)
+    #     else:
+    #         aa = self.opts['antialias']
+    #
+    #     p.setRenderHint(p.Antialiasing, aa)
+    #
+    #     if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
+    #         if self.fillPath is None:
+    #             if x is None:
+    #                 x, y = self.getData()
+    #             p2 = QtGui.QPainterPath(self.path)
+    #             p2.lineTo(x[-1], self.opts['fillLevel'])
+    #             p2.lineTo(x[0], self.opts['fillLevel'])
+    #             p2.lineTo(x[0], y[0])
+    #             p2.closeSubpath()
+    #             self.fillPath = p2
+    #
+    #         p.fillPath(self.fillPath, self.opts['brush'])
+    #
+    #     sp = pg.functions.mkPen(self.opts['shadowPen'])
+    #     cp = pg.functions.mkPen(self.opts['pen'])
+    #
+    #     self.setTransform(self.dataTransform())
+    #
+    #     if sp is not None and sp.style() != QtCore.Qt.NoPen:
+    #         p.setPen(sp)
+    #         p.drawPath(path)
+    #     p.setPen(cp)
+    #     p.drawPath(path)
+    #
+    # def setOpts(self, update=True, **kargs):
+    #     if 'flipud' in kargs:
+    #         self.flipud = kargs['flipud']
+    #     if 'fliplr' in kargs:
+    #         self.fliplr = kargs['fliplr']
+    #     if 'flipudbis' in kargs:
+    #         self.flipudbis = kargs['flipudbis']
+    #     if update:
+    #         self.update()
+    #
+    # def dataTransform(self):
+    #     """Return the transform that maps from this image's input array to its
+    #     local coordinate system.
+    #
+    #     This transform corrects for the transposition that occurs when image data
+    #     is interpreted in row-major order.
+    #     """
+    #     # Might eventually need to account for downsampling / clipping here
+    #     tr = QtGui.QTransform()
+    #     if self.flipudbis:
+    #         tr.scale(1, -1)
+    #     if self.flipud:
+    #         tr.scale(1, -1)
+    #     if self.fliplr:
+    #         tr.scale(-1, 1)
+    #     return tr

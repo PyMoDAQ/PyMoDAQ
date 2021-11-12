@@ -167,6 +167,8 @@ def test_Axis():
     assert 'label' in ax
     assert 'units' in ax
 
+    assert ax.label == ax['label']
+
     ax = utils.Axis(np.array([1, 2, 3, 5, 7]), 'a label', 'seconds')
     assert np.all(ax['data'] == np.array([1, 2, 3, 5, 7]))
     assert ax['label'] == 'a label'
@@ -289,6 +291,8 @@ def test_ScaledAxis():
         utils.ScaledAxis(scaling=None)
     with pytest.raises(ValueError):
         utils.ScaledAxis(scaling=0)
+
+    assert scaled_axis['scaling'] == scaled_axis.scaling
 
 
 def test_ScalingOptions():
@@ -538,6 +542,14 @@ class TestMath:
             utils.linspace_step(0, 10, -1)
         with pytest.raises(ValueError):
             utils.linspace_step(0, 10, 0.)
+
+    def test_linspace_step_N(self):
+        START = -1.
+        STEP = 0.25
+        LENGTH = 5
+        data = utils.linspace_step_N(START, STEP, LENGTH)
+        assert len(data) == LENGTH
+        assert np.any(data == pytest.approx(np.array([-1, -0.75, -0.5, -0.25, -0.])))
 
     def test_find_dict_if_matched_key_val(self):
         dict_tmp = {1: 'abc', 2: 'def'}

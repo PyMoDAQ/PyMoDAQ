@@ -32,8 +32,8 @@ import inspect
 import json
 
 
+plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
-plot_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
@@ -156,6 +156,13 @@ def load_config(config_path=None):          # pragma: no cover
     if check_config(config_base, config):
         config_path.write_text(toml.dumps(config))
     return config
+
+
+def set_config(config_as_dict, config_path=None):
+    if not config_path:
+        config_path = get_set_local_dir().joinpath('config.toml')
+
+    config_path.write_text(toml.dumps(config_as_dict))
 
 
 def check_config(config_base, config_local):
@@ -563,7 +570,41 @@ class ThreadCommand(object):
         self.attributes = attributes
 
 
-class Axis(dict):
+class AxisBase(dict):
+    """
+    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys or class
+    type attributes
+    """
+
+    def __init__(self, label='', units='', **kwargs):
+        """
+
+        Parameters
+        ----------
+        data
+        label
+        units
+        """
+        if units is None:
+            units = ''
+        if label is None:
+            label = ''
+        if not isinstance(label, str):
+            raise TypeError('label for the Axis class should be a string')
+        self['label'] = label
+        if not isinstance(units, str):
+            raise TypeError('units for the Axis class should be a string')
+        self['units'] = units
+        self.update(kwargs)
+
+    def __getattr__(self, item):
+        if item in self:
+            return self[item]
+        else:
+            raise AttributeError(f'{item} is not a valid attribute')
+
+
+class Axis(AxisBase):
     """
     Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
     """
@@ -577,21 +618,11 @@ class Axis(dict):
         label
         units
         """
-        if units is None:
-            units = ''
-        if label is None:
-            label = ''
-
+        super().__init__(label=label, units=units, **kwargs)
         if data is None or isinstance(data, np.ndarray):
             self['data'] = data
         else:
             raise TypeError('data for the Axis class should be a ndarray')
-        if not isinstance(label, str):
-            raise TypeError('label for the Axis class should be a string')
-        self['label'] = label
-        if not isinstance(units, str):
-            raise TypeError('units for the Axis class should be a string')
-        self['units'] = units
         self.update(kwargs)
 
 
@@ -605,6 +636,26 @@ class NavAxis(Axis):
         self['nav_index'] = nav_index
 
 
+class ScaledAxis(AxisBase):
+    def __init__(self, label='', units='', offset=0, scaling=1):
+        super().__init__(label=label, units=units)
+        if not (isinstance(offset, float) or isinstance(offset, int)):
+            raise TypeError('offset for the ScalingAxis class should be a float (or int)')
+        self['offset'] = offset
+        if not (isinstance(scaling, float) or isinstance(scaling, int)):
+            raise TypeError('scaling for the ScalingAxis class should be a non null float (or int)')
+        if scaling == 0 or scaling == 0.:
+            raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
+        self['scaling'] = scaling
+
+
+class ScalingOptions(dict):
+    def __init__(self, scaled_xaxis: ScaledAxis, scaled_yaxis: ScaledAxis):
+        assert isinstance(scaled_xaxis, ScaledAxis)
+        assert isinstance(scaled_yaxis, ScaledAxis)
+        self['scaled_xaxis'] = scaled_xaxis
+        self['scaled_yaxis'] = scaled_yaxis
+
 class Data(OrderedDict):
     def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis(), **kwargs):
         """
@@ -614,32 +665,32 @@ class Data(OrderedDict):
         ----------
         source: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
         distribution: (str) either 'uniform' or 'spread'
-        x_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
+        x_axis: (Axis) Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
          x positions of the spread points)
-        y_axis: (Axis) Axis class defining the corresponding axis (with data either linearly spaced or containing the
+        y_axis: (Axis) Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
          x positions of the spread points)
         """
 
         if not isinstance(name, str):
-            raise TypeError('name for the DataToExport class should be a string')
+            raise TypeError(f'name for the {self.__class__.__name__} class should be a string')
         self['name'] = name
         if not isinstance(source, str):
-            raise TypeError('source for the DataToExport class should be a string')
+            raise TypeError(f'source for the {self.__class__.__name__} class should be a string')
         elif not ('raw' in source or 'roi' in source):
-            raise ValueError('Invalid "source" for the DataToExport class')
+            raise ValueError(f'Invalid "source" for the {self.__class__.__name__} class')
         self['source'] = source
 
         if not isinstance(distribution, str):
-            raise TypeError('distribution for the DataToExport class should be a string')
+            raise TypeError(f'distribution for the {self.__class__.__name__} class should be a string')
         elif distribution not in ('uniform', 'spread'):
-            raise ValueError('Invalid "distribution" for the DataToExport class')
+            raise ValueError(f'Invalid "distribution" for the {self.__class__.__name__} class')
         self['distribution'] = distribution
 
         if not isinstance(x_axis, Axis):
             if isinstance(x_axis, np.ndarray):
                 x_axis = Axis(data=x_axis)
             else:
-                raise TypeError('x_axis for the DataToExport class should be a Axis class')
+                raise TypeError(f'x_axis for the {self.__class__.__name__} class should be a Axis class')
             self['x_axis'] = x_axis
         elif x_axis['data'] is not None:
             self['x_axis'] = x_axis
@@ -648,13 +699,22 @@ class Data(OrderedDict):
             if isinstance(y_axis, np.ndarray):
                 y_axis = Axis(data=y_axis)
             else:
-                raise TypeError('y_axis for the DataToExport class should be a Axis class')
+                raise TypeError(f'y_axis for the {self.__class__.__name__} class should be a Axis class')
             self['y_axis'] = y_axis
         elif y_axis['data'] is not None:
             self['y_axis'] = y_axis
 
         for k in kwargs:
             self[k] = kwargs[k]
+
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        else:
+            raise AttributeError(f'{name} if not a key of {self}')
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
 
 
 class DataFromPlugins(Data):
@@ -703,6 +763,10 @@ class DataFromPlugins(Data):
                 dim = 'DataND'
         self['dim'] = dim
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
+               f' - <source: {self.source}> - <dim: {self.dim}>'
+
 
 class DataToExport(Data):
     def __init__(self, data=None, dim='', **kwargs):
@@ -735,26 +799,9 @@ class DataToExport(Data):
                 dim = 'Data0D'
         self['dim'] = dim
 
-
-class ScaledAxis(Axis):
-    def __init__(self, label='', units='', offset=0, scaling=1):
-        super().__init__(label=label, units=units)
-        if not (isinstance(offset, float) or isinstance(offset, int)):
-            raise TypeError('offset for the ScalingAxis class should be a float (or int)')
-        self['offset'] = offset
-        if not (isinstance(scaling, float) or isinstance(scaling, int)):
-            raise TypeError('scaling for the ScalingAxis class should be a non null float (or int)')
-        if scaling == 0 or scaling == 0.:
-            raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
-        self['scaling'] = scaling
-
-
-class ScalingOptions(dict):
-    def __init__(self, scaled_xaxis=ScaledAxis(), scaled_yaxis=ScaledAxis()):
-        assert isinstance(scaled_xaxis, ScaledAxis)
-        assert isinstance(scaled_yaxis, ScaledAxis)
-        self['scaled_xaxis'] = scaled_xaxis
-        self['scaled_yaxis'] = scaled_yaxis
+    def __repr__(self):
+        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
+               f' - <source: {self.source}> - <dim: {self.dim}>'
 
 
 def setLocale():
@@ -774,6 +821,18 @@ def recursive_find_files_extension(ini_path, ext, paths=[]):
                 paths.append(entry.path)
             elif entry.is_dir():
                 recursive_find_files_extension(entry.path, ext, paths)
+    return paths
+
+
+def recursive_find_files(ini_path, exp='make_enum', paths=[],
+                         filters=['build']):
+    for child in Path(ini_path).iterdir():
+        if child.is_dir():
+            recursive_find_files(child, exp, paths, filters)
+        else:
+            if exp in child.stem:
+                if not any([filt in str(child) for filt in filters]):
+                    paths.append(child)
     return paths
 
 
@@ -1392,6 +1451,10 @@ def linspace_step(start, stop, step):
     return np.linspace(start, new_stop, Nsteps)
 
 
+def linspace_step_N(start, step, Npts):
+    stop = (Npts - 1) * step + start
+    return linspace_step(start, stop, step)
+
 
 def find_index(x, threshold):
     """
@@ -1694,10 +1757,30 @@ if __name__ == '__main__':
     #extensions = get_extension()
     #models = get_models()
     #count = count_lines('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\src')
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='abc',
-                                         paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py'],
-                                         replace=False, replace_str='Slot')
-    pass
+
+
+    # import license
+    # mit = license.find('MIT')
+    #
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+    #                                      exp='License :: CeCILL-B Free Software License Agreement (CECILL-B)',
+    #                                      paths=[],
+    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+    #                                               '.tox', 'daq_utils.py'],
+    #                                      replace=True, replace_str=mit.python)
+    # pass
+    paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+                         exp='VERSION', paths=[])
+    import version
+    for file in paths:
+        with open(str(file), 'r') as f:
+            v = version.Version(f.read())
+            v.minor += 1
+            v.patch = 0
+        with open(str(file), 'w') as f:
+            f.write(str(v))
+
+    # for file in paths:
+    #     with open(str(file), 'w') as f:
+    #         f.write(mit.render(name='Sebastien Weber', email='sebastien.weber@cemes.fr'))
+

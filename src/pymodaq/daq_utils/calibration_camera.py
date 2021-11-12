@@ -30,8 +30,8 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
         self.fname = None
         self.node_path = None
 
-        self.viewer2D.ui.Show_histogram.click()
-        self.viewer2D.ui.roiBtn.click()
+        self.viewer2D.get_action('histo').trigger()
+        self.viewer2D.get_action('roi').trigger()
 
         self.meas_module.ui.measurement_type_combo.setCurrentText('Sinus')
         QtWidgets.QApplication.processEvents()
@@ -67,7 +67,7 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
         widg2D = QtWidgets.QWidget()
         self.viewer2D = Viewer2D(widg2D)
         self.viewer2D.title = 'calib'
-        self.viewer2D.ui.auto_levels_pb.click()
+        self.viewer2D.get_action('autolevels').trigger()
 
         splitter.addWidget(widg2D)
 
@@ -105,9 +105,8 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
             self.settings.child('xaxis', 'xoffset').setValue((-self.data.shape[1] / 2))
             self.settings.child('yaxis', 'yoffset').setValue((-self.data.shape[0] / 2))
             self.viewer2D.setImage(self.data)
-            self.viewer2D.ui.Show_histogram.click()
-            self.viewer2D.ui.roiBtn.click()
-            self.viewer2D.ui.ROIs_widget.setVisible(False)
+            self.viewer2D.get_action('histo').trigger()
+            self.viewer2D.get_action('roi').trigger()
             QtWidgets.QApplication.processEvents()
 
     def save_data(self):

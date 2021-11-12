@@ -1,5 +1,5 @@
 from qtpy import QtWidgets, QtCore
-from pyqtgraph.widgets.SpinBox import SpinBox
+from pyqtgraph import functions as fn
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
 from pyqtgraph.parametertree import Parameter, ParameterItem
 import numpy as np

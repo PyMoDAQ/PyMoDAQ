@@ -1,21 +1,30 @@
 class DAQ_ScanException(Exception):
     """Raised when an error occur within the DAQ_Scan"""
+    pass
 
 
 class ScannerException(Exception):
     """Raised when there is an error related to the Scanner class (see pymodaq.da_utils.scanner)"""
+    pass
+
+
+class ViewerError(Exception):
+    pass
 
 
 class ExpectedError(Exception):
     """Raised in the tests made for pymodaq plugins"""
+    pass
 
 
 class Expected_1(ExpectedError):
     """Expected error 1 for pymodaq tests"""
+    pass
 
 
 class Expected_2(ExpectedError):
     """Expected error 2 for pymodaq tests"""
+    pass
 
 
 class Expected_3(ExpectedError):

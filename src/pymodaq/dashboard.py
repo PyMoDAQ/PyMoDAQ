@@ -54,6 +54,7 @@ remote_path = utils.get_set_remote_path()
 
 extensions = utils.get_extensions()
 
+
 class DashBoard(QObject):
     """
     Main class initializing a DashBoard interface to display det and move modules and logger """
@@ -173,6 +174,7 @@ class DashBoard(QObject):
         self.extensions['DAQ_Scan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()
+        return self.scan_module
 
     def load_log_module(self):
         win = QtWidgets.QMainWindow()
@@ -182,6 +184,7 @@ class DashBoard(QObject):
         self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
         win.show()
+        return self.log_module
 
     def load_pid_module(self):
         self.pid_window = QtWidgets.QMainWindow()
@@ -192,6 +195,7 @@ class DashBoard(QObject):
         self.pid_module.set_module_manager(self.detector_modules, self.actuators_modules)
         self.extensions['DAQ_PID'] = self.pid_module
         self.pid_window.show()
+        return self.pid_module
 
 
     def load_extensions_module(self, ext):
@@ -205,6 +209,7 @@ class DashBoard(QObject):
         klass = getattr(module, pkg.klass_name)
         self.extensions[pkg.klass_name] = klass(dockarea=area, dashboard=self)
         self.extension_windows[-1].show()
+        return self.extensions[pkg.klass_name]
 
     def create_menu(self, menubar):
         """
@@ -1338,11 +1343,12 @@ class DashBoard(QObject):
             pass
 
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+def main(init_qt=True):
+    if init_qt: # used for the test suite
+        app = QtWidgets.QApplication(sys.argv)
+        if config['style']['darkstyle']:
+            import qdarkstyle
+            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
 
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
@@ -1352,7 +1358,9 @@ def main():
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    sys.exit(app.exec_())
+    if init_qt:
+        sys.exit(app.exec_())
+    return prog, win
 
 
 if __name__ == '__main__':

@@ -144,6 +144,8 @@ class TestViewer1D:
         assert prog.viewer.plotwidget.plotItem.getAxis('bottom').labelText == prog.axis_settings['label']
         assert prog.viewer.plotwidget.plotItem.getAxis('left').labelText == ''
 
+
+    @pytest.mark.skip
     def test_update_lineouts(self, init_prog):
         prog = init_prog
 
@@ -219,6 +221,7 @@ class TestViewer1D:
         assert 'item3' in prog.lo_items
         assert 'Lineout_item2:' in prog.measure_data_dict
 
+    @pytest.mark.skip
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
     def test_add_lineout(self, mock_except, init_prog):
         mock_except.side_effect = [None, ExpectedError]

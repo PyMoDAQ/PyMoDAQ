@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, QLocale, Qt, QModelIndex
 from qtpy.QtWidgets import QAction
 from qtpy import QtGui, QtWidgets, QtCore
@@ -11,6 +13,7 @@ import datetime
 from pymodaq.daq_utils import daq_utils as utils
 import toml
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from multipledispatch import dispatch
 
 config = utils.load_config()
 
@@ -52,8 +55,14 @@ class QAction(QAction):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.click = self.trigger
-        self.clicked = self.triggered
+    def click(self):
+        logger.warning("click for PyMoDAQ's QAction is deprecated, use *trigger*")
+        self.trigger()
+
+    @property
+    def clicked(self):
+        logger.warning("clicked for PyMoDAQ's QAction is deprecated, use *trigger*")
+        return self.triggered
 
     def connect_to(self, slot):
         self.triggered.connect(slot)
@@ -79,13 +88,26 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
     return action
 
 
-class ActionManager:
+class ActionManager(ABC):
     def __init__(self, toolbar=None, menu=None):
-        self.actions = dict([])
-        self.toolbar = toolbar
-        self.menu = menu
+        self._actions = dict([])
+        self._toolbar = toolbar
+        self._menu = menu
 
         self.setup_actions()
+
+    def set_toolbar(self, toolbar):
+        self._toolbar = toolbar
+
+    def set_menu(self, menu):
+        self._menu = menu
+
+    def set_action_text(self, action_name, text: str):
+        if action_name in self._actions:
+            self._actions[action_name].setText(text)
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the view actions: {self._actions.keys()}')
 
     def addaction(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
         """Create a new action and add it to toolbar and menu
@@ -104,28 +126,120 @@ class ActionManager:
         pymodaq/resources/QtDesigner_Ressources/Icon_Library, affect_to
         """
         if toolbar is None:
-            toolbar = self.toolbar
+            toolbar = self._toolbar
         if menu is None:
-            menu = self.menu
-        self.actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
+            menu = self._menu
+        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
 
+    def get_action(self, name):
+        if name in self._actions:
+            return self._actions[name]
+        else:
+            raise KeyError(f'The action with name: {name} is not referenced'
+                           f' in the view actions: {self._actions.keys()}')
+
+    def has_action(self, action_name):
+        return action_name in self._actions
+
+    @abstractmethod
     def setup_actions(self):
         """
-        self.actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
-        self.actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
-        self.actions['load'] = self.addaction('Load', 'Open',
+        self._actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
+        self._actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
+        self._actions['load'] = self.addaction('Load', 'Open',
                                          "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
-        self.actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
+        self._actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
         """
-        raise NotImplementedError
+        pass
+
+    @property
+    def toolbar(self):
+        return self._toolbar
 
     def affect_to(self, action_name, obj):
         if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
-            obj.addAction(self.actions[action_name])
+            obj.addAction(self._actions[action_name])
+            
+    def connect_action(self, name, slot, connect=True):
+        """
+        Connect (or disconnect) the action referenced by name to the given slot
+        Parameters
+        ----------
+        name: (str) key of the action as referenced in the self._actions dict
+        slot: (method) a method/function
+        connect: (bool) if True connect the trigegr signal of the action to the defined slot else disconnect it
+        """
+        if name in self._actions:
+            if connect:
+                self._actions[name].triggered.connect(slot)
+            else:
+                try:
+                    self._actions[name].triggered.disconnect()
+                except (TypeError,) as e:
+                    pass  # the action was not connected
+        else:
+            raise KeyError(f'The action with name: {name} is not referenced'
+                           f' in the view actions: {self._actions.keys()}')
+    @dispatch(str)
+    def is_action_visible(self, action_name: str):
+        if action_name in self._actions:
+            return self._actions[action_name].isVisible()
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the actions list: {self._actions}')
+
+    @dispatch(list)
+    def is_action_visible(self, actions_name: list):
+        isvisible = False
+        for action_name in actions_name:
+            isvisible = isvisible and self.is_action_visible(action_name)
+        return isvisible
+
+    @dispatch(str)
+    def is_action_checked(self, action_name: str):
+        if action_name in self._actions:
+            return self._actions[action_name].isChecked()
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the actions list: {self._actions}')
+
+    @dispatch(list)
+    def is_action_checked(self, actions_name: list):
+        ischecked = False
+        for action_name in actions_name:
+            ischecked = ischecked and self.is_action_checked(action_name)
+        return ischecked
+
+    @dispatch(str, bool)
+    def set_action_visible(self, action_name: str, visible=True):
+        if action_name in self._actions:
+            self._actions[action_name].setVisible(visible)
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the actions list: {self._actions}')
+
+    @dispatch(list, bool)
+    def set_action_visible(self, actions_name: list, visible=True):
+        for action_name in actions_name:
+            self.set_action_visible(action_name, visible)
+
+    @dispatch(str, bool)
+    def set_action_checked(self, action_name: str, checked=True):
+        if action_name in self._actions:
+            self._actions[action_name].setChecked(checked)
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the actions list: {self._actions}')
+
+    @dispatch(list, bool)
+    def set_action_checked(self, actions_name: list, checked=True):
+        for action_name in actions_name:
+            self.set_action_checked(action_name, checked)
+
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
     def __init__(self, **kwargs):
-        super(QtWidgets.QSpinBox, self).__init__()
+        super().__init__()
         self.setMaximum(100000)
         self.setReadOnly(True)
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
@@ -719,7 +833,7 @@ def show_message(message="blabla", title="Error"):
     return ret
 
 
-class CustomApp(ActionManager, QtCore.QObject):
+class CustomApp(QtCore.QObject):
     # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
     log_signal = QtCore.Signal(str)
 
@@ -739,8 +853,9 @@ class CustomApp(ActionManager, QtCore.QObject):
 
         self.docks = dict([])
 
-        self.toolbar = QtWidgets.QToolBar()
-        self.mainwindow.addToolBar(self.toolbar)
+        self.action_manager = None
+        self._toolbar = QtWidgets.QToolBar()
+        self.mainwindow.addToolBar(self._toolbar)
 
         # %% init and set the status bar
         self.statusbar = self.mainwindow.statusBar()
@@ -752,9 +867,22 @@ class CustomApp(ActionManager, QtCore.QObject):
         self.settings_tree.setParameters(self.settings, showTop=False)  # load the tree with this parameter object
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
-        ActionManager.__init__(self, self.toolbar)  # init the action manager that call the setup_actions method that should be subclassed
         self.setup_UI()
+
+    def set_action_manager(self, action_manager):
+        self.action_manager = action_manager
+        self.action_manager.set_toolbar(self._toolbar)
         self.connect_things()
+        
+    def connect_action(self, action_name, slot, connect=True):
+        """Convenience function from the ActionManager"""
+        if self.action_manager is not None:
+            self.action_manager.connect_action(action_name, slot, connect)
+
+    def affect_to(self, action_name, obj):
+        """Convenience function from the ActionManager"""
+        if self.action_manager is not None:
+            self.action_manager.affect_to(action_name, obj)
 
     @property
     def modules_manager(self):
@@ -787,12 +915,12 @@ class CustomApp(ActionManager, QtCore.QObject):
 
         For instance:
 
-        file_menu = self.menubar.addMenu('File')
-        self.actions_manager.affect_to('load', file_menu)
-        self.actions_manager.affect_to('save', file_menu)
+        file_menu = self._menubar.addMenu('File')
+        self.affect_to('load', file_menu)
+        self.affect_to('save', file_menu)
 
         file_menu.addSeparator()
-        self.actions_manager.affect_to('quit', file_menu)
+        self.affect_to('quit', file_menu)
         '''
         raise NotImplementedError
 
@@ -827,16 +955,6 @@ class CustomApp(ActionManager, QtCore.QObject):
         ----------
         param: (Parameter) the parameter that has been deleted
         '''
-        raise NotImplementedError
-
-    def setup_actions(self):
-        """
-        self.actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
-        self.actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
-        self.actions['load'] = self.addaction('Load', 'Open',
-                                         "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
-        self.actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
-        """
         raise NotImplementedError
 
     def setup_UI(self):

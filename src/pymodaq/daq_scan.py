@@ -58,7 +58,7 @@ class DAQ_Scan(QObject):
             {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'}, ]},
     ]
 
-    def __init__(self, dockarea=None, dashboard=None):
+    def __init__(self, dockarea=None, dashboard=None, show_popup=True):
         """
 
         Parameters
@@ -75,6 +75,7 @@ class DAQ_Scan(QObject):
             raise Exception('No valid dashboard initialized')
         self.mainwindow = self.dockarea.parent()
 
+        self.show_popup = show_popup  # used to deactivate popups when testing with pytest
         self.wait_time = 1000
         self.navigator = None
         self.scan_x_axis = None
@@ -203,8 +204,10 @@ class DAQ_Scan(QObject):
             if self.ui.move_to_crosshair_cb.isChecked():
                 if "2D" in self.scanner.settings.child('scan_type').value():
                     if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
-                        posx_real = posx * self.ui.scan2D_graph.scaled_xaxis.scaling + self.ui.scan2D_graph.scaled_xaxis.offset
-                        posy_real = posy * self.ui.scan2D_graph.scaled_yaxis.scaling + self.ui.scan2D_graph.scaled_yaxis.offset
+                        posx_real = posx * self.ui.scan2D_graph.x_axis.axis_scaling +\
+                                    self.ui.scan2D_graph.x_axis.axis_offset
+                        posy_real = posy * self.ui.scan2D_graph.y_axis.axis_scaling +\
+                                    self.ui.scan2D_graph.y_axis.axis_offset
                         self.move_at(posx_real, posy_real)
                     else:
                         self.update_status("not valid configuration, check number of stages and scan2D option",
@@ -326,14 +329,14 @@ class DAQ_Scan(QObject):
                             datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
                             datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D.T
                             datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(
-                                data=self.ui.scan2D_graph.x_axis,
-                                units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
-                                label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'])
+                                data=self.ui.scan2D_graph.x_axis.axis_data(data2D.shape[1]),
+                                units=self.ui.scan2D_graph.x_axis.axis_units,
+                                label=self.ui.scan2D_graph.x_axis.axis_label)
                             if scan_type == 'scan2D':
                                 datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(
-                                    data=self.ui.scan2D_graph.y_axis,
-                                    units=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['units'],
-                                    label=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['label'])
+                                    data=self.ui.scan2D_graph.y_axis.axis_data(data2D.shape[0]),
+                                    units=self.ui.scan2D_graph.y_axis.axis_units,
+                                    label=self.ui.scan2D_graph.y_axis.axis_label)
 
                         for ind_channel, channel in enumerate(datas):  # list of OrderedDict
                             channel_group = self.h5saver.add_CH_group(live_group, title=channel)
@@ -348,14 +351,14 @@ class DAQ_Scan(QObject):
                             averaged_datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
                             averaged_datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D.T
                             averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(
-                                data=self.ui.scan2D_graph.x_axis,
-                                units=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['units'],
-                                label=self.ui.scan2D_graph.scaling_options['scaled_xaxis']['label'], )
+                                data=self.ui.scan2D_graph.x_axis.axis_data(data2D.shape[1]),
+                                units=self.ui.scan2D_graph.x_axis.axis_units,
+                                label=self.ui.scan2D_graph.x_axis.axis_label)
                             if scan_type == 'scan2D':
                                 averaged_datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(
-                                    data=self.ui.scan2D_graph.y_axis,
-                                    units=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['units'],
-                                    label=self.ui.scan2D_graph.scaling_options['scaled_yaxis']['label'])
+                                    data=self.ui.scan2D_graph.y_axis.axis_data(data2D.shape[0]),
+                                    units=self.ui.scan2D_graph.y_axis.axis_units,
+                                    label=self.ui.scan2D_graph.y_axis.axis_label)
 
                         for ind_channel, channel in enumerate(averaged_datas):  # dict of OrderedDict
                             channel_group = self.h5saver.add_CH_group(live_group, title=channel)
@@ -758,21 +761,17 @@ class DAQ_Scan(QObject):
         self.ui.scan2D_graph_widget.addWidget(scan2D_subgraph_widget)
         self.ui.scan2D_subgraph.show(False)
 
-        self.ui.scan2D_graph.ui.Show_histogram.setChecked(False)
-        self.ui.scan2D_graph.ui.histogram_blue.setVisible(False)
-        self.ui.scan2D_graph.ui.histogram_green.setVisible(False)
-        self.ui.scan2D_graph.ui.histogram_red.setVisible(False)
-        self.ui.scan2D_graph.ui.Ini_plot_pb.setVisible(False)
-        self.ui.scan2D_graph.ui.FlipUD_pb.setVisible(False)
-        self.ui.scan2D_graph.ui.FlipLR_pb.setVisible(False)
-        self.ui.scan2D_graph.ui.rotate_pb.setVisible(False)
+        self.ui.scan2D_graph.set_action_checked('histo', False)
+        self.ui.scan2D_graph.set_action_visible(['flip_ud', 'flip_lr', 'rotate'], False)
+        #self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
+
 
         self.move_to_crosshair_action = gutils.QAction(
             QtGui.QIcon(QtGui.QPixmap(':/icons/Icon_Library/move_contour.png')),"Move at doubleClicked")
         self.move_to_crosshair_action.setCheckable(True)
         self.ui.move_to_crosshair_cb = self.move_to_crosshair_action
 
-        self.ui.scan2D_graph.toolbar_button.addAction(self.move_to_crosshair_action)
+        self.ui.scan2D_graph.toolbar.addAction(self.move_to_crosshair_action)
         self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
 
         # %% init and set the status bar
@@ -886,27 +885,30 @@ class DAQ_Scan(QObject):
             --------
             custom_tree.parameter_to_xml_file, create_menu
         """
-        dialog = QtWidgets.QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
-        tree = ParameterTree()
-        tree.setMinimumWidth(400)
-        tree.setMinimumHeight(500)
-        if type_info == 'scan':
-            tree.setParameters(self.scan_attributes, showTop=False)
-        elif type_info == 'dataset':
-            tree.setParameters(self.dataset_attributes, showTop=False)
+        if self.show_popup:
+            dialog = QtWidgets.QDialog()
+            vlayout = QtWidgets.QVBoxLayout()
+            tree = ParameterTree()
+            tree.setMinimumWidth(400)
+            tree.setMinimumHeight(500)
+            if type_info == 'scan':
+                tree.setParameters(self.scan_attributes, showTop=False)
+            elif type_info == 'dataset':
+                tree.setParameters(self.dataset_attributes, showTop=False)
 
-        vlayout.addWidget(tree)
-        dialog.setLayout(vlayout)
-        buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-        buttonBox.addButton('Cancel', buttonBox.RejectRole)
-        buttonBox.addButton('Apply', buttonBox.AcceptRole)
-        buttonBox.rejected.connect(dialog.reject)
-        buttonBox.accepted.connect(dialog.accept)
+            vlayout.addWidget(tree)
+            dialog.setLayout(vlayout)
+            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+            buttonBox.addButton('Cancel', buttonBox.RejectRole)
+            buttonBox.addButton('Apply', buttonBox.AcceptRole)
+            buttonBox.rejected.connect(dialog.reject)
+            buttonBox.accepted.connect(dialog.accept)
 
-        vlayout.addWidget(buttonBox)
-        dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
-        res = dialog.exec()
+            vlayout.addWidget(buttonBox)
+            dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
+            res = dialog.exec()
+        else:
+            res = True
         return res
 
     def show_file_content(self):
@@ -1614,7 +1616,7 @@ class DAQ_Scan_Acquisition(QObject):
 
         """
         
-        super(QObject, self).__init__()
+        super().__init__()
 
         self.stop_scan_flag = False
         self.settings = settings
@@ -2074,25 +2076,27 @@ class DAQ_Scan_Acquisition(QObject):
             QtWidgets.QApplication.processEvents()
 
 
-def main():
+def main(init_qt=True):
+    if init_qt:  # used for the test suite
+        app = QtWidgets.QApplication(sys.argv)
+        if config['style']['darkstyle']:
+            import qdarkstyle
+            app.setStyleSheet(qdarkstyle.load_stylesheet())
+
     from pymodaq.dashboard import DashBoard
     from pymodaq.daq_utils.daq_utils import get_set_preset_path
-    app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
-        import qdarkstyle
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
-
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
 
-    prog = DashBoard(area)
+    dashboard = DashBoard(area)
+    daq_scan = None
     file = Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
     if file.exists():
-        prog.set_preset_mode(file)
-        prog.load_scan_module()
+        dashboard.set_preset_mode(file)
+        daq_scan = dashboard.load_scan_module()
     else:
         msgBox = QtWidgets.QMessageBox()
         msgBox.setText(f"The default file specified in the configuration file does not exists!\n"
@@ -2101,7 +2105,9 @@ def main():
         msgBox.setStandardButtons(msgBox.Ok)
         ret = msgBox.exec()
 
-    sys.exit(app.exec_())
+    if init_qt:
+        sys.exit(app.exec_())
+    return dashboard, daq_scan, win
 
 
 if __name__ == '__main__':
