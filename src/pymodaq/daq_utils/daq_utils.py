@@ -2,6 +2,7 @@ from qtpy import QtCore
 from qtpy.QtCore import QLocale #, QVariant
 import sys
 from packaging import version as version_mod
+import warnings
 
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
@@ -120,6 +121,12 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+
+        logging.captureWarnings(True)
+        warnings.filterwarnings('default', category=DeprecationWarning)
+        warnings_logger = logging.getLogger("py.warnings")
+        warnings_logger.addHandler(handler)
+
     if add_to_console:
         console_handler = logging.StreamHandler()
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -128,6 +135,10 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     return logger
 
 logger = set_logger('daq_utils')
+
+
+def deprecation_msg(message):
+    warnings.warn(message, DeprecationWarning, stacklevel=3)
 
 
 def get_version():
@@ -852,7 +863,7 @@ def recursive_find_expr_in_files(ini_path, exp='make_enum', paths=[],
                         for ind, line in enumerate(f):
                             if exp in line:
                                 found = True
-                                paths.append([child, ind])
+                                paths.append([child, ind, line])
                                 if replace:
                                     replacement += line.replace(exp, replace_str)
                             else:
@@ -1762,23 +1773,23 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-    #                                      exp='License :: CeCILL-B Free Software License Agreement (CECILL-B)',
-    #                                      paths=[],
-    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-    #                                               '.tox', 'daq_utils.py'],
-    #                                      replace=True, replace_str=mit.python)
-    # pass
-    paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                         exp='VERSION', paths=[])
-    import version
-    for file in paths:
-        with open(str(file), 'r') as f:
-            v = version.Version(f.read())
-            v.minor += 1
-            v.patch = 0
-        with open(str(file), 'w') as f:
-            f.write(str(v))
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+                                         exp='"values"',
+                                         paths=[],
+                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+                                                  '.tox', 'daq_utils.py', '.rst'],
+                                         replace=False, replace_str="'limits'")
+    pass
+    # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+    #                      exp='VERSION', paths=[])
+    # import version
+    # for file in paths:
+    #     with open(str(file), 'r') as f:
+    #         v = version.Version(f.read())
+    #         v.minor += 1
+    #         v.patch = 0
+    #     with open(str(file), 'w') as f:
+    #         f.write(str(v))
 
     # for file in paths:
     #     with open(str(file), 'w') as f:
