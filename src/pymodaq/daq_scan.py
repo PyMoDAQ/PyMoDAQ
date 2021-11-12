@@ -120,6 +120,9 @@ class DAQ_Scan(QObject):
 
         logger.info('DAQ_Scan Initialized')
 
+    ################
+    #  CONFIG/INIT
+
     def set_config(self):
         self.settings.child('time_flow', 'wait_time').setValue(config['scan']['timeflow']['wait_time'])
         self.settings.child('time_flow', 'wait_time_between').setValue(config['scan']['timeflow']['wait_time'])

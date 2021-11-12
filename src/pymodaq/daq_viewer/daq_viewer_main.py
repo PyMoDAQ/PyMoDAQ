@@ -45,6 +45,8 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import DockArea, Dock
 
 logger = utils.set_logger(utils.get_module_name(__file__))
+config = utils.load_config()
+
 local_path = utils.get_set_local_dir()
 
 DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
@@ -2178,6 +2180,10 @@ class DAQ_Detector(QObject):
 def main(init_qt=True):
     if init_qt: # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
+        if config['style']['darkstyle']:
+            import qdarkstyle
+            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
+
     win = QtWidgets.QMainWindow()
     area = DockArea()
     win.setCentralWidget(area)
