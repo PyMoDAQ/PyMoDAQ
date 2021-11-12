@@ -89,3 +89,6 @@ class Crosshair(pg.GraphicsObject):
         self.vLine.setVisible(state)
         if state:
             self.show_hide_crosshair()
+
+    def isVisible(self):
+        return self.hLine.isVisible()

@@ -765,13 +765,13 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
                         except Exception as e:
                             self.logger.exception(str(e))
                         if self.settings.child('detector_settings', 'ROIselect', 'use_ROI').value():
-                            if not self.ui.viewers[0].ROIselect_action.isChecked():
-                                self.ui.viewers[0].ROIselect_action.clicked()
+                            if not self.ui.viewers[0].is_action_checked('ROIselect'):
+                                self.ui.viewers[0].get_action('ROIselect').trigger()
                                 QtWidgets.QApplication.processEvents()
-                        self.ui.viewers[0].ui.ROIselect.setPos(
+                        self.ui.viewers[0].ROIselect.setPos(
                             self.settings.child('detector_settings', 'ROIselect', 'x0').value(),
                             self.settings.child('detector_settings', 'ROIselect', 'y0').value())
-                        self.ui.viewers[0].ui.ROIselect.setSize(
+                        self.ui.viewers[0].ROIselect.setSize(
                             [self.settings.child('detector_settings', 'ROIselect', 'width').value(),
                              self.settings.child('detector_settings', 'ROIselect', 'height').value()])
                         self.ui.viewers[0].ROI_select_signal.connect(self.update_ROI)

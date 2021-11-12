@@ -690,72 +690,72 @@ class PlotCurveItem(pg.PlotCurveItem):
 
     def __init__(self, *args, **kargs):
         super().__init__(*args, **kargs)
-        self.flipud = False
-        self.fliplr = False
-        self.flipudbis = False
-
-    def paint(self, p, opt, widget):
-        if self.xData is None or len(self.xData) == 0:
-            return
-
-        x = None
-        y = None
-        path = self.getPath()
-
-        if self._exportOpts is not False:
-            aa = self._exportOpts.get('antialias', True)
-        else:
-            aa = self.opts['antialias']
-
-        p.setRenderHint(p.Antialiasing, aa)
-
-        if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
-            if self.fillPath is None:
-                if x is None:
-                    x, y = self.getData()
-                p2 = QtGui.QPainterPath(self.path)
-                p2.lineTo(x[-1], self.opts['fillLevel'])
-                p2.lineTo(x[0], self.opts['fillLevel'])
-                p2.lineTo(x[0], y[0])
-                p2.closeSubpath()
-                self.fillPath = p2
-
-            p.fillPath(self.fillPath, self.opts['brush'])
-
-        sp = pg.functions.mkPen(self.opts['shadowPen'])
-        cp = pg.functions.mkPen(self.opts['pen'])
-
-        self.setTransform(self.dataTransform())
-
-        if sp is not None and sp.style() != QtCore.Qt.NoPen:
-            p.setPen(sp)
-            p.drawPath(path)
-        p.setPen(cp)
-        p.drawPath(path)
-
-    def setOpts(self, update=True, **kargs):
-        if 'flipud' in kargs:
-            self.flipud = kargs['flipud']
-        if 'fliplr' in kargs:
-            self.fliplr = kargs['fliplr']
-        if 'flipudbis' in kargs:
-            self.flipudbis = kargs['flipudbis']
-        if update:
-            self.update()
-
-    def dataTransform(self):
-        """Return the transform that maps from this image's input array to its
-        local coordinate system.
-
-        This transform corrects for the transposition that occurs when image data
-        is interpreted in row-major order.
-        """
-        # Might eventually need to account for downsampling / clipping here
-        tr = QtGui.QTransform()
-        if self.flipudbis:
-            tr.scale(1, -1)
-        if self.flipud:
-            tr.scale(1, -1)
-        if self.fliplr:
-            tr.scale(-1, 1)
-        return tr
+    #     self.flipud = False
+    #     self.fliplr = False
+    #     self.flipudbis = False
+    #
+    # def paint(self, p, opt, widget):
+    #     if self.xData is None or len(self.xData) == 0:
+    #         return
+    #
+    #     x = None
+    #     y = None
+    #     path = self.getPath()
+    #
+    #     if self._exportOpts is not False:
+    #         aa = self._exportOpts.get('antialias', True)
+    #     else:
+    #         aa = self.opts['antialias']
+    #
+    #     p.setRenderHint(p.Antialiasing, aa)
+    #
+    #     if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
+    #         if self.fillPath is None:
+    #             if x is None:
+    #                 x, y = self.getData()
+    #             p2 = QtGui.QPainterPath(self.path)
+    #             p2.lineTo(x[-1], self.opts['fillLevel'])
+    #             p2.lineTo(x[0], self.opts['fillLevel'])
+    #             p2.lineTo(x[0], y[0])
+    #             p2.closeSubpath()
+    #             self.fillPath = p2
+    #
+    #         p.fillPath(self.fillPath, self.opts['brush'])
+    #
+    #     sp = pg.functions.mkPen(self.opts['shadowPen'])
+    #     cp = pg.functions.mkPen(self.opts['pen'])
+    #
+    #     self.setTransform(self.dataTransform())
+    #
+    #     if sp is not None and sp.style() != QtCore.Qt.NoPen:
+    #         p.setPen(sp)
+    #         p.drawPath(path)
+    #     p.setPen(cp)
+    #     p.drawPath(path)
+    #
+    # def setOpts(self, update=True, **kargs):
+    #     if 'flipud' in kargs:
+    #         self.flipud = kargs['flipud']
+    #     if 'fliplr' in kargs:
+    #         self.fliplr = kargs['fliplr']
+    #     if 'flipudbis' in kargs:
+    #         self.flipudbis = kargs['flipudbis']
+    #     if update:
+    #         self.update()
+    #
+    # def dataTransform(self):
+    #     """Return the transform that maps from this image's input array to its
+    #     local coordinate system.
+    #
+    #     This transform corrects for the transposition that occurs when image data
+    #     is interpreted in row-major order.
+    #     """
+    #     # Might eventually need to account for downsampling / clipping here
+    #     tr = QtGui.QTransform()
+    #     if self.flipudbis:
+    #         tr.scale(1, -1)
+    #     if self.flipud:
+    #         tr.scale(1, -1)
+    #     if self.fliplr:
+    #         tr.scale(-1, 1)
+    #     return tr

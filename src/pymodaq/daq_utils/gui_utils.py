@@ -138,6 +138,9 @@ class ActionManager(ABC):
             raise KeyError(f'The action with name: {name} is not referenced'
                            f' in the view actions: {self._actions.keys()}')
 
+    def has_action(self, action_name):
+        return action_name in self._actions
+
     @abstractmethod
     def setup_actions(self):
         """

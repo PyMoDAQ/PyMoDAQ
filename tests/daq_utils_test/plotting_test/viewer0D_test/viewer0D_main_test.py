@@ -17,7 +17,6 @@ def init_prog(qtbot):
     qtbot.addWidget(form)
     return prog, qtbot
 
-@pytest.mark.skip
 class TestViewer0D:
     def test_init(self, init_prog):
         prog, qtbot = init_prog

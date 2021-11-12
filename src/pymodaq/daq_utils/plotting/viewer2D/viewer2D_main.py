@@ -173,17 +173,11 @@ class AxisInfosExtractor:
     @staticmethod
     @dispatch(utils.Axis)
     def extract_axis_info(axis: utils.Axis):
-        label = ''
-        units = ''
-        if isinstance(axis, utils.Axis):
-            if 'data' in axis:
-                data = axis['data']
-            if 'label' in axis:
-                label = axis['label']
-            if 'units' in axis:
-                units = axis['units']
-        else:
-            data = axis
+        data = None
+        if 'data' in axis:
+            data = axis['data']
+        label = axis['label']
+        units = axis['units']
 
         scaling = 1
         offset = 0
@@ -229,6 +223,12 @@ class LineoutData:
 
 class FilterFromCrosshair:
     def __init__(self, graph_items):
+        """
+        Extract data along a crosshair using coordinates of a graph_item such as an imageItem
+        Parameters
+        ----------
+        graph_items: (dict)
+        """
         self._graph_items = graph_items
         self._data_index, self._y = 0., 0.
 
@@ -286,7 +286,7 @@ class FilterFromCrosshair:
 
         hor_data = data[x_sorted_indexes][data_H_index]
 
-        points, data = self.img_spread.get_points_at(axis='x', val=posx)
+        points, data = self._graph_items[data_key].get_points_at(axis='x', val=posx)
         y_sorted_indexes = np.argsort(points[:, 1])
         ver_axis = points[y_sorted_indexes, 1][data_V_index]
 
@@ -410,8 +410,6 @@ class ActionManager(ActionManager):
         self.addaction('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
         self.addaction('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
         self.addaction('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
-        self.addaction('init_plot', 'Init. Plot', 'Refresh', tip='Initialize the plots')
-
         self.addaction('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
 
         self.addaction('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
@@ -475,7 +473,6 @@ class ImageDisplayer(QObject):
             self._image_items[img_key] = image_item_factory(self.display_type)
             self._plotitem.addItem(self._image_items[img_key])
         self.updated_item.emit(self._image_items)
-
 
     def update_image_visibility(self, are_items_visible):
         if len(are_items_visible) != len(self._image_items):
@@ -610,8 +607,11 @@ class LineoutPlotter(QObject):
         self.integrated_data.add_datas({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
         for roi_key, lineout_data in roi_dicts.items():
             if roi_key in self._roi_curves:
-                self._roi_curves[roi_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
-                self._roi_curves[roi_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
+                if lineout_data.hor_data.size > 0:
+                    self._roi_curves[roi_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
+                    self._roi_curves[roi_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
+
+
                 self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
                                                          self.integrated_data.datas[roi_key])
         logger.debug('roi lineouts plotted')
@@ -717,11 +717,19 @@ class LineoutPlotter(QObject):
             for item in self.get_roi_curves()[k].values():
                 item.setVisible(isroichecked)
 
+    Slot(bool)
+    def crosshair_clicked(self, iscrosshairchecked=True):
+        for image_key in IMAGE_TYPES:
+            self.show_crosshair_curves(image_key, iscrosshairchecked)
+
     def get_roi_curves(self):
         return self._roi_curves
 
     def get_crosshair_curves(self):
         return self._crosshair_curves
+
+    def get_crosshair_curve(self, curve_name):
+        return self._crosshair_curves[curve_name]
 
     def setup_crosshair(self):
         for image_key in IMAGE_TYPES:
@@ -730,7 +738,7 @@ class LineoutPlotter(QObject):
             self.add_lineout_items(self._crosshair_curves[image_key]['hor'], self._crosshair_curves[image_key]['ver'])
 
     def show_crosshair_curves(self, curve_key, show=True):
-        for curve in self._crosshair_curves[curve_key]:
+        for curve in self._crosshair_curves[curve_key].values():
             curve.setVisible(show)
 
 
@@ -805,7 +813,9 @@ class View2D(QObject):
 
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
-        self.show_hide_crosshair()
+        self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
+
+        self.show_hide_crosshair(False)
 
         self.show_lineout_widgets()
 
@@ -957,17 +967,15 @@ class View2D(QObject):
         """Convenience function from the Crosshair"""
         self.crosshair.set_crosshair_position(*positions)
 
-    def show_hide_crosshair(self):
-        if self.is_action_checked('crosshair'):
-            self.crosshair.setVisible(True)
-            self.set_action_visible('position', True)
-
+    @Slot(bool)
+    def show_hide_crosshair(self, show=True):
+        self.crosshair.setVisible(show)
+        self.set_action_visible('position', show)
+        self.crosshair.setVisible(show)
+        if show:
             range = self.get_view_range()
             self.set_crosshair_position(np.mean(np.array(range[0])), np.mean(np.array(range[0])))
-
-        else:
-            self.set_action_visible('position', False)
-            self.crosshair.setVisible(False)
+        logger.debug(f'Crosshair visible?: {self.crosshair.isVisible()}')
 
     def show_ROI_select(self):
         self.ROIselect.setVisible(self.is_action_checked('ROIselect'))
@@ -1075,7 +1083,7 @@ class Viewer2D(QObject):
         """
         for attribute in ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
                           'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
-                          'image_widget', 'scale_axis', 'unscale_axis'):
+                          'image_widget', 'scale_axis', 'unscale_axis', 'roi_manager'):
             if hasattr(self.view, attribute):
                 setattr(self, attribute, getattr(self.view, attribute))
 
@@ -1188,8 +1196,6 @@ class Viewer2D(QObject):
                 self.view.set_action_visible(key, True)
 
             self.view.notify_visibility_data_displayer()
-            #self.view.show_hide_histogram(False)
-
 
     def update_crosshair_data(self, crosshair_dict):
         try:
@@ -1361,19 +1367,21 @@ def main_controller():
     #prog.auto_levels_action_sym.trigger()
     #prog.view.actions['autolevels'].trigger()
 
-    # data = np.load('triangulation_data.npy')
+    data_spread = np.load('triangulation_data.npy')
     # data_shuffled = data
     # np.random.shuffle(data_shuffled)
     # prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',
     #                                      data=[data, data_shuffled]))
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
-    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
 
-    prog.ROI_select_signal.connect(print_roi_select)
-    prog.view.get_action('ROIselect').trigger()
-    prog.view.ROIselect.setSize((20, 35))
-    prog.view.ROIselect.setPos((45, 123))
+    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
+
+    #prog.ROI_select_signal.connect(print_roi_select)
+    #prog.view.get_action('ROIselect').trigger()
+    #prog.view.ROIselect.setSize((20, 35))
+    #prog.view.ROIselect.setPos((45, 123))
     QtWidgets.QApplication.processEvents()
 
     # prog.setImage(data_spread=data)
