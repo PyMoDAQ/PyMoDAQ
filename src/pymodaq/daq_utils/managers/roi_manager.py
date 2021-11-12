@@ -232,7 +232,7 @@ class ROIManager(QObject):
 
     new_ROI_signal = Signal(int, str)
     remove_ROI_signal = Signal(str)
-    roi_value_changed = Signal(str, list)
+    roi_value_changed = Signal(str, tuple)
 
     roi_update_children = Signal(list)
 

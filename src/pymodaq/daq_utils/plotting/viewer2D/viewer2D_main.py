@@ -646,7 +646,7 @@ class LineoutPlotter(QObject):
             raise KeyError(f'The lineout_widget reference should be within {LINEOUT_WIDGETS} not {name}')
         return self._lineout_widgets[name]
 
-    @Slot(str, list)
+    @Slot(str, tuple)
     def update_roi(self, roi_key, param_changed):
         param, param_value = param_changed
 

@@ -296,15 +296,10 @@ def test_ScaledAxis():
 
 
 def test_ScalingOptions():
-    scaling_options = utils.ScalingOptions()
+    scaling_options = utils.ScalingOptions(utils.ScaledAxis(), utils.ScaledAxis())
     assert isinstance(scaling_options, utils.ScalingOptions)
     assert isinstance(scaling_options['scaled_xaxis'], utils.ScaledAxis)
     assert isinstance(scaling_options['scaled_yaxis'], utils.ScaledAxis)
-
-    with pytest.raises(AssertionError):
-        utils.ScalingOptions(scaled_xaxis=None)
-    with pytest.raises(AssertionError):
-        utils.ScalingOptions(scaled_yaxis=None)
 
 
 def test_recursive_find_files_extension():

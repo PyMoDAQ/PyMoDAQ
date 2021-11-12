@@ -27,9 +27,6 @@ class TestViewer0D:
         prog = Viewer0D(None)
         assert isinstance(prog.parent, QtWidgets.QWidget)
 
-    @pytest.mark.skip  # causes error on pytest on github actions ??
-    # File "/opt/hostedtoolcache/Python/3.8.12/x64/lib/python3.8/site-packages/pyqtgraph/graphicsItems/AxisItem.py",
-    # line 1126 in generateDrawSpecs
     def test_clear_pb(self, init_prog):
         prog, qtbot = init_prog
 
