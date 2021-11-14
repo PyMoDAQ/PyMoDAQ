@@ -1,15 +1,13 @@
-from qtpy import QtCore, QtGui
-import pyqtgraph as pg
-from .plot_utils import makeAlphaTriangles, makePolygons
-from pymodaq.daq_utils import daq_utils as utils
-import numpy as np
-from pyqtgraph import debug as debug
-from pyqtgraph import Point
-from pyqtgraph import functions as fn
 import collections
 
+import numpy as np
+import pyqtgraph as pg
+from pymodaq.daq_utils.plotting.utils.plot_utils import makeAlphaTriangles, makePolygons
+from pyqtgraph import debug as debug, Point, functions as fn
+from qtpy import QtCore, QtGui
 
-class ImageItem(pg.ImageItem):
+
+class UniformImageItem(pg.ImageItem):
     def __init__(self, image=None, **kargs):
         super().__init__(image, **kargs)
         self.flipud = False
@@ -277,97 +275,7 @@ class ImageItem(pg.ImageItem):
     #         self.sigImageChanged.emit()
 
 
-AXIS_POSITIONS = ['top', 'bottom', 'right', 'left']
-
-
-class AxisItem_Scaled(pg.AxisItem):
-    """
-    Subclass of pg.AxisItem enabling scaling of the tick values with respect to the linked viewbox
-    """
-
-    def __init__(self, *args, scaling=1, offset=0, **kwargs):
-        """
-        ==============  ===============================================================
-        **Arguments:**
-        orientation     one of 'left', 'right', 'top', or 'bottom'
-        scaling         multiplicative coeff applied to the ticks
-        offset          offset applied to the ticks after scaling
-        maxTickLength   (px) maximum length of ticks to draw. Negative values draw
-                        into the plot, positive values draw outward.
-        linkView        (ViewBox) causes the range of values displayed in the axis
-                        to be linked to the visible range of a ViewBox.
-        showValues      (bool) Whether to display values adjacent to ticks
-        pen             (QPen) Pen used when drawing ticks.
-        ==============  ===============================================================
-        """
-        super().__init__(*args, **kwargs)
-        self._scaling = scaling
-        self._offset = offset
-
-    def axis_data(self, Npts):
-        return utils.linspace_step_N(self.axis_offset, self.axis_scaling, Npts)
-
-    def set_scaling_and_label(self, axis_info: utils.ScaledAxis):
-        self.setLabel(axis_info.label, axis_info.units)
-        self.axis_offset = axis_info.offset
-        self.axis_scaling = axis_info.scaling
-
-    @property
-    def axis_label(self):
-        return self.labelText
-
-    @axis_label.setter
-    def axis_label(self, label: str):
-        self.setLabel(text=label, units=self.axis_units)
-
-    @property
-    def axis_units(self):
-        return self.labelUnits
-
-    @axis_units.setter
-    def axis_units(self, units: str):
-        self.setLabel(text=self.axis_label, units=units)
-
-    @property
-    def axis_scaling(self):
-        return self._scaling
-
-    @axis_scaling.setter
-    def axis_scaling(self, scaling_factor=1):
-        self._scaling = scaling_factor
-        self.linkedViewChanged()
-
-    @property
-    def axis_offset(self):
-        return self._offset
-
-    @axis_offset.setter
-    def axis_offset(self, offset=0):
-        self._offset = offset
-        self.linkedViewChanged()
-
-    def linkedViewChanged(self, view=None, newRange=None):
-        if view is None:
-            if self.linkedView() is not None:
-                view = self.linkedView()
-            else:
-                return
-
-        if self.orientation in ['right', 'left']:
-            if newRange is None:
-                newRange = [pos * self._scaling + self._offset for pos in view.viewRange()[1]]
-            else:
-                newRange = [pos * self._scaling + self._offset for pos in newRange]
-        else:
-            if newRange is None:
-                newRange = [pos * self._scaling + self._offset for pos in view.viewRange()[0]]
-            else:
-                newRange = [pos * self._scaling + self._offset for pos in newRange]
-
-        super().linkedViewChanged(view, newRange=newRange)
-
-
-class TriangulationItem(ImageItem):
+class SpreadImageItem(UniformImageItem):
     """
     **Bases:** :class:`GraphicsObject <pyqtgraph.GraphicsObject>`
 
@@ -639,7 +547,7 @@ class TriangulationItem(ImageItem):
 
         self.setTransform(self.dataTransform())
 
-        for pol, color in zip(self.qimage['polygons'], self.qimage['limits']):
+        for pol, color in zip(self.qimage['polygons'], self.qimage['values']):
 
             p.setPen(fn.mkPen(*self.mesh_pen, 100, width=0.75))
             p.setBrush(fn.mkBrush(*color))
@@ -697,78 +605,3 @@ class TriangulationItem(ImageItem):
 
     def getPixmap(self):
         pass
-
-
-class PlotCurveItem(pg.PlotCurveItem):
-
-    def __init__(self, *args, **kargs):
-        super().__init__(*args, **kargs)
-    #     self.flipud = False
-    #     self.fliplr = False
-    #     self.flipudbis = False
-    #
-    # def paint(self, p, opt, widget):
-    #     if self.xData is None or len(self.xData) == 0:
-    #         return
-    #
-    #     x = None
-    #     y = None
-    #     path = self.getPath()
-    #
-    #     if self._exportOpts is not False:
-    #         aa = self._exportOpts.get('antialias', True)
-    #     else:
-    #         aa = self.opts['antialias']
-    #
-    #     p.setRenderHint(p.Antialiasing, aa)
-    #
-    #     if self.opts['brush'] is not None and self.opts['fillLevel'] is not None:
-    #         if self.fillPath is None:
-    #             if x is None:
-    #                 x, y = self.getData()
-    #             p2 = QtGui.QPainterPath(self.path)
-    #             p2.lineTo(x[-1], self.opts['fillLevel'])
-    #             p2.lineTo(x[0], self.opts['fillLevel'])
-    #             p2.lineTo(x[0], y[0])
-    #             p2.closeSubpath()
-    #             self.fillPath = p2
-    #
-    #         p.fillPath(self.fillPath, self.opts['brush'])
-    #
-    #     sp = pg.functions.mkPen(self.opts['shadowPen'])
-    #     cp = pg.functions.mkPen(self.opts['pen'])
-    #
-    #     self.setTransform(self.dataTransform())
-    #
-    #     if sp is not None and sp.style() != QtCore.Qt.NoPen:
-    #         p.setPen(sp)
-    #         p.drawPath(path)
-    #     p.setPen(cp)
-    #     p.drawPath(path)
-    #
-    # def setOpts(self, update=True, **kargs):
-    #     if 'flipud' in kargs:
-    #         self.flipud = kargs['flipud']
-    #     if 'fliplr' in kargs:
-    #         self.fliplr = kargs['fliplr']
-    #     if 'flipudbis' in kargs:
-    #         self.flipudbis = kargs['flipudbis']
-    #     if update:
-    #         self.update()
-    #
-    # def dataTransform(self):
-    #     """Return the transform that maps from this image's input array to its
-    #     local coordinate system.
-    #
-    #     This transform corrects for the transposition that occurs when image data
-    #     is interpreted in row-major order.
-    #     """
-    #     # Might eventually need to account for downsampling / clipping here
-    #     tr = QtGui.QTransform()
-    #     if self.flipudbis:
-    #         tr.scale(1, -1)
-    #     if self.flipud:
-    #         tr.scale(1, -1)
-    #     if self.fliplr:
-    #         tr.scale(-1, 1)
-    #     return tr

@@ -26,7 +26,7 @@ from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
 from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils

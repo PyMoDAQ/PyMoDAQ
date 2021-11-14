@@ -20,7 +20,7 @@ from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient
-from pymodaq.daq_utils.plotting.lcd import LCD
+from pymodaq.daq_utils.plotting.widgets.lcd import LCD
 
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data

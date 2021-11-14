@@ -25,7 +25,7 @@ from pymodaq.daq_utils.daq_utils import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.managers.remote_manager import RemoteManager
-from pymodaq.daq_utils.plotting.roi_saver import ROISaver
+from pymodaq.daq_utils.managers.roi_manager import ROISaver
 
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer

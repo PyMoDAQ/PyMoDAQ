@@ -13,9 +13,10 @@ from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
 from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import ImageWidget
-from pymodaq.daq_utils.plotting.graph_items import ImageItem, PlotCurveItem, TriangulationItem, AxisItem_Scaled,\
-    AXIS_POSITIONS
-from pymodaq.daq_utils.plotting.crosshair import Crosshair
+from pyqtgraph import PlotCurveItem
+from pymodaq.daq_utils.plotting.items.image import UniformImageItem, SpreadImageItem
+from pymodaq.daq_utils.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
+from pymodaq.daq_utils.plotting.items.crosshair import Crosshair
 from pymodaq.daq_utils.managers.action_manager import ActionManager
 import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils.exceptions import ViewerError
@@ -36,10 +37,10 @@ COLOR_LIST = utils.plot_colors
 
 def image_item_factory(item_type='uniform', axisOrder='row-major'):
     if item_type == 'uniform':
-        image = ImageItem()
+        image = UniformImageItem()
         image.setOpts(axisOrder=axisOrder)
     elif item_type == 'spread':
-        image = TriangulationItem()
+        image = SpreadImageItem()
     image.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
     return image
 
@@ -1044,10 +1045,36 @@ class View2D(QObject):
         return x_offset, x_scaling, y_offset, y_scaling
 
 
-class Viewer2D(QObject):
-    data_to_export_signal = Signal(OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
+VIEWERTYPES = ('Viewer0D', 'Viewer1D', 'Viewer2D', 'ViewerND', 'ViewerSequential')
 
+
+class ViewerBase(QObject):
+    data_to_export_signal = Signal(OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
     data_to_show_signal = Signal(utils.DataFromPlugins)
+
+    ROI_changed = Signal()
+
+    def __init__(self):
+        super().__init__()
+        self.viewer_type = self.get_type()
+        self.title = "2DViewer"
+
+        self._raw_datas = None
+
+    def get_viewer_type(self):
+        raise NotImplementedError(f'Should return one of {VIEWERTYPES}')
+
+    def show_data(self, datas: utils.DataFromPlugins):
+        raise NotImplementedError()
+
+    def show_data_temp(self, datas: utils.DataFromPlugins):
+        raise NotImplementedError()
+
+
+
+
+class Viewer2D(QObject):
+
     roi_lineout_signal = Signal(dict)
     crosshair_lineout_signal = Signal(dict)
 
@@ -1058,7 +1085,7 @@ class Viewer2D(QObject):
     # scaled axes units
     sig_double_clicked = Signal(float, float)
 
-    ROI_changed = Signal()
+
     ROI_select_signal = Signal(QtCore.QRectF)
 
     def __init__(self, parent=None):
@@ -1089,6 +1116,9 @@ class Viewer2D(QObject):
         self.prepare_connect_ui()
 
         self.add_convenience_attributes()
+
+    def get_viewer_type(self):
+        return 'Viewer2D'
 
     def add_convenience_attributes(self):
         """Convenience function to set attributes to self for the public API
@@ -1377,7 +1407,7 @@ def main_controller():
     #prog.auto_levels_action_sym.trigger()
     #prog.view.actions['autolevels'].trigger()
 
-    data_spread = np.load('.../resources/triangulation_data.npy')
+    data_spread = np.load('../../../resources/triangulation_data.npy')
     # data_shuffled = data
     # np.random.shuffle(data_shuffled)
     # prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',

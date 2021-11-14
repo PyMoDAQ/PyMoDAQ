@@ -1,7 +1,5 @@
-from qtpy import QtWidgets, QtCore
-from pyqtgraph.widgets.SpinBox import SpinBox
-from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter
-from pymodaq.daq_utils.plotting.qled import QLED
+from qtpy import QtWidgets
+from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 
 
 class BoolPushParameterItem(WidgetParameterItem):

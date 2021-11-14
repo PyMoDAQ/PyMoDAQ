@@ -11,7 +11,7 @@ from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.gui_utils as gutils
 from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils.plotting.plot_utils import QVector
+from pymodaq.daq_utils.plotting.utils.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_types  # to be placed after importing Parameter
 

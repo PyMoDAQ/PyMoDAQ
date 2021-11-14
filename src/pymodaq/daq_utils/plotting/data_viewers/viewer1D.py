@@ -6,7 +6,7 @@ import sys
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 from collections import OrderedDict
-from pymodaq.daq_utils.plotting.crosshair import Crosshair
+from pymodaq.daq_utils.plotting.items.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
 from pymodaq.daq_utils import daq_utils as utils

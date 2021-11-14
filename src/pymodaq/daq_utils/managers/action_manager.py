@@ -1,5 +1,4 @@
-from abc import ABC, abstractmethod
-
+from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 from PyQt5.QtWidgets import QAction
 from multipledispatch import dispatch
 from pymodaq.daq_utils import daq_utils as utils

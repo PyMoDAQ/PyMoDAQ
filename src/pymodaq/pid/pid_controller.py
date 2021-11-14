@@ -9,7 +9,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 from pymodaq.pid.utils import OutputToActuator, InputFromDetector
 
 from simple_pid import PID

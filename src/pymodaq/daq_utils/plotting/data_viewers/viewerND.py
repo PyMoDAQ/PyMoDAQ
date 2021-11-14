@@ -15,7 +15,7 @@ import pymodaq.daq_utils.daq_utils as utils
 from pyqtgraph import LinearRegionItem
 from pymodaq.daq_utils import gui_utils as gutils
 import copy
-from pymodaq.daq_utils.plotting.viewerND.signal_manager import Signal as SignalND
+from pymodaq.daq_utils.plotting.utils.signalND import Signal as SignalND
 import datetime
 
 logger = utils.set_logger(utils.get_module_name(__file__))
