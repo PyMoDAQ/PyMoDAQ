@@ -9,7 +9,7 @@ from pymodaq.daq_utils.parameter import utils as putils
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.daq_utils.parameter import pymodaq_ptypes
-from pymodaq.daq_utils.gui_utils import QAction
+from pymodaq.daq_utils.managers.action_manager import QAction
 from pyqtgraph import ROI as pgROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
@@ -484,7 +484,7 @@ class ROIManager(QObject):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
+    from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import ImageWidget
     from pyqtgraph import PlotWidget
 
     im = ImageWidget()

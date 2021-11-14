@@ -1,41 +1,23 @@
-import sys
 from collections import OrderedDict
 import datetime
 import numpy as np
 
-from qtpy import  QtWidgets
-from qtpy.QtCore import Slot, QLocale, QDate, QThread
+from qtpy import QtWidgets
+from qtpy.QtCore import Slot, QDate, QThread
 
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 
 from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
-class ActionManager(gutils.ActionManager):
-    def __init__(self, toolbar=None, menu=None):
-        super().__init__(toolbar=toolbar, menu=menu)
 
-    def setup_actions(self):
-        '''
-        subclass method from ActionManager
-        '''
-        logger.debug('setting actions')
-        self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-        self.addaction('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
-        self.addaction('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera",
-                       checkable=False, toolbar=self.toolbar)
-        self.addaction('save', 'Save', 'SaveAs', "Save current data", checkable=False, toolbar=self.toolbar)
-        self.addaction('show', 'Show/hide', 'read2', "Show Hide DAQViewer", checkable=True, toolbar=self.toolbar)
-
-        logger.debug('actions set')
-
-class CustomAppExample(gutils.CustomApp):
+class CustomAppExample(gutils.UserInterface):
 
     # list of dicts enabling the settings tree on the user interface
     params = [
@@ -66,7 +48,19 @@ class CustomAppExample(gutils.CustomApp):
         # init the object parameters
         self.raw_data = []
 
-        self.set_action_manager(ActionManager(toolbar=self.toolbar))
+    def setup_actions(self):
+        '''
+        subclass method from ActionManager
+        '''
+        logger.debug('setting actions')
+        self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
+        self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
+        self.add_action('load', 'Load', 'Open', "Load target file (.h5, .png, .jpg) or data from camera",
+                        checkable=False, toolbar=self.toolbar)
+        self.add_action('save', 'Save', 'SaveAs', "Save current data", checkable=False, toolbar=self.toolbar)
+        self.add_action('show', 'Show/hide', 'read2', "Show Hide DAQViewer", checkable=True, toolbar=self.toolbar)
+
+        logger.debug('actions set')
 
     def setup_docks(self):
         '''

@@ -1,8 +1,25 @@
+import os
+import sys
+from collections import OrderedDict
+from ctypes import CFUNCTYPE
+if 'win32' in sys.platform:
+    from ctypes import WINFUNCTYPE
+import datetime
+import importlib
+import inspect
+import json
+import logging
+from logging.handlers import TimedRotatingFileHandler
+from packaging import version as version_mod
+from pathlib import Path
+import pkgutil
+import traceback
+import warnings
+
+import numpy as np
 from qtpy import QtCore
 from qtpy.QtCore import QLocale #, QVariant
-import sys
-from packaging import version as version_mod
-import warnings
+import toml
 
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
@@ -10,27 +27,8 @@ if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from versio
     from importlib import metadata
 else:
     import importlib_metadata as metadata  # pragma: no cover
-import pkgutil
 
-import traceback
-from collections import OrderedDict
-
-import numpy as np
-import datetime
-from pathlib import Path
-from ctypes import CFUNCTYPE
-
-if 'win32' in sys.platform:
-    from ctypes import WINFUNCTYPE
-
-import os
-
-import importlib
-import toml
-import logging
-from logging.handlers import TimedRotatingFileHandler
-import inspect
-import json
+from pymodaq.daq_utils.exceptions import DataSourceError
 
 
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
@@ -39,6 +37,11 @@ plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207,
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
 c = 2.997924586e8  # m.s-1
+
+
+DATASOURCES = ('raw', 'roi')
+DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
+
 
 def get_set_local_dir(basename='pymodaq_local'):
     """Defines, creates abd returns a local folder where configurations files will be saved
@@ -65,6 +68,7 @@ def get_set_local_dir(basename='pymodaq_local'):
                 local_path.mkdir()
     return local_path
 
+
 def get_set_config_path(config_name='config'):
     """Creates a folder in the local config directory to store specific configuration files
 
@@ -85,10 +89,12 @@ def get_set_config_path(config_name='config'):
         path.mkdir()  # pragma: no cover
     return path
 
+
 def get_set_log_path():
     """ creates and return the config folder path for log files
     """
     return get_set_config_path('log')
+
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
     """defines a logger of a given name and eventually add an handler to it
@@ -134,18 +140,18 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         logger.addHandler(console_handler)
     return logger
 
+
 logger = set_logger('daq_utils')
 
 
 def deprecation_msg(message):
-    warnings.warn(message, DeprecationWarning, stacklevel=3)
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
 
 
 def get_version():
     with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
         version = fvers.read().strip()
     return version
-
 
 
 def copy_preset():                          # pragma: no cover
@@ -211,6 +217,7 @@ def set_qt_backend():
         logger.info('************************')
     else:
         logger.critical(f"No Qt backend could be found in your system, plese install either pyqt5/6 or pyside2/6")
+
 
 class JsonConverter:
     def __init__(self):
@@ -667,6 +674,7 @@ class ScalingOptions(dict):
         self['scaled_xaxis'] = scaled_xaxis
         self['scaled_yaxis'] = scaled_yaxis
 
+
 class Data(OrderedDict):
     def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis(), **kwargs):
         """
@@ -761,7 +769,7 @@ class DataFromPlugins(Data):
         else:
             raise TypeError('data for the DataFromPlugins class should be None or a list of numpy arrays')
 
-        if dim not in ('Data0D', 'Data1D', 'Data2D', 'DataND') and data is not None:
+        if dim not in DATADIMS and data is not None:
             ndim = len(data[0].shape)
             if ndim == 1:
                 if data[0].size == 1:
@@ -780,13 +788,14 @@ class DataFromPlugins(Data):
 
 
 class DataToExport(Data):
-    def __init__(self, data=None, dim='', **kwargs):
+    def __init__(self, data=None, dim='', source='raw', **kwargs):
         """
         Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary keys
         Parameters
         ----------
         data: (ndarray or a scalar)
         dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
+        source: (str) either 'raw' for raw data or 'roi' for data extracted from a roi
         """
         super().__init__(**kwargs)
         if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
@@ -809,6 +818,8 @@ class DataToExport(Data):
             else:
                 dim = 'Data0D'
         self['dim'] = dim
+        if source not in DATASOURCES:
+            raise DataSourceError(f'Data source should be in {DATASOURCES}')
 
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \

@@ -12,15 +12,16 @@ import numpy as np
 from pathlib import Path
 import os
 
+from pymodaq.daq_utils.managers.action_manager import QAction
 import pymodaq.daq_utils.parameter.ioxml
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, QDateTime, QDate, QTime
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 from pymodaq.daq_utils import exceptions
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
 from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
@@ -30,7 +31,6 @@ from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
-from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -365,7 +365,7 @@ class DAQ_Scan(QObject):
         #self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
 
 
-        self.move_to_crosshair_action = gutils.QAction(
+        self.move_to_crosshair_action = QAction(
             QtGui.QIcon(QtGui.QPixmap(':/icons/Icon_Library/move_contour.png')),"Move at doubleClicked")
         self.move_to_crosshair_action.setCheckable(True)
         self.ui.move_to_crosshair_cb = self.move_to_crosshair_action

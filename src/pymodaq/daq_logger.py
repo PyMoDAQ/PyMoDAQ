@@ -38,7 +38,7 @@ LOG_TYPES = ['None', 'H5 File']
 if is_sql:
     LOG_TYPES.append('SQL DataBase')
 
-class DAQ_Logger(gutils.CustomApp):
+class DAQ_Logger(gutils.UserInterface):
     """
     Main class initializing a DAQ_Logger module
     """
@@ -71,22 +71,22 @@ class DAQ_Logger(gutils.CustomApp):
         subclass method from ActionManager
         '''
         logger.debug('setting actions')
-        self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
+        self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
         self.toolbar.addSeparator()
-        self.addaction('start', 'Start Logging', 'run2', "Start the logging",
-                       checkable=True, toolbar=self.toolbar)
-        self.addaction('stop', 'Stop', 'stop', 'Stop/pause logging',
-                       checkable=False, toolbar=self.toolbar)
+        self.add_action('start', 'Start Logging', 'run2', "Start the logging",
+                        checkable=True, toolbar=self.toolbar)
+        self.add_action('stop', 'Stop', 'stop', 'Stop/pause logging',
+                        checkable=False, toolbar=self.toolbar)
 
         log_type_combo = QtWidgets.QComboBox()
         log_type_combo.addItems(LOG_TYPES)
         log_type_combo.currentTextChanged.connect(self.set_log_type)
         self._actions['log_type'] = self.toolbar.addWidget(log_type_combo)
         self.toolbar.addSeparator()
-        self.addaction('grab_all', 'Grab All', 'run_all', "Grab all selected detectors",
-                       checkable=True, toolbar=self.toolbar)
-        self.addaction('infos', 'Log infos', 'information2', "Show log file",
-                       checkable=False, toolbar=self.toolbar)
+        self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors",
+                        checkable=True, toolbar=self.toolbar)
+        self.add_action('infos', 'Log infos', 'information2', "Show log file",
+                        checkable=False, toolbar=self.toolbar)
 
 
         logger.debug('actions set')

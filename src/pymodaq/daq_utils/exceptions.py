@@ -12,6 +12,10 @@ class ViewerError(Exception):
     pass
 
 
+class DataSourceError(Exception):
+    pass
+
+
 class ExpectedError(Exception):
     """Raised in the tests made for pymodaq plugins"""
     pass
