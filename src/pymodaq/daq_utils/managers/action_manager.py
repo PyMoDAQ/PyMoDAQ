@@ -1,8 +1,10 @@
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
-from PyQt5.QtWidgets import QAction
 from multipledispatch import dispatch
+from qtpy import QtGui, QtWidgets, QtCore
+
+from qtpy.QtWidgets import QAction
+
 from pymodaq.daq_utils import daq_utils as utils
-from qtpy import QtGui, QtWidgets
+from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class QAction(QAction):

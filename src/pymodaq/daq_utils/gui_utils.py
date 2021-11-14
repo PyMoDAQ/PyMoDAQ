@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow, Dock
 from pymodaq.daq_utils.managers.action_manager import ActionManager
+from pymodaq.daq_utils.managers.parameter_manager import ParameterManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import datetime
 from pymodaq.daq_utils import daq_utils as utils
@@ -638,9 +639,18 @@ def show_message(message="blabla", title="Error"):
     return ret
 
 
-class UserInterface(QtCore.QObject, ActionManager):
+class CustomApp(QObject, ActionManager, ParameterManager):
     """
-    Implements the MixIn ActionManager methods and attributes
+    Implements the MixIns ActionManager and ParameterManager methods and attributes, you have to subclass it and make
+    concrete implementation of a given number of methods:
+
+    * setup_actions: mandatory, see ActionManager
+    * value_changed: non mandatory, see ParameterManager
+    * child_added: non mandatory, see ParameterManager
+    * param_deleted: non mandatory, see ParameterManager
+    * setup_docks: mandatory
+    * setup_menu: non mandatory
+    * connect_things: mandatory
     """
     # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
     log_signal = QtCore.Signal(str)
@@ -648,8 +658,10 @@ class UserInterface(QtCore.QObject, ActionManager):
     # list of dicts enabling the settings tree on the user interface
     params = []
 
-    def __init__(self, dockarea, dashboard=None):
-        super().__init__()
+    def __init__(self, dockarea: DockArea, dashboard=None):
+        QObject.__init__(self)
+        ActionManager.__init__(self)
+        ParameterManager.__init__(self)
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
 
         if not isinstance(dockarea, DockArea):
@@ -661,20 +673,12 @@ class UserInterface(QtCore.QObject, ActionManager):
 
         self.docks = dict([])
 
-        self.action_manager = None
         self._toolbar = QtWidgets.QToolBar()
         self.mainwindow.addToolBar(self._toolbar)
         self.set_toolbar(self._toolbar)
 
         # %% init and set the status bar
         self.statusbar = self.mainwindow.statusBar()
-
-        self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
-        # object containing the settings defined in the preamble
-        # # create a settings tree to be shown eventually in a dock
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setParameters(self.settings, showTop=False)  # load the tree with this parameter object
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         self.setup_ui()
 
@@ -721,7 +725,7 @@ class UserInterface(QtCore.QObject, ActionManager):
         --------
         pymodaq.daq_utils.managers.action_manager.ActionManager
         """
-        raise NotImplementedError
+        pass
 
     def connect_things(self):
         raise NotImplementedError
@@ -730,53 +734,6 @@ class UserInterface(QtCore.QObject, ActionManager):
     def modules_manager(self):
         if self.dashboard is not None:
             return self.dashboard.modules_manager
-
-    def parameter_tree_changed(self, param, changes):
-        for param, change, data in changes:
-            if change == 'childAdded':
-                self.child_added(param)
-
-            elif change == 'value':
-                self.value_changed(param)
-
-            elif change == 'parent':
-                self.param_deleted(param)
-
-    def value_changed(self, param):
-        """Non mandatory method  to be subclassed for actions to perform when one of the param's value in self.settings is changed
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter whose value just changed
-        """
-        pass
-
-    def child_added(self, param):
-        """Non mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter that has been deleted
-        """
-        pass
-
-    def param_deleted(self, param):
-        """Non mandatory method to be subclassed for actions to perform when one of the param in self.settings has been deleted
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter that has been deleted
-        """
-        pass
-
-
-
 
 
 if __name__ == '__main__':

@@ -34,7 +34,7 @@ LOG_TYPES = ['None', 'H5 File']
 if is_sql:
     LOG_TYPES.append('SQL DataBase')
 
-class DAQ_Logger(gutils.UserInterface):
+class DAQ_Logger(gutils.CustomApp):
     """
     Main class initializing a DAQ_Logger module
     """

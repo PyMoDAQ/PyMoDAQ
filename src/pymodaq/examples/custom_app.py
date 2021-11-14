@@ -17,7 +17,7 @@ config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class CustomAppExample(gutils.UserInterface):
+class CustomAppExample(gutils.CustomApp):
 
     # list of dicts enabling the settings tree on the user interface
     params = [
