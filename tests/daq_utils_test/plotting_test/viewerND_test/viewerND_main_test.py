@@ -1,7 +1,7 @@
 import pytest
 
 from qtpy import QtWidgets
-from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
+from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 
 
 @pytest.fixture

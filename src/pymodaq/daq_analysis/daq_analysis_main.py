@@ -1,11 +1,11 @@
 from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import Qt, QObject, Signal, QLocale, QByteArray
+from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
 import sys
 import pymodaq
 import pymodaq.daq_utils.parameter.ioxml
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
 
 from collections import OrderedDict
 import numpy as np

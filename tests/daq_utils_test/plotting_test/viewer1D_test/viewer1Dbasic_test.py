@@ -7,7 +7,7 @@ from pyqtgraph.graphicsItems.PlotItem.PlotItem import PlotItem
 from pyqtgraph.graphicsItems.InfiniteLine import InfiniteLine
 from pyqtgraph.graphicsItems.LinearRegionItem import LinearRegionItem
 from pymodaq.daq_utils.exceptions import ExpectedError
-from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
+from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 
 
 @pytest.fixture

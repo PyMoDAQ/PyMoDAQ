@@ -12,15 +12,13 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import ImageWidget
 from pymodaq.daq_utils.plotting.graph_items import ImageItem, PlotCurveItem, TriangulationItem, AxisItem_Scaled,\
     AXIS_POSITIONS
 from pymodaq.daq_utils.plotting.crosshair import Crosshair
-from pymodaq.daq_utils.gui_utils import DockArea, ActionManager
+from pymodaq.daq_utils.managers.action_manager import ActionManager
 import pymodaq.daq_utils.daq_utils as utils
 from pymodaq.daq_utils.exceptions import ViewerError
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
-
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
@@ -399,29 +397,29 @@ class ActionManager(ActionManager):
 
     def setup_actions(self):
 
-        self.addaction('position', '(,)')
-        self.addaction('red', 'Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
-        self.addaction('green', 'Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
-        self.addaction('blue', 'Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
-        self.addaction('autolevels', 'AutoLevels', 'autoscale',
-                       tip='Scale Histogram to Min/Max intensity', checkable=True)
-        self.addaction('auto_levels_sym', 'AutoLevels Sym.', 'autoscale',
-                       tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
+        self.add_action('position', '(,)')
+        self.add_action('red', 'Red Channel', 'r_icon', tip='Show/Hide Red Channel', checkable=True)
+        self.add_action('green', 'Green Channel', 'g_icon', tip='Show/Hide Green Channel', checkable=True)
+        self.add_action('blue', 'Blue Channel', 'b_icon', tip='Show/Hide Blue Channel', checkable=True)
+        self.add_action('autolevels', 'AutoLevels', 'autoscale',
+                        tip='Scale Histogram to Min/Max intensity', checkable=True)
+        self.add_action('auto_levels_sym', 'AutoLevels Sym.', 'autoscale',
+                        tip='Make the autoscale of the histograms symetric with respect to 0', checkable=True)
 
-        self.addaction('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
-        self.addaction('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
-        self.addaction('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
-        self.addaction('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
+        self.add_action('histo', 'Histogram', 'Histogram', tip='Show/Hide Histogram', checkable=True)
+        self.add_action('roi', 'ROI', 'Region', tip='Show/Hide ROI Manager', checkable=True)
+        self.add_action('isocurve', 'IsoCurve', 'meshPlot', tip='Show/Hide Isocurve', checkable=True)
+        self.add_action('aspect_ratio', 'Aspect Ratio', 'Zoom_1_1', tip='Fix Aspect Ratio', checkable=True)
 
-        self.addaction('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
-        self.addaction('ROIselect', 'ROI Select', 'Select_24',
-                       tip='Show/Hide ROI selection area', checkable=True)
-        self.addaction('flip_ud', 'Flip UD', 'scale_vertically',
-                       tip='Flip the image up/down', checkable=True)
-        self.addaction('flip_lr', 'Flip LR', 'scale_horizontally',
-                       tip='Flip the image left/right', checkable=True)
-        self.addaction('rotate', 'Rotate', 'rotation2',
-                       tip='Rotate the image', checkable=True)
+        self.add_action('crosshair', 'CrossHair', 'reset', tip='Show/Hide data Crosshair', checkable=True)
+        self.add_action('ROIselect', 'ROI Select', 'Select_24',
+                        tip='Show/Hide ROI selection area', checkable=True)
+        self.add_action('flip_ud', 'Flip UD', 'scale_vertically',
+                        tip='Flip the image up/down', checkable=True)
+        self.add_action('flip_lr', 'Flip LR', 'scale_horizontally',
+                        tip='Flip the image left/right', checkable=True)
+        self.add_action('rotate', 'Rotate', 'rotation2',
+                        tip='Rotate the image', checkable=True)
 
 
 class ImageDisplayer(QObject):
@@ -484,15 +482,16 @@ class ImageDisplayer(QObject):
 class Histogrammer(QObject):
     gradient_changed = Signal()
 
-    def __init__(self, histogram_container):
+    def __init__(self, histogram_container: QtWidgets.QWidget, histogram_refs=IMAGE_TYPES):
         super().__init__()
         self._histograms = dict([])
-        self.histogram_container = histogram_container
+        self._histogram_refs = histogram_refs
+        self._histogram_container = histogram_container
         self.setup_histograms()
         self._autolevels = False
 
     def setup_histograms(self):
-        for histo_key in IMAGE_TYPES:
+        for histo_key in self._histogram_refs:
             self._histograms[histo_key] = histogram_factory(None, gradient=histo_key)
             self.add_histogram(self._histograms[histo_key])
             self._histograms[histo_key].setVisible(False)
@@ -524,14 +523,17 @@ class Histogrammer(QObject):
                 histo.regionChanged()
 
     def affect_histo_to_imageitems(self, image_items):
-        for img_key in IMAGE_TYPES:
+        # TODO: if self._histogram_refs doesn't contains the same refs as image_items, we have an issue...
+        for img_key in self._histogram_refs:
             self._histograms[img_key].setImageItem(image_items[img_key])
 
     def add_histogram(self, histogram):
-        self.histogram_container.layout().addWidget(histogram)
+        if self._histogram_container.layout() is None:
+            self._histogram_container.setLayout(QtWidgets.QHBoxLayout())
+        self._histogram_container.layout().addWidget(histogram)
 
     def show_hide_histogram(self, checked, are_items_visible):
-        for ind_histo, histo_name in enumerate(IMAGE_TYPES):
+        for ind_histo, histo_name in enumerate(self._histogram_refs):
             self._histograms[histo_name].setVisible(are_items_visible[ind_histo] and checked)
 
     def set_gradient(self, histo='red', gradient='grey'):
@@ -544,7 +546,7 @@ class Histogrammer(QObject):
         """
         if gradient in Gradients:
             if histo == 'all':
-                for key in IMAGE_TYPES:
+                for key in self._histogram_refs:
                     self._histograms[key].item.gradient.loadPreset(gradient)
             else:
                 self._histograms[histo].item.gradient.loadPreset(gradient)
@@ -1375,7 +1377,7 @@ def main_controller():
     #prog.auto_levels_action_sym.trigger()
     #prog.view.actions['autolevels'].trigger()
 
-    data_spread = np.load('triangulation_data.npy')
+    data_spread = np.load('.../resources/triangulation_data.npy')
     # data_shuffled = data
     # np.random.shuffle(data_shuffled)
     # prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',

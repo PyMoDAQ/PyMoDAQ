@@ -4,7 +4,7 @@ import pytest
 from unittest import mock
 
 from pymodaq.daq_utils.daq_utils import gauss1D
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.daq_utils.exceptions import ExpectedError
 from collections import OrderedDict
 

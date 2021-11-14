@@ -1,24 +1,19 @@
-import os
 from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale
+from qtpy.QtCore import QObject, Slot, QThread, Signal
 
 from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, set_logger, get_module_name, \
-    get_set_pid_path, get_models, find_dict_in_list_from_key_val
+from pymodaq.daq_utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
+    get_models, find_dict_in_list_from_key_val
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.daq_utils.plotting.qled import QLED
 from pymodaq.pid.utils import OutputToActuator, InputFromDetector
 
-import importlib
 from simple_pid import PID
 import time
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-import numpy as np
 
 logger = set_logger(get_module_name(__file__))
 

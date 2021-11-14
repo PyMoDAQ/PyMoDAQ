@@ -7,8 +7,7 @@ import numpy as np
 import tables
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.daq_utils.parameter import pymodaq_ptypes
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
 from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5modules import H5Saver, browse_data, H5BrowserUtil

@@ -6,17 +6,17 @@ Created on Wed Jan 10 16:54:14 2018
 """
 import os
 from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale, QRectF
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QRectF
 import sys
 
 import pymodaq.daq_utils.scanner
 from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
 import copy
 
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient

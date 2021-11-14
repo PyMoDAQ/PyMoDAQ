@@ -1,5 +1,5 @@
 from qtpy import QtWidgets
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic, ImageWidget, View_cust
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic, ImageWidget, View_cust
 
 import pytest
 import numpy as np

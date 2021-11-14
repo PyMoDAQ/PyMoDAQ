@@ -11,7 +11,7 @@ config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class NonLinearScanner(gutils.CustomApp):
+class NonLinearScanner(gutils.UserInterface):
 
     positions_signal = Signal(np.ndarray)
 

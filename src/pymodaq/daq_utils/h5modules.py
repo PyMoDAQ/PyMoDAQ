@@ -5,7 +5,7 @@ import warnings
 import logging
 from copy import deepcopy
 from qtpy import QtGui, QtCore
-from qtpy.QtCore import Qt, QObject, Signal, QLocale, QByteArray
+from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
 import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -13,7 +13,7 @@ from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter, NavAxis
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
-from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
+from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 import pickle
 from qtpy import QtWidgets

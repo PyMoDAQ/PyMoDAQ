@@ -1,7 +1,6 @@
 import pymodaq.daq_utils.parameter.utils
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
 from pymodaq.daq_utils.parameter.pymodaq_ptypes.tableview import TableViewCustom

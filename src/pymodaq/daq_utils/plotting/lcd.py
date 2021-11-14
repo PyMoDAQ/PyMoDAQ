@@ -1,8 +1,8 @@
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets
 from qtpy.QtCore import QObject
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 import sys
-import numpy as np
+
 
 class LCD(QObject):
 

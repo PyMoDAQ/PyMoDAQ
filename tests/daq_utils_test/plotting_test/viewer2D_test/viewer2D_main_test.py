@@ -1,21 +1,17 @@
+import pymodaq.daq_utils.managers.action_manager
 from qtpy import QtWidgets, QtCore
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.plotting.viewer2D import viewer2D_main as v2d
-from pymodaq.daq_utils.exceptions import ExpectedError
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers import viewer2D as v2d
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.exceptions import ViewerError
-from pyqtgraph.parametertree import Parameter
-import pyqtgraph as pg
-from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
-from unittest import mock
 from pathlib import Path
 import pytest
 from pytest import fixture, approx
 import numpy as np
 import pyqtgraph as pg
 
-from pyqtgraph import ROI, mkPen
+from pyqtgraph import mkPen
 
 @fixture
 def init_qt(qtbot):
@@ -369,7 +365,7 @@ class TestActions:
                                         'histo', 'roi', 'isocurve', 'aspect_ratio', 'crosshair',
                                         'ROIselect', 'flip_ud', 'flip_lr', 'rotate'])
     def test_actionhas(self, qtbot, action):
-        action_manager = v2d.ActionManager()
+        action_manager = pymodaq.daq_utils.managers.action_manager.ActionManager()
         assert action_manager.has_action(action)
 
     @pytest.mark.parametrize('color', ['red', 'green', 'blue'])

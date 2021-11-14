@@ -4,8 +4,8 @@ from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Signal
 from pyqtgraph import LinearRegionItem
 
-from pymodaq.daq_utils.daq_utils import ftAxis_time, ft, find_index, gauss1D, ift, set_logger, get_module_name
-from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
+from pymodaq.daq_utils.daq_utils import ftAxis_time, ft, find_index, ift, set_logger, get_module_name
+from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 
 logger = set_logger(get_module_name(__file__))
 

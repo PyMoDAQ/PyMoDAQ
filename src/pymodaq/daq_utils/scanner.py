@@ -2,7 +2,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 from qtpy import QtWidgets, QtCore
-from qtpy.QtCore import QObject, Signal, QLocale, Slot
+from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq.daq_utils.parameter import ioxml
 
@@ -1195,7 +1195,7 @@ if __name__ == '__main__':
     from qtpy.QtCore import QThread
     from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+    from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
     from pymodaq.daq_utils.plotting.navigator import Navigator
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 

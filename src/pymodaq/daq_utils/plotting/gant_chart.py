@@ -3,7 +3,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QDateTime, Signal, QPointF, QObject
 import numpy as np
 import pyqtgraph as pg
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import ImageWidget
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import ImageWidget
 from pymodaq.daq_utils.managers.roi_manager import ROIBrushable
 
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients

@@ -235,7 +235,7 @@ class ScanSelector(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+    from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
     class UI:
