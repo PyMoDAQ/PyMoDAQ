@@ -7,7 +7,9 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.exceptions import ViewerError
 import datetime
 
-VIEWERTYPES = ('Viewer0D', 'Viewer1D', 'Viewer2D', 'ViewerND', 'ViewerSequential')
+
+DATATYPES = {'Viewer0D': 'Data0D', 'Viewer1D': 'Data1D', 'Viewer2D': 'Data2D', 'ViewerND': 'DataND',
+             'ViewerSequential': 'DataSequential'}
 
 
 class ViewerBase(QObject):
@@ -22,7 +24,7 @@ class ViewerBase(QObject):
 
     def __init__(self, parent=None, title=''):
         super().__init__()
-        self.viewer_type = self.__class__.__name__
+        self.viewer_type = DATATYPES[self.__class__.__name__]
         self.title = title if title != '' else self.__class__.__name__
 
         self._raw_datas = None

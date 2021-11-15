@@ -17,7 +17,7 @@ from pymodaq.daq_utils.daq_utils import ThreadCommand
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils import daq_utils as utils
-
+from pymodaq.daq_utils.exceptions import ActuatorError
 local_path = utils.get_set_local_dir()
 sys.path.append(local_path)
 
@@ -180,6 +180,9 @@ class DAQ_Move(Ui_Form, QObject):
     @actuator.setter
     def actuator(self, actuator):
         self.ui.Stage_type_combo.setCurrentText(actuator)
+        if self.actuator != actuator:
+            raise ActuatorError(f'{actuator} is not a valid installed actuator: {self.stage_types}')
+
 
     def init(self):
         self.ui.IniStage_pb.click()
@@ -807,7 +810,7 @@ class DAQ_Move_stage(QObject):
             self.logger.exception(str(e))
             return status
 
-    def move_Abs(self, position):
+    def move_Abs(self, position, polling=True):
         """
             Make the hardware absolute move from the given position.
 
@@ -823,9 +826,11 @@ class DAQ_Move_stage(QObject):
         """
         self.target_position = position
         self.hardware.move_is_done = False
+        self.hardware.ispolling = polling
         pos = self.hardware.move_Abs(position)
+        self.hardware.poll_moving()
 
-    def move_Rel(self, rel_position):
+    def move_Rel(self, rel_position, polling=True):
         """
             Make the hardware relative move from the given relative position added to the current one.
 
@@ -841,7 +846,9 @@ class DAQ_Move_stage(QObject):
         """
         self.hardware.move_is_done = False
         self.target_position = self.current_position + rel_position
+        self.hardware.ispolling = polling
         pos = self.hardware.move_Rel(rel_position)
+        self.hardware.poll_moving()
 
     @Slot(float)
     def Move_Stoped(self, pos):

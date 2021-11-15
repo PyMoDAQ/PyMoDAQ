@@ -8,6 +8,14 @@ class ScannerException(Exception):
     pass
 
 
+class DetectorError(Exception):
+    pass
+
+
+class ActuatorError(Exception):
+    pass
+
+
 class ViewerError(Exception):
     pass
 

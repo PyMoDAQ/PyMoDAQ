@@ -305,9 +305,9 @@ class ROIManager(QObject):
         self.roitree.setParameters(self.settings, showTop=False)
         self.settings.sigTreeStateChanged.connect(self.roi_tree_changed)
 
-        self.save_ROI_pb.clicked.connect(self.save_ROI)
-        self.load_ROI_pb.clicked.connect(lambda: self.load_ROI(None))
-        self.clear_ROI_pb.clicked.connect(self.clear_ROI)
+        self.save_ROI_pb.triggered.connect(self.save_ROI)
+        self.load_ROI_pb.triggered.connect(lambda: self.load_ROI(None))
+        self.clear_ROI_pb.triggered.connect(self.clear_ROI)
 
     def roi_tree_changed(self, param, changes):
 

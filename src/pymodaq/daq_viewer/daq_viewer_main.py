@@ -25,6 +25,7 @@ from pymodaq.daq_utils.plotting.widgets.lcd import LCD
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
 from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins
+from pymodaq.daq_utils.exceptions import DetectorError
 
 from collections import OrderedDict
 import numpy as np
@@ -55,7 +56,7 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-class DAQ_Viewer(QtWidgets.QWidget, QObject):
+class DAQ_Viewer(QObject):
     """
         ========================= =======================================
         **Attributes**             **Type**
@@ -109,7 +110,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         
         self.logger = utils.set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
-        super(DAQ_Viewer, self).__init__()
+        super().__init__()
 
         here = Path(__file__).parent
         splash = QtGui.QPixmap(str(here.parent.joinpath('splash.png')))
@@ -140,7 +141,6 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
         self.tcpclient_thread = None
 
         self.measurement_module = None
-        self.detector = None
 
         self.save_file_pathname = None  # to store last active path, will be an Path object
         self.ind_continuous_grab = 0
@@ -206,10 +206,10 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
 
     @detector.setter
     def detector(self, det):
-        try:
-            self.ui.Detector_type_combo.setCurrentText(det)
-        except:
-            pass
+        self.ui.Detector_type_combo.setCurrentText(det)
+        if self.detector != det:
+            raise DetectorError(f'{det} is not a valid installed detector: {self.detector_types}')
+
 
     @property
     def grab_state(self):
@@ -1325,7 +1325,7 @@ class DAQ_Viewer(QtWidgets.QWidget, QObject):
             --------
             update_status
         """
-        det_name = self.ui.Detector_type_combo.currentText()
+        det_name = self.detector
         if det_name == '':
             det_name = 'Mock'
         self.detector_name = det_name

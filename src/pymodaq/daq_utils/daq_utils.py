@@ -145,7 +145,7 @@ logger = set_logger('daq_utils')
 
 
 def deprecation_msg(message):
-    warnings.warn(message, DeprecationWarning, stacklevel=2)
+    warnings.warn(message, DeprecationWarning, stacklevel=3)
 
 
 def get_version():
