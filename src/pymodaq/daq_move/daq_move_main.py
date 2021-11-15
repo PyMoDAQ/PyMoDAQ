@@ -175,7 +175,7 @@ class DAQ_Move(Ui_Form, QObject):
 
     @property
     def actuator(self):
-        return self.ui.Stage_type_combo.currentText
+        return self.ui.Stage_type_combo.currentText()
 
     @actuator.setter
     def actuator(self, actuator):
