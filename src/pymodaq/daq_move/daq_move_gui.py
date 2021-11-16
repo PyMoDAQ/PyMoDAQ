@@ -9,9 +9,8 @@
 
 from qtpy import QtCore, QtGui, QtWidgets
 
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 from pyqtgraph import SpinBox
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
 class Ui_Form(object):

@@ -52,8 +52,8 @@ have to override with your App/Extension specifics:
             subclass method from ActionManager
             '''
             logger.debug('setting actions')
-            self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
-            self.addaction('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
+            self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
+            self.add_action('grab', 'Grab', 'camera', "Grab from camera", checkable=True, toolbar=self.toolbar)
             logger.debug('actions set')
 
         def setup_docks(self):

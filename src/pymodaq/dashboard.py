@@ -25,7 +25,8 @@ from pymodaq.daq_utils.daq_utils import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.managers.remote_manager import RemoteManager
-from pymodaq.daq_utils.plotting.roi_saver import ROISaver
+from pymodaq.daq_utils.managers.roi_manager import ROISaver
+from pymodaq.daq_utils.exceptions import DetectorError, ActuatorError
 
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -575,6 +576,7 @@ class DashBoard(QObject):
         mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
         mov_mod_tmp.ui.Quit_pb.setEnabled(False)
         QtWidgets.QApplication.processEvents()
+
         if plug_settings is not None:
             try:
                 utils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
@@ -619,14 +621,6 @@ class DashBoard(QObject):
             det_docks_viewer = []
             move_forms = []
 
-            # ### set daq scan settings set in presets
-            # try:
-            #     for child in self.preset_manager.preset_params.child(('saving_options')).children():
-            #         if hasattr(self, 'h5saver'):
-            #             self.h5saver.settings.child((child.name())).setValue(child.value())
-            # except Exception as e:
-            #     logger.exception(str(e))
-
             # # set PID if checked in managers
             try:
                 if self.preset_manager.preset_params.child('use_pid').value():
@@ -664,14 +658,14 @@ class DashBoard(QObject):
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
-            if isinstance(self.preset_manager.preset_params.child(('Moves')).children()[0],
+            if isinstance(self.preset_manager.preset_params.child('Moves').children()[0],
                           ptypes.GroupParameter):
                 plugins += [{'type': 'move', 'value': child} for child in
-                            self.preset_manager.preset_params.child(('Moves')).children()]
-            if isinstance(self.preset_manager.preset_params.child(('Detectors')).children()[0],
+                            self.preset_manager.preset_params.child('Moves').children()]
+            if isinstance(self.preset_manager.preset_params.child('Detectors').children()[0],
                           ptypes.GroupParameter):
                 plugins += [{'type': 'det', 'value': child} for child in
-                            self.preset_manager.preset_params.child(('Detectors')).children()]
+                            self.preset_manager.preset_params.child('Detectors').children()]
 
             for plug in plugins:
                 plug['ID'] = plug['value'].child('params', 'main_settings', 'controller_ID').value()
@@ -701,11 +695,12 @@ class DashBoard(QObject):
                     plug_settings = plugin['value'].child('params')
                     self.splash_sc.showMessage('Loading {:s} module: {:s}'.format(plugin['type'], plug_name),
                                                color=Qt.white)
-                    if plugin['type'] == 'move':
-                        plug_type = plug_settings.child('main_settings', 'move_type').value()
-                        self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules)
 
+                    if plugin['type'] == 'move':
                         try:
+                            plug_type = plug_settings.child('main_settings', 'move_type').value()
+                            self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules)
+
                             if ind_plugin == 0:  # should be a master type plugin
                                 if plugin['status'] != "Master":
                                     logger.error('error in the master/slave type for plugin {}'.format(plug_name))
@@ -724,65 +719,73 @@ class DashBoard(QObject):
                                     QtWidgets.QApplication.processEvents()
                                     self.poll_init(actuators_modules[-1])
                                     QtWidgets.QApplication.processEvents()
-                        except Exception as e:
+                        except ActuatorError as e:
+                            self.splash_sc.close()
+                            gutils.show_message(f'{str(e)}\nQuitting the application...', 'Incompatibility')
                             logger.exception(str(e))
-
+                            self.quit_fun()
+                            return
                     else:
-                        ind_det += 1
-                        plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
-                        plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
-
-                        det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
-                        det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
-
-                        if ind_det == 0:
-                            self.logger_dock.area.addDock(det_docks_settings[-1],
-                                                          'bottom')  # dockarea of the logger dock
-                        else:
-                            self.dockarea.addDock(det_docks_settings[-1], 'right', det_docks_viewer[-2])
-                        self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
-
-                        det_mod_tmp = DAQ_Viewer(self.dockarea, dock_settings=det_docks_settings[-1],
-                                                 dock_viewer=det_docks_viewer[-1], title=plug_name,
-                                                 DAQ_type=plug_type, parent_scan=self)
-                        detector_modules.append(det_mod_tmp)
-                        detector_modules[-1].ui.Detector_type_combo.setCurrentText(plug_subtype)
-                        detector_modules[-1].ui.Quit_pb.setEnabled(False)
                         try:
-                            utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
-                        except KeyError as e:
-                            mssg = f'Could not set this setting: {str(e)}\n'\
-                                   f'The Preset is no more compatible with the plugin {plug_subtype}'
-                            logger.warning(mssg)
-                            self.splash_sc.showMessage(mssg, color=Qt.white)
+                            ind_det += 1
+                            plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
+                            plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
 
-                        QtWidgets.QApplication.processEvents()
-
-                        try:
-                            if ind_plugin == 0:  # should be a master type plugin
-                                if plugin['status'] != "Master":
-                                    logger.error('error in the master/slave type for plugin {}'.format(plug_name))
-                                if plug_init:
-                                    detector_modules[-1].ui.IniDet_pb.click()
-                                    QtWidgets.QApplication.processEvents()
-                                    self.poll_init(detector_modules[-1])
-                                    QtWidgets.QApplication.processEvents()
-                                    master_controller = detector_modules[-1].controller
+                            det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
+                            det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
+                            if ind_det == 0:
+                                self.logger_dock.area.addDock(det_docks_settings[-1],
+                                                              'bottom')  # dockarea of the logger dock
                             else:
-                                if plugin['status'] != "Slave":
-                                    logger.error('error in the master/slave type for plugin {}'.format(plug_name))
-                                if plug_init:
-                                    detector_modules[-1].controller = master_controller
-                                    detector_modules[-1].ui.IniDet_pb.click()
-                                    QtWidgets.QApplication.processEvents()
-                                    self.poll_init(detector_modules[-1])
-                                    QtWidgets.QApplication.processEvents()
-                        except Exception as e:
+                                self.dockarea.addDock(det_docks_settings[-1], 'right', det_docks_viewer[-2])
+                            self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
+                            det_mod_tmp = DAQ_Viewer(self.dockarea, dock_settings=det_docks_settings[-1],
+                                                     dock_viewer=det_docks_viewer[-1], title=plug_name,
+                                                     DAQ_type=plug_type, parent_scan=self)
+                            det_mod_tmp.detector = plug_subtype
+                            det_mod_tmp.ui.Quit_pb.setEnabled(False)
+                            detector_modules.append(det_mod_tmp)
+
+                            try:
+                                utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
+                            except KeyError as e:
+                                mssg = f'Could not set this setting: {str(e)}\n'\
+                                       f'The Preset is no more compatible with the plugin {plug_subtype}'
+                                logger.warning(mssg)
+                                self.splash_sc.showMessage(mssg, color=Qt.white)
+
+                            QtWidgets.QApplication.processEvents()
+
+                            try:
+                                if ind_plugin == 0:  # should be a master type plugin
+                                    if plugin['status'] != "Master":
+                                        logger.error('error in the master/slave type for plugin {}'.format(plug_name))
+                                    if plug_init:
+                                        detector_modules[-1].ui.IniDet_pb.click()
+                                        QtWidgets.QApplication.processEvents()
+                                        self.poll_init(detector_modules[-1])
+                                        QtWidgets.QApplication.processEvents()
+                                        master_controller = detector_modules[-1].controller
+                                else:
+                                    if plugin['status'] != "Slave":
+                                        logger.error('error in the master/slave type for plugin {}'.format(plug_name))
+                                    if plug_init:
+                                        detector_modules[-1].controller = master_controller
+                                        detector_modules[-1].ui.IniDet_pb.click()
+                                        QtWidgets.QApplication.processEvents()
+                                        self.poll_init(detector_modules[-1])
+                                        QtWidgets.QApplication.processEvents()
+                            except Exception as e:
+                                logger.exception(str(e))
+
+                            detector_modules[-1].settings.child('main_settings', 'overshoot').show()
+                            detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
+                        except DetectorError as e:
+                            self.splash_sc.close()
+                            gutils.show_message(f'{str(e)}\nQuitting the application...', 'Incompatibility')
                             logger.exception(str(e))
-
-                        detector_modules[-1].settings.child('main_settings', 'overshoot').show()
-                        detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
-
+                            self.quit_fun()
+                            return
             QtWidgets.QApplication.processEvents()
             # restore dock state if saved
 
@@ -1179,7 +1182,7 @@ class DashBoard(QObject):
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
             {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config['general']['debug_level'],
-             'values': config['general']['debug_levels']},
+             'limits': config['general']['debug_levels']},
 
             {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
                 {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},

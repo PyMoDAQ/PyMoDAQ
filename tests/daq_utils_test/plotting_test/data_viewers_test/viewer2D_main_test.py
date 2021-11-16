@@ -1,21 +1,19 @@
+import pymodaq.daq_utils.managers.action_manager
+import pymodaq.daq_utils.plotting.utils.filter
+import pymodaq.daq_utils.plotting.utils.plot_utils
 from qtpy import QtWidgets, QtCore
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.plotting.viewer2D import viewer2D_main as v2d
-from pymodaq.daq_utils.exceptions import ExpectedError
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers import viewer2D as v2d
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.exceptions import ViewerError
-from pyqtgraph.parametertree import Parameter
-import pyqtgraph as pg
-from pymodaq.daq_utils.plotting.graph_items import PlotCurveItem
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
-from unittest import mock
 from pathlib import Path
 import pytest
 from pytest import fixture, approx
 import numpy as np
 import pyqtgraph as pg
 
-from pyqtgraph import ROI, mkPen
+from pyqtgraph import mkPen
 
 @fixture
 def init_qt(qtbot):
@@ -46,7 +44,8 @@ def init_prog(qtbot):
 
     prog.parent.show()
     
-    return prog, qtbot
+    yield prog, qtbot
+    form.close()
 
 @fixture
 def init_prog_show_data(init_prog, distribution='uniform'):
@@ -120,7 +119,7 @@ class TestCurveFactory:
 class TestData0DWithHistory:
     def test_add_datas_list(self, init_qt):
         Nsamplesinhisto = 2
-        data_histo = v2d.Data0DWithHistory(Nsamplesinhisto)
+        data_histo = pymodaq.daq_utils.plotting.utils.plot_utils.Data0DWithHistory(Nsamplesinhisto)
         dat = [[1, 2], [np.array([1]), 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
@@ -132,7 +131,7 @@ class TestData0DWithHistory:
             assert 'data_01' in data_histo.datas
 
     def test_add_datas(self, init_qt):
-        data_histo = v2d.Data0DWithHistory()
+        data_histo = pymodaq.daq_utils.plotting.utils.plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
@@ -142,7 +141,7 @@ class TestData0DWithHistory:
             assert 'CH1' in data_histo.datas
 
     def test_add_datas_and_clear(self, init_qt):
-        data_histo = v2d.Data0DWithHistory()
+        data_histo = pymodaq.daq_utils.plotting.utils.plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
@@ -155,38 +154,38 @@ class TestData0DWithHistory:
 class TestExtractAxis:
     def test_info_data_is_None(self):
         axis = utils.Axis(label='mylabel', units='myunits')
-        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (1, 0, 'mylabel', 'myunits')
+        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (1, 0, 'mylabel', 'myunits')
 
     def test_info(self):
         axis = utils.Axis(label='mylabel', units='myunits', data=np.array([5, 20, 35]))
-        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, 'mylabel', 'myunits')
+        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, 'mylabel', 'myunits')
 
     def test_info_data_is_ndarray(self):
         axis = np.array([5, 20, 35])
-        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, '', '')
+        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, '', '')
 
     def test_info_data_is_ndarray_scalingisneg(self):
         axis = np.array([35, 20, 5])
-        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, '', '')
+        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, '', '')
 
     def test_info_neg_scaling(self):
         axis = utils.Axis(label='mylabel', units='myunits', data=np.array([35, 20, 5]))
-        assert v2d.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, 'mylabel', 'myunits')
+        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, 'mylabel', 'myunits')
 
 
 class TestLineoutData:
     def test_with_error(self):
         with pytest.raises(ValueError):
-            v2d.LineoutData(hor_axis=np.random.random(10), hor_data=np.random.random(12))
+            pymodaq.daq_utils.plotting.utils.filter.LineoutData(hor_axis=np.random.random(10), hor_data=np.random.random(12))
 
         with pytest.raises(ValueError):
-            v2d.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(12))
+            pymodaq.daq_utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(12))
 
     def test_intdataisnotnone(self):
-        v2d.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10), int_data=np.array([10]))
+        pymodaq.daq_utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10), int_data=np.array([10]))
 
     def test_intdataisnone(self):
-        v2d.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
+        pymodaq.daq_utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
 
 
 class TestLineoutPlotter:
@@ -289,7 +288,7 @@ class TestViewer2D:
         create_one_roi(prog, qtbot)
         QtWidgets.QApplication.processEvents()
 
-        with qtbot.waitSignal(prog.roi_lineout_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
             prog.update_data()
 
     def test_update_data_crosshair(self, init_prog_show_data):
@@ -297,7 +296,7 @@ class TestViewer2D:
         prog.view.get_action('crosshair').trigger()
         QtWidgets.QApplication.processEvents()
 
-        with qtbot.waitSignal(prog.crosshair_lineout_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000) as blocker:
             prog.update_data()
 
 
@@ -368,9 +367,9 @@ class TestActions:
     @pytest.mark.parametrize('action', ['position', 'red', 'green', 'blue', 'autolevels', 'auto_levels_sym',
                                         'histo', 'roi', 'isocurve', 'aspect_ratio', 'crosshair',
                                         'ROIselect', 'flip_ud', 'flip_lr', 'rotate'])
-    def test_actionhas(self, qtbot, action):
-        action_manager = v2d.ActionManager()
-        assert action_manager.has_action(action)
+    def test_actionhas(self, init_prog, action):
+        prog, qtbot = init_prog
+        assert prog.view.has_action(action)
 
     @pytest.mark.parametrize('color', ['red', 'green', 'blue'])
     def test_color_action(self, init_prog, color):
@@ -390,7 +389,6 @@ class TestActions:
         prog, qtbot = init_prog
         data_red, data_green, data_blue, data_spread = init_data()
 
-        
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         prog.show_data(data)
 
@@ -690,7 +688,7 @@ class TestCrosshair:
         XCROSS = 24
         YCROSS = 75
 
-        with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.view.get_crosshair_signal(), timeout=1000) as blocker:
             prog.view.get_action('crosshair').trigger()
 
         with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000) as blocker:
@@ -819,13 +817,13 @@ class TestModifyImages:
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         datas = dict(red=data_red, green=data_green)
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.show_data(data)
 
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('flip_ud').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(np.flipud(data['data'][ind])))
@@ -836,12 +834,12 @@ class TestModifyImages:
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         prog.show_data(data)
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('flip_lr').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(np.fliplr(data['data'][ind])))
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('flip_lr').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))
@@ -852,12 +850,12 @@ class TestModifyImages:
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         prog.show_data(data)
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('rotate').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(np.flipud(np.transpose(data['data'][ind]))))
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('rotate').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))

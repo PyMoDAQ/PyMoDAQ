@@ -1,11 +1,11 @@
 from qtpy import QtWidgets
-from qtpy.QtCore import Qt, QObject, QLocale
+from qtpy.QtCore import Qt, QObject
 
 import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 import sys
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 from pymodaq.daq_utils.h5modules import browse_data
 import os
@@ -41,7 +41,7 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
 
         params = [{'title': 'Load data:', 'name': 'Load data', 'type': 'action', },
                   {'title': 'Set Measurement:', 'name': 'Do measurement', 'type': 'action', },
-                  {'title': 'Calib from:', 'name': 'calib_from', 'type': 'list', 'values': ['Hlineout', 'Vlineout'], },
+                  {'title': 'Calib from:', 'name': 'calib_from', 'type': 'list', 'limits': ['Hlineout', 'Vlineout'], },
                   {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
                       {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "µm"},
                       {'title': 'dx (units):', 'name': 'dx_units', 'type': 'float', 'value': 0, },

@@ -1,7 +1,7 @@
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QRectF, QRect, QPointF, QLocale
 import sys
-from pymodaq.daq_utils.plotting.graph_items import AxisItem_Scaled, AXIS_POSITIONS
+from pymodaq.daq_utils.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
 import pyqtgraph as pg
 import numpy as np
 from easydict import EasyDict as edict
@@ -148,12 +148,12 @@ class View_cust(pg.ViewBox):
 
 
 if __name__ == '__main__':  # pragma: no cover
-    from pymodaq.daq_utils.plotting.graph_items import TriangulationItem
+    from pymodaq.daq_utils.plotting.items.image import SpreadImageItem
 
     app = QtWidgets.QApplication(sys.argv)
     form = QtWidgets.QWidget()
     prog = Viewer2DBasic(form)
-    img = TriangulationItem()
+    img = SpreadImageItem()
     prog.image_widget.plotItem.addItem(img)
     form.show()
 

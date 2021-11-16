@@ -1,9 +1,12 @@
+from multipledispatch import dispatch
+from pymodaq.daq_utils.plotting.items.axis_scaled import AxisItem_Scaled
 from qtpy import QtGui, QtCore
 import pyqtgraph as pg
 import numpy as np
 from scipy.spatial import Delaunay as Triangulation
 import copy
 
+from pymodaq.daq_utils import daq_utils as utils
 
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
@@ -72,8 +75,6 @@ class QVector(QtCore.QLineF):
     def translate_to(self, point=QtCore.QPointF(0, 0)):
         vec = self + QVector(self.p1(), point)
         return vec
-
-
 
 
 def makeAlphaTriangles(data, lut=None, levels=None, scale=None, useRGBA=False):
@@ -247,3 +248,119 @@ def makePolygons(tri):
     for seq in tri.points[tri.simplices]:
         polygons.append(QtGui.QPolygonF([QtCore.QPointF(*s) for s in seq] + [QtCore.QPointF(*seq[0])]))
     return polygons
+
+
+class Data0DWithHistory:
+    def __init__(self, Nsamples=200):
+        super().__init__()
+        self._datas = dict([])
+        self.Nsamples = Nsamples
+        self._xaxis = None
+        self._data_length = 0
+
+    @dispatch(list)
+    def add_datas(self, datas: list):
+        """
+        Add datas to the history
+        Parameters
+        ----------
+        datas: (list) list of floats or np.array(float)
+        """
+        datas = {f'data_{ind:02d}': datas[ind] for ind in range(len(datas))}
+        self.add_datas(datas)
+
+    @dispatch(dict)
+    def add_datas(self, datas: dict):
+        """
+        Add datas to the history on the form of a dict of key/data pairs (data is a numpy 0D array)
+        Parameters
+        ----------
+        datas: (dict) dictionaary of floats or np.array(float)
+        """
+        if len(datas) != len(self._datas):
+            self.clear_data()
+
+        self._data_length += 1
+
+        if self._data_length > self.Nsamples:
+            self._xaxis += 1
+        else:
+            self._xaxis = np.linspace(0, self._data_length, self._data_length, endpoint=False)
+
+        for data_key, data in datas.items():
+            if not isinstance(data, np.ndarray):
+                data = np.array([data])
+
+            if self._data_length == 1:
+                self._datas[data_key] = data
+            else:
+                self._datas[data_key] = np.concatenate((self._datas[data_key], data))
+
+            if self._data_length > self.Nsamples:
+                self._datas[data_key] = self._datas[data_key][1:]
+
+    @property
+    def datas(self):
+        return self._datas
+
+    @property
+    def xaxis(self):
+        return self._xaxis
+
+    def clear_data(self):
+        self._datas = dict([])
+        self._data_length = 0
+        self._xaxis = np.array([])
+
+
+class AxisInfosExtractor:
+
+    @staticmethod
+    @dispatch(np.ndarray)
+    def extract_axis_info(axis: np.ndarray):
+        label = ''
+        units = ''
+        data = axis
+
+        scaling = 1
+        offset = 0
+        if data is not None:
+            if len(data) > 1:
+                scaling = data[1] - data[0]
+                if scaling > 0:
+                    offset = np.min(data)
+                else:
+                    offset = np.max(data)
+
+        return scaling, offset, label, units
+
+    @staticmethod
+    @dispatch(utils.Axis)
+    def extract_axis_info(axis: utils.Axis):
+        data = None
+        if 'data' in axis:
+            data = axis['data']
+        label = axis['label']
+        units = axis['units']
+
+        scaling = 1
+        offset = 0
+        if data is not None:
+            if len(data) > 1:
+                scaling = data[1] - data[0]
+                if scaling > 0:
+                    offset = np.min(data)
+                else:
+                    offset = np.max(data)
+
+        return scaling, offset, label, units
+
+    @staticmethod
+    @dispatch(AxisItem_Scaled)
+    def extract_axis_info(axis: AxisItem_Scaled):
+        label = axis.axis_label
+        units = axis.axis_units
+        scaling = axis.axis_scaling
+        offset = axis.axis_offset
+
+        return scaling, offset, label, units

@@ -7,7 +7,7 @@ from pyqtgraph.graphicsItems.PlotItem.PlotItem import PlotItem
 from pyqtgraph.graphicsItems.InfiniteLine import InfiniteLine
 from pyqtgraph.graphicsItems.LinearRegionItem import LinearRegionItem
 from pymodaq.daq_utils.exceptions import ExpectedError
-from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
+from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 
 
 @pytest.fixture
@@ -15,7 +15,8 @@ def init_prog(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer1DBasic(form)
     qtbot.addWidget(form)
-    return prog
+    yield prog
+    form.close()
 
 
 class TestViewer1DBasic:
@@ -54,29 +55,19 @@ class TestViewer1DBasic:
 
         prog.update_line(IL)
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic.logger.exception')
-    def test_update_labels(self, mock_except, init_prog):
-        mock_except.side_effect = [ExpectedError]
+    def test_update_labels(self, init_prog):
 
         prog = init_prog
-
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
         prog.datas = datas
-
         item = PlotItem()
         prog.legend.addItem(item, 'item_00')
         prog.plot_channels = ['CH_00', 'CH_01', 'CH_02', 'CH_03']
-
         labels = ['CH_00', 'CH_01']
-
         prog.update_labels(labels)
-
         assert prog._labels == ['CH_00', 'CH_01', 'CH02', 'CH03']
-
         prog.legend = None
-
-        with pytest.raises(ExpectedError):
-            prog.update_labels(labels)
+        prog.update_labels(labels)
 
     def test_show_data(self, init_prog):
         prog = init_prog

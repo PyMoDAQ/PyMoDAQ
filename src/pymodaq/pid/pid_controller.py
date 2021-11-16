@@ -1,24 +1,19 @@
-import os
 from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale
-
+from qtpy.QtCore import QObject, Slot, QThread, Signal
+from pyqtgraph.widgets.SpinBox import SpinBox
 from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_param_from_param, set_logger, get_module_name, \
-    get_set_pid_path, get_models, find_dict_in_list_from_key_val
+from pymodaq.daq_utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
+    get_models, find_dict_in_list_from_key_val
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
 from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 from pymodaq.pid.utils import OutputToActuator, InputFromDetector
 
-import importlib
 from simple_pid import PID
 import time
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-import numpy as np
 
 logger = set_logger(get_module_name(__file__))
 
@@ -44,7 +39,7 @@ class DAQ_PID(QObject):
     params = [
         {'title': 'Models', 'name': 'models', 'type': 'group', 'expanded': True, 'visible': True, 'children': [
             {'title': 'Models class:', 'name': 'model_class', 'type': 'list',
-             'values': [d['name'] for d in models]},
+             'limits': [d['name'] for d in models]},
             {'title': 'Model params:', 'name': 'model_params', 'type': 'group', 'children': []},
         ]},
         {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group', 'visible': False,
@@ -267,9 +262,11 @@ class DAQ_PID(QObject):
 
     def get_set_model_params(self, model):
         self.settings.child('models', 'model_params').clearChildren()
-        model_class = find_dict_in_list_from_key_val(get_models(), 'name', model['name'])['class']
-        params = getattr(model_class, 'params')
-        self.settings.child('models', 'model_params').addChildren(params)
+        models = get_models()
+        if len(models) > 0:
+            model_class = find_dict_in_list_from_key_val(models, 'name', model['name'])['class']
+            params = getattr(model_class, 'params')
+            self.settings.child('models', 'model_params').addChildren(params)
 
     def run_PID(self):
         if self.run_action.isChecked():
@@ -357,7 +354,7 @@ class DAQ_PID(QObject):
         self.currpoints_sb = []
         for ind_set in range(self.model_class.Nsetpoints):
 
-            self.setpoints_sb.append(custom_tree.SpinBoxCustom())
+            self.setpoints_sb.append(SpinBox())
             self.setpoints_sb[-1].setMinimumHeight(40)
             font = self.setpoints_sb[-1].font()
             font.setPointSizeF(20)
@@ -366,8 +363,7 @@ class DAQ_PID(QObject):
             self.toolbar_layout.addWidget(self.setpoints_sb[-1], 3, 2+ind_set, 1, 1)
             self.setpoints_sb[-1].valueChanged.connect(self.update_runner_setpoints)
 
-
-            self.currpoints_sb.append(custom_tree.SpinBoxCustom())
+            self.currpoints_sb.append(SpinBox())
             self.currpoints_sb[-1].setMinimumHeight(40)
             self.currpoints_sb[-1].setReadOnly(True)
             self.currpoints_sb[-1].setDecimals(6)
@@ -504,7 +500,7 @@ class PIDRunner(QObject):
         else:
             self.sample_time = 0.010  # in secs
 
-        self.pids = [PID(setpoint=setpoints[0], **params) for ind in range(Nsetpoints)] # #PID(object):
+        self.pids = [PID(setpoint=setpoints[0], **params) for ind in range(Nsetpoints)]  # #PID(object):
         for pid in self.pids:
             pid.set_auto_mode(False)
         self.refreshing_ouput_time = 200
@@ -600,7 +596,7 @@ class PIDRunner(QObject):
                 if not self.paused:
                     self.modules_manager.move_actuators(self.outputs_to_actuators.values,
                                                        self.outputs_to_actuators.mode,
-                                                       poll=False)
+                                                       polling=False)
 
                 self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()

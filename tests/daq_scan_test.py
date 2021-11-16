@@ -37,8 +37,9 @@ def main(qtbot):
     winscan.show()
     qtbot.addWidget(win)
     qtbot.addWidget(winscan)
-    return dashboard, daq_scan, win
-
+    yield dashboard, daq_scan, win
+    win.close()
+    winscan.close()
 
 class TestGeneral:
 

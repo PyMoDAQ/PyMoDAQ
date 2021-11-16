@@ -15,7 +15,7 @@ from pymodaq.daq_utils.scanner import ScanParameters
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
-                     'values': ['Master', 'Slave']}, ]
+                     'limits': ['Master', 'Slave']}, ]
 
 local_path = get_set_local_dir()
 # look for eventual calibration files
@@ -30,7 +30,7 @@ config = load_config()
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
-        {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'values': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
+        {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
@@ -58,7 +58,7 @@ params = [
              {'title': 'Overshoot:', 'name': 'stop_overshoot', 'type': 'bool', 'value': False},
              {'title': 'Overshoot value:', 'name': 'overshoot_value', 'type': 'float', 'value': 0}]},
         {'title': 'Axis options:', 'name': 'axes', 'type': 'group', 'visible': False, 'expanded': False, 'children': [
-            {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'values': calibs},
+            {'title': 'Use calibration?:', 'name': 'use_calib', 'type': 'list', 'limits': calibs},
             {'title': 'X axis:', 'name': 'xaxis', 'type': 'group', 'children': [
                 {'title': 'Label:', 'name': 'xlabel', 'type': 'str', 'value': "x axis"},
                 {'title': 'Units:', 'name': 'xunits', 'type': 'str', 'value': "pxls"},

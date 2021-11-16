@@ -1,5 +1,5 @@
 from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QTimer
 # from enum import IntEnum
 from easydict import EasyDict as edict
 from pymodaq.daq_utils.parameter.utils import iter_children
@@ -9,9 +9,11 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config, set_logger, get_module_name
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
+from time import perf_counter
 
 logger = set_logger(get_module_name(__file__))
 config = load_config()
+
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
                     {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
                      'tip': 'Differential Value at which the controller considers it reached the target position'},
@@ -34,8 +36,8 @@ def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
         {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
          'default': False},
         {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
-         'values': ['Master', 'Slave']},
-        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'values': stage_names},
+         'limits': ['Master', 'Slave']},
+        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': stage_names},
 
     ]}] + comon_parameters
     return params
@@ -127,6 +129,7 @@ class DAQ_Move_base(QObject):
     stage_names = []
     params = []
     _controller_units = ''
+    _epsilon = 1
 
     def __init__(self, parent=None, params_state=None):
         QObject.__init__(self)  # to make sure this is the parent class
@@ -137,6 +140,7 @@ class DAQ_Move_base(QObject):
         self.status = edict(info="", controller=None, stage=None, initialized=False)
         self.current_position = 0.
         self.target_position = 0.
+        self._ispolling = True
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
         # current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
@@ -148,6 +152,11 @@ class DAQ_Move_base(QObject):
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.controller_units = self._controller_units
+        self.settings.child('epsilon').setValue(self._epsilon)
+
+        self.poll_timer = QTimer()
+        self.poll_timer.setInterval(config['actuator']['polling_interval_ms'])
+        self.poll_timer.timeout.connect(self.check_target_reached)
 
     @property
     def controller_units(self):
@@ -157,9 +166,17 @@ class DAQ_Move_base(QObject):
     def controller_units(self, units: str = ''):
         self._controller_units = units
         try:
-            self.settings.child(('units')).setValue(units)
+            self.settings.child('units').setValue(units)
         except Exception:
             pass
+
+    @property
+    def ispolling(self):
+        return self._ispolling
+
+    @ispolling.setter
+    def ispolling(self, polling=True):
+        self._ispolling = polling
 
     def check_bound(self, position):
         """
@@ -254,28 +271,33 @@ class DAQ_Move_base(QObject):
             --------
             DAQ_utils.ThreadCommand, move_done
         """
-        sleep_ms = 50
-        ind = 0
-        #self.current_position = self.check_position()
-        while np.abs(self.current_position - self.target_position) > self.settings.child(('epsilon')).value():
+        self.start_time = perf_counter()
+        if self.ispolling:
+            self.poll_timer.start()
+        else:
+            self.current_position = self.check_position()
+            logger.debug(f'Current position: {self.current_position}')
+            self.move_done(self.current_position)
+
+    def check_target_reached(self):
+
+        if np.abs(self.current_position - self.target_position) > self.settings.child(('epsilon')).value():
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped'))
                 logger.info(f'Move has been stopped')
-                break
+
             self.current_position = self.check_position()
             logger.debug(f'Current position: {self.current_position}')
-            QThread.msleep(sleep_ms)
 
-            ind += 1
-
-            if ind * sleep_ms >= self.settings.child(('timeout')).value():
+            if perf_counter() - self.start_time >= self.settings.child(('timeout')).value():
                 self.emit_status(ThreadCommand('raise_timeout'))
                 logger.info(f'Timeout activated')
-                break
-            QtWidgets.QApplication.processEvents()
 
-        self.move_done(self.current_position)
+        else:
+            self.poll_timer.stop()
+            logger.debug(f'Current position: {self.current_position}')
+            self.move_done(self.current_position)
 
     def send_param_status(self, param, changes):
         """

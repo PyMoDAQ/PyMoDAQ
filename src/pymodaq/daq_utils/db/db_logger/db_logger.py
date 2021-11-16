@@ -180,7 +180,7 @@ class DbLogger:
 class DbLoggerGUI(DbLogger, QtCore.QObject):
     params = [
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
-            'values': ['PostgreSQL', ]},
+            'limits': ['PostgreSQL', ]},
         {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str',
             'value': config['network']['logging']['sql']['ip'],
          'tip':'Either localhost if the database server is on the same computer or the IP address of the server'},

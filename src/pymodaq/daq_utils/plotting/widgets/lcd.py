@@ -1,8 +1,8 @@
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets
 from qtpy.QtCore import QObject
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 import sys
-import numpy as np
+
 
 class LCD(QObject):
 
@@ -27,12 +27,12 @@ class LCD(QObject):
 
         """
         while len(values) < self.Nvals:
-            values.append(np.array([0.]))
+            values.append(0.)
         if len(values) > self.Nvals:
             values = values[:self.Nvals]
         vals = []
         for ind, val in enumerate(values):
-            self.lcds[ind].display(val[0])
+            self.lcds[ind].display(val)
             vals.append(val)
         self.viewer0D.show_data(vals)
 

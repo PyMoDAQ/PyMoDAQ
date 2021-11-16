@@ -7,7 +7,7 @@ Created on Mon Dec  4 10:59:53 2017
 """
 import sys
 from qtpy import QtWidgets, QtGui
-from qtpy.QtCore import Slot, Signal, QLocale, Qt, QDate, QDateTime, QTime, QByteArray, QSize
+from qtpy.QtCore import Slot, Signal, Qt, QDate, QDateTime, QTime, QByteArray, QSize
 from pyqtgraph.widgets import ColorButton, SpinBox
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph.parametertree import Parameter, ParameterItem
@@ -18,7 +18,7 @@ from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 from collections import OrderedDict
 from decimal import Decimal as D
 
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 
 from pathlib import Path
 import numpy as np

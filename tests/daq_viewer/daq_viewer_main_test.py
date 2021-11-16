@@ -34,4 +34,6 @@ class TestGeneral:
         with qtbot.waitSignal(viewer.quit_signal) as blocker:
             viewer.quit_fun()
 
+        win.close()
+
 

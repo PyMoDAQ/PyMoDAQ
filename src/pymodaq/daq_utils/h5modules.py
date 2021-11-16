@@ -5,7 +5,7 @@ import warnings
 import logging
 from copy import deepcopy
 from qtpy import QtGui, QtCore
-from qtpy.QtCore import Qt, QObject, Signal, QLocale, QByteArray
+from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
 import pymodaq.daq_utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -13,7 +13,7 @@ from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter, NavAxis
 from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
-from pymodaq.daq_utils.plotting.viewerND.viewerND_main import ViewerND
+from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 import pickle
 from qtpy import QtWidgets
@@ -983,10 +983,10 @@ class H5SaverBase(H5Backend):
     """
 
     params = [
-        {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'values': save_types, 'readonly': True},
+        {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': save_types, 'readonly': True},
     ] + dashboard_submodules_params + \
         [{'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
-            {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'values': backends_available,
+            {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'limits': backends_available,
                 'readonly': True},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False, 'children': [
                 {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
@@ -1009,7 +1009,7 @@ class H5SaverBase(H5Backend):
             'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '', 'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
-        {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list', 'values': ['uint8', 'int8',
+        {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list', 'limits': ['uint8', 'int8',
                                                                                   'uint16', 'int16',
                                                                                   'uint32', 'int32',
                                                                                   'uint64', 'int64',
@@ -1017,7 +1017,7 @@ class H5SaverBase(H5Backend):
          'value': 'float64'},
         {'title': 'Compression options:', 'name': 'compression_options', 'type': 'group', 'children': [
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
-                'values': ['zlib', 'gzip']},
+                'limits': ['zlib', 'gzip']},
             {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
                 'value': config['data_saving']['h5file']['compression_level'], 'min': 0, 'max': 9},
         ]},
