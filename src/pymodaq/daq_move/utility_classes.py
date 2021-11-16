@@ -6,7 +6,8 @@ from pymodaq.daq_utils.parameter.utils import iter_children
 from pymodaq.daq_utils.parameter import ioxml
 import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config, set_logger, get_module_name
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, set_logger, get_module_name
+from pymodaq import load_config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
 from time import perf_counter

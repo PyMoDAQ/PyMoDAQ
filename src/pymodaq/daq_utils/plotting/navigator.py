@@ -13,7 +13,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5modules import H5Saver, browse_data, H5BrowserUtil
 from pymodaq.daq_utils import gui_utils as gutils
 
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
+from pymodaq.daq_utils.config import get_set_local_dir, Config
 
 local_path = get_set_local_dir()
 navigator_path = os.path.join(local_path, 'navigator_temp_files')
@@ -26,7 +26,7 @@ Ntick = 128
 colors_red = np.array([(int(r), 0, 0) for r in np.linspace(0, 255, Ntick)])
 colors_green = np.array([(0, int(g), 0) for g in np.linspace(0, 255, Ntick)])
 colors_blue = np.array([(0, 0, int(b)) for b in np.linspace(0, 255, Ntick)])
-config = utils.load_config()
+config = Config()
 
 
 class Navigator(QObject):
@@ -183,7 +183,7 @@ class Navigator(QObject):
                 self.settings.child('scans', pixmaps[0]['scan_name']).value())
 
     def load_data(self):
-        self.h5module_path = str(gutils.select_file(start_path=config['data_saving']['h5file']['save_path'],
+        self.h5module_path = str(gutils.select_file(start_path=config('data_saving', 'h5file', 'save_path'),
                                                     save=False, ext='h5'))
         if self.h5module_path != '':
             self.settings.child('settings', 'filepath').setValue(self.h5module_path)

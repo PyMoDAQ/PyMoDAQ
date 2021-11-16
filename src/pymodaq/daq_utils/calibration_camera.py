@@ -9,7 +9,7 @@ from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 from pymodaq.daq_utils.h5modules import browse_data
 import os
-from pymodaq.daq_utils.daq_utils import get_set_local_dir
+from pymodaq.daq_utils.config import get_set_local_dir
 
 local_path = get_set_local_dir()
 calib_path = os.path.join(local_path, 'camera_calibrations')

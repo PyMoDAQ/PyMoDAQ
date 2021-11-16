@@ -9,6 +9,7 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 import sys
 from collections import OrderedDict
 
+from pymodaq.daq_utils.config import Config, get_set_preset_path
 import pymodaq.daq_utils.parameter.ioxml
 
 from qtpy import QtWidgets
@@ -19,7 +20,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Logger
 
-config = utils.load_config()
+config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 try:
     import sqlalchemy
@@ -448,12 +449,11 @@ class DAQ_Logging(QObject):
 
 def main():
     from pymodaq.dashboard import DashBoard
-    from pymodaq.daq_utils.daq_utils import load_config, get_set_preset_path
     from pathlib import Path
 
-    config = load_config()
+    config = Config()
     app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
+    if config('style', 'darkstyle'):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet())
 
@@ -465,7 +465,7 @@ def main():
 
     # win.setVisible(False)
     prog = DashBoard(area)
-    file = Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_logger']}.xml")
+    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_logger')}.xml")
     if file.exists():
         prog.set_preset_mode(file)
         prog.load_log_module()

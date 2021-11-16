@@ -4,6 +4,7 @@ import datetime
 import numpy as np
 import sys
 
+import pymodaq.daq_utils.messenger
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import pyqtgraph as pg
@@ -756,14 +757,14 @@ class Viewer2D(ViewerBase):
         self.filter_from_crosshair.filter_data(self._datas)
 
     def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        utils.deprecation_msg(f'setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with'
+        pymodaq.daq_utils.messenger.deprecation_msg(f'setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with'
                          f'one argument as utils.DataFromPlugins')
         datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
                                                     data_blue=data_blue, data_spread=data_spread)
         self.show_data(datas)
 
     def setImageTemp(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        utils.deprecation_msg(f'setImageTemp for PyMoDAQ Viewer2D is deprecated, use *show_data_temp* with'
+        pymodaq.daq_utils.messenger.deprecation_msg(f'setImageTemp for PyMoDAQ Viewer2D is deprecated, use *show_data_temp* with'
                          f'one argument as utils.DataFromPlugins')
         datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
                                                     data_blue=data_blue, data_spread=data_spread)

@@ -1,3 +1,4 @@
+import pymodaq.daq_utils.config
 from qtpy import QtWidgets, QtCore
 import sys
 import os
@@ -14,7 +15,7 @@ from collections import OrderedDict
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
-batch_path = utils.get_set_batch_path()
+batch_path = pymodaq.daq_utils.config.get_set_batch_path()
 
 params = [
     {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [

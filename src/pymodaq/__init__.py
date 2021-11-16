@@ -9,7 +9,8 @@ try:
         __version__ = fvers.read().strip()
 
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
-    from .daq_utils.daq_utils import set_logger, load_config, copy_preset, setLocale, set_qt_backend
+    from .daq_utils.daq_utils import set_logger, copy_preset, setLocale, set_qt_backend
+    from pymodaq.daq_utils.config import Config
 
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
@@ -28,7 +29,7 @@ try:
             print(infos)
             logger.warning(infos)
 
-    config = load_config()  # to ckeck for config file existence, otherwise create one
+    config = Config()  # to ckeck for config file existence, otherwise create one
     copy_preset()
     logger.info('')
     logger.info('')

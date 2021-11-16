@@ -9,7 +9,8 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.daq_utils.gui_utils import select_file
 
 # check if overshoot_configurations directory exists on the drive
-from pymodaq.daq_utils.daq_utils import get_set_overshoot_path
+from pymodaq.daq_utils.config import get_set_overshoot_path
+
 overshoot_path = get_set_overshoot_path()
 
 

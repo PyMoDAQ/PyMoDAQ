@@ -1,11 +1,12 @@
+from pymodaq.daq_utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
 from pymodaq.daq_utils import daq_utils as utils
 
 from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
 pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
-preset_path = utils.get_set_preset_path()
-config = utils.load_config()
+preset_path = get_set_preset_path()
+config = Config()
 
 @fixture
 def init_qt(qtbot):
@@ -27,7 +28,7 @@ class TestGeneral:
         win.setWindowTitle('PyMoDAQ Dashboard')
 
         dashboard = DashBoard(area)
-        file = preset_path.joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
+        file = preset_path.joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
 
         dashboard.set_preset_mode(file)
 

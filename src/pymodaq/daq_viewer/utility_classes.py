@@ -8,9 +8,9 @@ from pyqtgraph.parametertree import Parameter
 from easydict import EasyDict as edict
 
 import numpy as np
-from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D, get_set_local_dir
-
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, load_config
+from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.daq_utils.config import Config, get_set_local_dir
 from pymodaq.daq_utils.scanner import ScanParameters
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 
@@ -26,7 +26,7 @@ if local_path.joinpath('camera_calibrations').is_dir():
             calibs.append(file.stem)
 
 
-config = load_config()
+config = Config()
 
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
@@ -50,8 +50,8 @@ params = [
              'value': False},
             {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
             {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-             'value': config['network']['tcp-server']['ip']},
-            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config['network']['tcp-server']['port']},
+             'value': config('network', 'tcp-server', 'ip')},
+            {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
         ]},
         {'title': 'Overshoot options:', 'name': 'overshoot', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
@@ -98,7 +98,7 @@ def main(plugin_file, init=True):
     from pathlib import Path
 
     app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
+    if config('style', 'darkstyle'):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet())
 

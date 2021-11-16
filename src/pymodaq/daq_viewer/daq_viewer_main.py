@@ -5,6 +5,8 @@ Created on Wed Jan 10 16:54:14 2018
 @author: Weber Sébastien
 """
 import os
+
+
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QRectF
 import sys
@@ -21,7 +23,7 @@ from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils.plotting.widgets.lcd import LCD
-
+from pymodaq.daq_utils.config import Config, get_set_local_dir
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
 from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins
@@ -46,9 +48,9 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import DockArea, Dock
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-config = utils.load_config()
+config = Config()
 
-local_path = utils.get_set_local_dir()
+local_path = get_set_local_dir()
 
 DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
 DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
@@ -2180,7 +2182,7 @@ class DAQ_Detector(QObject):
 def main(init_qt=True):
     if init_qt: # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
-        if config['style']['darkstyle']:
+        if config('style', 'darkstyle'):
             import qdarkstyle
             app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
 

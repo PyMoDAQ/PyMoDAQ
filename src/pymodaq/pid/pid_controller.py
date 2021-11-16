@@ -644,7 +644,7 @@ class PIDRunner(QObject):
 
 def main():
     from pymodaq.dashboard import DashBoard
-    from pymodaq.daq_utils.daq_utils import get_set_preset_path
+    from pymodaq.daq_utils.config import get_set_preset_path
     from pathlib import Path
     import sys
     app = QtWidgets.QApplication(sys.argv)

@@ -1,6 +1,7 @@
 import sys
 from collections import OrderedDict
 import numpy as np
+from pymodaq.daq_utils.config import Config
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Signal, Slot
 
@@ -18,7 +19,7 @@ import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_types  # to be plac
 from pymodaq.daq_utils.exceptions import ScannerException
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-config = utils.load_config()
+config = Config()
 
 scan_types = ['Scan1D', 'Scan2D', 'Sequential', 'Tabular']
 scan_subtypes = dict(Scan1D=['Linear', 'Adaptive', 'Linear back to start', 'Random'],
@@ -155,7 +156,7 @@ class ScanParameters:
             return ScanInfo()
 
     def set_scan(self):
-        steps_limit = config['scan']['steps_limit']
+        steps_limit = config('scan', 'steps_limit')
         Nsteps = self.evaluate_Nsteps()
         if Nsteps > steps_limit:
             self.scan_info = ScanInfo(Nsteps=Nsteps)
@@ -274,22 +275,22 @@ class Scanner(QObject):
         {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
 
         {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': scan_types,
-         'value': config['scan']['default']},
+         'value': config('scan', 'default')},
         {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
             {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
-             'limits': scan_subtypes['Scan1D'], 'value': config['scan']['scan1D']['type'],
+             'limits': scan_subtypes['Scan1D'], 'value': config('scan', 'scan1D', 'type'),
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
             {'title': 'Loss type', 'name': 'scan1D_loss', 'type': 'list',
              'limits': [], 'tip': 'Type of loss used by the algo. to determine next points'},
-            {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': config['scan']['scan1D']['start']},
-            {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': config['scan']['scan1D']['stop']},
-            {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': config['scan']['scan1D']['step']}
+            {'title': 'Start:', 'name': 'start_1D', 'type': 'float', 'value': config('scan', 'scan1D', 'start')},
+            {'title': 'stop:', 'name': 'stop_1D', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
+            {'title': 'Step:', 'name': 'step_1D', 'type': 'float', 'value': config('scan', 'scan1D', 'step')}
         ]},
         {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'scan2D_type', 'type': 'list',
-             'limits': scan_subtypes['Scan2D'], 'value': config['scan']['scan2D']['type'],
+             'limits': scan_subtypes['Scan2D'], 'value': config('scan', 'scan2D', 'type'),
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
@@ -298,21 +299,21 @@ class Scanner(QObject):
             {'title': 'Selection:', 'name': 'scan2D_selection', 'type': 'list', 'limits': ['Manual', 'FromROI']},
             {'title': 'From module:', 'name': 'scan2D_roi_module', 'type': 'list', 'limits': [], 'visible': False},
             {'title': 'Start Ax1:', 'name': 'start_2d_axis1', 'type': 'float',
-             'value': config['scan']['scan2D']['start1'], 'visible': True},
+             'value': config('scan', 'scan2D', 'start1'), 'visible': True},
             {'title': 'Start Ax2:', 'name': 'start_2d_axis2', 'type': 'float',
-             'value': config['scan']['scan2D']['start2'], 'visible': True},
+             'value': config('scan', 'scan2D', 'start2'), 'visible': True},
             {'title': 'Step Ax1:', 'name': 'step_2d_axis1', 'type': 'float',
-             'value': config['scan']['scan2D']['step1'], 'visible': True},
+             'value': config('scan', 'scan2D', 'step1'), 'visible': True},
             {'title': 'Step Ax2:', 'name': 'step_2d_axis2', 'type': 'float',
-             'value': config['scan']['scan2D']['step2'], 'visible': True},
+             'value': config('scan', 'scan2D', 'step2'), 'visible': True},
             {'title': 'Npts/axis', 'name': 'npts_by_axis', 'type': 'int', 'min': 1,
-             'value': config['scan']['scan2D']['npts'],
+             'value': config('scan', 'scan2D', 'npts'),
              'visible': True},
             {'title': 'Stop Ax1:', 'name': 'stop_2d_axis1', 'type': 'float',
-             'value': config['scan']['scan2D']['stop1'], 'visible': True,
+             'value': config('scan', 'scan2D', 'stop1'), 'visible': True,
              'readonly': True, },
             {'title': 'Stop Ax2:', 'name': 'stop_2d_axis2', 'type': 'float',
-             'value': config['scan']['scan2D']['stop2'], 'visible': True,
+             'value': config('scan', 'scan2D', 'stop2'), 'visible': True,
              'readonly': True, },
 
         ]},
@@ -324,7 +325,7 @@ class Scanner(QObject):
         ]},
         {'title': 'Tabular settings', 'name': 'tabular_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'tabular_subtype', 'type': 'list',
-             'limits': scan_subtypes['Tabular'], 'value': config['scan']['tabular']['type'],
+             'limits': scan_subtypes['Tabular'], 'value': config('scan', 'tabular', 'type'),
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
@@ -335,7 +336,7 @@ class Scanner(QObject):
             {'title': 'From module:', 'name': 'tabular_roi_module', 'type': 'list', 'limits': [],
              'visible': False},
             {'title': 'Curvilinear Step:', 'name': 'tabular_step', 'type': 'float',
-             'value': config['scan']['tabular']['curvilinear']},
+             'value': config('scan', 'tabular', 'curvilinear')},
             {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
              'delegate': gutils.SpinBoxDelegate, 'menu': True},
         ]},
@@ -422,31 +423,31 @@ class Scanner(QObject):
         scan_type = config['scan']['default']
         self.settings.child('scan_type').setValue(scan_type)
 
-        self.settings.child('scan1D_settings', 'scan1D_type').setValue(config['scan']['scan1D']['type'])
-        self.settings.child('scan1D_settings', 'start_1D').setValue(config['scan']['scan1D']['start'])
-        self.settings.child('scan1D_settings', 'stop_1D').setValue(config['scan']['scan1D']['stop'])
-        self.settings.child('scan1D_settings', 'step_1D').setValue(config['scan']['scan1D']['step'])
+        self.settings.child('scan1D_settings', 'scan1D_type').setValue(config('scan', 'scan1D', 'type'))
+        self.settings.child('scan1D_settings', 'start_1D').setValue(config('scan', 'scan1D', 'start'))
+        self.settings.child('scan1D_settings', 'stop_1D').setValue(config('scan', 'scan1D', 'stop'))
+        self.settings.child('scan1D_settings', 'step_1D').setValue(config('scan', 'scan1D', 'step'))
 
-        self.settings.child('scan2D_settings', 'scan2D_type').setValue(config['scan']['scan2D']['type'])
+        self.settings.child('scan2D_settings', 'scan2D_type').setValue(config('scan', 'scan2D', 'type'))
         self.settings.child('scan2D_settings', 'start_2d_axis1').setValue(
-            config['scan']['scan2D']['start1'])
+            config('scan', 'scan2D', 'start1'))
         self.settings.child('scan2D_settings', 'start_2d_axis2').setValue(
-            config['scan']['scan2D']['start2'])
+            config('scan', 'scan2D', 'start2'))
         self.settings.child('scan2D_settings', 'step_2d_axis2').setValue(
-            config['scan']['scan2D']['step1'])
+            config('scan', 'scan2D', 'step1'))
         self.settings.child('scan2D_settings', 'step_2d_axis2').setValue(
-            config['scan']['scan2D']['step2'])
+            config('scan', 'scan2D', 'step2'))
         self.settings.child('scan2D_settings', 'npts_by_axis').setValue(
-            config['scan']['scan2D']['npts'])
+            config('scan', 'scan2D', 'npts'))
         self.settings.child('scan2D_settings', 'stop_2d_axis1').setValue(
-            config['scan']['scan2D']['stop1'])
+            config('scan', 'scan2D', 'stop1'))
         self.settings.child('scan2D_settings', 'stop_2d_axis2').setValue(
-            config['scan']['scan2D']['stop2'])
+            config('scan', 'scan2D', 'stop2'))
 
         self.settings.child('tabular_settings', 'tabular_subtype').setValue(
-            config['scan']['tabular']['type'])
+            config('scan', 'tabular', 'type'))
         self.settings.child('tabular_settings', 'tabular_step').setValue(
-            config['scan']['tabular']['curvilinear'])
+            config('scan', 'tabular', 'curvilinear'))
 
     @property
     def actuators(self):

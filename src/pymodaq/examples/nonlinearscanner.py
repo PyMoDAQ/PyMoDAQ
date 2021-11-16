@@ -1,5 +1,6 @@
 
 import numpy as np
+from pymodaq.daq_utils.config import Config, get_set_preset_path
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal, QLocale
 
@@ -7,7 +8,7 @@ from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils import daq_utils as utils
 
 
-config = utils.load_config()
+config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
@@ -89,7 +90,6 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
 
     from pymodaq.dashboard import DashBoard
-    from pymodaq.daq_utils.daq_utils import get_set_preset_path
 
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
@@ -98,7 +98,7 @@ def main():
     win.setWindowTitle('PyMoDAQ Dashboard')
 
     dash = DashBoard(area)
-    file = Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
+    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
     if file.exists():
         dash.set_preset_mode(file)
         dash.load_scan_module()

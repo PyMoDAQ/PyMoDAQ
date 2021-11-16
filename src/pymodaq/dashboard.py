@@ -8,6 +8,8 @@ import pickle
 import logging
 from pathlib import Path
 from importlib import import_module
+
+import pymodaq.daq_utils.config
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale
 
@@ -27,6 +29,7 @@ from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
 from pymodaq.daq_utils.managers.remote_manager import RemoteManager
 from pymodaq.daq_utils.managers.roi_manager import ROISaver
 from pymodaq.daq_utils.exceptions import DetectorError, ActuatorError
+from pymodaq.daq_utils import config as configmod
 
 from pymodaq.daq_move.daq_move_main import DAQ_Move
 from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
@@ -41,17 +44,17 @@ from packaging import version as version_mod
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
-config = utils.load_config()
+config = configmod.Config()
 
-local_path = utils.get_set_local_dir()
+local_path = configmod.get_set_local_dir()
 now = datetime.datetime.now()
-preset_path = utils.get_set_preset_path()
-log_path = utils.get_set_log_path()
-layout_path = utils.get_set_layout_path()
-layout_path = utils.get_set_layout_path()
-overshoot_path = utils.get_set_overshoot_path()
-roi_path = utils.get_set_roi_path()
-remote_path = utils.get_set_remote_path()
+preset_path = configmod.get_set_preset_path()
+log_path = configmod.get_set_log_path()
+layout_path = configmod.get_set_layout_path()
+layout_path = configmod.get_set_layout_path()
+overshoot_path = configmod.get_set_overshoot_path()
+roi_path = configmod.get_set_roi_path()
+remote_path = configmod.get_set_remote_path()
 
 extensions = utils.get_extensions()
 
@@ -113,7 +116,7 @@ class DashBoard(QObject):
 
         logger.info('Dashboard Initialized')
 
-        if config['general']['check_version']:
+        if config('general', 'check_version'):
             self.check_version(show=False)
 
     def set_preset_path(self, path):
@@ -268,12 +271,12 @@ class DashBoard(QObject):
         load_overshoot = self.overshoot_menu.addMenu('Load Overshoots')
 
         slots_over = dict([])
-        for ind_file, file in enumerate(utils.get_set_overshoot_path().iterdir()):
+        for ind_file, file in enumerate(configmod.get_set_overshoot_path().iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots_over[filestem] = load_overshoot.addAction(filestem)
                 slots_over[filestem].triggered.connect(
-                    self.create_menu_slot_over(utils.get_set_overshoot_path().joinpath(file)))
+                    self.create_menu_slot_over(configmod.get_set_overshoot_path().joinpath(file)))
 
         self.roi_menu = menubar.addMenu('ROI Modes')
         action_new_roi = self.roi_menu.addAction('Save Current ROIs as a file')
@@ -284,12 +287,12 @@ class DashBoard(QObject):
         load_roi = self.roi_menu.addMenu('Load roi configs')
 
         slots = dict([])
-        for ind_file, file in enumerate(utils.get_set_roi_path().iterdir()):
+        for ind_file, file in enumerate(configmod.get_set_roi_path().iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots[filestem] = load_roi.addAction(filestem)
                 slots[filestem].triggered.connect(
-                    self.create_menu_slot_roi(utils.get_set_roi_path().joinpath(file)))
+                    self.create_menu_slot_roi(configmod.get_set_roi_path().joinpath(file)))
 
         self.remote_menu = menubar.addMenu('Remote/Shortcuts Control')
         self.remote_menu.addAction('New remote config.', self.create_remote)
@@ -298,12 +301,12 @@ class DashBoard(QObject):
         load_remote = self.remote_menu.addMenu('Load remote config.')
 
         slots = dict([])
-        for ind_file, file in enumerate(utils.get_set_remote_path().iterdir()):
+        for ind_file, file in enumerate(configmod.get_set_remote_path().iterdir()):
             if file.suffix == '.xml':
                 filestem = file.stem
                 slots[filestem] = load_remote.addAction(filestem)
                 slots[filestem].triggered.connect(
-                    self.create_menu_slot_remote(utils.get_set_remote_path().joinpath(file)))
+                    self.create_menu_slot_remote(configmod.get_set_remote_path().joinpath(file)))
 
         # actions menu
         self.actions_menu = menubar.addMenu('Extensions')
@@ -396,7 +399,7 @@ class DashBoard(QObject):
 
     def modify_remote(self):
         try:
-            path = gutils.select_file(start_path=utils.get_set_remote_path(), save=False, ext='xml')
+            path = gutils.select_file(start_path=configmod.get_set_remote_path(), save=False, ext='xml')
             if path != '':
                 self.remote_manager.set_file_remote(path)
 
@@ -407,7 +410,7 @@ class DashBoard(QObject):
 
     def modify_overshoot(self):
         try:
-            path = gutils.select_file(start_path=utils.get_set_overshoot_path(), save=False, ext='xml')
+            path = gutils.select_file(start_path=configmod.get_set_overshoot_path(), save=False, ext='xml')
             if path != '':
                 self.overshoot_manager.set_file_overshoot(path)
 
@@ -418,7 +421,7 @@ class DashBoard(QObject):
 
     def modify_roi(self):
         try:
-            path = gutils.select_file(start_path=utils.get_set_roi_path(), save=False, ext='xml')
+            path = gutils.select_file(start_path=configmod.get_set_roi_path(), save=False, ext='xml')
             if path != '':
                 self.roi_saver.set_file_roi(path)
 
@@ -450,10 +453,10 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def remove_preset_related_files(self, name):
-        utils.get_set_roi_path().joinpath(name).unlink(missing_ok=True)
-        utils.get_set_layout_path().joinpath(name).unlink(missing_ok=True)
-        utils.get_set_overshoot_path().joinpath(name).unlink(missing_ok=True)
-        utils.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
+        configmod.get_set_roi_path().joinpath(name).unlink(missing_ok=True)
+        configmod.get_set_layout_path().joinpath(name).unlink(missing_ok=True)
+        configmod.get_set_overshoot_path().joinpath(name).unlink(missing_ok=True)
+        configmod.get_set_remote_path().joinpath(name).unlink(missing_ok=True)
 
     def quit_fun(self):
         """
@@ -527,7 +530,7 @@ class DashBoard(QObject):
         """
         try:
             if file is None:
-                file = gutils.select_file(start_path=utils.get_set_layout_path(), save=False, ext='dock')
+                file = gutils.select_file(start_path=configmod.get_set_layout_path(), save=False, ext='dock')
             if file is not None:
                 with open(str(file), 'rb') as f:
                     dockstate = pickle.load(f)
@@ -551,7 +554,7 @@ class DashBoard(QObject):
             if 'float' in dockstate:
                 dockstate['float'] = []
             if file is None:
-                file = gutils.select_file(start_path=utils.get_set_layout_path(), save=True, ext='dock')
+                file = gutils.select_file(start_path=configmod.get_set_layout_path(), save=True, ext='dock')
             if file is not None:
                 with open(str(file), 'wb') as f:
                     pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
@@ -1164,8 +1167,8 @@ class DashBoard(QObject):
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
     def show_config(self):
-        config = gutils.TreeFromToml()
-        config.show_dialog()
+        config_tree = configmod.TreeFromToml()
+        config_tree.show_dialog()
 
     def setupUI(self):
 
@@ -1181,8 +1184,8 @@ class DashBoard(QObject):
         self.logger_dock.addWidget(splitter)
 
         self.settings = Parameter.create(name='init_settings', type='group', children=[
-            {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config['general']['debug_level'],
-             'limits': config['general']['debug_levels']},
+            {'title': 'Log level', 'name': 'log_level', 'type': 'list', 'value': config('general', 'debug_level'),
+             'limits': config('general', 'debug_levels')},
 
             {'title': 'Loaded presets', 'name': 'loaded_files', 'type': 'group', 'children': [
                 {'title': 'Preset file', 'name': 'preset_file', 'type': 'str', 'value': '', 'readonly': True},
@@ -1349,7 +1352,7 @@ class DashBoard(QObject):
 def main(init_qt=True):
     if init_qt: # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
-        if config['style']['darkstyle']:
+        if config('style', 'darkstyle'):
             import qdarkstyle
             app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
 

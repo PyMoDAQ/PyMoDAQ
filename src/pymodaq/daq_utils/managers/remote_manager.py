@@ -1,5 +1,7 @@
 import os
 import sys
+
+import pymodaq.daq_utils.config
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtGui, QtWidgets
 
@@ -10,7 +12,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterT
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-remote_path = utils.get_set_remote_path()
+remote_path = pymodaq.daq_utils.config.get_set_remote_path()
 remote_types = ['ShortCut', 'Joystick']
 
 actuator_actions = ['move_Rel', 'move_Rel_p', 'move_Rel_m']

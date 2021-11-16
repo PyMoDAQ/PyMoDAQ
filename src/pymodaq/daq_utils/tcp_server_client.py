@@ -13,15 +13,16 @@ import numpy as np
 import pymodaq.daq_utils.parameter.ioxml
 import pymodaq.daq_utils.parameter.utils
 import pymodaq.daq_utils.parameter.pymodaq_ptypes
-from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand, load_config
+from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand
+from pymodaq.daq_utils.config import Config
 from pyqtgraph.parametertree import Parameter
 from collections import OrderedDict
 
-config = load_config()
+config = Config()
 
 tcp_parameters = [
-    {'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': config['network']['tcp-server']['port'], },
-    {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': config['network']['tcp-server']['ip'], },
+    {'title': 'Port:', 'name': 'port_id', 'type': 'int', 'value': config('network', 'tcp-server', 'port'), },
+    {'title': 'IP:', 'name': 'socket_ip', 'type': 'str', 'value': config('network', 'tcp-server', 'ip'), },
     {'title': 'Settings PyMoDAQ Client:', 'name': 'settings_client', 'type': 'group', 'children': []},
     {'title': 'Infos Client:', 'name': 'infos', 'type': 'group', 'children': []},
     {'title': 'Connected clients:', 'name': 'conn_clients', 'type': 'table',

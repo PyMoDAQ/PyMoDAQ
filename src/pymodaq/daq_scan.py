@@ -12,6 +12,7 @@ import numpy as np
 from pathlib import Path
 import os
 
+from pymodaq.daq_utils.config import Config, get_set_preset_path
 from pymodaq.daq_utils.managers.action_manager import QAction
 import pymodaq.daq_utils.parameter.ioxml
 
@@ -32,7 +33,7 @@ from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
 
-config = utils.load_config()
+config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
@@ -2099,7 +2100,7 @@ def main(init_qt=True):
             app.setStyleSheet(qdarkstyle.load_stylesheet())
 
     from pymodaq.dashboard import DashBoard
-    from pymodaq.daq_utils.daq_utils import get_set_preset_path
+
     win = QtWidgets.QMainWindow()
     area = gutils.DockArea()
     win.setCentralWidget(area)
@@ -2108,7 +2109,7 @@ def main(init_qt=True):
 
     dashboard = DashBoard(area)
     daq_scan = None
-    file = Path(get_set_preset_path()).joinpath(f"{config['presets']['default_preset_for_scan']}.xml")
+    file = Path(get_set_preset_path()).joinpath(f"{config('presets', 'default_preset_for_scan')}.xml")
     if file.exists():
         dashboard.set_preset_mode(file)
         daq_scan = dashboard.load_scan_module()

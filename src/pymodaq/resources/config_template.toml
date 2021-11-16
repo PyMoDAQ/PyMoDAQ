@@ -1,4 +1,14 @@
 #this is the configuration file of PyMoDAQ
+[style]
+darkstyle = false
+language = "English"
+country = "UnitedStates"
+
+[qtbackend]
+backends = [ "pyqt5", "pyqt6", "pyside2", "pyside6",]
+backend = "pyqt5"
+
+
 [data_saving]
     [data_saving.h5file]
     save_path = "C:\\Data"  #base path where data are automatically saved

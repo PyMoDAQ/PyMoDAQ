@@ -4,6 +4,8 @@ from collections import OrderedDict
 import warnings
 import logging
 from copy import deepcopy
+
+from pymodaq.daq_utils.config import Config
 from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
@@ -29,7 +31,7 @@ import copy
 import importlib
 from packaging import version as version_mod
 
-config = utils.load_config()
+config = Config()
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 backends_available = []
@@ -990,11 +992,11 @@ class H5SaverBase(H5Backend):
                 'readonly': True},
             {'title': 'HSDS Server:', 'name': 'hsds_options', 'type': 'group', 'visible': False, 'children': [
                 {'title': 'Endpoint:', 'name': 'endpoint', 'type': 'str',
-                    'value': config['data_saving']['hsds']['root_url'], 'readonly': False},
+                    'value': config('data_saving', 'hsds', 'root_url'), 'readonly': False},
                 {'title': 'User:', 'name': 'user', 'type': 'str',
-                    'value': config['data_saving']['hsds']['username'], 'readonly': False},
+                    'value': config('data_saving', 'hsds', 'username'), 'readonly': False},
                 {'title': 'password:', 'name': 'password', 'type': 'str',
-                    'value': config['data_saving']['hsds']['pwd'], 'readonly': False},
+                    'value': config('data_saving', 'hsds', 'pwd'), 'readonly': False},
             ]},
         ]},
 
@@ -1002,11 +1004,11 @@ class H5SaverBase(H5Backend):
         {'title': 'show file content?', 'name': 'show_file', 'type': 'bool_push', 'default': False,
             'value': False},
         {'title': 'Base path:', 'name': 'base_path', 'type': 'browsepath',
-            'value': config['data_saving']['h5file']['save_path'], 'filetype': False, 'readonly': True, },
+            'value': config('data_saving', 'h5file', 'save_path'), 'filetype': False, 'readonly': True, },
         {'title': 'Base name:', 'name': 'base_name', 'type': 'str', 'value': 'Scan', 'readonly': True},
         {'title': 'Current scan:', 'name': 'current_scan_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Current path:', 'name': 'current_scan_path', 'type': 'text',
-            'value': config['data_saving']['h5file']['save_path'], 'readonly': True, 'visible': False},
+            'value': config('data_saving', 'h5file', 'save_path'), 'readonly': True, 'visible': False},
         {'title': 'h5file:', 'name': 'current_h5_file', 'type': 'text', 'value': '', 'readonly': True},
         {'title': 'New file', 'name': 'new_file', 'type': 'action'},
         {'title': 'Saving dynamic', 'name': 'dynamic', 'type': 'list', 'limits': ['uint8', 'int8',
@@ -1019,7 +1021,7 @@ class H5SaverBase(H5Backend):
             {'title': 'Compression library:', 'name': 'h5comp_library', 'type': 'list', 'value': 'zlib',
                 'limits': ['zlib', 'gzip']},
             {'title': 'Compression level:', 'name': 'h5comp_level', 'type': 'int',
-                'value': config['data_saving']['h5file']['compression_level'], 'min': 0, 'max': 9},
+                'value': config('data_saving', 'h5file', 'compression_level'), 'min': 0, 'max': 9},
         ]},
     ]
 
@@ -2508,7 +2510,7 @@ def browse_data(fname=None, ret_all=False, message=None):
         | Browse data present in any h5 file, when user has selected the one,
     """
     if fname is None:
-        fname = str(select_file(start_path=config['data_saving']['h5file']['save_path'], save=False, ext='h5'))
+        fname = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=False, ext='h5'))
 
     if type(fname) != str:
         try:

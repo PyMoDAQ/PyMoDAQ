@@ -1,5 +1,7 @@
 import logging
 import datetime
+
+from pymodaq.daq_utils.config import Config
 from qtpy import QtCore
 from contextlib import contextmanager
 from sqlalchemy import create_engine
@@ -7,13 +9,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, Configuration
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.gui_utils import dashboard_submodules_params, messagebox
+from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
+from pymodaq.daq_utils.messenger import messagebox
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-config = utils.load_config()
+config = Config()
 
 
 class DBLogHandler(logging.StreamHandler):
@@ -29,11 +32,11 @@ class DBLogHandler(logging.StreamHandler):
 
 
 class DbLogger:
-    user = config['network']['logging']['user']['username']
-    user_pwd = config['network']['logging']['user']['pwd']
+    user = config('network', 'logging', 'user', 'username')
+    user_pwd = config('network', 'logging', 'user', 'pwd')
 
-    def __init__(self, database_name, ip_address=config['network']['logging']['sql']['ip'],
-                 port=config['network']['logging']['sql']['port'], save2D=False):
+    def __init__(self, database_name, ip_address=config('network', 'logging', 'sql', 'ip'),
+                 port=config('network', 'logging', 'sql', 'port'), save2D=False):
         """
 
         Parameters
@@ -182,17 +185,17 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
             'limits': ['PostgreSQL', ]},
         {'title': 'Server IP:', 'name': 'server_ip', 'type': 'str',
-            'value': config['network']['logging']['sql']['ip'],
+            'value': config('network', 'logging', 'sql', 'ip'),
          'tip':'Either localhost if the database server is on the same computer or the IP address of the server'},
         {'title': 'Server port:', 'name': 'server_port', 'type': 'int',
-            'value': config['network']['logging']['sql']['port']},
+            'value': config('network', 'logging', 'sql', 'port')},
         {'title': 'Connect:', 'name': 'connect_db', 'type': 'bool_push', 'value': False},
         {'title': 'Connected:', 'name': 'connected_db', 'type': 'led', 'value': False},
     ] + dashboard_submodules_params
 
     def __init__(self, database_name):
-        DbLogger.__init__(self, database_name, ip_address=config['network']['logging']['sql']['ip'],
-                          port=config['network']['logging']['sql']['port'], save2D=False)
+        DbLogger.__init__(self, database_name, ip_address=config('network', 'logging', 'sql', 'ip'),
+                          port=config('network', 'logging', 'sql', 'port'), save2D=False)
         QtCore.QObject.__init__(self)
 
         self.settings = Parameter.create(title='DB settings', name='db_settings', type='group',

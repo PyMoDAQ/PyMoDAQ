@@ -1,3 +1,4 @@
+import pymodaq.daq_utils.config
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, Qt
 import sys
@@ -18,7 +19,7 @@ from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.exceptions import ActuatorError
-local_path = utils.get_set_local_dir()
+local_path = pymodaq.daq_utils.config.get_set_local_dir()
 sys.path.append(local_path)
 
 logger = utils.set_logger(utils.get_module_name(__file__))

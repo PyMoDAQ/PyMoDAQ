@@ -2,6 +2,9 @@ import os
 import sys
 from collections import OrderedDict
 from ctypes import CFUNCTYPE
+
+from pymodaq.daq_utils.config import get_set_config_path, get_set_preset_path, Config
+
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 import datetime
@@ -19,7 +22,6 @@ import warnings
 import numpy as np
 from qtpy import QtCore
 from qtpy.QtCore import QLocale #, QVariant
-import toml
 
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
@@ -32,7 +34,7 @@ from pymodaq.daq_utils.exceptions import DataSourceError
 
 
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
-
+config = Config()
 
 Cb = 1.602176e-19  # coulomb
 h = 6.626068e-34  # J.s
@@ -41,59 +43,6 @@ c = 2.997924586e8  # m.s-1
 
 DATASOURCES = ('raw', 'roi')
 DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
-
-
-def get_set_local_dir(basename='pymodaq_local'):
-    """Defines, creates abd returns a local folder where configurations files will be saved
-
-    Parameters
-    ----------
-    basename: (str) how the configuration folder will be named
-
-    Returns
-    -------
-    Path: the local path
-    """
-    local_path = Path.home().joinpath(basename)
-
-    if not local_path.is_dir():                            # pragma: no cover
-        try:
-            local_path.mkdir()
-        except Exception as e:
-            local_path = Path(__file__).parent.parent.joinpath(basename)
-            info = f"Cannot create local folder from your **Home** defined location: {Path.home()}," \
-                   f" using PyMoDAQ's folder as local directory: {local_path}"
-            print(info)
-            if not local_path.is_dir():
-                local_path.mkdir()
-    return local_path
-
-
-def get_set_config_path(config_name='config'):
-    """Creates a folder in the local config directory to store specific configuration files
-
-    Parameters
-    ----------
-    config_name: (str) name of the configuration folder
-
-    Returns
-    -------
-
-    See Also
-    --------
-    get_set_local_dir
-    """
-    local_path = get_set_local_dir()
-    path = local_path.joinpath(config_name)
-    if not path.is_dir():
-        path.mkdir()  # pragma: no cover
-    return path
-
-
-def get_set_log_path():
-    """ creates and return the config folder path for log files
-    """
-    return get_set_config_path('log')
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
@@ -120,8 +69,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     log_path = get_set_config_path('log')
     if add_handler:
         if log_level is None:
-            config = load_config()
-            log_level = config['general']['debug_level']
+            log_level = config('general', 'debug_level')
         logger.setLevel(log_level)
         handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -144,10 +92,6 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
 logger = set_logger('daq_utils')
 
 
-def deprecation_msg(message):
-    warnings.warn(message, DeprecationWarning, stacklevel=3)
-
-
 def get_version():
     with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
         version = fvers.read().strip()
@@ -161,59 +105,23 @@ def copy_preset():                          # pragma: no cover
             path.write_text(file.read())
 
 
-def load_config(config_path=None):          # pragma: no cover
-    if not config_path:
-        config_path = get_set_local_dir().joinpath('config.toml')
-    config_base = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
-    if not config_path.exists():  # copy the template from pymodaq folder and create one in pymodad's local folder
-        config_path.write_text(toml.dumps(config_base))
-
-    # check if all fields are there
-    config = toml.load(config_path)
-    if check_config(config_base, config):
-        config_path.write_text(toml.dumps(config))
-    return config
-
-
-def set_config(config_as_dict, config_path=None):
-    if not config_path:
-        config_path = get_set_local_dir().joinpath('config.toml')
-
-    config_path.write_text(toml.dumps(config_as_dict))
-
-
-def check_config(config_base, config_local):
-    status = False
-    for key in config_base:
-        if key in config_local:
-            if isinstance(config_base[key], dict):
-                status = status or check_config(config_base[key], config_local[key])
-        else:
-            config_local[key] = config_base[key]
-            status = True
-    return status
-
-
-config = load_config()
-
-
 def set_qt_backend():
     backend_present = True
-    if config['qtbackend']['backend'].lower() not in [mod.lower() for mod in sys.modules]:
+    if config('qtbackend', 'backend').lower() not in [mod.lower() for mod in sys.modules]:
         backend_present = False
-        logger.warning(f"The chosen Qt backend ({config['qtbackend']['backend']}) has not been installed...\n"
+        logger.warning(f"The chosen Qt backend ({config('qtbackend', 'backend')}) has not been installed...\n"
                        f"Trying another...")
-        backends = config['qtbackend']['backends']
-        backends.pop(config['qtbackend']['backend'])
+        backends = config('qtbackend', 'backends')
+        backends.pop(config('qtbackend', 'backend'))
         for backend in backends:
             if backend.lower() in [mod.lower() for mod in sys.modules]:
                 backend_present = True
                 break
 
     if backend_present:
-        os.environ['QT_API'] = config['qtbackend']['backend']
+        os.environ['QT_API'] = config('qtbackend', 'backend')
         logger.info('************************')
-        logger.info(f"{config['qtbackend']['backend']} Qt backend loaded")
+        logger.info(f"{config('qtbackend', 'backend')} Qt backend loaded")
         logger.info('************************')
     else:
         logger.critical(f"No Qt backend could be found in your system, plese install either pyqt5/6 or pyside2/6")
@@ -831,8 +739,8 @@ def setLocale():
     defines the Locale to use to convert numbers to strings representation using language/country conventions
     Default is English and US
     """
-    language = getattr(QLocale, config['style']['language'])
-    country = getattr(QLocale, config['style']['country'])
+    language = getattr(QLocale, config('style', 'language'))
+    country = getattr(QLocale, config('style', 'country'))
     QLocale.setDefault(QLocale(language, country))
 
 
@@ -1141,7 +1049,6 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     return plugins_import
 
 
-
 def check_vals_in_iterable(iterable1, iterable2):
     assert len(iterable1) == len(iterable2)
     iterable1 = list(iterable1)  # so the assertion below is valid for any kind of iterable, list, tuple, ndarray...
@@ -1150,56 +1057,10 @@ def check_vals_in_iterable(iterable1, iterable2):
         assert val1 == val2
 
 
-
-
-def get_set_preset_path():
-    """ creates and return the config folder path for managers files
-    """
-    return get_set_config_path('preset_configs')
-
-def get_set_batch_path():
-    """ creates and return the config folder path for managers files
-    """
-    return get_set_config_path('batch_configs')
-
-
-def get_set_pid_path():
-    """ creates and return the config folder path for PID files
-    """
-    return get_set_config_path('pid_configs')
-
-
-
-
-def get_set_layout_path():
-    """ creates and return the config folder path for layout files
-    """
-    return get_set_config_path('layout_configs')
-
-
-def get_set_remote_path():
-    """ creates and return the config folder path for remote (shortcuts or joystick) files
-    """
-    return get_set_config_path('remote_configs')
-
-
-def get_set_overshoot_path():
-    """ creates and return the config folder path for overshoot files
-    """
-    return get_set_config_path('overshoot_configs')
-
-
-def get_set_roi_path():
-    """ creates and return the config folder path for managers files
-    """
-    return get_set_config_path('roi_configs')
-
-
 def get_module_name(module__file__path):
     """from the full path of a module extract its name"""
     path = Path(module__file__path)
     return path.stem
-
 
 
 def caller_name(skip=2):
@@ -1335,7 +1196,7 @@ def set_param_from_param(param_old, param_new):
 # ########################
 # #File management
 
-def get_new_file_name(base_path=Path(config['data_saving']['h5file']['save_path']), base_name='tttr_data'):
+def get_new_file_name(base_path=Path(config('data_saving', 'h5file', 'save_path')), base_name='tttr_data'):
     if isinstance(base_path, str):
         base_path = Path(base_path)
 

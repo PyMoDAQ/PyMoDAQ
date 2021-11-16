@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import datetime
 import numpy as np
+from pymodaq.daq_utils.config import Config
 
 from qtpy import QtWidgets
 from qtpy.QtCore import Slot, QDate, QThread
@@ -13,7 +14,7 @@ from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 
 from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
 
-config = utils.load_config()
+config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
@@ -23,7 +24,7 @@ class CustomAppExample(gutils.CustomApp):
     params = [
         {'title': 'Main settings:', 'name': 'main_settings', 'type': 'group', 'children': [
             {'title': 'Save base path:', 'name': 'base_path', 'type': 'browsepath',
-             'value': config['data_saving']['h5file']['save_path']},
+             'value': config('data_saving', 'h5file', 'save_path')},
             {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
             {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
             {'title': 'Do something, such as showing data:', 'name': 'do_something', 'type': 'bool', 'value': False},
