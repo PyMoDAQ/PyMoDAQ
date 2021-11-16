@@ -1,0 +1,6 @@
+import pytest
+
+qtbotskip = True
+
+
+

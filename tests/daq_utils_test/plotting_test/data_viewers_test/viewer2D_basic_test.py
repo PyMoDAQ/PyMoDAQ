@@ -3,7 +3,8 @@ from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
 
 import pytest
 import numpy as np
-
+from pymodaq.daq_utils.conftests import qtbotskip
+pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture
 def init_prog(qtbot):

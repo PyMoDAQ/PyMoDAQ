@@ -1,7 +1,8 @@
-from pathlib import Path
-from pytest import fixture, approx, mark
+from pytest import fixture, mark
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq import daq_scan as dscan
+
+from pymodaq.daq_utils.conftests import qtbotskip
+pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 preset_path = utils.get_set_preset_path()
 config = utils.load_config()

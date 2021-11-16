@@ -1,16 +1,14 @@
-from qtpy import QtWidgets, QtCore
-from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_viewer import daq_viewer_main as daqvm
-import pyqtgraph as pg
-from pathlib import Path
 import pytest
-from pytest import fixture, approx
-import numpy as np
-import pyqtgraph as pg
+from pytest import fixture
+from pymodaq.daq_utils.conftests import qtbotskip
+pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+
 
 @fixture
 def init_qt(qtbot):
     return qtbot
+
 
 class TestGeneral:
 

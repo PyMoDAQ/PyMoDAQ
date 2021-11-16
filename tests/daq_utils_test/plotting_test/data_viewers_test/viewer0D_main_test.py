@@ -1,13 +1,13 @@
 from qtpy import QtWidgets, QtCore
 import numpy as np
 import pytest
-from unittest import mock
 
 from pymodaq.daq_utils.daq_utils import gauss1D
 from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.daq_utils.exceptions import ExpectedError
 from collections import OrderedDict
 
+from pymodaq.daq_utils.conftests import qtbotskip
+pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture
 def init_prog(qtbot):
