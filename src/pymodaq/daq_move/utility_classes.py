@@ -7,13 +7,13 @@ from pymodaq.daq_utils.parameter import ioxml
 import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, set_logger, get_module_name
-from pymodaq import load_config
+from pymodaq.daq_utils.config import Config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
 from time import perf_counter
 
 logger = set_logger(get_module_name(__file__))
-config = load_config()
+config = Config()
 
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
                     {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
@@ -57,8 +57,8 @@ params = [
               'value': False},
              {'title': 'Connected?:', 'name': 'tcp_connected', 'type': 'led', 'value': False},
              {'title': 'IP address:', 'name': 'ip_address', 'type': 'str',
-              'value': config['network']['tcp-server']['ip']},
-             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config['network']['tcp-server']['port']},
+              'value': config('network', 'tcp-server', 'ip')},
+             {'title': 'Port:', 'name': 'port', 'type': 'int', 'value': config('network', 'tcp-server', 'port')},
          ]},
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
@@ -76,7 +76,7 @@ def main(plugin_file, init=True, title='test'):
     from pymodaq.daq_move.daq_move_main import DAQ_Move
     from pathlib import Path
     app = QtWidgets.QApplication(sys.argv)
-    if config['style']['darkstyle']:
+    if config('style', 'darkstyle'):
         import qdarkstyle
         app.setStyleSheet(qdarkstyle.load_stylesheet())
 
@@ -156,7 +156,7 @@ class DAQ_Move_base(QObject):
         self.settings.child('epsilon').setValue(self._epsilon)
 
         self.poll_timer = QTimer()
-        self.poll_timer.setInterval(config['actuator']['polling_interval_ms'])
+        self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self.poll_timer.timeout.connect(self.check_target_reached)
 
     @property

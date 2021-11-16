@@ -164,13 +164,6 @@ def check_config(config_base, config_local):
     return status
 
 
-if __name__ == '__main__':
-    config = load_config()
-    config = Config()
-    config('style', 'darkstyle')
-    assert config('style', 'darkstyle') == config['style']['darkstyle']
-
-
 class TreeFromToml(QObject):
     def __init__(self, conf_path=None):
         super().__init__()
@@ -259,3 +252,11 @@ class TreeFromToml(QObject):
                     param['show_pb'] = True
                 params.append(param)
         return params
+
+    
+if __name__ == '__main__':
+    config = load_config()
+    config = Config()
+    config('style', 'darkstyle')
+    assert config('style', 'darkstyle') == config['style']['darkstyle']
+
