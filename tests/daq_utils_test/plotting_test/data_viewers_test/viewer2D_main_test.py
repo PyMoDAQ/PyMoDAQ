@@ -16,7 +16,7 @@ import pyqtgraph as pg
 from pyqtgraph import mkPen
 from pymodaq.daq_utils.conftests import qtbotskip
 
-pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
 
 @fixture
 def init_qt(qtbot):

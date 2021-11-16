@@ -1,6 +1,7 @@
-import pytest
 
-qtbotskip = True
+qtbotskip = False
+
+main_modules_skip = True
 
 
 

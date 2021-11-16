@@ -1,5 +1,4 @@
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter, GroupParameter, GroupParameterItem
-
 from .bool import BoolPushParameterItem
 from .pixmap import PixmapParameterItem, PixmapCheckParameterItem
 from .slide import SliderSpinBox, SliderParameterItem
@@ -13,6 +12,8 @@ from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
 
 from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
+
+GroupParameterCustom = GroupParameter
 
 registerParameterItemType('bool_push', BoolPushParameterItem, SimpleParameter, override=True)
 registerParameterItemType('pixmap', PixmapParameterItem, SimpleParameter, override=True)

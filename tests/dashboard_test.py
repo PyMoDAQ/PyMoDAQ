@@ -1,7 +1,7 @@
 from pytest import fixture, mark
 from pymodaq.daq_utils import daq_utils as utils
 
-from pymodaq.daq_utils.conftests import qtbotskip
+from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
 pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 preset_path = utils.get_set_preset_path()
@@ -11,7 +11,7 @@ config = utils.load_config()
 def init_qt(qtbot):
     return qtbot
 
-
+@mark.skipif(main_modules_skip, reason='main module heavy qt5 testing')
 class TestGeneral:
     def test_main_setfilepreset_quit(self, init_qt):
         qtbot = init_qt

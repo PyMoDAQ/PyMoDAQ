@@ -1,6 +1,6 @@
 from pymodaq.daq_move import daq_move_main as daqmm
 from pytest import fixture, approx, mark
-from pymodaq.daq_utils.conftests import qtbotskip
+from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
 pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 
@@ -9,8 +9,8 @@ def init_qt(qtbot):
     return qtbot
 
 
+@mark.skipif(main_modules_skip, reason='main module heavy qt5 testing')
 class TestGeneral:
-
     def test_main_set_daqtype_init_snap_desinit_quit(self, init_qt):
         qtbot = init_qt
         mover, win = daqmm.main(False)
