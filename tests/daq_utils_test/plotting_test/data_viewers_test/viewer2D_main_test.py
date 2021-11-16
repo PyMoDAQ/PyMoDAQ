@@ -44,7 +44,8 @@ def init_prog(qtbot):
 
     prog.parent.show()
     
-    return prog, qtbot
+    yield prog, qtbot
+    form.close()
 
 @fixture
 def init_prog_show_data(init_prog, distribution='uniform'):
@@ -287,7 +288,7 @@ class TestViewer2D:
         create_one_roi(prog, qtbot)
         QtWidgets.QApplication.processEvents()
 
-        with qtbot.waitSignal(prog.roi_lineout_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
             prog.update_data()
 
     def test_update_data_crosshair(self, init_prog_show_data):
@@ -295,7 +296,7 @@ class TestViewer2D:
         prog.view.get_action('crosshair').trigger()
         QtWidgets.QApplication.processEvents()
 
-        with qtbot.waitSignal(prog.crosshair_lineout_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000) as blocker:
             prog.update_data()
 
 
@@ -366,9 +367,9 @@ class TestActions:
     @pytest.mark.parametrize('action', ['position', 'red', 'green', 'blue', 'autolevels', 'auto_levels_sym',
                                         'histo', 'roi', 'isocurve', 'aspect_ratio', 'crosshair',
                                         'ROIselect', 'flip_ud', 'flip_lr', 'rotate'])
-    def test_actionhas(self, qtbot, action):
-        action_manager = pymodaq.daq_utils.managers.action_manager.ActionManager()
-        assert action_manager.has_action(action)
+    def test_actionhas(self, init_prog, action):
+        prog, qtbot = init_prog
+        assert prog.view.has_action(action)
 
     @pytest.mark.parametrize('color', ['red', 'green', 'blue'])
     def test_color_action(self, init_prog, color):
@@ -388,7 +389,6 @@ class TestActions:
         prog, qtbot = init_prog
         data_red, data_green, data_blue, data_spread = init_data()
 
-        
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         prog.show_data(data)
 
@@ -688,7 +688,7 @@ class TestCrosshair:
         XCROSS = 24
         YCROSS = 75
 
-        with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.view.get_crosshair_signal(), timeout=1000) as blocker:
             prog.view.get_action('crosshair').trigger()
 
         with qtbot.waitSignal(prog.crosshair_dragged, timeout=1000) as blocker:
@@ -817,13 +817,13 @@ class TestModifyImages:
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         datas = dict(red=data_red, green=data_green)
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.show_data(data)
 
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('flip_ud').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(np.flipud(data['data'][ind])))
@@ -834,12 +834,12 @@ class TestModifyImages:
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         prog.show_data(data)
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('flip_lr').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(np.fliplr(data['data'][ind])))
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('flip_lr').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))
@@ -850,12 +850,12 @@ class TestModifyImages:
         data = utils.DataFromPlugins(distribution='uniform', data=[data_red, data_green])
         prog.show_data(data)
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('rotate').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(np.flipud(np.transpose(data['data'][ind]))))
 
-        with qtbot.waitSignal(prog.data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
             prog.view.get_action('rotate').trigger()
         for ind, data_to_show in enumerate(blocker.args[0]['data']):
             assert np.any(data_to_show == approx(data['data'][ind]))

@@ -9,7 +9,8 @@ def init_prog(qtbot):
     form = QtWidgets.QWidget()
     prog = ViewerND()
     qtbot.addWidget(form)
-    return prog
+    yield prog
+    form.close()
 
 
 class TestViewer2D:

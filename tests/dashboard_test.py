@@ -12,7 +12,6 @@ def init_qt(qtbot):
 
 
 class TestGeneral:
-    @mark.skip
     def test_main_setfilepreset_quit(self, init_qt):
         qtbot = init_qt
         from qtpy import QtWidgets
@@ -20,6 +19,7 @@ class TestGeneral:
         from pymodaq.daq_utils import gui_utils as gutils
 
         win = QtWidgets.QMainWindow()
+        qtbot.addWidget(win)
         area = gutils.DockArea()
         win.setCentralWidget(area)
         win.resize(1000, 500)

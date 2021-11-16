@@ -11,7 +11,8 @@ def init_prog(qtbot):
     prog = Viewer2DBasic(form)
     prog.setupUI()
     qtbot.addWidget(form)
-    return prog
+    yield prog
+    form.close()
 
 
 @pytest.fixture
@@ -20,7 +21,8 @@ def init_image(qtbot):
     img = ImageWidget(form)
     img.setupUI()
     qtbot.addWidget(form)
-    return img
+    yield img
+    form.close()
 
 
 @pytest.fixture
@@ -28,7 +30,8 @@ def init_view(qtbot):
     form = QtWidgets.QWidget()
     view = View_cust()
     qtbot.addWidget(form)
-    return view
+    yield view
+    form.close()
 
 
 class TestViewer2DBasic:

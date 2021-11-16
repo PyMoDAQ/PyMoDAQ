@@ -183,7 +183,6 @@ class DAQ_Move(Ui_Form, QObject):
         if self.actuator != actuator:
             raise ActuatorError(f'{actuator} is not a valid installed actuator: {self.stage_types}')
 
-
     def init(self):
         self.ui.IniStage_pb.click()
 

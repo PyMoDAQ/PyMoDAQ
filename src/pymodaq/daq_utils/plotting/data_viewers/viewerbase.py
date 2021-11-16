@@ -28,6 +28,7 @@ class ViewerBase(QObject):
         self.title = title if title != '' else self.__class__.__name__
 
         self._raw_datas = None
+        self.data_to_export = OrderedDict(name=self.title)
 
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -40,7 +41,6 @@ class ViewerBase(QObject):
         if len(datas['data'][0].shape) != 2:
             raise ViewerError(f'Ndarray of dim: {len(datas["data"][0].shape)} cannot be plotted'
                               f' using a {self.viewer_type}')
-
         self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict())
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self._raw_datas = datas

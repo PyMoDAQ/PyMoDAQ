@@ -817,10 +817,10 @@ class Viewer2D(ViewerBase):
             self._data_to_show_signal.emit(self._datas)
 
             if self.view.is_action_checked('roi'):
-                self.roi_changed(self.view.roi_manager.ROIs)
+                self.roi_changed()
 
             if self.view.is_action_checked('crosshair'):
-                self.crosshair_changed(*self.view.crosshair.get_positions())
+                self.crosshair_changed()
 
     def set_image_transform(self):
         """
@@ -897,7 +897,7 @@ class Viewer2D(ViewerBase):
     def double_clicked(self, posx, posy):
         if self.view.is_action_checked('crosshair'):
             self.view.crosshair.set_crosshair_position(posx, posy)
-            self.crosshair_changed(posx, posy)
+            self.crosshair_changed()
         self.sig_double_clicked.emit(posx, posy)
 
     def set_scaling_axes(self, scaling_options: utils.ScalingOptions):
@@ -1010,7 +1010,7 @@ def main_controller():
     prog.view.get_action('autolevels').trigger()
 
     #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
-    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red]))
+    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     #prog.ROI_select_signal.connect(print_roi_select)
     #prog.view.get_action('ROIselect').trigger()

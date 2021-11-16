@@ -18,7 +18,9 @@ def init_prog(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer1D(form)
     qtbot.addWidget(prog)
-    return prog
+    yield prog
+    form.close()
+
 
 
 @pytest.fixture
@@ -26,7 +28,8 @@ def init_prog_math(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer1D_math()
     qtbot.addWidget(form)
-    return prog
+    yield prog
+    form.close()
 
 
 class TestViewer1D:
@@ -74,9 +77,7 @@ class TestViewer1D:
         assert not prog.ui.do_measurements_pb.isChecked()
         assert prog.ui.Do_math_pb.isChecked()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_zoom_pb(self, mock_exception, init_prog):
-        mock_exception.return_value = None
+    def test_zoom_pb(self, init_prog):
         prog = init_prog
 
         x = np.linspace(0, 200, 201)
@@ -115,13 +116,9 @@ class TestViewer1D:
         assert prog.legend.isVisible()
         assert not prog.ui.xyplot_action.isChecked()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_do_scatter(self, mock_logger, init_prog):
-        mock_logger.side_effect = [ExpectedError]
+    def test_do_scatter(self, init_prog):
         prog = init_prog
-
-        with pytest.raises(ExpectedError):
-            prog.do_scatter()
+        prog.do_scatter()
 
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_graph1D')
     def test_do_xy(self, mock_graph, init_prog):
@@ -305,9 +302,7 @@ class TestViewer1D:
         assert not prog.ui.x_label.isVisible()
         assert not prog.ui.y_label.isVisible()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_do_math_fun(self, mock_logger, init_prog):
-        mock_logger.side_effect = [ExpectedError]
+    def test_do_math_fun(self,  init_prog):
         prog = init_prog
 
         prog.ui.Do_math_pb.setChecked(True)
@@ -315,14 +310,10 @@ class TestViewer1D:
 
         prog.ui.Do_math_pb.setChecked(False)
         prog.do_math_fun()
-
         roi_manager = mock.Mock()
         roi_manager.roiwidget.hide.side_effect = [Exception]
-
         prog.roi_manager = roi_manager
-
-        with pytest.raises(ExpectedError):
-            prog.do_math_fun()
+        prog.do_math_fun()
 
     def test_do_zoom(self, init_prog):
         prog = init_prog
@@ -336,11 +327,9 @@ class TestViewer1D:
         with pytest.raises(ExpectedError):
             prog.do_zoom()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
     @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_graph1D')
-    def test_enable_zoom(self, mock_graph, mock_except, init_prog):
+    def test_enable_zoom(self, mock_graph, init_prog):
         mock_graph.return_value = None
-        mock_except.side_effect = [ExpectedError]
 
         prog = init_prog
 
@@ -354,30 +343,18 @@ class TestViewer1D:
 
         prog.ui.zoom_pb.setChecked(True)
         assert prog.ui.zoom_pb.isChecked()
-
         prog.enable_zoom()
-
         assert prog.ui.zoom_region.getRegion() == (np.min(prog._x_axis), np.max(prog._x_axis))
         assert not prog.ui.zoom_widget.isHidden()
-
         prog.ui.zoom_pb.setChecked(False)
         assert not prog.ui.zoom_pb.isChecked()
-
+        prog.enable_zoom()
+        assert prog.ui.zoom_widget.isHidden()
         prog.enable_zoom()
 
-        assert prog.ui.zoom_widget.isHidden()
-
-        with pytest.raises(ExpectedError):
-            prog.enable_zoom()
-
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_ini_data_plots(self, mock_except, init_prog):
-        mock_except.side_effect = [ExpectedError]
-
+    def test_ini_data_plots(self,  init_prog):
         prog = init_prog
-
         prog._labels = ['x_axis', 'y_axis', 'z_axis']
-
         prog.ini_data_plots(3)
 
         assert len(prog.legend.items) == 3
@@ -387,9 +364,7 @@ class TestViewer1D:
 
         assert len(prog.legend.items) == 2
         assert len(prog.plot_channels) == 2
-
-        with pytest.raises(ExpectedError):
-            prog.ini_data_plots(4)
+        prog.ini_data_plots(4)
 
     def test_update_labels(self, init_prog):
         prog = init_prog
@@ -432,12 +407,7 @@ class TestViewer1D:
         prog.lock_aspect_ratio()
         assert prog.viewer.plotwidget.plotItem.vb.state['aspectLocked']
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.DAQ_Measurement.Quit_fun')
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_measurement_module')
-    def test_open_measurement_module(self, mock_meas, mock_quit, init_prog):
-        mock_meas.side_effect = [Expected_1]
-        mock_quit.side_effect = [Expected_2]
-
+    def test_open_measurement_module(self, init_prog):
         prog = init_prog
 
         prog.measurement_module = None
@@ -448,7 +418,7 @@ class TestViewer1D:
         prog.ui.do_measurements_pb.setChecked(True)
         assert prog.ui.do_measurements_pb.isChecked()
 
-        with pytest.raises(Expected_1):
+        with pytest.raises(IndexError):
             prog.open_measurement_module()
 
         assert prog.ui.Do_math_pb.isChecked()
@@ -458,8 +428,7 @@ class TestViewer1D:
         prog.ui.do_measurements_pb.setChecked(False)
         assert not prog.ui.do_measurements_pb.isChecked()
 
-        with pytest.raises(Expected_2):
-            prog.open_measurement_module()
+        prog.open_measurement_module()
 
     def test_remove_plots(self, init_prog):
         prog = init_prog
@@ -502,10 +471,7 @@ class TestViewer1D:
         assert axis.labelText == axis_settings['label']
         assert axis.labelUnits == axis_settings['units']
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_show_data(self, mock_except, init_prog):
-        mock_except.side_effect = [ExpectedError]
-
+    def test_show_data(self, init_prog):
         prog = init_prog
 
         datas = [np.linspace(1, 10, 10), np.linspace(11, 20, 10)]
@@ -534,8 +500,7 @@ class TestViewer1D:
         labels = ['CH0']
         x_axis = datas[0]
 
-        with pytest.raises(ExpectedError):
-            prog.show_data(datas, labels, x_axis)
+        prog.show_data(datas, labels, x_axis)
 
         assert np.array_equal(prog.datas, datas)
 
@@ -551,10 +516,7 @@ class TestViewer1D:
         assert np.array_equal(prog.x_axis, x_axis)
         assert prog.labels == labels
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_show_data_temp(self, mock_except, init_prog):
-        mock_except.side_effect = [ExpectedError]
-
+    def test_show_data_temp(self, init_prog):
         prog = init_prog
         prog.labels = ['CH0', 'CH1']
         prog.x_axis = None
@@ -577,8 +539,7 @@ class TestViewer1D:
         for ind, data in enumerate(datas):
             assert np.array_equal(prog.plot_channels[ind].getData(), (x_axis, data))
 
-        with pytest.raises(ExpectedError):
-            prog.show_data_temp(None)
+        prog.show_data_temp(None)
 
     def test_show_math(self, init_prog):
         prog = init_prog
@@ -733,14 +694,10 @@ class TestViewer1D:
         assert np.array_equal(prog.measurement_module.xdata, x_data)
         assert np.array_equal(prog.measurement_module.ydata, datas[0])
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.info')
-    def test_update_status(self, mock_info, init_prog):
-        mock_info.side_effect = [ExpectedError]
-
+    def test_update_status(self, init_prog):
         prog = init_prog
 
-        with pytest.raises(ExpectedError):
-            prog.update_status('')
+        prog.update_status('')
 
     def test_x_axis(self, init_prog):
         prog = init_prog
@@ -770,12 +727,8 @@ class TestViewer1D_math:
         assert prog.datas == prog.ROI_bounds == prog.operations == prog.channels == []
         assert not prog.x_axis
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
-    def test_update_math(self, mock_except, init_prog_math):
-        mock_except.side_effect = [None, ExpectedError]
-
+    def test_update_math(self, init_prog_math):
         prog = init_prog_math
-
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
         ROI_bounds = [[12, 17], [12, 17], [12, 17], [12, 17]]
         x_axis = datas[1]
@@ -800,5 +753,4 @@ class TestViewer1D_math:
 
         assert not prog.update_math(None)
 
-        with pytest.raises(ExpectedError):
-            prog.update_math(None)
+        prog.update_math(None)

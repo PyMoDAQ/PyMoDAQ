@@ -49,17 +49,18 @@ class FilterFromCrosshair(Filter):
         self._x, self._y = 0., 0.
 
     def _filter_data(self, datas: utils.DataFromPlugins):
-        self._x, self._y = self.crosshair.get_positions()
-        data_type = datas['distribution']
         data_dict = dict([])
-        for data_index in range(len(self._image_keys)):
-            if data_index < len(datas['data']):
-                data = datas['data'][data_index]
-                image_type = self._image_keys[data_index]
-                if data_type == 'uniform':
-                    data_dict[image_type] = self.get_data_from_uniform(image_type, data)
-                elif data_type == 'spread':
-                    data_dict[image_type] = self.get_data_from_spread(image_type, data)
+        if datas is not None:
+            self._x, self._y = self.crosshair.get_positions()
+            data_type = datas['distribution']
+            for data_index in range(len(self._image_keys)):
+                if data_index < len(datas['data']):
+                    data = datas['data'][data_index]
+                    image_type = self._image_keys[data_index]
+                    if data_type == 'uniform':
+                        data_dict[image_type] = self.get_data_from_uniform(image_type, data)
+                    elif data_type == 'spread':
+                        data_dict[image_type] = self.get_data_from_spread(image_type, data)
         return data_dict
 
     def get_data_from_uniform(self, data_key, data):
@@ -151,13 +152,14 @@ class FilterFromRois(Filter):
 
     def _filter_data(self, datas: utils.DataFromPlugins) -> dict:
         data_dict = dict([])
-        for roi_key, roi in self._ROIs.items():
-            image_key = self._roi_settings.child('ROIs', roi_key, 'use_channel').value()
-            image_index = self._image_keys.index(image_key)
+        if datas is not None:
+            for roi_key, roi in self._ROIs.items():
+                image_key = self._roi_settings.child('ROIs', roi_key, 'use_channel').value()
+                image_index = self._image_keys.index(image_key)
 
-            data_type = datas['distribution']
-            data = datas['data'][image_index]
-            data_dict[roi_key] = self.get_xydata_from_roi(data_type, roi, data)
+                data_type = datas['distribution']
+                data = datas['data'][image_index]
+                data_dict[roi_key] = self.get_xydata_from_roi(data_type, roi, data)
         return data_dict
 
 
