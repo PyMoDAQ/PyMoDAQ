@@ -4,7 +4,7 @@ import pytest
 from unittest import mock
 
 from pymodaq.daq_utils.daq_utils import gauss1D
-from pymodaq.daq_utils.plotting.viewer0D.viewer0D_main import Viewer0D
+from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.daq_utils.exceptions import ExpectedError
 from collections import OrderedDict
 
@@ -15,7 +15,9 @@ def init_prog(qtbot):
     prog = Viewer0D(form)
     form.show()
     qtbot.addWidget(form)
-    return prog, qtbot
+    yield prog, qtbot
+    form.close()
+
 
 class TestViewer0D:
     def test_init(self, init_prog):
@@ -27,9 +29,6 @@ class TestViewer0D:
         prog = Viewer0D(None)
         assert isinstance(prog.parent, QtWidgets.QWidget)
 
-    @pytest.mark.skip  # causes error on pytest on github actions ??
-    # File "/opt/hostedtoolcache/Python/3.8.12/x64/lib/python3.8/site-packages/pyqtgraph/graphicsItems/AxisItem.py",
-    # line 1126 in generateDrawSpecs
     def test_clear_pb(self, init_prog):
         prog, qtbot = init_prog
 
@@ -89,23 +88,6 @@ class TestViewer0D:
             assert data.size == 0
         assert prog.x_axis.size == 0
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer0D.viewer0D_main.logger.exception')
-    @mock.patch('pymodaq.daq_utils.plotting.viewer0D.viewer0D_main.Viewer0D.update_Graph1D')
-    def test_show_data(self, mock_update, mock_logger, init_prog):
-        mock_update.side_effect = [None, Exception]
-        mock_logger.side_effect = [ExpectedError]
-
-        prog, qtbot = init_prog
-
-        x = np.linspace(0, 200, 2)
-        y1 = gauss1D(x, 75, 25)
-        y2 = gauss1D(x, 120, 50, 2)
-        prog.parent.show()
-        with pytest.raises(ExpectedError):
-            for ind, data in enumerate(y1):
-                prog.show_data([[data], [y2[ind]]])
-                QtWidgets.QApplication.processEvents()
-
     def test_show_data_list(self, init_prog):
         prog, qtbot = init_prog
         prog.parent.show()
@@ -120,10 +102,7 @@ class TestViewer0D:
         
         assert not prog.show_data_temp(None)
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer0D.viewer0D_main.logger.exception')
-    def test_update_Graph1D(self, mock_except, init_prog):
-        mock_except.side_effect = [ExpectedError]
-
+    def test_update_Graph1D(self, init_prog):
         prog, qtbot = init_prog
 
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
@@ -143,9 +122,9 @@ class TestViewer0D:
         prog.update_Graph1D(datas)
 
         assert np.array_equal(prog.plot_channels[0].getData(), np.array((np.array(prog.x_axis),
-                                                          np.append(datas[0], datas[0])[1:])))
+                                                                         np.append(datas[0], datas[0])[1:])))
         assert np.array_equal(prog.plot_channels[1].getData(), np.array((np.array(prog.x_axis),
-                                                          np.append(datas[1], datas[1])[1:])))
+                                                                         np.append(datas[1], datas[1])[1:])))
 
         assert prog.data_to_export['data0D']['CH000']
         assert prog.data_to_export['data0D']['CH001']
@@ -153,9 +132,6 @@ class TestViewer0D:
         data_tot = np.array([np.append(datas[0], datas[0])[1:], np.append(datas[1], datas[1])[1:]])
         assert np.array_equal(np.array(prog.datas), data_tot)
 
-        with pytest.raises(ExpectedError):
-            prog.update_Graph1D(None)
-        
     def test_update_channels(self, init_prog):
         prog, qtbot = init_prog
 

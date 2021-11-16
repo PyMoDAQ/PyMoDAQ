@@ -12,25 +12,25 @@ import numpy as np
 from pathlib import Path
 import os
 
+from pymodaq.daq_utils.managers.action_manager import QAction
 import pymodaq.daq_utils.parameter.ioxml
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, QDateTime, QDate, QTime
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 from pymodaq.daq_utils import exceptions
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1D_main import Viewer1D
-from pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic import Viewer1DBasic
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
 from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Saver
-from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
 config = utils.load_config()
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -120,6 +120,9 @@ class DAQ_Scan(QObject):
 
         logger.info('DAQ_Scan Initialized')
 
+    ################
+    #  CONFIG/SETUP UI / EXIT
+
     def set_config(self):
         self.settings.child('time_flow', 'wait_time').setValue(config['scan']['timeflow']['wait_time'])
         self.settings.child('time_flow', 'wait_time_between').setValue(config['scan']['timeflow']['wait_time'])
@@ -127,9 +130,52 @@ class DAQ_Scan(QObject):
 
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
 
-    @Slot(list)
-    def update_actuators(self, actuators):
-        self.scanner.actuators = actuators
+    def setup_modules(self, filename):
+        """
+
+        """
+        try:
+
+            ######################################################################
+            # set scan selector
+            items = OrderedDict()
+            if self.navigator is not None:
+                items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
+            for det in self.modules_manager.detectors_all:
+                if len([view for view in det.ui.viewers if view.viewer_type == 'Data2D']) != 0:
+                    items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
+                                            names=[view.title for view in det.ui.viewers if
+                                                   view.viewer_type == 'Data2D'], )
+            items["DAQ_Scan"] = dict(viewers=[self.ui.scan2D_graph], names=["DAQ_Scan"])
+
+            if self.navigator is not None:
+                items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
+                items.update(self.scanner.scan_selector.viewers_items)
+
+            self.scanner.viewers_items = items
+
+            self.scanner.scan_selector.widget.setVisible(False)
+            self.scanner.scan_selector.settings.child('scan_options', 'scan_type').hide()
+
+            self.scanner.scan_selector.widget.setVisible(False)
+            self.scanner.scan_selector.show_scan_selector(visible=False)
+
+            # setting moves and det in tree
+            preset_items_det = [mod for ind, mod in enumerate(self.modules_manager.detectors_all) if ind == 0]
+            self.settings.child('scan_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
+            if preset_items_det != []:
+                self.settings.child('scan_options', 'plot_from').setValue(preset_items_det[0].title)
+
+            self.show_average_dock(False)
+
+            self.ui.scan_dock.setEnabled(True)
+            self.file_menu.setEnabled(True)
+            self.settings_menu.setEnabled(True)
+            self.create_new_file(True)
+
+        except Exception as e:
+            logger.exception(str(e))
+            # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
     def create_average_dock(self):
         self.ui.average_dock = gutils.Dock("Averaging")
@@ -175,50 +221,6 @@ class DAQ_Scan(QObject):
         action_batcher = self.settings_menu.addAction('Show Batch Scanner')
         action_batcher.triggered.connect(lambda: self.show_batcher(menubar))
 
-    def show_batcher(self, menubar):
-        self.batcher = BatchScanner(self.dockarea, self.modules_manager.actuators_name,
-                                    self.modules_manager.detectors_name)
-        self.batcher.create_menu(menubar)
-        self.batcher.setupUI()
-        self.ui.start_batch_pb.setVisible(True)
-
-    def load_file(self):
-        self.h5saver.load_file(self.h5saver.h5_file_path)
-
-    def move_to_crosshair(self, posx=None, posy=None):
-        """
-            Compute the scaled position from the given x/y position and send the command_DAQ signal with computed values as attributes.
-
-
-            =============== =========== ==============================
-            **Parameters**    **Type**   **Description**
-            *posx*           float       the original x position
-            *posy*           float       the original y position
-            =============== =========== ==============================
-
-            See Also
-            --------
-            update_status
-        """
-        try:
-            if self.ui.move_to_crosshair_cb.isChecked():
-                if "2D" in self.scanner.settings.child('scan_type').value():
-                    if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
-                        posx_real = posx * self.ui.scan2D_graph.x_axis.axis_scaling +\
-                                    self.ui.scan2D_graph.x_axis.axis_offset
-                        posy_real = posy * self.ui.scan2D_graph.y_axis.axis_scaling +\
-                                    self.ui.scan2D_graph.y_axis.axis_offset
-                        self.move_at(posx_real, posy_real)
-                    else:
-                        self.update_status("not valid configuration, check number of stages and scan2D option",
-                                           log_type='log')
-        except Exception as e:
-            logger.exception(str(e))
-            # self.update_status(getLineInfo()+ str(e),log_type='log')
-
-    def move_at(self, posx_real, posy_real):
-        self.command_DAQ_signal.emit(["move_stages", [posx_real, posy_real]])
-
     def quit_fun(self):
         """
             Quit the current instance of DAQ_scan and close on cascade move and detector modules.
@@ -236,6 +238,342 @@ class DAQ_Scan(QObject):
         except Exception as e:
             logger.exception(str(e))
 
+    def setupUI(self):
+        self.ui = QObject()
+        widgetsettings = QtWidgets.QWidget()
+        self.ui.verticalLayout = QtWidgets.QVBoxLayout()
+        widgetsettings.setLayout(self.ui.verticalLayout)
+        self.ui.StatusBarLayout = QtWidgets.QHBoxLayout()
+        self.ui.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+
+        self.ui.verticalLayout.addWidget(self.ui.splitter)
+        self.ui.verticalLayout.addLayout(self.ui.StatusBarLayout)
+
+        self.ui.horizontalLayout = QtWidgets.QHBoxLayout()
+        sett_widget = QtWidgets.QWidget()
+        self.ui.settings_layout = QtWidgets.QVBoxLayout()
+        sett_widget.setLayout(self.ui.settings_layout)
+        self.ui.horizontalLayout.addWidget(sett_widget)
+
+        # ###########################BUTTONS##################
+        widget_buttons = QtWidgets.QWidget()
+        self.ui.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        widget_buttons.setLayout(self.ui.horizontalLayout_2)
+
+        iconquit = QtGui.QIcon()
+        iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.quit_pb = QtWidgets.QPushButton(iconquit, 'Quit')
+
+        iconstart = QtGui.QIcon()
+        iconstart.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.start_scan_pb = QtWidgets.QPushButton(iconstart, '')
+        self.ui.start_scan_pb.setToolTip('Start Scan')
+
+        iconstop = QtGui.QIcon()
+        iconstop.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.stop_scan_pb = QtWidgets.QPushButton(iconstop, '')
+        self.ui.stop_scan_pb.setToolTip('Stop Scan (or skip current one if Batch scan running)')
+
+        self.ui.set_scan_pb = QtWidgets.QPushButton('Set Scan')
+        self.ui.set_scan_pb.setToolTip('Process the scanner settings and prepare the modules for coming scan')
+        self.ui.set_ini_positions_pb = QtWidgets.QPushButton('Init Positions')
+        self.ui.set_ini_positions_pb.setToolTip(
+            'Set Move Modules to their initial position as defined in the current scan')
+
+        iconstartbatch = QtGui.QIcon()
+        iconstartbatch.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run_all.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.ui.start_batch_pb = QtWidgets.QPushButton(iconstartbatch, '')
+        self.ui.start_batch_pb.setToolTip('Start the batch of scans defined in the batch manager')
+        self.ui.start_batch_pb.setVisible(False)
+
+        self.ui.horizontalLayout_2.addWidget(self.ui.quit_pb)
+        self.ui.horizontalLayout_2.addStretch()
+        self.ui.horizontalLayout_2.addWidget(self.ui.set_scan_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.set_ini_positions_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.start_batch_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.start_scan_pb)
+        self.ui.horizontalLayout_2.addWidget(self.ui.stop_scan_pb)
+
+        self.ui.settings_layout.addWidget(widget_buttons)
+        self.ui.splitter.addWidget(sett_widget)
+
+        # ##################TAB########################################
+        self.ui.tabWidget = QtWidgets.QTabWidget()
+
+        self.ui.tab_plot1D = QtWidgets.QWidget()
+        self.ui.scan1D_layout = QtWidgets.QVBoxLayout()
+        self.ui.tab_plot1D.setLayout(self.ui.scan1D_layout)
+
+        self.ui.tab_plot2D = QtWidgets.QWidget()
+        self.ui.scan2D_layout = QtWidgets.QVBoxLayout()
+        self.ui.tab_plot2D.setLayout(self.ui.scan2D_layout)
+
+        self.ui.tab_navigator = QtWidgets.QWidget()
+        self.ui.navigator_layout = QtWidgets.QVBoxLayout()
+        self.ui.tab_navigator.setLayout(self.ui.navigator_layout)
+
+        self.ui.tabWidget.addTab(self.ui.tab_plot1D, "")
+        self.ui.tabWidget.addTab(self.ui.tab_plot2D, "")
+        self.ui.tabWidget.addTab(self.ui.tab_navigator, "")
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot1D), '1D plot')
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot2D), '2D plot')
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_navigator), 'Navigator')
+
+        self.ui.splitter.addWidget(self.ui.tabWidget)
+        ##################################################################
+
+        # %% create scan dock and make it a floating window
+        self.ui.scan_dock = gutils.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
+        self.ui.scan_dock.setOrientation('vertical')
+        self.ui.scan_dock.addWidget(widgetsettings)
+
+        self.dockarea.addDock(self.ui.scan_dock, 'left')
+        #self.ui.scan_dock.float()
+
+        # %% init the 1D viewer
+        self.ui.scan1D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
+        self.ui.scan1D_layout.addWidget(self.ui.scan1D_graph_widget)
+
+        scan1D_widget = QtWidgets.QWidget()
+        self.ui.scan1D_graph = Viewer1D(scan1D_widget)
+        self.ui.scan1D_graph_widget.addWidget(scan1D_widget)
+
+        # this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
+        # impossible to plot in usual 1D or 2D graphs
+        scan1D_subgraph_widget = QtWidgets.QWidget()
+        self.ui.scan1D_subgraph = Viewer1DBasic(scan1D_subgraph_widget)
+        self.ui.scan1D_graph_widget.addWidget(scan1D_subgraph_widget)
+        self.ui.scan1D_subgraph.show(False)
+
+        # %% init the 2D viewer
+        self.ui.scan2D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
+        self.ui.scan2D_layout.addWidget(self.ui.scan2D_graph_widget)
+
+        scan2D_graph_widget = QtWidgets.QWidget()
+        self.ui.scan2D_graph = Viewer2D(scan2D_graph_widget)
+        self.ui.scan2D_graph_widget.addWidget(scan2D_graph_widget)
+
+        # this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
+        # impossible to plot in usual 1D or 2D graphs
+        scan2D_subgraph_widget = QtWidgets.QWidget()
+        self.ui.scan2D_subgraph = Viewer1DBasic(scan2D_subgraph_widget)
+        self.ui.scan2D_graph_widget.addWidget(scan2D_subgraph_widget)
+        self.ui.scan2D_subgraph.show(False)
+
+        self.ui.scan2D_graph.set_action_checked('histo', False)
+        self.ui.scan2D_graph.set_action_visible(['flip_ud', 'flip_lr', 'rotate'], False)
+        #self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
+
+
+        self.move_to_crosshair_action = QAction(
+            QtGui.QIcon(QtGui.QPixmap(':/icons/Icon_Library/move_contour.png')),"Move at doubleClicked")
+        self.move_to_crosshair_action.setCheckable(True)
+        self.ui.move_to_crosshair_cb = self.move_to_crosshair_action
+
+        self.ui.scan2D_graph.toolbar.addAction(self.move_to_crosshair_action)
+        self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
+
+        # %% init and set the status bar
+        self.ui.statusbar = QtWidgets.QStatusBar(self.dockarea)
+        self.ui.statusbar.setMaximumHeight(25)
+        self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
+        self.ui.status_message = QtWidgets.QLabel('Initializing')
+        self.ui.statusbar.addPermanentWidget(self.ui.status_message)
+        self.ui.N_scan_steps_sb = gutils.QSpinBox_ro()
+        self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
+        self.ui.indice_scan_sb = gutils.QSpinBox_ro()
+        self.ui.indice_scan_sb.setToolTip('Current step value')
+        self.ui.indice_average_sb = gutils.QSpinBox_ro()
+        self.ui.indice_average_sb.setToolTip('Current average value')
+        self.ui.scan_done_LED = QLED()
+        self.ui.scan_done_LED.setToolTip('Scan done state')
+        self.ui.statusbar.addPermanentWidget(self.ui.N_scan_steps_sb)
+        self.ui.statusbar.addPermanentWidget(self.ui.indice_scan_sb)
+        self.ui.statusbar.addPermanentWidget(self.ui.indice_average_sb)
+        self.ui.indice_average_sb.setVisible(False)
+        self.ui.statusbar.addPermanentWidget(self.ui.scan_done_LED)
+
+        self.plot_colors = utils.plot_colors
+        self.ui.splitter.setSizes([500, 1200])
+
+        self.ui.scan_done_LED.set_as_false()
+        self.ui.scan_done_LED.clickable = False
+
+        # displaying the settings
+        widget_settings = QtWidgets.QWidget()
+        settings_layout = QtWidgets.QGridLayout()
+        widget_settings.setLayout(settings_layout)
+        self.ui.settings_layout.addWidget(widget_settings)
+
+        self.settings_tree = ParameterTree()
+        self.settings_tree.setMinimumWidth(300)
+
+        settings_layout.addWidget(self.modules_manager.settings_tree, 0, 0, 1, 1)
+        self.ui.toolbox = QtWidgets.QToolBox()
+        settings_layout.addWidget(self.ui.toolbox, 0, 1, 1, 1)
+
+        self.ui.toolbox.addItem(self.settings_tree, 'General Settings')
+        self.ui.toolbox.addItem(self.h5saver.settings_tree, 'Save Settings')
+        self.ui.toolbox.addItem(self.scanner.settings_tree, 'Scanner Settings')
+        self.ui.toolbox.setCurrentIndex(2)
+
+        self.h5saver.settings_tree.setMinimumWidth(300)
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
+
+        self.settings_tree.setParameters(self.settings, showTop=False)
+        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+
+        # params about dataset attributes and scan attibutes
+        date = QDateTime(QDate.currentDate(), QTime.currentTime())
+        params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children': [
+            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
+            {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
+            {'title': 'Sample:', 'name': 'sample', 'type': 'str', 'value': ''},
+            {'title': 'Experiment type:', 'name': 'experiment_type', 'type': 'str', 'value': ''},
+            {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''}]}]
+
+        params_scan = [{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children': [
+            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
+            {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
+            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'value': 'Scan1D',
+             'limits': ['Scan1D', 'Scan2D']},
+            {'title': 'Scan name:', 'name': 'scan_name', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''},
+        ]}]
+
+        self.dataset_attributes = Parameter.create(name='Attributes', type='group', children=params_dataset)
+        self.scan_attributes = Parameter.create(name='Attributes', type='group', children=params_scan)
+
+        # creating the Average dock plots
+        self.create_average_dock()
+
+        # creating the menubar
+        self.create_menu()
+
+        #        connecting
+        self.ui.set_scan_pb.clicked.connect(self.set_scan)
+        self.ui.quit_pb.clicked.connect(self.quit_fun)
+
+        self.ui.start_scan_pb.clicked.connect(self.start_scan)
+        self.ui.start_batch_pb.clicked.connect(self.start_scan_batch)
+        self.ui.stop_scan_pb.clicked.connect(self.stop_scan)
+        self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
+
+        self.ui.tabWidget.removeTab(2)
+
+    ###################
+    # external modules
+
+    def show_batcher(self, menubar):
+        self.batcher = BatchScanner(self.dockarea, self.modules_manager.actuators_name,
+                                    self.modules_manager.detectors_name)
+        self.batcher.create_menu(menubar)
+        self.batcher.setupUI()
+        self.ui.start_batch_pb.setVisible(True)
+
+    def start_scan_batch(self):
+        self.batch_started = True
+        self.ind_batch = 0
+        self.loop_scan_batch()
+
+    def loop_scan_batch(self):
+        if self.ind_batch >= len(self.batcher.scans_names):
+            self.stop_scan()
+            return
+        self.scanner = self.batcher.scans[self.batcher.scans_names[self.ind_batch]]
+        actuators, detectors = self.batcher.get_act_dets()
+        self.set_scan_batch(actuators[self.batcher.scans_names[self.ind_batch]],
+                            detectors[self.batcher.scans_names[self.ind_batch]])
+        self.start_scan()
+
+    def set_scan_batch(self, actuators, detectors):
+        self.modules_manager.selected_detectors_name = detectors
+        self.modules_manager.selected_actuators_name = actuators
+        QtWidgets.QApplication.processEvents()
+
+    def show_file_attributes(self, type_info='dataset'):
+        """
+            Switch the type_info value.
+
+            In case of :
+                * *scan* : Set parameters showing top false
+                * *dataset* : Set parameters showing top false
+                * *managers* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save managers parameters in a xml file).
+
+            Finally, in case of accepted managers type info, save the managers parameters in a xml file.
+
+            =============== =========== ====================================
+            **Parameters**    **Type**    **Description**
+            *type_info*       string      The file type information between
+                                            * scan
+                                            * dataset
+                                            * managers
+            =============== =========== ====================================
+
+            See Also
+            --------
+            custom_tree.parameter_to_xml_file, create_menu
+        """
+        if self.show_popup:
+            dialog = QtWidgets.QDialog()
+            vlayout = QtWidgets.QVBoxLayout()
+            tree = ParameterTree()
+            tree.setMinimumWidth(400)
+            tree.setMinimumHeight(500)
+            if type_info == 'scan':
+                tree.setParameters(self.scan_attributes, showTop=False)
+            elif type_info == 'dataset':
+                tree.setParameters(self.dataset_attributes, showTop=False)
+
+            vlayout.addWidget(tree)
+            dialog.setLayout(vlayout)
+            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
+            buttonBox.addButton('Cancel', buttonBox.RejectRole)
+            buttonBox.addButton('Apply', buttonBox.AcceptRole)
+            buttonBox.rejected.connect(dialog.reject)
+            buttonBox.accepted.connect(dialog.accept)
+
+            vlayout.addWidget(buttonBox)
+            dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
+            res = dialog.exec()
+        else:
+            res = True
+        return res
+
+    def show_file_content(self):
+        try:
+            self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
+            self.h5saver.show_file_content()
+        except Exception as e:
+            logger.exception(str(e))
+
+    def show_navigator(self):
+        if self.navigator is None:
+            # loading navigator
+
+            widgnav = QtWidgets.QWidget()
+            self.navigator = Navigator(widgnav)
+
+            self.navigator.log_signal[str].connect(self.dashboard.add_status)
+            self.navigator.settings.child('settings', 'Load h5').hide()
+            self.navigator.loadaction.setVisible(False)
+
+            self.ui.navigator_layout.addWidget(widgnav)
+            self.navigator.sig_double_clicked.connect(self.move_at)
+
+            self.scanner.scan_selector.remove_scan_selector()
+            items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
+            items.update(self.scanner.scan_selector.viewers_items)
+            self.scanner.viewers_items = items
+
+            self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.addTab(self.ui.tab_navigator, 'Navigator'))
+            self.set_scan()  # to load current scans into the navigator
+
+    ################
+    #  LOADING SAVING
+
+    def load_file(self):
+        self.h5saver.load_file(self.h5saver.h5_file_path)
 
     def save_scan(self):
         """
@@ -453,6 +791,86 @@ class DAQ_Scan(QObject):
             settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 
+    def create_new_file(self, new_file):
+        self.h5saver.init_file(update_h5=new_file)
+        res = self.update_file_settings(new_file)
+        self.h5saver.current_scan_group.attrs['scan_done'] = False
+        if new_file:
+            self.ui.start_scan_pb.setEnabled(False)
+            self.ui.stop_scan_pb.setEnabled(False)
+        return res
+
+    def update_file_settings(self, new_file=False):
+        try:
+            if self.h5saver.current_scan_group is None:
+                new_file = True
+
+            if new_file:
+                self.set_metadata_about_dataset()
+                self.save_metadata(self.h5saver.raw_group, 'dataset_info')
+
+            if self.h5saver.current_scan_name is None:
+                self.h5saver.add_scan_group()
+            elif not self.h5saver.is_node_in_group(self.h5saver.raw_group, self.h5saver.current_scan_name):
+                self.h5saver.add_scan_group()
+
+            if self.navigator is not None:
+                self.navigator.update_h5file(self.h5saver.h5_file)
+                self.navigator.settings.child('settings', 'filepath').setValue(self.h5saver.h5_file.filename)
+
+            # set attributes to the current group, such as scan_type....
+            self.scan_attributes.child('scan_info', 'scan_type').setValue(
+                self.scanner.settings.child('scan_type').value())
+            self.scan_attributes.child('scan_info', 'scan_name').setValue(self.h5saver.current_scan_group.name)
+            self.scan_attributes.child('scan_info', 'description').setValue(
+                self.h5saver.current_scan_group.attrs['description'])
+            res = self.set_metadata_about_current_scan()
+            self.save_metadata(self.h5saver.current_scan_group, 'scan_info')
+            return res
+
+        except Exception as e:
+            logger.exception(str(e))
+
+    #  PROCESS MODIFICATIONS
+
+    @Slot(list)
+    def update_actuators(self, actuators):
+        self.scanner.actuators = actuators
+
+    def move_to_crosshair(self, posx=None, posy=None):
+        """
+            Compute the scaled position from the given x/y position and send the command_DAQ signal with computed values as attributes.
+
+
+            =============== =========== ==============================
+            **Parameters**    **Type**   **Description**
+            *posx*           float       the original x position
+            *posy*           float       the original y position
+            =============== =========== ==============================
+
+            See Also
+            --------
+            update_status
+        """
+        try:
+            if self.ui.move_to_crosshair_cb.isChecked():
+                if "2D" in self.scanner.settings.child('scan_type').value():
+                    if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
+                        posx_real = posx * self.ui.scan2D_graph.x_axis.axis_scaling +\
+                                    self.ui.scan2D_graph.x_axis.axis_offset
+                        posy_real = posy * self.ui.scan2D_graph.y_axis.axis_scaling +\
+                                    self.ui.scan2D_graph.y_axis.axis_offset
+                        self.move_at(posx_real, posy_real)
+                    else:
+                        self.update_status("not valid configuration, check number of stages and scan2D option",
+                                           log_type='log')
+        except Exception as e:
+            logger.exception(str(e))
+            # self.update_status(getLineInfo()+ str(e),log_type='log')
+
+    def move_at(self, posx_real, posy_real):
+        self.command_DAQ_signal.emit(["move_stages", [posx_real, posy_real]])
+
     def parameter_tree_changed(self, param, changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.
@@ -480,602 +898,25 @@ class DAQ_Scan(QObject):
             elif change == 'parent':
                 pass
 
-    def show_average_dock(self, show=True):
-        self.ui.average_dock.setVisible(show)
-        self.ui.indice_average_sb.setVisible(show)
-        if show:
-            self.ui.average_dock.setStretch(100, 100)
-
-    def set_ini_positions(self):
+    def update_plot_det_items(self, dets):
         """
-            Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
         """
-        self.command_DAQ_signal.emit(["set_ini_positions"])
+        self.settings.child('scan_options', 'plot_from').setOpts(limits=dets)
 
-    def set_metadata_about_current_scan(self):
+    def update_status(self, txt, wait_time=0, log_type=None):
         """
-            Set the date/time and author values of the scan_info child of the scan_attributes tree.
-            Show the 'scan' file attributes.
+            Show the txt message in the status bar with a delay of wait_time ms.
 
-            See Also
-            --------
-            show_file_attributes
-        """
-        date = QDateTime(QDate.currentDate(), QTime.currentTime())
-        self.scan_attributes.child('scan_info', 'date_time').setValue(date)
-        self.scan_attributes.child('scan_info', 'author').setValue(
-            self.dataset_attributes.child('dataset_info', 'author').value())
-        if not self.batch_started:
-            res = self.show_file_attributes('scan')
-        else:
-            res = True
-        return res
-
-    def set_metadata_about_dataset(self):
-        """
-            Set the date value of the data_set_info-date_time child of the data_set_attributes tree.
-            Show the 'dataset' file attributes.
-
-            See Also
-            --------
-            show_file_attributes
-        """
-        date = QDateTime(QDate.currentDate(), QTime.currentTime())
-        self.dataset_attributes.child('dataset_info', 'date_time').setValue(date)
-        res = self.show_file_attributes('dataset')
-        return res
-
-    def setup_modules(self, filename):
-        """
-
-        """
-        try:
-
-            ######################################################################
-            # set scan selector
-            items = OrderedDict()
-            if self.navigator is not None:
-                items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
-            for det in self.modules_manager.detectors_all:
-                if len([view for view in det.ui.viewers if view.viewer_type == 'Data2D']) != 0:
-                    items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
-                                            names=[view.title for view in det.ui.viewers if
-                                                   view.viewer_type == 'Data2D'], )
-            items["DAQ_Scan"] = dict(viewers=[self.ui.scan2D_graph], names=["DAQ_Scan"])
-
-            if self.navigator is not None:
-                items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
-                items.update(self.scanner.scan_selector.viewers_items)
-
-            self.scanner.viewers_items = items
-
-            self.scanner.scan_selector.widget.setVisible(False)
-            self.scanner.scan_selector.settings.child('scan_options', 'scan_type').hide()
-
-            self.scanner.scan_selector.widget.setVisible(False)
-            self.scanner.scan_selector.show_scan_selector(visible=False)
-
-            # setting moves and det in tree
-            preset_items_det = [mod for ind, mod in enumerate(self.modules_manager.detectors_all) if ind == 0]
-            self.settings.child('scan_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
-            if preset_items_det != []:
-                self.settings.child('scan_options', 'plot_from').setValue(preset_items_det[0].title)
-
-            self.show_average_dock(False)
-
-            self.ui.scan_dock.setEnabled(True)
-            self.file_menu.setEnabled(True)
-            self.settings_menu.setEnabled(True)
-            self.create_new_file(True)
-
-        except Exception as e:
-            logger.exception(str(e))
-            # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
-
-    def create_new_file(self, new_file):
-        self.h5saver.init_file(update_h5=new_file)
-        res = self.update_file_settings(new_file)
-        self.h5saver.current_scan_group.attrs['scan_done'] = False
-        if new_file:
-            self.ui.start_scan_pb.setEnabled(False)
-            self.ui.stop_scan_pb.setEnabled(False)
-        return res
-
-    def set_scan(self, scan=None):
-        """
-        Sets the current scan given the selected settings. Makes some checks, increments the h5 file scans.
-        In case the dialog is cancelled, return False and aborts the scan
-        """
-        try:
-            # set the filename and path
-            res = self.create_new_file(False)
-            if not res:
-                return
-
-            # reinit these objects
-            self.scan_data_1D = []
-            self.scan_data_1D_average = []
-            self.scan_data_2D = []
-            self.scan_data_2D_average = []
-
-            scan_params = self.scanner.set_scan()
-            if scan_params.scan_info.positions is None:
-                gutils.show_message(f"An error occurred when establishing the scan steps. Actual settings "
-                                    f"gives approximately {int(scan_params.Nsteps)} steps."
-                                    f" Please check the steps number "
-                                    f"limit in the config file ({config['scan']['steps_limit']}) or modify"
-                                    f" your scan settings.")
-
-
-            if len(self.modules_manager.actuators) != self.scanner.scan_parameters.Naxes:
-                gutils.show_message("There are not enough or too much selected move modules for this scan")
-                return
-
-            if self.scanner.scan_parameters.scan_subtype == 'Adaptive':
-                if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
-                    gutils.show_message("In adaptive mode, you have to pick a 0D signal from which the algorithm will"
-                                   " determine the next positions to scan, see 'probe_data' in the modules selector"
-                                   " panel")
-                    return
-
-            self.ui.N_scan_steps_sb.setValue(self.scanner.scan_parameters.Nsteps)
-
-            # check if the modules are initialized
-            for module in self.modules_manager.actuators:
-                if not module.initialized_state:
-                    raise exceptions.DAQ_ScanException('module ' + module.title + " is not initialized")
-
-            for module in self.modules_manager.detectors:
-                if not module.initialized_state:
-                    raise exceptions.DAQ_ScanException('module ' + module.title + " is not initialized")
-
-            self.ui.start_scan_pb.setEnabled(True)
-            self.ui.stop_scan_pb.setEnabled(True)
-
-            return True
-
-        except Exception as e:
-            logger.exception(str(e))
-            self.ui.start_scan_pb.setEnabled(False)
-            self.ui.stop_scan_pb.setEnabled(False)
-
-    def setupUI(self):
-        self.ui = QObject()
-        widgetsettings = QtWidgets.QWidget()
-        self.ui.verticalLayout = QtWidgets.QVBoxLayout()
-        widgetsettings.setLayout(self.ui.verticalLayout)
-        self.ui.StatusBarLayout = QtWidgets.QHBoxLayout()
-        self.ui.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-
-        self.ui.verticalLayout.addWidget(self.ui.splitter)
-        self.ui.verticalLayout.addLayout(self.ui.StatusBarLayout)
-
-        self.ui.horizontalLayout = QtWidgets.QHBoxLayout()
-        sett_widget = QtWidgets.QWidget()
-        self.ui.settings_layout = QtWidgets.QVBoxLayout()
-        sett_widget.setLayout(self.ui.settings_layout)
-        self.ui.horizontalLayout.addWidget(sett_widget)
-
-        # ###########################BUTTONS##################
-        widget_buttons = QtWidgets.QWidget()
-        self.ui.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        widget_buttons.setLayout(self.ui.horizontalLayout_2)
-
-        iconquit = QtGui.QIcon()
-        iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.quit_pb = QtWidgets.QPushButton(iconquit, 'Quit')
-
-        iconstart = QtGui.QIcon()
-        iconstart.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.start_scan_pb = QtWidgets.QPushButton(iconstart, '')
-        self.ui.start_scan_pb.setToolTip('Start Scan')
-
-        iconstop = QtGui.QIcon()
-        iconstop.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.stop_scan_pb = QtWidgets.QPushButton(iconstop, '')
-        self.ui.stop_scan_pb.setToolTip('Stop Scan (or skip current one if Batch scan running)')
-
-        self.ui.set_scan_pb = QtWidgets.QPushButton('Set Scan')
-        self.ui.set_scan_pb.setToolTip('Process the scanner settings and prepare the modules for coming scan')
-        self.ui.set_ini_positions_pb = QtWidgets.QPushButton('Init Positions')
-        self.ui.set_ini_positions_pb.setToolTip(
-            'Set Move Modules to their initial position as defined in the current scan')
-
-        iconstartbatch = QtGui.QIcon()
-        iconstartbatch.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run_all.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.start_batch_pb = QtWidgets.QPushButton(iconstartbatch, '')
-        self.ui.start_batch_pb.setToolTip('Start the batch of scans defined in the batch manager')
-        self.ui.start_batch_pb.setVisible(False)
-
-        self.ui.horizontalLayout_2.addWidget(self.ui.quit_pb)
-        self.ui.horizontalLayout_2.addStretch()
-        self.ui.horizontalLayout_2.addWidget(self.ui.set_scan_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.set_ini_positions_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.start_batch_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.start_scan_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.stop_scan_pb)
-
-        self.ui.settings_layout.addWidget(widget_buttons)
-        self.ui.splitter.addWidget(sett_widget)
-
-        # ##################TAB########################################
-        self.ui.tabWidget = QtWidgets.QTabWidget()
-
-        self.ui.tab_plot1D = QtWidgets.QWidget()
-        self.ui.scan1D_layout = QtWidgets.QVBoxLayout()
-        self.ui.tab_plot1D.setLayout(self.ui.scan1D_layout)
-
-        self.ui.tab_plot2D = QtWidgets.QWidget()
-        self.ui.scan2D_layout = QtWidgets.QVBoxLayout()
-        self.ui.tab_plot2D.setLayout(self.ui.scan2D_layout)
-
-        self.ui.tab_navigator = QtWidgets.QWidget()
-        self.ui.navigator_layout = QtWidgets.QVBoxLayout()
-        self.ui.tab_navigator.setLayout(self.ui.navigator_layout)
-
-        self.ui.tabWidget.addTab(self.ui.tab_plot1D, "")
-        self.ui.tabWidget.addTab(self.ui.tab_plot2D, "")
-        self.ui.tabWidget.addTab(self.ui.tab_navigator, "")
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot1D), '1D plot')
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot2D), '2D plot')
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_navigator), 'Navigator')
-
-        self.ui.splitter.addWidget(self.ui.tabWidget)
-        ##################################################################
-
-        # %% create scan dock and make it a floating window
-        self.ui.scan_dock = gutils.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
-        self.ui.scan_dock.setOrientation('vertical')
-        self.ui.scan_dock.addWidget(widgetsettings)
-
-        self.dockarea.addDock(self.ui.scan_dock, 'left')
-        #self.ui.scan_dock.float()
-
-        # %% init the 1D viewer
-        self.ui.scan1D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
-        self.ui.scan1D_layout.addWidget(self.ui.scan1D_graph_widget)
-
-        scan1D_widget = QtWidgets.QWidget()
-        self.ui.scan1D_graph = Viewer1D(scan1D_widget)
-        self.ui.scan1D_graph_widget.addWidget(scan1D_widget)
-
-        # this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
-        # impossible to plot in usual 1D or 2D graphs
-        scan1D_subgraph_widget = QtWidgets.QWidget()
-        self.ui.scan1D_subgraph = Viewer1DBasic(scan1D_subgraph_widget)
-        self.ui.scan1D_graph_widget.addWidget(scan1D_subgraph_widget)
-        self.ui.scan1D_subgraph.show(False)
-
-        # %% init the 2D viewer
-        self.ui.scan2D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
-        self.ui.scan2D_layout.addWidget(self.ui.scan2D_graph_widget)
-
-        scan2D_graph_widget = QtWidgets.QWidget()
-        self.ui.scan2D_graph = Viewer2D(scan2D_graph_widget)
-        self.ui.scan2D_graph_widget.addWidget(scan2D_graph_widget)
-
-        # this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
-        # impossible to plot in usual 1D or 2D graphs
-        scan2D_subgraph_widget = QtWidgets.QWidget()
-        self.ui.scan2D_subgraph = Viewer1DBasic(scan2D_subgraph_widget)
-        self.ui.scan2D_graph_widget.addWidget(scan2D_subgraph_widget)
-        self.ui.scan2D_subgraph.show(False)
-
-        self.ui.scan2D_graph.set_action_checked('histo', False)
-        self.ui.scan2D_graph.set_action_visible(['flip_ud', 'flip_lr', 'rotate'], False)
-        #self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
-
-
-        self.move_to_crosshair_action = gutils.QAction(
-            QtGui.QIcon(QtGui.QPixmap(':/icons/Icon_Library/move_contour.png')),"Move at doubleClicked")
-        self.move_to_crosshair_action.setCheckable(True)
-        self.ui.move_to_crosshair_cb = self.move_to_crosshair_action
-
-        self.ui.scan2D_graph.toolbar.addAction(self.move_to_crosshair_action)
-        self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
-
-        # %% init and set the status bar
-        self.ui.statusbar = QtWidgets.QStatusBar(self.dockarea)
-        self.ui.statusbar.setMaximumHeight(25)
-        self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.ui.status_message = QtWidgets.QLabel('Initializing')
-        self.ui.statusbar.addPermanentWidget(self.ui.status_message)
-        self.ui.N_scan_steps_sb = gutils.QSpinBox_ro()
-        self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb = gutils.QSpinBox_ro()
-        self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb = gutils.QSpinBox_ro()
-        self.ui.indice_average_sb.setToolTip('Current average value')
-        self.ui.scan_done_LED = QLED()
-        self.ui.scan_done_LED.setToolTip('Scan done state')
-        self.ui.statusbar.addPermanentWidget(self.ui.N_scan_steps_sb)
-        self.ui.statusbar.addPermanentWidget(self.ui.indice_scan_sb)
-        self.ui.statusbar.addPermanentWidget(self.ui.indice_average_sb)
-        self.ui.indice_average_sb.setVisible(False)
-        self.ui.statusbar.addPermanentWidget(self.ui.scan_done_LED)
-
-        self.plot_colors = utils.plot_colors
-        self.ui.splitter.setSizes([500, 1200])
-
-        self.ui.scan_done_LED.set_as_false()
-        self.ui.scan_done_LED.clickable = False
-
-        # displaying the settings
-        widget_settings = QtWidgets.QWidget()
-        settings_layout = QtWidgets.QGridLayout()
-        widget_settings.setLayout(settings_layout)
-        self.ui.settings_layout.addWidget(widget_settings)
-
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setMinimumWidth(300)
-
-        settings_layout.addWidget(self.modules_manager.settings_tree, 0, 0, 1, 1)
-        self.ui.toolbox = QtWidgets.QToolBox()
-        settings_layout.addWidget(self.ui.toolbox, 0, 1, 1, 1)
-
-        self.ui.toolbox.addItem(self.settings_tree, 'General Settings')
-        self.ui.toolbox.addItem(self.h5saver.settings_tree, 'Save Settings')
-        self.ui.toolbox.addItem(self.scanner.settings_tree, 'Scanner Settings')
-        self.ui.toolbox.setCurrentIndex(2)
-
-        self.h5saver.settings_tree.setMinimumWidth(300)
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-
-        self.settings_tree.setParameters(self.settings, showTop=False)
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-        # params about dataset attributes and scan attibutes
-        date = QDateTime(QDate.currentDate(), QTime.currentTime())
-        params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children': [
-            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
-            {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
-            {'title': 'Sample:', 'name': 'sample', 'type': 'str', 'value': ''},
-            {'title': 'Experiment type:', 'name': 'experiment_type', 'type': 'str', 'value': ''},
-            {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''}]}]
-
-        params_scan = [{'title': 'Scan information', 'name': 'scan_info', 'type': 'group', 'children': [
-            {'title': 'Author:', 'name': 'author', 'type': 'str', 'value': config['user']['name']},
-            {'title': 'Date/time:', 'name': 'date_time', 'type': 'date_time', 'value': date},
-            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'value': 'Scan1D',
-             'values': ['Scan1D', 'Scan2D']},
-            {'title': 'Scan name:', 'name': 'scan_name', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'Description:', 'name': 'description', 'type': 'text', 'value': ''},
-        ]}]
-
-        self.dataset_attributes = Parameter.create(name='Attributes', type='group', children=params_dataset)
-        self.scan_attributes = Parameter.create(name='Attributes', type='group', children=params_scan)
-
-        # creating the Average dock plots
-        self.create_average_dock()
-
-        # creating the menubar
-        self.create_menu()
-
-        #        connecting
-        self.ui.set_scan_pb.clicked.connect(self.set_scan)
-        self.ui.quit_pb.clicked.connect(self.quit_fun)
-
-        self.ui.start_scan_pb.clicked.connect(self.start_scan)
-        self.ui.start_batch_pb.clicked.connect(self.start_scan_batch)
-        self.ui.stop_scan_pb.clicked.connect(self.stop_scan)
-        self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
-
-        self.ui.tabWidget.removeTab(2)
-
-    def show_file_attributes(self, type_info='dataset'):
-        """
-            Switch the type_info value.
-
-            In case of :
-                * *scan* : Set parameters showing top false
-                * *dataset* : Set parameters showing top false
-                * *managers* : Set parameters showing top false. Add the save/cancel buttons to the accept/reject dialog (to save managers parameters in a xml file).
-
-            Finally, in case of accepted managers type info, save the managers parameters in a xml file.
-
-            =============== =========== ====================================
+            =============== =========== =======================
             **Parameters**    **Type**    **Description**
-            *type_info*       string      The file type information between
-                                            * scan
-                                            * dataset
-                                            * managers
-            =============== =========== ====================================
-
-            See Also
-            --------
-            custom_tree.parameter_to_xml_file, create_menu
+            *txt*             string      The message to show
+            *wait_time*       int         the delay of showing
+            *log_type*        string      the type of the log
+            =============== =========== =======================
         """
-        if self.show_popup:
-            dialog = QtWidgets.QDialog()
-            vlayout = QtWidgets.QVBoxLayout()
-            tree = ParameterTree()
-            tree.setMinimumWidth(400)
-            tree.setMinimumHeight(500)
-            if type_info == 'scan':
-                tree.setParameters(self.scan_attributes, showTop=False)
-            elif type_info == 'dataset':
-                tree.setParameters(self.dataset_attributes, showTop=False)
-
-            vlayout.addWidget(tree)
-            dialog.setLayout(vlayout)
-            buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
-            buttonBox.addButton('Cancel', buttonBox.RejectRole)
-            buttonBox.addButton('Apply', buttonBox.AcceptRole)
-            buttonBox.rejected.connect(dialog.reject)
-            buttonBox.accepted.connect(dialog.accept)
-
-            vlayout.addWidget(buttonBox)
-            dialog.setWindowTitle('Fill in information about this {}'.format(type_info))
-            res = dialog.exec()
-        else:
-            res = True
-        return res
-
-    def show_file_content(self):
-        try:
-            self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
-            self.h5saver.show_file_content()
-        except Exception as e:
-            logger.exception(str(e))
-
-    def show_navigator(self):
-        if self.navigator is None:
-            # loading navigator
-
-            widgnav = QtWidgets.QWidget()
-            self.navigator = Navigator(widgnav)
-
-            self.navigator.log_signal[str].connect(self.dashboard.add_status)
-            self.navigator.settings.child('settings', 'Load h5').hide()
-            self.navigator.loadaction.setVisible(False)
-
-            self.ui.navigator_layout.addWidget(widgnav)
-            self.navigator.sig_double_clicked.connect(self.move_at)
-
-            self.scanner.scan_selector.remove_scan_selector()
-            items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
-            items.update(self.scanner.scan_selector.viewers_items)
-            self.scanner.viewers_items = items
-
-            self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.addTab(self.ui.tab_navigator, 'Navigator'))
-            self.set_scan()  # to load current scans into the navigator
-
-    def start_scan_batch(self):
-        self.batch_started = True
-        self.ind_batch = 0
-        self.loop_scan_batch()
-
-    def loop_scan_batch(self):
-        if self.ind_batch >= len(self.batcher.scans_names):
-            self.stop_scan()
-            return
-        self.scanner = self.batcher.scans[self.batcher.scans_names[self.ind_batch]]
-        actuators, detectors = self.batcher.get_act_dets()
-        self.set_scan_batch(actuators[self.batcher.scans_names[self.ind_batch]],
-                            detectors[self.batcher.scans_names[self.ind_batch]])
-        self.start_scan()
-
-    def set_scan_batch(self, actuators, detectors):
-        self.modules_manager.selected_detectors_name = detectors
-        self.modules_manager.selected_actuators_name = actuators
-        QtWidgets.QApplication.processEvents()
-
-
-    def start_scan(self):
-        """
-            Start an acquisition calling the set_scan function.
-            Emit the command_DAQ signal "start_acquisition".
-
-            See Also
-            --------
-            set_scan
-        """
-        self.ui.status_message.setText('Starting acquisition')
-        self.dashboard.overshoot = False
-        self.plot_2D_ini = False
-        self.plot_1D_ini = False
-        self.bkg_container = None
-        self.scan_positions = []
-        self.curvilinear_values = []
-        res = self.set_scan()
-        if res:
-
-            # deactivate module controls usiong remote_control
-            if hasattr(self.dashboard, 'remote_manager'):
-                remote_manager = getattr(self.dashboard, 'remote_manager')
-                remote_manager.activate_all(False)
-
-            # save settings from move modules
-            move_modules_names = [mod.title for mod in self.modules_manager.actuators]
-            for ind_move, move_name in enumerate(move_modules_names):
-                move_group_name = 'Move{:03d}'.format(ind_move)
-                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, move_group_name):
-                    self.h5saver.add_move_group(self.h5saver.current_scan_group, title='',
-                                                settings_as_xml=pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                                                    self.modules_manager.actuators[ind_move].settings),
-                                                metadata=dict(name=move_name))
-
-            # save settings from detector modules
-            detector_modules_names = [mod.title for mod in self.modules_manager.detectors]
-            for ind_det, det_name in enumerate(detector_modules_names):
-                det_group_name = 'Detector{:03d}'.format(ind_det)
-                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, det_group_name):
-                    settings_str = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                        self.modules_manager.detectors[ind_det].settings)
-                    try:
-                        if 'Data0D' not in [viewer.viewer_type for viewer in
-                                            self.modules_manager.detectors[
-                                                ind_det].ui.viewers]:  # no roi_settings in viewer0D
-                            settings_str = b'<All_settings title="All Settings" type="group">' + settings_str
-                            for ind_viewer, viewer in enumerate(self.modules_manager.detectors[ind_det].ui.viewers):
-                                if hasattr(viewer, 'roi_manager'):
-                                    settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
-                                        ind_viewer).encode()
-                                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                                        viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(
-                                        ind_viewer).encode()
-                            settings_str += b'</All_settings>'
-                    except Exception as e:
-                        logger.exception(str(e))
-
-                    self.h5saver.add_det_group(self.h5saver.current_scan_group,
-                                               settings_as_xml=settings_str, metadata=dict(name=det_name))
-
-            # mandatory to deal with multithreads
-            if self.scan_thread is not None:
-                self.command_DAQ_signal.disconnect()
-                if self.scan_thread.isRunning():
-                    self.scan_thread.terminate()
-                    while not self.scan_thread.isFinished():
-                        QThread.msleep(100)
-                    self.scan_thread = None
-
-            self.scan_thread = QThread()
-
-            scan_acquisition = DAQ_Scan_Acquisition(self.settings, self.scanner.settings, self.h5saver.settings,
-                                                    self.modules_manager, self.scanner.scan_parameters)
-            if config['scan']['scan_in_thread']:
-                scan_acquisition.moveToThread(self.scan_thread)
-            self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
-            scan_acquisition.scan_data_tmp[OrderedDict].connect(self.update_scan_GUI)
-            scan_acquisition.status_sig[list].connect(self.thread_status)
-
-            self.scan_thread.scan_acquisition = scan_acquisition
-            self.scan_thread.start()
-
-            self.ui.set_scan_pb.setEnabled(False)
-            self.ui.set_ini_positions_pb.setEnabled(False)
-            self.ui.start_scan_pb.setEnabled(False)
-            QtWidgets.QApplication.processEvents()
-            self.ui.scan_done_LED.set_as_false()
-
-            self.command_DAQ_signal.emit(["start_acquisition"])
-            self.ui.status_message.setText('Running acquisition')
-            logger.info('Running acquisition')
-
-    def stop_scan(self):
-        """
-            Emit the command_DAQ signal "stop_acquisiion".
-
-            See Also
-            --------
-            set_ini_positions
-        """
-        self.ui.status_message.setText('Stoping acquisition')
-        self.command_DAQ_signal.emit(["stop_acquisition"])
-
-        if not self.dashboard.overshoot:
-            self.set_ini_positions()  # do not set ini position again in case overshoot fired
-            status = 'Data Acquisition has been stopped by user'
-        else:
-            status = 'Data Acquisition has been stopped due to overshoot'
-
-        self.update_status(status, log_type='log')
-        self.ui.status_message.setText('')
-
-        self.ui.set_scan_pb.setEnabled(True)
-        self.ui.set_ini_positions_pb.setEnabled(True)
-        self.ui.start_scan_pb.setEnabled(True)
+        self.ui.statusbar.showMessage(txt, wait_time)
+        self.status_signal.emit(txt)
+        logger.info(txt)
 
     @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
@@ -1123,6 +964,95 @@ class DAQ_Scan(QObject):
 
         elif status[0] == "Timeout":
             self.ui.status_message.setText('Timeout occurred')
+
+    ############
+    #  PLOTTING
+
+    def show_average_dock(self, show=True):
+        self.ui.average_dock.setVisible(show)
+        self.ui.indice_average_sb.setVisible(show)
+        if show:
+            self.ui.average_dock.setStretch(100, 100)
+
+    @Slot(OrderedDict)
+    def update_scan_GUI(self, datas):
+        """
+            Update the graph in the Graphic Interface from the given datas switching 0D/1D/2D consequently.
+
+            =============== =============================== ===========================
+            **Parameters**    **Type**                       **Description**
+            *datas*           double precision float array   the data values to update
+            =============== =============================== ===========================
+
+            See Also
+            --------
+            update_2D_graph, update_1D_graph, update_status
+        """
+
+        self.scan_positions.append(self.modules_manager.order_positions(datas['positions']))
+        scan_type = utils.capitalize(self.scanner.scan_parameters.scan_type)
+
+        display_as_sequence = (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
+                              (scan_type == 'Tabular' and not self.scanner.scan_parameters.Naxes == 1)
+
+        tabular2D = scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2
+        isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
+        if 'curvilinear' in datas:
+            self.curvilinear_values.append(datas['curvilinear'])
+
+        if self.bkg_container is None:
+            det_name = self.settings.child('scan_options', 'plot_from').value()
+            det_mod = self.modules_manager.get_mod_from_name(det_name)
+            if det_mod.bkg is not None and det_mod.is_bkg:
+                self.bkg_container = OrderedDict([])
+                det_mod.process_data(det_mod.bkg, self.bkg_container)
+
+        try:
+            if scan_type == 'Scan1D' or \
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or \
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
+                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 1) or \
+                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes > 2):
+
+                if 'data0D' in datas['datas'].keys():
+                    if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
+                        if self.bkg_container is None:
+                            bkg = None
+                        else:
+                            bkg = self.bkg_container['data0D']
+                        self.update_1D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
+                                             isadaptive=isadaptive, bkg=bkg)
+                    else:
+                        self.scan_data_1D = []
+                if 'data1D' in datas['datas'].keys():
+                    if not (datas['datas']['data1D'] is None or datas['datas']['data1D'] == OrderedDict()):
+                        if self.bkg_container is None:
+                            bkg = None
+                        else:
+                            bkg = self.bkg_container['data1D']
+                        self.update_2D_graph(datas['datas']['data1D'], display_as_sequence=display_as_sequence,
+                                             isadaptive=isadaptive, bkg=bkg)
+                    # else:
+                    #     self.scan_data_2D = []
+
+            if scan_type == 'Scan2D' or \
+                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2) or \
+                    tabular2D:
+                # means 2D cartography type scan
+
+                if 'data0D' in datas['datas'].keys():
+                    if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
+                        if self.bkg_container is None:
+                            bkg = None
+                        else:
+                            bkg = self.bkg_container['data0D']
+                        self.update_2D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
+                                             isadaptive=isadaptive or tabular2D, bkg=bkg)
+                    else:
+                        self.scan_data_2D = []
+
+        except Exception as e:
+            logger.exception(str(e))
 
     def update_1D_graph(self, datas, display_as_sequence=False, isadaptive=False, bkg=None):
         """
@@ -1313,21 +1243,21 @@ class DAQ_Scan(QObject):
                         self.scan_data_2D = [np.zeros((len(self.scan_y_axis),
                                                        len(self.scan_x_axis2D)))
                                              for ind in range(min((3, len(datas))))]
-                    self.ui.scan2D_graph.x_axis = dict(data=self.scan_x_axis2D,
+                    self.ui.scan2D_graph.x_axis = utils.Axis(data=self.scan_x_axis2D,
                                                        units=self.modules_manager.actuators[0].settings.child(
                                                            'move_settings', 'units').value(),
                                                        label=self.modules_manager.actuators[0].title)
-                    self.ui.scan2D_graph.y_axis = dict(data=self.scan_y_axis,
+                    self.ui.scan2D_graph.y_axis = utils.Axis(data=self.scan_y_axis,
                                                        units=self.modules_manager.actuators[1].settings.child(
                                                            'move_settings', 'units').value(),
                                                        label=self.modules_manager.actuators[1].title)
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.ui.average2D_graph.x_axis = dict(data=self.scan_x_axis2D,
+                        self.ui.average2D_graph.x_axis = utils.Axis(data=self.scan_x_axis2D,
                                                               units=self.modules_manager.actuators[0].settings.child(
                                                                   'move_settings', 'units').value(),
                                                               label=self.modules_manager.actuators[0].title)
-                        self.ui.average2D_graph.y_axis = dict(data=self.scan_y_axis,
+                        self.ui.average2D_graph.y_axis = utils.Axis(data=self.scan_y_axis,
                                                               units=self.modules_manager.actuators[1].settings.child(
                                                                   'move_settings', 'units').value(),
                                                               label=self.modules_manager.actuators[1].title)
@@ -1466,136 +1396,221 @@ class DAQ_Scan(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def update_file_settings(self, new_file=False):
+    #################
+    #  SCAN FLOW
+
+    def set_scan(self, scan=None):
+        """
+        Sets the current scan given the selected settings. Makes some checks, increments the h5 file scans.
+        In case the dialog is cancelled, return False and aborts the scan
+        """
         try:
-            if self.h5saver.current_scan_group is None:
-                new_file = True
+            # set the filename and path
+            res = self.create_new_file(False)
+            if not res:
+                return
 
-            if new_file:
-                self.set_metadata_about_dataset()
-                self.save_metadata(self.h5saver.raw_group, 'dataset_info')
+            # reinit these objects
+            self.scan_data_1D = []
+            self.scan_data_1D_average = []
+            self.scan_data_2D = []
+            self.scan_data_2D_average = []
 
-            if self.h5saver.current_scan_name is None:
-                self.h5saver.add_scan_group()
-            elif not self.h5saver.is_node_in_group(self.h5saver.raw_group, self.h5saver.current_scan_name):
-                self.h5saver.add_scan_group()
+            scan_params = self.scanner.set_scan()
+            if scan_params.scan_info.positions is None:
+                gutils.show_message(f"An error occurred when establishing the scan steps. Actual settings "
+                                    f"gives approximately {int(scan_params.Nsteps)} steps."
+                                    f" Please check the steps number "
+                                    f"limit in the config file ({config['scan']['steps_limit']}) or modify"
+                                    f" your scan settings.")
 
-            if self.navigator is not None:
-                self.navigator.update_h5file(self.h5saver.h5_file)
-                self.navigator.settings.child('settings', 'filepath').setValue(self.h5saver.h5_file.filename)
 
-            # set attributes to the current group, such as scan_type....
-            self.scan_attributes.child('scan_info', 'scan_type').setValue(
-                self.scanner.settings.child('scan_type').value())
-            self.scan_attributes.child('scan_info', 'scan_name').setValue(self.h5saver.current_scan_group.name)
-            self.scan_attributes.child('scan_info', 'description').setValue(
-                self.h5saver.current_scan_group.attrs['description'])
-            res = self.set_metadata_about_current_scan()
-            self.save_metadata(self.h5saver.current_scan_group, 'scan_info')
-            return res
+            if len(self.modules_manager.actuators) != self.scanner.scan_parameters.Naxes:
+                gutils.show_message("There are not enough or too much selected move modules for this scan")
+                return
+
+            if self.scanner.scan_parameters.scan_subtype == 'Adaptive':
+                if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
+                    gutils.show_message("In adaptive mode, you have to pick a 0D signal from which the algorithm will"
+                                   " determine the next positions to scan, see 'probe_data' in the modules selector"
+                                   " panel")
+                    return
+
+            self.ui.N_scan_steps_sb.setValue(self.scanner.scan_parameters.Nsteps)
+
+            # check if the modules are initialized
+            for module in self.modules_manager.actuators:
+                if not module.initialized_state:
+                    raise exceptions.DAQ_ScanException('module ' + module.title + " is not initialized")
+
+            for module in self.modules_manager.detectors:
+                if not module.initialized_state:
+                    raise exceptions.DAQ_ScanException('module ' + module.title + " is not initialized")
+
+            self.ui.start_scan_pb.setEnabled(True)
+            self.ui.stop_scan_pb.setEnabled(True)
+
+            return True
 
         except Exception as e:
             logger.exception(str(e))
+            self.ui.start_scan_pb.setEnabled(False)
+            self.ui.stop_scan_pb.setEnabled(False)
 
-    def update_plot_det_items(self, dets):
+    def set_metadata_about_current_scan(self):
         """
-        """
-        self.settings.child('scan_options', 'plot_from').setOpts(limits=dets)
-
-    @Slot(OrderedDict)
-    def update_scan_GUI(self, datas):
-        """
-            Update the graph in the Graphic Interface from the given datas switching 0D/1D/2D consequently.
-
-            =============== =============================== ===========================
-            **Parameters**    **Type**                       **Description**
-            *datas*           double precision float array   the data values to update
-            =============== =============================== ===========================
+            Set the date/time and author values of the scan_info child of the scan_attributes tree.
+            Show the 'scan' file attributes.
 
             See Also
             --------
-            update_2D_graph, update_1D_graph, update_status
+            show_file_attributes
         """
+        date = QDateTime(QDate.currentDate(), QTime.currentTime())
+        self.scan_attributes.child('scan_info', 'date_time').setValue(date)
+        self.scan_attributes.child('scan_info', 'author').setValue(
+            self.dataset_attributes.child('dataset_info', 'author').value())
+        if not self.batch_started:
+            res = self.show_file_attributes('scan')
+        else:
+            res = True
+        return res
 
-        self.scan_positions.append(self.modules_manager.order_positions(datas['positions']))
-        scan_type = utils.capitalize(self.scanner.scan_parameters.scan_type)
-
-        display_as_sequence = (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
-                              (scan_type == 'Tabular' and not self.scanner.scan_parameters.Naxes == 1)
-
-        tabular2D = scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2
-        isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
-        if 'curvilinear' in datas:
-            self.curvilinear_values.append(datas['curvilinear'])
-
-        if self.bkg_container is None:
-            det_name = self.settings.child('scan_options', 'plot_from').value()
-            det_mod = self.modules_manager.get_mod_from_name(det_name)
-            if det_mod.bkg is not None and det_mod.is_bkg:
-                self.bkg_container = OrderedDict([])
-                det_mod.process_data(det_mod.bkg, self.bkg_container)
-
-        try:
-            if scan_type == 'Scan1D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
-                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 1) or \
-                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes > 2):
-
-                if 'data0D' in datas['datas'].keys():
-                    if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
-                        if self.bkg_container is None:
-                            bkg = None
-                        else:
-                            bkg = self.bkg_container['data0D']
-                        self.update_1D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive, bkg=bkg)
-                    else:
-                        self.scan_data_1D = []
-                if 'data1D' in datas['datas'].keys():
-                    if not (datas['datas']['data1D'] is None or datas['datas']['data1D'] == OrderedDict()):
-                        if self.bkg_container is None:
-                            bkg = None
-                        else:
-                            bkg = self.bkg_container['data1D']
-                        self.update_2D_graph(datas['datas']['data1D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive, bkg=bkg)
-                    # else:
-                    #     self.scan_data_2D = []
-
-            if scan_type == 'Scan2D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2) or \
-                    tabular2D:
-                # means 2D cartography type scan
-
-                if 'data0D' in datas['datas'].keys():
-                    if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
-                        if self.bkg_container is None:
-                            bkg = None
-                        else:
-                            bkg = self.bkg_container['data0D']
-                        self.update_2D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive or tabular2D, bkg=bkg)
-                    else:
-                        self.scan_data_2D = []
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def update_status(self, txt, wait_time=0, log_type=None):
+    def set_metadata_about_dataset(self):
         """
-            Show the txt message in the status bar with a delay of wait_time ms.
+            Set the date value of the data_set_info-date_time child of the data_set_attributes tree.
+            Show the 'dataset' file attributes.
 
-            =============== =========== =======================
-            **Parameters**    **Type**    **Description**
-            *txt*             string      The message to show
-            *wait_time*       int         the delay of showing
-            *log_type*        string      the type of the log
-            =============== =========== =======================
+            See Also
+            --------
+            show_file_attributes
         """
-        self.ui.statusbar.showMessage(txt, wait_time)
-        self.status_signal.emit(txt)
-        logger.info(txt)
+        date = QDateTime(QDate.currentDate(), QTime.currentTime())
+        self.dataset_attributes.child('dataset_info', 'date_time').setValue(date)
+        res = self.show_file_attributes('dataset')
+        return res
+
+    def start_scan(self):
+        """
+            Start an acquisition calling the set_scan function.
+            Emit the command_DAQ signal "start_acquisition".
+
+            See Also
+            --------
+            set_scan
+        """
+        self.ui.status_message.setText('Starting acquisition')
+        self.dashboard.overshoot = False
+        self.plot_2D_ini = False
+        self.plot_1D_ini = False
+        self.bkg_container = None
+        self.scan_positions = []
+        self.curvilinear_values = []
+        res = self.set_scan()
+        if res:
+
+            # deactivate module controls usiong remote_control
+            if hasattr(self.dashboard, 'remote_manager'):
+                remote_manager = getattr(self.dashboard, 'remote_manager')
+                remote_manager.activate_all(False)
+
+            # save settings from move modules
+            move_modules_names = [mod.title for mod in self.modules_manager.actuators]
+            for ind_move, move_name in enumerate(move_modules_names):
+                move_group_name = 'Move{:03d}'.format(ind_move)
+                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, move_group_name):
+                    self.h5saver.add_move_group(self.h5saver.current_scan_group, title='',
+                                                settings_as_xml=pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                                    self.modules_manager.actuators[ind_move].settings),
+                                                metadata=dict(name=move_name))
+
+            # save settings from detector modules
+            detector_modules_names = [mod.title for mod in self.modules_manager.detectors]
+            for ind_det, det_name in enumerate(detector_modules_names):
+                det_group_name = 'Detector{:03d}'.format(ind_det)
+                if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, det_group_name):
+                    settings_str = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                        self.modules_manager.detectors[ind_det].settings)
+                    try:
+                        if 'Data0D' not in [viewer.viewer_type for viewer in
+                                            self.modules_manager.detectors[
+                                                ind_det].ui.viewers]:  # no roi_settings in viewer0D
+                            settings_str = b'<All_settings title="All Settings" type="group">' + settings_str
+                            for ind_viewer, viewer in enumerate(self.modules_manager.detectors[ind_det].ui.viewers):
+                                if hasattr(viewer, 'roi_manager'):
+                                    settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
+                                        ind_viewer).encode()
+                                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                        viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(
+                                        ind_viewer).encode()
+                            settings_str += b'</All_settings>'
+                    except Exception as e:
+                        logger.exception(str(e))
+
+                    self.h5saver.add_det_group(self.h5saver.current_scan_group,
+                                               settings_as_xml=settings_str, metadata=dict(name=det_name))
+
+            # mandatory to deal with multithreads
+            if self.scan_thread is not None:
+                self.command_DAQ_signal.disconnect()
+                if self.scan_thread.isRunning():
+                    self.scan_thread.terminate()
+                    while not self.scan_thread.isFinished():
+                        QThread.msleep(100)
+                    self.scan_thread = None
+
+            self.scan_thread = QThread()
+
+            scan_acquisition = DAQ_Scan_Acquisition(self.settings, self.scanner.settings, self.h5saver.settings,
+                                                    self.modules_manager, self.scanner.scan_parameters)
+            if config['scan']['scan_in_thread']:
+                scan_acquisition.moveToThread(self.scan_thread)
+            self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
+            scan_acquisition.scan_data_tmp[OrderedDict].connect(self.update_scan_GUI)
+            scan_acquisition.status_sig[list].connect(self.thread_status)
+
+            self.scan_thread.scan_acquisition = scan_acquisition
+            self.scan_thread.start()
+
+            self.ui.set_scan_pb.setEnabled(False)
+            self.ui.set_ini_positions_pb.setEnabled(False)
+            self.ui.start_scan_pb.setEnabled(False)
+            QtWidgets.QApplication.processEvents()
+            self.ui.scan_done_LED.set_as_false()
+
+            self.command_DAQ_signal.emit(["start_acquisition"])
+            self.ui.status_message.setText('Running acquisition')
+            logger.info('Running acquisition')
+
+    def set_ini_positions(self):
+        """
+            Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
+        """
+        self.command_DAQ_signal.emit(["set_ini_positions"])
+
+    def stop_scan(self):
+        """
+            Emit the command_DAQ signal "stop_acquisiion".
+
+            See Also
+            --------
+            set_ini_positions
+        """
+        self.ui.status_message.setText('Stoping acquisition')
+        self.command_DAQ_signal.emit(["stop_acquisition"])
+
+        if not self.dashboard.overshoot:
+            self.set_ini_positions()  # do not set ini position again in case overshoot fired
+            status = 'Data Acquisition has been stopped by user'
+        else:
+            status = 'Data Acquisition has been stopped due to overshoot'
+
+        self.update_status(status, log_type='log')
+        self.ui.status_message.setText('')
+
+        self.ui.set_scan_pb.setEnabled(True)
+        self.ui.set_ini_positions_pb.setEnabled(True)
+        self.ui.start_scan_pb.setEnabled(True)
 
 
 class DAQ_Scan_Acquisition(QObject):
@@ -1764,81 +1779,6 @@ class DAQ_Scan_Acquisition(QObject):
                                                                       add_scan_dim=True,
                                                                       enlargeable=self.isadaptive)
             pass
-
-    def det_done(self, det_done_datas, positions=[]):
-        """
-            | Initialize 0D/1D/2D datas from given data parameter.
-            | Update h5_file group and array.
-            | Save 0D/1D/2D... datas.
-        Parameters
-        ----------
-        det_done_datas: (OrderedDict) on the form OrderedDict
-                    (det0=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),
-                     det1=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),...)
-        """
-        try:
-            self.scan_read_datas = det_done_datas[
-                self.settings.child('scan_options', 'plot_from').value()].copy()
-
-            if self.ind_scan == 0 and self.ind_average == 0:  # first occurence=> initialize the channels
-                self.init_data()
-
-            if not self.isadaptive:
-                if self.scan_parameters.scan_type == 'Tabular':
-                    indexes = np.array([self.ind_scan])
-                else:
-                    indexes = self.scan_parameters.axes_indexes[self.ind_scan]
-
-                if self.Naverage > 1:
-                    indexes = list(indexes)
-                    indexes.append(self.ind_average)
-
-                indexes = tuple(indexes)
-
-            if self.isadaptive:
-                for ind_ax, nav_axis in enumerate(self.navigation_axes):
-                    nav_axis.append(np.array(positions[ind_ax]))
-
-            for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
-                datas = det_done_datas[det_name]
-
-                data_types = ['data0D', 'data1D']
-                if self.h5saver.settings.child(('save_2D')).value():
-                    data_types.extend(['data2D', 'dataND'])
-
-                for data_type in data_types:
-                    if data_type in datas.keys():
-                        if datas[data_type] is not None:
-                            if len(datas[data_type]) != 0:
-                                for ind_channel, channel in enumerate(datas[data_type]):
-                                    if not (self.h5saver.settings.child(
-                                            'save_raw_only').value() and datas[data_type][channel]['source'] != 'raw'):
-                                        if not self.isadaptive:
-                                            self.channel_arrays[
-                                                det_name][data_type][channel].__setitem__(
-                                                indexes, value=det_done_datas[det_name][data_type][channel]['data'])
-                                        else:
-                                            data = det_done_datas[det_name][data_type][channel]['data']
-                                            if isinstance(data, float) or isinstance(data, int):
-                                                data = np.array([data])
-                                            self.channel_arrays[det_name][data_type][channel].append(data)
-
-            self.det_done_flag = True
-
-            self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
-                                                datas=self.scan_read_datas,
-                                                curvilinear=self.curvilinear))
-        except Exception as e:
-            logger.exception(str(e))
-            # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
-
-    def timeout(self):
-        """
-            Send the status signal *'Time out during acquisition'*.
-        """
-        self.timeout_scan_flag = True
-        self.status_sig.emit(["Update_Status", "Timeout during acquisition", 'log'])
-        self.status_sig.emit(["Timeout"])
 
     def start_acquisition(self):
         try:
@@ -2074,6 +2014,81 @@ class DAQ_Scan_Acquisition(QObject):
         while not (self.det_done_flag or self.timeout_scan_flag):
             # wait for grab done signals to end
             QtWidgets.QApplication.processEvents()
+
+    def det_done(self, det_done_datas, positions=[]):
+        """
+            | Initialize 0D/1D/2D datas from given data parameter.
+            | Update h5_file group and array.
+            | Save 0D/1D/2D... datas.
+        Parameters
+        ----------
+        det_done_datas: (OrderedDict) on the form OrderedDict
+                    (det0=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),
+                     det1=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),...)
+        """
+        try:
+            self.scan_read_datas = det_done_datas[
+                self.settings.child('scan_options', 'plot_from').value()].copy()
+
+            if self.ind_scan == 0 and self.ind_average == 0:  # first occurence=> initialize the channels
+                self.init_data()
+
+            if not self.isadaptive:
+                if self.scan_parameters.scan_type == 'Tabular':
+                    indexes = np.array([self.ind_scan])
+                else:
+                    indexes = self.scan_parameters.axes_indexes[self.ind_scan]
+
+                if self.Naverage > 1:
+                    indexes = list(indexes)
+                    indexes.append(self.ind_average)
+
+                indexes = tuple(indexes)
+
+            if self.isadaptive:
+                for ind_ax, nav_axis in enumerate(self.navigation_axes):
+                    nav_axis.append(np.array(positions[ind_ax]))
+
+            for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
+                datas = det_done_datas[det_name]
+
+                data_types = ['data0D', 'data1D']
+                if self.h5saver.settings.child(('save_2D')).value():
+                    data_types.extend(['data2D', 'dataND'])
+
+                for data_type in data_types:
+                    if data_type in datas.keys():
+                        if datas[data_type] is not None:
+                            if len(datas[data_type]) != 0:
+                                for ind_channel, channel in enumerate(datas[data_type]):
+                                    if not (self.h5saver.settings.child(
+                                            'save_raw_only').value() and datas[data_type][channel]['source'] != 'raw'):
+                                        if not self.isadaptive:
+                                            self.channel_arrays[
+                                                det_name][data_type][channel].__setitem__(
+                                                indexes, value=det_done_datas[det_name][data_type][channel]['data'])
+                                        else:
+                                            data = det_done_datas[det_name][data_type][channel]['data']
+                                            if isinstance(data, float) or isinstance(data, int):
+                                                data = np.array([data])
+                                            self.channel_arrays[det_name][data_type][channel].append(data)
+
+            self.det_done_flag = True
+
+            self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
+                                                datas=self.scan_read_datas,
+                                                curvilinear=self.curvilinear))
+        except Exception as e:
+            logger.exception(str(e))
+            # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
+
+    def timeout(self):
+        """
+            Send the status signal *'Time out during acquisition'*.
+        """
+        self.timeout_scan_flag = True
+        self.status_sig.emit(["Update_Status", "Timeout during acquisition", 'log'])
+        self.status_sig.emit(["Timeout"])
 
 
 def main(init_qt=True):

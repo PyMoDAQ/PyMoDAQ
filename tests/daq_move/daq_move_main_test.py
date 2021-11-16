@@ -25,4 +25,5 @@ class TestGeneral:
 
         assert blocker.args[0] == MOVETITLE
         assert blocker.args[1] == MOVETARGET
+        win.close()
 

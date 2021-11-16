@@ -7,9 +7,8 @@ import numpy as np
 import tables
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.daq_utils.parameter import pymodaq_ptypes
-from pymodaq.daq_utils.plotting.viewer2D.viewer2D_basic import Viewer2DBasic
-from pymodaq.daq_utils.plotting.graph_items import ImageItem, TriangulationItem
+from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
+from pymodaq.daq_utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.h5modules import H5Saver, browse_data, H5BrowserUtil
 from pymodaq.daq_utils import gui_utils as gutils
@@ -245,9 +244,9 @@ class Navigator(QObject):
                                 if flag:
                                     isadaptive = 'adaptive' in node.attrs['scan_subtype'].lower()
                                     if isadaptive:
-                                        im = TriangulationItem()
+                                        im = SpreadImageItem()
                                     else:
-                                        im = ImageItem()
+                                        im = UniformImageItem()
                                     im.setOpacity(1)
                                     # im.setOpts(axisOrder='row-major')
                                     self.viewer.image_widget.plotitem.addItem(im)

@@ -8,17 +8,13 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 
 import sys
 from collections import OrderedDict
-import numpy as np
-import logging
 
 import pymodaq.daq_utils.parameter.ioxml
 
-from pyqtgraph.parametertree import Parameter, ParameterTree
-from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, Qt
+from qtpy import QtWidgets
+from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 
-from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils.plotting.qled import QLED
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Logger
@@ -71,22 +67,22 @@ class DAQ_Logger(gutils.CustomApp):
         subclass method from ActionManager
         '''
         logger.debug('setting actions')
-        self.addaction('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
+        self.add_action('quit', 'Quit', 'close2', "Quit program", toolbar=self.toolbar)
         self.toolbar.addSeparator()
-        self.addaction('start', 'Start Logging', 'run2', "Start the logging",
-                       checkable=True, toolbar=self.toolbar)
-        self.addaction('stop', 'Stop', 'stop', 'Stop/pause logging',
-                       checkable=False, toolbar=self.toolbar)
+        self.add_action('start', 'Start Logging', 'run2', "Start the logging",
+                        checkable=True, toolbar=self.toolbar)
+        self.add_action('stop', 'Stop', 'stop', 'Stop/pause logging',
+                        checkable=False, toolbar=self.toolbar)
 
         log_type_combo = QtWidgets.QComboBox()
         log_type_combo.addItems(LOG_TYPES)
         log_type_combo.currentTextChanged.connect(self.set_log_type)
         self._actions['log_type'] = self.toolbar.addWidget(log_type_combo)
         self.toolbar.addSeparator()
-        self.addaction('grab_all', 'Grab All', 'run_all', "Grab all selected detectors",
-                       checkable=True, toolbar=self.toolbar)
-        self.addaction('infos', 'Log infos', 'information2', "Show log file",
-                       checkable=False, toolbar=self.toolbar)
+        self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors",
+                        checkable=True, toolbar=self.toolbar)
+        self.add_action('infos', 'Log infos', 'information2', "Show log file",
+                        checkable=False, toolbar=self.toolbar)
 
 
         logger.debug('actions set')

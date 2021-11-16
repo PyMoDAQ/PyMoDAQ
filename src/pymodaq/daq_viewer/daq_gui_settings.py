@@ -8,8 +8,7 @@
 
 
 from qtpy import QtCore, QtGui, QtWidgets
-from pymodaq.daq_utils.plotting.qled import QLED
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 
 
 class Ui_Form(object):

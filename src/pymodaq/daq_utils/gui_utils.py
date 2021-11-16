@@ -1,19 +1,15 @@
-from abc import ABC, abstractmethod
-
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, QLocale, Qt, QModelIndex
-from qtpy.QtWidgets import QAction
 from qtpy import QtGui, QtWidgets, QtCore
 from pymodaq.daq_utils.qvariant import QVariant
 import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow, Dock
-
+from pymodaq.daq_utils.managers.action_manager import ActionManager
+from pymodaq.daq_utils.managers.parameter_manager import ParameterManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import datetime
 from pymodaq.daq_utils import daq_utils as utils
 import toml
-from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
-from multipledispatch import dispatch
 
 config = utils.load_config()
 
@@ -45,196 +41,6 @@ def messagebox(severity='warning', title='this is a title', text='blabla'):
     messbox = getattr(QtWidgets.QMessageBox, severity)
     ret = messbox(None, title, text)
     return ret == QtWidgets.QMessageBox.Ok
-
-
-class QAction(QAction):
-    """
-    QAction subclass to miicmic signals as pushbuttons. Done to be sure of backcompatibility when I moved from
-    pushbuttons to QAction
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def click(self):
-        logger.warning("click for PyMoDAQ's QAction is deprecated, use *trigger*")
-        self.trigger()
-
-    @property
-    def clicked(self):
-        logger.warning("clicked for PyMoDAQ's QAction is deprecated, use *trigger*")
-        return self.triggered
-
-    def connect_to(self, slot):
-        self.triggered.connect(slot)
-
-
-def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar=None, menu=None):
-    if icon_name != '':
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
-                           QtGui.QIcon.Off)
-        action = QAction(icon, name, None)
-    else:
-        action = QAction(name)
-
-    if slot is not None:
-        action.connect_to(slot)
-    action.setCheckable(checkable)
-    action.setToolTip(tip)
-    if toolbar is not None:
-        toolbar.addAction(action)
-    if menu is not None:
-        menu.addAction(action)
-    return action
-
-
-class ActionManager(ABC):
-    def __init__(self, toolbar=None, menu=None):
-        self._actions = dict([])
-        self._toolbar = toolbar
-        self._menu = menu
-
-        self.setup_actions()
-
-    def set_toolbar(self, toolbar):
-        self._toolbar = toolbar
-
-    def set_menu(self, menu):
-        self._menu = menu
-
-    def set_action_text(self, action_name, text: str):
-        if action_name in self._actions:
-            self._actions[action_name].setText(text)
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced'
-                           f' in the view actions: {self._actions.keys()}')
-
-    def addaction(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
-        """Create a new action and add it to toolbar and menu
-        Parameters
-        ----------
-        short_name: (str) the name as referenced in the dict self.actions
-        name: (str) Displayed name if should be displayed in
-        icon_name: (str) png file name to produce the icon
-        tip: (str) a tooltip to be displayed when hovering above the action
-        checkable: (bool) set the checkable state of the action
-        toolbar: (QToolBar) a toolbar where action should be added. Actions can also be added later see *affect_to*
-        menu: (QMenu) a menu where action should be added. Actions can also be added later see *affect_to*
-
-        See Also
-        --------
-        pymodaq/resources/QtDesigner_Ressources/Icon_Library, affect_to
-        """
-        if toolbar is None:
-            toolbar = self._toolbar
-        if menu is None:
-            menu = self._menu
-        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
-
-    def get_action(self, name):
-        if name in self._actions:
-            return self._actions[name]
-        else:
-            raise KeyError(f'The action with name: {name} is not referenced'
-                           f' in the view actions: {self._actions.keys()}')
-
-    def has_action(self, action_name):
-        return action_name in self._actions
-
-    @abstractmethod
-    def setup_actions(self):
-        """
-        self._actions['quit'] = self.addaction('Quit', 'close2', "Quit program")
-        self._actions['grab'] = self.addaction('Grab', 'camera', "Grab from camera", checkable=True)
-        self._actions['load'] = self.addaction('Load', 'Open',
-                                         "Load target file (.h5, .png, .jpg) or data from camera", checkable=False)
-        self._actions['save'] = self.addaction('Save', 'SaveAs', "Save current data", checkable=False)
-        """
-        pass
-
-    @property
-    def toolbar(self):
-        return self._toolbar
-
-    def affect_to(self, action_name, obj):
-        if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
-            obj.addAction(self._actions[action_name])
-            
-    def connect_action(self, name, slot, connect=True):
-        """
-        Connect (or disconnect) the action referenced by name to the given slot
-        Parameters
-        ----------
-        name: (str) key of the action as referenced in the self._actions dict
-        slot: (method) a method/function
-        connect: (bool) if True connect the trigegr signal of the action to the defined slot else disconnect it
-        """
-        if name in self._actions:
-            if connect:
-                self._actions[name].triggered.connect(slot)
-            else:
-                try:
-                    self._actions[name].triggered.disconnect()
-                except (TypeError,) as e:
-                    pass  # the action was not connected
-        else:
-            raise KeyError(f'The action with name: {name} is not referenced'
-                           f' in the view actions: {self._actions.keys()}')
-    @dispatch(str)
-    def is_action_visible(self, action_name: str):
-        if action_name in self._actions:
-            return self._actions[action_name].isVisible()
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced'
-                           f' in the actions list: {self._actions}')
-
-    @dispatch(list)
-    def is_action_visible(self, actions_name: list):
-        isvisible = False
-        for action_name in actions_name:
-            isvisible = isvisible and self.is_action_visible(action_name)
-        return isvisible
-
-    @dispatch(str)
-    def is_action_checked(self, action_name: str):
-        if action_name in self._actions:
-            return self._actions[action_name].isChecked()
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced'
-                           f' in the actions list: {self._actions}')
-
-    @dispatch(list)
-    def is_action_checked(self, actions_name: list):
-        ischecked = False
-        for action_name in actions_name:
-            ischecked = ischecked and self.is_action_checked(action_name)
-        return ischecked
-
-    @dispatch(str, bool)
-    def set_action_visible(self, action_name: str, visible=True):
-        if action_name in self._actions:
-            self._actions[action_name].setVisible(visible)
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced'
-                           f' in the actions list: {self._actions}')
-
-    @dispatch(list, bool)
-    def set_action_visible(self, actions_name: list, visible=True):
-        for action_name in actions_name:
-            self.set_action_visible(action_name, visible)
-
-    @dispatch(str, bool)
-    def set_action_checked(self, action_name: str, checked=True):
-        if action_name in self._actions:
-            self._actions[action_name].setChecked(checked)
-        else:
-            raise KeyError(f'The action with name: {action_name} is not referenced'
-                           f' in the actions list: {self._actions}')
-
-    @dispatch(list, bool)
-    def set_action_checked(self, actions_name: list, checked=True):
-        for action_name in actions_name:
-            self.set_action_checked(action_name, checked)
 
 
 class QSpinBox_ro(QtWidgets.QSpinBox):
@@ -833,16 +639,30 @@ def show_message(message="blabla", title="Error"):
     return ret
 
 
-class CustomApp(QtCore.QObject):
+class CustomApp(QObject, ActionManager, ParameterManager):
+    """
+    Implements the MixIns ActionManager and ParameterManager methods and attributes, you have to subclass it and make
+    concrete implementation of a given number of methods:
+
+    * setup_actions: mandatory, see ActionManager
+    * value_changed: non mandatory, see ParameterManager
+    * child_added: non mandatory, see ParameterManager
+    * param_deleted: non mandatory, see ParameterManager
+    * setup_docks: mandatory
+    * setup_menu: non mandatory
+    * connect_things: mandatory
+    """
     # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
     log_signal = QtCore.Signal(str)
 
     # list of dicts enabling the settings tree on the user interface
     params = []
 
-    def __init__(self, dockarea, dashboard=None):
+    def __init__(self, dockarea: DockArea, dashboard=None):
+        QObject.__init__(self)
+        ActionManager.__init__(self)
+        ParameterManager.__init__(self)
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
-        QtCore.QObject.__init__(self)
 
         if not isinstance(dockarea, DockArea):
             raise Exception('no valid parent container, expected a DockArea')
@@ -853,48 +673,27 @@ class CustomApp(QtCore.QObject):
 
         self.docks = dict([])
 
-        self.action_manager = None
         self._toolbar = QtWidgets.QToolBar()
         self.mainwindow.addToolBar(self._toolbar)
+        self.set_toolbar(self._toolbar)
 
         # %% init and set the status bar
         self.statusbar = self.mainwindow.statusBar()
 
-        self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
-        # object containing the settings defined in the preamble
-        # # create a settings tree to be shown eventually in a dock
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setParameters(self.settings, showTop=False)  # load the tree with this parameter object
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+        self.setup_ui()
 
-        self.setup_UI()
+    def setup_ui(self):
+        self.setup_docks()
 
-    def set_action_manager(self, action_manager):
-        self.action_manager = action_manager
-        self.action_manager.set_toolbar(self._toolbar)
+        self.setup_actions()  # see ActionManager MixIn class
+
+        self.setup_menu()
+
         self.connect_things()
-        
-    def connect_action(self, action_name, slot, connect=True):
-        """Convenience function from the ActionManager"""
-        if self.action_manager is not None:
-            self.action_manager.connect_action(action_name, slot, connect)
-
-    def affect_to(self, action_name, obj):
-        """Convenience function from the ActionManager"""
-        if self.action_manager is not None:
-            self.action_manager.affect_to(action_name, obj)
-
-    @property
-    def modules_manager(self):
-        if self.dashboard is not None:
-            return self.dashboard.modules_manager
-
-    def connect_things(self):
-        raise NotImplementedError
 
     def setup_docks(self):
-        '''
-        to be subclassed to setup the docks layout
+        """
+        Mandatory method to be subclassed to setup the docks layout
         for instance:
 
         self.docks['ADock'] = gutils.Dock('ADock name)
@@ -905,13 +704,13 @@ class CustomApp(QtCore.QObject):
         See Also
         ########
         pyqtgraph.dockarea.Dock
-        '''
+        """
         raise NotImplementedError
 
     def setup_menu(self):
-        '''
-        to be subclassed
-        create menu for actions contained into the self.actions_manager, for instance:
+        """
+        Non mandatory method to be subclassed in order to create a menubar
+        create menu for actions contained into the self._actions, for instance:
 
         For instance:
 
@@ -921,59 +720,20 @@ class CustomApp(QtCore.QObject):
 
         file_menu.addSeparator()
         self.affect_to('quit', file_menu)
-        '''
+
+        See Also
+        --------
+        pymodaq.daq_utils.managers.action_manager.ActionManager
+        """
+        pass
+
+    def connect_things(self):
         raise NotImplementedError
 
-    def value_changed(self, param):
-        ''' to be subclassed for actions to perform when one of the param's value in self.settings is changed
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter whose value just changed
-        '''
-        raise NotImplementedError
-
-    def param_deleted(self, param):
-        ''' to be subclassed for actions to perform when one of the param in self.settings has been deleted
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter that has been deleted
-        '''
-        raise NotImplementedError
-
-    def child_added(self, param):
-        ''' to be subclassed for actions to perform when a param  has been added in self.settings
-
-        Parameters
-        ----------
-        param: (Parameter) the parameter that has been deleted
-        '''
-        raise NotImplementedError
-
-    def setup_UI(self):
-        # ##### Manage Docks########
-        self.setup_docks()
-        self.setup_menu()
-
-        #toolbar is managed within the ActionManager herited class
-
-    def parameter_tree_changed(self, param, changes):
-        for param, change, data in changes:
-            if change == 'childAdded':
-                self.child_added(param)
-
-            elif change == 'value':
-                self.value_changed(param)
-
-            elif change == 'parent':
-                self.param_deleted(param)
+    @property
+    def modules_manager(self):
+        if self.dashboard is not None:
+            return self.dashboard.modules_manager
 
 
 if __name__ == '__main__':

@@ -163,8 +163,8 @@ def dict_from_param(param):
             readonly = '0'
     opts.update(dict(readonly=readonly))
 
-    if 'values' in param.opts:
-        values = str(param.opts['values'])
+    if 'limits' in param.opts:
+        values = str(param.opts['limits'])
         opts.update(dict(values=values))
 
     if 'limits' in param.opts:
@@ -265,8 +265,8 @@ def elt_to_dict(el):
         addList = eval(el.get('addList'))
         param.update(dict(addList=addList))
 
-    if 'values' in el.attrib.keys():
-        values = list(eval(el.get('values')))  # make sure the evaluated values are returned as list (in case another
+    if 'limits' in el.attrib.keys():
+        values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another
         # iterator type has been used)
         param.update(dict(values=values))
 

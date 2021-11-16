@@ -49,9 +49,9 @@ class ScalableGroupRemote(GroupParameter):
         else:
             newindex = max(child_indexes) + 1
 
-        params = [{'title': 'Action:', 'name': 'action', 'type': 'list', 'value': typ, 'values': self.opts['addList']},
+        params = [{'title': 'Action:', 'name': 'action', 'type': 'list', 'value': typ, 'limits': self.opts['addList']},
                   {'title': 'Remote:', 'name': 'remote_type', 'type': 'list', 'value': 'Keyboard',
-                   'values': remote_types},
+                   'limits': remote_types},
                   ]
         params.extend([
             {'title': 'Set Shortcut:', 'name': 'set_shortcut', 'type': 'bool_push', 'label': 'Set',
@@ -61,7 +61,7 @@ class ScalableGroupRemote(GroupParameter):
              'value': False, 'visible': False},
 
             {'title': 'Joystick ID:', 'name': 'joystickID', 'type': 'int', 'value': -1, 'visible': False},
-            {'title': 'Actionner type:', 'name': 'actionner_type', 'type': 'list', 'values': ['Axis', 'Button', 'Hat'],
+            {'title': 'Actionner type:', 'name': 'actionner_type', 'type': 'list', 'limits': ['Axis', 'Button', 'Hat'],
              'visible': False},
             {'title': 'Actionner ID:', 'name': 'actionnerID', 'type': 'int', 'value': -1, 'visible': False},
         ])
@@ -110,7 +110,7 @@ class ScalableGroupModules(GroupParameter):
 
         params = [
             {'title': 'Actions:', 'name': 'actions', 'type': 'groupremote', 'value': typ,
-             'values': self.opts['addList'], 'addList': addlist},
+             'limits': self.opts['addList'], 'addList': addlist},
         ]
 
         # for param in params:

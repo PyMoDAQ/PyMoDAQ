@@ -10,6 +10,7 @@ from pyqtgraph import SRTTransform
 from collections import OrderedDict
 from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2, Expected_3
 
+
 class MockPythonSocket:  # pragma: no cover
     def __init__(self):
         self._send = []

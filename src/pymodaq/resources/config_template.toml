@@ -36,6 +36,9 @@ name = "User name"  # default name used as author in the hdf5 saving files
 default_preset_for_scan = "preset_default"
 default_preset_for_logger = "preset_default"
 
+[actuator]
+    polling_interval_ms = 50  # ms
+
 [scan]
     scan_in_thread = true
     default = "Scan1D"

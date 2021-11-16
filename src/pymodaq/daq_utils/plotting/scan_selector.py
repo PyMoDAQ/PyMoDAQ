@@ -7,7 +7,7 @@ from pyqtgraph import ROI, RectROI, PolyLineROI, Point
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.dockarea import Dock
 from pymodaq.daq_utils.gui_utils import DockArea
-from pymodaq.daq_utils.plotting.plot_utils import QVector
+from pymodaq.daq_utils.plotting.utils.plot_utils import QVector
 from pymodaq.daq_utils import daq_utils as utils
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -50,7 +50,7 @@ class ScanSelector(QObject):
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Sources:', 'name': 'sources', 'type': 'list', },
             {'title': 'Viewers:', 'name': 'viewers', 'type': 'list', },
-            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'values': ['Tabular', 'Scan2D'],
+            {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': ['Tabular', 'Scan2D'],
              'value': 'Scan2D'},
         ]},
         {'title': 'Scan Area', 'name': 'scan_area', 'type': 'group', 'children': [
@@ -235,7 +235,7 @@ class ScanSelector(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.plotting.viewer2D.viewer2D_main import Viewer2D
+    from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
     from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
     class UI:

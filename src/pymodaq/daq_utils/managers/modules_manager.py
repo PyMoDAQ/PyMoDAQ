@@ -310,7 +310,7 @@ class ModulesManager(QObject):
 
         self.connect_actuators(False)
 
-    def move_actuators(self, positions, mode='abs', poll=True):
+    def move_actuators(self, positions, mode='abs', polling=True):
         """will apply positions to each currently selected actuators. By Default the mode is absolute but can be
 
         Parameters
@@ -349,18 +349,18 @@ class ModulesManager(QObject):
                 for k in positions:
                     act = self.get_mod_from_name(k, 'act')
                     if act is not None:
-                        act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[k]]))
+                        act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[k], polling]))
             else:
                 for ind, act in enumerate(self.actuators):
-                    act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[ind]]))
+                    act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[ind], polling]))
 
         else:
             logger.error('Invalid number of positions compared to selected actuators')
             return self.move_done_positions
 
         tzero = time.perf_counter()
-        if poll:
-            while not self.move_done_flag: #polling move done
+        if polling:
+            while not self.move_done_flag:  # polling move done
 
                 QtWidgets.QApplication.processEvents()
                 if time.perf_counter() - tzero > self.timeout:
