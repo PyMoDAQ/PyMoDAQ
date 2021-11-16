@@ -1,10 +1,10 @@
-#name: '3.9 PyQt5'
-#
-#on: [push]
-#
-#jobs:
-#  call_workflow:
-#    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@pyqtgraph
-#    with:
-#      python: '3.9'
-#      qt5: 'pyqt5'
+name: '3.9 PyQt5'
+
+on: [push]
+
+jobs:
+  call_workflow:
+    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@master
+    with:
+      python: '3.9'
+      qt5: 'pyqt5'
