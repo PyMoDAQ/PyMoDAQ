@@ -4,7 +4,7 @@ from collections import OrderedDict
 from ctypes import CFUNCTYPE
 
 from pymodaq.daq_utils.config import get_set_config_path, get_set_preset_path, Config
-
+from pymodaq.daq_utils.messenger import deprecation_msg
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 import datetime
@@ -43,6 +43,11 @@ c = 2.997924586e8  # m.s-1
 
 DATASOURCES = ('raw', 'roi')
 DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
+
+
+def load_config():
+    deprecation_msg(f'Configuration file must now be  imported from the pymodaq.daq_utils.messenger module')
+    return Config()
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):

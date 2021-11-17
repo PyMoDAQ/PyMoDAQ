@@ -114,12 +114,12 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.ui.xaxis_item = self.viewer.plotwidget.plotItem.getAxis('bottom')
         self.ui.Graph_Lineouts.hide()
 
-        self.ui.aspect_ratio_pb.clicked.connect(self.lock_aspect_ratio)
+        self.ui.aspect_ratio_pb.triggered.connect(self.lock_aspect_ratio)
 
         # #crosshair
         self.ui.crosshair = Crosshair(self.viewer.plotwidget.plotItem, orientation='vertical')
         self.ui.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
-        self.ui.crosshair_pb.clicked.connect(self.crosshairClicked)
+        self.ui.crosshair_pb.triggered.connect(self.crosshairClicked)
         self.crosshairClicked()
 
         # self.ui.Measurement_widget=Dock("Measurement Module", size=(300, 100), closable=True)
@@ -128,10 +128,10 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         self.ui.Measurement_widget.setVisible(False)
 
         # #Connecting buttons:
-        self.ui.Do_math_pb.clicked.connect(self.do_math_fun)
-        self.ui.do_measurements_pb.clicked.connect(self.open_measurement_module)
-        self.ui.zoom_pb.clicked.connect(self.enable_zoom)
-        self.ui.scatter.clicked.connect(self.do_scatter)
+        self.ui.Do_math_pb.triggered.connect(self.do_math_fun)
+        self.ui.do_measurements_pb.triggered.connect(self.open_measurement_module)
+        self.ui.zoom_pb.triggered.connect(self.enable_zoom)
+        self.ui.scatter.triggered.connect(self.do_scatter)
         self.ui.xyplot_action.triggered.connect(self.do_xy)
 
     def setup_buttons(self, button_widget):
@@ -413,7 +413,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         if not (self.ui.Do_math_pb.isChecked()):
             self.ui.Do_math_pb.setChecked(True)
             QtWidgets.QApplication.processEvents()
-            self.ui.Do_math_pb.clicked.emit()
+            self.ui.Do_math_pb.triggered.emit()
             QtWidgets.QApplication.processEvents()
 
         self.ui.Measurement_widget.setVisible(True)

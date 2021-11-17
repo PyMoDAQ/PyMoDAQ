@@ -6,7 +6,7 @@ from .led import LedPushParameter, LedParameter
 from .date import DateParameter, DateTimeParameter, TimeParameter
 from .list import ListParameter
 from .table import TableParameter
-from .tableview import TableViewParameter
+from .tableview import TableViewParameter, TableViewCustom
 from .itemselect import ItemSelectParameter
 from .filedir import FileDirParameter
 from .text import PlainTextPbParameter

@@ -44,8 +44,6 @@ except Exception:
     logger.info('adaptive module is not present, no adaptive scan possible')
 
 
-
-
 class ScanInfo:
     def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, **kwargs):
         """
@@ -355,7 +353,7 @@ class Scanner(QObject):
         """
 
         
-        super(Scanner, self).__init__()
+        super().__init__()
 
         self.settings_tree = None
         self.setupUI()

@@ -2,8 +2,8 @@ import warnings
 from qtpy import QtWidgets
 
 
-def deprecation_msg(message):
-    warnings.warn(message, DeprecationWarning, stacklevel=3)
+def deprecation_msg(message, stacklevel=2):
+    warnings.warn(message, DeprecationWarning, stacklevel=stacklevel)
 
 
 MESSAGE_SEVERITIES = ['critical', 'information', 'question', 'warning']

@@ -5,6 +5,7 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pyqtgraph.parametertree import Parameter
 from pyqtgraph.widgets import ColorButton
 
+
 class TableViewCustom(QtWidgets.QTableView):
     """
         ============== ===========================
@@ -76,17 +77,6 @@ class TableViewParameterItem(WidgetParameterItem):
         self.subItem = QtWidgets.QTreeWidgetItem()
         self.addChild(self.subItem)
 
-    def treeWidgetChanged(self):
-        """
-            Check for changement in the Widget tree.
-        """
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
-
-        # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
-
     def makeWidget(self):
         """
             Make and initialize an instance of Table_custom.
@@ -109,7 +99,7 @@ class TableViewParameterItem(WidgetParameterItem):
         if 'tip' in opts:
             w.setToolTip(opts['tip'])
 
-        w.setMaximumHeight(200)
+        #w.setMaximumHeight(200)
         # self.table.setReadOnly(self.param.opts.get('readonly', False))
         w.value = w.get_table_value
         w.setValue = w.set_table_value
