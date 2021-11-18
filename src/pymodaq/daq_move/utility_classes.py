@@ -1,24 +1,26 @@
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QTimer
-# from enum import IntEnum
+
 from easydict import EasyDict as edict
-from pymodaq.daq_utils.parameter.utils import iter_children
+import pymodaq.daq_utils.daq_utils as utils
+import pymodaq.daq_utils.parameter.utils as putils
 from pymodaq.daq_utils.parameter import ioxml
-import pymodaq.daq_utils.parameter.utils
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo, set_logger, get_module_name
+from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.daq_utils.config import Config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
 import numpy as np
 from time import perf_counter
 
-logger = set_logger(get_module_name(__file__))
+logger = utils.set_logger(utils.get_module_name(__file__))
 config = Config()
 
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
-                    {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
+                    {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
+                     'value': config('actuator', 'epsilon_default'),
                      'tip': 'Differential Value at which the controller considers it reached the target position'},
-                    {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000, 'default': 10000},
+                    {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int',
+                     'value': config('actuator', 'polling_timeout_s')},
 
                     {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
                         {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
@@ -157,6 +159,7 @@ class DAQ_Move_base(QObject):
 
         self.poll_timer = QTimer()
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
+        self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
     @property
@@ -281,8 +284,7 @@ class DAQ_Move_base(QObject):
             self.move_done(self.current_position)
 
     def check_target_reached(self):
-
-        if np.abs(self.current_position - self.target_position) > self.settings.child(('epsilon')).value():
+        if np.abs(self.current_position - self.target_position) > self.settings.child('epsilon').value():
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped'))
@@ -291,10 +293,10 @@ class DAQ_Move_base(QObject):
             self.current_position = self.check_position()
             logger.debug(f'Current position: {self.current_position}')
 
-            if perf_counter() - self.start_time >= self.settings.child(('timeout')).value():
+            if perf_counter() - self.start_time >= self.settings.child('timeout').value():
+                self.poll_timer.stop()
                 self.emit_status(ThreadCommand('raise_timeout'))
                 logger.info(f'Timeout activated')
-
         else:
             self.poll_timer.stop()
             logger.debug(f'Current position: {self.current_position}')
@@ -385,10 +387,10 @@ class DAQ_Move_base(QObject):
             param = child
 
         elif change == 'parent':
-            children = pymodaq.daq_utils.parameter.utils.get_param_from_name(self.settings, param.name())
+            children = putils.get_param_from_name(self.settings, param.name())
 
             if children is not None:
-                path = pymodaq.daq_utils.parameter.utils.get_param_path(children)
+                path = putils.get_param_path(children)
                 self.settings.child(*path[1:-1]).removeChild(children)
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
@@ -455,10 +457,10 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
     def commit_settings(self, param):
 
-        if param.name() in iter_children(self.settings.child(('settings_client')), []):
+        if param.name() in putils.iter_children(self.settings.child(('settings_client')), []):
             actuator_socket = [client['socket'] for client in self.connected_clients if client['type'] == 'ACTUATOR'][0]
             actuator_socket.send_string('set_info')
-            path = pymodaq.daq_utils.parameter.utils.get_param_path(param)[2:]
+            path = putils.get_param_path(param)[2:]
             # get the path of this param as a list starting at parent 'infos'
 
             actuator_socket.send_list(path)

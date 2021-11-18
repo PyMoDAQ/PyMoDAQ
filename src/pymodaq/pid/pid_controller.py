@@ -253,18 +253,18 @@ class DAQ_PID(QObject):
         self.dock_area.addDock(self.dock_input, 'bottom', self.dock_output)
 
         if len(self.models) != 0:
-            self.get_set_model_params(self.models[0])
+            self.get_set_model_params(self.models[0]['name'])
 
         # connecting from tree
         self.settings.sigTreeStateChanged.connect(
             self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
         self.dock_pid.addWidget(widget)
 
-    def get_set_model_params(self, model):
+    def get_set_model_params(self, model_name):
         self.settings.child('models', 'model_params').clearChildren()
         models = get_models()
         if len(models) > 0:
-            model_class = find_dict_in_list_from_key_val(models, 'name', model['name'])['class']
+            model_class = find_dict_in_list_from_key_val(models, 'name', model_name)['class']
             params = getattr(model_class, 'params')
             self.settings.child('models', 'model_params').addChildren(params)
 
@@ -595,8 +595,8 @@ class PIDRunner(QObject):
 
                 if not self.paused:
                     self.modules_manager.move_actuators(self.outputs_to_actuators.values,
-                                                       self.outputs_to_actuators.mode,
-                                                       polling=False)
+                                                        self.outputs_to_actuators.mode,
+                                                        polling=False)
 
                 self.current_time = time.perf_counter()
                 QtWidgets.QApplication.processEvents()

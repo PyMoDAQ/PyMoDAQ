@@ -12,6 +12,8 @@ import importlib
 import inspect
 import json
 import logging
+import functools
+import time
 from logging.handlers import TimedRotatingFileHandler
 from packaging import version as version_mod
 from pathlib import Path
@@ -48,6 +50,19 @@ DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
 def load_config():
     deprecation_msg(f'Configuration file must now be  imported from the pymodaq.daq_utils.messenger module')
     return Config()
+
+
+def timer(func):
+    """Print the runtime of the decorated function"""
+    @functools.wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        start_time = time.perf_counter()    # 1
+        value = func(*args, **kwargs)
+        end_time = time.perf_counter()      # 2
+        run_time = end_time - start_time    # 3
+        print(f"Finished {func.__name__!r} in {run_time:.4f} secs")
+        return value
+    return wrapper_timer
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
@@ -656,8 +671,6 @@ class DataFromPlugins(Data):
         Parameters
         ----------
         dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
-
-
         """
         super().__init__(**kwargs)
         self['labels'] = labels
@@ -710,7 +723,7 @@ class DataToExport(Data):
         dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
         source: (str) either 'raw' for raw data or 'roi' for data extracted from a roi
         """
-        super().__init__(**kwargs)
+        super().__init__(source=source, **kwargs)
         if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
             self['data'] = data
         else:

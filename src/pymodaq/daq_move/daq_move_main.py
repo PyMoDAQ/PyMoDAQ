@@ -962,6 +962,7 @@ class DAQ_Move_stage(QObject):
         self.status_sig.emit(ThreadCommand(command="Update_Status", attributes=["Motion stoping", 'log']))
         self.motion_stoped = True
         self.hardware.stop_motion()
+        self.hardware.poll_timer.stop()
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):

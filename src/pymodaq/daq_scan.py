@@ -1280,7 +1280,7 @@ class DAQ_Scan(QObject):
                                 (self.ind_average * self.scan_data_2D_average[ind_plot][
                                     ind_pos_axis_2, ind_pos_axis_1] + datas[
                                     keys[ind_plot]]['data']) / (self.ind_average + 1)
-                    self.ui.scan2D_graph.setImage(*self.scan_data_2D)
+                    self.ui.scan2D_graph.show_data(utils.DataFromPlugins(dim='Data2D', data=self.scan_data_2D))
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
                         self.ui.average2D_graph.setImage(*self.scan_data_2D_average)
