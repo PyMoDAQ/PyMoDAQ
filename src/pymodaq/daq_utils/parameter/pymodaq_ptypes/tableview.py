@@ -71,12 +71,6 @@ class TableViewCustom(QtWidgets.QTableView):
 
 
 class TableViewParameterItem(WidgetParameterItem):
-    def __init__(self, param, depth):
-        super().__init__(param, depth)
-        self.hideWidget = False
-        self.subItem = QtWidgets.QTreeWidgetItem()
-        self.addChild(self.subItem)
-
     def makeWidget(self):
         """
             Make and initialize an instance of Table_custom.
@@ -90,6 +84,8 @@ class TableViewParameterItem(WidgetParameterItem):
             --------
             Table_custom
         """
+        self.asSubItem = True
+        self.hideWidget = False
         menu = False
         opts = self.param.opts
         if 'menu' in opts:
@@ -98,7 +94,7 @@ class TableViewParameterItem(WidgetParameterItem):
 
         if 'tip' in opts:
             w.setToolTip(opts['tip'])
-
+        w.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.Stretch)
         #w.setMaximumHeight(200)
         # self.table.setReadOnly(self.param.opts.get('readonly', False))
         w.value = w.get_table_value

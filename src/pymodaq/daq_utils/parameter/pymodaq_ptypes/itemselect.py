@@ -73,33 +73,14 @@ class ItemSelect(QtWidgets.QListWidget):
 
 
 class ItemSelectParameterItem(WidgetParameterItem):
-
-    def __init__(self, param, depth):
-        super().__init__(param, depth)
-        self.hideWidget = False
-        self.subItem = QtWidgets.QTreeWidgetItem()
-        self.addChild(self.subItem)
-
-    def treeWidgetChanged(self):
-        """
-
-        """
-        # # TODO: fix so that superclass method can be called
-        # # (WidgetParameter should just natively support this style)
-        # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
-
-        # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
-
     def makeWidget(self):
         """
             | Make and initialize an instance of ItemSelect_pb with itemselect value.
             | Connect the created object with the buttonClicked function.
 
         """
+        self.asSubItem = True
+        self.hideWidget = False
         opts = self.param.opts
         w = ItemSelect_pb()
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)

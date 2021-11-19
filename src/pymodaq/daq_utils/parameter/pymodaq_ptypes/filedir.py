@@ -5,6 +5,7 @@ from pyqtgraph.parametertree.Parameter import ParameterItem
 from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pyqtgraph.parametertree import Parameter
 
+
 class FileDirWidget(QtWidgets.QWidget):
     """
         ================ =========================
@@ -96,26 +97,8 @@ class FileDirWidget(QtWidgets.QWidget):
         self.hor_layout.setSpacing(0)
         self.setLayout(self.hor_layout)
 
+
 class FileDirParameterItem(WidgetParameterItem):
-
-    def __init__(self, param, depth):
-        self.filetype = False
-        super().__init__(param, depth)
-        self.hideWidget = False
-        self.subItem = QtWidgets.QTreeWidgetItem()
-        self.addChild(self.subItem)
-
-    def treeWidgetChanged(self):
-        # # TODO: fix so that superclass method can be called
-        # # (WidgetParameter should just natively support this style)
-        # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.w)
-
-        # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
-
     def makeWidget(self):
         """
             Make an initialized file_browser object with parameter options dictionnary ('readonly' key)0
@@ -129,6 +112,8 @@ class FileDirParameterItem(WidgetParameterItem):
             --------
             file_browser
         """
+        self.asSubItem = True
+        self.hideWidget = False
         if 'filetype' in self.param.opts:
             self.filetype = self.param.opts['filetype']
         else:

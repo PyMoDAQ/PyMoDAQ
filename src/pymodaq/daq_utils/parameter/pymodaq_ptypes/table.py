@@ -68,25 +68,19 @@ class TableWidget(QtWidgets.QTableWidget):
 
 class TableParameterItem(WidgetParameterItem):
 
-    def __init__(self, param, depth):
-        super().__init__(param, depth)
-        self.hideWidget = False
-        self.subItem = QtWidgets.QTreeWidgetItem()
-        self.addChild(self.subItem)
-
-    def treeWidgetChanged(self):
-        """
-            Check for changement in the Widget tree.
-        """
-        # # TODO: fix so that superclass method can be called
-        # # (WidgetParameter should just natively support this style)
-        # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
-
-        # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
+    # def treeWidgetChanged(self):
+    #     """
+    #         Check for changement in the Widget tree.
+    #     """
+    #     # # TODO: fix so that superclass method can be called
+    #     # # (WidgetParameter should just natively support this style)
+    #     # WidgetParameterItem.treeWidgetChanged(self)
+    #     self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
+    #     self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
+    #
+    #     # for now, these are copied from ParameterItem.treeWidgetChanged
+    #     self.setHidden(not self.param.opts.get('visible', True))
+    #     self.setExpanded(self.param.opts.get('expanded', True))
 
     def makeWidget(self):
         """
@@ -101,6 +95,8 @@ class TableParameterItem(WidgetParameterItem):
             --------
             TableWidget
         """
+        self.asSubItem = True
+        self.hideWidget = False
         opts = self.param.opts
         w = TableWidget()
         if 'tip' in opts:
@@ -111,6 +107,7 @@ class TableParameterItem(WidgetParameterItem):
         if 'height' not in opts:
             opts['height'] = 200
         w.setMaximumHeight(opts['height'])
+        w.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.Stretch)
         # self.table.setReadOnly(self.param.opts.get('readonly', False))
         w.value = w.get_table_value
         w.setValue = w.set_table_value
@@ -135,6 +132,4 @@ class TableParameter(Parameter):
     def setValue(self, value):
         self.opts['value'] = value
         self.sigValueChanged.emit(self, value)
-
-
 
