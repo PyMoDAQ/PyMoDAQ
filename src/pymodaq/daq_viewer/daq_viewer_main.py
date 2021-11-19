@@ -675,7 +675,7 @@ class DAQ_Viewer(QObject):
                                                                                             units='second'))
 
                 data_dims = ['data0D', 'data1D']
-                if self.h5saver_continuous.settings.child(('save_2D')).value():
+                if self.h5saver_continuous.settings.child('save_2D').value():
                     data_dims.extend(['data2D', 'dataND'])
 
                 if self.bkg is not None and self.is_bkg:
@@ -704,7 +704,7 @@ class DAQ_Viewer(QObject):
             self.time_array.append(dt)
 
             data_dims = ['data0D', 'data1D']
-            if self.h5saver_continuous.settings.child(('save_2D')).value():
+            if self.h5saver_continuous.settings.child('save_2D').value():
                 data_dims.extend(['data2D', 'dataND'])
 
             for data_dim in data_dims:
@@ -716,8 +716,8 @@ class DAQ_Viewer(QObject):
                         self.channel_arrays[data_dim][channel].append(datas[data_dim][channel]['data'])
 
             self.h5saver_continuous.h5_file.flush()
-            self.h5saver_continuous.settings.child(('N_saved')).setValue(
-                self.h5saver_continuous.settings.child(('N_saved')).value() + 1)
+            self.h5saver_continuous.settings.child('N_saved').setValue(
+                self.h5saver_continuous.settings.child('N_saved').value() + 1)
 
         except Exception as e:
             self.logger.exception(str(e))

@@ -45,6 +45,8 @@ class PIDModelGeneric:
     actuators_name = []
     detectors_name = []
 
+    epsilon = 1
+
     def __init__(self, pid_controller):
         self.pid_controller = pid_controller  # instance of the pid_controller using this model
         self.modules_manager = pid_controller.modules_manager

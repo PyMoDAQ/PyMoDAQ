@@ -306,6 +306,7 @@ class DAQ_PID(QObject):
         self.model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
         self.set_setpoints_buttons()
         self.model_class.ini_model()
+        self.settings.child('main_settings', 'epsilon').setValue(self.model_class.epsilon)
 
     def ini_model(self):
         try:
