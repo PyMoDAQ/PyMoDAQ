@@ -23,7 +23,8 @@ import warnings
 
 import numpy as np
 from qtpy import QtCore
-from qtpy.QtCore import QLocale #, QVariant
+from qtpy.QtCore import QLocale
+from pymodaq.daq_utils.qvariant import QVariant
 
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
@@ -204,8 +205,8 @@ def decode_data(encoded_data):
         for ind in range(map_items):
             key = ds.readInt32()
             #TODO check this is fine
-            #value = QVariant()
-            value = None
+            value = QVariant()
+            #value = None
             ds >> value
             item[QtCore.Qt.ItemDataRole(key)] = value.value()
         data.append(item)

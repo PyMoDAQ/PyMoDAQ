@@ -381,13 +381,14 @@ class Scanner(QObject):
                 self.settings.child('scan2D_settings', 'scan2D_loss').setOpts(
                     limits=adaptive_losses['loss2D'], visible=False)
 
-        if actuators != []:
-            self.actuators = actuators
-        else:
-            stypes = scan_types[:]
-            stypes.pop(stypes.index('Sequential'))
-            self.settings.child('scan_type').setLimits(stypes)
-            self.settings.child('scan_type').setValue(stypes[0])
+        self.actuators = actuators
+        # if actuators != []:
+        #     self.actuators = actuators
+        # else:
+        #     stypes = scan_types[:]
+        #     stypes.pop(stypes.index('Sequential'))
+        #     self.settings.child('scan_type').setLimits(stypes)
+        #     self.settings.child('scan_type').setValue(stypes[0])
 
         self.scan_selector.widget.setVisible(False)
         self.scan_selector.show_scan_selector(visible=False)

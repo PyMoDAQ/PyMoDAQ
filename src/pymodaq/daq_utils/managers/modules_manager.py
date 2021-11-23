@@ -390,7 +390,7 @@ class ModulesManager(QObject):
 
             if len(self.move_done_positions.items()) == len(self.actuators):
                 self.move_done_flag = True
-                self.settings.child(('move_done')).setValue(self.move_done_flag)
+                self.settings.child('move_done').setValue(self.move_done_flag)
         except Exception as e:
             logger.exception(str(e))
 

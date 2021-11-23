@@ -86,7 +86,7 @@ class DashBoard(QObject):
         self.retriever_module = None
         self.database_module = None
         self.extensions = dict([])
-        self.extension_windows= []
+        self.extension_windows = []
 
         self.dockarea = dockarea
         self.dockarea.dock_signal.connect(self.save_layout_state_auto)
@@ -200,7 +200,6 @@ class DashBoard(QObject):
         self.extensions['DAQ_PID'] = self.pid_module
         self.pid_window.show()
         return self.pid_module
-
 
     def load_extensions_module(self, ext):
         self.extension_windows.append(QtWidgets.QMainWindow())
@@ -594,7 +593,6 @@ class DashBoard(QObject):
         move_docks[-1].addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
 
-
     def set_file_preset(self, filename):
         """
             Set a file managers from the converted xml file given by the filename parameter.
@@ -815,7 +813,6 @@ class DashBoard(QObject):
             if perf_counter() - tstart > 60:  # timeout of 60sec
                 break
         return is_init
-
 
     def set_roi_configuration(self, filename):
         if not isinstance(filename, Path):

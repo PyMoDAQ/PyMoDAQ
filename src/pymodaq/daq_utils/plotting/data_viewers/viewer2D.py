@@ -758,7 +758,7 @@ class Viewer2D(ViewerBase):
 
     def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
         pymodaq.daq_utils.messenger.deprecation_msg(f'setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with'
-                         f'one argument as utils.DataFromPlugins')
+                                                    f'one argument as utils.DataFromPlugins', stacklevel=3)
         datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
                                                     data_blue=data_blue, data_spread=data_spread)
         self.show_data(datas)

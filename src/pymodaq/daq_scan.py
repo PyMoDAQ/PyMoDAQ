@@ -37,7 +37,6 @@ config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-
 class DAQ_Scan(QObject):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
@@ -64,7 +63,7 @@ class DAQ_Scan(QObject):
 
         Parameters
         ----------
-        dockarea: (dockarea) instance of the modified pyqtgraph Dockarea (see daq_utils)
+        dockarea: (dockarea) instance of the modified pyqtgraph Dockarea
         dashboard: (DashBoard) instance of the pymodaq dashboard
         """
         
