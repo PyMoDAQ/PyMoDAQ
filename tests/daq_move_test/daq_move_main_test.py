@@ -9,6 +9,7 @@ def init_qt(qtbot):
     return qtbot
 
 
+@mark.skipif(main_modules_skip, reason='main module heavy qt5 testing')
 class TestGeneral:
     def test_main_set_daqtype_init_snap_desinit_quit(self, init_qt):
         qtbot = init_qt
