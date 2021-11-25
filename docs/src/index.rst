@@ -114,6 +114,7 @@ Please see :doc:`the changelog </changelog>`.
    usage/Feedback
    usage/Contributors
    usage/APIdoc
+   PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
 
 ..   usage/classDiagram
    usage/APIdoc

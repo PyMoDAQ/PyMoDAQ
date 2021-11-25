@@ -10,7 +10,8 @@ The DashBoard module can load extensions to perform dedicated tasks, such as aut
 
    DAQ_Scan
    DAQ_Logger
-   PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
+   pid_module
+
 
 
 
