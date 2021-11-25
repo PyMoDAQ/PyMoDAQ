@@ -1,7 +1,7 @@
 
 qtbotskip = False
 
-main_modules_skip = False
+main_modules_skip = True
 
 
 
