@@ -33,31 +33,31 @@ the manual control of the actuator *position* and a side tree like interface dis
     :width: 20pt
     :height: 20pt
 
-.. |settings| image:: /image/DAQ_move/settings_button.PNG
+.. |settings| image:: /image/DAQ_Move/settings_button.PNG
     :width: 20pt
     :height: 20pt
 
-.. |move_rel| image:: /image/DAQ_move/move_rel.PNG
+.. |move_rel| image:: /image/DAQ_Move/move_rel.PNG
     :width: 60pt
     :height: 20pt
 
-.. |move_rel_m| image:: /image/DAQ_move/move_rel_m.PNG
+.. |move_rel_m| image:: /image/DAQ_Move/move_rel_m.PNG
     :width: 60pt
     :height: 20pt
 
-.. |home| image:: /image/DAQ_move/home.PNG
+.. |home| image:: /image/DAQ_Move/home.PNG
     :width: 60pt
     :height: 20pt
 
-.. |stop| image:: /image/DAQ_move/stop.PNG
+.. |stop| image:: /image/DAQ_Move/stop.PNG
     :width: 60pt
     :height: 20pt
 
-.. |where| image:: /image/DAQ_move/where.PNG
+.. |where| image:: /image/DAQ_Move/where.PNG
     :width: 60pt
     :height: 20pt
 
-.. |abs| image:: /image/DAQ_move/abs.PNG
+.. |abs| image:: /image/DAQ_Move/abs.PNG
     :width: 60pt
     :height: 20pt
 
