@@ -1,3 +1,4 @@
+import copy
 import pymodaq.daq_utils.config as config_mod
 from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, QLocale, Qt, QModelIndex
 from qtpy import QtGui, QtWidgets, QtCore
@@ -368,12 +369,20 @@ class TableModel(QtCore.QAbstractTableModel):
                 data_tot.append([float(d) for d in dat])
             data = data_tot
         self._data = data  # stored data as a list of list
+        self._checked = [False for _ in range(len(self._data))]
         self.data_tmp = None
         self.header = header
         if not isinstance(editable, list):
             self.editable = [editable for h in header]
         else:
             self.editable = editable
+
+    def is_checked(self, row: int):
+        return self._checked[row]
+
+    @property
+    def raw_data(self):
+        return copy.deepcopy(self._data)
 
     def rowCount(self, parent):
         return len(self._data)
@@ -404,6 +413,11 @@ class TableModel(QtCore.QAbstractTableModel):
             if role == Qt.DisplayRole or role == Qt.EditRole:
                 dat = self._data[index.row()][index.column()]
                 return dat
+            elif role == Qt.CheckStateRole and index.column() == 0:
+                if self._checked[index.row()]:
+                    return Qt.CheckState.Checked
+                else:
+                    return Qt.CheckState.Unchecked
         return QVariant()
 
     # def setHeaderData(self, section, orientation, value):
@@ -430,6 +444,8 @@ class TableModel(QtCore.QAbstractTableModel):
         if index.column() < len(self.editable):
             if self.editable[index.column()]:
                 f |= Qt.ItemIsEditable
+        if index.column() == 0:
+            f |= Qt.ItemIsUserCheckable
 
         if not index.isValid():
             f |= Qt.ItemIsDropEnabled
@@ -463,6 +479,10 @@ class TableModel(QtCore.QAbstractTableModel):
 
                 else:
                     return False
+            elif role == Qt.CheckStateRole:
+                self._checked[index.row()] = True if value == Qt.CheckState.Checked else False
+                self.dataChanged.emit(index, index, [role])
+                return True
         return False
 
     def dropMimeData(self, data, action, row, column, parent):
@@ -481,6 +501,7 @@ class TableModel(QtCore.QAbstractTableModel):
         self.beginInsertRows(QtCore.QModelIndex(), row, row + count - 1)
         for ind in range(count):
             self._data.insert(row + ind, self.data_tmp)
+            self._checked.insert(row + ind, False)
         self.endInsertRows()
         return True
 
@@ -491,32 +512,32 @@ class TableModel(QtCore.QAbstractTableModel):
         self.beginRemoveRows(QModelIndex(), row, row + count - 1)
         for ind in range(count):
             self._data.pop(row + ind)
+            self._checked.pop(row + ind)
         self.endRemoveRows()
         return True
+
 
 class BooleanDelegate(QtWidgets.QItemEditorFactory):
     """
     TO implement custom widget editor for cells in a tableview
     """
-
-    def __init__(self):
-        super().__init__()
-
     def createEditor(self, userType, parent):
         boolean = QtWidgets.QCheckBox(parent)
         return boolean
 
 
 class SpinBoxDelegate(QtWidgets.QItemEditorFactory):
-
-    def __init__(self):
+    def __init__(self, decimals=4, min=-1e6, max=1e6):
+        self.decimals = decimals
+        self.min = min
+        self.max = max
         super().__init__()
 
     def createEditor(self, userType, parent):
         doubleSpinBox = QtWidgets.QDoubleSpinBox(parent)
-        doubleSpinBox.setDecimals(4)
-        doubleSpinBox.setMaximum(-10000000)
-        doubleSpinBox.setMaximum(10000000)  # The default maximum value is 99.99.所以要设置一下
+        doubleSpinBox.setDecimals(self.decimals)
+        doubleSpinBox.setMaximum(self.min)
+        doubleSpinBox.setMaximum(self.max)
         return doubleSpinBox
 
 
@@ -561,13 +582,14 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.dashboard = dashboard
 
         self.docks = dict([])
-
+        self.statusbar = None
         self._toolbar = QtWidgets.QToolBar()
-        self.mainwindow.addToolBar(self._toolbar)
-        self.set_toolbar(self._toolbar)
 
-        # %% init and set the status bar
-        self.statusbar = self.mainwindow.statusBar()
+        if self.mainwindow is not None:
+            self.mainwindow.addToolBar(self._toolbar)
+            self.statusbar = self.mainwindow.statusBar()
+
+        self.set_toolbar(self._toolbar)
 
         self.setup_ui()
 
@@ -632,11 +654,11 @@ if __name__ == '__main__':
     w = QtWidgets.QMainWindow()
     table = TableView(w)
     styledItemDelegate = QtWidgets.QStyledItemDelegate()
-    #styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
+    # styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
     styledItemDelegate.setItemEditorFactory(BooleanDelegate())
-    table.setItemDelegate(styledItemDelegate)
+    #table.setItemDelegate(styledItemDelegate)
 
-    table.setModel(TableModel([[name, True, False, True] for name in ['X_axis', 'Y_axis', 'theta_axis']],
+    table.setModel(TableModel([[name, True, False, 1.2] for name in ['X_axis', 'Y_axis', 'theta_axis']],
                               header=['Actuator', 'Start', 'Stop', 'Step'],
                               editable=[False, True, True, True]))
     w.setCentralWidget(table)

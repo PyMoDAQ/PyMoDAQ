@@ -949,8 +949,10 @@ class TableModelSequential(gutils.TableModel):
     def __init__(self, data, **kwargs):
         header = ['Actuator', 'Start', 'Stop', 'Step']
         if 'header' in kwargs:
-            kwargs.pop('header')
+            header = kwargs.pop('header')
         editable = [False, True, True, True]
+        if 'editable' in kwargs:
+            editable = kwargs.pop('editable')
         super().__init__(data, header, editable=editable, **kwargs)
 
     def __repr__(self):
@@ -977,7 +979,7 @@ class TableModelSequential(gutils.TableModel):
             start = value
         elif col == 2:  # the stop
             stop = value
-        else:  # the step
+        elif col == 3:  # the step
             isstep = True
             step = value
 
