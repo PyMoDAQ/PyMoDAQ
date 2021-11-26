@@ -10,6 +10,7 @@ from .tableview import TableViewParameter, TableViewCustom
 from .itemselect import ItemSelectParameter
 from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
+from pymodaq.daq_utils.plotting.widgets.qled import QLED
 
 from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
 
