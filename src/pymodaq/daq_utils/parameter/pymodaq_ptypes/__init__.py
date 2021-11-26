@@ -11,11 +11,14 @@ from .itemselect import ItemSelectParameter
 from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
 from pymodaq.daq_utils.plotting.widgets.qled import QLED
+from .numeric import NumericParameter
 
 from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
 
 GroupParameterCustom = GroupParameter
 
+registerParameterType('float', NumericParameter, override=True)
+registerParameterType('int',   NumericParameter, override=True)
 registerParameterItemType('bool_push', BoolPushParameterItem, SimpleParameter, override=True)
 registerParameterItemType('pixmap', PixmapParameterItem, SimpleParameter, override=True)
 registerParameterItemType('pixmap_check', PixmapCheckParameterItem, SimpleParameter, override=True)
