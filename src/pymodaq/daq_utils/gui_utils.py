@@ -360,7 +360,7 @@ class MyStyle(QtWidgets.QProxyStyle):
 
 class TableModel(QtCore.QAbstractTableModel):
 
-    def __init__(self, data, header, editable=True, parent=None):
+    def __init__(self, data, header, editable=True, parent=None, show_checkbox=False):
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
         super().__init__(parent)
         if isinstance(data, np.ndarray):
@@ -370,6 +370,7 @@ class TableModel(QtCore.QAbstractTableModel):
             data = data_tot
         self._data = data  # stored data as a list of list
         self._checked = [False for _ in range(len(self._data))]
+        self._show_checkbox = show_checkbox
         self.data_tmp = None
         self.header = header
         if not isinstance(editable, list):
@@ -413,7 +414,7 @@ class TableModel(QtCore.QAbstractTableModel):
             if role == Qt.DisplayRole or role == Qt.EditRole:
                 dat = self._data[index.row()][index.column()]
                 return dat
-            elif role == Qt.CheckStateRole and index.column() == 0:
+            elif role == Qt.CheckStateRole and index.column() == 0 and self._show_checkbox:
                 if self._checked[index.row()]:
                     return Qt.CheckState.Checked
                 else:
