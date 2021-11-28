@@ -170,8 +170,9 @@ class DashBoard(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def load_scan_module(self):
-        win = QtWidgets.QMainWindow()
+    def load_scan_module(self, win=None):
+        if win is None:
+            win = QtWidgets.QMainWindow()
         area = gutils.DockArea()
         win.setCentralWidget(area)
         self.scan_module = DAQ_Scan(dockarea=area, dashboard=self)
@@ -180,8 +181,9 @@ class DashBoard(QObject):
         win.show()
         return self.scan_module
 
-    def load_log_module(self):
-        win = QtWidgets.QMainWindow()
+    def load_log_module(self, win=None):
+        if win is None:
+            win = QtWidgets.QMainWindow()
         area = gutils.DockArea()
         win.setCentralWidget(area)
         self.log_module = DAQ_Logger(dockarea=area, dashboard=self)
@@ -190,8 +192,9 @@ class DashBoard(QObject):
         win.show()
         return self.log_module
 
-    def load_pid_module(self):
-        self.pid_window = QtWidgets.QMainWindow()
+    def load_pid_module(self, win=None):
+        if win is None:
+            win = QtWidgets.QMainWindow()
         dockarea = gutils.DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle('PID Controller')

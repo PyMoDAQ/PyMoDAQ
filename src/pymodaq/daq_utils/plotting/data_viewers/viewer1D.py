@@ -30,7 +30,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     def __init__(self, parent=None):
         
-        super(Viewer1D, self).__init__()
+        super().__init__()
 
         self.viewer_type = 'Data1D'
         self.title = 'viewer1D'
