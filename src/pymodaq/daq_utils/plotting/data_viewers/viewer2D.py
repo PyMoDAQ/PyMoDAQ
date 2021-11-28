@@ -442,7 +442,8 @@ class View2D(ActionManager, QtCore.QObject):
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
-        
+        self.setup_actions()
+
         self.parent_widget = parent_widget
         if self.parent_widget is None:
             self.parent_widget = QtWidgets.QWidget()
@@ -791,6 +792,10 @@ class Viewer2D(ViewerBase):
         datas = utils.DataFromPlugins(name='', distribution=distribution, data=data_list)
         return datas
 
+    def set_gradient(self, image_key, gradient):
+        """convenience function"""
+        self.view.histogrammer.set_gradient(image_key, 'grey')
+
     def _show_data(self, datas: utils.DataFromPlugins):
         """
         numpy arrays to be plotted and eventually filtered using ROI...
@@ -801,7 +806,7 @@ class Viewer2D(ViewerBase):
         """
 
         if len(datas['data']) == 1 and not self._is_gradient_manually_set:
-            self.view.histogrammer.set_gradient('red', 'grey')
+            self.set_gradient('red', 'grey')
 
         self.isdata['red'] = len(datas['data']) > 0
         self.isdata['green'] = len(datas['data']) > 1

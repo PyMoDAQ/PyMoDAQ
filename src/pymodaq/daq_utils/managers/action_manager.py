@@ -6,7 +6,7 @@ from qtpy.QtWidgets import QAction
 
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
-
+from pathlib import Path
 
 class QAction(QAction):
     """
@@ -45,7 +45,11 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
     """
     if icon_name != '':
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
+        if Path(icon_name).is_file():
+            icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Normal,
+                           QtGui.QIcon.Off)
+        else:
+            icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
         action = QAction(icon, name, None)
     else:
@@ -69,7 +73,7 @@ class ActionManager:
         self._toolbar = toolbar
         self._menu = menu
 
-        self.setup_actions()
+        #self.setup_actions()
 
     def setup_actions(self):
         """

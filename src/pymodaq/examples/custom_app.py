@@ -48,6 +48,7 @@ class CustomAppExample(gutils.CustomApp):
 
         # init the object parameters
         self.raw_data = []
+        self.setup_ui()
 
     def setup_actions(self):
         '''

@@ -592,8 +592,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.set_toolbar(self._toolbar)
 
-        self.setup_ui()
-
     def setup_ui(self):
         self.setup_docks()
 
