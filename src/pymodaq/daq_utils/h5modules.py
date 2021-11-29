@@ -20,7 +20,7 @@ from pymodaq.daq_utils.abstract.logger import AbstractLogger
 import pickle
 from qtpy import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.scanner import scan_types as stypes
+from pymodaq.daq_utils.scanner import SCAN_TYPES as stypes
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
 
 import datetime

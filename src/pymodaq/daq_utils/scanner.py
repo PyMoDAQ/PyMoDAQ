@@ -21,11 +21,15 @@ from pymodaq.daq_utils.exceptions import ScannerException
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = Config()
 
-scan_types = ['Scan1D', 'Scan2D', 'Sequential', 'Tabular']
-scan_subtypes = dict(Scan1D=['Linear', 'Adaptive', 'Linear back to start', 'Random'],
-                     Scan2D=['Spiral', 'Linear', 'Adaptive', 'Back&Forth', 'Random'],
-                     Sequential=['Linear'],
-                     Tabular=['Linear', 'Adaptive'])
+SCAN_TYPES = ['Scan1D', 'Scan2D', 'Sequential', 'Tabular']
+SCAN_SUBTYPES = dict(Scan1D=dict(subpath=('scan1D_settings', 'scan1D_type'),
+                                 limits=['Linear', 'Adaptive', 'Linear back to start', 'Random']),
+                     Scan2D=dict(subpath=('scan2D_settings', 'scan2D_type'),
+                                 limits=['Spiral', 'Linear', 'Adaptive', 'Back&Forth', 'Random']),
+                     Sequential=dict(subpath=('seq_settings', 'scanseq_type'),
+                                     limits=['Linear']),
+                     Tabular=dict(subpath=('tabular_settings', 'tabular_subtype'),
+                                  limits=['Linear', 'Adaptive']))
 
 try:
     import adaptive
@@ -36,9 +40,9 @@ try:
         loss2D=['default', 'resolution', 'uniform', 'triangle'])
 
 except Exception:
-    scan_subtypes['Scan1D'].pop(scan_subtypes['Scan1D'].index('Adaptive'))
-    scan_subtypes['Scan2D'].pop(scan_subtypes['Scan2D'].index('Adaptive'))
-    scan_subtypes['Tabular'].pop(scan_subtypes['Tabular'].index('Adaptive'))
+    SCAN_SUBTYPES['Scan1D']['limits'].pop(SCAN_SUBTYPES['Scan1D']['limits'].index('Adaptive'))
+    SCAN_SUBTYPES['Scan2D']['limits'].pop(SCAN_SUBTYPES['Scan2D']['limits'].index('Adaptive'))
+    SCAN_SUBTYPES['Tabular']['limits'].pop(SCAN_SUBTYPES['Tabular']['limits'].index('Adaptive'))
     adaptive_losses = None
     adaptive = None
     logger.info('adaptive module is not present, no adaptive scan possible')
@@ -70,8 +74,6 @@ class ScanInfo:
             return '[ScanInfo with position is None)'
 
 
-
-
 class ScanParameters:
     """
     Utility class to define and store information about scans to be done
@@ -84,8 +86,8 @@ class ScanParameters:
         Parameters
         ----------
         Naxes: (int) number of axes used to do the scan
-        scan_type: (str) one value of the scan_types list items
-        scan_subtype: (str) ne value of the scan_subtypes dict items for the scan_type key
+        scan_type: (str) one value of the SCAN_TYPES list items
+        scan_subtype: (str) ne value of the SCAN_SUBTYPES dict items for the scan_type key
         starts: (list of floats) list of starts position of each axis
         stops: (list of floats) list of stops position of each axis
         steps: (list of floats) list of steps position of each axis
@@ -97,12 +99,13 @@ class ScanParameters:
         daq_utils.plotting.scan_selector
         """
         self.Naxes = Naxes
-        if scan_type not in scan_types:
+        if scan_type not in SCAN_TYPES:
             raise ValueError(
-                f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(scan_types)}')
-        if scan_subtype not in scan_subtypes[scan_type]:
+                f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(SCAN_TYPES)}')
+        if scan_subtype not in SCAN_SUBTYPES[scan_type]['limits']:
             raise ValueError(
-                f'Chosen scan_subtype value ({scan_subtype}) is not possible. Should be among : {str(scan_subtypes[scan_type])}')
+                f'Chosen scan_subtype value ({scan_subtype}) is not possible. Should be among'
+                f' : {str(SCAN_SUBTYPES[scan_type]["limits"])}')
         self.scan_type = scan_type
         self.scan_subtype = scan_subtype
         self.adaptive_loss = adaptive_loss
@@ -272,11 +275,11 @@ class Scanner(QObject):
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
         {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
 
-        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': scan_types,
+        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': SCAN_TYPES,
          'value': config('scan', 'default')},
         {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
             {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
-             'limits': scan_subtypes['Scan1D'], 'value': config('scan', 'scan1D', 'type'),
+             'limits': SCAN_SUBTYPES['Scan1D']['limits'], 'value': config('scan', 'scan1D', 'type'),
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
@@ -288,7 +291,7 @@ class Scanner(QObject):
         ]},
         {'title': 'Scan2D settings', 'name': 'scan2D_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'scan2D_type', 'type': 'list',
-             'limits': scan_subtypes['Scan2D'], 'value': config('scan', 'scan2D', 'type'),
+             'limits': SCAN_SUBTYPES['Scan2D']['limits'], 'value': config('scan', 'scan2D', 'type'),
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
@@ -317,13 +320,13 @@ class Scanner(QObject):
         ]},
         {'title': 'Sequential settings', 'name': 'seq_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'scanseq_type', 'type': 'list',
-             'limits': scan_subtypes['Sequential'], 'value': scan_subtypes['Sequential'][0], },
+             'limits': SCAN_SUBTYPES['Sequential']['limits'], 'value': SCAN_SUBTYPES['Sequential']['limits'][0], },
             {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view',
              'delegate': gutils.SpinBoxDelegate},
         ]},
         {'title': 'Tabular settings', 'name': 'tabular_settings', 'type': 'group', 'visible': False, 'children': [
             {'title': 'Scan subtype:', 'name': 'tabular_subtype', 'type': 'list',
-             'limits': scan_subtypes['Tabular'], 'value': config('scan', 'tabular', 'type'),
+             'limits': SCAN_SUBTYPES['Tabular']['limits'], 'value': config('scan', 'tabular', 'type'),
              'tip': 'For adaptive, an algo will '
                     'determine the positions to check within the scan bounds. The defined step will be set as the'
                     'biggest feature size the algo should reach.'},
@@ -351,8 +354,6 @@ class Scanner(QObject):
         scan_type: type of scan selector
         actuators: list of actuators names
         """
-
-        
         super().__init__()
 
         self.settings_tree = None
@@ -385,7 +386,7 @@ class Scanner(QObject):
         # if actuators != []:
         #     self.actuators = actuators
         # else:
-        #     stypes = scan_types[:]
+        #     stypes = SCAN_TYPES[:]
         #     stypes.pop(stypes.index('Sequential'))
         #     self.settings.child('scan_type').setLimits(stypes)
         #     self.settings.child('scan_type').setValue(stypes[0])
@@ -536,6 +537,15 @@ class Scanner(QObject):
             limits=self.scan_selector.sources_names)
         self.settings.child('scan2D_settings', 'scan2D_roi_module').setOpts(
             limits=self.scan_selector.sources_names)
+
+    def set_scan_type_and_subtypes(self, scan_type: str, scan_subtype=None):
+        """Convenience function to qzt the main scan type"""
+        if scan_type in SCAN_TYPES:
+            self.settings.child('scan_type').setValue(scan_type)
+
+            if scan_subtype is not None:
+                if scan_subtype in SCAN_SUBTYPES[scan_type]['limits']:
+                    self.settings.child(*SCAN_SUBTYPES[scan_type]['subpath']).setValue(scan_subtype)
 
     def parameter_tree_changed(self, param, changes):
         """

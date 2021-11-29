@@ -9,7 +9,7 @@ from pymodaq.daq_utils.managers import preset_manager_utils
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.exceptions import ScannerException
-from pymodaq.daq_utils.scanner import Scanner, scan_types, adaptive_losses
+from pymodaq.daq_utils.scanner import Scanner, SCAN_TYPES, adaptive_losses
 from pathlib import Path
 from collections import OrderedDict
 
