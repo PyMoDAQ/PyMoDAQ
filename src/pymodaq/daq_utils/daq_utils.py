@@ -53,6 +53,10 @@ def load_config():
     return Config()
 
 
+def is_64bits():
+    return sys.maxsize > 2**32
+
+
 def timer(func):
     """Print the runtime of the decorated function"""
     @functools.wraps(func)
