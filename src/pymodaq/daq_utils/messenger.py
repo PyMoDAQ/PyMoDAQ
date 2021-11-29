@@ -1,5 +1,5 @@
 import warnings
-from qtpy import QtWidgets
+from qtpy import QtWidgets, QtCore
 
 
 def deprecation_msg(message, stacklevel=2):
@@ -26,3 +26,30 @@ def messagebox(severity='warning', title='this is a title', text='blabla'):
     messbox = getattr(QtWidgets.QMessageBox, severity)
     ret = messbox(None, title, text)
     return ret == QtWidgets.QMessageBox.Ok
+
+
+def dialog(title='', message='', widget=None):
+    dlg = QtWidgets.QDialog()
+    dlg.setWindowTitle(title)
+    dlg.setLayout(QtWidgets.QVBoxLayout())
+    label = QtWidgets.QLabel(message)
+    label.setAlignment(QtCore.Qt.AlignCenter)
+    dlg.layout().addWidget(label)
+    dlg.layout().addWidget(widget)
+    button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+    dlg.layout().addWidget(button_box)
+    button_box.accepted.connect(dlg.accept)
+    button_box.rejected.connect(dlg.reject)
+    ret = dlg.exec()
+    return ret
+
+
+if __name__ == '__main__':
+    import sys
+    from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
+    app = QtWidgets.QApplication([])
+    widget = QtWidgets.QWidget()
+    viewer = Viewer1D(widget)
+    ret = dialog('my dialog', 'this is a dialog do you want to proceed', widget)
+    print(ret)
+    sys.exit(app.exec_())
