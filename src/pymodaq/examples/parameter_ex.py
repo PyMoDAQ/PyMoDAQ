@@ -117,7 +117,11 @@ def main():
     parametertree = ParameterTree()
     ptree = ParameterEx(parametertree)
     parametertree.show()
+    ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
+                                                             selected=['item3']))
 
+    ptree.settings.child('itemss', 'itemsbis').setValue(dict(all_items=['item1', 'item2', 'item3'],
+                                                             selected=['item1', 'item3']))
     sys.exit(app.exec_())
 
 

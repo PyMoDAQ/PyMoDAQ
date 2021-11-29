@@ -67,6 +67,8 @@ class ItemSelect(QtWidgets.QListWidget):
             self.clear()
             self.addItems(values['all_items'])
             QtWidgets.QApplication.processEvents()
+
+        self.clearSelection()
         for item in self.all_items():
             if item.text() in values['selected']:
                 item.setSelected(True)
