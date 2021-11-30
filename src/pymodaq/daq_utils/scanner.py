@@ -189,8 +189,9 @@ class ScanParameters:
                 raise ScannerException(f'The chosen scan_subtype: {str(self.scan_subtype)} is not known')
 
         elif self.scan_type == "Scan2D":
-            if np.abs((self.stops[0]-self.starts[0]) / self.steps[0]) > steps_limit:
-                return ScanInfo()
+            if self.scan_subtype != 'Adaptive':
+                if np.abs((self.stops[0]-self.starts[0]) / self.steps[0]) > steps_limit:
+                    return ScanInfo()
 
             if self.scan_subtype == 'Spiral':
                 positions = set_scan_spiral(self.starts, self.stops, self.steps)
@@ -250,7 +251,9 @@ class ScanParameters:
         Nsteps = 1
         if self.starts is not None:
             for ind in range(len(self.starts)):
-                if self.scan_subtype != 'Spiral':
+                if self.scan_subtype == 'Adaptive':
+                    Nsteps = 1
+                elif self.scan_subtype != 'Spiral':
                     Nsteps *= np.abs((self.stops[ind] - self.starts[ind]) / self.steps[ind])+1
                 else:
                     Nsteps *= np.abs(2 * (self.stops[ind] / self.steps[ind]) + 1)
@@ -826,13 +829,14 @@ class Scanner(QObject):
             if scan_subtype == 'Adaptive':
                 if self.settings.child('scan2D_settings', 'scan2D_loss').value() == 'resolution':
                     self.settings.child('scan2D_settings', 'step_2d_axis1').setOpts(
-                        title='Minimal feature (%):',
-                        tip='Features smaller than this will not be probed first. In percent of maximal scanned area length',
-                        visible=True)
+                        value=1, title='Minimal feature (%):', visible=True,
+                        tip='Features smaller than this will not be probed first. In percent of maximal scanned area'
+                            ' length',
+                        )
                     self.settings.child('scan2D_settings', 'step_2d_axis2').setOpts(
-                        title='Maximal feature (%):',
+                        value=100, title='Maximal feature (%):', visible=True,
                         tip='Features bigger than this will be probed first. In percent of maximal scanned area length',
-                        visible=True)
+                        )
                 else:
                     self.settings.child('scan2D_settings', 'step_2d_axis1').hide()
                     self.settings.child('scan2D_settings', 'step_2d_axis2').hide()
