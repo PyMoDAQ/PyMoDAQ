@@ -313,11 +313,11 @@ class DashBoard(QObject):
         # actions menu
         self.actions_menu = menubar.addMenu('Extensions')
         action_scan = self.actions_menu.addAction('Do Scans')
-        action_scan.triggered.connect(self.load_scan_module)
+        action_scan.triggered.connect(lambda: self.load_scan_module())
         action_log = self.actions_menu.addAction('Log data')
-        action_log.triggered.connect(self.load_log_module)
+        action_log.triggered.connect(lambda: self.load_log_module())
         action_pid = self.actions_menu.addAction('PID module')
-        action_pid.triggered.connect(self.load_pid_module)
+        action_pid.triggered.connect(lambda: self.load_pid_module())
 
         extensions_actions = []
         for ext in extensions:
