@@ -59,7 +59,7 @@ is installed on your environment and load PyQt5 by default (see the :ref:`config
 This means you have to install one of these backends on your environment using either:
 
 * ``pip install pyqt5``
-* ``pip install pyside2``
+* ``pip install pyside2`` (still some issues with some parts of pymodaq's code. If you want to help fix them, please, don't be shy!)
 * ``pip install pyqt6`` (not tested yet)
 * ``pip install pyside6`` (not tested yet)
 
@@ -161,6 +161,18 @@ you could follow these steps:
 * Install the right PyMoDAQ's plugin
 * You should be good to go!
 
+.. warning::
+    From Python 3.8 onwards, the way python looks for dlls on your system changed causing issues on existing plugins
+    using them. So far the right way was to add the path pointing to your dll in the system PATH environment variable.
+    This no longer works and ctypes ``LoadLibrary`` function raises an error. A simple solution to this issue, is to add
+    in the preamble of my/your plugins this instruction:
+
+    .. code::
+
+        import os
+        os.add_dll_directory(path_dll)
+
+    where path_dll is the path pointing to your dll.
 
 .. note::
 
