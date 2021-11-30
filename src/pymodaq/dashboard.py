@@ -531,13 +531,7 @@ class DashBoard(QObject):
             utils.select_file
         """
         try:
-            if file is None:
-                file = gutils.select_file(start_path=configmod.get_set_layout_path(), save=False, ext='dock')
-            if file is not None:
-                with open(str(file), 'rb') as f:
-                    dockstate = pickle.load(f)
-                    self.dockarea.restoreState(dockstate)
-            file = file.name
+            file = gutils.load_layout_state(self.dockarea, file)
             self.settings.child('loaded_files', 'layout_file').setValue(file)
         except Exception as e:
             logger.exception(str(e))
@@ -552,14 +546,7 @@ class DashBoard(QObject):
             utils.select_file
         """
         try:
-            dockstate = self.dockarea.saveState()
-            if 'float' in dockstate:
-                dockstate['float'] = []
-            if file is None:
-                file = gutils.select_file(start_path=configmod.get_set_layout_path(), save=True, ext='dock')
-            if file is not None:
-                with open(str(file), 'wb') as f:
-                    pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
+            gutils.save_layout_state(self.dockarea, file)
         except Exception as e:
             logger.exception(str(e))
 

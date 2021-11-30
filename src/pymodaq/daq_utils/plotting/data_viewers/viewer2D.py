@@ -862,6 +862,13 @@ class Viewer2D(ViewerBase):
 
             self.view.notify_visibility_data_displayer()
 
+    def show_roi(self, show=True, show_roi_widget=True):
+        """convenience function to control roi"""
+        if show == (not self.is_action_checked('roi')):
+            self.get_action('roi').trigger()
+
+        self.view.roi_manager.roiwidget.setVisible(show_roi_widget)
+
     def update_crosshair_data(self, crosshair_dict):
         try:
             posx, posy = self.view.get_crosshair_position()
@@ -996,6 +1003,8 @@ def main_controller():
     # data_red = pg.gaussianFilter(data_red, (2, 2))
     data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
     # data_green = pg.gaussianFilter(data_green, (2, 2))
+    data_green[70:80, 7:12] = np.nan
+
     data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
 
@@ -1015,8 +1024,8 @@ def main_controller():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
-    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
+    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     #prog.ROI_select_signal.connect(print_roi_select)
     #prog.view.get_action('ROIselect').trigger()

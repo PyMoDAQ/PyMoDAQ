@@ -598,6 +598,24 @@ class TestROI:
 
         assert prog.view.is_action_checked('roi')
 
+    def test_show_roi(self, init_prog):
+        prog, qtbot = init_prog
+        prog.show_roi(show=True, show_roi_widget=True)
+        assert prog.is_action_checked('roi')
+        assert prog.view.roi_manager.roiwidget.isVisible()
+
+        prog.show_roi(show=True, show_roi_widget=False)
+        assert prog.is_action_checked('roi')
+        assert not prog.view.roi_manager.roiwidget.isVisible()
+
+        prog.show_roi(show=False, show_roi_widget=False)
+        assert not prog.is_action_checked('roi')
+        assert not prog.view.roi_manager.roiwidget.isVisible()
+
+        prog.show_roi(show=False, show_roi_widget=True)
+        assert not prog.is_action_checked('roi')
+        assert prog.view.roi_manager.roiwidget.isVisible()
+
 
 class TestIsocurve:
 

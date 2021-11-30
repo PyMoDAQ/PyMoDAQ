@@ -1100,7 +1100,7 @@ class DAQ_Scan(QObject):
                         self.ui.scan1D_subgraph.set_axis_label(axis_settings=dict(orientation='bottom',
                                                                                   label='Scan index', units=''))
 
-                    self.scan_data_1D = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
+                    self.scan_data_1D = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas))) * np.nan
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
                         self.scan_data_1D_average = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
 
@@ -1156,9 +1156,10 @@ class DAQ_Scan(QObject):
                             (self.ind_average * self.scan_data_1D_average[self.ind_scan, :] + self.scan_data_1D[
                                 self.ind_scan, :]) / (self.ind_average + 1)
 
-            x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
+            #x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
+            x_axis_sorted = self.scan_x_axis
             data_sorted = list(self.scan_data_1D.T)
-            data_sorted = [data[indices] for data in data_sorted]
+            #data_sorted = [data[indices] for data in data_sorted]
 
             if not display_as_sequence:
                 x_axis = utils.Axis(data=x_axis_sorted,
@@ -1171,14 +1172,14 @@ class DAQ_Scan(QObject):
                 else:
                     x_axis = utils.Axis(data=x_axis_sorted, label='Scan index', units='')
 
-            self.ui.scan1D_graph.x_axis = x_axis
-            self.ui.scan1D_graph.show_data(data_sorted)
+            #self.ui.scan1D_graph.x_axis = x_axis
+            self.ui.scan1D_graph.show_data(data_sorted, x_axis=x_axis)
 
             if self.settings.child('scan_options', 'scan_average').value() > 1:
                 data_averaged_sorted = list(self.scan_data_1D_average.T)
-                data_averaged_sorted = [data[indices] for data in data_averaged_sorted]
-                self.ui.average1D_graph.x_axis = x_axis_sorted
-                self.ui.average1D_graph.show_data(data_averaged_sorted)
+                #data_averaged_sorted = [data[indices] for data in data_averaged_sorted]
+                #self.ui.average1D_graph.x_axis = x_axis_sorted
+                self.ui.average1D_graph.show_data(data_averaged_sorted, x_axis=x_axis)
 
         except Exception as e:
             logger.exception(str(e))

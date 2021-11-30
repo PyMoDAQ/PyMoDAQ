@@ -85,7 +85,7 @@ params = [
     ]}
 ]
 
-def main(plugin_file, init=True):
+def main(plugin_file=None, init=True):
     """
     this method start a DAQ_Viewer object with this defined plugin as detector
     Returns
@@ -107,8 +107,12 @@ def main(plugin_file, init=True):
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
-    detector = Path(plugin_file).stem[13:]
-    det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
+    if plugin_file is None:
+        detector = 'Mock'
+        det_type = f'DAQ0D'
+    else:
+        detector = Path(plugin_file).stem[13:]
+        det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
     prog = DAQ_Viewer(area, title="Testing", DAQ_type=det_type)
     win.show()
     prog.detector = detector

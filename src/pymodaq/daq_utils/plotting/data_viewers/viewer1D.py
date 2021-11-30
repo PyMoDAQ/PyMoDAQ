@@ -690,7 +690,7 @@ class Viewer1D_math(QObject):
             return []
 
 
-if __name__ == '__main__':  # pragma: no cover
+def main():
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     prog = Viewer1D(Form)
@@ -721,3 +721,44 @@ if __name__ == '__main__':  # pragma: no cover
     QtWidgets.QApplication.processEvents()
     prog.update_labels(['coucou', 'label2'])
     sys.exit(app.exec_())
+
+
+def main_unsorted():
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    prog = Viewer1D(widget)
+
+    from pymodaq.daq_utils.daq_utils import gauss1D
+
+    x = np.linspace(0, 200, 201)
+    xaxis = np.concatenate((x, x[::-1]))
+    y = gauss1D(x, 75, 25)
+    yaxis = np.concatenate((y, -y))
+
+    widget.show()
+    prog.show_data([yaxis], x_axis=xaxis)
+
+    sys.exit(app.exec_())
+
+
+def main_nans():
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    prog = Viewer1D(widget)
+
+    from pymodaq.daq_utils.daq_utils import gauss1D
+
+    x = np.linspace(0, 200, 201)
+    y = gauss1D(x, 75, 25)
+
+    y[100:150] = np.nan
+
+    widget.show()
+    prog.show_data([y], x_axis=x)
+
+    sys.exit(app.exec_())
+
+if __name__ == '__main__':  # pragma: no cover
+    #main()
+    #main_unsorted()
+    main_nans()

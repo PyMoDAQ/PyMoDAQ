@@ -1116,6 +1116,10 @@ class DAQ_Viewer(QObject):
         self.init_show_data(datas)
         self.set_datas_to_viewers(datas, temp=True)
 
+    @property
+    def viewers(self):
+        return self.ui.viewers
+
     def update_viewer_pannels(self, data_dims=['Data0D']):
         Nviewers = len(data_dims)
 
