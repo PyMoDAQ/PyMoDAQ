@@ -7,6 +7,7 @@ from pymodaq.daq_utils.qvariant import QVariant
 import numpy as np
 from pathlib import Path
 from pyqtgraph.dockarea.DockArea import DockArea, TempAreaWindow, Dock
+from pyqtgraph.widgets.SpinBox import SpinBox
 from pymodaq.daq_utils.managers.action_manager import ActionManager
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager
 from pymodaq.daq_utils import daq_utils as utils
@@ -689,6 +690,55 @@ def save_layout_state(dockarea, file=None):
     if file is not None:
         with open(str(file), 'wb') as f:
             pickle.dump(dockstate, f, pickle.HIGHEST_PROTOCOL)
+
+
+class EditPush(QtWidgets.QWidget):
+    clicked = QtCore.Signal(float)
+
+    def __init__(self, icon_name: str, text=''):
+        super().__init__()
+
+        self.setLayout(QtWidgets.QHBoxLayout())
+        self._edit = SpinBox(value=0.1, dec=True, step=0.1, minStep=0.001)
+        self._edit.setMinimumHeight(20)
+        self._edit.setMaximumWidth(60)
+        self._edit.setMinimumWidth(60)
+        self.layout().addWidget(self._edit)
+        self.set_pushs(icon_name, text)
+
+    def set_pushs(self, icon_name, text):
+        self._push = PushButtonIcon(icon_name, text)
+        self._push.setMaximumWidth(40)
+        self._push.clicked.connect(lambda: self.emit_clicked())
+        self.layout().addWidget(self._push)
+
+    def emit_clicked(self, coeff=1):
+        print(coeff * self._edit.value())
+        self.clicked.emit(coeff * self._edit.value())
+
+
+class EditPushRel(EditPush):
+
+    def __init__(self, icon_name: str, text=''):
+        super().__init__(icon_name, text)
+
+    def set_pushs(self, icon_name, text):
+        vlayout = QtWidgets.QVBoxLayout()
+        self.layout().addLayout(vlayout)
+
+        self._push_plus = PushButtonIcon(icon_name, f'+{text}')
+        self._push_plus.setMaximumWidth(40)
+        self._push_minus = PushButtonIcon(icon_name, f'-{text}')
+        self._push_minus.setMaximumWidth(40)
+
+        vlayout.addWidget(self._push_plus)
+        vlayout.addWidget(self._push_minus)
+
+        self._push_plus.clicked.connect(lambda: self.emit_clicked(1))
+        self._push_minus.clicked.connect(lambda: self.emit_clicked(-1))
+
+
+
 
 
 if __name__ == '__main__':
