@@ -32,6 +32,20 @@ class QSpinBox_ro(QtWidgets.QSpinBox):
         self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
 
 
+class PushButtonIcon(QtWidgets.QPushButton):
+    def __init__(self, icon_name: str, text: str):
+        super().__init__(text)
+        if icon_name != '':
+            icon = QtGui.QIcon()
+            if Path(icon_name).is_file():
+                icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Normal,
+                               QtGui.QIcon.Off)
+            else:
+                icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
+                               QtGui.QIcon.Off)
+            self.setIcon(icon)
+
+
 def clickable(widget):
     class Filter(QObject):
         clicked = Signal()
