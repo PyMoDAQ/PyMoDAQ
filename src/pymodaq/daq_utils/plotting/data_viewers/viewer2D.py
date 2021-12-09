@@ -9,6 +9,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+from pyqtgraph import ROI as pgROI
 
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
 from pymodaq.daq_utils.managers.action_manager import ActionManager
@@ -451,6 +452,10 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget = ImageWidget()
         self.roi_manager = ROIManager(self.image_widget, '2D')
+        self.ROIselect = pg.RectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+        self.roi_target = pgROI(pos=(0, 0), size=(20,20), movable=False, rotatable=False, resizable=False)
+        self.roi_target.setVisible(False)
+
         self.setup_widgets()
 
         self.histogrammer = Histogrammer(self.widget_histo)
@@ -460,11 +465,32 @@ class View2D(ActionManager, QtCore.QObject):
         self.crosshair = Crosshair(self.image_widget)
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
 
+
+
         self.connect_things()
         self.prepare_ui()
 
         self.set_axis_label('bottom', label='', units='Pxls')
         self.set_axis_label('left', label='', units='Pxls')
+
+    def show_roi_target(self, show=True):
+        self.roi_target.setVisible(show)
+
+    def move_scale_roi_target(self, pos=None, size=None):
+        """
+        Move and scale the target ROI (used to displat a particular area, for instance the currently scanned points
+        during a scan
+        Parameters
+        ----------
+        pos: (iterable) precising the central position of the ROI in the view
+        size: (iterable) precising the size of the ROI
+        """
+        if pos is not None:
+            if self.roi_target.pos() != pos:
+                self.roi_target.setPos(pos)
+        if size is not None:
+            if self.roi_target.size() != size:
+                self.roi_target.setSize(size)
 
     def setup_widgets(self):
         vertical_layout = QtWidgets.QVBoxLayout()
@@ -483,8 +509,10 @@ class View2D(ActionManager, QtCore.QObject):
         self.setupGraphs(self.graphs_widget.layout())
         splitter_vertical.addWidget(self.graphs_widget)
 
-        self.ROIselect = pg.RectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+
         self.plotitem.addItem(self.ROIselect)
+
+        self.plotitem.addItem(self.roi_target)
 
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
@@ -725,7 +753,8 @@ class Viewer2D(ViewerBase):
     ROI_select_signal = Signal(QtCore.QRectF)
     convenience_attributes = ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
                               'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
-                              'image_widget', 'scale_axis', 'unscale_axis', 'roi_manager')
+                              'image_widget', 'scale_axis', 'unscale_axis', 'roi_manager', 'show_roi_target',
+                              'move_scale_roi_target')
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent, title)
@@ -1031,6 +1060,9 @@ def main_controller():
     #prog.view.get_action('ROIselect').trigger()
     #prog.view.ROIselect.setSize((20, 35))
     #prog.view.ROIselect.setPos((45, 123))
+    prog.show_roi_target(True)
+    prog.move_scale_roi_target((50, 40), (20, 20))
+
     QtWidgets.QApplication.processEvents()
 
     # prog.setImage(data_spread=data)
@@ -1038,8 +1070,10 @@ def main_controller():
 
     sys.exit(app.exec_())
 
+
 def print_roi_select(rect):
     print(rect)
+
 
 def main_view():
     app = QtWidgets.QApplication(sys.argv)
@@ -1047,6 +1081,7 @@ def main_view():
     prog = View2D(form)
     form.show()
     sys.exit(app.exec_())
+
 
 if __name__ == '__main__':  # pragma: no cover
 

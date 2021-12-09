@@ -828,23 +828,31 @@ class Scanner(QObject):
             self.settings.child('scan2D_settings', 'scan2D_loss').show(scan_subtype == 'Adaptive')
             if scan_subtype == 'Adaptive':
                 if self.settings.child('scan2D_settings', 'scan2D_loss').value() == 'resolution':
+                    title = 'Minimal feature (%):'
+                    if self.settings.child('scan2D_settings', 'step_2d_axis1').opts['title'] != title:
+                        self.settings.child('scan2D_settings', 'step_2d_axis1').setValue(1)
+                        self.settings.child('scan2D_settings', 'step_2d_axis2').setValue(100)
+
                     self.settings.child('scan2D_settings', 'step_2d_axis1').setOpts(
-                        value=1, title='Minimal feature (%):', visible=True,
+                        limits=[0, 100], title=title, visible=True,
                         tip='Features smaller than this will not be probed first. In percent of maximal scanned area'
                             ' length',
                         )
                     self.settings.child('scan2D_settings', 'step_2d_axis2').setOpts(
-                        value=100, title='Maximal feature (%):', visible=True,
+                        limits=[0, 100], title='Maximal feature (%):', visible=True,
                         tip='Features bigger than this will be probed first. In percent of maximal scanned area length',
                         )
+
                 else:
                     self.settings.child('scan2D_settings', 'step_2d_axis1').hide()
                     self.settings.child('scan2D_settings', 'step_2d_axis2').hide()
             else:
-                self.settings.child('scan2D_settings', 'step_2d_axis1').setOpts(title='Step Ax1:',
-                                                                                                tip='Step size for ax1 in actuator units')
-                self.settings.child('scan2D_settings', 'step_2d_axis2').setOpts(title='Step Ax2:',
-                                                                                                tip='Step size for ax2 in actuator units')
+                self.settings.child('scan2D_settings',
+                                    'step_2d_axis1').setOpts(title='Step Ax1:',
+                                                             tip='Step size for ax1 in actuator units')
+                self.settings.child('scan2D_settings',
+                                    'step_2d_axis2').setOpts(title='Step Ax2:',
+                                                             tip='Step size for ax2 in actuator units')
 
             if scan_subtype == 'Spiral':
                 self.settings.child('scan2D_settings',

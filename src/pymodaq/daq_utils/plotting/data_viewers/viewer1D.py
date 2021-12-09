@@ -457,10 +457,12 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.remove_plots()
                 self.ini_data_plots(len(datas))
 
+            if x_axis is not None:
+                self.set_x_axis(x_axis)
+
             self.update_graph1D(datas)
 
-            if x_axis is not None:
-                self.x_axis = x_axis
+
 
             if labels is not None:
                 self.update_labels(labels)
@@ -616,6 +618,11 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     @x_axis.setter
     def x_axis(self, x_axis):
+        self.set_x_axis(x_axis)
+        if self.datas:
+            self.show_data_temp(self.datas)
+
+    def set_x_axis(self, x_axis):
         label = 'Pxls'
         units = ''
         if isinstance(x_axis, dict):
@@ -629,8 +636,6 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             xdata = x_axis
         self._x_axis = xdata
         self.measurement_dict['x_axis'] = self._x_axis
-        if self.datas:
-            self.show_data_temp(self.datas)
         self.set_axis_label(dict(orientation='bottom', label=label, units=units))
 
 

@@ -55,7 +55,8 @@ class DAQ_Scan(QObject):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'}, ]},
+            {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},
+            {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
     ]
 
     def __init__(self, dockarea=None, dashboard=None, show_popup=True):
@@ -582,6 +583,7 @@ class DAQ_Scan(QObject):
         try:
             scan_type = self.scanner.scan_parameters.scan_type
             isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
+            self.ui.scan2D_graph.show_roi_target(False)
 
             self.h5saver.current_scan_group.attrs['scan_done'] = True
             self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
@@ -1156,29 +1158,31 @@ class DAQ_Scan(QObject):
                             (self.ind_average * self.scan_data_1D_average[self.ind_scan, :] + self.scan_data_1D[
                                 self.ind_scan, :]) / (self.ind_average + 1)
 
-            #x_axis_sorted, indices = np.unique(self.scan_x_axis, return_index=True)
-            x_axis_sorted = self.scan_x_axis
-            data_sorted = list(self.scan_data_1D.T)
-            #data_sorted = [data[indices] for data in data_sorted]
+            data_to_plot = list(self.scan_data_1D.T)
+            if self.settings.child('scan_options', 'sort_scan1D').value():
+                x_axis_to_plot, indices = np.unique(self.scan_x_axis, return_index=True)
+                data_to_plot = [data[indices] for data in data_to_plot]
+            else:
+                x_axis_to_plot = np.squeeze(self.scan_x_axis)
 
             if not display_as_sequence:
-                x_axis = utils.Axis(data=x_axis_sorted,
+                x_axis = utils.Axis(data=x_axis_to_plot,
                                     label=self.modules_manager.actuators[0].title,
                                     units=self.modules_manager.actuators[0].settings.child('move_settings',
                                                                                            'units').value())
             else:
                 if isadaptive:
-                    x_axis = utils.Axis(data=x_axis_sorted, label='Curvilinear value', units='')
+                    x_axis = utils.Axis(data=x_axis_to_plot, label='Curvilinear value', units='')
                 else:
-                    x_axis = utils.Axis(data=x_axis_sorted, label='Scan index', units='')
+                    x_axis = utils.Axis(data=x_axis_to_plot, label='Scan index', units='')
 
             #self.ui.scan1D_graph.x_axis = x_axis
-            self.ui.scan1D_graph.show_data(data_sorted, x_axis=x_axis)
+            self.ui.scan1D_graph.show_data(data_to_plot, x_axis=x_axis)
 
             if self.settings.child('scan_options', 'scan_average').value() > 1:
                 data_averaged_sorted = list(self.scan_data_1D_average.T)
-                #data_averaged_sorted = [data[indices] for data in data_averaged_sorted]
-                #self.ui.average1D_graph.x_axis = x_axis_sorted
+                if self.settings.child('scan_options', 'sort_scan1D').value():
+                    data_averaged_sorted = [data[indices] for data in data_averaged_sorted]
                 self.ui.average1D_graph.show_data(data_averaged_sorted, x_axis=x_axis)
 
         except Exception as e:
@@ -1228,6 +1232,7 @@ class DAQ_Scan(QObject):
                 if not self.plot_2D_ini:  # init the data
                     # self.ui.scan1D_subgraph.show(False)
                     self.plot_2D_ini = True
+                    self.ui.scan2D_graph.show_roi_target(not isadaptive)
                     if isadaptive:
                         self.scan_x_axis2D = np.array(self.scan_positions)[:, 0]
                         self.scan_y_axis = np.array(self.scan_positions)[:, 1]
@@ -1239,6 +1244,7 @@ class DAQ_Scan(QObject):
                             self.scan_data_2D = \
                                 np.hstack((self.scan_positions[-1], datas[key]['data']))
                     else:
+
                         self.scan_x_axis2D = self.scanner.scan_parameters.axes_unique[0]
                         self.scan_y_axis = self.scanner.scan_parameters.axes_unique[1]
                         self.scan_data_2D = [np.zeros((len(self.scan_y_axis),
@@ -1251,7 +1257,11 @@ class DAQ_Scan(QObject):
                     self.ui.scan2D_graph.y_axis = utils.Axis(data=self.scan_y_axis,
                                                        units=self.modules_manager.actuators[1].settings.child(
                                                            'move_settings', 'units').value(),
+
                                                        label=self.modules_manager.actuators[1].title)
+                    size = (self.scanner.scan_parameters.steps[0] / self.ui.scan2D_graph.x_axis.axis_scaling,
+                            self.scanner.scan_parameters.steps[1] / self.ui.scan2D_graph.y_axis.axis_scaling)
+                    self.ui.scan2D_graph.move_scale_roi_target(size=size)
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
                         self.ui.average2D_graph.x_axis = utils.Axis(data=self.scan_x_axis2D,
@@ -1269,6 +1279,7 @@ class DAQ_Scan(QObject):
                 if not isadaptive:
                     ind_pos_axis_1 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 0]
                     ind_pos_axis_2 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 1]
+                    self.ui.scan2D_graph.move_scale_roi_target(pos=(ind_pos_axis_1, ind_pos_axis_2))
                     for ind_plot in range(min((3, len(datas)))):
                         keys = list(datas.keys())
 
