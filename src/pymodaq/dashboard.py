@@ -897,14 +897,15 @@ class DashBoard(QObject):
         # # Specifi action for axis to get their values even if it doesn't change (in which case it would'nt trigger events)
         for action_dict in self.joysticks.values():
             if action_dict['activated'] and action_dict['actionner_type'].lower() == 'axis':
-                joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id', action_dict['joystickID'])
-                val = joy['obj'].get_axis(action_dict['actionnerID'])
-                if abs(val) > 1e-4:
-                    module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
-                                                                    mod=action_dict['module_type'])
-                    action = getattr(module, action_dict['action'])
-                    if module.move_done_bool:
-                        action(val * 1 * module.settings.child('move_settings', 'epsilon').value())
+                if action_dict['module_type'] == 'act':
+                    joy = utils.find_dict_in_list_from_key_val(self.joysticks_obj, 'id', action_dict['joystickID'])
+                    val = joy['obj'].get_axis(action_dict['actionnerID'])
+                    if abs(val) > 1e-4:
+                        module = self.modules_manager.get_mod_from_name(action_dict['module_name'],
+                                                                        mod=action_dict['module_type'])
+                        action = getattr(module, action_dict['action'])
+                        if module.move_done_bool:
+                            action(val * 1 * module.settings.child('move_settings', 'epsilon').value())
 
         # # For other actions use the event loop
         for event in self.pygame.event.get():  # User did something.
