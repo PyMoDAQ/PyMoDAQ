@@ -1151,7 +1151,7 @@ class DAQ_Scan(QObject):
 
                 else:
                     self.scan_data_1D[self.ind_scan, :] = \
-                        np.array([self.get_data_live_bkg(datas, key, bkg) for key in datas])
+                        np.squeeze(np.array([self.get_data_live_bkg(datas, key, bkg) for key in datas]))
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
                         self.scan_data_1D_average[self.ind_scan, :] = \
@@ -1360,9 +1360,10 @@ class DAQ_Scan(QObject):
                         if units == '':
                             units = self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].axis_settings['units']
 
-                    self.ui.scan2D_graph.y_axis = dict(data=self.scan_y_axis,
-                                                       units=units,
-                                                       label=f'{self.modules_manager.detectors_all[ind_plot_det].title} {label}')
+                    self.ui.scan2D_graph.y_axis =\
+                        utils.Axis(data=self.scan_y_axis,
+                                   units=units,
+                                   label=f'{self.modules_manager.detectors_all[ind_plot_det].title} {label}')
                     self.scan_data_2D = []
                     self.scan_data_2D_average = []
                     for ind, key in enumerate(datas):
