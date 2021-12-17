@@ -170,8 +170,10 @@ def check_config(config_base, config_local):
 class TreeFromToml(QObject):
     def __init__(self, conf_path=None):
         super().__init__()
-
-        self.config_path = get_set_local_dir().joinpath('config.toml')
+        if conf_path is None:
+            self.config_path = get_set_local_dir().joinpath('config.toml')
+        else:
+            self.config_path = conf_path
         config = load_config(self.config_path)
 
         params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(self.config_path),
