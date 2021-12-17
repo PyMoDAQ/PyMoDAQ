@@ -109,10 +109,13 @@ def get_set_roi_path():
     return get_set_config_path('roi_configs')
 
 
-def load_config(config_path=None):
+def load_config(config_path=None, config_base_path=None):
     if not config_path:
         config_path = get_set_local_dir().joinpath('config.toml')
-    config_base = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
+    if not config_base_path:
+        config_base = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
+    else:
+        config_base = toml.load(config_base_path)
     if not config_path.exists():  # copy the template from pymodaq folder and create one in pymodad's local folder
         config_path.write_text(toml.dumps(config_base))
 
@@ -129,8 +132,8 @@ class ConfigError(Exception):
 
 
 class Config:
-    def __init__(self, config_path=None):
-        self._config = load_config(config_path)
+    def __init__(self, config_path=None, config_base_path=None):
+        self._config = load_config(config_path, config_base_path)
 
     def __call__(self, *args):
         try:
