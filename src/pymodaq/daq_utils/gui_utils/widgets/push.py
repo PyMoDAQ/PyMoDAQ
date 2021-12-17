@@ -30,11 +30,11 @@ class EditPushInfo:
 
 
 class EditPush(QtWidgets.QWidget):
-    clicked = QtCore.Signal(dict)
+    clicked = QtCore.Signal(EditPushInfo)
 
     def __init__(self, icon_name: str, ini_value=0.1, text=''):
         super().__init__()
-
+        self._edit_push_type = 'abs'
         self.setLayout(QtWidgets.QHBoxLayout())
         self._edit = SpinBox(value=ini_value, dec=True, step=0.1, minStep=0.001)
         self._edit.setMinimumHeight(20)
@@ -57,13 +57,14 @@ class EditPush(QtWidgets.QWidget):
         --------
         EditPushRel
         """
-        self.clicked.emit({'abs': coeff * self._edit.value()})
+        self.clicked.emit(EditPushInfo(type=self._edit_push_type, value=coeff * self._edit.value()))
 
 
 class EditPushRel(EditPush):
 
     def __init__(self, icon_name: str, text='', ini_value=0.15):
         super().__init__(icon_name, text=text, ini_value=ini_value)
+        self._edit_push_type = 'rel'
 
     def set_pushs(self, icon_name, text):
         vlayout = QtWidgets.QVBoxLayout()
@@ -80,14 +81,5 @@ class EditPushRel(EditPush):
         self._push_plus.clicked.connect(lambda: self.emit_clicked(1))
         self._push_minus.clicked.connect(lambda: self.emit_clicked(-1))
 
-    def emit_clicked(self, coeff=1):
-        """will emit a signal containing a float value calculated from the product of the coeff and the internal
-        spinbox value.
-
-        See Also
-        --------
-        EditPushRel
-        """
-        self.clicked.emit({'rel': coeff * self._edit.value()})
 
 
