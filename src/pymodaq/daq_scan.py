@@ -12,6 +12,11 @@ import numpy as np
 from pathlib import Path
 import os
 
+import pymodaq.daq_utils.gui_utils.dock
+import pymodaq.daq_utils.gui_utils.file_io
+import pymodaq.daq_utils.gui_utils.utils
+import pymodaq.daq_utils.gui_utils.widgets.spinbox
+import pymodaq.daq_utils.messenger
 from pymodaq.daq_utils.config import Config, get_set_preset_path
 from pymodaq.daq_utils.managers.action_manager import QAction
 import pymodaq.daq_utils.parameter.ioxml
@@ -27,7 +32,8 @@ from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
 from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils.plotting.widgets.qled import QLED
+from pymodaq.daq_utils.gui_utils.widgets import QLED
+from pymodaq.daq_utils.messenger import messagebox
 
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils import gui_utils as gutils
@@ -179,7 +185,7 @@ class DAQ_Scan(QObject):
             # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
     def create_average_dock(self):
-        self.ui.average_dock = gutils.Dock("Averaging")
+        self.ui.average_dock = pymodaq.daq_utils.gui_utils.dock.Dock("Averaging")
         average_tab = QtWidgets.QTabWidget()
         average1D_widget = QtWidgets.QWidget()
         average2D_widget = QtWidgets.QWidget()
@@ -324,7 +330,7 @@ class DAQ_Scan(QObject):
         ##################################################################
 
         # %% create scan dock and make it a floating window
-        self.ui.scan_dock = gutils.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
+        self.ui.scan_dock = pymodaq.daq_utils.gui_utils.dock.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
         self.ui.scan_dock.setOrientation('vertical')
         self.ui.scan_dock.addWidget(widgetsettings)
 
@@ -380,11 +386,11 @@ class DAQ_Scan(QObject):
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
         self.ui.status_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.status_message)
-        self.ui.N_scan_steps_sb = gutils.QSpinBox_ro()
+        self.ui.N_scan_steps_sb = pymodaq.daq_utils.gui_utils.widgets.spinbox.QSpinBox_ro()
         self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb = gutils.QSpinBox_ro()
+        self.ui.indice_scan_sb = pymodaq.daq_utils.gui_utils.widgets.spinbox.QSpinBox_ro()
         self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb = gutils.QSpinBox_ro()
+        self.ui.indice_average_sb = pymodaq.daq_utils.gui_utils.widgets.spinbox.QSpinBox_ro()
         self.ui.indice_average_sb.setToolTip('Current average value')
         self.ui.scan_done_LED = QLED()
         self.ui.scan_done_LED.setToolTip('Scan done state')
@@ -651,9 +657,9 @@ class DAQ_Scan(QObject):
                                                         scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = gutils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
+                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
                 else:
-                    string = gutils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
+                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
                 live_group.attrs['pixmap1D'] = string
 
             elif self.scan_data_2D != []:  #if live data is saved as 1D not needed to save as 2D
@@ -715,9 +721,9 @@ class DAQ_Scan(QObject):
                                                     scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = gutils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
+                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
                 else:
-                    string = gutils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
+                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
                 live_group.attrs['pixmap2D'] = string
 
             if self.navigator is not None:
@@ -729,7 +735,7 @@ class DAQ_Scan(QObject):
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
             os.mkdir(self.h5saver.settings.child(('base_path')).value())
-        filename = gutils.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
+        filename = pymodaq.daq_utils.gui_utils.file_io.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
     def save_metadata(self, node, type_info='dataset_info'):
@@ -1431,22 +1437,21 @@ class DAQ_Scan(QObject):
 
             scan_params = self.scanner.set_scan()
             if scan_params.scan_info.positions is None:
-                gutils.show_message(f"An error occurred when establishing the scan steps. Actual settings "
-                                    f"gives approximately {int(scan_params.Nsteps)} steps."
-                                    f" Please check the steps number "
-                                    f"limit in the config file ({config['scan']['steps_limit']}) or modify"
-                                    f" your scan settings.")
-
+                messagebox(text=f"An error occurred when establishing the scan steps. Actual settings "
+                                f"gives approximately {int(scan_params.Nsteps)} steps."
+                                f" Please check the steps number "
+                                f"limit in the config file ({config['scan']['steps_limit']}) or modify"
+                                f" your scan settings.")
 
             if len(self.modules_manager.actuators) != self.scanner.scan_parameters.Naxes:
-                gutils.show_message("There are not enough or too much selected move modules for this scan")
+                messagebox(text="There are not enough or too much selected move modules for this scan")
                 return
 
             if self.scanner.scan_parameters.scan_subtype == 'Adaptive':
                 if len(self.modules_manager.get_selected_probed_data('0D')) == 0:
-                    gutils.show_message("In adaptive mode, you have to pick a 0D signal from which the algorithm will"
-                                   " determine the next positions to scan, see 'probe_data' in the modules selector"
-                                   " panel")
+                    messagebox(text="In adaptive mode, you have to pick a 0D signal from which the algorithm will"
+                                    " determine the next positions to scan, see 'probe_data' in the modules selector"
+                                    " panel")
                     return
 
             self.ui.N_scan_steps_sb.setValue(self.scanner.scan_parameters.Nsteps)
@@ -2114,7 +2119,7 @@ def main(init_qt=True):
     from pymodaq.dashboard import DashBoard
 
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = pymodaq.daq_utils.gui_utils.dock.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

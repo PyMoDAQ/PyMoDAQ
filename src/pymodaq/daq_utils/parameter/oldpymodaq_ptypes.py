@@ -18,7 +18,7 @@ from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 from collections import OrderedDict
 from decimal import Decimal as D
 
-from pymodaq.daq_utils.plotting.widgets.qled import QLED
+from pymodaq.daq_utils.gui_utils.widgets import QLED
 
 from pathlib import Path
 import numpy as np

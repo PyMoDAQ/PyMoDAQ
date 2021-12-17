@@ -14,14 +14,17 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
 from pymodaq.daq_utils.daq_utils import capitalize, Axis, JsonConverter, NavAxis
-from pymodaq.daq_utils.gui_utils import h5tree_to_QTree, pngbinary2Qlabel, select_file, DockArea
+from pymodaq.daq_utils.gui_utils.utils import h5tree_to_QTree, pngbinary2Qlabel
+from pymodaq.daq_utils.gui_utils.file_io import select_file
+from pymodaq.daq_utils.gui_utils.dock import DockArea
+from pymodaq.daq_utils.gui_utils.utils import dashboard_submodules_params
 from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 import pickle
 from qtpy import QtWidgets
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.scanner import SCAN_TYPES as stypes
-from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
+
 
 import datetime
 from dateutil import parser

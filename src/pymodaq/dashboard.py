@@ -8,21 +8,19 @@ import pickle
 import logging
 from pathlib import Path
 from importlib import import_module
-
-import pymodaq.daq_utils.config
+from packaging import version as version_mod
+from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale
-
-from pymodaq.daq_utils.parameter import utils as putils
-from pyqtgraph.dockarea import Dock
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes  # to be placed after importing Parameter
-
-from pymodaq.daq_utils import daq_utils as utils
 from time import perf_counter
 
+from pymodaq.daq_utils.gui_utils import DockArea, Dock, select_file
+import pymodaq.daq_utils.gui_utils.layout as layout_mod
+from pymodaq.daq_utils.messenger import messagebox
+from pymodaq.daq_utils.parameter import utils as putils
+import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes  # to be placed after importing Parameter
+from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.daq_utils import get_version
 from pymodaq.daq_utils.managers.preset_manager import PresetManager
 from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
@@ -39,7 +37,6 @@ from pymodaq.daq_logger import DAQ_Logger
 from pymodaq.pid.pid_controller import DAQ_PID
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
-from packaging import version as version_mod
 
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -173,7 +170,7 @@ class DashBoard(QObject):
     def load_scan_module(self, win=None):
         if win is None:
             win = QtWidgets.QMainWindow()
-        area = gutils.DockArea()
+        area = DockArea()
         win.setCentralWidget(area)
         self.scan_module = DAQ_Scan(dockarea=area, dashboard=self)
         self.extensions['DAQ_Scan'] = self.scan_module
@@ -184,7 +181,7 @@ class DashBoard(QObject):
     def load_log_module(self, win=None):
         if win is None:
             win = QtWidgets.QMainWindow()
-        area = gutils.DockArea()
+        area = DockArea()
         win.setCentralWidget(area)
         self.log_module = DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions['DAQ_Logger'] = self.log_module
@@ -195,7 +192,7 @@ class DashBoard(QObject):
     def load_pid_module(self, win=None):
         if win is None:
             win = QtWidgets.QMainWindow()
-        dockarea = gutils.DockArea()
+        dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle('PID Controller')
         self.pid_module = DAQ_PID(dockarea=dockarea)
@@ -206,7 +203,7 @@ class DashBoard(QObject):
 
     def load_extensions_module(self, ext):
         self.extension_windows.append(QtWidgets.QMainWindow())
-        area = gutils.DockArea()
+        area = DockArea()
         self.extension_windows[-1].setCentralWidget(area)
         self.extension_windows[-1].resize(1000, 500)
         self.extension_windows[-1].setWindowTitle(ext['name'])
@@ -401,7 +398,7 @@ class DashBoard(QObject):
 
     def modify_remote(self):
         try:
-            path = gutils.select_file(start_path=configmod.get_set_remote_path(), save=False, ext='xml')
+            path = select_file(start_path=configmod.get_set_remote_path(), save=False, ext='xml')
             if path != '':
                 self.remote_manager.set_file_remote(path)
 
@@ -412,7 +409,7 @@ class DashBoard(QObject):
 
     def modify_overshoot(self):
         try:
-            path = gutils.select_file(start_path=configmod.get_set_overshoot_path(), save=False, ext='xml')
+            path = select_file(start_path=configmod.get_set_overshoot_path(), save=False, ext='xml')
             if path != '':
                 self.overshoot_manager.set_file_overshoot(path)
 
@@ -423,7 +420,7 @@ class DashBoard(QObject):
 
     def modify_roi(self):
         try:
-            path = gutils.select_file(start_path=configmod.get_set_roi_path(), save=False, ext='xml')
+            path = select_file(start_path=configmod.get_set_roi_path(), save=False, ext='xml')
             if path != '':
                 self.roi_saver.set_file_roi(path)
 
@@ -434,7 +431,7 @@ class DashBoard(QObject):
 
     def modify_preset(self):
         try:
-            path = gutils.select_file(start_path=self.preset_path, save=False, ext='xml')
+            path = select_file(start_path=self.preset_path, save=False, ext='xml')
             if path != '':
                 modified = self.preset_manager.set_file_preset(path)
 
@@ -531,7 +528,7 @@ class DashBoard(QObject):
             utils.select_file
         """
         try:
-            file = gutils.load_layout_state(self.dockarea, file)
+            file = layout_mod.load_layout_state(self.dockarea, file)
             self.settings.child('loaded_files', 'layout_file').setValue(file)
         except Exception as e:
             logger.exception(str(e))
@@ -546,7 +543,7 @@ class DashBoard(QObject):
             utils.select_file
         """
         try:
-            gutils.save_layout_state(self.dockarea, file)
+            layout_mod.save_layout_state(self.dockarea, file)
         except Exception as e:
             logger.exception(str(e))
 
@@ -712,7 +709,7 @@ class DashBoard(QObject):
                                     QtWidgets.QApplication.processEvents()
                         except ActuatorError as e:
                             self.splash_sc.close()
-                            gutils.show_message(f'{str(e)}\nQuitting the application...', 'Incompatibility')
+                            messagebox(text=f'{str(e)}\nQuitting the application...', title='Incompatibility')
                             logger.exception(str(e))
                             self.quit_fun()
                             return
@@ -773,7 +770,7 @@ class DashBoard(QObject):
                             detector_modules[-1].overshoot_signal[bool].connect(self.stop_moves)
                         except DetectorError as e:
                             self.splash_sc.close()
-                            gutils.show_message(f'{str(e)}\nQuitting the application...', 'Incompatibility')
+                            messagebox(text=f'{str(e)}\nQuitting the application...', title='Incompatibility')
                             logger.exception(str(e))
                             self.quit_fun()
                             return
@@ -1345,7 +1342,7 @@ def main(init_qt=True):
             app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
 
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

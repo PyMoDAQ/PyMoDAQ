@@ -1,3 +1,4 @@
+import pymodaq.daq_utils.gui_utils.file_io
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
@@ -259,7 +260,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
             open_h5_file, update_status, daq_utils.select_file
         """
         try:
-            filename = gutils.select_file(start_path=path, save=False, ext='h5')
+            filename = pymodaq.daq_utils.gui_utils.file_io.select_file(start_path=path, save=False, ext='h5')
             if filename != "":
                 self.open_h5_file(filename)
         except Exception as e:

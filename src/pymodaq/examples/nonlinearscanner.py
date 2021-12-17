@@ -1,5 +1,7 @@
 
 import numpy as np
+from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
+from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
 from pymodaq.daq_utils.config import Config, get_set_preset_path
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal, QLocale
@@ -12,7 +14,7 @@ config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class NonLinearScanner(gutils.CustomApp):
+class NonLinearScanner(CustomApp):
 
     positions_signal = Signal(np.ndarray)
 
@@ -44,7 +46,7 @@ class NonLinearScanner(gutils.CustomApp):
         subclass method from CustomApp
         '''
         logger.debug('setting docks')
-        self.dock_settings = gutils.Dock('Settings', size=(350, 350))
+        self.dock_settings = Dock('Settings', size=(350, 350))
         self.dockarea.addDock(self.dock_settings, 'left')
         self.dock_settings.addWidget(self.settings_tree, 10)
         logger.debug('docks are set')
@@ -92,7 +94,7 @@ def main():
     from pymodaq.dashboard import DashBoard
 
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
@@ -105,7 +107,7 @@ def main():
 
 
     mainwindow = QtWidgets.QMainWindow()
-    dockarea = gutils.DockArea()
+    dockarea = DockArea()
     mainwindow.setCentralWidget(dockarea)
 
     prog = NonLinearScanner(dockarea)

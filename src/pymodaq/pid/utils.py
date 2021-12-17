@@ -1,3 +1,4 @@
+from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
 from pymodaq.daq_utils.daq_utils import get_plugins, set_logger, get_module_name
 logger = set_logger(get_module_name(__file__))
 
@@ -146,7 +147,7 @@ def main(xmlfile):
     import sys
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
@@ -156,7 +157,7 @@ def main(xmlfile):
     if file.exists():
         dashboard.set_preset_mode(file)
         # prog.load_scan_module()
-        pid_area = gutils.DockArea()
+        pid_area = DockArea()
         pid_window = QtWidgets.QMainWindow()
         pid_window.setCentralWidget(pid_area)
 

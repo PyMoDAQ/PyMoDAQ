@@ -9,7 +9,7 @@
 
 from qtpy import QtCore, QtGui, QtWidgets
 
-from pymodaq.daq_utils.plotting.widgets.qled import QLED
+from pymodaq.daq_utils.gui_utils.widgets import QLED
 from pyqtgraph import SpinBox
 
 

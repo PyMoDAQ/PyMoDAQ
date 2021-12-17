@@ -3,6 +3,8 @@ S Weber  2020
 Examples of custome parameter types derived from pyqtgraph
 """
 import sys
+
+import pymodaq.daq_utils.gui_utils.widgets.table
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from collections import OrderedDict
@@ -78,8 +80,8 @@ class ParameterEx:
             {'title': 'Table widget', 'name': 'tablewidget', 'type': 'table', 'value':
                 OrderedDict(key1='data1', key2=24), 'header': ['keys', 'limits'], 'height': 100},
             {'title': 'Table view', 'name': 'tabular_table', 'type': 'table_view',
-             'delegate': gutils.SpinBoxDelegate, 'menu': True,
-             'value': gutils.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),
+             'delegate': pymodaq.daq_utils.gui_utils.widgets.table.SpinBoxDelegate, 'menu': True,
+             'value': pymodaq.daq_utils.gui_utils.widgets.table.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),
              'tip': 'The advantage of the Table model lies in its modularity.\n For concrete examples see the'
                     'TableModelTabular and the TableModelSequential custom models in the'
                     ' pymodaq.daq_utils.scanner module'},

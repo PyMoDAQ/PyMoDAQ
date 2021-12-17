@@ -3,7 +3,7 @@ import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtWidgets import QLabel
 from qtpy.QtCore import QObject, Signal
-from pymodaq.daq_utils.gui_utils import clickable
+from pymodaq.daq_utils.gui_utils.utils import clickable
 
 
 class QLED(QLabel):

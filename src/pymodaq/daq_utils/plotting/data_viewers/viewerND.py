@@ -1,3 +1,4 @@
+from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
 from pymodaq.daq_utils.managers.action_manager import addaction
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QRectF, \
@@ -62,13 +63,13 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 
         if parent is None:
-            area = gutils.DockArea()
+            area = DockArea()
             area.show()
             self.area = area
-        elif isinstance(parent, gutils.DockArea):
+        elif isinstance(parent, DockArea):
             self.area = parent
         elif isinstance(parent, QtWidgets.QWidget):
-            area = gutils.DockArea()
+            area = DockArea()
             self.area = area
             parent.setLayout(QtWidgets.QVBoxLayout())
             parent.layout().addWidget(area)
@@ -566,7 +567,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ROI2D = self.ui.viewer2D.ROIselect
         self.ui.viewer2D.ROI_select_signal.connect(self.update_Navigator)
 
-        Dock_signal = gutils.Dock('Signal')
+        Dock_signal = Dock('Signal')
         Dock_signal.addWidget(viewer1D_widget)
         Dock_signal.addWidget(viewer2D_widget)
 
@@ -599,7 +600,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         # self.ui.navigation_widget.setLayout(vlayout_navigation)
         # vsplitter.insertWidget(0, self.ui.navigation_widget)
 
-        Dock_navigation = gutils.Dock('Navigation')
+        Dock_navigation = Dock('Navigation')
         Dock_navigation.addWidget(navigator1D_widget)
         Dock_navigation.addWidget(navigator2D_widget)
 
@@ -883,7 +884,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    area = gutils.DockArea()
+    area = DockArea()
     prog = ViewerND(area)
     prog.settings.child(('set_data_4D')).show(True)
     prog.settings.child(('set_data_3D')).show(True)

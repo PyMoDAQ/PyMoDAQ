@@ -44,6 +44,11 @@ def dialog(title='', message='', widget=None):
     return ret
 
 
+def show_message(message="blabla", title="Error"):
+    DeprecationWarning('Using show_message is deprecated, please use messagebox in daq_utils.messenger module')
+    messagebox('Warning', title=title, text=message)
+
+
 if __name__ == '__main__':
     import sys
     from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
@@ -53,3 +58,5 @@ if __name__ == '__main__':
     ret = dialog('my dialog', 'this is a dialog do you want to proceed', widget)
     print(ret)
     sys.exit(app.exec_())
+
+

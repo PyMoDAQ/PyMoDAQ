@@ -1,4 +1,4 @@
-from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem, SimpleParameter, GroupParameter, GroupParameterItem
+from pyqtgraph.parametertree.parameterTypes.basetypes import SimpleParameter, GroupParameter
 from .bool import BoolPushParameterItem
 from .pixmap import PixmapParameterItem, PixmapCheckParameterItem
 from .slide import SliderSpinBox, SliderParameterItem
@@ -10,7 +10,6 @@ from .tableview import TableViewParameter, TableViewCustom
 from .itemselect import ItemSelectParameter
 from .filedir import FileDirParameter
 from .text import PlainTextPbParameter
-from pymodaq.daq_utils.plotting.widgets.qled import QLED
 from .numeric import NumericParameter
 
 from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType

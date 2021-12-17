@@ -9,15 +9,16 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 import sys
 from collections import OrderedDict
 
+from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
+from pymodaq.daq_utils.gui_utils.dock import Dock
 from pymodaq.daq_utils.config import Config, get_set_preset_path
 import pymodaq.daq_utils.parameter.ioxml
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 
-from pymodaq.daq_utils.plotting.widgets.qled import QLED
+from pymodaq.daq_utils.gui_utils.widgets import QLED
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import H5Logger
 
 config = Config()
@@ -35,7 +36,8 @@ LOG_TYPES = ['None', 'H5 File']
 if is_sql:
     LOG_TYPES.append('SQL DataBase')
 
-class DAQ_Logger(gutils.CustomApp):
+
+class DAQ_Logger(CustomApp):
     """
     Main class initializing a DAQ_Logger module
     """
@@ -90,7 +92,7 @@ class DAQ_Logger(gutils.CustomApp):
 
     def setup_docks(self):
         logger.debug('setting docks')
-        self.docks['detectors'] = gutils.Dock("Detectors")
+        self.docks['detectors'] = Dock("Detectors")
         splitter = QtWidgets.QSplitter(Qt.Vertical)
         self.docks['detectors'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
@@ -99,7 +101,7 @@ class DAQ_Logger(gutils.CustomApp):
         self.modules_manager.settings.child('actuators_positions').hide()
         self.dockarea.addDock(self.docks['detectors'])
 
-        self.docks['logger_settings'] = gutils.Dock("Logger Settings")
+        self.docks['logger_settings'] = Dock("Logger Settings")
         self.dockarea.addDock(self.docks['logger_settings'], 'right', self.docks['detectors'])
 
         self.statusbar.setMaximumHeight(25)
@@ -450,6 +452,7 @@ class DAQ_Logging(QObject):
 def main():
     from pymodaq.dashboard import DashBoard
     from pathlib import Path
+    from pymodaq.daq_utils.gui_utils.dock import DockArea
 
     config = Config()
     app = QtWidgets.QApplication(sys.argv)
@@ -458,7 +461,7 @@ def main():
         app.setStyleSheet(qdarkstyle.load_stylesheet())
 
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

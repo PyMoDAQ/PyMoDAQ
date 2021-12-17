@@ -1,17 +1,17 @@
+
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 from pyqtgraph.widgets.SpinBox import SpinBox
+
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
     get_models, find_dict_in_list_from_key_val
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as custom_tree
-from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.daq_utils.plotting.widgets.qled import QLED
+from pymodaq.daq_utils.gui_utils.widgets import QLED
 from pymodaq.pid.utils import OutputToActuator, InputFromDetector
-
+from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
 from simple_pid import PID
 import time
 
@@ -168,7 +168,7 @@ class DAQ_PID(QObject):
 
     def setupUI(self):
 
-        self.dock_pid = gutils.Dock('PID controller', self.dock_area)
+        self.dock_pid = Dock('PID controller', self.dock_area)
         self.dock_area.addDock(self.dock_pid)
 
         widget = QtWidgets.QWidget()
@@ -240,13 +240,13 @@ class DAQ_PID(QObject):
         verlayout.addWidget(widget_toolbar)
         verlayout.addWidget(self.settings_tree)
 
-        self.dock_output = gutils.Dock('PID output')
+        self.dock_output = Dock('PID output')
         widget_output = QtWidgets.QWidget()
         self.output_viewer = Viewer0D(widget_output)
         self.dock_output.addWidget(widget_output)
         self.dock_area.addDock(self.dock_output, 'right', self.dock_pid)
 
-        self.dock_input = gutils.Dock('PID input')
+        self.dock_input = Dock('PID input')
         widget_input = QtWidgets.QWidget()
         self.input_viewer = Viewer0D(widget_input)
         self.dock_input.addWidget(widget_input)
@@ -650,7 +650,7 @@ def main():
     import sys
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
@@ -660,7 +660,7 @@ def main():
     if file.exists():
         dashboard.set_preset_mode(file)
         # prog.load_scan_module()
-        pid_area = gutils.DockArea()
+        pid_area = DockArea()
         pid_window = QtWidgets.QMainWindow()
         pid_window.setCentralWidget(pid_area)
 

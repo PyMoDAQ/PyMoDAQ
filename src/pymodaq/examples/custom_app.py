@@ -1,6 +1,9 @@
 from collections import OrderedDict
 import datetime
 import numpy as np
+from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
+from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
+from  pymodaq.daq_utils.gui_utils.file_io import select_file
 from pymodaq.daq_utils.config import Config
 
 from qtpy import QtWidgets
@@ -18,7 +21,7 @@ config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 
-class CustomAppExample(gutils.CustomApp):
+class CustomAppExample(CustomApp):
 
     # list of dicts enabling the settings tree on the user interface
     params = [
@@ -69,27 +72,27 @@ class CustomAppExample(gutils.CustomApp):
         subclass method from CustomApp
         '''
         logger.debug('setting docks')
-        self.dock_settings = gutils.Dock('Settings', size=(350, 350))
+        self.dock_settings = Dock('Settings', size=(350, 350))
         self.dockarea.addDock(self.dock_settings, 'left')
         self.dock_settings.addWidget(self.settings_tree, 10)
 
-        self.dock_logger = gutils.Dock("Logger")
+        self.dock_logger = Dock("Logger")
         self.logger_list = QtWidgets.QListWidget()
         self.logger_list.setMinimumWidth(300)
         self.dock_logger.addWidget(self.logger_list)
         self.dockarea.addDock(self.dock_logger, 'bottom', self.dock_settings)
 
         # create a dock containing a viewer object, could be 0D, 1D or 2D depending what kind of data one want to plot here a 0D
-        dock_Viewer0D = gutils.Dock('Viewer dock', size=(350, 350))
+        dock_Viewer0D = Dock('Viewer dock', size=(350, 350))
         self.dockarea.addDock(dock_Viewer0D, 'right', self.dock_logger)
         target_widget = QtWidgets.QWidget()
         self.target_viewer = Viewer0D(target_widget)
         dock_Viewer0D.addWidget(target_widget)
 
         # create 2 docks to display the DAQ_Viewer (one for its settings, one for its viewer)
-        self.dock_detector_settings = gutils.Dock("Detector Settings", size=(350, 350))
+        self.dock_detector_settings = Dock("Detector Settings", size=(350, 350))
         self.dockarea.addDock(self.dock_detector_settings, 'right', self.dock_settings)
-        self.dock_detector = gutils.Dock("Detector Viewer", size=(350, 350))
+        self.dock_detector = Dock("Detector Viewer", size=(350, 350))
         self.dockarea.addDock(self.dock_detector, 'right', self.dock_detector_settings)
         # init one daq_viewer object named detector
 
@@ -197,8 +200,8 @@ class CustomAppExample(gutils.CustomApp):
 
     def save_data(self):
         try:
-            path = gutils.select_file(start_path=self.settings.child('main_settings', 'base_path').value(), save=True,
-                                      ext='h5')
+            path = select_file(start_path=self.settings.child('main_settings', 'base_path').value(), save=True,
+                                                                   ext='h5')
             if path is not None:
                 # init the file object with an addhoc name given by the user
                 h5saver = H5Saver(save_type='custom')
@@ -251,7 +254,7 @@ def main():
     import sys
     app = QtWidgets.QApplication(sys.argv)
     mainwindow = QtWidgets.QMainWindow()
-    dockarea = gutils.DockArea()
+    dockarea = DockArea()
     mainwindow.setCentralWidget(dockarea)
 
     prog = CustomAppExample(dockarea)

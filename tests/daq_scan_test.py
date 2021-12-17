@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pymodaq.daq_utils.gui_utils.dock
 from pymodaq.daq_utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
 from pymodaq.daq_utils import daq_utils as utils
@@ -25,7 +26,7 @@ def main(qtbot):
     from pymodaq.daq_utils import gui_utils as gutils
 
     win = QtWidgets.QMainWindow()
-    area = gutils.DockArea()
+    area = pymodaq.daq_utils.gui_utils.dock.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
@@ -35,7 +36,7 @@ def main(qtbot):
     dashboard.set_preset_mode(file)
 
     winscan = QtWidgets.QMainWindow()
-    areascan = gutils.DockArea()
+    areascan = pymodaq.daq_utils.gui_utils.dock.DockArea()
     win.setCentralWidget(area)
     daq_scan = DAQ_Scan(dockarea=areascan, dashboard=dashboard, show_popup=False)
     daq_scan.status_signal.connect(dashboard.add_status)

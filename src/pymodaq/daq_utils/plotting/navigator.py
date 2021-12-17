@@ -1,3 +1,4 @@
+from pymodaq.daq_utils.gui_utils.file_io import select_file
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, Signal
 
@@ -183,8 +184,9 @@ class Navigator(QObject):
                 self.settings.child('scans', pixmaps[0]['scan_name']).value())
 
     def load_data(self):
-        self.h5module_path = str(gutils.select_file(start_path=config('data_saving', 'h5file', 'save_path'),
-                                                    save=False, ext='h5'))
+        self.h5module_path = str(
+            select_file(start_path=config('data_saving', 'h5file', 'save_path'),
+                                                            save=False, ext='h5'))
         if self.h5module_path != '':
             self.settings.child('settings', 'filepath').setValue(self.h5module_path)
             if self.h5module is not None:

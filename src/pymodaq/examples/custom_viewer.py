@@ -1,4 +1,5 @@
-import pymodaq.daq_utils.parameter.utils
+from pymodaq.daq_utils.gui_utils.widgets.table import SpinBoxDelegate
+from  pymodaq.daq_utils.parameter.utils import get_widget_from_tree
 from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.daq_utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock
@@ -45,7 +46,7 @@ class ViewerPointList(QObject):
         dock_list = Dock('List of points')
         self.area.addDock(dock_list, 'right')
         params = [{'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view',
-                   'delegate': gutils.SpinBoxDelegate, 'menu': True}, ]
+                   'delegate': SpinBoxDelegate, 'menu': True}, ]
         self.settings_tree = ParameterTree()
         self.settings = Parameter.create(name='settings', title='Settings', type='group', children=params)
         self.settings_tree.setParameters(self.settings, showTop=False)
@@ -53,7 +54,7 @@ class ViewerPointList(QObject):
 
         init_data = [[0., 0., 0.]]
         self.table_model = TableModelTabular(init_data, ['x', 'y', 'data'])
-        self.table_view = pymodaq.daq_utils.parameter.utils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
+        self.table_view = get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)
 
         self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -61,7 +62,7 @@ class ViewerPointList(QObject):
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
         styledItemDelegate = QtWidgets.QStyledItemDelegate()
-        styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
+        styledItemDelegate.setItemEditorFactory(SpinBoxDelegate())
         self.table_view.setItemDelegate(styledItemDelegate)
 
         self.table_view.setDragEnabled(True)

@@ -6,7 +6,8 @@ Created on Wed Jan 10 16:54:14 2018
 """
 import os
 
-
+from pymodaq.daq_utils.gui_utils.file_io import select_file
+import pymodaq.daq_utils.gui_utils.utils
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QRectF
 import sys
@@ -22,7 +23,7 @@ from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.scanner import Scanner
 from pymodaq.daq_utils.plotting.navigator import Navigator
 from pymodaq.daq_utils.tcp_server_client import TCPClient
-from pymodaq.daq_utils.plotting.widgets.lcd import LCD
+from pymodaq.daq_utils.gui_utils.widgets.lcd import LCD
 from pymodaq.daq_utils.config import Config, get_set_local_dir
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
@@ -596,7 +597,7 @@ class DAQ_Viewer(QObject):
                 self.ini_det_fun()
 
             if path is None or path is False:
-                path = gutils.select_file(start_path=Path.home(), save=False, ext='par')
+                path = select_file(start_path=Path.home(), save=False, ext='par')
             with open(str(path), 'rb') as f:
                 settings = pickle.load(f)
                 settings_main = settings['settings_main']
@@ -731,8 +732,8 @@ class DAQ_Viewer(QObject):
             gutils.select_file, save_export_data
         """
         self.do_save_data = True
-        self.save_file_pathname = gutils.select_file(start_path=self.save_file_pathname, save=True,
-                                                     ext='h5')  # see daq_utils
+        self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True,
+                                                                                  ext='h5')  # see daq_utils
         self.save_export_data(self.data_to_save_export)
 
     def save_new(self):
@@ -744,8 +745,8 @@ class DAQ_Viewer(QObject):
             gutils.select_file, snapshot
         """
         self.do_save_data = True
-        self.save_file_pathname = gutils.select_file(start_path=self.save_file_pathname, save=True,
-                                                     ext='h5')  # see daq_utils
+        self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True,
+                                                                                  ext='h5')  # see daq_utils
         self.snapshot(pathname=self.save_file_pathname, dosave=True)
 
     def save_datas(self, path=None, datas=None):
@@ -821,7 +822,7 @@ class DAQ_Viewer(QObject):
 
                                 if data_dim == 'data2D' and 'Data2D' in self.viewer_types:
                                     ind_viewer = self.viewer_types.index('Data2D')
-                                    string = gutils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
+                                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
                                     self.channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
             self.logger.exception(str(e))
@@ -872,7 +873,7 @@ class DAQ_Viewer(QObject):
         """
         try:
             if path is None or path is False:
-                path = gutils.select_file(start_path=Path.home(), save=True, ext='par')
+                path = select_file(start_path=Path.home(), save=True, ext='par')
 
             settings_main = self.settings.saveState()
             if self.DAQ_type != 'DAQ0D':
