@@ -32,6 +32,15 @@ comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value':
                          'default': False},
                         {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                         {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+MOVE_COMMANDS = ['abs', 'rel', 'home']
+
+
+class MoveCommand:
+    def __init__(self, move_type, value=0):
+        if move_type not in MOVE_COMMANDS:
+            raise ValueError(f'The allowed move types fro an actuator are {MOVE_COMMANDS}')
+        self.move_type = move_type
+        self.value = value
 
 
 def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
@@ -44,9 +53,6 @@ def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
 
     ]}] + comon_parameters
     return params
-
-
-
 
 
 params = [
@@ -65,6 +71,7 @@ params = [
     ]},
     {'title': 'Actuator Settings:', 'name': 'move_settings', 'type': 'group'}
 ]
+
 
 def main(plugin_file, init=True, title='test'):
     """
@@ -90,6 +97,7 @@ def main(plugin_file, init=True, title='test'):
         prog.init()
 
     sys.exit(app.exec_())
+
 
 class DAQ_Move_base(QObject):
     """ The base class to be herited by all actuator modules

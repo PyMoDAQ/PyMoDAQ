@@ -5,6 +5,7 @@ import sys
 from pymodaq.daq_move.daq_move_gui import Ui_Form
 
 from pymodaq.daq_move.utility_classes import params as daq_move_params
+from pymodaq.daq_move.utility_classes import MoveCommand
 from pathlib import Path
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -25,6 +26,7 @@ sys.path.append(local_path)
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
+
 
 
 class DAQ_Move(Ui_Form, QObject):
@@ -242,6 +244,15 @@ class DAQ_Move(Ui_Form, QObject):
 
         except Exception as e:
             self.logger.exception(str(e))
+
+    def move(self, move_command: MoveCommand):
+        """Public method to trigger the correct action on the actuator. Should be used by external applications"""
+        if move_command.move_type == 'abs':
+            self.move_Abs(move_command.value)
+        elif move_command.move_type == 'rel':
+            self.move_Rel(move_command.value)
+        elif move_command.move_type == 'home':
+            self.move_Home(move_command.value)
 
     def move_Abs(self, position, send_to_tcpip=False):
         """
