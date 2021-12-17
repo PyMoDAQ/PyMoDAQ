@@ -49,6 +49,7 @@ class DAQ_Scan(QObject):
     """
     command_DAQ_signal = Signal(list)
     status_signal = Signal(str)
+    live_data_1D_signal = Signal(list)
 
     params = [
         {'title': 'Time Flow:', 'name': 'time_flow', 'type': 'group', 'expanded': False, 'children': [
@@ -1184,6 +1185,7 @@ class DAQ_Scan(QObject):
 
             #self.ui.scan1D_graph.x_axis = x_axis
             self.ui.scan1D_graph.show_data(data_to_plot, x_axis=x_axis)
+            self.live_data_1D_signal.emit([x_axis, data_to_plot])
 
             if self.settings.child('scan_options', 'scan_average').value() > 1:
                 data_averaged_sorted = list(self.scan_data_1D_average.T)
@@ -1629,6 +1631,16 @@ class DAQ_Scan(QObject):
         self.ui.set_scan_pb.setEnabled(True)
         self.ui.set_ini_positions_pb.setEnabled(True)
         self.ui.start_scan_pb.setEnabled(True)
+
+    def do_scan(self, start_scan=True):
+        """Public method to start the scan programmatically"""
+        if start_scan:
+            if not self.ui.start_scan_pb.isEnabled():
+                self.ui.set_scan_pb.click()
+                QtWidgets.QApplication.processEvents()
+            self.ui.start_scan_pb.click()
+        else:
+            self.ui.stop_scan_pb.click()
 
 
 class DAQ_Scan_Acquisition(QObject):
