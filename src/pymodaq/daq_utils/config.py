@@ -134,6 +134,8 @@ class ConfigError(Exception):
 class Config:
     def __init__(self, config_path=None, config_base_path=None):
         self._config = load_config(config_path, config_base_path)
+        self.config_path = config_path
+        self.config_base_path = config_base_path
 
     def __call__(self, *args):
         try:
@@ -142,6 +144,9 @@ class Config:
             raise ConfigError(f'the path {args} does not exist in your configuration toml file, check '
                               f'your pymodaq_local folder')
         return ret
+
+    def to_dict(self):
+        return self._config
 
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
@@ -168,17 +173,18 @@ def check_config(config_base, config_local):
 
 
 class TreeFromToml(QObject):
-    def __init__(self, conf_path=None):
+    def __init__(self, config=None, conf_path=None, config_base_path=None):
         super().__init__()
-        if conf_path is None:
-            self.config_path = get_set_local_dir().joinpath('config.toml')
-        else:
-            self.config_path = conf_path
-        config = load_config(self.config_path)
+        if config is None:
+            if conf_path is None:
+                config_path = get_set_local_dir().joinpath('config.toml')
+            else:
+                config_path = conf_path
+            config = Config(config_path, config_base_path)
 
-        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(self.config_path),
+        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(config.config_path),
                    'readonly': True}]
-        params.extend(self.dict_to_param(config))
+        params.extend(self.dict_to_param(config.to_dict()))
 
         self.settings = Parameter.create(title='settings', name='settings', type='group', children=params)
         self.settings_tree = ParameterTree()

@@ -1,9 +1,9 @@
 import sys
 from qtpy import QtWidgets
 from pymodaq.daq_utils.h5modules import H5Browser
-from pymodaq import load_config
+from pymodaq.daq_utils.config import Config
 
-config = load_config()
+config = Config()
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
