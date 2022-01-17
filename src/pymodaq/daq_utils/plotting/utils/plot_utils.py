@@ -5,8 +5,10 @@ import pyqtgraph as pg
 import numpy as np
 from scipy.spatial import Delaunay as Triangulation
 import copy
+from easydict import EasyDict as edict
 
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.messenger import deprecation_msg
 
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
@@ -337,6 +339,28 @@ class AxisInfosExtractor:
     @staticmethod
     @dispatch(utils.Axis)
     def extract_axis_info(axis: utils.Axis):
+        data = None
+        if 'data' in axis:
+            data = axis['data']
+        label = axis['label']
+        units = axis['units']
+
+        scaling = 1
+        offset = 0
+        if data is not None:
+            if len(data) > 1:
+                scaling = data[1] - data[0]
+                if scaling > 0:
+                    offset = np.min(data)
+                else:
+                    offset = np.max(data)
+
+        return scaling, offset, label, units
+
+    @staticmethod
+    @dispatch(edict)
+    def extract_axis_info(axis: edict):
+        deprecation_msg('edict should not be used to store axis info, use daq_utils.Axis')
         data = None
         if 'data' in axis:
             data = axis['data']
