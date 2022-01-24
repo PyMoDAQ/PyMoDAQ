@@ -116,24 +116,22 @@ class PIDModelGeneric:
         float: the converted input
 
         """
-        return 0
+        raise NotImplementedError
 
-    def convert_output(self, output, dt):
+    def convert_output(self, outputs, dt, stab=True):
         """
         Convert the output of the PID in units to be fed into the actuator
         Parameters
         ----------
-        output: (float) output value from the PID from which the model extract a value of the same units as the actuator
-        dt: (float) ellapsed time in seconds since last call
+        outputs: (list of float) output value from the PID from which the model extract a value of the same units as the actuator
+        dt: (float) elapsed time in seconds since last call
         Returns
         -------
-        list: the converted output as a list (in case there are a few actuators)
+        OutputToActuator: the converted output as an OutputToActuator object
 
         """
-        #print('output converted')
-        out_put_to_actuator = OutputToActuator('rel', values=[output])
-
-        return out_put_to_actuator
+        self.curr_output = outputs
+        return OutputToActuator(mode='rel', values=outputs)
 
 
 def main(xmlfile):
