@@ -181,7 +181,7 @@ class TreeFromToml(QObject):
             else:
                 config_path = conf_path
             config = Config(config_path, config_base_path)
-
+        self.config_path = config_path
         params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(config.config_path),
                    'readonly': True}]
         params.extend(self.dict_to_param(config.to_dict()))
