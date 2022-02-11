@@ -171,7 +171,47 @@ class DAQ_Viewer_base(QObject):
         self.x_axis = None
         self.y_axis = None
 
+    def ini_detector(self, controller=None):
+        """
+        Mandatory
+        To be reimplemented in subclass
+        """
+        raise NotImplemented
+
+    def close(self):
+        """
+        Mandatory
+        To be reimplemented in subclass
+        """
+        raise NotImplemented
+
+    def grab_data(self, Naverage=1, **kwargs):
+        """
+        Mandatory
+        To be reimplemented in subclass
+        """
+        raise NotImplemented
+
     def stop(self):
+        """
+        Mandatory
+        To be reimplemented in subclass
+        """
+        raise NotImplemented
+
+    def commit_settings(self, param):
+        """
+        To be reimplemented in subclass
+        """
+        pass
+
+    def update_com(self):
+        """
+        If some communications settings have to be re init
+        To be reimplemented in subclass
+        -------
+
+        """
         pass
 
     def get_axis(self):
@@ -200,14 +240,7 @@ class DAQ_Viewer_base(QObject):
     def update_scanner(self, scan_parameters):
         self.scan_parameters = scan_parameters
 
-    def update_com(self):
-        """
-        If some communications settings have to be reinit
-        Returns
-        -------
 
-        """
-        pass
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
@@ -254,11 +287,7 @@ class DAQ_Viewer_base(QObject):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-    def commit_settings(self, param):
-        """
-            Not implemented.
-        """
-        pass
+
 
     def send_param_status(self, param, changes):
         """
