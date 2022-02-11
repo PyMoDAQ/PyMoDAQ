@@ -1,7 +1,7 @@
 import importlib.util
 import os
 import sys
-
+from pint import UnitRegistry
 from pathlib import Path
 
 try:
@@ -48,6 +48,13 @@ try:
     logger.info(f"Setting Locale to {config['style']['language']} / {config['style']['country']}")
     logger.info('************************')
     setLocale()
+    logger.info('')
+    logger.info('')
+    logger.info('************************')
+    logger.info('Initializing the pint unit register')
+    logger.info('************************')
+    ureg = UnitRegistry()
+    Q_ = ureg.Quantity
     logger.info('')
     logger.info('')
 
