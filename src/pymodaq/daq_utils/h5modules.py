@@ -45,7 +45,7 @@ try:
     import tables
     backends_available.append('tables')
 except Exception as e:                              # pragma: no cover
-    logger.exception(str(e))
+    logger.warning(str(e))
     is_tables = False
 
 is_h5py = True
@@ -54,7 +54,7 @@ try:
     import h5py
     backends_available.append('h5py')
 except Exception as e:                              # pragma: no cover
-    logger.exception(str(e))
+    logger.warning(str(e))
     is_h5y = False
 
 is_h5pyd = True
@@ -65,6 +65,9 @@ try:
 except Exception as e:                              # pragma: no cover
     logger.warning(str(e))
     is_h5yd = False
+
+if not (is_tables or is_h5py or is_h5pyd):
+    logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')
 
 version = '0.0.1'
 save_types = ['scan', 'detector', 'logger', 'custom']
