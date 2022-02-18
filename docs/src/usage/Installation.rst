@@ -34,8 +34,9 @@ Setting up a new environment
 
 * Download and install Miniconda3.
 * Open a console, and cd to the location of the *condabin* folder, for instance: ``C:\Miniconda3\condabin``
-* Create a new environment: ``conda create -n my_env python=3.8``, where my_env is your new environment name, could be *pymodaq34*
-  if you plan to install PyMoDAQ version 3.4.1 for instance.. This will create the environment with python version 3.8
+* Create a new environment: ``conda create -n my_env python=3.8``, where my_env is your new environment name,
+  could be *pymodaq353*
+  if you plan to install PyMoDAQ version 3.5.3 for instance.. This will create the environment with python version 3.8
   that is currently the recommended one, see :ref:`pythonversions`.
 * Activate your environment so that only packages installed within this environment will be *seen* by Python:
   ``conda activate my_env``
@@ -65,7 +66,6 @@ This means you have to install one of these backends on your environment using e
 
 
 __ https://pypi.org/project/QtPy/
-
 
 
 
@@ -185,6 +185,6 @@ you could follow these steps:
 Python Versions
 +++++++++++++++
 
-As of today (late october 2021), PyMoDAQ has been efficiently used on python 3.7 and 3.8 versions. It's source code
-is regularly tested against those versions. Work is in progress to make it working with python 3.9 and 3.10, but some of
+As of today (early 2022), PyMoDAQ has been efficiently used on python 3.7 up to 3.9 versions. It's source code
+is regularly tested against those versions. Work is in progress to make it working with python 3.10, but some of
 PyMoDAQ's dependencies are not yet available for these versions.
