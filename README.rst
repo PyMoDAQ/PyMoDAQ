@@ -18,6 +18,9 @@ PyMoDAQ
 .. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg
     :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
 
+.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg
+    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
+
 .. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg
     :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
 
