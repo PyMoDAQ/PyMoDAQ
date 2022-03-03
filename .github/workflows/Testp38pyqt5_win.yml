@@ -1,0 +1,10 @@
+name: '3.8 PyQt5'
+
+on: [push]
+
+jobs:
+  call_workflow:
+    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase_win.yml@master
+    with:
+      python: '3.8'
+      qt5: 'pyqt5'

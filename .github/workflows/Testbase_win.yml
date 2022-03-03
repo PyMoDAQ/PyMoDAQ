@@ -1,0 +1,42 @@
+name: Base
+
+on:
+    workflow_call:
+      inputs:
+        python:
+          required: true
+          type: string
+        qt5:
+          required: true
+          type: string
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      DISPLAY: ':99.0'
+      QT_DEBUG_PLUGINS: 1
+    steps:
+      - name: Set up Python ${{ inputs.python }}
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ inputs.python }}
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }}
+          pip install -e .
+      - name: Linting with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=src/pymodaq/resources/QtDesigner_Ressources,docs
+      - name: Test with pytest
+        run: |
+          pytest --cov=pymodaq --cov-report=xml -n auto
+      - name: Upload coverage to codecov.io
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
