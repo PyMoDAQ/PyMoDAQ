@@ -502,8 +502,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         self.settings.child('data_shape_settings', 'navigator_axes').setValue(
             dict(all_items=[ax['label'] for ax in self.nav_axes_dicts],
-                 selected=[self.    nav_axes_dicts[ind]['label']
-    for ind in nav_axes]))
+                 selected=[self.nav_axes_dicts[ind]['label'] for ind in nav_axes]))
 
     def set_GUI(self):
         """

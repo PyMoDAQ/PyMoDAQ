@@ -191,7 +191,9 @@ class DashBoard(QObject):
 
     def load_pid_module(self, win=None):
         if win is None:
-            win = QtWidgets.QMainWindow()
+            self.pid_window = QtWidgets.QMainWindow()
+        else:
+            self.pid_window = win
         dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle('PID Controller')
