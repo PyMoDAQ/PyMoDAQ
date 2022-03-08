@@ -89,7 +89,7 @@ class LCD(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.daq_utils import gauss1D
+    from pymodaq.daq_utils.math_utils import gauss1D
     import numpy as np
 
     x = np.linspace(0, 200, 201)
