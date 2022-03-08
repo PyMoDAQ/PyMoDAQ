@@ -4,9 +4,9 @@ from qtpy import QtGui, QtWidgets, QtCore
 
 from qtpy.QtWidgets import QAction
 
-from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 from pathlib import Path
+
 
 class QAction(QAction):
     """

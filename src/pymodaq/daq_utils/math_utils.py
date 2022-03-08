@@ -4,7 +4,7 @@ from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Signal
 from pyqtgraph import LinearRegionItem
 
-from pymodaq.daq_utils.daq_utils import set_logger, get_module_name, find_index
+from pymodaq.daq_utils.daq_utils import set_logger, get_module_name
 from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 
 logger = set_logger(get_module_name(__file__))
@@ -393,10 +393,6 @@ def ift2(x, dim=(-2, -1)):
         assert dim <= len(x.shape)
     out = np.fft.fftshift(np.fft.ifft2(np.fft.fftshift(x, axes=dim)), axes=dim)
     return out
-
-
-
-
 
 
 class FourierFilterer(QObject):
