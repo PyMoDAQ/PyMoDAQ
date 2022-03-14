@@ -70,12 +70,19 @@ Documentation: http://pymodaq.cnrs.fr/
 
 List of available `plugins`__
 
+Video tutorials `here`__
+
+
+Credits
+*******
+
 Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola.
 
-PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a CeCILL-B license.
+PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT license.
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/
 
+__ https://youtube.com/playlist?list=PLGdoHByMKfIdn-N51goippSSP_9iG4wds
 
 
 Contribution
