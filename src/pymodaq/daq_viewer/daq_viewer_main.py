@@ -11,7 +11,7 @@ import pymodaq.daq_utils.gui_utils.utils
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QRectF
 import sys
-
+from typing import List
 import pymodaq.daq_utils.scanner
 from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
 import copy
@@ -1038,7 +1038,7 @@ class DAQ_Viewer(QObject):
         container['dataND'] = dataND
 
     @Slot(list)
-    def show_data(self, datas):
+    def show_data(self, datas: List[utils.DataFromPlugins]):
         """
 
         """

@@ -13,10 +13,12 @@ import numpy as np
 import pymodaq.daq_utils.parameter.ioxml
 import pymodaq.daq_utils.parameter.utils
 import pymodaq.daq_utils.parameter.pymodaq_ptypes
-from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand
+from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand, DataFromPlugins
+from pymodaq.daq_utils import math_utils as mutils
 from pymodaq.daq_utils.config import Config
 from pyqtgraph.parametertree import Parameter
 from collections import OrderedDict
+from typing import List
 
 config = Config()
 
@@ -899,24 +901,95 @@ class MockServer(TCPServer):
         self.settings = Parameter.create(name='settings', type='group', children=tcp_parameters)
 
 
+
+class MockDataGrabber:
+
+    def __init__(self, grabber_dim='2D'):
+        super().__init__()
+        self.Nx = 256
+        self.Ny = 128
+        self.x_axis = np.linspace(0, self.Nx-1, self.Nx)
+        self.y_axis = np.linspace(0, self.Ny-1, self.Ny)
+        self.grabber_dim = grabber_dim
+
+    def grab(self) -> List[DataFromPlugins]:
+        if self.grabber_dim == '0D':
+            return [DataFromPlugins(data=[np.array([np.random.rand()])])]
+
+        elif self.grabber_dim == '1D':
+            return [DataFromPlugins(data=[mutils.gauss1D(self.x_axis, 128, 25) +
+                                          np.random.rand(self.Nx)])]
+
+        elif self.grabber_dim == '2D':
+            return [DataFromPlugins(data=[mutils.gauss2D(self.x_axis, 128, 65,
+                                                         self.y_axis, 60, 10) +
+                                          np.random.rand(self.Ny, self.Nx)])]
+
+
+class Grabber(QObject):
+    command_tcpip = Signal(ThreadCommand)
+
+    def __init__(self, grab_method=None):
+        super().__init__()
+        self.send_to_tcpip = False
+        self.grab_method = grab_method
+
+    def connect_tcp_ip(self, ip='localhost', port=6341):
+        self.tcpclient_thread = QThread()
+        tcpclient = TCPClient(ip, port=port)
+
+        tcpclient.moveToThread(self.tcpclient_thread)
+        self.tcpclient_thread.tcpclient = tcpclient
+        tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
+
+        self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
+
+        self.tcpclient_thread.start()
+        tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis')])
+        self.send_to_tcpip = True
+
+    def snapshot(self, info='', send_to_tcpip=True):
+        self.grab_data()
+
+    def grab_data(self):
+        """
+            Do a grab session using 2 profile :
+                * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
+                * if not send a "stop_grab" thread command with settings "main settings-naverage" node value as an attribute.
+
+            See Also
+            --------
+            daq_utils.ThreadCommand, set_enabled_Ini_buttons
+        """
+        data = self.grab_method()
+        self.command_tcpip.emit(ThreadCommand('data_ready', data))
+
+
+
+    @Slot(ThreadCommand)
+    def process_tcpip_cmds(self, status):
+        if 'Send Data' in status.command:
+            self.snapshot('', send_to_tcpip=True)
+
+        elif status.command == 'connected':
+            #self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
+            pass
+
+        elif status.command == 'disconnected':
+            #self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(False)
+            pass
+
+        elif status.command == 'Update_Status':
+            print(status)
+
+
 if __name__ == '__main__':  # pragma: no cover
     import sys
+    from pymodaq.daq_utils.parameter import ioxml
 
     app = QtWidgets.QApplication(sys.argv)
-    server = MockServer()
+    mockdata_grabber = MockDataGrabber('2D')
+    grabber = Grabber(mockdata_grabber.grab)
+    grabber.connect_tcp_ip()
 
-    params = [{'name': 'detsettings', 'type': 'group', 'children': [
-        {'title': 'Device index:', 'name': 'device', 'type': 'int', 'value': 0, 'max': 3, 'min': 0},
-        {'title': 'Infos:', 'name': 'infos', 'type': 'str', 'value': "one_info", 'readonly': True},
-        {'title': 'Line Settings:', 'name': 'line_settings', 'type': 'group', 'expanded': False,
-         'children': [
-             {'title': 'Device index:', 'name': 'device1', 'type': 'int', 'value': 0, 'max': 3,
-              'min': 0},
-             {'title': 'Device index:', 'name': 'device2', 'type': 'int', 'value': 0, 'max': 3,
-              'min': 0}, ]
-         }]}]
-
-    param = Parameter.create(name='settings', type='group', children=params)
-    params = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
-    server.read_infos(None, params)
     sys.exit(app.exec_())
