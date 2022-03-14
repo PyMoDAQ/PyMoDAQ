@@ -6,15 +6,15 @@
 Welcome to PyMoDAQ's documentation!
 ===================================
 
-..
-   Announcement: Training session in Toulouse, France 18/19/20 October 2021:
+.. note::
+   Announcement: Training session in Toulouse, France 17/18/19 October 2022 followed by the PyMoDAQ's Days:
 
-      .. _flyer:
-   
-   .. figure:: /image/Flyer_PyMoDAQ.png
-      :alt: Flyer_femto
+   .. _flyer:
 
-      Training session announcement
+.. figure:: /image/Flyer_PyMoDAQ.png
+   :alt: Flyer_femto
+
+   Training sessions announcement and PyMoDAQ's days
 
 PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
 It simplifies the interaction with detector and actuator hardware to go straight to the data acquisition of interest.
@@ -46,16 +46,20 @@ __ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin
 
 
 
-Demonstration
-*************
+PyMoDAQ in two minutes
+**********************
 
 .. raw:: html
 
    <div style="text-align: center">
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
-     autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      <iframe width="560" height="315" src="https://www.youtube.com/embed/PWuZggs_HwM" title="YouTube video player"
+      frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+       allowfullscreen></iframe>
    </div>
 
+French version `here`__
+
+__ https://youtu.be/TrRy6HL3h3c
 
 Information
 ***********
