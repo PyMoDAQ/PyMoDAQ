@@ -32,7 +32,7 @@ class LCD(QObject):
             values = values[:self.Nvals]
         vals = []
         for ind, val in enumerate(values):
-            self.lcds[ind].display(val)
+            self.lcds[ind].display(val[0])
             vals.append(val)
         self.viewer0D.show_data(vals)
 
