@@ -48,7 +48,6 @@ now = datetime.datetime.now()
 preset_path = configmod.get_set_preset_path()
 log_path = configmod.get_set_log_path()
 layout_path = configmod.get_set_layout_path()
-layout_path = configmod.get_set_layout_path()
 overshoot_path = configmod.get_set_overshoot_path()
 roi_path = configmod.get_set_roi_path()
 remote_path = configmod.get_set_remote_path()
@@ -648,14 +647,10 @@ class DashBoard(QObject):
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
-            if isinstance(self.preset_manager.preset_params.child('Moves').children()[0],
-                          ptypes.GroupParameter):
-                plugins += [{'type': 'move', 'value': child} for child in
-                            self.preset_manager.preset_params.child('Moves').children()]
-            if isinstance(self.preset_manager.preset_params.child('Detectors').children()[0],
-                          ptypes.GroupParameter):
-                plugins += [{'type': 'det', 'value': child} for child in
-                            self.preset_manager.preset_params.child('Detectors').children()]
+            plugins += [{'type': 'move', 'value': child} for child in
+                        self.preset_manager.preset_params.child('Moves').children()]
+            plugins += [{'type': 'det', 'value': child} for child in
+                        self.preset_manager.preset_params.child('Detectors').children()]
 
             for plug in plugins:
                 plug['ID'] = plug['value'].child('params', 'main_settings', 'controller_ID').value()
@@ -1337,7 +1332,7 @@ class DashBoard(QObject):
 
 
 def main(init_qt=True):
-    if init_qt: # used for the test suite
+    if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
         if config('style', 'darkstyle'):
             import qdarkstyle

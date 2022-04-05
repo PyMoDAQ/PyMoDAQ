@@ -7,6 +7,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pathlib import Path
+import pymodaq.daq_utils.managers.preset_manager_utils  # to register move and det types
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 

@@ -380,8 +380,12 @@ def walk_xml_to_parameter(params=[], XML_elt=None):
             if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
                 set_txt_from_elt(el, param_dict)
             else:
-                subparams = []
-                param_dict.update(dict(children=walk_xml_to_parameter(subparams, el)))
+                if len(el) == 0:
+                    children = []
+                else:
+                    subparams = []
+                    children = walk_xml_to_parameter(subparams, el)
+                param_dict.update(dict(children=children))
 
                 param_dict.update(dict(name=el.tag))
 
