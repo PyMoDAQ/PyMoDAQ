@@ -488,13 +488,13 @@ def test_get_new_file_name(tmp_path):
     assert file == f'{base_name}_000'
 
 
-def test_find_dict_if_matched_key_val(self):
+def test_find_dict_if_matched_key_val():
     dict_tmp = {1: 'abc', 2: 'def'}
     assert utils.find_dict_if_matched_key_val(dict_tmp, 1, 'abc')
     assert not utils.find_dict_if_matched_key_val(dict_tmp, 2, 'abc')
 
 
-def test_find_dict_in_list_from_key_val(self):
+def test_find_dict_in_list_from_key_val():
     dict_tmp_1 = {1: 'abc', 2: 'def'}
     dict_tmp_2 = {1: 'def', 2: 'abc'}
     dict_tmp_3 = {'abc': 1, 'def': 2}
