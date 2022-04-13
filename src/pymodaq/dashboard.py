@@ -657,7 +657,12 @@ class DashBoard(QObject):
                 if plug["type"] == 'det':
                     plug['status'] = plug['value'].child('params', 'detector_settings', 'controller_status').value()
                 else:
-                    plug['status'] = plug['value'].child('params', 'move_settings', 'multiaxes', 'multi_status').value()
+                    if 'multiaxes' in [child.name() for child in plug['value'].child('params',
+                                                                                     'move_settings').children()]:
+                        plug['status'] = plug['value'].child('params', 'move_settings',
+                                                             'multiaxes', 'multi_status').value()
+                    else:
+                        plug['status'] = 'Master'
 
             IDs = list(set([plug['ID'] for plug in plugins]))
             # %%

@@ -19,7 +19,7 @@ comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value':
                     {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
                      'value': config('actuator', 'epsilon_default'),
                      'tip': 'Differential Value at which the controller considers it reached the target position'},
-                    {'title': 'Timeout (ms):', 'name': 'timeout', 'type': 'int',
+                    {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
                      'value': config('actuator', 'polling_timeout_s')},
 
                     {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
@@ -283,13 +283,14 @@ class DAQ_Move_base(QObject):
             --------
             DAQ_utils.ThreadCommand, move_done
         """
-        self.start_time = perf_counter()
-        if self.ispolling:
-            self.poll_timer.start()
-        else:
-            self.current_position = self.check_position()
-            logger.debug(f'Current position: {self.current_position}')
-            self.move_done(self.current_position)
+        if 'TCPServer' not in self.__class__.__name__:
+            self.start_time = perf_counter()
+            if self.ispolling:
+                self.poll_timer.start()
+            else:
+                self.current_position = self.check_position()
+                logger.debug(f'Current position: {self.current_position}')
+                self.move_done(self.current_position)
 
     def check_target_reached(self):
         if np.abs(self.current_position - self.target_position) > self.settings.child('epsilon').value():
@@ -493,6 +494,9 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
             self.init_server()
 
+            self.settings.child('units').hide()
+            self.settings.child('epsilon').hide()
+
             self.status.info = 'TCP Server actuator'
             self.status.initialized = True
             self.status.controller = self.serversocket
@@ -528,8 +532,6 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             sock.send_string('move_abs')
             sock.send_scalar(position)
 
-            # self.poll_moving()
-
     def move_Rel(self, position):
         position = self.check_bound(self.current_position + position) - self.current_position
         self.target_position = position + self.current_position
@@ -539,8 +541,6 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_rel')
             sock.send_scalar(position)
-
-            # self.poll_moving()
 
     def move_Home(self):
         """

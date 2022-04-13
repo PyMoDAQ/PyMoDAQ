@@ -48,8 +48,8 @@ default_preset_for_logger = "preset_default"
 
 [actuator]
     epsilon_default = 1
-    polling_interval_ms = 50  # ms
-    polling_timeout_s = 10  # s
+    polling_interval_ms = 200  # ms
+    polling_timeout_s = 20  # s
 
 [scan]
     scan_in_thread = true
