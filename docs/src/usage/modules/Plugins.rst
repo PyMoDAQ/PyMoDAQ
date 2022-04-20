@@ -18,7 +18,7 @@ you develop in order to contribute to PyMoDAQ's development.
 PyMoDAQ is looking at startup for all installed packages that it can consider as its plugins. This includes by default
 the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
+__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager
 
 Contributions:
 --------------
