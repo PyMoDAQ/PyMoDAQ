@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   call_workflow:
-    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@pyqtgraph
+    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@master
     with:
       python: '3.7'
       qt5: 'pyqt5'
