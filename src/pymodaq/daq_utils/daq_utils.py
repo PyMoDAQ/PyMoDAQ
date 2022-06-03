@@ -20,6 +20,7 @@ from pathlib import Path
 import pkgutil
 import traceback
 import warnings
+import numbers
 
 import numpy as np
 from qtpy import QtCore
@@ -575,6 +576,10 @@ class Axis(AxisBase):
         else:
             raise TypeError('data for the Axis class should be a ndarray')
         self.update(kwargs)
+
+    def __mul__(self, other):
+        if isinstance(other, numbers.Number):
+            return Axis(data=self['data'] * other, label=self['label'], units=self['units'])
 
 
 class NavAxis(Axis):
