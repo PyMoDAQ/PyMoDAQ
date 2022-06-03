@@ -23,8 +23,9 @@ class ViewerPointList(QObject):
     @Slot(float, float)
     def double_click_action(self, posx, posy):
         xs, ys = self.viewer.scale_axis(posx, posy)
-        data_at = self.viewer.get_data_at_along(posx, posy)['red'].int_data
-        self.table_model.add_data(self.table_view.currentIndex().row() + 1, [xs, ys, data_at])
+        data_at = self.viewer.get_data_at('red', (posx, posy))
+        if data_at is not None:
+            self.table_model.add_data(self.table_view.currentIndex().row() + 1, [xs, ys, data_at])
 
     def setData(self, data):
         self.viewer.setImage(data_red=data)

@@ -607,7 +607,6 @@ class View2D(ActionManager, QtCore.QObject):
     def display_crosshair_lineouts(self, crosshair_dict):
         self.lineout_plotter.plot_crosshair_lineouts(crosshair_dict)
 
-
     def show_lineout_widgets(self):
         state = self.is_action_checked('roi') or self.is_action_checked('crosshair')
         for lineout_name in LINEOUT_WIDGETS:
@@ -644,6 +643,9 @@ class View2D(ActionManager, QtCore.QObject):
     def get_view_range(self):
         return self.image_widget.view.viewRange()
 
+    def get_data_at(self, name='red', xy=(0, 0)):
+        return self.data_displayer.get_image(name).get_val_at(xy)
+
     def lock_aspect_ratio(self):
         lock = self.is_action_checked('aspect_ratio')
         self.plotitem.vb.setAspectLocked(lock=lock, ratio=1)
@@ -659,8 +661,6 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter_VRight.blockSignals(True)
         self.splitter_VRight.moveSplitter(pos, index)
         self.splitter_VRight.blockSignals(False)
-
-
 
     def get_double_clicked(self):
         return self.image_widget.view.sig_double_clicked
@@ -754,7 +754,7 @@ class Viewer2D(ViewerBase):
     convenience_attributes = ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
                               'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
                               'image_widget', 'scale_axis', 'unscale_axis', 'roi_manager', 'show_roi_target',
-                              'move_scale_roi_target')
+                              'move_scale_roi_target', 'get_data_at')
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent, title)
@@ -856,6 +856,7 @@ class Viewer2D(ViewerBase):
 
             if self.view.is_action_checked('crosshair'):
                 self.crosshair_changed()
+
 
     def set_image_transform(self):
         """
