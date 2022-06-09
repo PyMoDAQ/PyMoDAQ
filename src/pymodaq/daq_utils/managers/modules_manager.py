@@ -41,6 +41,7 @@ class ModulesManager(QObject):
     def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10):
         super().__init__()
 
+        # check that selected_actuator and selected_detectors are subset of actuators and detectors respectively
         for mod in selected_actuators:
             assert mod in actuators
         for mod in selected_detectors:
@@ -226,9 +227,20 @@ class ModulesManager(QObject):
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
 
     def grab_datas(self, **kwargs):
+        """Send a command to every managed detectors to do a single grab
+
+        Parameters
+        ----------
+        **kwargs : dict
+
+        Returns
+        -------
+        self.det_done_data : OrderedDict
+
+        """
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
-        self.settings.child(('det_done')).setValue(self.det_done_flag)
+        self.settings.child('det_done').setValue(self.det_done_flag)
         tzero = time.perf_counter()
 
         for sig in [mod.command_detector for mod in self.detectors]:
@@ -265,6 +277,7 @@ class ModulesManager(QObject):
     def connect_detectors(self, connect=True, slot=None):
         """
         Connect selected DAQ_Viewers's grab_done_signal to the given slot
+
         Parameters
         ----------
         connect: (bool) if True, connect to the given slot (or default slot)

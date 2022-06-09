@@ -592,7 +592,7 @@ class PIDRunner(QObject):
                     self.outputs = [pid.setpoint for pid in self.pids]
 
                 dt = time.perf_counter() - self.current_time
-                self.outputs_to_actuators = self.model_class.convert_output(self.outputs, dt, stab=True)
+                self.outputs_to_actuators = self.model_class.convert_output(self.outputs)
 
                 if not self.paused:
                     self.modules_manager.move_actuators(self.outputs_to_actuators.values,
