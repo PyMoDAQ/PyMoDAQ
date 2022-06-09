@@ -38,7 +38,7 @@ class ModulesManager(QObject):
         ]},
     ]
 
-    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10000):
+    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10):
         super().__init__()
 
         for mod in selected_actuators:
@@ -46,7 +46,7 @@ class ModulesManager(QObject):
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.timeout = timeout  # in ms
+        self.timeout = timeout  # in seconds
 
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
