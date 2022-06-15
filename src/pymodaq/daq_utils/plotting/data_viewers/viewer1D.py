@@ -510,7 +510,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = utils.DataToExport(name=self.title,
                                                                                                  data=data_lo[ind],
                                                                                                  source='roi')
-            self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
+            self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
 
             for ind, key in enumerate(self.lo_items):
                 self.lo_data[key] = np.append(self.lo_data[key], data_lo[ind])

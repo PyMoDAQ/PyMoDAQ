@@ -164,7 +164,6 @@ class ModulesManager(QObject):
             self.settings.child('modules', 'actuators').setValue(dict(all_items=self.actuators_name,
                                                                       selected=actuators))
 
-
     def parameter_tree_changed(self, param, changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.
@@ -227,7 +226,7 @@ class ModulesManager(QObject):
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
 
     def grab_datas(self, **kwargs):
-        """Send a command to every managed detectors to do a single grab
+        """Send a command to every managed detectors to do a single grab.
 
         Parameters
         ----------

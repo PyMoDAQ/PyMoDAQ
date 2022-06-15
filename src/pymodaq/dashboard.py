@@ -554,7 +554,24 @@ class DashBoard(QObject):
             self.save_layout_state(path)
 
     def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules):
+        """Add an actuator to the dashboard?
 
+        Parameters
+        ----------
+        plug_name : str
+            Title of the actuator module
+        plug_settings : ?
+            ?
+        plug_type : ?
+            ?
+        move_docks : list of Dock
+            List of the DAQ_Move docks
+        move_forms : list of QWidget
+            ?
+        actuators_modules : list of DAQ_Move objects
+            ?
+
+        """
         move_docks.append(Dock(plug_name, size=(150, 250)))
         if len(move_docks) == 1:
             self.dockarea.addDock(move_docks[-1], 'right', self.logger_dock)
@@ -582,21 +599,21 @@ class DashBoard(QObject):
         actuators_modules.append(mov_mod_tmp)
 
     def set_file_preset(self, filename):
+        """Load a preset file.
+
+        Return the lists of actuator and detector modules defined in the preset file.
+
+        Parameters
+        ----------
+        filename : str
+            The full name of the xml file to be converted/treated
+
+        Returns
+        -------
+        actuators_modules, detector_modules : tuple list of DAQ_Move, list of DAQ_Viewer
+            The updated (Move modules list, Detector modules list).
+
         """
-            Set a file managers from the converted xml file given by the filename parameter.
-
-
-            =============== =========== ===================================================
-            **Parameters**    **Type**    **Description**
-            *filename*        string      the name of the xml file to be converted/treated
-            =============== =========== ===================================================
-
-            Returns
-            -------
-            (Object list, Object list) tuple
-                The updated (Move modules list, Detector modules list).
-
-           """
         actuators_modules = []
         detector_modules = []
         if not isinstance(filename, Path):
@@ -610,39 +627,39 @@ class DashBoard(QObject):
             det_docks_viewer = []
             move_forms = []
 
-            # # set PID if checked in managers
-            try:
-                if self.preset_manager.preset_params.child('use_pid').value():
-                    self.load_pid_module()
-
-                    self.pid_module.settings.child('models', 'model_class').setValue(
-                        self.preset_manager.preset_params.child('pid_models').value())
-                    QtWidgets.QApplication.processEvents()
-                    self.pid_module.set_model()
-
-                    QtWidgets.QApplication.processEvents()
-
-                    for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
-                                                             []):
-                        preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
-                        path = ['models', 'model_params']
-                        path.extend(preset_path)
-                        self.pid_module.settings.child(*path).setValue(child.value())
-
-                    model_class = utils.get_models(
-                        self.preset_manager.preset_params.child('pid_models').value())['class']
-                    for setp in model_class.setpoints_names:
-                        self.add_move(setp, None, 'PID', move_docks, move_forms, actuators_modules)
-                        actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
-                                                           setpoint=self.pid_module.setpoints_signal,
-                                                           emit_curr_points=self.pid_module.emit_curr_points_sig)
-                        actuators_modules[-1].ui.IniStage_pb.click()
-                        QtWidgets.QApplication.processEvents()
-                        self.poll_init(actuators_modules[-1])
-                        QtWidgets.QApplication.processEvents()
-
-            except Exception as e:
-                logger.exception(str(e))
+            # # # set PID if checked in managers
+            # try:
+            #     if self.preset_manager.preset_params.child('use_pid').value():
+            #         self.load_pid_module()
+            #
+            #         self.pid_module.settings.child('models', 'model_class').setValue(
+            #             self.preset_manager.preset_params.child('pid_models').value())
+            #         QtWidgets.QApplication.processEvents()
+            #         self.pid_module.set_model()
+            #
+            #         QtWidgets.QApplication.processEvents()
+            #
+            #         for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
+            #                                                  []):
+            #             preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
+            #             path = ['models', 'model_params']
+            #             path.extend(preset_path)
+            #             self.pid_module.settings.child(*path).setValue(child.value())
+            #
+            #         model_class = utils.get_models(
+            #             self.preset_manager.preset_params.child('pid_models').value())['class']
+            #         for setp in model_class.setpoints_names:
+            #             self.add_move(setp, None, 'PID', move_docks, move_forms, actuators_modules)
+            #             actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
+            #                                                setpoint=self.pid_module.setpoints_signal,
+            #                                                emit_curr_points=self.pid_module.emit_curr_points_sig)
+            #             actuators_modules[-1].ui.IniStage_pb.click()
+            #             QtWidgets.QApplication.processEvents()
+            #             self.poll_init(actuators_modules[-1])
+            #             QtWidgets.QApplication.processEvents()
+            #
+            # except Exception as e:
+            #     logger.exception(str(e))
 
             # ################################################################
             # ##### sort plugins by IDs and within the same IDs by Master and Slave status
@@ -785,8 +802,8 @@ class DashBoard(QObject):
                 self.load_layout_state(path)
 
             self.mainwindow.setWindowTitle(f'PyMoDAQ Dashboard: {self.title}')
-            if self.pid_module is not None:
-                self.pid_module.set_module_manager(detector_modules, actuators_modules)
+            # if self.pid_module is not None:
+            #     self.pid_module.set_module_manager(detector_modules, actuators_modules)
             return actuators_modules, detector_modules
         else:
             logger.error('Invalid file selected')
@@ -1111,6 +1128,39 @@ class DashBoard(QObject):
                 self.preset_loaded_signal.emit(True)
 
             logger.info(f'Preset file: {filename} has been loaded')
+
+            # If the preset is configured to use the pid extension
+            if self.preset_manager.preset_params.child('use_pid').value():
+                self.load_pid_module()
+
+                self.pid_module.settings.child('models', 'model_class').setValue(
+                    self.preset_manager.preset_params.child('pid_models').value())
+                QtWidgets.QApplication.processEvents()
+                self.pid_module.set_model()
+
+                QtWidgets.QApplication.processEvents()
+
+                for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
+                                                         []):
+                    preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
+                    path = ['models', 'model_params']
+                    path.extend(preset_path)
+                    self.pid_module.settings.child(*path).setValue(child.value())
+
+                model_class = utils.get_models(
+                    self.preset_manager.preset_params.child('pid_models').value())['class']
+
+                # Add a mock actuator modules that will control each setpoint
+                for setp in model_class.setpoints_names:
+                    self.add_move(setp, None, 'PID', [], [], actuators_modules)
+                    actuators_modules[-1].controller = dict(
+                        curr_point=self.pid_module.curr_points_signal,
+                        setpoint=self.pid_module.setpoints_signal,
+                        emit_curr_points=self.pid_module.emit_curr_points_sig)
+                    actuators_modules[-1].ui.IniStage_pb.click()
+                    QtWidgets.QApplication.processEvents()
+                    self.poll_init(actuators_modules[-1])
+                    QtWidgets.QApplication.processEvents()
 
         except Exception as e:
             logger.exception(str(e))
