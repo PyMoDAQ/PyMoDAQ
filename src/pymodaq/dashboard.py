@@ -554,22 +554,22 @@ class DashBoard(QObject):
             self.save_layout_state(path)
 
     def add_move(self, plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules):
-        """Add an actuator to the dashboard?
+        """Add an actuator module to the dashboard
 
         Parameters
         ----------
         plug_name : str
             Title of the actuator module
-        plug_settings : ?
-            ?
-        plug_type : ?
-            ?
+        plug_settings : GroupParameter
+            Settings of the actuator module
+        plug_type : str
+            Plugin type (i.e. "SmarActMCS")
         move_docks : list of Dock
-            List of the DAQ_Move docks
-        move_forms : list of QWidget
-            ?
+            List of the actuators pyqtgraph docks (floating subwindows in the dashboard main window)
+        move_forms : list of Ui_Form
+            List of forms that define the graphical aspects of the UI of the modules
         actuators_modules : list of DAQ_Move objects
-            ?
+            The actuator modules of the dashboard
 
         """
         move_docks.append(Dock(plug_name, size=(150, 250)))
@@ -627,42 +627,7 @@ class DashBoard(QObject):
             det_docks_viewer = []
             move_forms = []
 
-            # # # set PID if checked in managers
-            # try:
-            #     if self.preset_manager.preset_params.child('use_pid').value():
-            #         self.load_pid_module()
-            #
-            #         self.pid_module.settings.child('models', 'model_class').setValue(
-            #             self.preset_manager.preset_params.child('pid_models').value())
-            #         QtWidgets.QApplication.processEvents()
-            #         self.pid_module.set_model()
-            #
-            #         QtWidgets.QApplication.processEvents()
-            #
-            #         for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
-            #                                                  []):
-            #             preset_path = self.preset_manager.preset_params.child('model_settings').childPath(child)
-            #             path = ['models', 'model_params']
-            #             path.extend(preset_path)
-            #             self.pid_module.settings.child(*path).setValue(child.value())
-            #
-            #         model_class = utils.get_models(
-            #             self.preset_manager.preset_params.child('pid_models').value())['class']
-            #         for setp in model_class.setpoints_names:
-            #             self.add_move(setp, None, 'PID', move_docks, move_forms, actuators_modules)
-            #             actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
-            #                                                setpoint=self.pid_module.setpoints_signal,
-            #                                                emit_curr_points=self.pid_module.emit_curr_points_sig)
-            #             actuators_modules[-1].ui.IniStage_pb.click()
-            #             QtWidgets.QApplication.processEvents()
-            #             self.poll_init(actuators_modules[-1])
-            #             QtWidgets.QApplication.processEvents()
-            #
-            # except Exception as e:
-            #     logger.exception(str(e))
-
-            # ################################################################
-            # ##### sort plugins by IDs and within the same IDs by Master and Slave status
+            # Sort plugins by IDs and within the same IDs by Master and Slave status
             plugins = []
             plugins += [{'type': 'move', 'value': child} for child in
                         self.preset_manager.preset_params.child('Moves').children()]
@@ -1056,7 +1021,7 @@ class DashBoard(QObject):
             for area in self.dockarea.tempAreas:
                 area.window().setVisible(False)
 
-            self.splash_sc.show()
+            #self.splash_sc.show()
             QtWidgets.QApplication.processEvents()
             self.splash_sc.raise_()
             self.splash_sc.showMessage('Loading Modules, please wait', color=Qt.white)
