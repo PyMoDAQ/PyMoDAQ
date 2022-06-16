@@ -995,26 +995,16 @@ class DashBoard(QObject):
         """Load a preset file.
 
         This method is called from the dashboard UI main menu: Preset modes > Load preset > <preset name>
-            | Set the managers mode from the given filename.
-            |
-            | In case of "mock" or "canon" move, set the corresponding managers calling set_(*)_preset procedure.
-            |
-            | Else set the managers file using set_file_preset function.
-            | Once done connect the move and detector modules to logger to recipe/transmit informations.
 
-            Finally update DAQ_scan_settings tree with :
-                * Detectors
-                * Move
-                * plot_form.
+        Parameters
+        ----------
+        filename : str
+            Complete path of the preset file
 
-            =============== =========== =============================================
-            **Parameters**    **Type**    **Description**
-            *filename*        string      the name of the managers file to be treated
-            =============== =========== =============================================
+        See Also
+        --------
+        set_file_preset, add_status, update_status
 
-            See Also
-            --------
-            set_Mock_preset, set_canon_preset, set_file_preset, add_status, update_status
         """
         try:
             if not isinstance(filename, Path):
@@ -1087,10 +1077,6 @@ class DashBoard(QObject):
                 self.settings_menu.setEnabled(True)
                 self.update_init_tree()
 
-                self.preset_loaded_signal.emit(True)
-
-            logger.info(f'Preset file: {filename} has been loaded')
-
             # If the preset is configured to use the pid extension
             if self.preset_manager.preset_params.child('use_pid').value():
                 self.load_pid_module()
@@ -1124,7 +1110,11 @@ class DashBoard(QObject):
                     self.poll_init(actuators_modules[-1])
                     QtWidgets.QApplication.processEvents()
 
+            self.preset_loaded_signal.emit(True)
+            logger.info(f'Preset file: {filename} has been loaded')
+
         except Exception as e:
+            logger.error(f'Preset file: {filename} has not been loaded properly')
             logger.exception(str(e))
 
     def update_init_tree(self):
