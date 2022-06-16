@@ -1086,6 +1086,8 @@ class DAQ_Viewer(QObject):
                 refresh = time.perf_counter() - self.start_grab_time > self.settings.child('main_settings',
                                                                                            'refresh_time').value() /\
                           1000
+                if refresh:
+                    self.start_grab_time = time.perf_counter()
             else:
                 refresh = True  # if single
             if self.settings.child('main_settings', 'show_data').value() and refresh:
