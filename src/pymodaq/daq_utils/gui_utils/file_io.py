@@ -6,7 +6,7 @@ from qtpy import QtWidgets
 config = Config()
 
 
-def select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=True, ext=None):
+def select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=True, ext=None, filter=None):
     """Save or open a file with Qt5 file dialog, to be used within an Qt5 loop.
 
     Usage::
@@ -35,29 +35,41 @@ def select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=Tr
 
     """
     if ext is None:
-        ext = '*'
-    if not save:
-        if not isinstance(ext, list):
-            ext = [ext]
+        ext = '.h5'
 
-        filter = "Data files ("
-        for ext_tmp in ext:
-            filter += '*.' + ext_tmp + " "
-        filter += ")"
+    if filter is None:
+        if not save:
+            if not isinstance(ext, list):
+                ext = [ext]
+            filter = "Data files ("
+            for ext_tmp in ext:
+                filter += '*.' + ext_tmp + " "
+            filter += ")"
+    
     if start_path is not None:
         if not isinstance(start_path, str):
             start_path = str(start_path)
     if save:
-        fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .' + ext + ' file name', start_path,
-                                                      ext + " file (*." + ext + ")")
+        # fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a .' + ext + ' file name', start_path,
+        #                                               ext + " file (*." + ext + ")")
+        fname = QtWidgets.QFileDialog.getSaveFileName(None, 'Enter a file name', start_path,
+                                                      filter)
     else:
         fname = QtWidgets.QFileDialog.getOpenFileName(None, 'Select a file name', start_path, filter)
 
     fname = fname[0]
     if fname != '':  # execute if the user didn't cancel the file selection
         fname = Path(fname)
-        if save:
-            parent = fname.parent
-            filename = fname.stem
-            fname = parent.joinpath(filename + "." + ext)  # forcing the right extension on the filename
+        # if save:
+        #     parent = fname.parent
+        #     filename = fname.stem
+        #     fname = parent.joinpath(filename + "." + ext)  # forcing the right extension on the filename
     return fname  # fname is a Path object
+
+
+if __name__ == '__main__':
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    file = select_file(save=True, filter="Images (*.png *.xpm *.jpg);;Text files (*.txt);;XML files (*.xml)")
+    print(file)
+    sys.exit(app.exec_())

@@ -144,7 +144,7 @@ class CustomTree(QtWidgets.QTreeWidget):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.gui_utils import h5tree_to_QTree
+
 
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
