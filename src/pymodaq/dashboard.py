@@ -992,7 +992,9 @@ class DashBoard(QObject):
         return self.actuators_modules
 
     def set_preset_mode(self, filename):
-        """
+        """Load a preset file.
+
+        This method is called from the dashboard UI main menu: Preset modes > Load preset > <preset name>
             | Set the managers mode from the given filename.
             |
             | In case of "mock" or "canon" move, set the corresponding managers calling set_(*)_preset procedure.
@@ -1031,6 +1033,7 @@ class DashBoard(QObject):
 
             logger.info(f'Loading Preset file: {filename}')
             actuators_modules, detector_modules = self.set_file_preset(filename)
+
             if not (not actuators_modules and not detector_modules):
                 self.update_status('Preset mode ({}) has been loaded'.format(filename.name), log_type='log')
                 self.settings.child('loaded_files', 'preset_file').setValue(filename.name)
@@ -1038,12 +1041,6 @@ class DashBoard(QObject):
                 self.detector_modules = detector_modules
 
                 self.modules_manager = ModulesManager(self.detector_modules, self.actuators_modules)
-                #
-                if self.pid_module is not None:
-                    self.pid_module.ini_model_action.click()
-                #
-
-                #####################################################
                 self.overshoot_manager = OvershootManager(det_modules=[det.title for det in detector_modules],
                                                           actuators_modules=[move.title for move in actuators_modules])
                 # load overshoot if present
@@ -1101,7 +1098,7 @@ class DashBoard(QObject):
                 self.pid_module.settings.child('models', 'model_class').setValue(
                     self.preset_manager.preset_params.child('pid_models').value())
                 QtWidgets.QApplication.processEvents()
-                self.pid_module.set_model()
+                self.pid_module.ini_model()
 
                 QtWidgets.QApplication.processEvents()
 
@@ -1115,7 +1112,7 @@ class DashBoard(QObject):
                 model_class = utils.get_models(
                     self.preset_manager.preset_params.child('pid_models').value())['class']
 
-                # Add a mock actuator modules that will control each setpoint
+                # Add a mock actuator module that will control each setpoint defined in the model.
                 for setp in model_class.setpoints_names:
                     self.add_move(setp, None, 'PID', [], [], actuators_modules)
                     actuators_modules[-1].controller = dict(

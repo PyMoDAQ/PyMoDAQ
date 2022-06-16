@@ -49,8 +49,6 @@ class DAQ_PID(QObject):
 
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group', 'children': [
             {'title': 'Acquisition Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000},
-            {'title': 'epsilon', 'name': 'epsilon', 'type': 'float', 'value': 0.01,
-             'tooltip': 'Precision at which move is considered as done'},
             {'title': 'PID controls:', 'name': 'pid_controls', 'type': 'group', 'children': [
                 {'title': 'Sample time (ms):', 'name': 'sample_time', 'type': 'int', 'value': 10},
                 {'title': 'Refresh plot time (ms):', 'name': 'refresh_plot_time', 'type': 'int', 'value': 200},
@@ -301,17 +299,19 @@ class DAQ_PID(QObject):
         for mod in self.modules_manager.actuators:
             mod.stop_Motion()
 
-    def set_model(self):
-        model_name = self.settings.child('models', 'model_class').value()
-        self.model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
-        self.set_setpoints_buttons()
-        self.model_class.ini_model()
-        self.settings.child('main_settings', 'epsilon').setValue(self.model_class.epsilon)
-
+    @Slot()
     def ini_model(self):
+        """Initialize the model.
+
+        Called by the UI "Ini model" button.
+        Construct the UI depending on the number of setpoints defined in the model.
+        Call the ini_model function of the model.
+        """
         try:
-            if self.model_class is None:
-                self.set_model()
+            model_name = self.settings.child('models', 'model_class').value()
+            self.model_class = find_dict_in_list_from_key_val(self.models, 'name', model_name)['class'](self)
+            self.set_setpoints_buttons()
+            self.model_class.ini_model()
 
             self.modules_manager.selected_actuators_name = self.model_class.actuators_name
             self.modules_manager.selected_detectors_name = self.model_class.detectors_name
@@ -321,6 +321,7 @@ class DAQ_PID(QObject):
             self.ini_model_action.setEnabled(False)
 
         except Exception as e:
+            logger.error("The PID model has not been properly initialized.")
             logger.exception(str(e))
 
     @property
@@ -351,8 +352,11 @@ class DAQ_PID(QObject):
             self.curr_points_signal.emit(dict(zip(self.model_class.setpoints_names, self.curr_points)))
 
     def set_setpoints_buttons(self):
+        """Construct the setpoints buttons of the UI depending on the number of setpoints defined by the model."""
+
         self.setpoints_sb = []
         self.currpoints_sb = []
+
         for ind_set in range(self.model_class.Nsetpoints):
 
             self.setpoints_sb.append(SpinBox())
