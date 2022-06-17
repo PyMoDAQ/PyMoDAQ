@@ -10,6 +10,7 @@ from pymodaq.daq_utils.plotting.items.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils import math_utils as mutils
 from pymodaq.daq_utils.managers.action_manager import QAction
 from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
@@ -666,7 +667,7 @@ class Viewer1D_math(QObject):
             # self.status_sig.emit(["Update_Status","doing math"])
             data_lo = []
             for ind_meas in range(len(self.operations)):
-                indexes = utils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
+                indexes = mutils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
                 ind1 = indexes[0][0]
                 ind2 = indexes[1][0]
                 sub_data = self.datas[self.channels[ind_meas]][ind1:ind2]
