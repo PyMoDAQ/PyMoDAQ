@@ -9,7 +9,6 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-
 class InputFromDetector:
     def __init__(self, values=[]):
         super().__init__()
@@ -90,7 +89,6 @@ class PIDModelGeneric:
             name = name.split('//')
             self.data_names.append(name)
 
-
     def update_settings(self, param):
         """
         Get a parameter instance whose value has been modified by a user on the UI
@@ -107,6 +105,7 @@ class PIDModelGeneric:
     def convert_input(self, measurements):
         """
         Convert the measurements in the units to be fed to the PID (same dimensionality as the setpoint)
+
         Parameters
         ----------
         measurements: (Ordereddict) Ordereded dict of object from which the model extract a value of the same units as the setpoint
@@ -121,6 +120,7 @@ class PIDModelGeneric:
     def convert_output(self, outputs, dt, stab=True):
         """
         Convert the output of the PID in units to be fed into the actuator
+
         Parameters
         ----------
         outputs: (list of float) output value from the PID from which the model extract a value of the same units as the actuator
