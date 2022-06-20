@@ -180,9 +180,12 @@ class DashBoard(QObject):
     def load_log_module(self, win=None):
         if win is None:
             win = QtWidgets.QMainWindow()
-        area = DockArea()
-        win.setCentralWidget(area)
-        self.log_module = DAQ_Logger(dockarea=area, dashboard=self)
+
+        win.showFullScreen()
+        dockarea = DockArea()
+        win.setCentralWidget(dockarea)
+        win.setWindowTitle('Logger extension module')
+        self.log_module = DAQ_Logger(dockarea=dockarea, dashboard=self)
         self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
         win.show()
