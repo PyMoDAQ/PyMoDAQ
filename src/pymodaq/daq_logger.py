@@ -65,6 +65,8 @@ class DAQ_Logger(CustomApp):
         self.logger_thread = None
         self.logger = None  # should be a reference either to self.h5saver or self.dblogger depending the choice of the user
 
+        self.setup_ui()
+
     def setup_actions(self):
         '''
         subclass method from ActionManager
@@ -120,13 +122,11 @@ class DAQ_Logger(CustomApp):
 
     def connect_things(self):
         self.status_signal[str].connect(self.dashboard.add_status)
-        self._actions['quit'].connect(self.quit_fun)
-
-        self._actions['start'].connect(self.start_logging)
-        self._actions['stop'].connect(self.stop_logging)
-        self._actions['grab_all'].connect(self.start_all)
-
-        self._actions['infos'].connect(self.dashboard.show_log)
+        self._actions['quit'].triggered.connect(self.quit_fun)
+        self._actions['start'].triggered.connect(self.start_logging)
+        self._actions['stop'].triggered.connect(self.stop_logging)
+        self._actions['grab_all'].triggered.connect(self.start_all)
+        self._actions['infos'].triggered.connect(self.dashboard.show_log)
 
     def setup_menu(self):
         """
