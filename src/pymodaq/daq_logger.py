@@ -249,8 +249,12 @@ class DAQ_Logger(CustomApp):
         self.settings.child('log_type').setValue(log_type)
 
     def start_logging(self):
-        """
-            Start a logging.
+        """Start saving the detectors data and measurements.
+
+        This method is called from the Logger extension module UI main menu: Play.
+
+        Instantiate a DAQ_Logging object, put it into a thread, and call its own start_logging method.
+
         """
         self.status_widget.setText('Starting logging')
 
@@ -413,11 +417,13 @@ class DAQ_Logging(QObject):
             logger.exception(str(e))
 
     def connect_detectors(self, status=True):
-        """
-        Connect detectors to DAQ_Logging do_save_continuous method
+        """Connect detectors grab_done_signals to DAQ_Logging.do_save_continuous method.
+
         Parameters
         ----------
-        status: (bool) If True make the connection else disconnect
+        status : bool
+            If True make the connection else disconnect.
+
         """
         self.modules_manager.connect_detectors(connect=status, slot=self.do_save_continuous)
 
@@ -440,6 +446,11 @@ class DAQ_Logging(QObject):
         self.data_logger.stop_logger()
 
     def start_logging(self):
+        """Start saving the detectors data and measurements.
+
+        This method is called by the DAQ_Logger.start_logging method.
+
+        """
         try:
             self.connect_detectors()
             self.stop_logging_flag = False

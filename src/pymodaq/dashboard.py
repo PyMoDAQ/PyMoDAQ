@@ -167,17 +167,28 @@ class DashBoard(QObject):
             logger.exception(str(e))
 
     def load_scan_module(self, win=None):
+        """Load the Scan extension module.
+
+        This method is called from the dashboard UI main menu: Extension > Scan
+
+        """
         if win is None:
             win = QtWidgets.QMainWindow()
-        area = DockArea()
-        win.setCentralWidget(area)
-        self.scan_module = DAQ_Scan(dockarea=area, dashboard=self)
+
+        dockarea = DockArea()
+        win.setCentralWidget(dockarea)
+        self.scan_module = DAQ_Scan(dockarea=dockarea, dashboard=self)
         self.extensions['DAQ_Scan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()
         return self.scan_module
 
     def load_log_module(self, win=None):
+        """Load the Logger extension module.
+
+        This method is called from the dashboard UI main menu: Extension > Log data
+
+        """
         if win is None:
             win = QtWidgets.QMainWindow()
 
@@ -192,6 +203,11 @@ class DashBoard(QObject):
         return self.log_module
 
     def load_pid_module(self, win=None):
+        """Load the PID extension module.
+
+        This method is called from the dashboard UI main menu: Extension > PID
+
+        """
         if win is None:
             self.pid_window = QtWidgets.QMainWindow()
         else:
