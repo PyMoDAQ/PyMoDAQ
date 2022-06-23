@@ -78,6 +78,12 @@ data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['']
 scan_types.extend(stypes)
 
+EXPORT_TYPES = ['ascii', 'single node', 'ascii line']
+
+
+class InvalidExport(Exception):
+    pass
+
 
 def check_mandatory_attrs(attr_name, attr):
     """for cross compatibility between different backends. If these attributes have binary value, then decode them
@@ -1955,43 +1961,59 @@ class H5BrowserUtil(H5Backend):
     def __init__(self, backend='tables'):
         super().__init__(backend=backend)
 
-    def export_data(self, node_path='/', filesavename='datafile.txt'):
+    def export_data(self, node_path='/', filesavename='datafile.h5'):
+
         if filesavename != '':
+            file = Path(filesavename)
             node = self.get_node(node_path)
-            if 'ARRAY' in node.attrs['CLASS']:
-                data = node.read()
-                if not isinstance(data, np.ndarray):
-                    # in case one has a list of same objects (array of strings for instance, logger or other)
-                    data = np.array(data)
-                    np.savetxt(filesavename, data, '%s', '\t')
-                else:
-                    np.savetxt(filesavename, data, '%.6e', '\t')
+            if file.suffix == '.txt' or file.suffix == '.ascii':
+                if 'ARRAY' in node.attrs['CLASS']:
+                    data = node.read()
+                    if not isinstance(data, np.ndarray):
+                        # in case one has a list of same objects (array of strings for instance, logger or other)
+                        data = np.array(data)
+                        np.savetxt(filesavename,
+                                   data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
+                                   '%s', '\t')
+                    else:
+                        np.savetxt(filesavename,
+                                   data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
+                                   '%.6e', '\t')
 
-            elif 'GROUP' in node.attrs['CLASS']:
-                data_tot = []
-                header = []
-                dtypes = []
-                fmts = []
-                for subnode_name, subnode in node.children().items():
-                    if 'ARRAY' in subnode.attrs['CLASS']:
-                        if len(subnode.attrs['shape']) == 1:
-                            data = subnode.read()
-                            if not isinstance(data, np.ndarray):
-                                # in case one has a list of same objects (array of strings for instance, logger or other)
-                                data = np.array(data)
-                            data_tot.append(data)
-                            dtypes.append((subnode_name, data.dtype))
-                            header.append(subnode_name)
-                            if data.dtype.char == 'U':
-                                fmt = '%s'  # for strings
-                            elif data.dtype.char == 'l':
-                                fmt = '%d'  # for integers
-                            else:
-                                fmt = '%.6f'  # for decimal numbers
-                            fmts.append(fmt)
+                elif 'GROUP' in node.attrs['CLASS']:
+                    data_tot = []
+                    header = []
+                    dtypes = []
+                    fmts = []
+                    for subnode_name, subnode in node.children().items():
+                        if 'ARRAY' in subnode.attrs['CLASS']:
+                            if len(subnode.attrs['shape']) == 1:
+                                data = subnode.read()
+                                if not isinstance(data, np.ndarray):
+                                    # in case one has a list of same objects (array of strings for instance, logger or other)
+                                    data = np.array(data)
+                                data_tot.append(data)
+                                dtypes.append((subnode_name, data.dtype))
+                                header.append(subnode_name)
+                                if data.dtype.char == 'U':
+                                    fmt = '%s'  # for strings
+                                elif data.dtype.char == 'l':
+                                    fmt = '%d'  # for integers
+                                else:
+                                    fmt = '%.6f'  # for decimal numbers
+                                fmts.append(fmt)
 
-                data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
-                np.savetxt(filesavename, data_trans, fmts, '\t', header='#' + '\t'.join(header))
+                    data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
+                    np.savetxt(filesavename, data_trans, fmts, '\t', header='#' + '\t'.join(header))
+            elif file.suffix == '.h5':
+                self.save_file_as(str(file))
+                copied_file = H5Backend()
+                copied_file.open_file(str(file), 'a')
+
+                copied_file.h5file.move_node(self.get_node_path(node), newparent=copied_file.h5file.get_node('/'))
+                copied_file.h5file.remove_node('/Raw_datas', recursive=True)
+                copied_file.close_file()
+
 
     def get_h5file_scans(self, where='/'):
         # TODO add a test for this method
@@ -2260,7 +2282,8 @@ class H5Browser(QObject):
 
     def export_data(self):
         try:
-            file = select_file(save=True, ext='txt')
+            file_filter = "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
+            file = select_file(save=True, filter=file_filter)
             self.current_node_path = self.get_tree_node_path()
             if file != '':
                 self.h5utils.export_data(self.current_node_path, str(file))
@@ -2346,8 +2369,9 @@ class H5Browser(QObject):
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
 
-        self.export_action = QtWidgets.QAction("Export data as *.txt file", None)
+        self.export_action = QtWidgets.QAction("Export data", None)
         self.export_action.triggered.connect(self.export_data)
+
         self.add_comments_action = QtWidgets.QAction("Add comments to this node", None)
         self.add_comments_action.triggered.connect(self.add_comments)
         self.ui.h5file_tree.ui.Tree.addAction(self.export_action)
