@@ -762,6 +762,25 @@ class DataToExport(Data):
                f' - <source: {self.source}> - <dim: {self.dim}>'
 
 
+def ensure_ndarray(data):
+    """
+    Make sure data is returned as a numpy array
+    Parameters
+    ----------
+    data
+
+    Returns
+    -------
+    ndarray
+    """
+    if not isinstance(data, np.ndarray):
+        if isinstance(data, list):
+            data = np.array(data)
+        else:
+            data = np.array([data])
+    return data
+
+
 def setLocale():
     """
     defines the Locale to use to convert numbers to strings representation using language/country conventions

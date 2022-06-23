@@ -696,6 +696,8 @@ class DAQ_Viewer(QObject):
                                 if self.bkg is not None and self.is_bkg:
                                     if channel in bkg_container[data_dim]:
                                         datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
+                                datas[data_dim][channel]['data'] =\
+                                    utils.ensure_ndarray(datas[data_dim][channel]['data'])
                                 self.channel_arrays[data_dim][channel] = \
                                     self.h5saver_continuous.add_data(channel_group, datas[data_dim][channel],
                                                                      scan_type='scan1D', enlargeable=True)
