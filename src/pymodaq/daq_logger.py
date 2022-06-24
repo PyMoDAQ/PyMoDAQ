@@ -407,17 +407,40 @@ class DAQ_Logging(QObject):
             self.stop_scan_flag = True
             self.stop_logging()
 
-    def do_save_continuous(self, datas):
-        """
+    def do_save_continuous(self, acquisition_from_viewer):
+        """Receive data, metadata and measurements from the detectors and call the data_logger to save it.
+
+        Triggered by the grab_done_signals of the detectors (DAQ_Viewers modules). It is triggered each time a detector
+        (selected in the configuration of the logger) has finished its acquisition.
+
+        The signals are connected by the DAQ_Logging.connect_detectors method.
+
+        The type of the data_logger depends on the choice of the user. The data can be saved in a h5 file or a database.
+        It will be a H5Logger if the user choose to save the data in a h5 file.
+
+        Parameters
+        ----------
+
+        acquisition_from_viewer : OrderedDict
+            Dictionary that contains data, metadata and measurements corresponding to an acquisition. Data of different
+            dimensions are classified in different entries of the dictionary. For example:
+
+            acquisition_from_viewer["name"] is the name of the detector
+
+            acquisition_from_viewer["data0D"] would contain the lineouts from defined ROIs
+
+            acquisition_from_viewer["data1D"] would contain the spectrum from a spectrometer
+
+            …
 
         """
         try:
-            self.data_logger.add_datas(datas)
+            self.data_logger.add_datas(acquisition_from_viewer)
         except Exception as e:
             logger.exception(str(e))
 
     def connect_detectors(self, status=True):
-        """Connect detectors grab_done_signals to DAQ_Logging.do_save_continuous method.
+        """Connect detectors (DAQ_Viewer modules) grab_done_signals to DAQ_Logging.do_save_continuous method.
 
         Parameters
         ----------

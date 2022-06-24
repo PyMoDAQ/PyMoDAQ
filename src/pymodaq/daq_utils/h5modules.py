@@ -1882,6 +1882,24 @@ class H5Logger(AbstractLogger):
                                      metadata=dict(label='Time axis', units='s', nav_index=0))
 
     def add_datas(self, datas):
+        """Receive data, metadata and measurements from a detector module (DAQ_Viewer), build the h5 structure and save
+        the data.
+
+        Parameters
+        ----------
+        datas : OrderedDict
+            Dictionary that contains data, metadata and measurements corresponding to an acquisition. Data of different
+            dimensions are classified in different entries of the dictionary. For example:
+
+            acquisition_from_viewer["name"] is the name of the detector
+
+            acquisition_from_viewer["data0D"] would contain the lineouts from defined ROIs
+
+            acquisition_from_viewer["data1D"] would contain the spectrum from a spectrometer
+
+            …
+
+        """
         det_name = datas['name']
         det_group = self.h5saver.get_group_by_title(self.h5saver.raw_group, det_name)
         time_array = self.h5saver.get_node(det_group, 'Logger_time_axis')
@@ -1897,18 +1915,25 @@ class H5Logger(AbstractLogger):
                     data_group = self.h5saver.add_data_group(det_group, data_type, metadata=dict(type='scan'))
                 else:
                     data_group = self.h5saver.get_node(det_group, utils.capitalize(data_type))
+
                 for ind_channel, channel in enumerate(datas[data_type]):
                     channel_group = self.h5saver.get_group_by_title(data_group, channel)
                     if channel_group is None:
                         channel_group = self.h5saver.add_CH_group(data_group, title=channel)
+                        # This condition should be added for the 0D case because H5Saver.add_data requires that the key
+                        # data_dict["data"] should be an ndarray, and not a float.
+                        if data_type == "data0D":
+                            datas[data_type][channel]["data"] = np.array(datas[data_type][channel]["data"])
+
                         data_array = self.h5saver.add_data(channel_group, datas[data_type][channel],
-                                                   scan_type='scan1D', enlargeable=True)
+                                                           scan_type='scan1D', enlargeable=True)
                     else:
                         data_array = self.h5saver.get_node(channel_group, 'Data')
                     if data_type == 'data0D':
                         data_array.append(np.array([datas[data_type][channel]['data']]))
                     else:
                         data_array.append(datas[data_type][channel]['data'])
+
         self.h5saver.flush()
         self.settings.child(('N_saved')).setValue(
             self.settings.child(('N_saved')).value() + 1)
