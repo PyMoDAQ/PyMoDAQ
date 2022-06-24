@@ -836,6 +836,8 @@ class DAQ_Move_stage(QObject):
             --------
             move_Abs
         """
+        position = float(position)  # because it may be a numpy float and could cause issues
+        # see https://github.com/pythonnet/pythonnet/issues/1833
         self.target_position = position
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
@@ -856,6 +858,8 @@ class DAQ_Move_stage(QObject):
             --------
             move_Rel
         """
+        rel_position = float(rel_position)  # because it may be a numpy float and could cause issues
+        # see https://github.com/pythonnet/pythonnet/issues/1833
         self.hardware.move_is_done = False
         self.target_position = self.current_position + rel_position
         self.hardware.ispolling = polling

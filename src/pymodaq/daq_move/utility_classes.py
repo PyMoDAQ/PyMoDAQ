@@ -165,6 +165,8 @@ class DAQ_Move_base(QObject):
         self.controller_units = self._controller_units
         self.settings.child('epsilon').setValue(self._epsilon)
 
+
+
         self.poll_timer = QTimer()
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self._poll_timeout = config('actuator', 'polling_timeout_s')
