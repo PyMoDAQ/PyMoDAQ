@@ -10,7 +10,7 @@ from pathlib import Path
 
 class QAction(QAction):
     """
-    QAction subclass to miicmic signals as pushbuttons. Done to be sure of backcompatibility when I moved from
+    QAction subclass to mimic signals as pushbuttons. Done to be sure of backcompatibility when I moved from
     pushbuttons to QAction
     """
     def __init__(self, *args, **kwargs):

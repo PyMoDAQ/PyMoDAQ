@@ -32,6 +32,7 @@ class NonLinearScanner(CustomApp):
     def __init__(self, dockarea):
         
         super().__init__(dockarea)
+        self.setup_ui()
 
     def setup_actions(self):
         '''

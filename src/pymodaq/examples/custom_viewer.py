@@ -98,7 +98,8 @@ if __name__ == '__main__':
     y = (np.linspace(0, Ny - 1, Ny) - 10) * 2
     from pymodaq.daq_utils.daq_utils import gauss2D
 
-    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90)
+    data_red = 3 * gauss2D(x, np.mean(x), (np.max(x)-np.min(x)) / 5, y, np.mean(y), (np.max(y)-np.min(y)) / 5, 1)
+    data_red += np.random.random(data_red.shape)
 
     viewer.setData(data_red)
     viewer.setXaxis(Axis(data=x, label='This is x axis', units='au'))
