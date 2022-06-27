@@ -137,6 +137,7 @@ class DAQ_Scan(QObject):
         self.settings.child('time_flow', 'timeout').setValue(config['scan']['timeflow']['timeout'])
 
         self.settings.child('scan_options',  'scan_average').setValue(config['scan']['Naverage'])
+        self.settings.child('scan_options', 'sort_scan1D').setValue(config['scan']['sort1D'])
 
     def setup_modules(self, filename):
         """
