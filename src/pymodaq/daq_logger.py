@@ -420,18 +420,25 @@ class DAQ_Logging(QObject):
 
         Parameters
         ----------
-
-        acquisition_from_viewer : OrderedDict
+        acquisition_from_viewer : OrderedDict{
+                    Ndatas : int
+                    acq_time_s : float
+                    name : str
+                    data0D : OrderedDict{
+                                <channel name> : DataToExport
+                                …
+                                }
+                        The dictionary data0D can contain data from 0D detectors, but also some measurements (e.g. an
+                        ROI integration).
+                    data1D : OrderedDict
+                        Same as data0D but for 1D data.
+                    data2D : OrderedDict
+                        Same for 2D data.
+                    dataND : OrderedDict
+                        Same for ND data.
+                    }
             Dictionary that contains data, metadata and measurements corresponding to an acquisition. Data of different
-            dimensions are classified in different entries of the dictionary. For example:
-
-            acquisition_from_viewer["name"] is the name of the detector
-
-            acquisition_from_viewer["data0D"] would contain the lineouts from defined ROIs
-
-            acquisition_from_viewer["data1D"] would contain the spectrum from a spectrometer
-
-            …
+            dimensions are classified in different keys of the dictionary.
 
         """
         try:

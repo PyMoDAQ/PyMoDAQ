@@ -192,6 +192,12 @@ class ModulesManager(QObject):
                 pass
 
     def get_det_data_list(self):
+        """Construct the list of data channels that are available with the current configuration of the module manager.
+
+        It will display all the data channels as selectable parameters in the module manager UI.
+        This method is called by the "Probe detectors’ data" button of the module manager UI.
+
+        """
         self.connect_detectors()
 
         datas = self.grab_datas()
