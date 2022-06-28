@@ -10,6 +10,13 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class ModulesManager(QObject):
+    """
+
+    Attributes
+    ----------
+    detectors : list of DAQ_Viewer
+
+    """
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
     det_done_signal = Signal(OrderedDict)
@@ -195,27 +202,26 @@ class ModulesManager(QObject):
         """Construct the list of data channels that are available with the current configuration of the module manager.
 
         It will display all the data channels as selectable parameters in the module manager UI.
+
         This method is called by the "Probe detectors’ data" button of the module manager UI.
 
         """
-        self.connect_detectors()
-
-        datas = self.grab_datas()
-
         data_list0D = []
         data_list1D = []
         data_list2D = []
         data_listND = []
 
-        for k in datas.keys():
-            if 'data0D' in datas[k].keys():
-                data_list0D.extend([f'{k}/{name}' for name in datas[k]['data0D'].keys()])
-            if 'data1D' in datas[k].keys():
-                data_list1D.extend([f'{k}/{name}' for name in datas[k]['data1D'].keys()])
-            if 'data2D' in datas[k].keys():
-                data_list2D.extend([f'{k}/{name}' for name in datas[k]['data2D'].keys()])
-            if 'dataND' in datas[k].keys():
-                data_listND.extend([f'{k}/{name}' for name in datas[k]['dataND'].keys()])
+        for detector in self.detectors:
+            detector_acquisition = detector.data_to_save_export
+
+            if 'data0D' in detector_acquisition.keys():
+                data_list0D.extend([f'{name}' for name in detector_acquisition['data0D'].keys()])
+            if 'data1D' in detector_acquisition.keys():
+                data_list1D.extend([f'{name}' for name in detector_acquisition['data1D'].keys()])
+            if 'data2D' in detector_acquisition.keys():
+                data_list2D.extend([f'{name}' for name in detector_acquisition['data2D'].keys()])
+            if 'data1D' in detector_acquisition.keys():
+                data_listND.extend([f'{name}' for name in detector_acquisition['dataND'].keys()])
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
@@ -225,8 +231,6 @@ class ModulesManager(QObject):
             dict(all_items=data_list2D, selected=[]))
         self.settings.child('data_dimensions', 'det_data_listND').setValue(
             dict(all_items=data_listND, selected=[]))
-
-        self.connect_detectors(False)
 
     def get_selected_probed_data(self, dim='0D'):
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
