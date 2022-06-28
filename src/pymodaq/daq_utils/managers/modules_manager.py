@@ -232,7 +232,14 @@ class ModulesManager(QObject):
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
 
     def grab_datas(self, **kwargs):
-        """Send a command to every managed detectors to do a single grab.
+        """Send a command to every managed detectors to do a single grab and return the acquisitions classified in an
+        ordered dictionary.
+
+        In principle the detectors will send their signals and self.det_done_datas will be constructed from all their
+        contributions.
+
+        If all the detectors do not send the data before timeout, then the det_done_signal is emitted anyway, and the
+        method returns the dictionary, which will be "incomplete" in this case.
 
         Parameters
         ----------
@@ -240,7 +247,26 @@ class ModulesManager(QObject):
 
         Returns
         -------
-        self.det_done_data : OrderedDict
+        self.det_done_datas : OrderedDict{
+            Ndatas : int
+            acq_time_s : float
+            name : str
+            data0D : OrderedDict{
+                        <channel name> : DataToExport
+                        …
+                        }
+                The dictionary data0D can contain data from 0D detectors, but also some measurements (e.g. an
+                ROI integration).
+            data1D : OrderedDict
+                Same as data0D but for 1D data.
+            data2D : OrderedDict
+                Same for 2D data.
+            dataND : OrderedDict
+                Same for ND data.
+            }
+
+            Dictionary that contains data, metadata and measurements corresponding to an acquisition. Data of different
+            dimensions are classified in different keys of the dictionary.
 
         """
         self.det_done_datas = OrderedDict()
