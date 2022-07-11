@@ -60,12 +60,35 @@ DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
 class DAQ_Viewer(QObject):
-    """
+    """Main class of the DAQ_Viewer module.
+
+    It defines the UI of the module and ensure the communication between the user and all the other objects that are
+    needed to run the module.
 
     Attributes
     ----------
     do_save_data : bool
         Set to True if the current acquisition should be saved (see save_export_data).
+    data_to_save_export : OrderedDict{
+                                Ndatas : int
+                                acq_time_s : float
+                                name : str
+                                    Name of the detector as defined in the preset.
+                                data0D : OrderedDict{
+                                            <channel name 1> : DataToExport
+                                            <channel name 2> : DataToExport
+                                            …
+                                            }
+                                    The dictionary data0D can contain data from 0D detectors, but
+                                    also some measurements (e.g. an ROI integration).
+                                data1D : OrderedDict
+                                    Same as data0D but for 1D data.
+                                data2D : OrderedDict
+                                    Same for 2D data.
+                                dataND : OrderedDict
+                                    Same for ND data.
+                                }
+        Buffer to save the data and the measurements from the current acquisition of the detector.
 
         ========================= =======================================
         **Attributes**             **Type**
@@ -737,6 +760,8 @@ class DAQ_Viewer(QObject):
         This method should not be accessible if data_to_save_export is None (i.e. if there has been no grabbing). We
         check that it is not None and write a message in the log file if it is the case.
 
+        This method does not save measurements (e.g. if ROIs are defined, the lineouts will not be saved).
+
         """
         if self.data_to_save_export is None:
             self.update_status(f'{self.title}: Nothing to save. Grab data before.')
@@ -748,16 +773,16 @@ class DAQ_Viewer(QObject):
         self.save_export_data(self.data_to_save_export)
 
     def save_new(self):
-        """
-            Do a new save from the select_file obtained pathname into a h5 file structure.
+        """Method called by the UI "Save new ddta" button.
 
-            See Also
-            --------
-            gutils.select_file, snapshot
+        Do a snapshot (i.e. one single grab) and popup a window to ask the user to select a h5 file to save the
+        resulting acquisition.
+
+        This method does not save measurements (e.g. if ROIs are defined, the lineouts will not be saved).
+
         """
         self.do_save_data = True
-        self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
+        self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True, ext='h5')
         self.snapshot(pathname=self.save_file_pathname, dosave=True)
 
     def save_datas(self, path=None, datas=None):
