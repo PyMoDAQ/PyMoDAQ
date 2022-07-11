@@ -61,6 +61,12 @@ DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 class DAQ_Viewer(QObject):
     """
+
+    Attributes
+    ----------
+    do_save_data : bool
+        Set to True if the current acquisition should be saved (see save_export_data).
+
         ========================= =======================================
         **Attributes**             **Type**
 
@@ -724,16 +730,20 @@ class DAQ_Viewer(QObject):
             self.logger.exception(str(e))
 
     def save_current(self):
-        """
+        """Method called by the UI "Save current data" button.
 
+        Popup a window to ask the user to select a h5 file to save the current acquisition.
 
-            See Also
-            --------
-            gutils.select_file, save_export_data
+        This method should not be accessible if data_to_save_export is None (i.e. if there has been no grabbing). We
+        check that it is not None and write a message in the log file if it is the case.
+
         """
+        if self.data_to_save_export is None:
+            logger.error("The data buffer should not be empty if you call the save_current method. Grab data before.")
+            return
+
         self.do_save_data = True
-        self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True,
-                                                                                  ext='h5')  # see daq_utils
+        self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True, ext='h5')
         self.save_export_data(self.data_to_save_export)
 
     def save_new(self):
