@@ -739,6 +739,7 @@ class DAQ_Viewer(QObject):
 
         """
         if self.data_to_save_export is None:
+            self.update_status(f'{self.title}: Nothing to save. Grab data before.')
             logger.error("The data buffer should not be empty if you call the save_current method. Grab data before.")
             return
 
