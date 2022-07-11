@@ -3,6 +3,7 @@ from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import time
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
@@ -15,6 +16,31 @@ class ModulesManager(QObject):
     Attributes
     ----------
     detectors : list of DAQ_Viewer
+
+    det_done_datas : OrderedDict{
+                        <name of detector 1> : OrderedDict{
+                                                    Ndatas : int
+                                                    acq_time_s : float
+                                                    name : str
+                                                    data0D : OrderedDict{
+                                                                <channel name 1> : DataToExport
+                                                                <channel name 2> : DataToExport
+                                                                …
+                                                                }
+                                                        The dictionary data0D can contain data from 0D detectors, but
+                                                        also some measurements (e.g. an ROI integration).
+                                                    data1D : OrderedDict
+                                                        Same as data0D but for 1D data.
+                                                    data2D : OrderedDict
+                                                        Same for 2D data.
+                                                    dataND : OrderedDict
+                                                        Same for ND data.
+                                                    }
+                        <name of detector 2> : OrderedDict{
+                                                    …
+                                                    }
+                        …
+                        }
 
     """
     detectors_changed = Signal(list)
@@ -213,15 +239,24 @@ class ModulesManager(QObject):
 
         for detector in self.detectors:
             detector_acquisition = detector.data_to_save_export
+            det_name = detector.detector_name
+
+            # In this case the detector is not grabbing.
+            if detector_acquisition is None:
+                detector.grab_done_signal.connect(self.det_done)
+                detector_acquisition = self.grab_one_detector(detector)
+                detector.grab_done_signal.disconnect(self.det_done)
+            # In this case the detector is grabbing, thus we do not need to send the grab signal, which would freeze the
+            # acquisition.
 
             if 'data0D' in detector_acquisition.keys():
-                data_list0D.extend([f'{name}' for name in detector_acquisition['data0D'].keys()])
+                data_list0D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data0D'].keys()])
             if 'data1D' in detector_acquisition.keys():
-                data_list1D.extend([f'{name}' for name in detector_acquisition['data1D'].keys()])
+                data_list1D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data1D'].keys()])
             if 'data2D' in detector_acquisition.keys():
-                data_list2D.extend([f'{name}' for name in detector_acquisition['data2D'].keys()])
+                data_list2D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data2D'].keys()])
             if 'data1D' in detector_acquisition.keys():
-                data_listND.extend([f'{name}' for name in detector_acquisition['dataND'].keys()])
+                data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['dataND'].keys()])
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
@@ -243,7 +278,8 @@ class ModulesManager(QObject):
         contributions.
 
         If all the detectors do not send the data before timeout, then the det_done_signal is emitted anyway, and the
-        method returns the dictionary, which will be "incomplete" in this case.
+        method returns the dictionary, which will be "incomplete" in this case (an error message will be sent in the
+        logs).
 
         Parameters
         ----------
@@ -252,30 +288,35 @@ class ModulesManager(QObject):
         Returns
         -------
         self.det_done_datas : OrderedDict{
-            Ndatas : int
-            acq_time_s : float
-            name : str
-            data0D : OrderedDict{
-                        <channel name> : DataToExport
-                        …
+                                    <name of detector 1> : OrderedDict{
+                                                                Ndatas : int
+                                                                acq_time_s : float
+                                                                name : str
+                                                                data0D : OrderedDict{
+                                                                            <channel name 1> : DataToExport
+                                                                            <channel name 2> : DataToExport
+                                                                            …
+                                                                            }
+                                                                    The dictionary data0D can contain data from 0D
+                                                                    detectors, but also some measurements (e.g. an ROI
+                                                                    integration).
+                                                                data1D : OrderedDict
+                                                                    Same as data0D but for 1D data.
+                                                                data2D : OrderedDict
+                                                                    Same for 2D data.
+                                                                dataND : OrderedDict
+                                                                    Same for ND data.
+                                                                }
+                                    <name of detector 2> : OrderedDict{
+                                                                …
+                                                                }
+                                    …
                         }
-                The dictionary data0D can contain data from 0D detectors, but also some measurements (e.g. an
-                ROI integration).
-            data1D : OrderedDict
-                Same as data0D but for 1D data.
-            data2D : OrderedDict
-                Same for 2D data.
-            dataND : OrderedDict
-                Same for ND data.
-            }
-
-            Dictionary that contains data, metadata and measurements corresponding to an acquisition. Data of different
-            dimensions are classified in different keys of the dictionary.
 
         """
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
-        self.settings.child('det_done').setValue(self.det_done_flag)
+        self.settings.child('det_done').setValue(False)
         tzero = time.perf_counter()
 
         for sig in [mod.command_detector for mod in self.detectors]:
@@ -292,6 +333,59 @@ class ModulesManager(QObject):
 
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
+
+    def grab_one_detector(self, detector: DAQ_Viewer, **kwargs):
+        """Send a command to the detector given in parameter to do a single grab and return the acquisition.
+
+        Parameters
+        ----------
+        detector : DAQ_Viewer
+
+        Returns
+        -------
+        detector_acquisition : OrderedDict{
+                                    Ndatas : int
+                                    acq_time_s : float
+                                    name : str
+                                    data0D : OrderedDict{
+                                                <channel name 1> : DataToExport
+                                                <channel name 2> : DataToExport
+                                                …
+                                                }
+                                        The dictionary data0D can contain data from 0D detectors, but
+                                        also some measurements (e.g. an ROI integration).
+                                    data1D : OrderedDict
+                                        Same as data0D but for 1D data.
+                                    data2D : OrderedDict
+                                        Same for 2D data.
+                                    dataND : OrderedDict
+                                        Same for ND data.
+                                    }
+
+        """
+        if not isinstance(detector, DAQ_Viewer):
+            logger.error("The input parameter is not a DAQ_Viewer object.")
+            raise Exception
+
+        self.det_done_datas = OrderedDict()
+        self.det_done_flag = False
+        self.settings.child('det_done').setValue(False)
+        tzero = time.perf_counter()
+
+        detector.command_detector.emit(utils.ThreadCommand("single", [1, kwargs]))
+
+        while not self.det_done_flag:
+            # wait for the grab_done_signal to be emitted
+
+            QtWidgets.QApplication.processEvents()
+            if time.perf_counter() - tzero > self.timeout:
+                self.timeout_signal.emit(True)
+                logger.error('Timeout fired during waiting for data to be acquired')
+                break
+
+        detector_acquisition = detector.data_to_save_export
+
+        return detector_acquisition
 
     def connect_actuators(self, connect=True, slot=None):
         if slot is None:
@@ -310,17 +404,18 @@ class ModulesManager(QObject):
         self.actuators_connected = connect
 
     def connect_detectors(self, connect=True, slot=None):
-        """
-        Connect selected DAQ_Viewers's grab_done_signal to the given slot
+        """Connect selected DAQ_Viewers's grab_done_signal to the given slot.
 
         Parameters
         ----------
-        connect: (bool) if True, connect to the given slot (or default slot)
-                        if False, disconnect all detectors (not only the currently selected ones.
-                        This is made because when selected detectors changed if you only disconnect those ones,
-                        the previously connected ones will stay connected)
+        connect : bool
+            If True, connect to the given slot (or default slot).
+            If False, disconnect all detectors (not only the currently selected ones.
+            This is made because when selected detectors changed if you only disconnect those ones, the previously
+            connected ones will stay connected).
+        slot : method
+            A method that should be connected.
 
-        slot: (method) A method that should be connected
         """
         if slot is None:
             slot = self.det_done
@@ -329,7 +424,6 @@ class ModulesManager(QObject):
             for sig in [mod.grab_done_signal for mod in self.detectors]:
                 sig.connect(slot)
         else:
-
             for sig in [mod.grab_done_signal for mod in self.detectors_all]:
                 try:
                     sig.disconnect(slot)
@@ -444,12 +538,36 @@ class ModulesManager(QObject):
 
     @Slot(OrderedDict)
     def det_done(self, data):
+        """Triggered each time a detector has finished its acquisition (DAQ_Viewer.grab_done_signal).
+
+        Parameters
+        ----------
+        data : OrderedDict{
+                    Ndatas : int
+                    acq_time_s : float
+                    name : str
+                    data0D : OrderedDict{
+                                <channel name 1> : DataToExport
+                                <channel name 2> : DataToExport
+                                …
+                                }
+                        The dictionary data0D can contain data from 0D detectors, but
+                        also some measurements (e.g. an ROI integration).
+                    data1D : OrderedDict
+                        Same as data0D but for 1D data.
+                    data2D : OrderedDict
+                        Same for 2D data.
+                    dataND : OrderedDict
+                        Same for ND data.
+                    }
+
+        """
         try:
             if data['name'] not in list(self.det_done_datas.keys()):
                 self.det_done_datas[data['name']] = data
             if len(self.det_done_datas.items()) == len(self.detectors):
                 self.det_done_flag = True
-                self.settings.child(('det_done')).setValue(self.det_done_flag)
+                self.settings.child('det_done').setValue(self.det_done_flag)
         except Exception as e:
             logger.exception(str(e))
 
