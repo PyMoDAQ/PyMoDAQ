@@ -62,8 +62,21 @@ DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 class DAQ_Viewer(QObject):
     """Main class of the DAQ_Viewer module.
 
-    It defines the UI of the module and ensure the communication between the user and all the other objects that are
+    It defines the UI of the module and ensure the communication between the UI and all the other objects that are
     needed to run the module.
+
+    Signals
+    -------
+    grab_done_signal : pyqt signal
+        This signal is emitted each time an acquisition from the detector is ready. It contains the acquisition buffer.
+        It is emitted by show_data and get_data_from_viewer methods.
+        It is connected to the save_export_data method, and may be connected (depending on the context defined by the
+        user) to other modules that need the detector acquisition (e.g. Logger extension module to save the
+        acquisition).
+    command_detector : pyqt signal
+        This signal allows to send commands from the DAQ_Viewer thread to the DAQ_Detector thread.
+        It is connected to DAQ_Detector.queue_command. This last method will call the proper method of the DAQ_Detector
+        depending on the string that is sent in the ThreadCommand.
 
     Attributes
     ----------
@@ -73,7 +86,7 @@ class DAQ_Viewer(QObject):
                                 Ndatas : int
                                 acq_time_s : float
                                 name : str
-                                    Name of the detector as defined in the preset.
+                                    Name of the detector as defined in the preset file.
                                 data0D : OrderedDict{
                                             <channel name 1> : DataToExport
                                             <channel name 2> : DataToExport
@@ -94,7 +107,6 @@ class DAQ_Viewer(QObject):
         **Attributes**             **Type**
 
         *command_detector*         instance of pyqt Signal
-        *grab_done_signal*         instance of pyqt Signal
         *quit_signal*              instance of pyqt Signal
         *update_settings_signal*   instance of pyqt Signal
         *overshoot_signal*         instance of pyqt Signal
@@ -118,8 +130,6 @@ class DAQ_Viewer(QObject):
         *x_axis*                   1D numpy array
         *y_axis*                   1D numpy array
         *current_datas*            dictionnary
-        *data_to_save_export*      ordered dictionnary
-        *do_save_data*             boolean
         *do_continuous_save*       boolean
         *file_continuous_save*     ???
         ========================= =======================================
@@ -259,6 +269,13 @@ class DAQ_Viewer(QObject):
     #######################
     #  INIT QUIT
     def setupUI(self, parent, dock_settings, dock_viewer):
+        """Setup the user interface (UI).
+
+        Define some graphical parameters, the buttons that are clickable…
+        It also connects the signals of the buttons of the UI to the methods of the class.
+        This method is called by the constructor of the class.
+
+        """
         self.ui = Ui_Form()
         widgetsettings = QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
@@ -520,19 +537,31 @@ class DAQ_Viewer(QObject):
 
     def grab_data(self, grab_state=False, send_to_tcpip=False):
         """
-            Do a grab session using 2 profile :
-                * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
-                * if not send a "stop_grab" thread command with settings "main settings-naverage" node value as an attribute.
 
-            See Also
-            --------
-            daq_utils.ThreadCommand, set_enabled_Ini_buttons
+        This method is called from the DAQ_Viewer module UI, either from Grab button (continuous grab, grab_state=True)
+        or from Snap button (single grab, grab_state=False).
+
+        Do a grab session using 2 profile :
+            * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
+            * if not send a "stop_grab" thread command with settings "main settings-naverage" node value as an
+            attribute.
+
+        Parameters
+        ----------
+        grab_state : bool
+
+
+        See Also
+        --------
+        daq_utils.ThreadCommand, set_enabled_Ini_buttons
+
         """
         self.send_to_tcpip = send_to_tcpip
         self.grab_done = False
         self.ui.data_ready_led.set_as_false()
         self.start_grab_time = time.perf_counter()
-        if not (grab_state):
+
+        if not grab_state:
             self.update_status(f'{self.title}: Snap')
             self.command_detector.emit(
                 ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value()]))
@@ -876,18 +905,34 @@ class DAQ_Viewer(QObject):
     @Slot(OrderedDict)
     def save_export_data(self, datas):
         """
-            Store in data_to_save_export buffer the data to be saved and do save at self.snapshot_pathname.
 
-            ============== ============= ======================
-            **Parameters**   **Type**     **Description**
-            *datas*         dictionnary  the data to be saved
-            ============== ============= ======================
+        Triggered by grab_done_signal.
 
-            See Also
-            --------
-            save_datas
+        Parameters
+        ----------
+        datas : OrderedDict{
+                    Ndatas : int
+                    acq_time_s : float
+                    name : str
+                        Name of the detector as defined in the preset file.
+                    data0D : OrderedDict{
+                                <channel name 1> : DataToExport
+                                <channel name 2> : DataToExport
+                                …
+                                }
+                        The dictionary data0D can contain data from 0D detectors, but
+                        also some measurements (e.g. an ROI integration).
+                    data1D : OrderedDict
+                        Same as data0D but for 1D data.
+                    data2D : OrderedDict
+                        Same for 2D data.
+                    dataND : OrderedDict
+                        Same for ND data.
+                    }
+            Dictionnary that contains the raw data, metadata (e.g. acquisition time) and the measurements
+            (e.g. ROI lineouts) from the viewer.
+
         """
-
         if self.do_save_data:
             self.save_datas(self.save_file_pathname, datas)
             self.do_save_data = False
@@ -931,13 +976,35 @@ class DAQ_Viewer(QObject):
 
     @Slot(OrderedDict)
     def get_data_from_viewer(self, datas):
-        """
-            Emit the grab done signal with datas as an attribute.
+        """First method to be triggered after the viewer has displayed the acquisition.
 
-            =============== ===================== ===================
-            **Parameters**    **Type**             **Description**
-            *datas*           ordered dictionnary  the datas to show
-            =============== ===================== ===================
+        Update the acquisition buffer (self.data_to_save_export) from the acquisition received from the viewer.
+        Triggered by Viewer.data_to_export_signal.
+        Emit the grab_done_signal with the acquisition buffer as an attribute.
+
+        Parameters
+        ----------
+        datas : OrderedDict{
+                    Ndatas : int
+                    acq_time_s : float
+                    name : str
+                        Name of the viewer.
+                    data0D : OrderedDict{
+                                <channel name 1> : DataToExport
+                                <channel name 2> : DataToExport
+                                …
+                                }
+                        The dictionary data0D can contain data from 0D detectors, but
+                        also some measurements (e.g. an ROI integration).
+                    data1D : OrderedDict
+                        Same as data0D but for 1D data.
+                    data2D : OrderedDict
+                        Same for 2D data.
+                    dataND : OrderedDict
+                        Same for ND data.
+                    }
+            Dictionnary that contains the raw data and the measurements (e.g. ROI lineouts) from the viewer.
+
         """
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
         if self.data_to_save_export is not None:  # means that somehow datas are not initialized so no further procsessing
@@ -1076,6 +1143,9 @@ class DAQ_Viewer(QObject):
     @Slot(list)
     def show_data(self, datas: List[utils.DataFromPlugins]):
         """
+
+        Triggered by DAQ_Detector.data_detector_sig.
+        Emit the grab_done_signal.
 
         """
         try:
@@ -1879,31 +1949,45 @@ class DAQ_Viewer(QObject):
 
 
 class DAQ_Detector(QObject):
-    """
-        ========================= ==========================
-        **Attributes**              **Type**
-        *status_sig*                instance of pyqt Signal
-        *data_detector_sig*         instance of pyqt Signal
-        *data_detector_temp_sig*    instance of pyqt Signal
+    """This class makes the bridge between the DAQ_Viewer class (UI) and the pymodaq plugin that corresponds to the
+    currently plugged detector.
 
-        *waiting_for_data*          boolean
-        *controller*                ???
-        *detector_name*             string
-        *detector*                  ???
-        *controller_adress*         ???
-        *grab_state*                boolean
-        *single_grab*               boolean
-        *x_axis*                    1D numpy array
-        *y_axis*                    1D numpy array
-        *datas*                     dictionnary
-        *ind_average*               int
-        *Naverage*                  int
-        *average_done*              boolean
-        *hardware_averaging*        boolean
-        *show_averaging*            boolean
-        *wait_time*                 int
-        *DAQ_type*                  string
-        ========================= ==========================
+    It is intended to be put in a thread.
+
+    Signals
+    -------
+    data_detector_sig : pyqt signal
+        This signal hands over the acquisition from DAQ_Detector to DAQ_Viewer.
+        Emitted by data_ready.
+        Connected to DAQ_Viewer.show_data.
+
+    Attributes
+    ----------
+    detector : a pymodaq viewer plugin object (depends on the context, e.g. DAQ_1DViewer_Mock object)
+        The pymodaq viewer plugin that corresponds to the detector that is currently plugged.
+
+    ========================= ==========================
+    **Attributes**              **Type**
+    *status_sig*                instance of pyqt Signal
+    *data_detector_temp_sig*    instance of pyqt Signal
+
+    *waiting_for_data*          boolean
+    *controller*                ???
+    *detector_name*             string
+    *controller_adress*         ???
+    *grab_state*                boolean
+    *single_grab*               boolean
+    *x_axis*                    1D numpy array
+    *y_axis*                    1D numpy array
+    *datas*                     dictionnary
+    *ind_average*               int
+    *Naverage*                  int
+    *average_done*              boolean
+    *hardware_averaging*        boolean
+    *show_averaging*            boolean
+    *wait_time*                 int
+    *DAQ_type*                  string
+    ========================= ==========================
     """
     status_sig = Signal(ThreadCommand)
     data_detector_sig = Signal(list)
@@ -2090,14 +2174,13 @@ class DAQ_Detector(QObject):
             |
             | Else emit the data detector signals with datas parameter as an attribute.
 
-            =============== ===================== =========================
-            **Parameters**    **Type**             **Description**
-            *datas*           list                the datas to be emitted.
-            =============== ===================== =========================
+        Triggered by?
+        Emit the data_detector_sig signal.
 
-            See Also
-            --------
-            daq_utils.ThreadCommand
+        Attributes
+        ----------
+            datas : list of DataFormPlugins
+
         """
 
         # datas validation check for backcompatibility with plugins not exporting new DataFromPlugins list of objects
