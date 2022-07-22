@@ -241,22 +241,25 @@ class ModulesManager(QObject):
             detector_acquisition = detector.data_to_save_export
             det_name = detector.detector_name
 
-            # In this case the detector is not grabbing.
-            if detector_acquisition is None:
-                detector.grab_done_signal.connect(self.det_done)
-                detector_acquisition = self.grab_one_detector(detector)
-                detector.grab_done_signal.disconnect(self.det_done)
-            # In this case the detector is grabbing, thus we do not need to send the grab signal, which would freeze the
-            # acquisition.
+            try:
+                # If the detector is not grabbing (detector_acquisition is None), we send a grab signal. But if it is
+                # not grabbing, we do not need to send the grab signal, which would freeze the acquisition.
+                if detector_acquisition is None:
+                    detector.grab_done_signal.connect(self.det_done)
+                    detector_acquisition = self.grab_one_detector(detector)
+                    detector.grab_done_signal.disconnect(self.det_done)
 
-            if 'data0D' in detector_acquisition.keys():
-                data_list0D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data0D'].keys()])
-            if 'data1D' in detector_acquisition.keys():
-                data_list1D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data1D'].keys()])
-            if 'data2D' in detector_acquisition.keys():
-                data_list2D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data2D'].keys()])
-            if 'data1D' in detector_acquisition.keys():
-                data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['dataND'].keys()])
+                if 'data0D' in detector_acquisition.keys():
+                    data_list0D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data0D'].keys()])
+                if 'data1D' in detector_acquisition.keys():
+                    data_list1D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data1D'].keys()])
+                if 'data2D' in detector_acquisition.keys():
+                    data_list2D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data2D'].keys()])
+                if 'data1D' in detector_acquisition.keys():
+                    data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['dataND'].keys()])
+
+            except Exception as e:
+                self.logger.exception(str(e))
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
