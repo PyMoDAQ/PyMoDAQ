@@ -536,24 +536,19 @@ class DAQ_Viewer(QObject):
             self.logger.exception(str(e))
 
     def grab_data(self, grab_state=False, send_to_tcpip=False):
-        """
+        """Ask for an acquisition, either continuous or single grab (snap).
 
         This method is called from the DAQ_Viewer module UI, either from Grab button (continuous grab, grab_state=True)
         or from Snap button (single grab, grab_state=False).
 
-        Do a grab session using 2 profile :
-            * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
-            * if not send a "stop_grab" thread command with settings "main settings-naverage" node value as an
-            attribute.
+        !!!Not to be confused with DAQ_Detector.grab_data!!!
 
         Parameters
         ----------
         grab_state : bool
-
-
-        See Also
-        --------
-        daq_utils.ThreadCommand, set_enabled_Ini_buttons
+            True means that it is a continuous grab.
+            False means a single grab (snap).
+        send_to_tcpip : bool
 
         """
         self.send_to_tcpip = send_to_tcpip
@@ -1029,7 +1024,18 @@ class DAQ_Viewer(QObject):
                 self.grab_done = True
                 self.grab_done_signal.emit(self.data_to_save_export)
 
-    def set_datas_to_viewers(self, datas, temp=False):
+    def set_datas_to_viewers(self, datas: List[utils.DataFromPlugins], temp=False):
+        """Transfert the metadata and the acquired raw data from the detector (DAQ_Detector) to the UI viewer.
+
+        Parameters
+        ----------
+        datas : list of DataFromPlugins
+            The objects in this list contain the acquired raw data and the associated metadada. This list can contains
+            several DataFromPlugins objects because the DAQ_Viewer can manage several detectors???
+        temp : bool
+            If True the method show_data_temp of the viewer will be called, otherwise it will call the show_data method.
+
+        """
         for ind, data in enumerate(datas):
             self.ui.viewers[ind].title = data['name']
             if data['name'] != '':
@@ -1037,15 +1043,7 @@ class DAQ_Viewer(QObject):
             if data['dim'].lower() != 'datand':
                 self.set_xy_axis(data, ind)
 
-            if data['dim'] == 'Data0D':
-                if 'labels' in data.keys():
-                    self.ui.viewers[ind].labels = data['labels']
-                if temp:
-                    self.ui.viewers[ind].show_data_temp(data['data'])
-                else:
-                    self.ui.viewers[ind].show_data(data['data'])
-
-            elif data['dim'] == 'Data1D':
+            if data['dim'] == 'Data0D' or 'Data1D':
                 if 'labels' in data.keys():
                     self.ui.viewers[ind].labels = data['labels']
                 if temp:
@@ -1142,10 +1140,16 @@ class DAQ_Viewer(QObject):
 
     @Slot(list)
     def show_data(self, datas: List[utils.DataFromPlugins]):
-        """
+        """Transfert the acquired data from the detector (DAQ_Detector) to the UI viewer.
 
         Triggered by DAQ_Detector.data_detector_sig.
         Emit the grab_done_signal.
+
+        Parameters
+        ----------
+        datas : list of DataFromPlugins
+            The objects in this list contain the acquired raw data and the associated metadada. This list can contains
+            several DataFromPlugins objects because the DAQ_Viewer can manage several detectors???
 
         """
         try:
@@ -2169,13 +2173,15 @@ class DAQ_Detector(QObject):
 
     @Slot(list)
     def data_ready(self, datas):
-        """
-            | Update the local datas attributes from the given datas parameter if the averaging has to be done software wise.
-            |
-            | Else emit the data detector signals with datas parameter as an attribute.
+        """Transfert the acquired data from the detector (viewer plugin) to the UI manager (DAQ_Viewer).
 
-        Triggered by?
-        Emit the data_detector_sig signal.
+        | Update the local datas attributes from the given datas parameter if the averaging has to be done software wise.
+        |
+        | Else emit the data detector signals with datas parameter as an attribute.
+
+        Triggered by the viewer plugin data_grabbed_signal.
+        Emit the data_detector_sig signal. The latter will transfert the acquired data to the DAQ_Viewer.show_data
+        method.
 
         Attributes
         ----------
@@ -2184,7 +2190,6 @@ class DAQ_Detector(QObject):
         """
 
         # datas validation check for backcompatibility with plugins not exporting new DataFromPlugins list of objects
-
         for dat in datas:
             if not isinstance(dat, utils.DataFromPlugins):
                 if 'type' in dat:
@@ -2214,7 +2219,9 @@ class DAQ_Detector(QObject):
                 self.ind_average = 0
         else:
             self.data_detector_sig.emit(datas)
+
         self.waiting_for_data = False
+
         if not self.grab_state:
             # self.status_sig.emit(["Update_Status","Grabing braked"])
             self.detector.stop()
@@ -2241,17 +2248,20 @@ class DAQ_Detector(QObject):
 
     def grab_data(self, Naverage=1, live=True, **kwargs):
         """
-            | Update status with 'Start Grabing' Update_status sub command of the Thread command.
-            | Process events and grab naverage is needed.
 
-            =============== =========== ==================
-            **Parameters**    **Type**    **Description**
-            *Naverage*        int
-            =============== =========== ==================
+        !!!Not to be confused with DAQ_Viewer.grab_data!!!
 
-            See Also
-            --------
-            daq_utils.ThreadCommand, grab
+        | Update status with 'Start Grabing' Update_status sub command of the Thread command.
+        | Process events and grab naverage is needed.
+
+        =============== =========== ==================
+        **Parameters**    **Type**    **Description**
+        *Naverage*        int
+        =============== =========== ==================
+
+        See Also
+        --------
+        daq_utils.ThreadCommand, grab
         """
         try:
             self.ind_average = 0

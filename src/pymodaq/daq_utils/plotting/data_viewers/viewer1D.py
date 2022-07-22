@@ -292,14 +292,18 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             self.ui.y_label.setVisible(False)
 
     def do_math_fun(self):
+        """Display/hide the ROI and lineouts widgets.
+
+        This method is triggered by the "Do Math using ROI" button from the Viewer1D UI.
+
+        """
         try:
             if self.ui.Do_math_pb.isChecked():
                 self.roi_manager.roiwidget.show()
                 self.ui.Graph_Lineouts.show()
-
             else:
-                self.ui.Graph_Lineouts.hide()
                 self.roi_manager.roiwidget.hide()
+                self.ui.Graph_Lineouts.hide()
 
         except Exception as e:
             logger.exception(str(e))
@@ -443,6 +447,24 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     @Slot(list)
     def show_data(self, datas, labels=None, x_axis=None):
+        """Transfert the acquired raw data from the detector(s).
+
+        Called by DAQ_Viewer.set_datas_to_viewers.
+        Start to construct self.data_to_export filling the "data1D" key with the raw data.
+        Set the abscissa of the viewer and label the curves if they are given.
+        Call update_graph1D.
+        Call update_measurement_module if the "Do measurement" push button has been checked by the user.
+
+        Parameters
+        ----------
+        datas : list of ndarray of floats
+            Each array represents the spectrum from the acquisition of a 1D detector.
+        labels : ??
+            Names for each data curve (in case there are several detectors?).
+        x_axis : ??
+            The abscissa of the detection window.
+
+        """
         try:
             self.datas = datas
             self.update_labels(self.labels)
@@ -462,8 +484,6 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                 self.set_x_axis(x_axis)
 
             self.update_graph1D(datas)
-
-
 
             if labels is not None:
                 self.update_labels(labels)
@@ -504,6 +524,19 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     @Slot(list)
     def show_math(self, data_lo):
+        """
+
+        This method is called by the update_graph1D method if the user defined some ROIs.
+        It will complete the data_to_export dictionary with the lineouts from the ROIs (measurements). They are put
+            within the "data0D" key of the dictionary.
+        Emit the data_to_export_signal with the updated data_to_export dictionary.
+
+        Parameters
+        ----------
+        data_lo : list of float
+            The values of the lineouts of the ROIs (e.g. the mean value of the segments defined by the ROIs).
+
+        """
         # self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
         if len(data_lo) != 0:
             for ind, key in enumerate(self.lo_items):
@@ -547,6 +580,16 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     def update_graph1D(self, datas):
         # self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
+        """
+
+        If the user defined some ROI, the lineouts values will be sent as argument to the show_math method.
+
+        Parameters
+        ----------
+        datas : list of ndarray
+            Spectra from the detectors.
+
+        """
         try:
 
             pens = []
