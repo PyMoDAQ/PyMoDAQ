@@ -74,14 +74,30 @@ class DAQ_Viewer(QObject):
         user) to other modules that need the detector acquisition (e.g. Logger extension module to save the
         acquisition).
     command_detector : pyqt signal
-        This signal allows to send commands from the DAQ_Viewer thread to the DAQ_Detector thread.
+        This signal allows sending commands from the DAQ_Viewer thread to the DAQ_Detector thread.
         It is connected to DAQ_Detector.queue_command. This last method will call the proper method of the DAQ_Detector
         depending on the string that is sent in the ThreadCommand.
 
     Parameters
     ----------
-    refresh_time : ??
-        ??
+    refresh_time : int
+        Time delay (in ms) between two updates of the viewer in the UI. This time delay (contrary to
+        DAQ_Viewer.wait_time) will not directly affect the actual speed of the acquisition. If for example the
+        acquisition loop runs at 50 Hz, there is no point to display on the UI at such a speed. In that case the user
+        can specify a refresh time longer than 20 ms. Notice that the longer the refresh time, the better the
+        performances, since the displaying is quite costly in terms of resources. A very short refresh time can slow
+        down the program. For most applications, a refreshing time higher than 200 ms is enough. If the user wants to
+        optimize the performance of the program, he can untick the "Show data and process" parameter on the UI. If the
+        user chooses a refreshing time shorter than the delay between two acquisitions, then it just means that the
+        viewer will display all the acquisitions. Notice also that the ROI lineouts are calculated each time the
+        viewer is refreshed. It means that (up to now) the user cannot perform ROI lineouts calculation and saving
+        faster than the refresh time of the viewer. This is probably not an expected behavior.
+    show_data : bool
+        Corresponds to the "Show data and process" parameter on the UI.
+        If True the viewer is updated on the UI, if False the visualization of the acquisition is stopped. Notice that
+        the latter case does not mean that the backend treatment of the acquisition is stopped (e.g. each acquisition
+        can still be saved). The user can untick this parameter if he wants to optimize the speed of the program and
+        does not need to visualize what is going on.
 
     Attributes
     ----------
@@ -114,7 +130,6 @@ class DAQ_Viewer(QObject):
         ========================= =======================================
         **Attributes**             **Type**
 
-        *command_detector*         instance of pyqt Signal
         *quit_signal*              instance of pyqt Signal
         *update_settings_signal*   instance of pyqt Signal
         *overshoot_signal*         instance of pyqt Signal
