@@ -192,7 +192,7 @@ class DashBoard(QObject):
         if win is None:
             win = QtWidgets.QMainWindow()
 
-        win.showFullScreen()
+        win.showMaximized()
         dockarea = DockArea()
         win.setCentralWidget(dockarea)
         win.setWindowTitle('Logger extension module')
@@ -213,14 +213,13 @@ class DashBoard(QObject):
         else:
             self.pid_window = win
 
-        self.pid_window.showFullScreen()
         dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle('PID extension module')
         self.pid_module = DAQ_PID(dockarea=dockarea)
         self.pid_module.set_module_manager(self.detector_modules, self.actuators_modules)
         self.extensions['DAQ_PID'] = self.pid_module
-        self.pid_window.show()
+        self.pid_window.showMaximized()
         return self.pid_module
 
     def load_extensions_module(self, ext):
