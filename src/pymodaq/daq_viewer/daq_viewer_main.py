@@ -78,6 +78,11 @@ class DAQ_Viewer(QObject):
         It is connected to DAQ_Detector.queue_command. This last method will call the proper method of the DAQ_Detector
         depending on the string that is sent in the ThreadCommand.
 
+    Parameters
+    ----------
+    refresh_time : ??
+        ??
+
     Attributes
     ----------
     do_save_data : bool
@@ -102,6 +107,9 @@ class DAQ_Viewer(QObject):
                                     Same for ND data.
                                 }
         Buffer to save the data and the measurements from the current acquisition of the detector.
+    wait_time : int
+        Time in milliseconds a message displayed in the UI status bar will stay before disappearing.
+        !!!Not to be confused with DAQ_Detector.wait_time!!!
 
         ========================= =======================================
         **Attributes**             **Type**
@@ -122,7 +130,6 @@ class DAQ_Viewer(QObject):
         *settings*                 instance of pyqtgraph parameter tree
         *measurement_module*       ???
         *detector*                 instance of DAQ_Detector
-        *wait_time*                int
         *save_file_pathname*       string
         *ind_continuous_grab*      int
         *initialized_state*        boolean
@@ -172,7 +179,7 @@ class DAQ_Viewer(QObject):
         self.parent_scan = parent_scan  # to use if one need the DAQ_Scan object
 
         self.ini_time = 0  # used for the continuous saving
-        self.wait_time = 1000
+        self.wait_time = 3000
 
         self.dockarea = parent
         self.bkg = None  # buffer to store background
@@ -346,8 +353,8 @@ class DAQ_Viewer(QObject):
         self.ui.settings_pb.clicked.connect(self.show_settings)
         self.ui.IniDet_pb.clicked.connect(self.ini_det_fun)
         self.update_status("Ready", wait_time=self.wait_time)
-        self.ui.grab_pb.clicked.connect(lambda: self.grab_data(grab_state=True))
-        self.ui.single_pb.clicked.connect(lambda: self.grab_data(grab_state=False))
+        self.ui.grab_pb.clicked.connect(lambda: self.grab_data(continuous_grab=True))
+        self.ui.single_pb.clicked.connect(lambda: self.grab_data(continuous_grab=False))
         self.ui.stop_pb.clicked.connect(self.stop_all)
         self.ui.save_new_pb.clicked.connect(self.save_new)
         self.ui.save_current_pb.clicked.connect(self.save_current)
@@ -497,7 +504,7 @@ class DAQ_Viewer(QObject):
                 self.detector_thread.start()
 
                 self.command_detector.emit(ThreadCommand("ini_detector", attributes=[
-                    self.settings.child(('detector_settings')).saveState(), self.controller]))
+                    self.settings.child('detector_settings').saveState(), self.controller]))
 
                 for dock in self.ui.viewer_docks:
                     dock.setEnabled(True)
@@ -535,17 +542,17 @@ class DAQ_Viewer(QObject):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def grab_data(self, grab_state=False, send_to_tcpip=False):
+    def grab_data(self, continuous_grab=False, send_to_tcpip=False):
         """Ask for an acquisition, either continuous or single grab (snap).
 
-        This method is called from the DAQ_Viewer module UI, either from Grab button (continuous grab, grab_state=True)
-        or from Snap button (single grab, grab_state=False).
+        This method is called from the DAQ_Viewer module UI, either from Grab button (continuous grab,
+        continuous_grab=True) or from Snap button (single grab, continuous_grab=False).
 
         !!!Not to be confused with DAQ_Detector.grab_data!!!
 
         Parameters
         ----------
-        grab_state : bool
+        continuous_grab : bool
             True means that it is a continuous grab.
             False means a single grab (snap).
         send_to_tcpip : bool
@@ -556,7 +563,7 @@ class DAQ_Viewer(QObject):
         self.ui.data_ready_led.set_as_false()
         self.start_grab_time = time.perf_counter()
 
-        if not grab_state:
+        if not continuous_grab:
             self.update_status(f'{self.title}: Snap')
             self.command_detector.emit(
                 ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value()]))
@@ -998,7 +1005,7 @@ class DAQ_Viewer(QObject):
                     dataND : OrderedDict
                         Same for ND data.
                     }
-            Dictionnary that contains the raw data and the measurements (e.g. ROI lineouts) from the viewer.
+            Dictionary that contains the raw data and the measurements (e.g. ROI lineouts) from the viewer.
 
         """
         # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
@@ -1025,12 +1032,12 @@ class DAQ_Viewer(QObject):
                 self.grab_done_signal.emit(self.data_to_save_export)
 
     def set_datas_to_viewers(self, datas: List[utils.DataFromPlugins], temp=False):
-        """Transfert the metadata and the acquired raw data from the detector (DAQ_Detector) to the UI viewer.
+        """Transfer the metadata and the acquired raw data from the detector (DAQ_Detector) to the UI viewer.
 
         Parameters
         ----------
         datas : list of DataFromPlugins
-            The objects in this list contain the acquired raw data and the associated metadada. This list can contains
+            The objects in this list contain the acquired raw data and the associated metadata. This list can contain
             several DataFromPlugins objects because the DAQ_Viewer can manage several detectors???
         temp : bool
             If True the method show_data_temp of the viewer will be called, otherwise it will call the show_data method.
@@ -1148,7 +1155,7 @@ class DAQ_Viewer(QObject):
         Parameters
         ----------
         datas : list of DataFromPlugins
-            The objects in this list contain the acquired raw data and the associated metadada. This list can contains
+            The objects in this list contain the acquired raw data and the associated metadada. This list can contain
             several DataFromPlugins objects because the DAQ_Viewer can manage several detectors???
 
         """
@@ -1301,16 +1308,19 @@ class DAQ_Viewer(QObject):
         self.logger.info(txt)
 
     def update_status(self, txt, wait_time=0, log=True):
-        """
-            | Show the given txt message in the status bar with a delay of wait_time ms.
-            | Emit a log signal if log_type parameter is defined.
+        """Show the given txt message in the status bar.
 
-            =============== =========== =====================================
-            **Parameters**    **Type**   **Description**
-            *txt*             string     the message to show
-            *wait_time*       int        the delay of showwing
-            *log_type*        string     the type of  the log signal to emit
-            =============== =========== =====================================
+        Write in the logger if log is True.
+
+        Parameters
+        ----------
+        txt : str
+            The message displayed.
+        wait_time : int
+            The amount of time (in ms) the message will stay displayed.
+        log : bool
+            If True, the message is also written in the logger.
+
         """
         self.ui.statusbar.showMessage(txt, wait_time)
         self.status_signal.emit(txt)
@@ -1967,8 +1977,27 @@ class DAQ_Detector(QObject):
 
     Attributes
     ----------
-    detector : a pymodaq viewer plugin object (depends on the context, e.g. DAQ_1DViewer_Mock object)
+    detector : a viewer plugin object (depends on the context, e.g. DAQ_1DViewer_Mock object).
         The pymodaq viewer plugin that corresponds to the detector that is currently plugged.
+    wait_time : int
+        This corresponds to the "Wait time (ms)" in the parameters of the UI of the DAQ_Viewer (Main Settings).
+        Extra waiting time (in ms) in the pymodaq process to slow down the acquisition loop. Notice that it is not only
+        a matter of displaying on the UI. Of course the displaying on the UI cannot be faster than the loop timing, but
+        one could refresh the UI displaying slower than the actual speed of the acquisition. It actually reduces the
+        number of acquisition per second and thus gives a lower limit to the number of acquisition you can save per
+        second (see grab_data method).
+        !!!Not to be confused with DAQ_Viewer.wait_time!!!
+    grab_state : bool
+        True if the viewer is grabbing, False otherwise.
+    single_grab : bool
+        True if the last acquisition order from the user was a snap (single grab), False otherwise.
+    Naverage : int
+        ??
+    ind_average : int
+        ??
+    average_done : bool
+        ??
+
 
     ========================= ==========================
     **Attributes**              **Type**
@@ -1979,17 +2008,11 @@ class DAQ_Detector(QObject):
     *controller*                ???
     *detector_name*             string
     *controller_adress*         ???
-    *grab_state*                boolean
-    *single_grab*               boolean
     *x_axis*                    1D numpy array
     *y_axis*                    1D numpy array
     *datas*                     dictionnary
-    *ind_average*               int
-    *Naverage*                  int
-    *average_done*              boolean
     *hardware_averaging*        boolean
     *show_averaging*            boolean
-    *wait_time*                 int
     *DAQ_type*                  string
     ========================= ==========================
     """
@@ -2249,19 +2272,18 @@ class DAQ_Detector(QObject):
     def grab_data(self, Naverage=1, live=True, **kwargs):
         """
 
+        This method is called (indirectly) by DAQ_Viewer.grab_data.
+        Call the detector_plugin.grab_data method.
+
         !!!Not to be confused with DAQ_Viewer.grab_data!!!
 
-        | Update status with 'Start Grabing' Update_status sub command of the Thread command.
-        | Process events and grab naverage is needed.
+        Parameters
+        ----------
+        Naverage : int
+            ??
+        live : bool
+            ??
 
-        =============== =========== ==================
-        **Parameters**    **Type**    **Description**
-        *Naverage*        int
-        =============== =========== ==================
-
-        See Also
-        --------
-        daq_utils.ThreadCommand, grab
         """
         try:
             self.ind_average = 0
@@ -2295,6 +2317,7 @@ class DAQ_Detector(QObject):
                         break
                     if self.detector.live_mode_available:
                         break
+
                 except Exception as e:
                     self.logger.exception(str(e))
 
