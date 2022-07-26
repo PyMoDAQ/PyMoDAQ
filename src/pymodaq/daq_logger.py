@@ -63,8 +63,8 @@ class DAQ_Logger(CustomApp):
         self.wait_time = 1000
 
         self.logger_thread = None
-        self.logger = None  # should be a reference either to self.h5saver or self.dblogger depending the choice of the user
-
+        self.logger = None  # should be a reference either to self.h5saver or self.dblogger depending on the choice of
+        # the user
         self.setup_ui()
 
     def setup_actions(self):
@@ -122,11 +122,11 @@ class DAQ_Logger(CustomApp):
 
     def connect_things(self):
         self.status_signal[str].connect(self.dashboard.add_status)
-        self._actions['quit'].triggered.connect(self.quit_fun)
-        self._actions['start'].triggered.connect(self.start_logging)
-        self._actions['stop'].triggered.connect(self.stop_logging)
-        self._actions['grab_all'].triggered.connect(self.start_all)
-        self._actions['infos'].triggered.connect(self.dashboard.show_log)
+        self._actions['quit'].connect_to(self.quit_fun)
+        self._actions['start'].connect_to(self.start_logging)
+        self._actions['stop'].connect_to(self.stop_logging)
+        self._actions['grab_all'].connect_to(self.start_all)
+        self._actions['infos'].connect_to(self.dashboard.show_log)
 
     def setup_menu(self):
         """
