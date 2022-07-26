@@ -243,7 +243,7 @@ class ModulesManager(QObject):
 
             try:
                 # If the detector is not grabbing (detector_acquisition is None), we send a grab signal. But if it is
-                # not grabbing, we do not need to send the grab signal, which would freeze the acquisition.
+                # grabbing, we do not need to send the grab signal, which would freeze the acquisition.
                 if detector_acquisition is None:
                     detector.grab_done_signal.connect(self.det_done)
                     detector_acquisition = self.grab_one_detector(detector)
@@ -259,6 +259,8 @@ class ModulesManager(QObject):
                     data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['dataND'].keys()])
 
             except Exception as e:
+                self.logger.warning("There may be a connection problem with the detector that prevents to construct"
+                                    "the acquisition channels.")
                 self.logger.exception(str(e))
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
