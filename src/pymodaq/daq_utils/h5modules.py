@@ -1851,6 +1851,21 @@ class H5Saver(H5SaverBase, QObject):
 
 
 class H5Logger(AbstractLogger):
+    """This object will be created if one uses the Logger extension and asks to save the acquisitions in a h5 file.
+
+    It makes the bridge between the data sent from the detector modules (DAQ_Viewer) and the h5 file.
+
+    Parameters
+    ----------
+    N_saved : int
+        Number of acquisitions that have been saved.
+
+    Attributes
+    ----------
+    h5saver : H5Saver object
+        Helper object to construct a h5 tree structure and manipulate the file (read and write).
+
+    """
     def __init__(self, *args, **kwargs):
         self.h5saver = H5Saver(*args, save_type='logger', **kwargs)
 
@@ -1881,70 +1896,81 @@ class H5Logger(AbstractLogger):
                                      title='Time axis',
                                      metadata=dict(label='Time axis', units='s', nav_index=0))
 
-    def add_datas(self, datas):
-        """Receive data, metadata and measurements from a detector module (DAQ_Viewer), build the h5 structure and save
-        the data.
+    def add_datas(self, acquisition):
+        """Get raw data, metadata and measurements from a detector module (DAQ_Viewer) in the form of a dictionary.
+        Construct the h5 file structure according to the dictionary structure to welcome and save the new data from the
+        acquisition.
+
+        The keys of the dictionary received as a parameter are scanned, they correspond to a node in the h5 structure.
+        For each key, the corresponding node will be created at the first call of the method. Otherwise, it will just
+        get the good node (called data_array), append the new data into it and flush the file.
+
+        The H5Saver object helps to construct the h5 file tree structure, navigate and interact with it (read and
+        write).
+
+        This method is called by DAQ_Logging.do_save_continuous.
 
         Parameters
         ----------
-        datas : OrderedDict{
-                    Ndatas : int
-                    acq_time_s : float
-                    name : str
-                    data0D : OrderedDict{
-                                <channel name> : DataToExport
-                                …
-                                }
-                        The dictionary data0D can contain data from 0D detectors, but also some measurements (e.g. an
-                        ROI integration).
-                    data1D : OrderedDict
-                        Same as data0D but for 1D data.
-                    data2D : OrderedDict
-                        Same for 2D data.
-                    dataND : OrderedDict
-                        Same for ND data.
-                    }
-            Dictionary that contains data, metadata and measurements corresponding to an acquisition. Data of different
-            dimensions are classified in different keys of the dictionary.
+        acquisition : OrderedDict{
+                            Ndatas : int
+                            acq_time_s : float
+                            name : str
+                                Name of the detector.
+                            data0D : OrderedDict{
+                                        <channel name> : DataToExport
+                                        …
+                                        }
+                                The dictionary data0D can contain data from 0D detectors, but also some measurements
+                                (e.g. an ROI integration).
+                            data1D : OrderedDict
+                                Same as data0D but for 1D data.
+                            data2D : OrderedDict
+                                Same for 2D data.
+                            dataND : OrderedDict
+                                Same for ND data.
+                            }
+            Dictionary that contains raw data, metadata and measurements corresponding to an acquisition. Data of
+            different dimensions are classified in different keys of the dictionary.
 
         """
-        det_name = datas['name']
+        det_name = acquisition['name']
         det_group = self.h5saver.get_group_by_title(self.h5saver.raw_group, det_name)
         time_array = self.h5saver.get_node(det_group, 'Logger_time_axis')
-        time_array.append(np.array([datas['acq_time_s']]))
+        time_array.append(np.array([acquisition['acq_time_s']]))
 
         data_types = ['data0D', 'data1D']
-        if self.settings.child(('save_2D')).value():
+        if self.settings.child('save_2D').value():
             data_types.extend(['data2D', 'dataND'])
 
         for data_type in data_types:
-            if data_type in datas.keys() and len(datas[data_type]) != 0:
+            if data_type in acquisition.keys() and len(acquisition[data_type]) != 0:
                 if not self.h5saver.is_node_in_group(det_group, data_type):
                     data_group = self.h5saver.add_data_group(det_group, data_type, metadata=dict(type='scan'))
                 else:
                     data_group = self.h5saver.get_node(det_group, utils.capitalize(data_type))
 
-                for ind_channel, channel in enumerate(datas[data_type]):
+                for ind_channel, channel in enumerate(acquisition[data_type]):
                     channel_group = self.h5saver.get_group_by_title(data_group, channel)
                     if channel_group is None:
                         channel_group = self.h5saver.add_CH_group(data_group, title=channel)
                         # This condition should be added for the 0D case because H5Saver.add_data requires that the key
                         # data_dict["data"] should be an ndarray, and not a float.
                         if data_type == "data0D":
-                            datas[data_type][channel]["data"] = np.array(datas[data_type][channel]["data"])
+                            acquisition[data_type][channel]["data"] = np.array(acquisition[data_type][channel]["data"])
 
-                        data_array = self.h5saver.add_data(channel_group, datas[data_type][channel],
+                        data_array = self.h5saver.add_data(channel_group, acquisition[data_type][channel],
                                                            scan_type='scan1D', enlargeable=True)
                     else:
                         data_array = self.h5saver.get_node(channel_group, 'Data')
                     if data_type == 'data0D':
-                        data_array.append(np.array([datas[data_type][channel]['data']]))
+                        data_array.append(np.array([acquisition[data_type][channel]['data']]))
                     else:
-                        data_array.append(datas[data_type][channel]['data'])
+                        data_array.append(acquisition[data_type][channel]['data'])
 
         self.h5saver.flush()
-        self.settings.child(('N_saved')).setValue(
-            self.settings.child(('N_saved')).value() + 1)
+        self.settings.child('N_saved').setValue(
+            self.settings.child('N_saved').value() + 1)
 
     def stop_logger(self):
         self.h5saver.flush()

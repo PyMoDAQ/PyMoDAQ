@@ -425,6 +425,7 @@ class DAQ_Logging(QObject):
                                         Ndatas : int
                                         acq_time_s : float
                                         name : str
+                                            Name of the detector.
                                         data0D : OrderedDict{
                                                     <channel name> : DataToExport
                                                     …
