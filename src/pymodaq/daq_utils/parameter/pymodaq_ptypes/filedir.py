@@ -81,7 +81,7 @@ class FileDirWidget(QtWidgets.QWidget):
         """
 
         self.hor_layout = QtWidgets.QHBoxLayout()
-        self.base_path_edit = QtWidgets.QPlainTextEdit(self.path)
+        self.base_path_edit = QtWidgets.QPlainTextEdit(str(self.path))
         self.base_path_edit.setMaximumHeight(50)
         self.base_path_browse_pb = QtWidgets.QPushButton()
         self.base_path_browse_pb.setText("")
