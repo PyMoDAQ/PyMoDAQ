@@ -1939,34 +1939,35 @@ class H5Logger(AbstractLogger):
         time_array = self.h5saver.get_node(det_group, 'Logger_time_axis')
         time_array.append(np.array([acquisition['acq_time_s']]))
 
-        data_types = ['data0D', 'data1D']
+        acquisition_key_dimensions = ['data0D', 'data1D']
         if self.settings.child('save_2D').value():
-            data_types.extend(['data2D', 'dataND'])
+            acquisition_key_dimensions.extend(['data2D', 'dataND'])
 
-        for data_type in data_types:
-            if data_type in acquisition.keys() and len(acquisition[data_type]) != 0:
-                if not self.h5saver.is_node_in_group(det_group, data_type):
-                    data_group = self.h5saver.add_data_group(det_group, data_type, metadata=dict(type='scan'))
+        for data_dimension in acquisition_key_dimensions:
+            if data_dimension in acquisition.keys() and len(acquisition[data_dimension]) != 0:
+                if not self.h5saver.is_node_in_group(det_group, data_dimension):
+                    data_group = self.h5saver.add_data_group(det_group, data_dimension, metadata=dict(type='scan'))
                 else:
-                    data_group = self.h5saver.get_node(det_group, utils.capitalize(data_type))
+                    data_group = self.h5saver.get_node(det_group, utils.capitalize(data_dimension))
 
-                for ind_channel, channel in enumerate(acquisition[data_type]):
+                for ind_channel, channel in enumerate(acquisition[data_dimension]):
                     channel_group = self.h5saver.get_group_by_title(data_group, channel)
                     if channel_group is None:
                         channel_group = self.h5saver.add_CH_group(data_group, title=channel)
                         # This condition should be added for the 0D case because H5Saver.add_data requires that the key
                         # data_dict["data"] should be an ndarray, and not a float.
-                        if data_type == "data0D":
-                            acquisition[data_type][channel]["data"] = np.array(acquisition[data_type][channel]["data"])
+                        if data_dimension == "data0D":
+                            acquisition[data_dimension][channel]["data"] = \
+                                np.array(acquisition[data_dimension][channel]["data"])
 
-                        data_array = self.h5saver.add_data(channel_group, acquisition[data_type][channel],
+                        data_array = self.h5saver.add_data(channel_group, acquisition[data_dimension][channel],
                                                            scan_type='scan1D', enlargeable=True)
                     else:
                         data_array = self.h5saver.get_node(channel_group, 'Data')
-                    if data_type == 'data0D':
-                        data_array.append(np.array([acquisition[data_type][channel]['data']]))
+                    if data_dimension == 'data0D':
+                        data_array.append(np.array([acquisition[data_dimension][channel]['data']]))
                     else:
-                        data_array.append(acquisition[data_type][channel]['data'])
+                        data_array.append(acquisition[data_dimension][channel]['data'])
 
         self.h5saver.flush()
         self.settings.child('N_saved').setValue(
