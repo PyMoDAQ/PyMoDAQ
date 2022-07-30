@@ -234,7 +234,7 @@ class DAQ_Move_base(QObject):
 
     def get_actuator_value(self):
         if hasattr(self, 'check_position'):
-            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_position')
+            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value')
             return self.check_position()
         else:
             raise NotImplementedError
