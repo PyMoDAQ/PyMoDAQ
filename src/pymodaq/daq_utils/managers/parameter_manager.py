@@ -9,13 +9,16 @@ class ParameterManager:
         # object containing the settings defined in the preamble
         # # create a settings tree to be shown eventually in a dock
         self.settings_tree = ParameterTree()
+        self.settings_tree.setMinimumWidth(150)
+        self.settings_tree.setMinimumHeight(300)
         self.settings_tree.setParameters(self.settings, showTop=False)  # load the tree with this parameter object
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
     def parameter_tree_changed(self, param, changes):
         for param, change, data in changes:
+            path = self.settings.childPath(param)
             if change == 'childAdded':
-                self.child_added(param)
+                self.child_added(param, data)
 
             elif change == 'value':
                 self.value_changed(param)
@@ -34,16 +37,20 @@ class ParameterManager:
 
         Parameters
         ----------
-        param: (Parameter) the parameter whose value just changed
+        param: Parameter
+            the parameter whose value just changed
         """
         pass
 
-    def child_added(self, param):
+    def child_added(self, param, data):
         """Non mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
 
         Parameters
         ----------
-        param: (Parameter) the parameter that has been deleted
+        param: Parameter
+            the parameter where child will be added
+        data: Parameter
+            the child parameter
         """
         pass
 
@@ -52,6 +59,7 @@ class ParameterManager:
 
         Parameters
         ----------
-        param: (Parameter) the parameter that has been deleted
+        param: Parameter
+            the parameter that has been deleted
         """
         pass

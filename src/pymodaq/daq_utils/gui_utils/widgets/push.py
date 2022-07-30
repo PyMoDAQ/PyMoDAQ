@@ -1,14 +1,14 @@
 from pathlib import Path
 
 from qtpy import QtWidgets, QtCore, QtGui
-from pyqtgraph import SpinBox
+from .spinbox import SpinBox
 
 
 EDIT_PUSH_TYPES = ['abs', 'rel']
 
 
 class PushButtonIcon(QtWidgets.QPushButton):
-    def __init__(self, icon_name: str, text: str):
+    def __init__(self, icon_name: str, text: str, checkable=False, tip=""):
         super().__init__(text)
         if icon_name != '':
             icon = QtGui.QIcon()
@@ -19,6 +19,8 @@ class PushButtonIcon(QtWidgets.QPushButton):
                 icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
                                QtGui.QIcon.Off)
             self.setIcon(icon)
+        self.setCheckable(checkable)
+        self.setToolTip(tip)
 
 
 class EditPushInfo:

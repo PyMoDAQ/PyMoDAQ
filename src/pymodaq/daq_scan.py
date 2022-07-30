@@ -2039,13 +2039,6 @@ class DAQ_Scan_Acquisition(QObject):
             logger.exception(str(e))
             # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
-    def wait_for_det_done(self):
-        self.timeout_scan_flag = False
-        self.timer.start(self.settings.child('time_flow', 'timeout').value())
-        while not (self.det_done_flag or self.timeout_scan_flag):
-            # wait for grab done signals to end
-            QtWidgets.QApplication.processEvents()
-
     def det_done(self, det_done_datas, positions=[]):
         """
             | Initialize 0D/1D/2D datas from given data parameter.

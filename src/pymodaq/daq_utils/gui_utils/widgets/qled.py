@@ -9,16 +9,18 @@ from pymodaq.daq_utils.gui_utils.utils import clickable
 class QLED(QLabel):
     value_changed = Signal(bool)
 
-    def __init__(self, parent=None, scale=1):
+    def __init__(self, parent=None, scale=1, readonly=True):
         QLabel.__init__(self, parent)
         # self.setText("")
         self.red_icon = QtGui.QPixmap(":/icons/Icon_Library/red_light.png")
         self.green_icon = QtGui.QPixmap(":/icons/Icon_Library/greenLight2.png")
         self.setPixmap(self.red_icon)
         self.state = False
-        self.clickable = True  # set the possibility to click and control the state of the LED otherwise it behaves as an indicator
+        self.clickable = not readonly
+        # set the possibility to click and control the state of the LED otherwise it behaves as an indicator
         clickable(self).connect(
-            self.LED_Clicked)  # clickable is a function importing a filter class to deal with mouse down event as a signal see GUI_utils
+            self.LED_Clicked)
+        # clickable is a function importing a filter class to deal with mouse down event as a signal see GUI_utils
         self.setText("empty")
         self.setMaximumWidth(self.height())
         if scale != 1:

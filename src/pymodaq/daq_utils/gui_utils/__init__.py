@@ -8,3 +8,4 @@ from .widgets.push import PushButtonIcon, EditPush, EditPushRel, EditPushInfo
 from .widgets.qled import QLED
 from .widgets.spinbox import QSpinBox_ro
 
+from .utils import get_splash_sc

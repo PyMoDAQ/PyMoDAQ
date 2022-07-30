@@ -4,6 +4,7 @@ from pymodaq.daq_utils.managers.action_manager import ActionManager
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager
 from pyqtgraph.dockarea import DockArea
 from qtpy import QtCore, QtWidgets
+from typing import Union
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
@@ -25,14 +26,15 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     # list of dicts enabling the settings tree on the user interface
     params = []
 
-    def __init__(self, dockarea: DockArea, dashboard=None):
+    def __init__(self, dockarea: Union[DockArea, QtWidgets.QWidget], dashboard=None):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self)
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
 
         if not isinstance(dockarea, DockArea):
-            raise Exception('no valid parent container, expected a DockArea')
+            if not isinstance(dockarea, QtWidgets.QWidget):
+                raise Exception('no valid parent container, expected a DockArea or a least a QWidget')
 
         self.dockarea = dockarea
         self.mainwindow = dockarea.parent()

@@ -21,12 +21,22 @@ from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.exceptions import ActuatorError
 from pymodaq.daq_utils import config
+from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
 local_path = config.get_set_local_dir()
 sys.path.append(local_path)
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
+
+
+class DAQ_Move_App(CustomApp):
+
+    def __init__(self, dockarea):
+        super().__init__(dockarea)
+
+        self.setup_ui()
+
 
 
 

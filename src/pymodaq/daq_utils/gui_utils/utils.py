@@ -1,5 +1,7 @@
-from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice
+from qtpy.QtCore import QObject, Signal, QEvent, QBuffer, QIODevice, Qt
 from qtpy import QtWidgets, QtCore, QtGui
+
+from pathlib import Path
 
 
 dashboard_submodules_params = [
@@ -9,6 +11,12 @@ dashboard_submodules_params = [
     {'title': 'Do Save:', 'name': 'do_save', 'type': 'bool', 'default': False, 'value': False},
     {'title': 'N saved:', 'name': 'N_saved', 'type': 'int', 'default': 0, 'value': 0, 'visible': False},
 ]
+
+def get_splash_sc():
+    here = Path(__file__)
+    splash_sc = QtWidgets.QSplashScreen(QtGui.QPixmap(str(here.parent.parent.parent.joinpath('splash.png'))),
+                                        Qt.WindowStaysOnTopHint)
+    return splash_sc
 
 
 def clickable(widget):

@@ -521,6 +521,9 @@ class ThreadCommand(object):
         self.command = command
         self.attributes = attributes
 
+    def __repr__(self):
+        return f'Threadcommand: {self.command} with attributes {self.attributes}'
+
 
 class AxisBase(dict):
     """

@@ -1,6 +1,7 @@
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QTimer
 
+
 from easydict import EasyDict as edict
 import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.parameter.utils as putils
@@ -9,6 +10,7 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.daq_utils.config import Config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.daq_utils.messenger import deprecation_msg
 import numpy as np
 from time import perf_counter
 
@@ -111,7 +113,7 @@ class DAQ_Move_base(QObject):
     params_state : Parameter instance (pyqtgraph) from which the module will get the initial settings (as defined in the managers)
 
 
-    :ivar Move_Done_signal: Signal signal represented by a float. Is emitted each time the hardware reached the target
+    :ivar move_done_signal: Signal signal represented by a float. Is emitted each time the hardware reached the target
                             position within the epsilon precision (see comon_parameters variable)
 
     :ivar controller: the object representing the hardware in the plugin. Used to access hardware functionality
@@ -129,13 +131,13 @@ class DAQ_Move_base(QObject):
     :ivar is_multiaxes: class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define
                         a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID Parameter)
 
-    :ivar current_position: (float) stores the current position after each call to the check_position in the child module
+    :ivar current_value: (float) stores the current position after each call to the get_actuator_value in the child module
 
-    :ivar target_position: (float) stores the target position the controller should reach within epsilon
+    :ivar target_value: (float) stores the target position the controller should reach within epsilon
 
     """
 
-    Move_Done_signal = Signal(float)
+    move_done_signal = Signal(float)
     is_multiaxes = False
     stage_names = []
     params = []
@@ -149,8 +151,8 @@ class DAQ_Move_base(QObject):
         self.shamrock_controller = None
         self.stage = None
         self.status = edict(info="", controller=None, stage=None, initialized=False)
-        self.current_position = 0.
-        self.target_position = 0.
+        self.current_value = 0.
+        self.target_value = 0.
         self._ispolling = True
         self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the
         # current class instance parameter list is a child of some other class
@@ -171,6 +173,24 @@ class DAQ_Move_base(QObject):
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
+
+    @property
+    def current_position(self):
+        deprecation_msg('current_position attribute should not be used, use current_value')
+        return self.current_value
+
+    @current_position.setter
+    def current_position(self, value):
+        self.current_value = value
+
+    @property
+    def target_position(self):
+        deprecation_msg('target_position attribute should not be used, use target_value')
+        return self.target_value
+
+    @target_position.setter
+    def target_position(self, value):
+        self.target_value = value
 
     @property
     def controller_units(self):
@@ -212,6 +232,34 @@ class DAQ_Move_base(QObject):
                 self.emit_status(ThreadCommand('outofbounds', []))
         return position
 
+    def get_actuator_value(self):
+        if hasattr(self, 'check_position'):
+            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_position')
+            return self.check_position()
+        else:
+            raise NotImplementedError
+
+    def move_abs(self, value):
+        if hasattr(self, 'move_Abs'):
+            deprecation_msg('move_Abs method in plugins is deprecated, use move_abs')
+            self.move_Abs(value)
+        else:
+            raise NotImplementedError
+
+    def move_rel(self, value):
+        if hasattr(self, 'move_Rel'):
+            deprecation_msg('move_Rel method in plugins is deprecated, use move_rel')
+            self.move_Rel(value)
+        else:
+            raise NotImplementedError
+
+    def move_home(self, value):
+        if hasattr(self, 'move_Home'):
+            deprecation_msg('move_Home method in plugins is deprecated, use move_home')
+            self.move_Home()
+        else:
+            raise NotImplementedError
+
     def emit_status(self, status):
         """
             | Emit the statut signal from the given status parameter.
@@ -232,6 +280,9 @@ class DAQ_Move_base(QObject):
             QtWidgets.QApplication.processEvents()
         else:
             print(status)
+
+    def emit_value(self, pos):
+        self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
     def commit_settings(self, param):
         """
@@ -273,8 +324,8 @@ class DAQ_Move_base(QObject):
 
         """
         if position is None:
-            position = self.check_position()
-        self.Move_Done_signal.emit(position)
+            position = self.get_actuator_value()
+        self.move_done_signal.emit(position)
         self.move_is_done = True
 
     def poll_moving(self):
@@ -290,19 +341,22 @@ class DAQ_Move_base(QObject):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                self.current_position = self.check_position()
-                logger.debug(f'Current position: {self.current_position}')
-                self.move_done(self.current_position)
+                self.current_value = self.get_actuator_value()
+                logger.debug(f'Current position: {self.current_value}')
+                self.move_done(self.current_value)
 
     def check_target_reached(self):
-        if np.abs(self.current_position - self.target_position) > self.settings.child('epsilon').value():
+        logger.debug(f"epsilon value is {self.settings.child('epsilon').value()}")
+        logger.debug(f"current_value value is {self.current_value}")
+        logger.debug(f"target_value value is {self.target_value}")
+        if np.abs(self.current_value - self.target_value) > self.settings.child('epsilon').value():
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
                 self.emit_status(ThreadCommand('Move has been stopped'))
                 logger.info(f'Move has been stopped')
 
-            self.current_position = self.check_position()
-            logger.debug(f'Current position: {self.current_position}')
+            self.current_value = self.get_actuator_value()
+            logger.debug(f'Current value: {self.current_value}')
 
             if perf_counter() - self.start_time >= self.settings.child('timeout').value():
                 self.poll_timer.stop()
@@ -310,8 +364,8 @@ class DAQ_Move_base(QObject):
                 logger.info(f'Timeout activated')
         else:
             self.poll_timer.stop()
-            logger.debug(f'Current position: {self.current_position}')
-            self.move_done(self.current_position)
+            logger.debug(f'Current value: {self.current_value}')
+            self.move_done(self.current_value)
 
     def send_param_status(self, param, changes):
         """
@@ -427,7 +481,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     command_server = Signal(list)
 
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
-                    'move_home', 'move_rel', 'check_position', 'stop_motion', 'position_is', 'move_done']
+                    'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
     socket_types = ["ACTUATOR"]
     params = comon_parameters + tcp_parameters
 
@@ -455,13 +509,13 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
                 pos = sock.get_scalar()
 
                 pos = self.get_position_with_scaling(pos)
-                self.current_position = pos
-                self.emit_status(ThreadCommand('check_position', [pos]))
+                self.current_value = pos
+                self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
             elif command == 'move_done':
                 pos = sock.get_scalar()
                 pos = self.get_position_with_scaling(pos)
-                self.current_position = pos
+                self.current_value = pos
                 self.emit_status(ThreadCommand('move_done', [pos]))
             else:
                 self.send_command(sock, command)
@@ -520,12 +574,12 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         self.listening = False
         self.close_server()
 
-    def move_Abs(self, position):
+    def move_abs(self, position):
         """
 
         """
         position = self.check_bound(position)
-        self.target_position = position
+        self.target_value = position
 
         position = self.set_position_with_scaling(position)
 
@@ -534,9 +588,9 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             sock.send_string('move_abs')
             sock.send_scalar(position)
 
-    def move_Rel(self, position):
-        position = self.check_bound(self.current_position + position) - self.current_position
-        self.target_position = position + self.current_position
+    def move_rel(self, position):
+        position = self.check_bound(self.current_value + position) - self.current_value
+        self.target_value = position + self.current_value
 
         position = self.set_position_relative_with_scaling(position)
         sock = self.find_socket_within_connected_clients(self.client_type)
@@ -544,7 +598,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
             sock.send_string('move_rel')
             sock.send_scalar(position)
 
-    def move_Home(self):
+    def move_home(self):
         """
             Make the absolute move to original position (0).
 
@@ -556,7 +610,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_home')
 
-    def check_position(self):
+    def get_actuator_value(self):
         """
             Get the current hardware position with scaling conversion given by get_position_with_scaling.
 
@@ -566,9 +620,9 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         """
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            self.send_command(sock, 'check_position')
+            self.send_command(sock, 'get_actuator_value')
 
-        return self.current_position
+        return self.current_value
 
     def stop_motion(self):
         """

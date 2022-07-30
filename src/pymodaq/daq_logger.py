@@ -98,8 +98,8 @@ class DAQ_Logger(CustomApp):
         self.docks['detectors'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
-        self.modules_manager.settings.child('modules', 'actuators').hide()
-        self.modules_manager.settings.child('actuators_positions').hide()
+        #self.modules_manager.settings.child('modules', 'actuators').hide()
+        #self.modules_manager.settings.child('actuators_positions').hide()
         self.dockarea.addDock(self.docks['detectors'])
 
         self.docks['logger_settings'] = Dock("Logger Settings")
