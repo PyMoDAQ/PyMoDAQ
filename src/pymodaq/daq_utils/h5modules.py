@@ -1662,6 +1662,7 @@ class H5SaverBase(H5Backend):
                     array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
 
             array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
+
         self.set_attr(array, 'type', data_type)
         self.set_attr(array, 'data_dimension', data_dimension)
         self.set_attr(array, 'scan_type', scan_type)
@@ -1903,10 +1904,10 @@ class H5Logger(AbstractLogger):
 
         The keys of the dictionary received as a parameter are scanned, they correspond to a node in the h5 structure.
         For each key, the corresponding node will be created at the first call of the method. Otherwise, it will just
-        get the good node (called data_array), append the new data into it and flush the file.
+        get the good node (earray : EARRAY object), append the new data into it and flush the file.
 
-        The H5Saver object helps to construct the h5 file tree structure, navigate and interact with it (read and
-        write).
+        The H5Saver object helps to construct the h5 file tree structure, navigate into it, read, write and save the
+        file.
 
         This method is called by DAQ_Logging.do_save_continuous.
 
@@ -1939,39 +1940,40 @@ class H5Logger(AbstractLogger):
         time_array = self.h5saver.get_node(det_group, 'Logger_time_axis')
         time_array.append(np.array([acquisition['acq_time_s']]))
 
-        acquisition_key_dimensions = ['data0D', 'data1D']
+        acquisition_dimension_keys = ['data0D', 'data1D']
         if self.settings.child('save_2D').value():
-            acquisition_key_dimensions.extend(['data2D', 'dataND'])
+            acquisition_dimension_keys.extend(['data2D', 'dataND'])
 
-        for data_dimension in acquisition_key_dimensions:
+        for data_dimension in acquisition_dimension_keys:
             if data_dimension in acquisition.keys() and len(acquisition[data_dimension]) != 0:
-                if not self.h5saver.is_node_in_group(det_group, data_dimension):
+                if not self.h5saver.is_node_in_group(det_group, data_dimension):  # First iteration.
                     data_group = self.h5saver.add_data_group(det_group, data_dimension, metadata=dict(type='scan'))
                 else:
                     data_group = self.h5saver.get_node(det_group, utils.capitalize(data_dimension))
 
                 for ind_channel, channel in enumerate(acquisition[data_dimension]):
-                    channel_group = self.h5saver.get_group_by_title(data_group, channel)
-                    if channel_group is None:
-                        channel_group = self.h5saver.add_CH_group(data_group, title=channel)
-                        # This condition should be added for the 0D case because H5Saver.add_data requires that the key
-                        # data_dict["data"] should be an ndarray, and not a float.
-                        if data_dimension == "data0D":
-                            acquisition[data_dimension][channel]["data"] = \
-                                np.array(acquisition[data_dimension][channel]["data"])
+                    # This condition should be added for the 0D case because H5Saver.add_data requires that the key
+                    # data_dict["data"] should be an ndarray, and not a float or an int. Here we transform a scalar
+                    # into a ndarray of shape (1,), which seems the easy way to save a scalar with pytables.
+                    # The "data" key of DataToExport object can be a float, an int, a ndarray or None.
+                    # This condition could be skipped if we would impose DataToExport["data"] to be a ndarray.
+                    # Do we manage the None case properly?
+                    if isinstance(acquisition[data_dimension][channel]["data"], (float, int)):
+                        acquisition[data_dimension][channel]["data"] = \
+                            np.array([acquisition[data_dimension][channel]["data"]])
 
-                        data_array = self.h5saver.add_data(channel_group, acquisition[data_dimension][channel],
+                    channel_group = self.h5saver.get_group_by_title(data_group, channel)
+                    if channel_group is None:  # First iteration.
+                        channel_group = self.h5saver.add_CH_group(data_group, title=channel)
+                        earray = self.h5saver.add_data(channel_group, acquisition[data_dimension][channel],
                                                            scan_type='scan1D', enlargeable=True)
                     else:
-                        data_array = self.h5saver.get_node(channel_group, 'Data')
-                    if data_dimension == 'data0D':
-                        data_array.append(np.array([acquisition[data_dimension][channel]['data']]))
-                    else:
-                        data_array.append(acquisition[data_dimension][channel]['data'])
+                        earray = self.h5saver.get_node(channel_group, 'Data')
+
+                    earray.append(acquisition[data_dimension][channel]['data'])
 
         self.h5saver.flush()
-        self.settings.child('N_saved').setValue(
-            self.settings.child('N_saved').value() + 1)
+        self.settings.child('N_saved').setValue(self.settings.child('N_saved').value() + 1)
 
     def stop_logger(self):
         self.h5saver.flush()

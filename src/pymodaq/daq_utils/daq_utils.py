@@ -443,6 +443,25 @@ def uncapitalize(string, Nfirst=1):
 
 
 def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
+    """Get a numpy ndarray and return its shape, dimension and size.
+
+    Parameters
+    ----------
+    arr : numpy ndarray
+        Typically raw data from an acquisition (a spectrum, an image…).
+    scan_type : str
+        ??
+    remove_scan_dimension : bool
+        ??
+
+    Returns
+    -------
+    tuple of tuple, string, int
+
+    """
+    if not isinstance(arr, np.ndarray):
+        raise Exception
+
     dimension = len(arr.shape)
     if dimension == 1:
         if arr.size == 1:
@@ -456,6 +475,7 @@ def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
     else:
         if dimension > 2:
             dimension = 'N'
+
     return arr.shape, f'{dimension}D', arr.size
 
 
@@ -725,15 +745,20 @@ class DataFromPlugins(Data):
 
 class DataToExport(Data):
     def __init__(self, data=None, dim='', source='raw', **kwargs):
-        """
-        Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary keys
+        """Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary
+        keys.
+
         Parameters
         ----------
-        data: (ndarray or a scalar)
-        dim: (str) data dimensionality (either Data0D, Data1D, Data2D or DataND)
-        source: (str) either 'raw' for raw data or 'roi' for data extracted from a roi
+        data : ndarray or float or int or None
+        dim : str
+            Data dimensionality (either Data0D, Data1D, Data2D or DataND).
+        source : str
+            Either 'raw' for raw data or 'roi' for data extracted from a roi.
+
         """
         super().__init__(source=source, **kwargs)
+
         if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
             self['data'] = data
         else:
@@ -754,6 +779,7 @@ class DataToExport(Data):
             else:
                 dim = 'Data0D'
         self['dim'] = dim
+
         if source not in DATASOURCES:
             raise DataSourceError(f'Data source should be in {DATASOURCES}')
 
