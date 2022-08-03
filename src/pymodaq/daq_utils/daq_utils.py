@@ -442,12 +442,16 @@ def uncapitalize(string, Nfirst=1):
     return string[:Nfirst].lower() + string[Nfirst:]
 
 
-def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
-    """Get a numpy ndarray and return its shape, dimension and size.
+def get_data_dimension(data: np.ndarray, scan_type='scan1D', remove_scan_dimension=False):
+    """Return the shape, dimension and size of the input data.
+
+    Notice that the dimension returned does not necessarily correspond to the size of the input ndarray. If the shape of
+    the ndarray is (1,) it is interpreted as a scalar data, thus of dimension 0. This is done because it seems to be the
+    way pytables library manages scalar data (https://www.pytables.org/_modules/tables/earray.html#EArray.append).
 
     Parameters
     ----------
-    arr : numpy ndarray
+    data : numpy ndarray
         Typically raw data from an acquisition (a spectrum, an image…).
     scan_type : str
         ??
@@ -459,13 +463,16 @@ def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
     tuple of tuple, string, int
 
     """
-    if not isinstance(arr, np.ndarray):
-        raise Exception
+    if not isinstance(data, np.ndarray):
+        raise Exception("Input parameter should be an ndarray.")
 
-    dimension = len(arr.shape)
-    if dimension == 1:
-        if arr.size == 1:
-            dimension = 0
+    if data.ndim == 0:
+        raise Exception("The dimension of the array should be superior to zero.")
+
+    dimension = data.ndim
+
+    if data.shape == (1,):  # Case of a scalar data.
+        dimension = 0
 
     if remove_scan_dimension:
         if scan_type.lower() == 'scan1d':
@@ -476,7 +483,7 @@ def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
         if dimension > 2:
             dimension = 'N'
 
-    return arr.shape, f'{dimension}D', arr.size
+    return data.shape, f'{dimension}D', data.size
 
 
 def scroll_log(scroll_val, min_val, max_val):

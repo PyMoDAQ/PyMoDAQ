@@ -1954,7 +1954,8 @@ class H5Logger(AbstractLogger):
                 for ind_channel, channel in enumerate(acquisition[data_dimension]):
                     # This condition should be added for the 0D case because H5Saver.add_data requires that the key
                     # data_dict["data"] should be an ndarray, and not a float or an int. Here we transform a scalar
-                    # into a ndarray of shape (1,), which seems the easy way to save a scalar with pytables.
+                    # into a ndarray of shape (1,), which seems the easy way to save a scalar with pytables
+                    # (https://www.pytables.org/_modules/tables/earray.html#EArray.append).
                     # The "data" key of DataToExport object can be a float, an int, a ndarray or None.
                     # This condition could be skipped if we would impose DataToExport["data"] to be a ndarray.
                     # Do we manage the None case properly?
