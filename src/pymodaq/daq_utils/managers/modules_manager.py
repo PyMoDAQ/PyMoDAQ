@@ -11,12 +11,28 @@ logger = utils.set_logger(utils.get_module_name(__file__))
 
 
 class ModulesManager(QObject):
-    """
+    """The module manager is an object used to deal with:
+
+    * Selection of actuators and detectors by a user (and internal facilities to manipulate them, see the API when it
+        will be written…).
+    * Synchronize acquisition from selected detectors.
+    * Synchronize moves from selected actuators.
+    * Probe as lists all the data that will be exported by the selected detectors.
+    * Test actuators positioning. Clicking on "test_actuator" button on the UI will let you enter positions for all
+        selected actuators that will be displayed when reached.
+
+    See: https://pymodaq.cnrs.fr/en/latest/usage/modules/Utility_Modules.html#module-manager
 
     Attributes
     ----------
-    detectors : list of DAQ_Viewer
-
+    detectors : list of DAQ_Viewer objects
+        The detectors that have been selected by the user.
+    detectors_all : list of DAQ_Viewer objects
+        All the detectors (even those that are not selected).
+    actuators : list of DAQ_Move objects
+        The actuators that have been selected by the user.
+    actuators_all : list of DAQ_Viewer objects
+        All the actuators (even those that are not selected).
     det_done_datas : OrderedDict{
                         <name of detector 1> : OrderedDict{
                                                     Ndatas : int
