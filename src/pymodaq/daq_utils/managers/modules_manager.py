@@ -258,9 +258,17 @@ class ModulesManager(QObject):
     def get_det_data_list(self):
         """Construct the list of data channels that are available with the current configuration of the module manager.
 
-        It will display all the data channels as selectable parameters in the module manager UI.
-
         This method is called by the "Probe detectors’ data" button of the module manager UI.
+        It will display all the data channels of all the selected detectors as selectable parameters in the module
+        manager UI.
+        Here we just need the structure of the data that is acquired by each detector. Is it 1D, 2D…? Does some ROI
+            lineouts are configured? We do not need the raw data.
+        If the detector buffer is not empty, which means that the detector grabbed at some point, we have all what we
+            need.
+        If the buffer is empty, we ask him to grab once (snap) to get the structure of the acquired data. The grab
+            signal is sent only when there is no other choice, since it would freeze the acquisition of a grabbing
+            detector, which is unwanted. However, we suppose that asking for a snap to a detector that has never grabbed
+            should not be of much consequence.
 
         """
         data_list0D = []
@@ -268,26 +276,26 @@ class ModulesManager(QObject):
         data_list2D = []
         data_listND = []
 
-        for detector in self.detectors:
-            detector_acquisition = detector.data_to_save_export
+        for detector in self.detectors:  # Loop on the selected detectors.
+            detector_buffer = detector.data_to_save_export
             det_name = detector.detector_name
 
             try:
-                # If the detector is not grabbing (detector_acquisition is None), we send a grab signal. But if it is
-                # grabbing, we do not need to send the grab signal, which would freeze the acquisition.
-                if detector_acquisition is None:
+                # If the detector has never grabbed (detector_buffer is None), we send a grab signal. But if the buffer
+                # is not empty, we proceed further.
+                if detector_buffer is None:  # This means that the detector never grabbed before.
                     detector.grab_done_signal.connect(self.det_done)
-                    detector_acquisition = self.grab_one_detector(detector)
+                    detector_buffer = self.grab_one_detector(detector)
                     detector.grab_done_signal.disconnect(self.det_done)
 
-                if 'data0D' in detector_acquisition.keys():
-                    data_list0D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data0D'].keys()])
-                if 'data1D' in detector_acquisition.keys():
-                    data_list1D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data1D'].keys()])
-                if 'data2D' in detector_acquisition.keys():
-                    data_list2D.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['data2D'].keys()])
-                if 'data1D' in detector_acquisition.keys():
-                    data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_acquisition['dataND'].keys()])
+                if 'data0D' in detector_buffer.keys():
+                    data_list0D.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['data0D'].keys()])
+                if 'data1D' in detector_buffer.keys():
+                    data_list1D.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['data1D'].keys()])
+                if 'data2D' in detector_buffer.keys():
+                    data_list2D.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['data2D'].keys()])
+                if 'data1D' in detector_buffer.keys():
+                    data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['dataND'].keys()])
 
             except Exception as e:
                 self.logger.warning("There may be a connection problem with the detector that prevents to construct"
@@ -371,7 +379,7 @@ class ModulesManager(QObject):
         return self.det_done_datas
 
     def grab_one_detector(self, detector: DAQ_Viewer, **kwargs):
-        """Send a command to the detector given in parameter to do a single grab and return the acquisition.
+        """Send a command to the detector given in parameter to do a single grab (snap) and return the acquisition.
 
         Parameters
         ----------
