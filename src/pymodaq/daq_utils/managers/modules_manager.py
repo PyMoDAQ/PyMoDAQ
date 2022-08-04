@@ -1,13 +1,16 @@
+import time
+
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
-import time
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
+from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+from pymodaq.daq_utils.config import Config
+
 logger = utils.set_logger(utils.get_module_name(__file__))
+config = Config()
 
 
 class ModulesManager(QObject):
@@ -22,6 +25,12 @@ class ModulesManager(QObject):
         selected actuators that will be displayed when reached.
 
     See: https://pymodaq.cnrs.fr/en/latest/usage/modules/Utility_Modules.html#module-manager
+
+    Signals
+    -------
+    timeout_signal : pyqt signal
+        Signal triggered by the manager if it waited too long for the answer of a module (actuator or detector), which
+        would mean a communication problem.
 
     Attributes
     ----------
@@ -57,6 +66,9 @@ class ModulesManager(QObject):
                                                     }
                         …
                         }
+    timeout : int
+        Time in second the manager will wait for an answer from a detector or an actuator before firing the
+        timeout_signal, which would mean a communication problem.
 
     """
     detectors_changed = Signal(list)
@@ -87,7 +99,7 @@ class ModulesManager(QObject):
         ]},
     ]
 
-    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10):
+    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout_s=None):
         super().__init__()
 
         # check that selected_actuator and selected_detectors are subset of actuators and detectors respectively
@@ -96,7 +108,10 @@ class ModulesManager(QObject):
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.timeout = timeout  # in seconds
+        if timeout_s is None:
+            self.timeout = config("module_manager", "timeout_s")  # in second
+        else:
+            self.timeout = timeout_s
 
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False

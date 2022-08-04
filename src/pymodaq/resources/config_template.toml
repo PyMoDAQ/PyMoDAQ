@@ -81,3 +81,6 @@ default_preset_for_logger = "preset_default"
     [scan.tabular]
     type = "Linear" #either "Linear", "Adaptive" see pymodaq.daq_utils.scanner.py
     curvilinear = 0.1
+
+[module_manager]
+    timeout_s = 10  # in second
