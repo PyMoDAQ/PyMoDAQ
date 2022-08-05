@@ -1980,8 +1980,8 @@ class DAQ_Viewer(QObject):
 
 
 class DAQ_Detector(QObject):
-    """This class makes the bridge between the DAQ_Viewer class (UI) and the pymodaq plugin that corresponds to the
-    currently plugged detector.
+    """This class makes the bridge between the DAQ_Viewer class (UI) and the plugin that corresponds to the currently
+    plugged detector.
 
     It is intended to be put in a thread.
 
@@ -1991,11 +1991,34 @@ class DAQ_Detector(QObject):
         This signal hands over the acquisition from DAQ_Detector to DAQ_Viewer.
         Emitted by data_ready.
         Connected to DAQ_Viewer.show_data.
+    data_detector_temp_sig : pyqt signal
 
     Attributes
     ----------
+    average_done : bool
+        ??
     detector : a viewer plugin object (depends on the context, e.g. DAQ_1DViewer_Mock object).
         The pymodaq viewer plugin that corresponds to the detector that is currently plugged.
+    detector_name : str
+        Name of the associated detector.
+    grab_state : bool
+        True if the viewer is grabbing, False otherwise.
+    hardware_averaging : bool
+        This parameter comes from the detector plugin. By default it is set to False.
+        If True, it means that the developer of the plugin considered that it would be smarter to perform a software
+            averaging inside the plugin rather than inside the DAQ_Detector. For instance, it could be smarter to do the
+            averaging inside a camera plugin when one ofen use a buffer and where it is faster to do so than exporting
+            (and copying) all data and then averaging.
+    ind_average : int
+        Keep track of the index of data within the averaging process (if local averaging, i.e. done in the DAQ_Detector
+            and not in the detector plugin).
+    Naverage : int
+        Number of acquisitions to be averaged before displaying. This averaging is done in DAQ_Detector.data_ready if
+            the hardware_averaging parameter is set to False. Otherwise, it will be done in the detector plugin.
+    single_grab : bool
+        True if the last acquisition order from the user was a snap (single grab), False otherwise.
+    show_averaging : bool
+        If True it will stop the while loop used to average data locally.
     wait_time : int
         This corresponds to the "Wait time (ms)" in the parameters of the UI of the DAQ_Viewer (Main Settings).
         Extra waiting time (in ms) in the pymodaq process to slow down the acquisition loop. Notice that it is not only
@@ -2004,32 +2027,17 @@ class DAQ_Detector(QObject):
         number of acquisition per second and thus gives a lower limit to the number of acquisition you can save per
         second (see grab_data method).
         !!!Not to be confused with DAQ_Viewer.wait_time!!!
-    grab_state : bool
-        True if the viewer is grabbing, False otherwise.
-    single_grab : bool
-        True if the last acquisition order from the user was a snap (single grab), False otherwise.
-    Naverage : int
-        ??
-    ind_average : int
-        ??
-    average_done : bool
-        ??
 
 
     ========================= ==========================
     **Attributes**              **Type**
     *status_sig*                instance of pyqt Signal
-    *data_detector_temp_sig*    instance of pyqt Signal
-
     *waiting_for_data*          boolean
     *controller*                ???
-    *detector_name*             string
     *controller_adress*         ???
     *x_axis*                    1D numpy array
     *y_axis*                    1D numpy array
     *datas*                     dictionnary
-    *hardware_averaging*        boolean
-    *show_averaging*            boolean
     *DAQ_type*                  string
     ========================= ==========================
     """
@@ -2148,23 +2156,34 @@ class DAQ_Detector(QObject):
                 cmd(*command.attributes)
 
     def ini_detector(self, params_state=None, controller=None):
-        """
-            Init the detector from params_state parameter and DAQ_type class attribute :
-                * in **0D** profile : update the local status and send the "x_axis" Thread command via a status signal
-                * in **1D** profile : update the local status and send the "x_axis" Thread command via a status signal
-                * in **2D** profile : update the local status and send the "x_axis" and the "y_axis" Thread command via a status signal
+        """Initialize the communication with the associated detector plugin and configure it.
 
-            =============== =========== ==========================================
-            **Parameters**    **Type**    **Description**
-            *params_state*     ???         the parameter's state of initialization
-            =============== =========== ==========================================
+        This method is triggered when the user click the "Ini. Det." button of the DAQ_Viewer UI.
+        If configured in a preset file (by checking the "Init?" parameter), this method will be called at the loading of
+            the preset.
+        Get the class of the plugin, connect the signals, and call the detector_plugin.ini_detector method.
 
-            See Also
-            --------
-            ini_detector, daq_utils.ThreadCommand
+        Init the detector from params_state parameter and DAQ_type class attribute :
+            * in **0D** profile : update the local status and send the "x_axis" Thread command via a status signal
+            * in **1D** profile : update the local status and send the "x_axis" Thread command via a status signal
+            * in **2D** profile : update the local status and send the "x_axis" and the "y_axis" Thread command via
+            a status signal
+
+        Parameters
+        ----------
+        params_state : dict
+            The parameters’ state for the initialization of the detector.
+        controller : ??
+            ??
+
+        Returns
+        -------
+        status : EasyDict object
+            Dictionary that stores information (initialization state, axes…) about the detector after its initialization.
+            It is filled by the detector_plugin_class.ini_detector method.
+
         """
         try:
-            # status="Not initialized"
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
 
             plug_name = self.detector_name
@@ -2200,7 +2219,8 @@ class DAQ_Detector(QObject):
                 y_axis = status['y_axis']
                 self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
 
-            self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
+            # to check if averaging can be done directly by the hardware or done here software wise
+            self.hardware_averaging = class_.hardware_averaging
 
             return status
         except Exception as e:
@@ -2213,13 +2233,10 @@ class DAQ_Detector(QObject):
 
     @Slot(list)
     def data_ready(self, datas):
-        """Transfert the acquired data from the detector (viewer plugin) to the UI manager (DAQ_Viewer).
+        """Transfert the acquired data from the detector plugin to the DAQ_Viewer (UI manager). Perform software
+        averaging if specified by the user.
 
-        | Update the local datas attributes from the given datas parameter if the averaging has to be done software wise.
-        |
-        | Else emit the data detector signals with datas parameter as an attribute.
-
-        Triggered by the viewer plugin data_grabbed_signal.
+        Triggered by the signal data_grabbed_signal from the plugin.
         Emit the data_detector_sig signal. The latter will transfert the acquired data to the DAQ_Viewer.show_data
         method.
 
@@ -2297,9 +2314,9 @@ class DAQ_Detector(QObject):
         Parameters
         ----------
         Naverage : int
-            ??
+            Number of data to average before displaying data.
         live : bool
-            ??
+            If True, it means the viewer is in a continuous grab state (with opposition to a snap).
 
         """
         try:
