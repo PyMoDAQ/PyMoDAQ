@@ -167,7 +167,7 @@ class DAQ_Move_UI(CustomApp):
         self.abs_value_sb = SpinBox()
         self.abs_value_sb.setStyleSheet("background-color : lightgreen")
         self.abs_value_sb_2 = SpinBox()
-        self.abs_value_sb_2.setStyleSheet("background-color : lightred")
+        self.abs_value_sb_2.setStyleSheet("background-color : lightcoral")
         self.move_toolbar.addWidget(self.abs_value_sb)
         self.move_toolbar.addWidget(self.abs_value_sb_2)
 
