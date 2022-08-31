@@ -165,7 +165,9 @@ class DAQ_Move_UI(CustomApp):
         self.main_ui.layout().addWidget(self.move_toolbar, 1, 0, 1, 2)
 
         self.abs_value_sb = SpinBox()
+        self.abs_value_sb.setStyleSheet("background-color : lightgreen")
         self.abs_value_sb_2 = SpinBox()
+        self.abs_value_sb_2.setStyleSheet("background-color : lightred")
         self.move_toolbar.addWidget(self.abs_value_sb)
         self.move_toolbar.addWidget(self.abs_value_sb_2)
 
@@ -227,6 +229,8 @@ class DAQ_Move_UI(CustomApp):
                         toolbar=self.toolbar)
         self.add_action('refresh_value', 'Refresh', 'Refresh2', "Refresh Value", checkable=True,
                         toolbar=self.toolbar)
+        self.add_action('stop', 'Stop', 'stop', "Stop Motion", checkable=False,
+                        toolbar=self.toolbar)
         self.add_action('quit', 'Quit the module', 'close2')
         self.add_action('log', 'Show Log file', 'information2')
 
@@ -241,6 +245,7 @@ class DAQ_Move_UI(CustomApp):
         self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log')))
+        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
 

@@ -7,7 +7,7 @@ Created the 29/07/2022
 import sys
 from pathlib import Path
 
-from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt
+from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
 from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
@@ -82,7 +82,8 @@ class DAQ_Move(QObject, ParameterManager):
 
         self.splash_sc = get_splash_sc()
         self.title = title
-        self._actuator_name = ACTUATORS_NAME[0]
+        self.actuator = ACTUATORS_NAME[0]
+
         self._initialized_state = False
 
         self.send_to_tcpip = False
@@ -102,6 +103,9 @@ class DAQ_Move(QObject, ParameterManager):
             self.ui.actuators = ACTUATORS_NAME
             self.ui.set_settings_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
+
+        self.refresh_timer = QTimer()
+        self.refresh_timer.timeout.connect(self.get_actuator_value)
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -129,8 +133,11 @@ class DAQ_Move(QObject, ParameterManager):
         elif cmd.command == 'get_value':
             self.get_actuator_value()
         elif cmd.command == 'loop_get_value':
-            #  TODO
-            pass
+            if cmd.attributes:
+                self.refresh_timer.setInterval(self.settings['main_settings', 'refresh_timeout'])
+                self.refresh_timer.start()
+            else:
+                self.refresh_timer.stop()
         elif cmd.command == 'find_home':
             self.move_home()
         elif cmd.command == 'stop':
@@ -138,7 +145,7 @@ class DAQ_Move(QObject, ParameterManager):
         elif cmd.command == 'move_abs':
             self.move_abs(cmd.attributes)
         elif cmd.command == 'move_rel':
-            self.move_rel()
+            self.move_rel(cmd.attributes)
         elif cmd.command == 'show_log':
             self.show_log()
         elif cmd.command == 'actuator_changed':
@@ -150,7 +157,7 @@ class DAQ_Move(QObject, ParameterManager):
         """Stop any motion
         """
         try:
-            self.command_stage.emit(ThreadCommand(command="stop_motion"))
+            self.command_hardware.emit(ThreadCommand(command="stop_motion"))
         except Exception as e:
             self.logger.exception(str(e))
 
@@ -179,7 +186,7 @@ class DAQ_Move(QObject, ParameterManager):
         """
         try:
             self.send_to_tcpip = send_to_tcpip
-            if not (value == self.current_value and self._actuator_name == "Thorlabs_Flipper"):
+            if not value == self.current_value:
                 if self.ui is not None:
                     self.ui.move_done = False
                 self.move_done_bool = False
@@ -209,8 +216,8 @@ class DAQ_Move(QObject, ParameterManager):
                 self.ui.move_done = False
             self.move_done_bool = False
             self.update_status("Moving", wait_time=STATUS_WAIT_TIME)
-            self.command_stage.emit(ThreadCommand(command="reset_stop_motion"))
-            self.command_stage.emit(ThreadCommand(command="move_Home"))
+            self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
+            self.command_hardware.emit(ThreadCommand(command="move_Home"))
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -294,7 +301,7 @@ class DAQ_Move(QObject, ParameterManager):
                 self.logger.exception(str(e))
         else:
             try:
-                hardware = DAQ_Move_Hardware(self._actuator_name, self.current_value, self.title)
+                hardware = DAQ_Move_Hardware(self._actuator_type, self.current_value, self.title)
                 self.hardware_thread = QThread()
                 hardware.moveToThread(self.hardware_thread)
 
@@ -323,6 +330,9 @@ class DAQ_Move(QObject, ParameterManager):
                                                                                      'ip_address').value(),
                                                        port=self.settings.child('main_settings', 'tcpip',
                                                                                 'port').value())))
+        elif param.name() == 'refresh_timeout':
+            self.refresh_timer.setInterval(param.value())
+
         path = self.settings.childPath(param)
         if path is not None:
             if 'main_settings' not in path:
@@ -529,12 +539,12 @@ class DAQ_Move(QObject, ParameterManager):
 
     @property
     def actuator(self):
-        return self._actuator_name
+        return self._actuator_type
 
     @actuator.setter
     def actuator(self, act_name):
         if act_name in ACTUATORS_NAME:
-            self._actuator_name = act_name
+            self._actuator_type = act_name
             if self.ui is not None:
                 self.ui.actuator = act_name
                 self.update_settings()
@@ -543,13 +553,14 @@ class DAQ_Move(QObject, ParameterManager):
 
     def update_settings(self):
 
-        self.settings.child('main_settings', 'move_type').setValue(self._actuator_name)
+        self.settings.child('main_settings', 'move_type').setValue(self._actuator_type)
+        self.settings.child('main_settings', 'actuator_name').setValue(self.title)
         try:
             for child in self.settings.child('move_settings').children():
                 child.remove()
-            parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Actuators, 'name', self._actuator_name)
-            class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self._actuator_name),
-                             'DAQ_Move_' + self._actuator_name)
+            parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Actuators, 'name', self._actuator_type)
+            class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self._actuator_type),
+                             'DAQ_Move_' + self._actuator_type)
             params = getattr(class_, 'params')
             move_params = Parameter.create(name='move_settings', type='group', children=params)
 
@@ -588,11 +599,11 @@ class DAQ_Move(QObject, ParameterManager):
         elif 'check_position' in status.command:
             deprecation_msg('check_position is deprecated, you should use get_actuator_value')
             self.send_to_tcpip = True
-            self.command_stage.emit(ThreadCommand('get_actuator_value'))
+            self.command_hardware.emit(ThreadCommand('get_actuator_value'))
 
         elif 'get_actuator_value' in status.command:
             self.send_to_tcpip = True
-            self.command_stage.emit(ThreadCommand('get_actuator_value'))
+            self.command_hardware.emit(ThreadCommand('get_actuator_value'))
 
         elif status.command == 'connected':
             self.settings.child('main_settings', 'tcpip', 'tcp_connected').setValue(True)
@@ -617,7 +628,7 @@ class DAQ_Move_Hardware(QObject):
         **Attributes**      **Type**
         *status_sig*        instance of Signal
         *hardware*          ???
-        *actuator_name*        string
+        *actuator_type*        string
         *current_position*  float
         *target_value*   float
         *hardware_adress*   string
@@ -627,12 +638,12 @@ class DAQ_Move_Hardware(QObject):
     """
     status_sig = Signal(ThreadCommand)
 
-    def __init__(self, actuator_name, position, title='actuator'):
+    def __init__(self, actuator_type, position, title='actuator'):
         super().__init__()
         self.logger = utils.set_logger(f'{logger.name}.{title}.actuator')
         self.title = title
         self.hardware = None
-        self.actuator_name = actuator_name
+        self.actuator_type = actuator_type
         self.current_position = position
         self.target_value = 0
         self.hardware_adress = None
@@ -681,9 +692,9 @@ class DAQ_Move_Hardware(QObject):
 
         status = edict(initialized=False, info="")
         try:
-            parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Actuators, 'name', self.actuator_name)
-            class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.actuator_name),
-                             'DAQ_Move_' + self.actuator_name)
+            parent_module = utils.find_dict_in_list_from_key_val(DAQ_Move_Actuators, 'name', self.actuator_type)
+            class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.actuator_type),
+                             'DAQ_Move_' + self.actuator_type)
             self.hardware = class_(self, params_state)
             status.update(self.hardware.ini_stage(controller))  # return edict(info="", controller=, stage=)
 
@@ -864,8 +875,6 @@ class DAQ_Move_Hardware(QObject):
 
         elif path[0] == 'move_settings':
             self.hardware.update_settings(settings_parameter_dict)
-
-
 
 
 def main(init_qt=True):

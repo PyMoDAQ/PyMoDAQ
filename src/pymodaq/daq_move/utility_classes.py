@@ -60,7 +60,10 @@ def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Actuator name:', 'name': 'actuator_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
+        {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
+            'value': config('actuator', 'refresh_timeout_ms')},
         {'title': 'TCP/IP options:', 'name': 'tcpip', 'type': 'group', 'visible': True, 'expanded': False,
          'children': [
              {'title': 'Connect to server:', 'name': 'connect_server', 'type': 'bool_push', 'label': 'Connect',

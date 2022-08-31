@@ -53,8 +53,9 @@ default_preset_for_logger = "preset_default"
 
 [actuator]
     epsilon_default = 1
-    polling_interval_ms = 20  # ms Carefull when using TCP/IP connection as you can saturate the connection with too much polling
+    polling_interval_ms = 100  # ms Carefull when using TCP/IP connection as you can saturate the connection with too much polling
     polling_timeout_s = 20  # s
+    refresh_timeout_ms = 500  # ms
 
 [scan]
     scan_in_thread = true
