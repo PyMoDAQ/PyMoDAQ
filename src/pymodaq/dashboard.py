@@ -667,8 +667,8 @@ class DashBoard(QObject):
                         plug['status'] = 'Master'
 
             IDs = list(set([plug['ID'] for plug in plugins]))
-            # %%
             plugins_sorted = []
+
             for id in IDs:
                 plug_Ids = []
                 for plug in plugins:
@@ -676,8 +676,6 @@ class DashBoard(QObject):
                         plug_Ids.append(plug)
                 plug_Ids.sort(key=lambda status: status['status'])
                 plugins_sorted.append(plug_Ids)
-            #################################################################
-            #######################
 
             ind_det = -1
             for plug_IDs in plugins_sorted:
@@ -787,8 +785,6 @@ class DashBoard(QObject):
                 self.load_layout_state(path)
 
             self.mainwindow.setWindowTitle(f'PyMoDAQ Dashboard: {self.title}')
-            # if self.pid_module is not None:
-            #     self.pid_module.set_module_manager(detector_modules, actuators_modules)
             return actuators_modules, detector_modules
         else:
             logger.error('Invalid file selected')
