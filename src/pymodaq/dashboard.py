@@ -205,7 +205,15 @@ class DashBoard(QObject):
     def load_pid_module(self, win=None):
         """Load the PID extension module.
 
-        This method is called from the dashboard UI main menu: Extension > PID
+        This method is called from the dashboard UI main menu: Extension > PID.
+        It can also be called automatically (from Dashboard.set_preset_mode) if the preset file is configured to use the
+            PID extension.
+        It creates a new window to interact with the PID extension module.
+
+        Returns
+        -------
+        self.pid_module : DAQ_PID object
+            Main object to deal with the PID extension module.
 
         """
         if win is None:
@@ -1096,12 +1104,10 @@ class DashBoard(QObject):
             # If the preset is configured to use the pid extension
             if self.preset_manager.preset_params.child('use_pid').value():
                 self.load_pid_module()
-
                 self.pid_module.settings.child('models', 'model_class').setValue(
                     self.preset_manager.preset_params.child('pid_models').value())
                 QtWidgets.QApplication.processEvents()
                 self.pid_module.ini_model()
-
                 QtWidgets.QApplication.processEvents()
 
                 for child in putils.iter_children_params(self.preset_manager.preset_params.child('model_settings'),
