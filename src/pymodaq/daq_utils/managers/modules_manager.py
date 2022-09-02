@@ -246,16 +246,36 @@ class ModulesManager(QObject):
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
 
-    def connect_actuators(self, connect=True, slot=None):
+    def connect_actuators(self, connect=True, slot=None, signal='move_done'):
+        """Connect the selected actuators signal to a given or default slot
+
+        Parameters
+        ----------
+        connect: bool
+        slot: builtin_function_or_method
+            method or function the chosen signal will be connected to
+            if None, then the default move_done slot is used
+        signal: str
+            What kind of signal is to be used:
+
+            * 'move_done' will connect the `move_done signal` to the slot
+            * 'current_value' will connect the 'current_signal' to the slot
+
+        See Also
+        --------
+        :meth:`move_done`
+        """
         if slot is None:
             slot = self.move_done
         if connect:
-            for sig in [mod.move_done_signal for mod in self.actuators]:
+            for sig in [mod.move_done_signal if signal == 'move_done' else mod.current_value_signal
+                        for mod in self.actuators]:
                 sig.connect(slot)
 
         else:
             try:
-                for sig in [mod.move_done_signal for mod in self.actuators]:
+                for sig in [mod.move_done_signal if signal == 'move_done' else mod.current_value_signal
+                            for mod in self.actuators]:
                     sig.disconnect(slot)
             except Exception as e:
                 logger.error(str(e))
