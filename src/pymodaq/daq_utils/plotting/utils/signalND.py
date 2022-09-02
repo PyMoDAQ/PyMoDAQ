@@ -61,7 +61,7 @@ def isfloat(number):
 
 
 def iterable_not_string(thing):
-    return isinstance(thing, collections.Iterable) and not isinstance(thing, str)
+    return isinstance(thing, collections.abc.Iterable) and not isinstance(thing, str)
 
 
 class SpecialSlicers(object):

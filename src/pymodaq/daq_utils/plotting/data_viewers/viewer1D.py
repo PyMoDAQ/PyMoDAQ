@@ -10,6 +10,7 @@ from pymodaq.daq_utils.plotting.items.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
 from pymodaq.daq_utils import daq_utils as utils
+import pymodaq.daq_utils.math_utils as mutils
 from pymodaq.daq_utils.managers.action_manager import QAction
 from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
@@ -533,7 +534,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     def update_crosshair_data(self, posx, posy, name=""):
         try:
-            indx = utils.find_index(self._x_axis, posx)[0][0]
+            indx = mutils.find_index(self._x_axis, posx)[0][0]
 
             string = "y="
             for data in self.datas:
@@ -666,7 +667,7 @@ class Viewer1D_math(QObject):
             # self.status_sig.emit(["Update_Status","doing math"])
             data_lo = []
             for ind_meas in range(len(self.operations)):
-                indexes = utils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
+                indexes = mutils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
                 ind1 = indexes[0][0]
                 ind2 = indexes[1][0]
                 sub_data = self.datas[self.channels[ind_meas]][ind1:ind2]
@@ -677,16 +678,16 @@ class Viewer1D_math(QObject):
                 elif self.operations[ind_meas] == "Sum":
                     data_lo.append(float(np.sum(sub_data)))
                 elif self.operations[ind_meas] == 'half-life' or self.operations[ind_meas] == 'expotime':
-                    ind_x0 = utils.find_index(sub_data, np.max(sub_data))[0][0]
+                    ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
                     x0 = sub_xaxis[ind_x0]
                     sub_xaxis = sub_xaxis[ind_x0:]
                     sub_data = sub_data[ind_x0:]
                     offset = sub_data[-1]
                     N0 = np.max(sub_data) - offset
                     if self.operations[ind_meas] == 'half-life':
-                        time = sub_xaxis[utils.find_index(sub_data - offset, 0.5 * N0)[0][0]] - x0
+                        time = sub_xaxis[mutils.find_index(sub_data - offset, 0.5 * N0)[0][0]] - x0
                     elif self.operations[ind_meas] == 'expotime':
-                        time = sub_xaxis[utils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
+                        time = sub_xaxis[mutils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
                     data_lo.append(time)
 
             return data_lo

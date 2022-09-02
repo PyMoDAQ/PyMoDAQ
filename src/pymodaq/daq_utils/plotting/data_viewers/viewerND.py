@@ -12,6 +12,7 @@ from collections import OrderedDict
 import numpy as np
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.daq_utils.daq_utils as utils
+import pymodaq.daq_utils.math_utils as mutils
 
 from pyqtgraph import LinearRegionItem
 from pymodaq.daq_utils import gui_utils as gutils
@@ -268,7 +269,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
             ROI_bounds_1D = []
             try:
                 self.ROI1D.getRegion()
-                indexes_values = utils.find_index(self.ui.viewer1D.x_axis, self.ROI1D.getRegion())
+                indexes_values = mutils.find_index(self.ui.viewer1D.x_axis, self.ROI1D.getRegion())
                 ROI_bounds_1D.append(QPointF(indexes_values[0][0], indexes_values[1][0]))
             except Exception as e:
                 logger.warning(str(e))
@@ -575,7 +576,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
         navigator1D_widget = QtWidgets.QWidget()
         self.ui.navigator1D = Viewer1D(navigator1D_widget)
         self.ui.navigator1D.ui.crosshair.crosshair_dragged.connect(self.update_viewer_data)
-        self.ui.navigator1D.ui.crosshair_pb.click()
+        self.ui.navigator1D.ui.crosshair_pb.trigger()
         self.ui.navigator1D.data_to_export_signal.connect(self.export_data)
         navigator2D_widget = QtWidgets.QWidget()
         self.ui.navigator2D = Viewer2D(navigator2D_widget)
@@ -653,8 +654,8 @@ class ViewerND(QtWidgets.QWidget, QObject):
         self.ui.spread_widget.layout().addWidget(widget2D)
         # todo: better connection as discussed
         self.ui.spread_viewer_1D.ui.crosshair.crosshair_dragged.connect(self.get_nav_position)
-        self.ui.spread_viewer_1D.ui.crosshair_pb.click()
-        self.ui.spread_viewer_2D.get_action('autolevels').click()
+        self.ui.spread_viewer_1D.ui.crosshair_pb.trigger()
+        self.ui.spread_viewer_2D.get_action('autolevels').trigger()
         # todo: better connection as discussed
         self.ui.spread_viewer_2D.crosshair_dragged.connect(self.get_nav_position)
         self.ui.spread_viewer_2D.get_action('crosshair').trigger()
@@ -816,7 +817,7 @@ class ViewerND(QtWidgets.QWidget, QObject):
                     yaxis = datas[1]
                     ind_scan = utils.find_common_index(xaxis, yaxis, posx, posy)
                 else:
-                    ind_scan = utils.find_index(xaxis, posx)[0]
+                    ind_scan = mutils.find_index(xaxis, posx)[0]
 
                 self.ui.navigator1D.ui.crosshair.set_crosshair_position(ind_scan[0])
 
@@ -842,15 +843,15 @@ class ViewerND(QtWidgets.QWidget, QObject):
                 elif len(nav_axes) == 1:
                     if posx < nav_axes[0]['data'][0] or posx > nav_axes[0]['data'][-1]:
                         return
-                    ind_x = utils.find_index(nav_axes[0]['data'], posx)[0][0]
+                    ind_x = mutils.find_index(nav_axes[0]['data'], posx)[0][0]
                     data = self.datas.inav[ind_x].data
                 elif len(nav_axes) == 2:
                     if posx < nav_axes[0]['data'][0] or posx > nav_axes[0]['data'][-1]:
                         return
                     if posy < nav_axes[1]['data'][0] or posy > nav_axes[1]['data'][-1]:
                         return
-                    ind_x = utils.find_index(nav_axes[0]['data'], posx)[0][0]
-                    ind_y = utils.find_index(nav_axes[1]['data'], posy)[0][0]
+                    ind_x = mutils.find_index(nav_axes[0]['data'], posx)[0][0]
+                    ind_y = mutils.find_index(nav_axes[1]['data'], posy)[0][0]
                     data = self.datas.inav[ind_x, ind_y].data
 
                 else:
