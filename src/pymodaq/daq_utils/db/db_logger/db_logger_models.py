@@ -15,25 +15,39 @@ class Configuration(Base):
     def __repr__(self):
         return f"<Config(date='{datetime.datetime.fromtimestamp(self.timestamp).isoformat()}', settings_xml='{self.settings_xml[0:20]}')>"
 
-class Actuator(Base):
-    __tablename__ = 'actuators'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(128))
-    settings_xml = Column(String)
-    value = Column(Float)
+# class Actuator(Base):
+#     __tablename__ = 'actuators'
+#     id = Column(Integer, primary_key=True)
+#     name = Column(String(128))
+#     settings_xml = Column(String)
+#     datas0D = relationship("Data0D", backref='actuators')
+#
+#
+# class Detector(Base):
+#     __tablename__ = 'detectors'
+#     id = Column(Integer, primary_key=True)
+#     name = Column(String(128))
+#     settings_xml = Column(String)
+#     datas0D = relationship("Data0D", backref='detectors')
+#     datas1D = relationship("Data1D", backref='detectors')
+#     datas2D = relationship("Data2D", backref='detectors')
+#
+#     def __repr__(self):
+#         return f"<Detector(name='{self.name}', settings_xml='{self.settings_xml[0:20]}')>"
 
 
-class Detector(Base):
-    __tablename__ = 'detectors'
+class ControlModule(Base):
+    __tablename__ = 'control_modules'
     id = Column(Integer, primary_key=True)
     name = Column(String(128))
+    module_type = Column(String(128))
     settings_xml = Column(String)
-    datas0D = relationship("Data0D", backref='detectors')
-    datas1D = relationship("Data1D", backref='detectors')
-    datas2D = relationship("Data2D", backref='detectors')
+    datas0D = relationship("Data0D", backref='control_modules')
+    datas1D = relationship("Data1D", backref='control_modules')
+    datas2D = relationship("Data2D", backref='control_modules')
 
     def __repr__(self):
-        return f"<Detector(name='{self.name}', settings_xml='{self.settings_xml[0:20]}')>"
+        return f"<Control Module {self.type} (name='{self.name}', settings_xml='{self.settings_xml[0:20]}')>"
 
 
 class LogInfo(Base):
@@ -50,7 +64,7 @@ class Data0D(Base):
 
     id = Column(Integer, primary_key=True)
     timestamp = Column(Integer, nullable=False, index=True)
-    detector_id = Column(Integer, ForeignKey('detectors.id'), index=True)
+    control_module_id = Column(Integer, ForeignKey('control_modules.id'), index=True)
     channel = Column(String(128))
     value = Column(Float)
 
@@ -63,7 +77,7 @@ class Data1D(Base):
 
     id = Column(Integer, primary_key=True)
     timestamp = Column(Integer, nullable=False, index=True)
-    detector_id = Column(Integer, ForeignKey('detectors.id'), index=True)
+    control_module_id = Column(Integer, ForeignKey('control_modules.id'), index=True)
     channel = Column(String(128))
     value = Column(Array(Float, dimensions=1))
 
@@ -76,7 +90,7 @@ class Data2D(Base):
 
     id = Column(Integer, primary_key=True)
     timestamp = Column(Integer, nullable=False, index=True)
-    detector_id = Column(Integer, ForeignKey('detectors.id'), index=True)
+    control_module_id = Column(Integer, ForeignKey('control_modules.id'), index=True)
     channel = Column(String(128))
     value = Column(Array(Float, dimensions=2))
 

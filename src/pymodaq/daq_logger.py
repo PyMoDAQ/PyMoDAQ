@@ -414,20 +414,20 @@ class DAQ_Logging(QObject):
 
     def format_actuators_data(self, act_name, act_value):
         acq_time = datetime.datetime.now().timestamp()
-        data = OrderedDict(name=act_name, acq_time_s=acq_time,
-                           data0D=OrderedDict(act_name=utils.DataToExport(name=act_name, dim='Data0D', source='raw',
+        data = OrderedDict(name=act_name, acq_time_s=acq_time, control_module='DAQ_Move',
+                           data0D=OrderedDict(data=utils.DataToExport(name=act_name, dim='Data0D', source='raw',
                                                                           data=np.array([act_value]))))
         self.do_save_continuous(data)
 
-    def connect_actuators(self, status=True):
+    def connect_actuators(self, connect=True):
         """Connect actuators to DAQ_Logging do_save_continuous method
 
         Parameters
         ----------
-        status: bool
+        connect: bool
             If True make the connection else disconnect
         """
-        self.modules_manager.connect_actuators(connect=status, slot=self.format_actuators_data)
+        self.modules_manager.connect_actuators(connect=connect, slot=self.format_actuators_data, signal='current_value')
 
     def update_connect_actuators(self):
         try:
@@ -436,15 +436,15 @@ class DAQ_Logging(QObject):
             pass
         self.connect_actuators()
 
-    def connect_detectors(self, status=True):
+    def connect_detectors(self, connect=True):
         """Connect detectors to DAQ_Logging do_save_continuous method
 
         Parameters
         ----------
-        status: bool
+        connect: bool
             If True make the connection else disconnect
         """
-        self.modules_manager.connect_detectors(connect=status, slot=self.do_save_continuous)
+        self.modules_manager.connect_detectors(connect=connect, slot=self.do_save_continuous)
 
     def update_connect_detectors(self):
         try:
@@ -456,6 +456,7 @@ class DAQ_Logging(QObject):
     def stop_logging(self):
         try:
             self.connect_detectors(connect=False)
+            self.connect_actuators(connect=False)
         except Exception as e:
             logger.exception(str(e))
 
@@ -467,6 +468,7 @@ class DAQ_Logging(QObject):
     def start_logging(self):
         try:
             self.connect_detectors()
+            self.connect_actuators()
             self.stop_logging_flag = False
             self.status_sig.emit(["Update_Status", "Acquisition has started"])
 

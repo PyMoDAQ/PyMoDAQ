@@ -1072,7 +1072,8 @@ class DAQ_Viewer(QObject, utils.ControlModule):
             Ndatas = len(datas)
             acq_time = datetime.datetime.now().timestamp()
             name = self._title
-            self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name)
+            self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
+                                                   control_module='DAQ_Viewer')
 
             self.process_data(datas, self.data_to_save_export)
 

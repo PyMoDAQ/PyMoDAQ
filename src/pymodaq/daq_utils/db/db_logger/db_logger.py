@@ -7,14 +7,13 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
-from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector,\
-    Configuration, Actuator
+from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo,\
+    Configuration, ControlModule
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
+from pymodaq.daq_utils.gui_utils.utils import dashboard_submodules_params
 from pymodaq.daq_utils.messenger import messagebox, deprecation_msg
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
-
 
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -125,7 +124,7 @@ class DbLogger:
         -------
         the list of all created detectors
         """
-        return [res[0] for res in session.query(Detector.name)]
+        return [res[0] for res in session.query(ControlModule.name)]
 
     def get_actuators(self, session) -> List[str]:
         """Returns the list of actuators name
@@ -138,7 +137,7 @@ class DbLogger:
         -------
         the list of all created actuators
         """
-        return [res[0] for res in session.query(Actuator.name)]
+        return [res[0] for res in session.query(ControlModule.name)]
 
     def add_detectors(self, detectors):
         """
@@ -147,13 +146,7 @@ class DbLogger:
         ----------
         detectors: (list) list of dict with keys: name and settings_xml
         """
-        if not isinstance(detectors, list):
-            detectors = [detectors]
-        with self.session_scope() as session:
-            existing_detectors = [d.name for d in session.query(Detector)]
-            for det in detectors:
-                if det['name'] not in existing_detectors:
-                    session.add(Detector(name=det['name'], settings_xml=det['xml_settings']))
+        self.add_control_modules(detectors, 'DAQ_Viewer')
 
     def add_actuators(self, actuators):
         """
@@ -163,13 +156,17 @@ class DbLogger:
         actuators: list
             list of dict with keys: name and settings_xml
         """
-        if not isinstance(actuators, list):
-            actuators = [actuators]
+        self.add_control_modules(actuators, 'DAQ_Move')
+
+    def add_control_modules(self, modules, module_type='DAQ_Viewer'):
+        if not isinstance(modules, list):
+            modules = [modules]
         with self.session_scope() as session:
-            existing_actuators = [d.name for d in session.query(Actuator)]
-            for act in actuators:
-                if act['name'] not in existing_actuators:
-                    session.add(Actuator(name=act['name'], settings_xml=act['xml_settings']))
+            existing_modules = [d.name for d in session.query(ControlModule)]
+            for mod in modules:
+                if mod['name'] not in existing_modules:
+                    session.add(ControlModule(name=mod['name'], module_type=module_type,
+                                              settings_xml=mod['xml_settings']))
 
     def add_config(self, config_settings):
         with self.session_scope() as session:
@@ -179,33 +176,38 @@ class DbLogger:
         with self.session_scope() as session:
             session.add(LogInfo(log))
 
-    def add_data(self, datas):
+    def add_data(self, data):
         with self.session_scope() as session:
-            time_stamp = datas['acq_time_s']
-            detector_name = datas['name']
-            if session.query(Detector).filter_by(name=detector_name).count() == 0:
-                # security detector adding in case it hasn't been done previously (and properly)
-                self.add_detectors(session, dict(name=detector_name))
+            time_stamp = data['acq_time_s']
+            module_name = data['name']
 
-            det_id = session.query(Detector).filter_by(name=detector_name).one().id  # detector names should/are unique
+            if session.query(ControlModule).filter_by(name=module_name).count() == 0:
+                self.add_control_modules(session, dict(name=module_name), data['control_module'])
 
-            if 'data0D' in datas:
-                for channel in datas['data0D']:
-                    session.add(Data0D(timestamp=time_stamp, detector_id=det_id,
-                                       channel=f"{datas['data0D'][channel]['name']}:{channel}",
-                                       value=datas['data0D'][channel]['data']))
+            module_id = session.query(ControlModule).filter_by(name=module_name).one().id  # detector/actuator names should/are unique
 
-            if 'data1D' in datas:
-                for channel in datas['data1D']:
-                    session.add(Data1D(timestamp=time_stamp, detector_id=det_id,
-                                       channel=f"{datas['data1D'][channel]['name']}:{channel}",
-                                       value=datas['data1D'][channel]['data'].tolist()))
+            if 'data0D' in data:
+                for channel in data['data0D']:
+                    d = data['data0D'][channel]['data']
+                    if hasattr(d, '__len__'):
+                        d = float(d[0])
+                    if data['control_module'] == 'DAQ_Move':
+                        channel = f"{data['data0D'][channel]['name']}"
+                    else:
+                        channel = f"{data['data0D'][channel]['name']}:{channel}"
+                    session.add(Data0D(timestamp=time_stamp, control_module_id=module_id, channel=channel, value=d))
 
-            if 'data2D' in datas and self.save2D:
-                for channel in datas['data2D']:
-                    session.add(Data2D(timestamp=time_stamp, detector_id=det_id,
-                                       channel=f"{datas['data2D'][channel]['name']}:{channel}",
-                                       value=datas['data2D'][channel]['data'].tolist()))
+            if 'data1D' in data:
+                for channel in data['data1D']:
+                    session.add(Data1D(timestamp=time_stamp, control_module_id=module_id,
+                                       channel=f"{data['data1D'][channel]['name']}:{channel}",
+                                       value=data['data1D'][channel]['data'].tolist()))
+
+            if 'data2D' in data and self.save2D:
+                for channel in data['data2D']:
+                    session.add(Data2D(timestamp=time_stamp, control_module_id=module_id,
+                                       channel=f"{data['data2D'][channel]['name']}:{channel}",
+                                       value=data['data2D'][channel]['data'].tolist()))
 
             # not yet dataND as db should not know where to save these datas
 
@@ -306,16 +308,15 @@ class DataBaseLogger(AbstractLogger):
         return DBLogHandler(self.dblogger)
 
     def add_detector(self, det_name, settings):
-        deprecation_msg('add_detector method is deprecated, use add_control_module', 3)
-        self.add_control_module(det_name, settings)
-        
-    def add_control_module(self, mod_name, settings):
-        self.dblogger.add_detectors([dict(name=mod_name, xml_settings=settings)])
+        self.dblogger.add_detectors([dict(name=det_name, xml_settings=settings)])
 
-    def add_datas(self, datas):
-        self.dblogger.add_datas(datas)
-        self.settings.child(('N_saved')).setValue(
-            self.settings.child(('N_saved')).value() + 1)
+    def add_actuator(self, act_name, settings):
+        self.dblogger.add_actuators([dict(name=act_name, xml_settings=settings)])
+
+    def add_data(self, data):
+        self.dblogger.add_data(data)
+        self.settings.child('N_saved').setValue(
+            self.settings.child('N_saved').value() + 1)
 
     def stop_logger(self):
         pass
