@@ -38,6 +38,20 @@ MOVE_COMMANDS = ['abs', 'rel', 'home']
 
 
 class MoveCommand:
+    """Utility class to contain a given move type and value
+
+    Attributes
+    ----------
+    move_type: str
+        either:
+
+        * 'abs': performs an absolute action
+        * 'rel': performs a relative action
+        * 'home': find the actuator's home
+    value: float
+        the value the move should reach
+
+    """
     def __init__(self, move_type, value=0):
         if move_type not in MOVE_COMMANDS:
             raise ValueError(f'The allowed move types fro an actuator are {MOVE_COMMANDS}')
@@ -60,7 +74,7 @@ def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
 params = [
     {'title': 'Main Settings:', 'name': 'main_settings', 'type': 'group', 'children': [
         {'title': 'Actuator type:', 'name': 'move_type', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Actuator name:', 'name': 'actuator_name', 'type': 'str', 'value': '', 'readonly': True},
+        {'title': 'Actuator name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0},
         {'title': 'Refresh value (ms):', 'name': 'refresh_timeout', 'type': 'int',
             'value': config('actuator', 'refresh_timeout_ms')},
@@ -168,9 +182,6 @@ class DAQ_Move_base(QObject):
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.controller_units = self._controller_units
-        self.settings.child('epsilon').setValue(self._epsilon)
-
-
 
         self.poll_timer = QTimer()
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
@@ -237,28 +248,28 @@ class DAQ_Move_base(QObject):
 
     def get_actuator_value(self):
         if hasattr(self, 'check_position'):
-            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value')
+            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value',3)
             return self.check_position()
         else:
             raise NotImplementedError
 
     def move_abs(self, value):
         if hasattr(self, 'move_Abs'):
-            deprecation_msg('move_Abs method in plugins is deprecated, use move_abs')
+            deprecation_msg('move_Abs method in plugins is deprecated, use move_abs',3)
             self.move_Abs(value)
         else:
             raise NotImplementedError
 
     def move_rel(self, value):
         if hasattr(self, 'move_Rel'):
-            deprecation_msg('move_Rel method in plugins is deprecated, use move_rel')
+            deprecation_msg('move_Rel method in plugins is deprecated, use move_rel',3)
             self.move_Rel(value)
         else:
             raise NotImplementedError
 
     def move_home(self, value):
         if hasattr(self, 'move_Home'):
-            deprecation_msg('move_Home method in plugins is deprecated, use move_home')
+            deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
             self.move_Home()
         else:
             raise NotImplementedError

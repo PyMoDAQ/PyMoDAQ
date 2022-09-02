@@ -59,7 +59,7 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-class DAQ_Viewer(QObject):
+class DAQ_Viewer(QObject, utils.ControlModule):
     """
         ========================= =======================================
         **Attributes**             **Type**
@@ -94,13 +94,17 @@ class DAQ_Viewer(QObject):
         *do_continuous_save*       boolean
         *file_continuous_save*     ???
         ========================= =======================================
+
+    See Also
+    --------
+    :class:`ControlModule`, :class:`ParameterManager`
     """
     command_detector = Signal(ThreadCommand)
     init_signal = Signal(bool)
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
     command_tcpip = Signal(ThreadCommand)
     grab_done_signal = Signal(
-        OrderedDict)  # OrderedDict(name=self.title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+        OrderedDict)  # OrderedDict(name=self._title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
     quit_signal = Signal()
     update_settings_signal = Signal(edict)
     overshoot_signal = Signal(bool)
@@ -118,7 +122,7 @@ class DAQ_Viewer(QObject):
         here = Path(__file__).parent
         splash = QtGui.QPixmap(str(here.parent.joinpath('splash.png')))
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
-        self.title = title
+        self._title = title
         self.DAQ_type = DAQ_type
         self.h5saver_continuous = H5Saver(save_type='detector')
 
@@ -148,7 +152,7 @@ class DAQ_Viewer(QObject):
         self.save_file_pathname = None  # to store last active path, will be an Path object
         self.ind_continuous_grab = 0
 
-        self.initialized_state = False
+        self._initialized_state = False
         self.measurement_module = None
         self.snapshot_pathname = None
 
@@ -234,7 +238,7 @@ class DAQ_Viewer(QObject):
         widgetsettings = QtWidgets.QWidget()
         self.ui.setupUi(widgetsettings)
 
-        self.ui.title_label.setText(self.title)
+        self.ui.title_label.setText(self._title)
 
         self.ui.Ini_state_LED.clickable = False
         self.ui.Ini_state_LED.set_as_false()
@@ -253,7 +257,7 @@ class DAQ_Viewer(QObject):
         self.ui.settings_tree = ParameterTree()
         self.ui.settings_layout.addWidget(self.ui.settings_tree, 10)
         self.ui.settings_tree.setMinimumWidth(300)
-        self.settings = Parameter.create(title=self.title + ' settings', name='Settings', type='group',
+        self.settings = Parameter.create(title=self._title + ' settings', name='Settings', type='group',
                                          children=self.params)
         self.settings.child('main_settings', 'DAQ_type').setValue(self.DAQ_type)
         self.ui.settings_tree.setParameters(self.settings, showTop=False)
@@ -268,17 +272,17 @@ class DAQ_Viewer(QObject):
 
         if dock_settings is not None:
             self.ui.settings_dock = dock_settings
-            self.ui.settings_dock.setTitle(self.title + "_Settings")
+            self.ui.settings_dock.setTitle(self._title + "_Settings")
         else:
-            self.ui.settings_dock = Dock(self.title + "_Settings", size=(10, 10))
+            self.ui.settings_dock = Dock(self._title + "_Settings", size=(10, 10))
             self.dockarea.addDock(self.ui.settings_dock)
 
         self.ui.viewer_docks = []
         if dock_viewer is not None:
             self.ui.viewer_docks.append(dock_viewer)
-            self.ui.viewer_docks[-1].setTitle(self.title + "_Viewer 1")
+            self.ui.viewer_docks[-1].setTitle(self._title + "_Viewer 1")
         else:
-            self.ui.viewer_docks.append(Dock(self.title + "_Viewer", size=(500, 300), closable=False))
+            self.ui.viewer_docks.append(Dock(self._title + "_Viewer", size=(500, 300), closable=False))
             self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
 
         for dock in self.ui.viewer_docks:
@@ -323,7 +327,7 @@ class DAQ_Viewer(QObject):
         """
         # insert anything that needs to be closed before leaving
         try:
-            if self.initialized_state:  # means  initialzed
+            if self._initialized_state:  # means  initialzed
                 self.ui.IniDet_pb.click()
                 QtWidgets.QApplication.processEvents()
             self.quit_signal.emit()
@@ -421,7 +425,7 @@ class DAQ_Viewer(QObject):
             if not self.ui.IniDet_pb.isChecked():
                 self.set_enabled_grab_buttons(enable=False)
                 self.ui.Ini_state_LED.set_as_false()
-                self.initialized_state = False
+                self._initialized_state = False
 
                 if hasattr(self, 'detector_thread'):
                     self.command_detector.emit(ThreadCommand("close"))
@@ -430,14 +434,14 @@ class DAQ_Viewer(QObject):
                     if hasattr(self, 'detector_thread'):
                         self.detector_thread.quit()
 
-                self.initialized_state = False
+                self._initialized_state = False
                 for dock in self.ui.viewer_docks:
                     dock.setEnabled(False)
 
             else:
                 self.detector_name = self.ui.Detector_type_combo.currentText()
 
-                detector = DAQ_Detector(self.title, self.settings, self.detector_name)
+                detector = DAQ_Detector(self._title, self.settings, self.detector_name)
                 self.detector_thread = QThread()
                 detector.moveToThread(self.detector_thread)
 
@@ -504,13 +508,13 @@ class DAQ_Viewer(QObject):
         self.ui.data_ready_led.set_as_false()
         self.start_grab_time = time.perf_counter()
         if not (grab_state):
-            self.update_status(f'{self.title}: Snap')
+            self.update_status(f'{self._title}: Snap')
             self.command_detector.emit(
                 ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value()]))
         else:
             if not (self.ui.grab_pb.isChecked()):
 
-                self.update_status(f'{self.title}: Stop Grab')
+                self.update_status(f'{self._title}: Stop Grab')
                 self.command_detector.emit(ThreadCommand("stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
                 # self.ui.settings_tree.setEnabled(True)
@@ -519,12 +523,12 @@ class DAQ_Viewer(QObject):
                 # self.ui.settings_tree.setEnabled(False)
                 self.thread_status(ThreadCommand("update_channels"))
                 self.set_enabled_Ini_buttons(enable=False)
-                self.update_status(f'{self.title}: Continuous Grab')
+                self.update_status(f'{self._title}: Continuous Grab')
                 self.command_detector.emit(
                     ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
 
     def stop_all(self):
-        self.update_status(f'{self.title}: Stop Grab')
+        self.update_status(f'{self._title}: Stop Grab')
         self.command_detector.emit(ThreadCommand("stop_all"))
         if self.ui.grab_pb.isChecked():
             self.ui.grab_pb.setChecked(False)
@@ -905,7 +909,7 @@ class DAQ_Viewer(QObject):
             *datas*           ordered dictionnary  the datas to show
             =============== ===================== ===================
         """
-        # datas=OrderedDict(name=self.title,data0D=None,data1D=None,data2D=None)
+        # datas=OrderedDict(name=self._title,data0D=None,data1D=None,data2D=None)
         if self.data_to_save_export is not None:  # means that somehow datas are not initialized so no further procsessing
             self.received_data += 1
             for key in datas:
@@ -915,7 +919,7 @@ class DAQ_Viewer(QObject):
                             self.data_to_save_export[key] = OrderedDict([])
                         for k in datas[key]:
                             if datas[key][k]['source'] != 'raw':
-                                name = f'{self.title}_{datas["name"]}_{k}'
+                                name = f'{self._title}_{datas["name"]}_{k}'
                                 self.data_to_save_export[key][name] = utils.DataToExport(**datas[key][k])
                                 # if name not in self.data_to_save_export[key]:
                                 #
@@ -932,7 +936,7 @@ class DAQ_Viewer(QObject):
         for ind, data in enumerate(datas):
             self.ui.viewers[ind].title = data['name']
             if data['name'] != '':
-                self.ui.viewer_docks[ind].setTitle(self.title + ' ' + data['name'])
+                self.ui.viewer_docks[ind].setTitle(self._title + ' ' + data['name'])
             if data['dim'].lower() != 'datand':
                 self.set_xy_axis(data, ind)
 
@@ -1010,8 +1014,8 @@ class DAQ_Viewer(QObject):
             for ind_sub_data, dat in enumerate(data_arrays):
                 if 'labels' in data_tmp:
                     data_tmp.pop('labels')
-                subdata_tmp = utils.DataToExport(name=self.title, data=dat, **data_tmp)
-                sub_name = f'{self.title}_{name}_CH{ind_sub_data:03}'
+                subdata_tmp = utils.DataToExport(name=self._title, data=dat, **data_tmp)
+                sub_name = f'{self._title}_{name}_CH{ind_sub_data:03}'
                 if data_dim.lower() == 'data0d':
                     subdata_tmp['data'] = subdata_tmp['data'][0]
                     data0D[sub_name] = subdata_tmp
@@ -1067,7 +1071,7 @@ class DAQ_Viewer(QObject):
             # store raw data for further processing
             Ndatas = len(datas)
             acq_time = datetime.datetime.now().timestamp()
-            name = self.title
+            name = self._title
             self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name)
 
             self.process_data(datas, self.data_to_save_export)
@@ -1173,7 +1177,7 @@ class DAQ_Viewer(QObject):
                 self.ui.viewers[-1].status_signal.connect(self.log_messages)
 
             self.ui.viewer_docks.append(
-                Dock(self.title + "_Viewer {:d}".format(len(self.ui.viewer_docks) + 1), size=(500, 300),
+                Dock(self._title + "_Viewer {:d}".format(len(self.ui.viewer_docks) + 1), size=(500, 300),
                      closable=False))
             self.ui.viewer_docks[-1].addWidget(self.viewer_widgets[-1])
             if ind == 0:
@@ -1447,7 +1451,7 @@ class DAQ_Viewer(QObject):
                 self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
             else:
                 self.ui.viewer_docks.append(
-                    Dock(self.title + "_Viewer {:d}".format(ind), size=(500, 300), closable=False))
+                    Dock(self._title + "_Viewer {:d}".format(ind), size=(500, 300), closable=False))
                 self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.viewer_docks[-2])
             self.ui.viewer_docks[-1].addWidget(viewer)
             self.ui.viewers[ind].data_to_export_signal.connect(self.get_data_from_viewer)
@@ -1551,10 +1555,10 @@ class DAQ_Viewer(QObject):
                 self.controller = status.attributes[0]['controller']
                 self.set_enabled_grab_buttons(enable=True)
                 self.ui.Ini_state_LED.set_as_true()
-                self.initialized_state = True
+                self._initialized_state = True
             else:
-                self.initialized_state = False
-            self.init_signal.emit(self.initialized_state)
+                self._initialized_state = False
+            self.init_signal.emit(self._initialized_state)
 
         elif status.command == "close":
             try:
@@ -1569,8 +1573,8 @@ class DAQ_Viewer(QObject):
             except Exception as e:
                 self.logger.exception(str(e))
 
-            self.initialized_state = False
-            self.init_signal.emit(self.initialized_state)
+            self._initialized_state = False
+            self.init_signal.emit(self._initialized_state)
 
         elif status.command == "grab":
             pass
@@ -1750,7 +1754,7 @@ class DAQ_Viewer(QObject):
                 items['Navigator'] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
             viewers_title = [view.title for view in self.ui.viewers if view.viewer_type == 'Data2D']
             if len(viewers_title) > 0:
-                items[self.title] = dict(viewers=[view for view in self.ui.viewers if view.viewer_type == 'Data2D'],
+                items[self._title] = dict(viewers=[view for view in self.ui.viewers if view.viewer_type == 'Data2D'],
                                          names=viewers_title)
 
             self.scanner = Scanner(items, scan_type='Scan2D')
@@ -2202,6 +2206,7 @@ def main(init_qt=True):
     win.setWindowTitle('PyMoDAQ Viewer')
     viewer = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
     win.show()
+
     if init_qt:
         sys.exit(app.exec_())
     return viewer, win
