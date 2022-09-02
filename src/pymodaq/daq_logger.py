@@ -8,12 +8,12 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 
 import sys
 from collections import OrderedDict
-
+import datetime
 from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
 from pymodaq.daq_utils.gui_utils.dock import Dock
 from pymodaq.daq_utils.config import Config, get_set_preset_path
 import pymodaq.daq_utils.parameter.ioxml
-
+import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 
@@ -83,11 +83,10 @@ class DAQ_Logger(CustomApp):
         log_type_combo.currentTextChanged.connect(self.set_log_type)
         self._actions['log_type'] = self.toolbar.addWidget(log_type_combo)
         self.toolbar.addSeparator()
-        self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors",
+        self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors's data and actuators's value",
                         checkable=True, toolbar=self.toolbar)
         self.add_action('infos', 'Log infos', 'information2', "Show log file",
                         checkable=False, toolbar=self.toolbar)
-
 
         logger.debug('actions set')
 
@@ -98,8 +97,6 @@ class DAQ_Logger(CustomApp):
         self.docks['detectors'].addWidget(splitter)
         splitter.addWidget(self.settings_tree)
         splitter.addWidget(self.modules_manager.settings_tree)
-        #self.modules_manager.settings.child('modules', 'actuators').hide()
-        #self.modules_manager.settings.child('actuators_positions').hide()
         self.dockarea.addDock(self.docks['detectors'])
 
         self.docks['logger_settings'] = Dock("Logger Settings")
@@ -206,25 +203,29 @@ class DAQ_Logger(CustomApp):
         """
         status = self.set_continuous_save()
         if status:
-            det_modules_log = self.modules_manager.detectors_all
-            if det_modules_log != []:
+            modules_log = self.modules_manager.detectors_all + self.modules_manager.actuators_all
+            if modules_log != []:
                 # check if the modules are initialized
-                for module in det_modules_log:
+                for module in modules_log:
                     if not module.initialized_state:
                         logger.error(f'module {module.title} is not initialized')
                         return False
 
                 # create the detectors in the chosen logger
-                for det in det_modules_log:
+                for mod in modules_log:
                     settings_str = b'<All_settings>'
-                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(det.settings)
-                    for viewer in det.ui.viewers:
-                        if hasattr(viewer, 'roi_manager'):
-                            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                                viewer.roi_manager.settings)
-                    settings_str += b'</All_settings>'
+                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(mod.settings)
 
-                    self.logger.add_detector(det.title, settings_str)
+                    if mod.module_type == 'DAQ_Viewer':
+                        for viewer in mod.ui.viewers:
+                            if hasattr(viewer, 'roi_manager'):
+                                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                    viewer.roi_manager.settings)
+                    settings_str += b'</All_settings>'
+                    if mod.module_type == 'DAQ_Viewer':
+                        self.logger.add_detector(mod.title, settings_str)
+                    elif mod.module_type == 'DAQ_Move':
+                        self.logger.add_actuator(mod.title, settings_str)
 
                 self._actions['start'].setEnabled(True)
                 self._actions['stop'].setEnabled(True)
@@ -242,9 +243,10 @@ class DAQ_Logger(CustomApp):
             return False
 
     def start_all(self):
-        preset_items_det = self.modules_manager.detectors
-        for det in preset_items_det:
-            det.ui.grab_pb.click()
+        for det in self.modules_manager.detectors:
+            det.grab()
+        for act in self.modules_manager.actuators:
+            act.grab()
 
     def set_log_type(self, log_type):
         self.settings.child('log_type').setValue(log_type)
@@ -349,12 +351,9 @@ class DAQ_Logger(CustomApp):
 
 class DAQ_Logging(QObject):
     """
-        =========================== ========================================
-        **Attributes**               **Type**
-
-        =========================== ========================================
 
     """
+
     scan_data_tmp = Signal(OrderedDict)
     status_sig = Signal(list)
 
@@ -376,7 +375,7 @@ class DAQ_Logging(QObject):
         self.ind_log = 0
         self.modules_manager = modules_manager
         self.modules_manager.detectors_changed.connect(self.update_connect_detectors)
-
+        self.modules_manager.actuators_changed.connect(self.update_connect_actuators)
         self.data_logger = logger
 
     @Slot(list)
@@ -404,21 +403,46 @@ class DAQ_Logging(QObject):
             self.stop_scan_flag = True
             self.stop_logging()
 
-    def do_save_continuous(self, datas):
+    def do_save_continuous(self, data):
         """
 
         """
         try:
-            self.data_logger.add_datas(datas)
+            self.data_logger.add_data(data)
         except Exception as e:
             logger.exception(str(e))
 
-    def connect_detectors(self, status=True):
-        """
-        Connect detectors to DAQ_Logging do_save_continuous method
+    def format_actuators_data(self, act_name, act_value):
+        acq_time = datetime.datetime.now().timestamp()
+        data = OrderedDict(name=act_name, acq_time_s=acq_time,
+                           data0D=OrderedDict(act_name=utils.DataToExport(name=act_name, dim='Data0D', source='raw',
+                                                                          data=np.array([act_value]))))
+        self.do_save_continuous(data)
+
+    def connect_actuators(self, status=True):
+        """Connect actuators to DAQ_Logging do_save_continuous method
+
         Parameters
         ----------
-        status: (bool) If True make the connection else disconnect
+        status: bool
+            If True make the connection else disconnect
+        """
+        self.modules_manager.connect_actuators(connect=status, slot=self.format_actuators_data)
+
+    def update_connect_actuators(self):
+        try:
+            self.connect_actuators(False)
+        except:
+            pass
+        self.connect_actuators()
+
+    def connect_detectors(self, status=True):
+        """Connect detectors to DAQ_Logging do_save_continuous method
+
+        Parameters
+        ----------
+        status: bool
+            If True make the connection else disconnect
         """
         self.modules_manager.connect_detectors(connect=status, slot=self.do_save_continuous)
 

@@ -15,6 +15,13 @@ class Configuration(Base):
     def __repr__(self):
         return f"<Config(date='{datetime.datetime.fromtimestamp(self.timestamp).isoformat()}', settings_xml='{self.settings_xml[0:20]}')>"
 
+class Actuator(Base):
+    __tablename__ = 'actuators'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(128))
+    settings_xml = Column(String)
+    value = Column(Float)
+
 
 class Detector(Base):
     __tablename__ = 'detectors'

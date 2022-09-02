@@ -36,11 +36,15 @@ class AbstractLogger(ABC):
         pass
 
     @abstractmethod
-    def add_detector(self, det_name, settings):
+    def add_detector(self, module_name, settings):
         pass
 
     @abstractmethod
-    def add_datas(self, datas):
+    def add_actuator(self, module_name, settings):
+        pass
+
+    @abstractmethod
+    def add_data(self, data):
         pass
 
     @abstractmethod

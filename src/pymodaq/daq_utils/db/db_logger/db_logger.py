@@ -1,18 +1,20 @@
 import logging
 import datetime
-
+from typing import List
 from pymodaq.daq_utils.config import Config
 from qtpy import QtCore
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists, create_database
-from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector, Configuration
+from pymodaq.daq_utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo, Detector,\
+    Configuration, Actuator
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.gui_utils import dashboard_submodules_params
-from pymodaq.daq_utils.messenger import messagebox
+from pymodaq.daq_utils.messenger import messagebox, deprecation_msg
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
+
 
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -112,7 +114,7 @@ class DbLogger:
         if self.engine is not None:
             Base.metadata.create_all(self.engine)
 
-    def get_detectors(self, session):
+    def get_detectors(self, session) -> List[str]:
         """Returns the list of detectors name
 
         Parameters
@@ -121,16 +123,28 @@ class DbLogger:
 
         Returns
         -------
-        list of str
+        the list of all created detectors
         """
         return [res[0] for res in session.query(Detector.name)]
+
+    def get_actuators(self, session) -> List[str]:
+        """Returns the list of actuators name
+
+        Parameters
+        ----------
+        session: (Session) SQLAlchemy session instance for db transactions
+
+        Returns
+        -------
+        the list of all created actuators
+        """
+        return [res[0] for res in session.query(Actuator.name)]
 
     def add_detectors(self, detectors):
         """
         add detectors in the detectors table
         Parameters
         ----------
-        session: (Session) SQLAlchemy session instance for db transactions
         detectors: (list) list of dict with keys: name and settings_xml
         """
         if not isinstance(detectors, list):
@@ -141,6 +155,22 @@ class DbLogger:
                 if det['name'] not in existing_detectors:
                     session.add(Detector(name=det['name'], settings_xml=det['xml_settings']))
 
+    def add_actuators(self, actuators):
+        """
+        add actuators in the actuators table
+        Parameters
+        ----------
+        actuators: list
+            list of dict with keys: name and settings_xml
+        """
+        if not isinstance(actuators, list):
+            actuators = [actuators]
+        with self.session_scope() as session:
+            existing_actuators = [d.name for d in session.query(Actuator)]
+            for act in actuators:
+                if act['name'] not in existing_actuators:
+                    session.add(Actuator(name=act['name'], settings_xml=act['xml_settings']))
+
     def add_config(self, config_settings):
         with self.session_scope() as session:
             session.add(Configuration(timestamp=datetime.datetime.now().timestamp(), settings_xml=config_settings))
@@ -149,7 +179,7 @@ class DbLogger:
         with self.session_scope() as session:
             session.add(LogInfo(log))
 
-    def add_datas(self, datas):
+    def add_data(self, datas):
         with self.session_scope() as session:
             time_stamp = datas['acq_time_s']
             detector_name = datas['name']
@@ -178,6 +208,8 @@ class DbLogger:
                                        value=datas['data2D'][channel]['data'].tolist()))
 
             # not yet dataND as db should not know where to save these datas
+
+
 
 
 class DbLoggerGUI(DbLogger, QtCore.QObject):
@@ -274,7 +306,11 @@ class DataBaseLogger(AbstractLogger):
         return DBLogHandler(self.dblogger)
 
     def add_detector(self, det_name, settings):
-        self.dblogger.add_detectors([dict(name=det_name, xml_settings=settings)])
+        deprecation_msg('add_detector method is deprecated, use add_control_module', 3)
+        self.add_control_module(det_name, settings)
+        
+    def add_control_module(self, mod_name, settings):
+        self.dblogger.add_detectors([dict(name=mod_name, xml_settings=settings)])
 
     def add_datas(self, datas):
         self.dblogger.add_datas(datas)
