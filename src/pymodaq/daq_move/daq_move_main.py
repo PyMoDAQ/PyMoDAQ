@@ -58,6 +58,7 @@ class DAQ_Move(QObject, ParameterManager, utils.ControlModule):
     command_hardware = Signal(ThreadCommand)
     command_tcpip = Signal(ThreadCommand)
     move_done_signal = Signal(str, float)
+    current_value_signal = Signal(str, float)
     # to be used in external program to make sure the move has been done,
     # export the current position. str refer to the unique title given to the module
     update_settings_signal = Signal(edict)
@@ -471,6 +472,7 @@ class DAQ_Move(QObject, ParameterManager, utils.ControlModule):
             if self.ui is not None:
                 self.ui.display_value(status.attributes[0])
             self.current_value = status.attributes[0]
+            self.current_value_signal.emit(self.title, self.current_value)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
                 self.command_tcpip.emit(ThreadCommand('position_is', status.attributes))
 
