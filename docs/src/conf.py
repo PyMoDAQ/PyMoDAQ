@@ -66,24 +66,28 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
-    #'autoapi.sphinx',
+    #'autoapi.extension',
     'sphinx.ext.autosummary',
     'releases',
     'crate.sphinx.csv',
+    'numpydoc'
 ]
-numfig=True
-
 
 # -- Options for autodocumentation ---------------------------------------------
+numfig = True
 
-# autoapi_type= 'python'
-# autoapi_ignore=[]
-# autoapi_dirs= [ ]
+autoapi_type = 'python'
+autoapi_dirs = ['../../src/pymodaq']
+autoapi_generate_api_docs = False
 
-autoapi_include_summaries=True
+autoapi_include_summaries = True
 autodoc_member_order = "groupwise"
 autoclass_content = "class"
 autosummary_generate = []
+
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
