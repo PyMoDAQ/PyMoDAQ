@@ -563,8 +563,7 @@ class DashBoard(QObject):
         move_forms.append(QtWidgets.QWidget())
         mov_mod_tmp = DAQ_Move(move_forms[-1], plug_name)
 
-        mov_mod_tmp.ui.Stage_type_combo.setCurrentText(plug_type)
-        mov_mod_tmp.ui.Quit_pb.setEnabled(False)
+        mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
 
         if plug_settings is not None:
@@ -636,7 +635,7 @@ class DashBoard(QObject):
                         actuators_modules[-1].controller = dict(curr_point=self.pid_module.curr_points_signal,
                                                            setpoint=self.pid_module.setpoints_signal,
                                                            emit_curr_points=self.pid_module.emit_curr_points_sig)
-                        actuators_modules[-1].ui.IniStage_pb.click()
+                        actuators_modules[-1].init_hardware_ui()
                         QtWidgets.QApplication.processEvents()
                         self.poll_init(actuators_modules[-1])
                         QtWidgets.QApplication.processEvents()
@@ -695,7 +694,7 @@ class DashBoard(QObject):
                                 if plugin['status'] != "Master":
                                     logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
-                                    actuators_modules[-1].ui.IniStage_pb.click()
+                                    actuators_modules[-1].init_hardware_ui()
                                     QtWidgets.QApplication.processEvents()
                                     self.poll_init(actuators_modules[-1])
                                     QtWidgets.QApplication.processEvents()
@@ -705,7 +704,7 @@ class DashBoard(QObject):
                                     logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                 if plug_init:
                                     actuators_modules[-1].controller = master_controller
-                                    actuators_modules[-1].ui.IniStage_pb.click()
+                                    actuators_modules[-1].init_hardware_ui()
                                     QtWidgets.QApplication.processEvents()
                                     self.poll_init(actuators_modules[-1])
                                     QtWidgets.QApplication.processEvents()
@@ -751,7 +750,7 @@ class DashBoard(QObject):
                                     if plugin['status'] != "Master":
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
-                                        detector_modules[-1].ui.IniDet_pb.click()
+                                        detector_modules[-1].init_det()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
@@ -761,7 +760,7 @@ class DashBoard(QObject):
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
                                         detector_modules[-1].controller = master_controller
-                                        detector_modules[-1].ui.IniDet_pb.click()
+                                        detector_modules[-1].init_det()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
@@ -1086,10 +1085,8 @@ class DashBoard(QObject):
 
                 # connecting to logger
                 for mov in actuators_modules:
-                    mov.status_signal[str].connect(self.add_status)
                     mov.init_signal.connect(self.update_init_tree)
                 for det in detector_modules:
-                    det.status_signal[str].connect(self.add_status)
                     det.init_signal.connect(self.update_init_tree)
 
                 self.splash_sc.close()

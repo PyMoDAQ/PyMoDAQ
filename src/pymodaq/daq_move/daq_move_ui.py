@@ -165,9 +165,9 @@ class DAQ_Move_UI(CustomApp):
         self.main_ui.layout().addWidget(self.move_toolbar, 1, 0, 1, 2)
 
         self.abs_value_sb = SpinBox()
-        self.abs_value_sb.setStyleSheet("background-color : lightgreen")
+        self.abs_value_sb.setStyleSheet("background-color : lightgreen; color: black")
         self.abs_value_sb_2 = SpinBox()
-        self.abs_value_sb_2.setStyleSheet("background-color : lightcoral")
+        self.abs_value_sb_2.setStyleSheet("background-color : lightcoral; color: black")
         self.move_toolbar.addWidget(self.abs_value_sb)
         self.move_toolbar.addWidget(self.abs_value_sb_2)
 
@@ -262,6 +262,17 @@ class DAQ_Move_UI(CustomApp):
 
         self.actuators_combo.currentTextChanged.connect(
             lambda act: self.command_sig.emit(ThreadCommand('actuator_changed', act)))
+
+    def do_init(self, do_init=True):
+        """Programmatically press the Init button
+        API entry
+        Parameters
+        ----------
+        do_init: bool
+            will fire the Init button depending on the argument value and the button check state
+        """
+        if (do_init and not self.ini_actuator_pb.isChecked()) or ((not do_init) and self.ini_actuator_pb.isChecked()):
+            self.ini_actuator_pb.click()
 
     def send_init(self):
         self.actuators_combo.setEnabled(not self.ini_actuator_pb.isChecked())

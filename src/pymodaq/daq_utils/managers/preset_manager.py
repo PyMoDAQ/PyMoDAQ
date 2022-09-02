@@ -117,7 +117,8 @@ class PresetManager:
         for param, change, data in changes:
             path = self.preset_params.childPath(param)
             if change == 'childAdded':
-                pass
+                if 'move' in data[0].name():
+                    data[0].child('params', 'main_settings', 'actuator_name').setValue(data[0].child('name').value())
 
             elif change == 'value':
 
@@ -126,6 +127,8 @@ class PresetManager:
                     self.preset_params.child('model_settings').show(param.value())
                 if param.name() == 'pid_models' and param.value() != '':
                     self.get_set_pid_model_params(param.value())
+                if param.name() == 'name' and 'move' in param.parent().name():
+                    param.parent().child('params', 'main_settings', 'actuator_name').setValue(param.value())
 
             elif change == 'parent':
                 pass

@@ -559,6 +559,29 @@ class AxisBase(dict):
             raise AttributeError(f'{item} is not a valid attribute')
 
 
+class ControlModule:
+    """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules"""
+
+    def __init__(self):
+        self._title = ""
+
+    @property
+    def module_type(self):
+        return type(self).__name__
+
+    @property
+    def initialized_state(self):
+        return self._initialized_state
+
+    @property
+    def title(self):
+        return self._title
+
+    def grab(self):
+        """Programmatic entry to grab data from detectors or current value from actuator"""
+        raise NotImplementedError
+
+
 class Axis(AxisBase):
     """
     Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
@@ -617,18 +640,23 @@ class ScalingOptions(dict):
 
 
 class Data(OrderedDict):
-    def __init__(self, name='', source='raw', distribution='uniform', x_axis=Axis(), y_axis=Axis(), **kwargs):
+    def __init__(self, name='', source='raw', distribution='uniform', x_axis: Axis = None,
+                 y_axis: Axis = None, **kwargs):
         """
         Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
         attributes can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
-        source: (str) either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
-        distribution: (str) either 'uniform' or 'spread'
-        x_axis: (Axis) Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
-         x positions of the spread points)
-        y_axis: (Axis) Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
-         x positions of the spread points)
+        source: str
+            either 'raw' or 'roi...' if straight from a plugin or data processed within a viewer
+        distribution: str
+            either 'uniform' or 'spread'
+        x_axis: Axis
+            Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
+            x positions of the spread points)
+        y_axis: Axis
+            Axis class defining the corresponding axis (if any) (with data either linearly spaced or containing the
+            y positions of the spread points)
         """
 
         if not isinstance(name, str):
@@ -646,23 +674,25 @@ class Data(OrderedDict):
             raise ValueError(f'Invalid "distribution" for the {self.__class__.__name__} class')
         self['distribution'] = distribution
 
-        if not isinstance(x_axis, Axis):
-            if isinstance(x_axis, np.ndarray):
-                x_axis = Axis(data=x_axis)
-            else:
-                raise TypeError(f'x_axis for the {self.__class__.__name__} class should be a Axis class')
-            self['x_axis'] = x_axis
-        elif x_axis['data'] is not None:
-            self['x_axis'] = x_axis
+        if x_axis is not None:
+            if not isinstance(x_axis, Axis):
+                if isinstance(x_axis, np.ndarray):
+                    x_axis = Axis(data=x_axis)
+                else:
+                    raise TypeError(f'x_axis for the {self.__class__.__name__} class should be a Axis class')
+                self['x_axis'] = x_axis
+            elif x_axis['data'] is not None:
+                self['x_axis'] = x_axis
 
-        if not isinstance(y_axis, Axis):
-            if isinstance(y_axis, np.ndarray):
-                y_axis = Axis(data=y_axis)
-            else:
-                raise TypeError(f'y_axis for the {self.__class__.__name__} class should be a Axis class')
-            self['y_axis'] = y_axis
-        elif y_axis['data'] is not None:
-            self['y_axis'] = y_axis
+        if y_axis is not None:
+            if not isinstance(y_axis, Axis):
+                if isinstance(y_axis, np.ndarray):
+                    y_axis = Axis(data=y_axis)
+                else:
+                    raise TypeError(f'y_axis for the {self.__class__.__name__} class should be a Axis class')
+                self['y_axis'] = y_axis
+            elif y_axis['data'] is not None:
+                self['y_axis'] = y_axis
 
         for k in kwargs:
             self[k] = kwargs[k]
@@ -675,6 +705,12 @@ class Data(OrderedDict):
 
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
+
+
+class DataTimeStamped(Data):
+    def __init__(self, acq_time_s: int = 0, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self['acq_time_s'] = acq_time_s
 
 
 class DataFromPlugins(Data):
@@ -725,6 +761,18 @@ class DataFromPlugins(Data):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
                f' - <source: {self.source}> - <dim: {self.dim}>'
 
+class DataToEmit(DataTimeStamped):
+    """Utility class defining data emitted by DAQ_Viewers or DAQ_Move
+
+    to be precessed by externaly connected object
+
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def get_data_0D(self):
+        return self['data']['data']
+
 
 class DataToExport(Data):
     def __init__(self, data=None, dim='', source='raw', **kwargs):
@@ -759,6 +807,7 @@ class DataToExport(Data):
         self['dim'] = dim
         if source not in DATASOURCES:
             raise DataSourceError(f'Data source should be in {DATASOURCES}')
+
 
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \

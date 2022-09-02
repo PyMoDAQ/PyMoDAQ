@@ -334,9 +334,9 @@ class ModulesManager(QObject):
         self.settings.child(('move_done')).setValue(self.move_done_flag)
 
         if mode == 'abs':
-            command = 'move_Abs'
+            command = 'move_abs'
         elif mode == 'rel':
-            command = 'move_Rel'
+            command = 'move_rel'
         else:
             logger.error(f'Invalid positioning mode: {mode}')
             return self.move_done_positions
@@ -349,10 +349,10 @@ class ModulesManager(QObject):
                 for k in positions:
                     act = self.get_mod_from_name(k, 'act')
                     if act is not None:
-                        act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[k], polling]))
+                        act.command_hardware.emit(utils.ThreadCommand(command=command, attributes=[positions[k], polling]))
             else:
                 for ind, act in enumerate(self.actuators):
-                    act.command_stage.emit(utils.ThreadCommand(command=command, attributes=[positions[ind], polling]))
+                    act.command_hardware.emit(utils.ThreadCommand(command=command, attributes=[positions[ind], polling]))
 
         else:
             logger.error('Invalid number of positions compared to selected actuators')
