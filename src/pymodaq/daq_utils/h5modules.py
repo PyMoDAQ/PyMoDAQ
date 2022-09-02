@@ -1926,10 +1926,10 @@ class H5Logger(AbstractLogger):
                                                    scan_type='scan1D', enlargeable=True)
                     else:
                         data_array = self.h5saver.get_node(channel_group, 'Data')
-                    if data_type == 'data0D':
-                        data_array.append(np.array([data[data_type][channel]['data']]))
-                    else:
-                        data_array.append(data[data_type][channel]['data'])
+                    # if data_type == 'data0D':
+                    #     data_array.append(np.array([data[data_type][channel]['data']]))
+                    # else:
+                    data_array.append(data[data_type][channel]['data'])
         self.h5saver.flush()
         self.settings.child(('N_saved')).setValue(
             self.settings.child(('N_saved')).value() + 1)
