@@ -1,7 +1,7 @@
 import random
 from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_move.utility_classes import params as daq_move_params
-from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
+from pymodaq.control_modules.move_utility_classes import params as daq_move_params
+from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 
 from pyqtgraph.parametertree.Parameter import registerParameterType
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter

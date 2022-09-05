@@ -3,8 +3,8 @@
 #mandatory imports
 import pymodaq.daq_utils.parameter.utils
 from pymodaq.daq_utils.daq_utils import ThreadCommand
-from pymodaq.daq_viewer.utility_classes import comon_parameters
-from pymodaq.daq_viewer.utility_classes import DAQ_Viewer_base
+from pymodaq.control_modules.viewer_utility_classes import comon_parameters
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 import numpy as np
 from collections import OrderedDict
 from qtpy import QtWidgets, QtCore

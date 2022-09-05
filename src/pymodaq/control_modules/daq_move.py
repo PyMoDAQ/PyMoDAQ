@@ -5,7 +5,6 @@ Created the 29/07/2022
 @author: Sebastien Weber
 """
 import sys
-from pathlib import Path
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
 from qtpy import QtWidgets
@@ -13,11 +12,11 @@ from qtpy import QtWidgets
 from easydict import EasyDict as edict
 
 from pymodaq.daq_utils.parameter import ioxml
-from pymodaq.daq_move.daq_move_ui import DAQ_Move_UI, ThreadCommand
+from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
-from pymodaq.daq_move.utility_classes import MoveCommand
+from pymodaq.control_modules.move_utility_classes import MoveCommand
 from pymodaq.daq_utils.tcp_server_client import TCPClient
-from pymodaq.daq_move.utility_classes import params as daq_move_params
+from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.gui_utils import get_splash_sc
@@ -35,7 +34,7 @@ ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
 STATUS_WAIT_TIME = 1000
 
 
-class DAQ_Move(QObject, ParameterManager, utils.ControlModule):
+class DAQ_Move(ParameterManager, utils.ControlModule):
     """ Main PyMoDAQ class to drive actuators
 
     Qt object and generic UI to drive actuators.
@@ -54,9 +53,6 @@ class DAQ_Move(QObject, ParameterManager, utils.ControlModule):
     --------
     :class:`ControlModule`, :class:`ParameterManager`
     """
-    init_signal = Signal(bool)
-    command_hardware = Signal(ThreadCommand)
-    command_tcpip = Signal(ThreadCommand)
     move_done_signal = Signal(str, float)
     current_value_signal = Signal(str, float)
     # to be used in external program to make sure the move has been done,
@@ -302,8 +298,8 @@ class DAQ_Move(QObject, ParameterManager, utils.ControlModule):
 
         if self._initialized_state:
             self.init_hardware(False)
-
         self.ui.get_action('quit').trigger()
+        self.quit_signal.emit()
 
     def ini_stage_fun(self):
         deprecation_msg(f'The function *ini_stage_fun* is deprecated, use init_hardware')

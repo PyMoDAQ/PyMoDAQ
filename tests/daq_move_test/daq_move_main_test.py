@@ -1,5 +1,5 @@
-from pymodaq.daq_move import daq_move_main as daqmm
-from pytest import fixture, approx, mark
+from pymodaq.control_modules import daq_move as daqmm
+from pytest import fixture, mark
 from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
 pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 

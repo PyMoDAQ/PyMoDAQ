@@ -1,4 +1,3 @@
-import os
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
@@ -95,7 +94,7 @@ def main(plugin_file=None, init=True):
     import sys
     from qtpy import QtWidgets
     from pymodaq.daq_utils.gui_utils import DockArea
-    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer_main import DAQ_Viewer
     from pathlib import Path
 
     app = QtWidgets.QApplication(sys.argv)

@@ -38,7 +38,7 @@ from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.daq_utils.parameter import utils as putils
 
 from easydict import EasyDict as edict
-from pymodaq.daq_viewer.utility_classes import params as daq_viewer_params
+from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 import pickle
 import time
 import datetime
@@ -46,6 +46,7 @@ import tables
 from pathlib import Path
 from pymodaq.daq_utils.h5modules import H5Saver
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils.messenger import deprecation_msg
 from pymodaq.daq_utils.gui_utils import DockArea, Dock
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -59,53 +60,30 @@ DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
 
 
-class DAQ_Viewer(QObject, utils.ControlModule):
-    """
-        ========================= =======================================
-        **Attributes**             **Type**
+class DAQ_Viewer(utils.ControlModule):
+    """ Main PyMoDAQ class to drive detectors
 
-        *command_detector*         instance of pyqt Signal
-        *grab_done_signal*         instance of pyqt Signal
-        *quit_signal*              instance of pyqt Signal
-        *update_settings_signal*   instance of pyqt Signal
-        *overshoot_signal*         instance of pyqt Signal
-        *status_signal*               instance of pyqt Signal
-        *params*                   dictionnary list
+    Qt object and generic UI to drive actuators.
 
-        *widgetsettings*           instance of QWidget
-        *title*                    string
-        *DAQ_type*                 string
-        *dockarea*                 instance of DockArea
-        *bkg*                      ???
-        *filters*                  instance of tables.Filters
-        *settings*                 instance of pyqtgraph parameter tree
-        *measurement_module*       ???
-        *detector*                 instance of DAQ_Detector
-        *wait_time*                int
-        *save_file_pathname*       string
-        *ind_continuous_grab*      int
-        *initialized_state*        boolean
-        *snapshot_pathname*        string
-        *x_axis*                   1D numpy array
-        *y_axis*                   1D numpy array
-        *current_datas*            dictionnary
-        *data_to_save_export*      ordered dictionnary
-        *do_save_data*             boolean
-        *do_continuous_save*       boolean
-        *file_continuous_save*     ???
-        ========================= =======================================
+    Attributes
+    ----------
+    init_signal: Signal[bool]
+        This signal is emitted when the chosen actuator is correctly initialized
+    move_done_signal: Signal[str, float]
+        This signal is emitted when the chosen actuator finished its action. It gives the actuator's name and current
+        value
+    bounds_signal: Signal[bool]
+        This signal is emitted when the actuator reached defined limited boundaries.
 
     See Also
     --------
     :class:`ControlModule`, :class:`ParameterManager`
     """
-    command_detector = Signal(ThreadCommand)
-    init_signal = Signal(bool)
+
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
-    command_tcpip = Signal(ThreadCommand)
-    grab_done_signal = Signal(
-        OrderedDict)  # OrderedDict(name=self._title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
-    quit_signal = Signal()
+    grab_done_signal = Signal(OrderedDict)
+    # OrderedDict(name=self._title,x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
+
     update_settings_signal = Signal(edict)
     overshoot_signal = Signal(bool)
     status_signal = Signal(str)
@@ -406,10 +384,18 @@ class DAQ_Viewer(QObject, utils.ControlModule):
     ######################################
     #  Methods for running the acquisition
 
-    def init_det(self):
+    def init_hardware_ui(self, do_init=True):
         self.ui.IniDet_pb.click()
 
+    def init_det(self):
+        deprecation_msg(f'The function *init_det* is deprecated, use init_hardware_ui')
+        self.init_hardware_ui(True)
+
     def ini_det_fun(self):
+        deprecation_msg(f'The function *ini_det_fun* is deprecated, use init_hardware')
+        self.init_hardware(True)
+
+    def init_hardware(self, do_init=True):
         """
             | If Init detector button checked, init the detector and connect the data detector, the data detector temp, the status and the update_settings signals to their corresponding function.
             | Once done start the detector linked thread.
@@ -428,7 +414,7 @@ class DAQ_Viewer(QObject, utils.ControlModule):
                 self._initialized_state = False
 
                 if hasattr(self, 'detector_thread'):
-                    self.command_detector.emit(ThreadCommand("close"))
+                    self.command_hardware.emit(ThreadCommand("close"))
                     QtWidgets.QApplication.processEvents()
                     QThread.msleep(1000)
                     if hasattr(self, 'detector_thread'):
@@ -445,7 +431,7 @@ class DAQ_Viewer(QObject, utils.ControlModule):
                 self.detector_thread = QThread()
                 detector.moveToThread(self.detector_thread)
 
-                self.command_detector[ThreadCommand].connect(detector.queue_command)
+                self.command_hardware[ThreadCommand].connect(detector.queue_command)
                 detector.data_detector_sig[list].connect(self.show_data)
                 detector.data_detector_temp_sig[list].connect(self.show_temp_data)
                 detector.status_sig[ThreadCommand].connect(self.thread_status)
@@ -454,7 +440,7 @@ class DAQ_Viewer(QObject, utils.ControlModule):
                 self.detector_thread.detector = detector
                 self.detector_thread.start()
 
-                self.command_detector.emit(ThreadCommand("ini_detector", attributes=[
+                self.command_hardware.emit(ThreadCommand("ini_detector", attributes=[
                     self.settings.child(('detector_settings')).saveState(), self.controller]))
 
                 for dock in self.ui.viewer_docks:
@@ -509,13 +495,13 @@ class DAQ_Viewer(QObject, utils.ControlModule):
         self.start_grab_time = time.perf_counter()
         if not (grab_state):
             self.update_status(f'{self._title}: Snap')
-            self.command_detector.emit(
+            self.command_hardware.emit(
                 ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value()]))
         else:
             if not (self.ui.grab_pb.isChecked()):
 
                 self.update_status(f'{self._title}: Stop Grab')
-                self.command_detector.emit(ThreadCommand("stop_grab"))
+                self.command_hardware.emit(ThreadCommand("stop_grab"))
                 self.set_enabled_Ini_buttons(enable=True)
                 # self.ui.settings_tree.setEnabled(True)
             else:
@@ -524,12 +510,12 @@ class DAQ_Viewer(QObject, utils.ControlModule):
                 self.thread_status(ThreadCommand("update_channels"))
                 self.set_enabled_Ini_buttons(enable=False)
                 self.update_status(f'{self._title}: Continuous Grab')
-                self.command_detector.emit(
+                self.command_hardware.emit(
                     ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
 
     def stop_all(self):
         self.update_status(f'{self._title}: Stop Grab')
-        self.command_detector.emit(ThreadCommand("stop_all"))
+        self.command_hardware.emit(ThreadCommand("stop_all"))
         if self.ui.grab_pb.isChecked():
             self.ui.grab_pb.setChecked(False)
         self.set_enabled_Ini_buttons(enable=True)
@@ -1306,7 +1292,7 @@ class DAQ_Viewer(QObject, utils.ControlModule):
                     self.set_continuous_save()
 
                 elif param.name() == 'wait_time':
-                    self.command_detector.emit(ThreadCommand('update_wait_time', [param.value()]))
+                    self.command_hardware.emit(ThreadCommand('update_wait_time', [param.value()]))
 
                 elif param.name() == 'connect_server':
                     if param.value():
@@ -1705,11 +1691,11 @@ class DAQ_Viewer(QObject, utils.ControlModule):
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
     def update_com(self):
-        self.command_detector.emit(ThreadCommand('update_com', []))
+        self.command_hardware.emit(ThreadCommand('update_com', []))
 
     @Slot(pymodaq.daq_utils.scanner.ScanParameters)
     def update_from_scanner(self, scan_parameters):
-        self.command_detector.emit(ThreadCommand('update_scanner', [scan_parameters]))
+        self.command_hardware.emit(ThreadCommand('update_scanner', [scan_parameters]))
 
     def show_ROI(self):
         if self.DAQ_type == "DAQ2D":
@@ -1801,7 +1787,7 @@ class DAQ_Viewer(QObject, utils.ControlModule):
 
     @Slot(float, float)
     def move_at_navigator(self, posx, posy):
-        self.command_detector.emit(ThreadCommand("move_at_navigator", [posx, posy]))
+        self.command_hardware.emit(ThreadCommand("move_at_navigator", [posx, posy]))
 
     def show_log(self):
         import webbrowser
@@ -1847,7 +1833,7 @@ class DAQ_Viewer(QObject, utils.ControlModule):
             param.restoreState(param_tmp.saveState())
 
         elif status.command == 'get_axis':
-            self.command_detector.emit(
+            self.command_hardware.emit(
                 ThreadCommand('get_axis'))  # tells the plugin to emit its axes so that the server will receive them
 
 

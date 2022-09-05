@@ -1221,7 +1221,7 @@ if __name__ == '__main__':
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
     from pymodaq.daq_utils.plotting.navigator import Navigator
-    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
     class UI:
         def __init__(self):

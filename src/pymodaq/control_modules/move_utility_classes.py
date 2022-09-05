@@ -1,5 +1,5 @@
 from qtpy import QtWidgets
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QTimer
+from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
 
 from easydict import EasyDict as edict
@@ -101,7 +101,7 @@ def main(plugin_file, init=True, title='test'):
     """
     import sys
     from qtpy import QtWidgets
-    from pymodaq.daq_move.daq_move_main import DAQ_Move
+    from pymodaq.control_modules.daq_move import DAQ_Move
     from pathlib import Path
     app = QtWidgets.QApplication(sys.argv)
     if config('style', 'darkstyle'):

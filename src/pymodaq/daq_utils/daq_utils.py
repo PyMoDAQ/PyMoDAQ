@@ -559,10 +559,32 @@ class AxisBase(dict):
             raise AttributeError(f'{item} is not a valid attribute')
 
 
-class ControlModule:
-    """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules"""
+class ControlModule(QtCore.QObject):
+    """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
+
+    Attributes
+    ----------
+
+    init_signal: Signal[bool]
+        This signal is emitted when the chosen hardware is correctly initialized
+    init_signal: Signal[bool]
+        This signal is emitted when the chosen hardware is correctly initialized
+    init_signal: Signal[bool]
+        This signal is emitted when the chosen hardware is correctly initialized
+    init_signal: Signal[bool]
+        This signal is emitted when the chosen hardware is correctly initialized
+
+    See Also
+    --------
+    :class:`ThreadCommand`
+    """
+    init_signal = QtCore.Signal(bool)
+    command_hardware = QtCore.Signal(ThreadCommand)
+    command_tcpip = QtCore.Signal(ThreadCommand)
+    quit_signal = QtCore.Signal()
 
     def __init__(self):
+        super().__init__()
         self._title = ""
 
     @property
@@ -581,6 +603,37 @@ class ControlModule:
         """Programmatic entry to grab data from detectors or current value from actuator"""
         raise NotImplementedError
 
+    def quit_fun(self):
+        """Programmatic entry to quit the controle module"""
+        raise NotImplementedError
+
+    def init_hardware(self, do_init=True):
+        """Programmatic entry to initialize/deinitialize the control module
+
+        Parameters
+        ----------
+        do_init: bool
+            if True initialize the selected hardware else deinitialize it
+
+        See Also
+        --------
+        :meth:`init_hardware_ui`
+        """
+        raise NotImplementedError
+
+    def init_hardware_ui(self, do_init=True):
+        """Programmatic entry to simulated a click on the user interface init button
+
+        Parameters
+        ----------
+        do_init: bool
+            if True initialize the selected hardware else deinitialize it
+
+        Notes
+        -----
+        This method should be preferred to :meth:`init_hardware`
+        """
+        raise NotImplementedError
 
 class Axis(AxisBase):
     """
@@ -1424,11 +1477,12 @@ if __name__ == '__main__':
     # mit = license.find('MIT')
     #
     paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='DAQmxTypes',
+                                         exp='from pymodaq.daq_move.utility_classes import comon_parameters, main',
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
                                                   '.tox', 'daq_utils.py', '.rst'],
-                                         replace=False, replace_str="'limits'")
+                                         replace=False,
+                                         replace_str="from pymodaq.control_modules.move_utility_classes import comon_parameters, main")
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])

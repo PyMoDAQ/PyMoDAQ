@@ -1,4 +1,4 @@
-from pymodaq.daq_viewer import daq_viewer_main as daqvm
+from pymodaq.control_modules import daq_viewer as daqvm
 import pytest
 from pytest import fixture
 from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip

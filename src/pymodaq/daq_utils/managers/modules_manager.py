@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from qtpy.QtCore import QObject, Signal, Slot, QThread
+from qtpy.QtCore import QObject, Signal, Slot
 from qtpy import QtWidgets
 import time
 from pymodaq.daq_utils import daq_utils as utils
@@ -433,8 +433,8 @@ if __name__ == '__main__':
     from qtpy.QtCore import QThread
     from pymodaq.daq_utils.gui_utils import DockArea
     from pyqtgraph.dockarea import Dock
-    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
-    from pymodaq.daq_move.daq_move_main import DAQ_Move
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
     win = QtWidgets.QMainWindow()
     area = DockArea()
