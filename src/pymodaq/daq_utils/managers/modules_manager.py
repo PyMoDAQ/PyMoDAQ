@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from qtpy.QtCore import QObject, Signal, Slot
+from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import time
 from pymodaq.daq_utils import daq_utils as utils
@@ -231,7 +231,7 @@ class ModulesManager(QObject):
         self.settings.child(('det_done')).setValue(self.det_done_flag)
         tzero = time.perf_counter()
 
-        for sig in [mod.command_detector for mod in self.detectors]:
+        for sig in [mod.command_hardware for mod in self.detectors]:
             sig.emit(utils.ThreadCommand("single", [1, kwargs]))
 
         while not self.det_done_flag:
