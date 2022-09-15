@@ -11,8 +11,10 @@ import datetime
 import importlib
 import inspect
 import json
+
 import logging
 import functools
+import re
 import time
 from logging.handlers import TimedRotatingFileHandler
 from packaging import version as version_mod
@@ -71,7 +73,8 @@ def timer(func):
     return wrapper_timer
 
 
-def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
+def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None,
+               logger_base_name='pymodaq', local_dir=None):
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -89,10 +92,10 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     get_module_name, logging.handlers.TimedRotatingFileHandler
     """
     if not base_logger:
-        logger_name = f'pymodaq.{logger_name}'
+        logger_name = f'{logger_base_name}.{logger_name}'
 
     logger = logging.getLogger(logger_name)
-    log_path = get_set_config_path('log')
+    log_path = get_set_config_path('log', local_dir=local_dir)
     if add_handler:
         if log_level is None:
             log_level = config('general', 'debug_level')
@@ -119,9 +122,19 @@ logger = set_logger('daq_utils')
 
 
 def get_version():
+    """Obtain pymodaq version from the VERSION file
+
+    Follows the layout from the packaging tool hatch, hatchling
+    """
+    DEFAULT_PATTERN = r'(?i)^(__version__|VERSION) *= *([\'"])v?(?P<version>.+?)\2'
+
     with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
-        version = fvers.read().strip()
-    return version
+        contents = fvers.read().strip()
+        match = re.search(DEFAULT_PATTERN, contents, flags=re.MULTILINE)
+        groups = match.groupdict()
+        if 'version' not in groups:
+            raise ValueError('no group named `version` was defined in the pattern')
+    return groups['version']
 
 
 def copy_preset():                          # pragma: no cover
@@ -1476,13 +1489,14 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='from pymodaq.daq_move.utility_classes import comon_parameters, main',
-                                         paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py', '.rst'],
-                                         replace=False,
-                                         replace_str="from pymodaq.control_modules.move_utility_classes import comon_parameters, main")
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+    #                                      exp='from pymodaq.daq_move.utility_classes import comon_parameters, main',
+    #                                      paths=[],
+    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+    #                                               '.tox', 'daq_utils.py', '.rst'],
+    #                                      replace=False,
+    #                                      replace_str="from pymodaq.control_modules.move_utility_classes import comon_parameters, main")
+    get_version()
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])
