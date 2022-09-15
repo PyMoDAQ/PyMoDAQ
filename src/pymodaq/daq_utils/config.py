@@ -40,7 +40,7 @@ def get_set_local_dir(basename='pymodaq_local'):
     return local_path
 
 
-def get_set_config_path(config_name='config'):
+def get_set_config_path(config_name='config', local_dir=None):
     """Creates a folder in the local config directory to store specific configuration files
 
     Parameters
@@ -54,7 +54,11 @@ def get_set_config_path(config_name='config'):
     --------
     get_set_local_dir
     """
-    local_path = get_set_local_dir()
+    if local_dir is None:
+        local_path = get_set_local_dir()
+    else:
+        local_path = get_set_local_dir(local_dir)
+
     path = local_path.joinpath(config_name)
     if not path.is_dir():
         path.mkdir()  # pragma: no cover
