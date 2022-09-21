@@ -408,7 +408,7 @@ class DAQ_Logging(QObject):
             self.stop_logging()
 
     @Slot(OrderedDict)
-    def do_save_continuous(self, acquisition_from_viewer):
+    def do_save_continuous(self, acquisition_from_viewer: OrderedDict) -> None:
         """Receive raw data, metadata and measurements from the detectors and call the data_logger to save it.
 
         Triggered by the grab_done_signals of the detectors (DAQ_Viewers modules). It is triggered each time a detector

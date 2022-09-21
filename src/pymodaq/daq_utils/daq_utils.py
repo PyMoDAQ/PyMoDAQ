@@ -464,10 +464,10 @@ def get_data_dimension(data: np.ndarray, scan_type='scan1D', remove_scan_dimensi
 
     """
     if not isinstance(data, np.ndarray):
-        raise Exception("Input parameter should be an ndarray.")
+        raise TypeError(f"Input parameter should be an ndarray: {type(data)} received.")
 
     if data.ndim == 0:
-        raise Exception("The dimension of the array should be superior to zero.")
+        raise ValueError("The dimension of the array should be superior to zero.")
 
     dimension = data.ndim
 

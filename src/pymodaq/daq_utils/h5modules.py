@@ -1897,7 +1897,7 @@ class H5Logger(AbstractLogger):
                                      title='Time axis',
                                      metadata=dict(label='Time axis', units='s', nav_index=0))
 
-    def add_datas(self, acquisition):
+    def add_datas(self, acquisition: OrderedDict) -> None:
         """Get raw data, metadata and measurements from a detector module (DAQ_Viewer) in the form of a dictionary.
         Construct the h5 file structure according to the dictionary structure to welcome and save the new data from the
         acquisition.
