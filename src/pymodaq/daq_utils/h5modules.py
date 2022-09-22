@@ -1962,6 +1962,7 @@ class H5Logger(AbstractLogger):
                     if isinstance(acquisition[data_dimension][channel]["data"], (float, int)):
                         acquisition[data_dimension][channel]["data"] = \
                             np.array([acquisition[data_dimension][channel]["data"]])
+                        logger.warning("Data has been converted from scalar to ndarray.")
 
                     channel_group = self.h5saver.get_group_by_title(data_group, channel)
                     if channel_group is None:  # First iteration.
