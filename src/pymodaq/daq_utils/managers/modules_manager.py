@@ -99,8 +99,13 @@ class ModulesManager(QObject):
         ]},
     ]
 
-    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout_s=None):
+    def __init__(self, detectors=None, actuators=None, selected_detectors=None, selected_actuators=None, timeout_s=None):
         super().__init__()
+
+        detectors = detectors or []
+        actuators = actuators or []
+        selected_detectors = selected_detectors or []
+        selected_actuators = selected_actuators or []
 
         # check that selected_actuator and selected_detectors are subset of actuators and detectors respectively
         for mod in selected_actuators:
