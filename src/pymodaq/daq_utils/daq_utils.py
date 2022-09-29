@@ -100,7 +100,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         if log_level is None:
             log_level = config('general', 'debug_level')
         logger.setLevel(log_level)
-        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
+        handler = TimedRotatingFileHandler(log_path.joinpath(f'{logger_base_name}.log'), when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)

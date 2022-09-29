@@ -86,6 +86,9 @@ class ItemSelectParameterItem(WidgetParameterItem):
         opts = self.param.opts
         w = ItemSelect_pb()
         w.itemselect.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        if 'minheight' in opts:
+            w.itemselect.setMinimumHeight(opts['min_height'])
+
         if 'height' in opts:
             w.itemselect.setMaximumHeight(opts['height'])
         else:
