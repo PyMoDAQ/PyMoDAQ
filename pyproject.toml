@@ -1,7 +1,5 @@
 [build-system]
-requires = [
-    "hatchling>=1.9.0",
-]
+requires = ["hatchling>=1.9.0",]
 build-backend = "hatchling.build"
 
 [project]
@@ -11,7 +9,7 @@ dynamic = [
 ]
 description = "Modular Data Acquisition with Python"
 readme = "README.rst"
-license = "MIT"
+license = { file="LICENSE" }
 requires-python = ">=3.6"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
