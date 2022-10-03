@@ -11,6 +11,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+from control_modules.utils import ControlModule
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
@@ -34,7 +35,7 @@ ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
 STATUS_WAIT_TIME = 1000
 
 
-class DAQ_Move(ParameterManager, utils.ControlModule):
+class DAQ_Move(ParameterManager, ControlModule):
     """ Main PyMoDAQ class to drive actuators
 
     Qt object and generic UI to drive actuators.
@@ -78,7 +79,7 @@ class DAQ_Move(ParameterManager, utils.ControlModule):
 
         QObject.__init__(self)
         ParameterManager.__init__(self)
-        utils.ControlModule.__init__(self)
+        ControlModule.__init__(self)
 
         self.parent = parent
         if parent is not None:

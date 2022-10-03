@@ -15,9 +15,9 @@ from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QTool
 from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
 from pymodaq.daq_utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
+from pymodaq.control_modules.utils import ControlModuleUI
 
-
-class DAQ_Move_UI(CustomApp):
+class DAQ_Move_UI(CustomApp, ControlModuleUI):
     """DAQ_Move user interface.
 
     This class manages the UI and emit dedicated signals depending on actions from the user
@@ -51,11 +51,11 @@ class DAQ_Move_UI(CustomApp):
     pymodaq.daq_utils.daq_utils.ThreadCommand
     """
 
-    command_sig = Signal(ThreadCommand)
 
-    def __init__(self, dockarea, title="DAQ_Move"):
 
-        super().__init__(dockarea)
+    def __init__(self, parent, title="DAQ_Move"):
+
+        super().__init__(parent)
         self.title = title
         self.setup_ui()
 
@@ -111,9 +111,6 @@ class DAQ_Move_UI(CustomApp):
         self.get_action('move_abs').setEnabled(status)
         self.get_action('move_abs_2').setEnabled(status)
 
-    def display_status(self, txt, wait_time):
-        self.statusbar.showMessage(txt, wait_time)
-
     def set_spinbox_properties(self, **properties):
         if 'decimals' in properties:
             self.abs_value_sb.setDecimals(properties['decimals'])
@@ -133,13 +130,13 @@ class DAQ_Move_UI(CustomApp):
             self.abs_value_sb_bis.setSingleStep(properties['step'])
 
     def setup_docks(self):
-        self.dockarea.setLayout(QVBoxLayout())
-        self.dockarea.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
-        self.dockarea.layout().setContentsMargins(2, 2, 2, 2)
+        self.parent.setLayout(QVBoxLayout())
+        self.parent.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
+        self.parent.layout().setContentsMargins(2, 2, 2, 2)
 
         widget = QWidget()
         widget.setLayout(QHBoxLayout())
-        self.dockarea.layout().addWidget(widget)
+        self.parent.layout().addWidget(widget)
 
         self.main_ui = QWidget()
         self.control_ui = QWidget()
@@ -216,7 +213,7 @@ class DAQ_Move_UI(CustomApp):
         self.settings_ui.setVisible(False)
 
         self.statusbar = QtWidgets.QStatusBar()
-        self.dockarea.layout().addWidget(self.statusbar)
+        self.parent.layout().addWidget(self.statusbar)
 
     def setup_actions(self):
         self.add_action('move_abs', 'Move Abs', 'go_to_1', "Move to the set absolute value",

@@ -531,7 +531,11 @@ class ThreadCommand(object):
     """
 
     def __init__(self, command="", attributes=[]):
+        if not isinstance(command, str):
+            raise TypeError(f'The command in a Threadcommand object should be a string, not a {type(command)}')
         self.command = command
+        if not isinstance(attributes, list):
+            attributes = [attributes]
         self.attributes = attributes
 
     def __repr__(self):
@@ -571,82 +575,6 @@ class AxisBase(dict):
         else:
             raise AttributeError(f'{item} is not a valid attribute')
 
-
-class ControlModule(QtCore.QObject):
-    """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
-
-    Attributes
-    ----------
-
-    init_signal: Signal[bool]
-        This signal is emitted when the chosen hardware is correctly initialized
-    init_signal: Signal[bool]
-        This signal is emitted when the chosen hardware is correctly initialized
-    init_signal: Signal[bool]
-        This signal is emitted when the chosen hardware is correctly initialized
-    init_signal: Signal[bool]
-        This signal is emitted when the chosen hardware is correctly initialized
-
-    See Also
-    --------
-    :class:`ThreadCommand`
-    """
-    init_signal = QtCore.Signal(bool)
-    command_hardware = QtCore.Signal(ThreadCommand)
-    command_tcpip = QtCore.Signal(ThreadCommand)
-    quit_signal = QtCore.Signal()
-
-    def __init__(self):
-        super().__init__()
-        self._title = ""
-
-    @property
-    def module_type(self):
-        return type(self).__name__
-
-    @property
-    def initialized_state(self):
-        return self._initialized_state
-
-    @property
-    def title(self):
-        return self._title
-
-    def grab(self):
-        """Programmatic entry to grab data from detectors or current value from actuator"""
-        raise NotImplementedError
-
-    def quit_fun(self):
-        """Programmatic entry to quit the controle module"""
-        raise NotImplementedError
-
-    def init_hardware(self, do_init=True):
-        """Programmatic entry to initialize/deinitialize the control module
-
-        Parameters
-        ----------
-        do_init: bool
-            if True initialize the selected hardware else deinitialize it
-
-        See Also
-        --------
-        :meth:`init_hardware_ui`
-        """
-        raise NotImplementedError
-
-    def init_hardware_ui(self, do_init=True):
-        """Programmatic entry to simulated a click on the user interface init button
-
-        Parameters
-        ----------
-        do_init: bool
-            if True initialize the selected hardware else deinitialize it
-
-        Notes
-        -----
-        This method should be preferred to :meth:`init_hardware`
-        """
-        raise NotImplementedError
 
 class Axis(AxisBase):
     """
