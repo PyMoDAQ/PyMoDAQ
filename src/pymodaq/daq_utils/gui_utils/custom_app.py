@@ -26,18 +26,23 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     # list of dicts enabling the settings tree on the user interface
     params = []
 
-    def __init__(self, dockarea: Union[DockArea, QtWidgets.QWidget], dashboard=None):
+    def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard=None):
         QObject.__init__(self)
         ActionManager.__init__(self)
         ParameterManager.__init__(self)
         QLocale.setDefault(QLocale(QLocale.English, QLocale.UnitedStates))
 
-        if not isinstance(dockarea, DockArea):
-            if not isinstance(dockarea, QtWidgets.QWidget):
+        if not isinstance(parent, DockArea):
+            if not isinstance(parent, QtWidgets.QWidget):
                 raise Exception('no valid parent container, expected a DockArea or a least a QWidget')
 
-        self.dockarea = dockarea
-        self.mainwindow = dockarea.parent()
+        self.parent = parent
+        if isinstance(parent, DockArea):
+            self.dockarea = parent
+            self.mainwindow = parent.parent()
+        else:
+            self.dockarea = None
+            self.mainwindow = None
         self.dashboard = dashboard
 
         self.docks = dict([])
