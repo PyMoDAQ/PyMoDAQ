@@ -16,6 +16,7 @@ from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QTool
 from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
 from pymodaq.daq_utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
+from pymodaq.daq_utils.gui_utils import DockArea, Dock
 
 
 class DAQ_Viewer_UI(CustomApp):
@@ -54,87 +55,109 @@ class DAQ_Viewer_UI(CustomApp):
 
     command_sig = Signal(ThreadCommand)
 
-    def __init__(self, dockarea, title="DAQ_Viewer"):
-        super().__init__(dockarea)
+    def __init__(self, parent, title="DAQ_Viewer"):
+        super().__init__(parent)
         self.title = title
+
+        self._detector_widget = None
+        self._settings_widget = None
+        self._info_detector = None
+        self._daq_types_combo = None
+        self._detectors_combo = None
+        self._ini_det_pb = None
+        self._ini_state_led = None
+        self._statusbar = None
+
         self.setup_ui()
 
-        self.enable_grab_buttons(False)
+        self._enable_grab_buttons(False)
+        self._detector_widget.setVisible(False)
+        self._settings_widget.setVisible(False)
 
     @property
     def detector(self):
-        return self.detectors_combo.currentText()
+        return self._detectors_combo.currentText()
 
     @detector.setter
     def detector(self, det_name: str):
-        self.detectors_combo.setCurrentText(det_name)
+        self._detectors_combo.setCurrentText(det_name)
     @property
     def detectors(self):
-        return [self.detectors_combo.itemText(ind) for ind in range(self.detectors_combo.count())]
+        return [self._detectors_combo.itemText(ind) for ind in range(self._detectors_combo.count())]
 
     @detectors.setter
     def detectors(self, detectors: List[str]):
-        self.detectors_combo.clear()
-        self.detectors_combo.addItems(detectors)
+        self._detectors_combo.clear()
+        self._detectors_combo.addItems(detectors)
 
     @property
     def daq_type(self):
-        return self.daq_types_combo.currentText()
+        return self._daq_types_combo.currentText()
 
     @daq_type.setter
     def daq_type(self, dtype: str):
-        self.daq_types_combo.setCurrentText(dtype)
+        self._daq_types_combo.setCurrentText(dtype)
     @property
     def daq_types(self):
-        return [self.daq_types_combo.itemText(ind) for ind in range(self.daq_types_combo.count())]
+        return [self._daq_types_combo.itemText(ind) for ind in range(self._daq_types_combo.count())]
 
     @daq_types.setter
     def daq_types(self, dtypes: List[str]):
-        self.daq_types_combo.clear()
-        self.daq_types_combo.addItems(dtypes)
+        self._daq_types_combo.clear()
+        self._daq_types_combo.addItems(dtypes)
 
     def setup_docks(self):
-        self.dockarea.setLayout(QVBoxLayout())
-        self.dockarea.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
-        self.dockarea.layout().setContentsMargins(2, 2, 2, 2)
+        settings_dock = Dock(self.title + "_Settings", size=(10, 10))
+        self.viewer_dock = Dock(self.title + "_Viewer", size=(10, 10))
 
-        self.widget = QWidget()
-        self.widget.setLayout(QVBoxLayout())
-        self.dockarea.layout().addWidget(self.widget)
+        self.dockarea.addDock(settings_dock)
+        self.dockarea.addDock(self.viewer_dock, 'right', settings_dock)
 
-        self.detector_ui = QWidget()
-        self.settings_ui = QWidget()
+        widget = QWidget()
+        widget.setLayout(QVBoxLayout())
+        widget.layout().setSizeConstraint(QHBoxLayout.SetFixedSize)
+        widget.layout().setContentsMargins(2, 2, 2, 2)
+        settings_dock.addWidget(widget)
 
-        self.widget.layout().addWidget(self.toolbar)
+        info_ui = QWidget()
+        self._detector_widget = QWidget()
+        self._settings_widget = QWidget()
+        self._settings_widget.setLayout(QtWidgets.QVBoxLayout())
 
-        widg_init = QtWidgets.QWidget()
-        widg_init.setLayout(QtWidgets.QHBoxLayout())
-        widg_init.layout().addWidget(LabelWithFont(self.title, font_name="Tahoma", font_size=14, isbold=True,
-                                                   isitalic=True))
-        self.ini_det_pb = PushButtonIcon('ini', 'Init. Detector', True, 'Initialize selected detector')
-        self.ini_state_led = QLED(readonly=True)
+        widget.layout().addWidget(info_ui)
+        widget.layout().addWidget(self.toolbar)
+        widget.layout().addWidget(self._detector_widget)
+        widget.layout().addWidget(self._settings_widget)
 
-        widg_init.layout().addWidget(self.ini_det_pb)
-        widg_init.layout().addWidget(self.ini_state_led)
+        info_ui.setLayout(QtWidgets.QHBoxLayout())
+        info_ui.layout().addWidget(LabelWithFont(self.title, font_name="Tahoma", font_size=14, isbold=True,
+                                                      isitalic=True))
+        self._info_detector = LabelWithFont('', font_name="Tahoma", font_size=8, isbold=True, isitalic=True)
+        info_ui.layout().addWidget(self._info_detector)
 
-        self.widget.layout().addWidget(widg_init)
-        self.widget.layout().addWidget(self.detector_ui)
-        self.widget.layout().addWidget(self.settings_ui)
+        self._detector_widget.setLayout(QtWidgets.QGridLayout())
+        self._daq_types_combo = QComboBox()
+        self._daq_types_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._detectors_combo = QComboBox()
+        self._detectors_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._ini_det_pb = PushButtonIcon('ini', 'Init. Detector', True, 'Initialize selected detector')
+        self._ini_state_led = QLED(readonly=True)
 
-        self.detector_ui.setLayout(QtWidgets.QHBoxLayout())
+        self._detector_widget.layout().addWidget(LabelWithFont('DAQ type:'), 0, 0)
+        self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
+        self._detector_widget.layout().addWidget(LabelWithFont('Detector:'), 1, 0)
+        self._detector_widget.layout().addWidget(self._detectors_combo, 1, 1)
+        self._detector_widget.layout().addWidget(self._ini_det_pb, 0, 2)
+        self._detector_widget.layout().addWidget(self._ini_state_led, 1, 2)
 
-        self.daq_types_combo = QComboBox()
-        self.daq_types_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.detectors_combo = QComboBox()
-        self.detectors_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        self._statusbar = QtWidgets.QStatusBar()
+        settings_dock.addWidget(self._statusbar)
 
-        self.detector_ui.layout().addWidget(LabelWithFont('DAQ type:'))
-        self.detector_ui.layout().addWidget(self.daq_types_combo)
-        self.detector_ui.layout().addWidget(LabelWithFont('Detector:'))
-        self.detector_ui.layout().addWidget(self.detectors_combo)
+    def add_setting_tree(self, tree):
+        self._settings_widget.layout().addWidget(tree)
 
-        self.statusbar = QtWidgets.QStatusBar()
-        self.dockarea.layout().addWidget(self.statusbar)
+    def add_viewer(self):
+        pass
 
     def setup_actions(self):
         self.add_action('grab', 'Grab', 'run2', "Grab data from the detector", checkable=True)
@@ -146,34 +169,87 @@ class DAQ_Viewer_UI(CustomApp):
 
         self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True)
 
-        self.add_action('navigator', 'Select Data', 'Select_24', "Stop Motion")
+        self.add_action('navigator', 'Select Data', 'Select_24', "Display ROI in a 2D viewer")
         self.add_action('quit', 'Quit the module', 'close2')
         self.add_action('log', 'Show Log file', 'information2')
 
     def connect_things(self):
-        self.connect_action('show_settings', lambda show: self.detector_ui.setVisible(show))
-        self.connect_action('show_settings', lambda show: self.settings_ui.setVisible(show))
+        self.connect_action('show_settings', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
 
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
 
-        self.ini_det_pb.clicked.connect(self.send_init)
+        self.connect_action('grab', self._grab)
+        self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand('snap')))
 
-        self.detectors_combo.currentTextChanged.connect(
-            lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
-        self.daq_types_combo.currentTextChanged.connect(
-            lambda mod: self.command_sig.emit(ThreadCommand('daq_type_changed', mod)))
+        self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand('save_current')))
+        self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand('save_new')))
+        self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand('open')))
 
-    def send_init(self):
-        self.detectors_combo.setEnabled(not self.ini_det_pb.isChecked())
-        self.daq_types_combo.setEnabled(not self.ini_det_pb.isChecked())
+        self._ini_det_pb.clicked.connect(self._send_init)
 
-        self.command_sig.emit(ThreadCommand('init', [self.ini_det_pb.isChecked(),
-                                                     self.daq_types_combo.currentText(),
-                                                     self.detectors_combo.currentText()]))
+        self._detectors_combo.currentTextChanged.connect(
+            lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', [mod])))
+        self._daq_types_combo.currentTextChanged.connect(
+            lambda mod: self.command_sig.emit(ThreadCommand('daq_type_changed', [mod])))
 
-    def enable_grab_buttons(self, status):
+    def _grab(self):
+        """Slot from the *grab* action"""
+        self.command_sig.emit(ThreadCommand('grab', attributes=[self.is_action_checked('grab')]))
+
+    def do_init(self, do_init=True):
+        """Programmatically press the Init button
+        API entry
+        Parameters
+        ----------
+        do_init: bool
+            will fire the Init button depending on the argument value and the button check state
+        """
+        if (do_init and not self._ini_det_pb.isChecked()) or ((not do_init) and self._ini_det_pb.isChecked()):
+            self._ini_det_pb.click()
+
+    def do_grab(self, do_grab=True):
+        """Programmatically press the Grab button
+        API entry
+        Parameters
+        ----------
+        do_grab: bool
+            will fire the Init button depending on the argument value and the button check state
+        """
+        if (do_grab and not self.is_action_checked('grab')) or ((not do_grab) and self.is_action_checked('grab')):
+            self.get_action('grab').trigger()
+
+    def do_snap(self):
+        """Programmatically press the Snap button
+        API entry
+        """
+        self.get_action('snap').trigger()
+
+    def _send_init(self):
+        self._enable_detchoices(not self._ini_det_pb.isChecked())
+        self._ini_det_pb.isChecked()
+        self.command_sig.emit(ThreadCommand('init', [self._ini_det_pb.isChecked(),
+                                                     self._daq_types_combo.currentText(),
+                                                     self._detectors_combo.currentText()]))
+
+    def _enable_detchoices(self, enable=True):
+        self._detectors_combo.setEnabled(enable)
+        self._daq_types_combo.setEnabled(enable)
+    @property
+    def detector_init(self):
+        """bool: the status of the init LED."""
+        return self._ini_state_led.get_state()
+
+    @detector_init.setter
+    def detector_init(self, status):
+        if status:
+            self._info_detector.setText(f'{self.daq_type} : {self.detector}')
+        else:
+            self._info_detector.setText('')
+        self._ini_state_led.set_as(status)
+
+    def _enable_grab_buttons(self, status):
         self.get_action('grab').setEnabled(status)
         self.get_action('snap').setEnabled(status)
         self.get_action('stop').setEnabled(status)
@@ -189,15 +265,15 @@ def main(init_qt=True):
     daq_types = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
     detectors = [f'Detector Detector {ind}' for ind in range(5)]
 
-
-    widget = QtWidgets.QWidget()
-    prog = DAQ_Viewer_UI(widget)
-    widget.show()
+    dockarea = DockArea()
+    prog = DAQ_Viewer_UI(dockarea)
+    dockarea.show()
 
     def print_command_sig(cmd_sig):
         print(cmd_sig)
         if cmd_sig.command == 'init':
-            prog.enable_grab_buttons(True)
+            prog._enable_grab_buttons(cmd_sig.attributes[0])
+            prog.detector_init = cmd_sig.attributes[0]
 
     prog.command_sig.connect(print_command_sig)
     prog.detectors = detectors
@@ -205,7 +281,7 @@ def main(init_qt=True):
 
     if init_qt:
         sys.exit(app.exec_())
-    return prog, widget
+    return prog, dockarea
 
 
 if __name__ == '__main__':
