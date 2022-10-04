@@ -261,51 +261,24 @@ class ModulesManager(QObject):
                 pass
 
     def get_det_data_list(self):
-        """Construct the list of data channels that are available with the current configuration of the module manager.
+        self.connect_detectors()
 
-        This method is called by the "Probe detectors’ data" button of the module manager UI.
-        It will display all the data channels of all the selected detectors as selectable parameters in the module
-        manager UI.
-        Here we just need the structure of the data that is acquired by each detector. Is it 1D, 2D…? Does some ROI
-            lineouts are configured? We do not need the raw data.
-        If the detector buffer is not empty, which means that the detector grabbed at some point, we have all what we
-            need.
-        If the buffer is empty, we ask him to grab once (snap) to get the structure of the acquired data. The grab
-            signal is sent only when there is no other choice, since it would freeze the acquisition of a grabbing
-            detector, which is unwanted. However, we suppose that asking for a snap to a detector that has never grabbed
-            should not be of much consequence.
+        datas = self.grab_datas()
 
-        """
         data_list0D = []
         data_list1D = []
         data_list2D = []
         data_listND = []
 
-        for detector in self.detectors:  # Loop on the selected detectors.
-            detector_buffer = detector.data_to_save_export
-            det_name = detector.detector_name
-
-            try:
-                # If the detector has never grabbed (detector_buffer is None), we send a grab signal. But if the buffer
-                # is not empty, we proceed further.
-                if detector_buffer is None:  # This means that the detector never grabbed before.
-                    detector.grab_done_signal.connect(self.det_done)
-                    detector_buffer = self.grab_one_detector(detector)
-                    detector.grab_done_signal.disconnect(self.det_done)
-
-                if 'data0D' in detector_buffer.keys():
-                    data_list0D.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['data0D'].keys()])
-                if 'data1D' in detector_buffer.keys():
-                    data_list1D.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['data1D'].keys()])
-                if 'data2D' in detector_buffer.keys():
-                    data_list2D.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['data2D'].keys()])
-                if 'data1D' in detector_buffer.keys():
-                    data_listND.extend([f'{det_name}/{ch_name}' for ch_name in detector_buffer['dataND'].keys()])
-
-            except Exception as e:
-                self.logger.warning("There may be a connection problem with the detector that prevents to construct"
-                                    "the acquisition channels.")
-                self.logger.exception(str(e))
+        for k in datas.keys():
+            if 'data0D' in datas[k].keys():
+                data_list0D.extend([f'{k}/{name}' for name in datas[k]['data0D'].keys()])
+            if 'data1D' in datas[k].keys():
+                data_list1D.extend([f'{k}/{name}' for name in datas[k]['data1D'].keys()])
+            if 'data2D' in datas[k].keys():
+                data_list2D.extend([f'{k}/{name}' for name in datas[k]['data2D'].keys()])
+            if 'dataND' in datas[k].keys():
+                data_listND.extend([f'{k}/{name}' for name in datas[k]['dataND'].keys()])
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
@@ -315,6 +288,8 @@ class ModulesManager(QObject):
             dict(all_items=data_list2D, selected=[]))
         self.settings.child('data_dimensions', 'det_data_listND').setValue(
             dict(all_items=data_listND, selected=[]))
+
+        self.connect_detectors(False)
 
     def get_selected_probed_data(self, dim='0D'):
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
@@ -382,59 +357,6 @@ class ModulesManager(QObject):
 
         self.det_done_signal.emit(self.det_done_datas)
         return self.det_done_datas
-
-    def grab_one_detector(self, detector: DAQ_Viewer, **kwargs):
-        """Send a command to the detector given in parameter to do a single grab (snap) and return the acquisition.
-
-        Parameters
-        ----------
-        detector : DAQ_Viewer
-
-        Returns
-        -------
-        detector_acquisition : OrderedDict{
-                                    Ndatas : int
-                                    acq_time_s : float
-                                    name : str
-                                    data0D : OrderedDict{
-                                                <channel name 1> : DataToExport
-                                                <channel name 2> : DataToExport
-                                                …
-                                                }
-                                        The dictionary data0D can contain data from 0D detectors, but
-                                        also some measurements (e.g. an ROI integration).
-                                    data1D : OrderedDict
-                                        Same as data0D but for 1D data.
-                                    data2D : OrderedDict
-                                        Same for 2D data.
-                                    dataND : OrderedDict
-                                        Same for ND data.
-                                    }
-
-        """
-        if not isinstance(detector, DAQ_Viewer):
-            logger.error("The input parameter is not a DAQ_Viewer object.")
-            raise Exception
-
-        self.det_done_datas = OrderedDict()
-        self.det_done_flag = False
-        self.settings.child('det_done').setValue(False)
-        tzero = time.perf_counter()
-
-        detector.command_detector.emit(utils.ThreadCommand("single", [1, kwargs]))
-
-        while not self.det_done_flag:
-            # wait for the grab_done_signal to be emitted
-
-            QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tzero > self.timeout:
-                self.timeout_signal.emit(True)
-                logger.error('Timeout fired during waiting for data to be acquired')
-                break
-
-        detector_acquisition = detector.data_to_save_export
-
-        return detector_acquisition
 
     def connect_actuators(self, connect=True, slot=None):
         if slot is None:
