@@ -2,9 +2,6 @@ import os
 import sys
 from collections import OrderedDict
 from ctypes import CFUNCTYPE
-
-from pymodaq.daq_utils.config import get_set_config_path, get_set_preset_path, Config
-from pymodaq.daq_utils.messenger import deprecation_msg
 if 'win32' in sys.platform:
     from ctypes import WINFUNCTYPE
 import datetime
@@ -21,21 +18,22 @@ import pkgutil
 import traceback
 import warnings
 import numbers
-
-import numpy as np
-from qtpy import QtCore
-from qtpy.QtCore import QLocale
-from pymodaq.daq_utils.qvariant import QVariant
-
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
     # standard lib
     from importlib import metadata
 else:
     import importlib_metadata as metadata  # pragma: no cover
+from typing import Tuple
 
+import numpy as np
+from qtpy import QtCore
+from qtpy.QtCore import QLocale
+
+from pymodaq.daq_utils.qvariant import QVariant
+from pymodaq.daq_utils.config import get_set_config_path, get_set_preset_path, Config
+from pymodaq.daq_utils.messenger import deprecation_msg
 from pymodaq.daq_utils.exceptions import DataSourceError
-
 
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 config = Config()
@@ -442,7 +440,7 @@ def uncapitalize(string, Nfirst=1):
     return string[:Nfirst].lower() + string[Nfirst:]
 
 
-def get_data_dimension(data: np.ndarray, scan_type='scan1D', remove_scan_dimension=False):
+def get_data_dimension(data: np.ndarray, scan_type='scan1D', remove_scan_dimension=False) -> Tuple[Tuple, str, str]:
     """Return the shape, dimension and size of the input data.
 
     Notice that the dimension returned does not necessarily correspond to the size of the input ndarray. If the shape of
