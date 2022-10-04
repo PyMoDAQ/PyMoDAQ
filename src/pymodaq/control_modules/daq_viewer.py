@@ -14,7 +14,6 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QRectF
 import sys
 from typing import List
 import pymodaq.daq_utils.scanner
-from pymodaq.daq_viewer.daq_gui_settings import Ui_Form
 import copy
 
 from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
@@ -28,7 +27,7 @@ from pymodaq.daq_utils.gui_utils.widgets.lcd import LCD
 from pymodaq.daq_utils.config import Config, get_set_local_dir
 from pymodaq.daq_utils import gui_utils as gutils
 from pymodaq.daq_utils.h5modules import browse_data
-from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins
+from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_utils.exceptions import DetectorError
 
 from collections import OrderedDict
@@ -52,21 +51,12 @@ from pymodaq.daq_utils.gui_utils import DockArea, Dock, get_splash_sc
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 
+from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
+
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = Config()
 
 local_path = get_set_local_dir()
-
-DAQ_TYPES = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
-DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
-             'DAQ1D': get_plugins('daq_1Dviewer'),
-             'DAQ2D': get_plugins('daq_2Dviewer'),
-             'DAQND': get_plugins('daq_NDviewer'),}
-DAQ_0DViewer_Det_types =
-DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
-DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
-DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
-
 
 class DAQ_Viewer(ParameterManager, ControlModule):
     """ Main PyMoDAQ class to drive detectors
@@ -75,13 +65,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     Attributes
     ----------
-    init_signal: Signal[bool]
-        This signal is emitted when the chosen actuator is correctly initialized
-    move_done_signal: Signal[str, float]
-        This signal is emitted when the chosen actuator finished its action. It gives the actuator's name and current
-        value
-    bounds_signal: Signal[bool]
-        This signal is emitted when the actuator reached defined limited boundaries.
 
     See Also
     --------
@@ -124,39 +107,38 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         if self.ui is not None:
             self.ui.daq_types = DAQ_TYPES
-            self.ui.detectors = DET_TYPES[DAQ_TYPES[0]]
-            self.ui.set_settings_tree(self.settings_tree)
+            self.ui.detectors = [det_dict['name'] for det_dict in DET_TYPES[config('viewer', 'daq_type')]]
+            self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
 
         self.splash_sc = get_splash_sc()
 
         self._title = title
-        self._daq_type = None
-        self._detector_type = None
-        self._initialized_state = False
+
+        self._daq_type = config('viewer', 'daq_type')
+        self._detectors = [det_dict['name'] for det_dict in DET_TYPES[self._daq_type]]
+        self._detector = self._detectors[0]
+        self._viewer_types = []
+
         self._grabing = False
-
-        self.send_to_tcpip = False
-        self.tcpclient_thread = None
-
-        self.detector = DET_TYPES[DAQ_TYPES[0]]
-
-        # ###########IMPORTANT############################
-        self.controller = None  # the hardware controller/set after initialization and to be used by other modules
-        # ################################################
+        self._do_bkg = False
+        self._take_bkg = False
 
         self.h5saver_continuous = H5Saver(save_type='detector')
-
         self.time_array = None
         self.channel_arrays = []
+        self._ini_time_cs = 0  # used for the continuous saving
+        self.do_continuous_save = False
+        self.is_continuous_initialized = False
+        self.file_continuous_save = None
+        
         self.grab_done = False
         self.start_grab_time = 0.  # used for the refreshing rate
+        self.received_data = 0
+        
         self.navigator = None
         self.scanner = None
-        self.received_data = 0
         self.lcd = None
-
-        self._ini_time_cs = 0  # used for the continuous saving
 
         self.bkg = None  # buffer to store background
         self.measurement_module = None
@@ -164,22 +146,19 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.save_file_pathname = None  # to store last active path, will be an Path object
         self.ind_continuous_grab = 0
 
-        self._initialized_state = False
-        self.measurement_module = None
         self.snapshot_pathname = None
-
         self.current_datas = None
         self.data_to_save_export = None
 
         self.do_save_data = False
-        self.do_continuous_save = False
-        self.is_continuous_initialized = False
-        self.file_continuous_save = None
 
-
-        self.setupUI(parent, dock_settings, dock_viewer)
+        self.setup_ui(dock_settings, dock_viewer)
         self.set_setting_tree()  # to activate parameters of default Mock detector
         self.show_settings()
+
+        self.grab_done_signal[OrderedDict].connect(self.save_export_data)
+
+        self.daq_type = config('viewer', 'daq_type')
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -190,42 +169,53 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             Possible values are :
             * init
             * quit
-            * get_value
-            * loop_get_value
-            * find_home
+            * grab
+            * snap
             * stop
-            * move_abs
-            * move_rel
             * show_log
-            * actuator_changed
-            * rel_value
+            * detector_changed
+            * daq_type_changed
+            * save_current
+            * save_new
+            * do_bkg
+            * take_bkg
         """
+
         if cmd.command == 'init':
-            self.init_hardware(cmd.attributes[0])
+            self.init_hardware(cmd.attribute[0])
         elif cmd.command == 'quit':
             self.quit_fun()
-        elif cmd.command == 'get_value':
-            self.get_actuator_value()
-        elif cmd.command == 'loop_get_value':
-            self.get_continuous_actuator_value(cmd.attributes)
-        elif cmd.command == 'find_home':
-            self.move_home()
         elif cmd.command == 'stop':
-            self.stop_motion()
-        elif cmd.command == 'move_abs':
-            self.move_abs(cmd.attributes)
-        elif cmd.command == 'move_rel':
-            self.move_rel(cmd.attributes)
+            self.stop()
         elif cmd.command == 'show_log':
             self.show_log()
-        elif cmd.command == 'actuator_changed':
-            self.actuator = cmd.attributes
-        elif cmd.command == 'rel_value':
-            self.relative_value = cmd.attributes
+        elif cmd.command == 'navigator':
+            self.show_navigator()
+        elif cmd.command == 'grab':
+            self.grab_data(cmd.attribute, snap_state=False)
+        elif cmd.command == 'snap':
+            self.grab_data(False, snap_state=True)
+        elif cmd.command == 'save_new':
+            self.save_new()
+        elif cmd.command == 'save_current':
+            self.save_current()
+        elif cmd.command == 'open':
+            self.load_data()
+        elif cmd.command == 'detector_changed':
+            self.detector = cmd.attribute
+
+        elif cmd.command == 'daq_type_changed':
+            self.daq_type = cmd.attribute
+        elif cmd.command == 'take_bkg':
+            self.take_bkg()
+        elif cmd.command == 'do_bkg':
+            self._do_bkg = cmd.attribute
+
 
     @property
     def viewer_docks(self):
-        return self.ui.viewer_docks
+        if self.ui is not None:
+            return self.ui.viewer_docks
 
     @property
     def daq_type(self):
@@ -233,23 +223,34 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @daq_type.setter
     def daq_type(self, daq_type):
+        """
+        """
         self._daq_type = daq_type
         if self.ui is not None:
             self.ui.daq_type = daq_type
         self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
+        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type]]
 
     @property
     def detector(self):
-        return self._detector_type
+        return self._detector
 
     @detector.setter
     def detector(self, det):
-        self._detector_type = det
+        self._detector = det
         if self.ui is not None:
             self.ui.detector = det
+        self.set_setting_tree()
 
-        if self.detector != det:
-            raise DetectorError(f'{det} is not a valid installed detector: {self.detector_types}')
+    @property
+    def detectors(self):
+        return self._detectors
+
+    @detectors.setter
+    def detectors(self, detectors):
+        self._detectors = detectors
+        if self.ui is not None:
+            self.ui.detectors = detectors
 
 
     @property
@@ -257,73 +258,24 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         return self._grabing
 
     @property
-    def is_bkg(self):
-        return self.ui.do_bkg_cb.isChecked()
+    def do_bkg(self):
+        return self._do_bkg
 
-    @Slot(str)
-    def set_DAQ_type(self, daq_type):
-        self.DAQ_type = daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
 
     #######################
     #  INIT QUIT
-    def setupUI(self, parent, dock_settings, dock_viewer):
-        self.ui.navigator_pb.setVisible(False)
-        self.ui.navigator_pb.clicked.connect(self.send_to_nav)
-        self.settings.child('main_settings', 'DAQ_type').setValue(self.DAQ_type)
-        self.ui.add_setting(self.settings_tree)
+
+    def setup_ui(self, dock_settings, dock_viewer):
+        if self.ui is not None:
+            self.ui.add_setting_tree(self.settings_tree)
+
+            for dock in self.ui.viewer_docks:
+                dock.setEnabled(False)
+
         self.h5saver_continuous.settings_tree.setVisible(False)
         self.h5saver_continuous.settings.sigTreeStateChanged.connect(
-            self.parameter_tree_changed)  # trigger action from "do_save'  boolean
+            self.parameter_tree_changed)  # trigger action from "do_save"  boolean
 
-        if dock_settings is not None:
-            self.ui.settings_dock = dock_settings
-            self.ui.settings_dock.setTitle(self._title + "_Settings")
-        else:
-            self.ui.settings_dock = Dock(self._title + "_Settings", size=(10, 10))
-            self.dockarea.addDock(self.ui.settings_dock)
-
-        self.ui.viewer_docks = []
-        if dock_viewer is not None:
-            self.ui.viewer_docks.append(dock_viewer)
-            self.ui.viewer_docks[-1].setTitle(self._title + "_Viewer 1")
-        else:
-            self.ui.viewer_docks.append(Dock(self._title + "_Viewer", size=(500, 300), closable=False))
-            self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
-
-        for dock in self.ui.viewer_docks:
-            dock.setEnabled(False)
-
-        # install specific viewers
-        self.viewer_widgets = []
-        self.change_viewer()
-
-        self.ui.settings_dock.addWidget(widgetsettings)
-
-        # #Setting detector types
-        self.ui.Detector_type_combo.clear()
-        self.ui.Detector_type_combo.addItems(self.detector_types)
-
-        # #Connecting buttons:
-        self.ui.update_com_pb.clicked.connect(self.update_com)  # update communications with hardware
-        self.ui.Quit_pb.clicked.connect(self.quit_fun, type=Qt.QueuedConnection)
-        self.ui.settings_pb.clicked.connect(self.show_settings)
-        self.ui.IniDet_pb.clicked.connect(self.ini_det_fun)
-        self.update_status("Ready", wait_time=self.wait_time)
-        self.ui.grab_pb.clicked.connect(lambda: self.grab_data(grab_state=True))
-        self.ui.single_pb.clicked.connect(lambda: self.grab_data(grab_state=False))
-        self.ui.stop_pb.clicked.connect(self.stop_all)
-        self.ui.save_new_pb.clicked.connect(self.save_new)
-        self.ui.save_current_pb.clicked.connect(self.save_current)
-        self.ui.load_data_pb.clicked.connect(self.load_data)
-        self.grab_done_signal[OrderedDict].connect(self.save_export_data)
-        self.ui.Detector_type_combo.currentIndexChanged.connect(self.set_setting_tree)
-        self.ui.save_settings_pb.clicked.connect(self.save_settings)
-        self.ui.load_settings_pb.clicked.connect(self.load_settings)
-        self.ui.DAQ_type_combo.currentTextChanged[str].connect(self.set_DAQ_type)
-        self.ui.take_bkg_cb.clicked.connect(self.take_bkg)
-        self.ui.DAQ_type_combo.setCurrentText(self.DAQ_type)
-        self.ui.log_pb.clicked.connect(self.show_log)
 
     def quit_fun(self):
         """
@@ -332,88 +284,33 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         """
         # insert anything that needs to be closed before leaving
+
+        if self._initialized_state:  # means  initialized
+            self.init_hardware(False)
+        self.quit_signal.emit()
+
+        if self.lcd is not None:
+            try:
+                self.lcd.parent.close()
+            except Exception as e:
+                self.logger.exception(str(e))
         try:
-            if self._initialized_state:  # means  initialzed
-                self.ui.IniDet_pb.click()
-                QtWidgets.QApplication.processEvents()
-            self.quit_signal.emit()
-            try:
-                self.ui.settings_dock.close()  # close the settings widget
-            except Exception as e:
-                self.logger.exception(str(e))
-            if self.lcd is not None:
-                try:
-                    self.lcd.parent.close()
-                except Exception as e:
-                    self.logger.exception(str(e))
-            try:
-                for dock in self.ui.viewer_docks:
-                    dock.close()  # the dock viewers
-            except Exception as e:
-                self.logger.exception(str(e))
-            if hasattr(self, 'nav_dock'):
-                self.nav_dock.close()
-
-            if __name__ == '__main__':
-                try:
-                    self.dockarea.parent().close()
-                except Exception as e:
-                    self.logger.exception(str(e))
+            for dock in self.ui.viewer_docks:
+                dock.close()  # the dock viewers
         except Exception as e:
-            icon = QtGui.QIcon()
-            icon.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-            msgBox = QtWidgets.QMessageBox(parent=None)
-            msgBox.addButton(QtWidgets.QMessageBox.Yes)
-            msgBox.addButton(QtWidgets.QMessageBox.No)
-            msgBox.setWindowTitle("Error")
-            msgBox.setText(str(e) + " error happened when uninitializing the Detector.\nDo you still want to quit?")
-            msgBox.setDefaultButton(QtWidgets.QMessageBox.Yes)
-            ret = msgBox.exec()
-            if ret == QtWidgets.QMessageBox.Yes:
-                self.dockarea.parent().close()
+            self.logger.exception(str(e))
+        if hasattr(self, 'nav_dock'):
+            self.nav_dock.close()
 
-    def set_enabled_grab_buttons(self, enable=False):
-        """
-            Set enable with parameter value :
-                * **grab** button
-                * **single** button
-                * **save current** button
-                * **save new** button
 
-            =============== =========== ===========================
-            **Parameters**    **Type**    **Description**
-            enable            boolean     the default value to map
-            =============== =========== ===========================
-        """
-        self.ui.grab_pb.setEnabled(enable)
-        self.ui.single_pb.setEnabled(enable)
-        self.ui.save_current_pb.setEnabled(enable)
-        self.ui.save_new_pb.setEnabled(enable)
-        # self.ui.settings_pb.setEnabled(enable)
 
-    def set_enabled_Ini_buttons(self, enable=False):
-        """
-            Set enable :
-                * **Detector** button
-                * **Init Detector** button
-                * **Quit** button
-
-            with the given enable boolean value.
-
-            =============== =========== ===================
-            **Parameters**    **Type**    **Description**
-            *enable*          boolean     the value to map
-            =============== =========== ===================
-        """
-        self.ui.Detector_type_combo.setEnabled(enable)
-        self.ui.IniDet_pb.setEnabled(enable)
-        self.ui.Quit_pb.setEnabled(enable)
 
     ######################################
     #  Methods for running the acquisition
 
     def init_hardware_ui(self, do_init=True):
-        self.ui.IniDet_pb.click()
+        if self.ui is not None:
+            self.ui.do_init()
 
     def init_det(self):
         deprecation_msg(f'The function *init_det* is deprecated, use init_hardware_ui')
@@ -434,49 +331,36 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             --------
             set_enabled_grab_buttons, daq_utils.ThreadCommand, DAQ_Detector
         """
-        try:
-            QtWidgets.QApplication.processEvents()
-            if not self.ui.IniDet_pb.isChecked():
-                self.set_enabled_grab_buttons(enable=False)
-                self.ui.Ini_state_LED.set_as_false()
-                self._initialized_state = False
+        if not do_init:
+            try:
+                self.command_hardware.emit(ThreadCommand(command="close"))
+                if self.ui is not None:
+                    self.ui.detector_init = False
+            except Exception as e:
+                self.logger.exception(str(e))
+        else:            
+            try:
+                hardware = DAQ_Detector(self._title, self.settings, self.detector)
+                self._hardware_thread = QThread()
+                hardware.moveToThread(self._hardware_thread)
 
-                if hasattr(self, 'detector_thread'):
-                    self.command_hardware.emit(ThreadCommand("close"))
-                    QtWidgets.QApplication.processEvents()
-                    QThread.msleep(1000)
-                    if hasattr(self, 'detector_thread'):
-                        self.detector_thread.quit()
+                self.command_hardware[ThreadCommand].connect(hardware.queue_command)
+                hardware.data_detector_sig[list].connect(self.show_data)
+                hardware.data_detector_temp_sig[list].connect(self.show_temp_data)
+                hardware.status_sig[ThreadCommand].connect(self.thread_status)
+                self.update_settings_signal[edict].connect(hardware.update_settings)
 
-                self._initialized_state = False
-                for dock in self.ui.viewer_docks:
-                    dock.setEnabled(False)
-
-            else:
-                self.detector_name = self.ui.Detector_type_combo.currentText()
-
-                detector = DAQ_Detector(self._title, self.settings, self.detector_name)
-                self.detector_thread = QThread()
-                detector.moveToThread(self.detector_thread)
-
-                self.command_hardware[ThreadCommand].connect(detector.queue_command)
-                detector.data_detector_sig[list].connect(self.show_data)
-                detector.data_detector_temp_sig[list].connect(self.show_temp_data)
-                detector.status_sig[ThreadCommand].connect(self.thread_status)
-                self.update_settings_signal[edict].connect(detector.update_settings)
-
-                self.detector_thread.detector = detector
-                self.detector_thread.start()
-
-                self.command_hardware.emit(ThreadCommand("ini_detector", attributes=[
-                    self.settings.child(('detector_settings')).saveState(), self.controller]))
+                self._hardware_thread.hardware = hardware
+                self._hardware_thread.start()
+                self.command_hardware.emit(ThreadCommand("ini_detector", attribute=[
+                    self.settings.child('detector_settings').saveState(), self.controller]))
 
                 for dock in self.ui.viewer_docks:
                     dock.setEnabled(True)
 
-        except Exception as e:
-            self.logger.exception(str(e))
-            self.set_enabled_grab_buttons(enable=False)
+            except Exception as e:
+                self.logger.exception(str(e))
+                self.set_enabled_grab_buttons(enable=False)
 
     def snap(self):
         if self.ui is not None:
@@ -505,53 +389,34 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 raise (Exception("filepathanme has not been defined in snapshot"))
             self.save_file_pathname = pathname
 
-            self.grab_data(False, send_to_tcpip=send_to_tcpip)
+            self.grab_data(grab_state=False, send_to_tcpip=send_to_tcpip, snap_state=True)
         except Exception as e:
             self.logger.exception(str(e))
 
-    def grab_data(self, grab_state=False, send_to_tcpip=False):
+    def grab_data(self, grab_state=False, send_to_tcpip=False, snap_state=False):
         """
-            Do a grab session using 2 profile :
-                * if grab pb checked do  a continous save and send an "update_channels" thread command and a "grab" too.
-                * if not send a "stop_grab" thread command with settings "main settings-naverage" node value as an attribute.
-
-            See Also
-            --------
-            daq_utils.ThreadCommand, set_enabled_Ini_buttons
         """
         self._grabing = grab_state
-        self.send_to_tcpip = send_to_tcpip
+        self._send_to_tcpip = send_to_tcpip
         self.grab_done = False
-        self.ui.data_ready_led.set_as_false()
+
+        if self.ui is not None:
+            self.ui.data_ready = False
+
         self.start_grab_time = time.perf_counter()
-        if not (grab_state):
+        if snap_state:
             self.update_status(f'{self._title}: Snap')
             self.command_hardware.emit(
                 ThreadCommand("single", [self.settings.child('main_settings', 'Naverage').value()]))
         else:
-            if not (self.ui.grab_pb.isChecked()):
-
+            if not grab_state:
                 self.update_status(f'{self._title}: Stop Grab')
-                self.command_hardware.emit(ThreadCommand("stop_grab"))
-                self.set_enabled_Ini_buttons(enable=True)
-                # self.ui.settings_tree.setEnabled(True)
+                self.command_hardware.emit(ThreadCommand("stop_grab", ))
             else:
-
-                # self.ui.settings_tree.setEnabled(False)
-                self.thread_status(ThreadCommand("update_channels"))
-                self.set_enabled_Ini_buttons(enable=False)
+                self.thread_status(ThreadCommand("update_channels", ))
                 self.update_status(f'{self._title}: Continuous Grab')
                 self.command_hardware.emit(
                     ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
-
-    def stop_all(self):
-        self.update_status(f'{self._title}: Stop Grab')
-        self.command_hardware.emit(ThreadCommand("stop_all"))
-        if self.ui.grab_pb.isChecked():
-            self.ui.grab_pb.setChecked(False)
-        self.set_enabled_Ini_buttons(enable=True)
-
-        self.ui.settings_tree.setEnabled(True)
 
     def take_bkg(self):
         """
@@ -561,11 +426,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             --------
             save_new
         """
-        if self.ui.take_bkg_cb.isChecked():
-            self.snap()
+        self._take_bkg = True
+        self.snap()
 
     def stop(self):
-        self.ui.stop_pb.click()
+        self.update_status(f'{self._title}: Stop Grab')
+        self.command_hardware.emit(ThreadCommand("stop_all", ))
 
     @Slot()
     def raise_timeout(self):
@@ -576,7 +442,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             --------
             update_status
         """
-        self.update_status("Timeout occured", wait_time=self.wait_time, log_type="log")
+        self.update_status("Timeout occured", log_type="log")
 
 
     ############ LOADING SAVING
@@ -584,57 +450,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     ###### LOADING ##########
 
     def load_data(self):
-
+        """Opens a H5 file in the H5Browser module
         """
+        browse_data()
 
-        """
-        try:
-            data = browse_data()
-            datas = [OrderedDict(name='loaded data', data=[data], type='Data2D')]
-            self.show_data(datas)
-
-        except Exception as e:
-            self.logger.exception(str(e))
-
-    def load_settings(self, path=None):
-        """
-            to be checked to see if still working
-            | Load settings contained in the pathname file (or select_file destination if path not defined).
-            | Open a DAQ_type viewer instance (0D, 1D or 2D), send a data_to_save_export signal and restore state from the loaeded settings.
-
-            =============== ========== =======================================
-            **Parameters**   **Type**   **Description**
-            *path*           string     the pathname of the file to be loaded
-            =============== ========== =======================================
-
-            See Also
-            --------
-            ini_det_fun, update_status
-        """
-        try:
-            if self.ui.Ini_state_LED.state:  # means  initialzed
-                self.ui.IniDet_pb.setChecked(False)
-                QtWidgets.QApplication.processEvents()
-                self.ini_det_fun()
-
-            if path is None or path is False:
-                path = select_file(start_path=Path.home(), save=False, ext='par')
-            with open(str(path), 'rb') as f:
-                settings = pickle.load(f)
-                settings_main = settings['settings_main']
-                DAQ_type = settings_main['children']['main_settings']['children']['DAQ_type']['value']
-                if DAQ_type != self.settings.child('main_settings', 'DAQ_type'):
-                    self.settings.child('main_settings', 'DAQ_type').setValue(DAQ_type)
-                    QtWidgets.QApplication.processEvents()
-
-                self.settings.restoreState(settings_main)
-
-                settings_viewer = settings['settings_viewer']
-                if self.DAQ_type != 'DAQ0D':
-                    self.ui.viewers[0].roi_manager.settings.restoreState(settings_viewer)
-
-        except Exception as e:
-            self.logger.exception(str(e))
 
     ####### SAVING########
 
@@ -700,7 +519,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 if self.h5saver_continuous.settings.child('save_2D').value():
                     data_dims.extend(['data2D', 'dataND'])
 
-                if self.bkg is not None and self.is_bkg:
+                if self.bkg is not None and self._do_bkg:
                     bkg_container = OrderedDict([])
                     self.process_data(self.bkg, bkg_container)
 
@@ -714,7 +533,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                                 channel_group = self.h5saver_continuous.add_CH_group(data_group, title=channel)
                                 self.channel_arrays[data_dim]['parent'] = channel_group
-                                if self.bkg is not None and self.is_bkg:
+                                if self.bkg is not None and self._do_bkg:
                                     if channel in bkg_container[data_dim]:
                                         datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
                                 datas[data_dim][channel]['data'] =\
@@ -819,7 +638,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             if h5saver.settings.child(('save_2D')).value():
                 data_dims.extend(['data2D', 'dataND'])
 
-            if self.bkg is not None and self.is_bkg:
+            if self.bkg is not None and self._do_bkg:
                 bkg_container = OrderedDict([])
                 self.process_data(self.bkg, bkg_container)
 
@@ -835,7 +654,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                 channel_group = h5saver.add_CH_group(data_group, title=channel)
 
                                 self.channel_arrays[data_dim]['parent'] = channel_group
-                                if self.bkg is not None and self.is_bkg:
+                                if self.bkg is not None and self._do_bkg:
                                     if channel in bkg_container[data_dim]:
                                         datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
                                 self.channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
@@ -843,8 +662,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                                                                           scan_type='',
                                                                                           enlargeable=False)
 
-                                if data_dim == 'data2D' and 'Data2D' in self.viewer_types:
-                                    ind_viewer = self.viewer_types.index('Data2D')
+                                if data_dim == 'data2D' and 'Data2D' in self._viewer_types:
+                                    ind_viewer = self._viewer_types.index('Data2D')
                                     string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
                                     self.channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
@@ -878,40 +697,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.do_save_data:
             self.save_datas(self.save_file_pathname, datas)
             self.do_save_data = False
-
-    def save_settings(self, path=None):
-        """
-            | Save the current viewer settings.
-            | In case of Region Of Interest setting, save the current viewer state.
-            | Then dump setting if the QDialog has been cancelled.
-
-            ============== ========= ======================================
-            **Parameters** **Type**  **Description**
-            path           string    the pathname of the file to be saved.
-            ============== ========= ======================================
-
-            See Also
-            --------
-            gutils.select_file, update_status
-        """
-        try:
-            if path is None or path is False:
-                path = select_file(start_path=Path.home(), save=True, ext='par')
-
-            settings_main = self.settings.saveState()
-            if self.DAQ_type != 'DAQ0D':
-                settings_viewer = self.ui.viewers[0].roi_manager.settings.saveState()
-            else:
-                settings_viewer = None
-
-            settings = OrderedDict(settings_main=settings_main, settings_viewer=settings_viewer)
-
-            if path is not None:  # could be if the Qdialog has been canceled
-                with open(str(path), 'wb') as f:
-                    pickle.dump(settings, f, pickle.HIGHEST_PROTOCOL)
-
-        except Exception as e:
-            self.logger.exception(str(e))
 
     ######################
     #  ### DATAMANAGEMENT
@@ -1007,9 +792,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     def init_show_data(self, datas):
         self.process_overshoot(datas)
-        data_dims = [data['dim'] for data in datas]
-        if data_dims != self.viewer_types:
-            self.update_viewer_pannels(data_dims)
+        self._viewer_types = [data['dim'] for data in datas]
+        if self.ui is not None:
+            self.ui.update_viewer(self._viewer_types)
 
     def process_data(self, datas, container):
 
@@ -1066,10 +851,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         """
         try:
-            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self.command_tcpip.emit(ThreadCommand('data_ready', datas))
-
-            self.ui.data_ready_led.set_as_true()
+            if self.ui is not None:
+                self.ui.data_ready = True
             self.init_show_data(datas)
 
             if self.settings.child('main_settings', 'live_averaging').value():
@@ -1094,11 +879,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
             self.process_data(datas, self.data_to_save_export)
 
-            if self.ui.take_bkg_cb.isChecked():
-                self.ui.take_bkg_cb.setChecked(False)
+            if self._take_bkg:
                 self.bkg = copy.deepcopy(datas)
             # process bkg if needed
-            if self.is_bkg and self.bkg is not None:
+            if self._do_bkg and self.bkg is not None:
                 try:
                     for ind_channels, channels in enumerate(datas):
                         for ind_channel, channel in enumerate(channels['data']):
@@ -1106,7 +890,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 except Exception as e:
                     self.logger.exception(str(e))
 
-            if self.ui.grab_pb.isChecked():  # if live
+            if self._grabing:  # if live
                 refresh = time.perf_counter() - self.start_grab_time > self.settings.child('main_settings',
                                                                                            'refresh_time').value() /\
                           1000
@@ -1145,68 +929,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @property
     def viewers(self):
-        return self.ui.viewers
+        if self.ui is not None:
+            return self.ui.viewers
 
-    def update_viewer_pannels(self, data_dims=['Data0D']):
-        Nviewers = len(data_dims)
 
-        self.settings.child('main_settings', 'Nviewers').setValue(Nviewers)
-
-        # check if viewers are compatible with new data type
-        N = 0
-        for ind, data_dim in enumerate(data_dims):
-            if len(self.viewer_types) > ind:
-                if data_dim == self.viewer_types[ind]:
-                    N += 1
-                else:
-                    break
-            else:
-                break
-
-        while len(self.ui.viewers) > N:  # remove all viewers after index N
-            # #while len(self.ui.viewers)>Nviewers:
-            self.ui.viewers.pop()
-            widget = self.viewer_widgets.pop()
-            widget.close()
-            dock = self.ui.viewer_docks.pop()
-            dock.close()
-            QtWidgets.QApplication.processEvents()
-        # #for ind,data_dim in enumerate(data_dims):
-        ind_loop = 0
-        Nviewers_init = len(self.ui.viewers)
-        while len(self.ui.viewers) < len(data_dims):
-            data_dim = data_dims[Nviewers_init + ind_loop]
-            ind_loop += 1
-            if data_dim == "Data0D":
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Viewer0D(self.viewer_widgets[-1]))
-            elif data_dim == "Data1D":
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Viewer1D(self.viewer_widgets[-1]))
-            elif data_dim == "Data2D":
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
-                self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
-                self.ui.viewers[-1].get_action('autolevels').trigger()
-
-            else:  # for multideimensional data 0 up to dimension 4
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
-                self.ui.viewers[-1].status_signal.connect(self.log_messages)
-
-            self.ui.viewer_docks.append(
-                Dock(self._title + "_Viewer {:d}".format(len(self.ui.viewer_docks) + 1), size=(500, 300),
-                     closable=False))
-            self.ui.viewer_docks[-1].addWidget(self.viewer_widgets[-1])
-            if ind == 0:
-                self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
-            else:
-                self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.viewer_docks[-2])
-            self.ui.viewers[-1].data_to_export_signal.connect(self.get_data_from_viewer)
-            QtWidgets.QApplication.processEvents()
-
-        self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
-        QtWidgets.QApplication.processEvents()
 
     #####################
     ##### PROCESS CHANGES
@@ -1216,19 +942,19 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.status_signal.emit(txt)
         self.logger.info(txt)
 
-    def update_status(self, txt, wait_time=0, log=True):
+    def update_status(self, txt, log=True):
         """
-            | Show the given txt message in the status bar with a delay of wait_time ms.
+            | Show the given txt message in the status bar with
             | Emit a log signal if log_type parameter is defined.
 
             =============== =========== =====================================
             **Parameters**    **Type**   **Description**
             *txt*             string     the message to show
-            *wait_time*       int        the delay of showwing
             *log_type*        string     the type of  the log signal to emit
             =============== =========== =====================================
         """
-        self.ui.statusbar.showMessage(txt, wait_time)
+        if self.ui is not None:
+            self.ui.display_status(txt)
         self.status_signal.emit(txt)
         if log:
             self.logger.info(txt)
@@ -1237,15 +963,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         path = putils.get_param_path(param)
 
         if param.name() == 'DAQ_type':
-            self.DAQ_type = param.value()
-            self.change_viewer()
             self.h5saver_continuous.settings.child('do_save').setValue(False)
-            if param.value() == 'DAQ2D':
-                self.settings.child('main_settings', 'axes').show()
-            else:
-                self.settings.child('main_settings', 'axes').hide()
-        # elif param.name()=='Nviewers': #this parameter is readonly it is updated from the number of items in the data list sent to show_data
-        #    self.update_viewer_pannels(param.value())
+            self.settings.child('main_settings', 'axes').show(param.value() == 'DAQ2D')
+
         elif param.name() == 'show_averaging':
             self.settings.child('main_settings', 'live_averaging').setValue(False)
             self.update_settings_signal.emit(edict(path=path, param=param, change='value'))
@@ -1259,7 +979,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()
         elif param.name() in putils.iter_children(self.settings.child('main_settings', 'axes'), []):
-            if self.DAQ_type == "DAQ2D":
+            if self.daq_type == "DAQ2D":
                 if param.name() == 'use_calib':
                     if param.value() != 'None':
                         params = ioxml.XML_file_to_parameter(
@@ -1274,7 +994,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif param.name() in putils.iter_children(self.settings.child('detector_settings', 'ROIselect'),
                                                   []) and 'ROIselect' in param.parent().name():  # to be sure
             # a param named 'y0' for instance will not collide with the y0 from the ROI
-            if self.DAQ_type == "DAQ2D":
+            if self.daq_type == "DAQ2D":
                 try:
                     self.ui.viewers[0].ROI_select_signal.disconnect(self.update_ROI)
                 except Exception as e:
@@ -1304,14 +1024,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             if param.value():
                 self.connect_tcp_ip()
             else:
-                self.command_tcpip.emit(ThreadCommand('quit'))
+                self.command_tcpip.emit(ThreadCommand('quit', ))
 
         elif param.name() == 'ip_address' or param.name == 'port':
-            self.command_tcpip.emit(ThreadCommand('update_connection',
-                                                  dict(ipaddress=self.settings.child('main_settings', 'tcpip',
-                                                                                     'ip_address').value(),
-                                                       port=self.settings.child('main_settings', 'tcpip',
-                                                                                'port').value())))
+            self.command_tcpip.emit(
+                ThreadCommand('update_connection', dict(ipaddress=self.settings.child('main_settings', 'tcpip',
+                                                                                      'ip_address').value(),
+                                                        port=self.settings.child('main_settings', 'tcpip',
+                                                                                 'port').value())))
 
         if path is not None:
             if 'main_settings' not in path:
@@ -1333,28 +1053,13 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             --------
             update_status
         """
-        det_name = self.detector
-        if det_name == '':
-            det_name = 'Mock'
-        self.detector_name = det_name
-        self.settings.child('main_settings', 'detector_type').setValue(self.detector_name)
+
         try:
-            if len(self.settings.child(('detector_settings')).children()) > 0:
-                for child in self.settings.child(('detector_settings')).children()[1:]:
+            if len(self.settings.child('detector_settings').children()) > 0:
+                for child in self.settings.child('detector_settings').children()[1:]:
                     # leave just the ROIselect group
                     child.remove()
-            plug_name = self.detector_name
-            parent_module = utils.find_dict_in_list_from_key_val(DET_TYPES[self.daq_type], 'name', plug_name)
-
-            if self.daq_type == 'DAQ0D':
-                match_name = self.daq_type.lower()
-                match_name = f'{match_name[0:3]}_{match_name[3:]}_'
-
-            obj = getattr(getattr(parent_module['module'], match_name + self.detector_name),
-                          match_name + self.detector_name)
-
-            params = getattr(obj, 'params')
-            det_params = Parameter.create(name='Det Settings', type='group', children=params)
+            det_params, _class = get_viewer_plugins(self.daq_type, self.detector)
             self.settings.child('detector_settings').addChildren(det_params.children())
         except Exception as e:
             self.logger.exception(str(e))
@@ -1366,91 +1071,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     if any(channel >= self.settings.child('main_settings', 'overshoot', 'overshoot_value').value()):
                         self.overshoot_signal.emit(True)
 
-    def change_viewer(self):
-        """
-            Change the viewer type from DAQ_Type value between :
-                * **DAQ0D** : a 0D instance of viewer
-                * **DAQ1D** : a 1D instance of viewer
-                * **DAQ2D** : a 2D instance of viewer
-
-            ============== ========== ===========================================
-            **Parameters**  **Type**   **Description**
-            *DAQ_type*      string     Define the target dimension of the viewer
-            ============== ========== ===========================================
-        """
-        DAQ_type = self.settings.child('main_settings', 'DAQ_type').value()
-        Nviewers = self.settings.child('main_settings', 'Nviewers').value()
-
-        if self.ui.IniDet_pb.isChecked():
-            self.ui.IniDet_pb.click()
-        QtWidgets.QApplication.processEvents()
-
-        self.DAQ_type = DAQ_type
-        if hasattr(self.ui, 'viewers'):  # this basically means we are at the initialization satge of the class
-            if self.ui.viewers != []:
-                for ind in range(Nviewers):
-                    self.ui.viewers.pop()
-                    widget = self.viewer_widgets.pop()
-                    widget.close()
-                    if len(self.ui.viewer_docks) > 1:
-                        dock = self.ui.viewer_docks.pop()
-                        dock.close()
-
-        self.ui.viewers = []
-        self.viewer_widgets = []
-        self.viewer_types = []
-        if DAQ_type == "DAQ0D":
-            for ind in range(Nviewers):
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Viewer0D(self.viewer_widgets[-1]))
-            self.detector_types = [plugin['name'] for plugin in DAQ_0DViewer_Det_types]
-
-        elif DAQ_type == "DAQ1D":
-            for ind in range(Nviewers):
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Viewer1D(self.viewer_widgets[-1]))
-            self.detector_types = [plugin['name'] for plugin in DAQ_1DViewer_Det_types]
-
-        elif DAQ_type == "DAQ2D":
-            for ind in range(Nviewers):
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(Viewer2D(self.viewer_widgets[-1]))
-                self.ui.viewers[-1].set_scaling_axes(self.get_scaling_options())
-                self.ui.viewers[-1].get_action('autolevels').trigger()
-
-            self.detector_types = [plugin['name'] for plugin in DAQ_2DViewer_Det_types]
-            self.settings.child('main_settings', 'axes').show()
-            self.ui.viewers[0].ROI_select_signal.connect(self.update_ROI)
-            self.ui.viewers[0].get_action('ROIselect').triggered.connect(self.show_ROI)
-
-        elif DAQ_type == "DAQND":
-            for ind in range(Nviewers):
-                self.viewer_widgets.append(QtWidgets.QWidget())
-                self.ui.viewers.append(ViewerND(self.viewer_widgets[-1]))
-            self.detector_types = [plugin['name'] for plugin in DAQ_NDViewer_Det_types]
-
-        self.viewer_types = [viewer.viewer_type for viewer in self.ui.viewers]
-
-        for ind, viewer in enumerate(self.viewer_widgets):
-            if ind == 0:
-                self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.settings_dock)
-            else:
-                self.ui.viewer_docks.append(
-                    Dock(self._title + "_Viewer {:d}".format(ind), size=(500, 300), closable=False))
-                self.dockarea.addDock(self.ui.viewer_docks[-1], 'right', self.ui.viewer_docks[-2])
-            self.ui.viewer_docks[-1].addWidget(viewer)
-            self.ui.viewers[ind].data_to_export_signal.connect(self.get_data_from_viewer)
-
-        # #Setting detector types
-        try:
-            self.ui.Detector_type_combo.currentIndexChanged.disconnect(self.set_setting_tree)
-        except (TypeError, RuntimeError) as e:
-            pass  # just means it wasn't connected yet
-
-        self.ui.Detector_type_combo.clear()
-        self.ui.Detector_type_combo.addItems(self.detector_types)
-        self.ui.Detector_type_combo.currentIndexChanged.connect(self.set_setting_tree)
-        self.set_setting_tree()
 
     def get_scaling_options(self):
         """
@@ -1493,11 +1113,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """
             Set the settings tree visible if the corresponding button is checked.
         """
-
-        if self.ui.settings_pb.isChecked():
-            self.ui.settings_widget.setVisible(True)
-        else:
-            self.ui.settings_widget.setVisible(False)
+        if self.ui is not None:
+            self.ui.show_settings(True)
 
     @Slot(ThreadCommand)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
@@ -1505,21 +1122,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             General function to get datas/infos from all threads back to the main.
 
             In case of :
-                * **Update_Status**   *command* : update the status from the given status attributes
-                * **ini_detector**    *command* : update the status with "detector initialized" value and init state if attributes not null.
-                * **close**           *command* : close the current thread and delete corresponding attributes on cascade.
+                * **Update_Status**   *command* : update the status from the given status attribute
+                * **ini_detector**    *command* : update the status with "detector initialized" value and init state if attribute not null.
+                * **close**           *command* : close the current thread and delete corresponding attribute on cascade.
                 * **grab**            *command* : Do nothing
-                * **x_axis**          *command* : update x_axis from status attributes and User Interface viewer consequently.
-                * **y_axis**          *command* : update y_axis from status attributes and User Interface viewer consequently.
+                * **x_axis**          *command* : update x_axis from status attribute and User Interface viewer consequently.
+                * **y_axis**          *command* : update y_axis from status attribute and User Interface viewer consequently.
                 * **Update_channel**  *command* : update the viewer channels in case of 0D DAQ_type
                 * **Update_settings** *command* : Update the "detector setting" node in the settings tree.
 
             =============== ================ =======================================================
             **Parameters**   **Type**            **Description**
 
-            *status*        ThreadCommand()     instance of ThreadCommand containing two attributes:
+            *status*        ThreadCommand()     instance of ThreadCommand containing two attribute:
                                                     * command   : string
-                                                    * attributes: list
+                                                    * attribute: list
             =============== ================ =======================================================
 
             See Also
@@ -1527,34 +1144,33 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             update_status, set_enabled_grab_buttons, raise_timeout
         """
         if status.command == "Update_Status":
-            if len(status.attributes) > 1:
-                self.update_status(status.attributes[0], wait_time=self.wait_time, log=status.attributes[1])
+            if len(status.attribute) > 1:
+                self.update_status(status.attribute[0], log=status.attribute[1])
             else:
-                self.update_status(status.attributes[0], wait_time=self.wait_time)
+                self.update_status(status.attribute[0])
 
         elif status.command == "ini_detector":
-            self.update_status("detector initialized: " + str(status.attributes[0]['initialized']),
-                               wait_time=self.wait_time)
-
-            if status.attributes[0]['initialized']:
-                self.controller = status.attributes[0]['controller']
-                self.set_enabled_grab_buttons(enable=True)
-                self.ui.Ini_state_LED.set_as_true()
+            self.update_status("detector initialized: " + str(status.attribute[0]['initialized']))
+            if self.ui is not None:
+                self.ui.detector_init = status.attribute[0]['initialized']
+            if status.attribute[0]['initialized']:
+                self.controller = status.attribute[0]['controller']
                 self._initialized_state = True
             else:
                 self._initialized_state = False
+
             self.init_signal.emit(self._initialized_state)
 
         elif status.command == "close":
             try:
-                self.update_status(status.attributes[0], wait_time=self.wait_time)
-                self.detector_thread.exit()
-                self.detector_thread.wait()
-                finished = self.detector_thread.isFinished()
+                self.update_status(status.attribute[0])
+                self._hardware_thread.exit()
+                self._hardware_thread.wait()
+                finished = self._hardware_thread.isFinished()
                 if finished:
                     delattr(self, 'detector_thread')
                 else:
-                    self.update_status('thread is locked?!', self.wait_time, 'log')
+                    self.update_status('thread is locked?!', 'log')
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -1566,7 +1182,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         elif status.command == "x_axis":
             try:
-                x_axis = status.attributes[0]
+                x_axis = status.attribute[0]
                 if isinstance(x_axis, list):
                     if len(x_axis) == len(self.ui.viewers):
                         for ind, viewer in enumerate(self.ui.viewers):
@@ -1584,7 +1200,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         elif status.command == "y_axis":
             try:
-                y_axis = status.attributes[0]
+                y_axis = status.attribute[0]
                 if isinstance(y_axis, list):
                     if len(y_axis) == len(self.ui.viewers):
                         for ind, viewer in enumerate(self.ui.viewers):
@@ -1609,12 +1225,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif status.command == 'update_main_settings':
             # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
             try:
-                if status.attributes[2] == 'value':
-                    self.settings.child('main_settings', *status.attributes[0]).setValue(status.attributes[1])
-                elif status.attributes[2] == 'limits':
-                    self.settings.child('main_settings', *status.attributes[0]).setLimits(status.attributes[1])
-                elif status.attributes[2] == 'options':
-                    self.settings.child('main_settings', *status.attributes[0]).setOpts(**status.attributes[1])
+                if status.attribute[2] == 'value':
+                    self.settings.child('main_settings', *status.attribute[0]).setValue(status.attribute[1])
+                elif status.attribute[2] == 'limits':
+                    self.settings.child('main_settings', *status.attribute[0]).setLimits(status.attribute[1])
+                elif status.attribute[2] == 'options':
+                    self.settings.child('main_settings', *status.attribute[0]).setOpts(**status.attribute[1])
             except Exception as e:
                 self.logger.exception(str(e))
 
@@ -1626,16 +1242,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
             try:
-                if status.attributes[2] == 'value':
-                    self.settings.child('detector_settings', *status.attributes[0]).setValue(status.attributes[1])
-                elif status.attributes[2] == 'limits':
-                    self.settings.child('detector_settings', *status.attributes[0]).setLimits(status.attributes[1])
-                elif status.attributes[2] == 'options':
-                    self.settings.child('detector_settings', *status.attributes[0]).setOpts(**status.attributes[1])
-                elif status.attributes[2] == 'childAdded':
+                if status.attribute[2] == 'value':
+                    self.settings.child('detector_settings', *status.attribute[0]).setValue(status.attribute[1])
+                elif status.attribute[2] == 'limits':
+                    self.settings.child('detector_settings', *status.attribute[0]).setLimits(status.attribute[1])
+                elif status.attribute[2] == 'options':
+                    self.settings.child('detector_settings', *status.attribute[0]).setOpts(**status.attribute[1])
+                elif status.attribute[2] == 'childAdded':
                     child = Parameter.create(name='tmp')
-                    child.restoreState(status.attributes[1][0])
-                    self.settings.child('detector_settings', *status.attributes[0]).addChild(status.attributes[1][0])
+                    child.restoreState(status.attribute[1][0])
+                    self.settings.child('detector_settings', *status.attribute[0]).addChild(status.attribute[1][0])
 
             except Exception as e:
                 self.logger.exception(str(e))
@@ -1648,7 +1264,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.ui.settings_tree.setEnabled(False)
             self.splash_sc.show()
             self.splash_sc.raise_()
-            self.splash_sc.showMessage(status.attributes[0], color=Qt.white)
+            self.splash_sc.showMessage(status.attribute[0], color=Qt.white)
 
         elif status.command == 'close_splash':
             self.splash_sc.close()
@@ -1662,24 +1278,24 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     self.logger.exception(str(e))
             # lcd module
             lcd = QtWidgets.QWidget()
-            self.lcd = LCD(lcd, **status.attributes[0])
+            self.lcd = LCD(lcd, **status.attribute[0])
             lcd.setVisible(True)
             QtWidgets.QApplication.processEvents()
 
         elif status.command == 'lcd':
-            self.lcd.setvalues(status.attributes[0])
+            self.lcd.setvalues(status.attribute[0])
 
         elif status.command == 'show_navigator':
             show = True
-            if len(status.attributes) != 0:
-                show = status.attributes[0]
+            if len(status.attribute) != 0:
+                show = status.attribute[0]
             self.show_navigator(show)
             QtWidgets.QApplication.processEvents()
 
         elif status.command == 'show_scanner':
             show = True
-            if len(status.attributes) != 0:
-                show = status.attributes[0]
+            if len(status.attribute) != 0:
+                show = status.attribute[0]
             self.show_scanner(show)
             QtWidgets.QApplication.processEvents()
 
@@ -1787,28 +1403,24 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     def move_at_navigator(self, posx, posy):
         self.command_hardware.emit(ThreadCommand("move_at_navigator", [posx, posy]))
 
-    def show_log(self):
-        import webbrowser
-        webbrowser.open(self.logger.parent.handlers[0].baseFilename)
-
     ###########################
     #  TCPIP stuff
 
     def connect_tcp_ip(self):
         if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
-            self.tcpclient_thread = QThread()
+            self._tcpclient_thread = QThread()
 
             tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
                                   self.settings.child('main_settings', 'tcpip', 'port').value(),
                                   self.settings.child(('detector_settings')))
-            tcpclient.moveToThread(self.tcpclient_thread)
-            self.tcpclient_thread.tcpclient = tcpclient
+            tcpclient.moveToThread(self._tcpclient_thread)
+            self._tcpclient_thread.tcpclient = tcpclient
             tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
 
             self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
-            self.tcpclient_thread.start()
-            tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis')])
+            self._tcpclient_thread.start()
+            tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
@@ -1824,15 +1436,15 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.thread_status(status)
 
         elif status.command == 'set_info':
-            param_dict = ioxml.XML_string_to_parameter(status.attributes[1])[0]
+            param_dict = ioxml.XML_string_to_parameter(status.attribute[1])[0]
             param_tmp = Parameter.create(**param_dict)
-            param = self.settings.child('detector_settings', *status.attributes[0][1:])
+            param = self.settings.child('detector_settings', *status.attribute[0][1:])
 
             param.restoreState(param_tmp.saveState())
 
         elif status.command == 'get_axis':
             self.command_hardware.emit(
-                ThreadCommand('get_axis'))  # tells the plugin to emit its axes so that the server will receive them
+                ThreadCommand('get_axis', ))  # tells the plugin to emit its axes so that the server will receive them
 
 
 class DAQ_Detector(QObject):
@@ -1859,7 +1471,7 @@ class DAQ_Detector(QObject):
         *hardware_averaging*        boolean
         *show_averaging*            boolean
         *wait_time*                 int
-        *DAQ_type*                  string
+        *daq_type*                  string
         ========================= ==========================
     """
     status_sig = Signal(ThreadCommand)
@@ -1883,13 +1495,13 @@ class DAQ_Detector(QObject):
         self.hardware_averaging = False
         self.show_averaging = False
         self.wait_time = settings_parameter.child('main_settings', 'wait_time').value()
-        self.DAQ_type = settings_parameter.child('main_settings', 'DAQ_type').value()
+        self.daq_type = settings_parameter.child('main_settings', 'DAQ_type').value()
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
         """
-            | Set attributes values in case of "main_settings" path with corresponding parameter values.
-            | Recursively call the method on detector class attributes else.
+            | Set attribute values in case of "main_settings" path with corresponding parameter values.
+            | Recursively call the method on detector class attribute else.
 
             ======================== ============== ======================================
             **Parameters**             **Type**      **Description**
@@ -1911,13 +1523,13 @@ class DAQ_Detector(QObject):
             self.detector.update_settings(settings_parameter_dict)
 
     @Slot(ThreadCommand)
-    def queue_command(self, command=ThreadCommand()):
+    def queue_command(self, command: ThreadCommand):
         """
             Treat the given command parameter from his name :
               * **ini_detector** : Send the corresponding Thread command via a status signal.
               * **close**        : Send the corresponding Thread command via a status signal.
-              * **grab**         : Call the local grab method with command(s) attributes.
-              * **single**       : Call the local single method with command(s) attributes.
+              * **grab**         : Call the local grab method with command(s) attribute.
+              * **single**       : Call the local single method with command(s) attribute.
               * **stop_grab**    : Send the correpsonding Thread command via a status signal.
 
             =============== ================= ============================
@@ -1930,7 +1542,7 @@ class DAQ_Detector(QObject):
             grab, single, daq_utils.ThreadCommand
         """
         if command.command == "ini_detector":
-            status = self.ini_detector(*command.attributes)
+            status = self.ini_detector(*command.attribute)
             self.status_sig.emit(ThreadCommand(command.command, [status, 'log']))
 
         elif command.command == "close":
@@ -1940,12 +1552,12 @@ class DAQ_Detector(QObject):
         elif command.command == "grab":
             self.single_grab = False
             self.grab_state = True
-            self.grab_data(*command.attributes)
+            self.grab_data(*command.attribute)
 
         elif command.command == "single":
             self.single_grab = True
             self.grab_state = True
-            self.single(*command.attributes)
+            self.single(*command.attribute)
 
         elif command.command == "stop_grab":
             self.grab_state = False
@@ -1957,16 +1569,16 @@ class DAQ_Detector(QObject):
             QtWidgets.QApplication.processEvents()
 
         elif command.command == 'update_scanner':
-            self.detector.update_scanner(command.attributes[0])
+            self.detector.update_scanner(command.attribute[0])
 
         elif command.command == 'move_at_navigator':
-            self.detector.move_at_navigator(*command.attributes)
+            self.detector.move_at_navigator(*command.attribute)
 
         elif command.command == 'update_com':
             self.detector.update_com()
 
         elif command.command == 'update_wait_time':
-            self.wait_time = command.attributes[0]
+            self.wait_time = command.attribute[0]
 
         elif command.command == 'get_axis':
             self.detector.get_axis()
@@ -1974,7 +1586,7 @@ class DAQ_Detector(QObject):
         else:  # custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
             if hasattr(self.detector, command.command):
                 cmd = getattr(self.detector, command.command)
-                cmd(*command.attributes)
+                cmd(*command.attribute)
 
     def ini_detector(self, params_state=None, controller=None):
         """
@@ -1995,29 +1607,8 @@ class DAQ_Detector(QObject):
         try:
             # status="Not initialized"
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
-
-            plug_name = self.detector_name
-
-            if self.DAQ_type == 'DAQ0D':
-                parent_module = utils.find_dict_in_list_from_key_val(DAQ_0DViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_0Dviewer_' + plug_name),
-                                 'DAQ_0DViewer_' + plug_name)
-            elif self.DAQ_type == "DAQ1D":
-                parent_module = utils.find_dict_in_list_from_key_val(DAQ_1DViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_1Dviewer_' + plug_name),
-                                 'DAQ_1DViewer_' + plug_name)
-            elif self.DAQ_type == 'DAQ2D':
-                parent_module = utils.find_dict_in_list_from_key_val(DAQ_2DViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_2Dviewer_' + plug_name),
-                                 'DAQ_2DViewer_' + plug_name)
-            elif self.DAQ_type == 'DAQND':
-                parent_module = utils.find_dict_in_list_from_key_val(DAQ_NDViewer_Det_types, 'name', plug_name)
-                class_ = getattr(getattr(parent_module['module'], 'daq_NDviewer_' + plug_name),
-                                 'DAQ_NDViewer_' + plug_name)
-            else:
-                raise Exception(plug_name + " unknown")
-
-            self.detector = class_(self, params_state)
+            det_params, _class = get_viewer_plugins(self.daq_type, self.detector_name)
+            self.detector = _class(self, params_state)
             self.detector.data_grabed_signal.connect(self.data_ready)
             self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
             status.update(self.detector.ini_detector(controller))
@@ -2029,7 +1620,7 @@ class DAQ_Detector(QObject):
                 y_axis = status['y_axis']
                 self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
 
-            self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
+            self.hardware_averaging = _class.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
 
             return status
         except Exception as e:
@@ -2043,7 +1634,7 @@ class DAQ_Detector(QObject):
     @Slot(list)
     def data_ready(self, datas):
         """
-            | Update the local datas attributes from the given datas parameter if the averaging has to be done software wise.
+            | Update the local datas attribute from the given datas parameter if the averaging has to be done software wise.
             |
             | Else emit the data detector signals with datas parameter as an attribute.
 
@@ -2190,7 +1781,7 @@ def main(init_qt=True):
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Viewer')
 
-    viewer = DAQ_Viewer(area, title="Testing", DAQ_type='DAQ2D')
+    viewer = DAQ_Viewer(area, title="Testing")
 
     win.show()
 

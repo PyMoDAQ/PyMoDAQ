@@ -17,7 +17,8 @@ from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
 from pymodaq.daq_utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
 from pymodaq.control_modules.utils import ControlModuleUI
 
-class DAQ_Move_UI(CustomApp, ControlModuleUI):
+
+class DAQ_Move_UI(ControlModuleUI):
     """DAQ_Move user interface.
 
     This class manages the UI and emit dedicated signals depending on actions from the user
@@ -50,8 +51,6 @@ class DAQ_Move_UI(CustomApp, ControlModuleUI):
     --------
     pymodaq.daq_utils.daq_utils.ThreadCommand
     """
-
-
 
     def __init__(self, parent, title="DAQ_Move"):
 
@@ -213,6 +212,7 @@ class DAQ_Move_UI(CustomApp, ControlModuleUI):
         self.settings_ui.setVisible(False)
 
         self.statusbar = QtWidgets.QStatusBar()
+        self.statusbar.setMaximumHeight(30)
         self.parent.layout().addWidget(self.statusbar)
 
     def setup_actions(self):
@@ -236,24 +236,24 @@ class DAQ_Move_UI(CustomApp, ControlModuleUI):
     def connect_things(self):
         self.connect_action('show_controls', lambda show: self.control_ui.setVisible(show))
         self.connect_action('show_settings', lambda show: self.settings_ui.setVisible(show))
-        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
+        self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit', )))
         self.connect_action('refresh_value',
                             lambda do_refresh: self.command_sig.emit(ThreadCommand('loop_get_value', do_refresh)))
         self.connect_action('move_abs', lambda: self.emit_move_abs(self.abs_value_sb))
         self.connect_action('move_abs_2', lambda: self.emit_move_abs(self.abs_value_sb_2))
-        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log')))
-        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
+        self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))
+        self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
 
         self.move_abs_pb.clicked.connect(lambda: self.emit_move_abs(self.abs_value_sb_bis))
 
-        self.rel_value_sb.valueChanged.connect(lambda: self.command_sig.emit(ThreadCommand('rel_value',
-                                                                                           self.rel_value_sb.value())))
+        self.rel_value_sb.valueChanged.connect(lambda: self.command_sig.emit(
+            ThreadCommand('rel_value', self.rel_value_sb.value())))
         self.move_rel_plus_pb.clicked.connect(lambda: self.emit_move_rel('+'))
         self.move_rel_minus_pb.clicked.connect(lambda: self.emit_move_rel('-'))
 
-        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('find_home')))
-        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('stop')))
-        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('get_value')))
+        self.find_home_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('find_home', )))
+        self.stop_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('stop', )))
+        self.get_value_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('get_value', )))
 
         self.ini_actuator_pb.clicked.connect(self.send_init)
 
@@ -281,7 +281,7 @@ class DAQ_Move_UI(CustomApp, ControlModuleUI):
 
     def emit_move_rel(self, sign):
         self.command_sig.emit(ThreadCommand('move_rel', self.rel_value_sb.value() * (1 if sign == '+'
-                                                                                        else-1)))
+                                                                                     else -1)))
 
 
 

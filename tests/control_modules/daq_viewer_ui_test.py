@@ -32,7 +32,7 @@ def ini_daq_viewer_ui(init_qt):
 
 
 def test_api_attributes(ini_daq_viewer_ui):
-    """Make sure the API attributes and methods used from other modules are present
+    """Make sure the API attribute and methods used from other modules are present
     """
     daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
     assert hasattr(daq_viewer, 'command_sig')
@@ -47,10 +47,10 @@ def test_api_attributes(ini_daq_viewer_ui):
     assert hasattr(daq_viewer, 'detector_init')
     assert hasattr(daq_viewer, 'do_grab')
     assert hasattr(daq_viewer, 'do_snap')
-
+    assert hasattr(daq_viewer, 'statusbar')
 
 def test_private_attributes(ini_daq_viewer_ui):
-    """Make sure the private attributes and methods used from other modules are present
+    """Make sure the private attribute and methods used from other modules are present
     """
     daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
     assert hasattr(daq_viewer, '_detector_widget')
@@ -60,7 +60,7 @@ def test_private_attributes(ini_daq_viewer_ui):
     assert hasattr(daq_viewer, '_detectors_combo')
     assert hasattr(daq_viewer, '_ini_det_pb')
     assert hasattr(daq_viewer, '_ini_state_led')
-    assert hasattr(daq_viewer, '_statusbar')
+
     assert hasattr(daq_viewer, '_enable_grab_buttons')
     assert hasattr(daq_viewer, '_grab')
     assert hasattr(daq_viewer, '_send_init')
@@ -87,11 +87,11 @@ def test_signals(ini_daq_viewer_ui):
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.get_action('grab').trigger()
     assert blocker.args[0].command == 'grab'
-    assert blocker.args[0].attributes[0]
+    assert blocker.args[0].attribute
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.get_action('grab').trigger()
-    assert not blocker.args[0].attributes[0]
+    assert not blocker.args[0].attribute
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.get_action('snap').trigger()
@@ -112,12 +112,12 @@ def test_signals(ini_daq_viewer_ui):
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.detector = daq_viewer.detectors[1]
     assert blocker.args[0].command == 'detector_changed'
-    assert blocker.args[0].attributes[0] == daq_viewer.detectors[1]
+    assert blocker.args[0].attribute == daq_viewer.detectors[1]
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.daq_type = daq_viewer.daq_types[1]
     assert blocker.args[0].command == 'daq_type_changed'
-    assert blocker.args[0].attributes[0] == daq_viewer.daq_types[1]
+    assert blocker.args[0].attribute == daq_viewer.daq_types[1]
 
     daq_viewer.daq_type = daq_viewer.daq_types[1]
     daq_viewer.detector = daq_viewer.detectors[2]
@@ -126,9 +126,9 @@ def test_signals(ini_daq_viewer_ui):
         daq_viewer._ini_det_pb.click()
 
     assert blocker.args[0].command == 'init'
-    assert blocker.args[0].attributes[0]
-    assert blocker.args[0].attributes[1] == daq_viewer.daq_types[1]
-    assert blocker.args[0].attributes[2] == daq_viewer.detectors[2]
+    assert blocker.args[0].attribute[0]
+    assert blocker.args[0].attribute[1] == daq_viewer.daq_types[1]
+    assert blocker.args[0].attribute[2] == daq_viewer.detectors[2]
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.get_action('save_current').trigger()
@@ -142,6 +142,15 @@ def test_signals(ini_daq_viewer_ui):
         daq_viewer.get_action('open').trigger()
     assert blocker.args[0].command == 'open'
 
+    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
+        daq_viewer._do_bkg_pb.click()
+    assert blocker.args[0].command == 'do_bkg'
+    assert blocker.args[0].attribute
+
+    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
+        daq_viewer._take_bkg_pb.click()
+    assert blocker.args[0].command == 'take_bkg'
+    assert blocker.args[0].attribute
 
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
@@ -154,16 +163,16 @@ def test_do_init(ini_daq_viewer_ui):
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.do_init(True)
     assert blocker.args[0].command == 'init'
-    assert blocker.args[0].attributes[0]
-    assert blocker.args[0].attributes[1] == daq_viewer.daq_types[IND_daq_type]
-    assert blocker.args[0].attributes[2] == daq_viewer.detectors[IND_det_type]
+    assert blocker.args[0].attribute[0]
+    assert blocker.args[0].attribute[1] == daq_viewer.daq_types[IND_daq_type]
+    assert blocker.args[0].attribute[2] == daq_viewer.detectors[IND_det_type]
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.do_init(False)
     assert blocker.args[0].command == 'init'
-    assert not blocker.args[0].attributes[0]
-    assert blocker.args[0].attributes[1] == daq_viewer.daq_types[IND_daq_type]
-    assert blocker.args[0].attributes[2] == daq_viewer.detectors[IND_det_type]
+    assert not blocker.args[0].attribute[0]
+    assert blocker.args[0].attribute[1] == daq_viewer.daq_types[IND_daq_type]
+    assert blocker.args[0].attribute[2] == daq_viewer.detectors[IND_det_type]
 
     # if triggered twice with same boolean, no action is performed
     with pytest.raises(qtbot.TimeoutError):
@@ -198,12 +207,12 @@ def test_do_grab(ini_daq_viewer_ui):
     with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
         daq_viewer.do_grab(True)
     assert blocker.args[0].command == 'grab'
-    assert blocker.args[0].attributes[0]
+    assert blocker.args[0].attribute
 
     with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
         daq_viewer.do_grab(False)
     assert blocker.args[0].command == 'grab'
-    assert not blocker.args[0].attributes[0]
+    assert not blocker.args[0].attribute
 
 
 def test_show_settings(ini_daq_viewer_ui):
@@ -215,3 +224,26 @@ def test_show_settings(ini_daq_viewer_ui):
         assert daq_viewer._detector_widget.isVisible()
     qtbot.waitUntil(is_visible)
 
+
+def test_update_viewers(ini_daq_viewer_ui):
+    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    dockarea.show()
+
+    assert len(daq_viewer.viewers) == 0
+
+    data_dims = ['Data0D', 'Data2D']
+    daq_viewer.update_viewer(data_dims)
+
+    assert len(daq_viewer.viewers) == len(data_dims)
+    assert daq_viewer.viewer_types == data_dims
+
+    v0 = daq_viewer.viewers[0]
+
+    data_dims = ['Data0D', 'Data1D', 'Data2D']
+    daq_viewer.update_viewer(data_dims)
+    assert len(daq_viewer.viewers) == len(data_dims)
+    assert daq_viewer.viewer_types == data_dims
+    assert daq_viewer.viewers[0] is v0
+
+    daq_viewer.update_viewer([])
+    assert len(daq_viewer.viewers) == 0

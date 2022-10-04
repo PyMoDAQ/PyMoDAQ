@@ -5,8 +5,34 @@ Created the 03/10/2022
 @author: Sebastien Weber
 """
 from qtpy import QtCore
+from pymodaq.daq_utils.gui_utils import CustomApp
+from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
+from pymodaq.daq_utils.config import Config
+from pymodaq.daq_utils.parameter import Parameter
 
-from daq_utils.daq_utils import ThreadCommand
+
+DAQ_TYPES = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
+DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
+             'DAQ1D': get_plugins('daq_1Dviewer'),
+             'DAQ2D': get_plugins('daq_2Dviewer'),
+             'DAQND': get_plugins('daq_NDviewer'),}
+
+config = Config()
+
+
+class ViewerError(Exception):
+    pass
+
+
+def get_viewer_plugins(daq_type, det_name):
+    parent_module = find_dict_in_list_from_key_val(DET_TYPES[daq_type], 'name', det_name)
+    match_name = daq_type.lower()
+    match_name = f'{match_name[0:3]}_{match_name[3:].upper()}viewer_'
+    obj = getattr(getattr(parent_module['module'], match_name + det_name),
+                  f'{match_name[0:7].upper()}{match_name[7:]}{det_name}')
+    params = getattr(obj, 'params')
+    det_params = Parameter.create(name='Det Settings', type='group', children=params)
+    return det_params, obj
 
 
 class ControlModule(QtCore.QObject):
@@ -36,6 +62,14 @@ class ControlModule(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self._title = ""
+
+        # the hardware controller instance set after initialization and to be used by other modules if they share the
+        # same controller
+        self.controller = None
+        self._initialized_state = False
+        self._send_to_tcpip = False
+        self._tcpclient_thread = None
+        self._hardware_thread = None
 
     @property
     def module_type(self):
@@ -72,7 +106,7 @@ class ControlModule(QtCore.QObject):
         raise NotImplementedError
 
     def init_hardware_ui(self, do_init=True):
-        """Programmatic entry to simulated a click on the user interface init button
+        """Programmatic entry to simulate a click on the user interface init button
 
         Parameters
         ----------
@@ -85,13 +119,32 @@ class ControlModule(QtCore.QObject):
         """
         raise NotImplementedError
 
+    def show_log(self):
+        import webbrowser
+        webbrowser.open(self.logger.parent.handlers[0].baseFilename)
 
-class ControlModuleUI(QtCore.QObject):
 
+class ControlModuleUI(CustomApp):
+    """ Base Class for ControlModules UIs
+    Attributes
+    ----------
+    command_sig: Signal[Threadcommand]
+        This signal is emitted whenever some actions done by the user has to be
+        applied on the main module. Possible commands are:
+        See specific implementation
+
+    See Also
+    --------
+    pymodaq.control_modules.daq_move_ui:DAQ_Move_UI, pymodaq.control_modules.daq_viewer_ui:DAQ_Viewer_UI
+    """
     command_sig = QtCore.Signal(ThreadCommand)
 
-    def display_status(self, txt, wait_time):
-        self.statusbar.showMessage(txt, wait_time)
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def display_status(self, txt, wait_time=config('general', 'message_status_persistence')):
+        if self.statusbar is not None:
+            self.statusbar.showMessage(txt, wait_time)
 
     def do_init(self, do_init=True):
         """Programmatically press the Init button
