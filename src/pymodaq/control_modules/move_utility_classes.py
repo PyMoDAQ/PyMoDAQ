@@ -366,7 +366,7 @@ class DAQ_Move_base(QObject):
         if np.abs(self.current_value - self.target_value) > self.settings.child('epsilon').value():
             logger.debug(f'Check move_is_done: {self.move_is_done}')
             if self.move_is_done:
-                self.emit_status(ThreadCommand('Move has been stopped'))
+                self.emit_status(ThreadCommand('Move has been stopped', ))
                 logger.info(f'Move has been stopped')
 
             self.current_value = self.get_actuator_value()
@@ -374,7 +374,7 @@ class DAQ_Move_base(QObject):
 
             if perf_counter() - self.start_time >= self.settings.child('timeout').value():
                 self.poll_timer.stop()
-                self.emit_status(ThreadCommand('raise_timeout'))
+                self.emit_status(ThreadCommand('raise_timeout', ))
                 logger.info(f'Timeout activated')
         else:
             self.poll_timer.stop()
@@ -508,7 +508,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         params_state
         """
         self.client_type = "ACTUATOR"
-        DAQ_Move_base.__init__(self, parent, params_state)  # initialize base class with commom attributes and methods
+        DAQ_Move_base.__init__(self, parent, params_state)  # initialize base class with commom attribute and methods
         self.settings.child(('bounds')).hide()
         self.settings.child(('scaling')).hide()
         self.settings.child(('epsilon')).setValue(1)

@@ -369,10 +369,11 @@ class ModulesManager(QObject):
                 for k in positions:
                     act = self.get_mod_from_name(k, 'act')
                     if act is not None:
-                        act.command_hardware.emit(utils.ThreadCommand(command=command, attributes=[positions[k], polling]))
+                        act.command_hardware.emit(
+                            utils.ThreadCommand(command=command, attribute=[positions[k], polling]))
             else:
                 for ind, act in enumerate(self.actuators):
-                    act.command_hardware.emit(utils.ThreadCommand(command=command, attributes=[positions[ind], polling]))
+                    act.command_hardware.emit(utils.ThreadCommand(command=command, attribute=[positions[ind], polling]))
 
         else:
             logger.error('Invalid number of positions compared to selected actuators')

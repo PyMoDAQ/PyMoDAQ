@@ -517,35 +517,37 @@ def getLineInfo():
     return res
 
 
-class ThreadCommand(object):
-    """ | Micro class managing the thread commands.
-        |
-        | A thread command is composed of a string name defining the command to execute and an attribute list splitable making arguments of the called function.
+class ThreadCommand:
+    """"""
 
-        =============== =============
-        **Attributes**  **Type**
-        *command*       string
-        *attributes*    generic list
-        =============== =============
+    def __init__(self, command: str, attribute=None, attributes=None):
+        """Object used to transmit info between threads or modules
 
-    """
-
-    def __init__(self, command="", attributes=[]):
+        Parameters
+        ----------
+        command: str
+            The command to be analysed for further action
+        attribute: any type
+            the attribute related to the command. The actual type and value depend on the command and the situation
+        attributes: deprecated, attribute should be used instead
+        """
         if not isinstance(command, str):
             raise TypeError(f'The command in a Threadcommand object should be a string, not a {type(command)}')
         self.command = command
-        if not isinstance(attributes, list):
-            attributes = [attributes]
-        self.attributes = attributes
+        if attribute is None and attributes is not None:
+            deprecation_msg('ThreadCommand signature changed, use attribute in place of attribute')
+            self.attribute = attributes
+            self.attributes = attributes
+        self.attribute = attribute
 
     def __repr__(self):
-        return f'Threadcommand: {self.command} with attributes {self.attributes}'
+        return f'Threadcommand: {self.command} with attribute {self.attribute}'
 
 
 class AxisBase(dict):
     """
-    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys or class
-    type attributes
+    Utility class defining an axis for pymodaq's viewers, attribute can be accessed as dictionary keys or class
+    type attribute
     """
 
     def __init__(self, label='', units='', **kwargs):
@@ -578,7 +580,7 @@ class AxisBase(dict):
 
 class Axis(AxisBase):
     """
-    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
+    Utility class defining an axis for pymodaq's viewers, attribute can be accessed as dictionary keys
     """
 
     def __init__(self, data=None, label='', units='', **kwargs):
@@ -638,7 +640,7 @@ class Data(OrderedDict):
                  y_axis: Axis = None, **kwargs):
         """
         Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
-        attributes can be accessed as dictionary keys. Should be subclassed from for real datas
+        attribute can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
         source: str
@@ -771,7 +773,7 @@ class DataToEmit(DataTimeStamped):
 class DataToExport(Data):
     def __init__(self, data=None, dim='', source='raw', **kwargs):
         """
-        Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary keys
+        Utility class defining a data being exported from pymodaq's viewers, attribute can be accessed as dictionary keys
         Parameters
         ----------
         data: (ndarray or a scalar)

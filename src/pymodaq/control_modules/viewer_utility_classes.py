@@ -292,7 +292,7 @@ class DAQ_Viewer_base(QObject):
     def send_param_status(self, param, changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, send the 'update_settings' ThreadCommand with concerned path,data and change as attributes.
+            In case of value changed, send the 'update_settings' ThreadCommand with concerned path,data and change as attribute.
 
             =============== ============================================ ============================
             **Parameters**    **Type**                                    **Description**
@@ -378,7 +378,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         grabber_type: (str) either '0D', '1D' or '2D'
         """
         self.client_type = "GRABBER"
-        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with commom attributes and methods
+        DAQ_Viewer_base.__init__(self, parent, params_state)  # initialize base class with commom attribute and methods
         TCPServer.__init__(self, self.client_type)
 
         self.x_axis = None

@@ -160,7 +160,7 @@ def test_ThreadCommand():
     attributes = [1, 3]
     threadcomm = utils.ThreadCommand(command, attributes)
     assert threadcomm.command is command
-    assert threadcomm.attributes is attributes
+    assert threadcomm.attribute is attributes
 
 
 def test_Axis():

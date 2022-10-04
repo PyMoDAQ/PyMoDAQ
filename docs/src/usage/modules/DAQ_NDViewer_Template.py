@@ -83,7 +83,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
 
     def __init__(self,parent=None,params_state=None):
         #the super will call parent class initialization where , for instance, self.settings is created
-        super(DAQ_NDViewer_Template,self).__init__(parent,params_state) #initialize base class with commom attributes and methods
+        super(DAQ_NDViewer_Template,self).__init__(parent,params_state) #initialize base class with commom attribute and methods
 
         self.x_axis=None
         self.y_axis=None
@@ -126,7 +126,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
         #########################################################################
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[str(e),'log']))
+            self.emit_status(ThreadCommand('Update_Status', [str(e), 'log']))
 
     def emit_data(self):
         """
@@ -147,7 +147,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             ##################################################################
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[str(e),'log']))
+            self.emit_status(ThreadCommand('Update_Status', [str(e), 'log']))
 
     def ini_detector(self, controller=None):
         """
@@ -187,13 +187,13 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             self.status.y_axis=self.y_axis
             self.status.initialized=True
             self.status.controller=self.controller
-            self.emit_status(ThreadCommand('close_splash'))
+            self.emit_status(ThreadCommand('close_splash', ))
             return self.status
 
         except Exception as e:
             self.status.info=str(e)
             self.status.initialized=False
-            self.emit_status(ThreadCommand('close_splash'))
+            self.emit_status(ThreadCommand('close_splash', ))
             return self.status
 
     ########################## to adapt below if a timer has been set#####################
@@ -286,7 +286,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
 
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[str(e),"log"]))
+            self.emit_status(ThreadCommand('Update_Status', [str(e), "log"]))
 
     def stop(self):
         """
