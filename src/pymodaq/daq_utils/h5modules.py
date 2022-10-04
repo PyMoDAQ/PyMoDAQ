@@ -2551,8 +2551,22 @@ class H5Browser(QObject):
 
 
 def browse_data(fname=None, ret_all=False, message=None):
-    """
-        | Browse data present in any h5 file, when user has selected the one,
+    """Browse data present in any h5 file using the H5Browser within a dialog window
+    when the user has selected a given node, return its content
+
+    Parameters
+    ----------
+    fname: str
+    ret_all: bool
+    message: str
+
+    Returns
+    -------
+    data: the numpy array in the selected node
+    if argument ret_all is True, returns also:
+    fname: the file name
+    node_path: hte path of the selected node within the H5 file tree
+
     """
     if fname is None:
         fname = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=False, ext='h5'))
