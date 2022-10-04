@@ -1171,8 +1171,11 @@ class DAQ_Viewer(QObject):
         ----------
         datas : list of DataFromPlugins
             The objects in this list contain the acquired raw data and the associated metadada. This list can contain
-            several DataFromPlugins objects because the DAQ_Viewer can manage several detectors???
-
+            several DataFromPlugins objects because the DAQ_Viewer can manage several viewers. One instrument can export
+            many kind of data that would be better rendered in different viewers. For instance the output of a lockin
+            amplifier gives you an amplitude in volt and a phase in degree. Plotting both on the same viewer is
+            misleading and make one of the signal invisible (the amplitude) so you can use this to automatically plot
+            each on separate viewers.
         """
         try:
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
