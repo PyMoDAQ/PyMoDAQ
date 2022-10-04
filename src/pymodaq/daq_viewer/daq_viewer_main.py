@@ -1162,7 +1162,7 @@ class DAQ_Viewer(QObject):
 
     @Slot(list)
     def show_data(self, datas: List[utils.DataFromPlugins]):
-        """Transfert the acquired data from the detector (DAQ_Detector) to the UI viewer.
+        """Transfer the acquired data from the detector (DAQ_Detector) to the UI viewer.
 
         Triggered by DAQ_Detector.data_detector_sig.
         Emit the grab_done_signal.
