@@ -11,7 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.daq_utils.managers.roi_manager import ROIManager
+from pymodaq.daq_utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.daq_utils.managers.action_manager import ActionManager
 from pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic import ImageWidget
 from pyqtgraph import PlotCurveItem
@@ -22,7 +22,6 @@ from pymodaq.daq_utils.plotting.items.crosshair import Crosshair
 from pymodaq.daq_utils.plotting.utils.plot_utils import Data0DWithHistory, AxisInfosExtractor
 from pymodaq.daq_utils.plotting.utils.filter import FilterFromCrosshair, FilterFromRois
 import pymodaq.daq_utils.daq_utils as utils
-import pymodaq.daq_utils.gui_utils as gutils
 from pymodaq.daq_utils.exceptions import ViewerError
 
 logger = utils.set_logger(utils.get_module_name(__file__))
@@ -443,6 +442,8 @@ class View2D(ActionManager, QtCore.QObject):
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
+        self.ROIselect = SimpleRectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+
         self.setup_actions()
 
         self.parent_widget = parent_widget
@@ -452,7 +453,7 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.image_widget = ImageWidget()
         self.roi_manager = ROIManager(self.image_widget, '2D')
-        self.ROIselect = pg.RectROI([0, 0], [10, 10], centered=True, sideScalers=True)
+
         self.roi_target = pgROI(pos=(0, 0), size=(20,20), movable=False, rotatable=False, resizable=False)
         self.roi_target.setVisible(False)
 
@@ -464,8 +465,6 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.crosshair = Crosshair(self.image_widget)
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
-
-
 
         self.connect_things()
         self.prepare_ui()
@@ -585,6 +584,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('roi', self.lineout_plotter.roi_clicked)
         self.connect_action('roi', self.show_lineout_widgets)
         self.connect_action('ROIselect', self.show_ROI_select)
+        self.roiselect_pb.clicked.connect(self.show_ROI_select)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
