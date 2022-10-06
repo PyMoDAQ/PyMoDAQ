@@ -128,9 +128,11 @@ detector currently activated.
 * **Nviewers**: readonly integer displaying the number of data viewers
 * **Controller ID**: integer used to deal with a controller controlling multiple hardware, see :ref:`multiple_hardware`
 * **Naverage**: integer to set in order to do data averaging, see :ref:`hardware_averaging`.
-* **Show averaging**: in the case of software averaging (see :ref:`hardware_averaging`), if this is set to ``True``, intermediate averaging data will be displayed
+* **Show averaging**: in the case of software averaging (see :ref:`hardware_averaging`), if this is set to ``True``,
+intermediate averaging data will be displayed
 * **Live averaging**: *show averaging* must be set to ``False``. If set to ``True``, a *live* ``grab`` will perform
-  non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one should average, then set *Naverage* to this value
+  non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one
+should average, then set *Naverage* to this value
 * **Wait time (ms)**: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging
 * **Continuous saving**: useful for data logging. Will display new options below in order to set a h5 file to log live data, see :ref:`continuous_saving`.
 * **Overshoot options**: useful to protect the experiment. If this is activated, then as soon as any value of the datas exported by this
@@ -140,6 +142,34 @@ detector currently activated.
 * **Axis options**: only valid for 2D detector. You can add labels, units, scaling and offset (with respect to pixels)
   to both x and y axis of the detector. Redundant with the plugin data export feature (see :ref:`data_emission`)
 
+Data Viewers
+------------
 
+Data Viewers presented in section :ref:`data_viewers` are the one used to display data from detectors controlled from
+the DAQ_Viewer. By default, one viewer will be set with its type (0D, 1D, 2D, ND) depending on the detector main
+dimensionality (DAQ_type: DAQ0D, DAQ1D, DAQ2D...) but in fact the data viewers are set depending on the data exported
+from the detector plugin using the `data_grabed_signal` or `data_grabed_signal_temp` signals.
 
+These two signal emit a
+list of `DataFromPlugins` objects. The **length** of this list will set the **number of dedicated data viewers**. In
+general one, but think about data from a Lockin amplifier generating an amplitude in volt and a phase in degrees.
+They are unrelated physical values better displayed in separated axes or viewers. The `DataFromPlugins`'s attribute
+`dim` (a string either equal to `Data0D`, `Data1D`, `Data2D`, `DataND`) will determine the data viewer type to set.
+
+This code in a plugin
+.. code-block:: python
+
+    self.data_grabed_signal.emit([
+        DataFromPlugins(name='Mock1', data=data1, dim='Data0D'),
+        DataFromPlugins(name='Mock2', data=data2, dim='Data2D')])
+
+will trigger two separated viewers displaying respectively 0D data and 2D data.
+
+Other utilities
+---------------
+
+There are other functionalities that can be triggered in specific conditions. Among those, you'll find:
+
+* The LCD screen to display 0D Data
+* The ROI_select button and ROI on a Viewer2D
 
