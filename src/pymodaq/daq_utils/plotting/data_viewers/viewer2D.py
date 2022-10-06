@@ -584,7 +584,6 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('roi', self.lineout_plotter.roi_clicked)
         self.connect_action('roi', self.show_lineout_widgets)
         self.connect_action('ROIselect', self.show_ROI_select)
-        self.roiselect_pb.clicked.connect(self.show_ROI_select)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
