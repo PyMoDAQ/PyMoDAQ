@@ -14,6 +14,7 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 from pymodaq.daq_utils.parameter import pymodaq_ptypes
 from pymodaq.daq_utils.managers.action_manager import QAction
 from pyqtgraph import ROI as pgROI
+from pyqtgraph import RectROI as pgRectROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
 from pymodaq.daq_utils.daq_utils import plot_colors
@@ -26,7 +27,72 @@ from pathlib import Path
 roi_path = get_set_roi_path()
 
 
-class ROIBrushable(pgROI):
+class ROIPositionMapper(QtWidgets.QWidget):
+    """ Widget presenting a Tree structure representing a ROI positions.
+    """
+
+    def __init__(self, roi_pos, roi_size):
+        super().__init__()
+        self.roi_pos = roi_pos
+        self.roi_size = roi_size
+
+    def show_dialog(self):
+        self.params = [
+            {'name': 'position', 'type': 'group', 'children': [
+                {'name': 'x0', 'type': 'float', 'value': self.roi_pos[0] + self.roi_size[0] / 2, 'step': 1},
+                {'name': 'y0', 'type': 'float', 'value': self.roi_pos[1] + self.roi_size[1] / 2, 'step': 1}
+            ]},
+            {'name': 'size', 'type': 'group', 'children': [
+                {'name': 'width', 'type': 'float', 'value': self.roi_size[0], 'step': 1},
+                {'name': 'height', 'type': 'float', 'value': self.roi_size[1], 'step': 1}]
+             }]
+
+        dialog = QtWidgets.QDialog(self)
+        vlayout = QtWidgets.QVBoxLayout()
+        self.settings_tree = ParameterTree()
+        vlayout.addWidget(self.settings_tree, 10)
+        self.settings_tree.setMinimumWidth(300)
+        self.settings = Parameter.create(name='settings', type='group', children=self.params)
+        self.settings_tree.setParameters(self.settings, showTop=False)
+        dialog.setLayout(vlayout)
+
+        buttonBox = QtWidgets.QDialogButtonBox(parent=self);
+        buttonBox.addButton('Apply', buttonBox.AcceptRole)
+        buttonBox.accepted.connect(dialog.accept)
+        buttonBox.addButton('Cancel', buttonBox.RejectRole)
+        buttonBox.rejected.connect(dialog.reject)
+
+        vlayout.addWidget(buttonBox)
+        self.setWindowTitle('Set Precise positions for the ROI')
+        res = dialog.exec()
+
+        if res == dialog.Accepted:
+
+            return self.settings
+        else:
+            return None
+
+
+class ROI(pgROI):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._menu = QtWidgets.QMenu()
+        self._menu.addAction('Set ROI positions', self.set_positions)
+
+    def set_positions(self):
+        mapper = ROIPositionMapper(self.pos(), self.size())
+        settings = mapper.show_dialog()
+        if settings is not None:
+            self.setSize((settings['size', 'width'], settings['size', 'height']))
+            self.setPos((settings['position', 'x0'] - settings['size', 'width'] / 2,
+                         settings['position', 'y0'] - settings['size', 'height'] / 2))
+
+    def contextMenuEvent(self, event):
+        if self._menu is not None:
+            self._menu.exec(event.screenPos())
+
+
+class ROIBrushable(ROI):
     def __init__(self, brush=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -76,7 +142,7 @@ class LinearROI(pgLinearROI):
         self.index_signal.emit(self.index)
 
 
-class EllipseROI(pgROI):
+class EllipseROI(ROI):
     """
     Elliptical ROI subclass with one scale handle and one rotation handle.
 
@@ -156,7 +222,25 @@ class EllipseROI(pgROI):
         return self.size().x()
 
 
-class RectROI(pgROI):
+class SimpleRectROI(ROI):
+    r"""
+    Rectangular ROI subclass with a single scale handle at the top-right corner.
+    """
+
+    def __init__(self, pos, size, centered=False, sideScalers=False, **args):
+        super().__init__(pos, size, **args)
+        if centered:
+            center = [0.5, 0.5]
+        else:
+            center = [0, 0]
+
+        self.addScaleHandle([1, 1], center)
+        if sideScalers:
+            self.addScaleHandle([1, 0.5], [center[0], 0.5])
+            self.addScaleHandle([0.5, 1], [0.5, center[1]])
+
+
+class RectROI(ROI):
     index_signal = Signal(int)
 
     def __init__(self, index=0, pos=[0, 0], size=[10, 10]):
@@ -613,7 +697,6 @@ class ROISaver:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')
-            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path,
-                                                                                                   self.roi_presets.child(
-                                                                                                       (
-                                                                                                           'filename')).value()))
+            pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(
+                self.roi_presets, os.path.join(roi_path, self.roi_presets.child('filename').value()))
+
