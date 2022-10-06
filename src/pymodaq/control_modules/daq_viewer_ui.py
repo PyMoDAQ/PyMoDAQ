@@ -81,7 +81,6 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._detector_widget.setVisible(False)
         self._settings_widget.setVisible(False)
 
-        self.get_action('navigator').setVisible(False)
 
     @property
     def detector(self):
@@ -131,6 +130,26 @@ class DAQ_Viewer_UI(ControlModuleUI):
     def viewer_types(self):
         return self._viewer_types
 
+    def remove_viewers(self, Nviewers_to_leave: int = 0):
+        """Remove viewers from the list after index Nviewers_to_leave
+
+        Parameters
+        ----------
+        Nviewers
+
+        Returns
+        -------
+
+        """
+        while len(self.viewer_docks) > Nviewers_to_leave:
+            widget = self.viewer_widgets.pop()
+            widget.close()
+            dock = self.viewer_docks.pop()
+            dock.close()
+            self.viewers.pop()
+            self.viewer_types.pop()
+            QtWidgets.QApplication.processEvents()
+
     def add_viewer(self, datadim: str):
         self._viewer_widgets.append(QtWidgets.QWidget())
         if datadim == "Data0D":
@@ -155,7 +174,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
         else:
             self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
 
-    def update_viewer(self, datadims: List[str]):
+    def update_viewers(self, datadims: List[str]):
         for datadim in datadims:
             if datadim not in DATA_TYPES:
                 raise ViewerError(f'{datadims} is not a valid data dimensionality')
@@ -176,28 +195,13 @@ class DAQ_Viewer_UI(ControlModuleUI):
             datadim = datadims[Nviewers_to_leave + ind_loop]
             ind_loop += 1
             self.add_viewer(datadim)
+        self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
+                                                                              viewers=self.viewers)))
 
-        return self.viewers
-
-    def remove_viewers(self, Nviewers_to_leave: int = 0):
-        """Remove viewers from the list after index Nviewers_to_leave
-
-        Parameters
-        ----------
-        Nviewers
-
-        Returns
-        -------
-
-        """
-        while len(self.viewer_docks) > Nviewers_to_leave:
-            widget = self.viewer_widgets.pop()
-            widget.close()
-            dock = self.viewer_docks.pop()
+    def close(self):
+        for dock in self.viewer_docks:
             dock.close()
-            self.viewers.pop()
-            self.viewer_types.pop()
-            QtWidgets.QApplication.processEvents()
+        self._settings_dock.close()
 
     def setup_docks(self):
         self._settings_dock = Dock(self.title + "_Settings", size=(10, 10))
@@ -266,20 +270,11 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
         self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True)
 
-        self.add_action('navigator', 'Select Data', 'Select_24', "Display ROI in a 2D viewer")
         self.add_action('quit', 'Quit the module', 'close2')
         self.add_action('log', 'Show Log file', 'information2')
 
         self._data_ready_led = QLED(readonly=True)
         self.toolbar.addWidget(self._data_ready_led)
-
-    @property
-    def data_ready(self):
-        return self._data_ready_led.get_state()
-
-    @data_ready.setter
-    def data_ready(self, status):
-        self._data_ready_led.set_as(status)
 
     def connect_things(self):
         self.connect_action('show_settings', lambda show: self._detector_widget.setVisible(show))
@@ -290,6 +285,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop', )))
         self.connect_action('stop', lambda: self.get_action('grab').setChecked(False))
         self.connect_action('stop', lambda: self._enable_ini_buttons(True))
+        self.connect_action('stop', lambda: self._settings_widget.setEnabled(True))
 
         self.connect_action('grab', self._grab)
         self.connect_action('snap', lambda: self.command_sig.emit(ThreadCommand('snap', )))
@@ -297,21 +293,27 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self.connect_action('save_current', lambda: self.command_sig.emit(ThreadCommand('save_current', )))
         self.connect_action('save_new', lambda: self.command_sig.emit(ThreadCommand('save_new', )))
         self.connect_action('open', lambda: self.command_sig.emit(ThreadCommand('open', )))
-        self.connect_action('navigator', lambda: self.command_sig.emit(ThreadCommand('navigator', )))
 
         self._ini_det_pb.clicked.connect(self._send_init)
 
         self._detectors_combo.currentTextChanged.connect(
             lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
         self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
-        self._daq_types_combo.currentTextChanged.connect(
-            lambda mod: self.get_action('navigator').setVisible(mod == 'DAQ2D'))
+
 
         self._do_bkg_pb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand('do_bkg', checked)))
         self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('take_bkg')))
 
+    @property
+    def data_ready(self):
+        return self._data_ready_led.get_state()
+
+    @data_ready.setter
+    def data_ready(self, status):
+        self._data_ready_led.set_as(status)
+
     def _daq_type_changed(self, daq_type):
-        self.update_viewer([f'Data{daq_type[3:]}'])
+        self.update_viewers([f'Data{daq_type[3:]}'])
         self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
 
     def show_settings(self, show=True):

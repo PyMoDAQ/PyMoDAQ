@@ -74,15 +74,7 @@ params = [
         ]},
 
     ]},
-    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': [
-        {'title': 'ROI select:', 'name': 'ROIselect', 'type': 'group', 'visible': False, 'children': [
-            {'title': 'Use ROI:', 'name': 'use_ROI', 'type': 'bool', 'value': False},
-            {'title': 'x0:', 'name': 'x0', 'type': 'int', 'value': 0, 'min': 0},
-            {'title': 'y0:', 'name': 'y0', 'type': 'int', 'value': 0, 'min': 0},
-            {'title': 'width:', 'name': 'width', 'type': 'int', 'value': 10, 'min': 1},
-            {'title': 'height:', 'name': 'height', 'type': 'int', 'value': 10, 'min': 1},
-        ]}
-    ]}
+    {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': []}
 ]
 
 def main(plugin_file=None, init=True):
