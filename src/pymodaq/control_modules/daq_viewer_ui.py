@@ -69,6 +69,8 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._detectors_combo = None
         self._ini_det_pb = None
         self._ini_state_led = None
+        self._do_bkg_cb = None
+        self._take_bkg_pb = None
         self._settings_dock = None
         self._viewer_docks = []
         self._viewer_widgets = []
@@ -95,8 +97,12 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     @detectors.setter
     def detectors(self, detectors: List[str]):
+        self._detectors_combo.currentTextChanged.disconnect()
         self._detectors_combo.clear()
         self._detectors_combo.addItems(detectors)
+        self._detectors_combo.currentTextChanged.connect(
+            lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
+        self.detector = detectors[0]
 
     @property
     def daq_type(self):
@@ -112,8 +118,11 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     @daq_types.setter
     def daq_types(self, dtypes: List[str]):
+        self._daq_types_combo.currentTextChanged.disconnect()
         self._daq_types_combo.clear()
         self._daq_types_combo.addItems(dtypes)
+        self.daq_type = dtypes[0]
+        self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
 
     @property
     def viewers(self):
@@ -239,8 +248,9 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._detectors_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self._ini_det_pb = PushButtonIcon('ini', 'Init. Detector', True, 'Initialize selected detector')
         self._ini_state_led = QLED(readonly=True)
-        self._do_bkg_pb = QtWidgets.QCheckBox('Do Bkg')
+        self._do_bkg_cb = QtWidgets.QCheckBox('Do Bkg')
         self._take_bkg_pb = QtWidgets.QPushButton('Take Bkg')
+        self._take_bkg_pb.setChecked(False)
 
         self._detector_widget.layout().addWidget(LabelWithFont('DAQ type:'), 0, 0)
         self._detector_widget.layout().addWidget(self._daq_types_combo, 0, 1)
@@ -250,7 +260,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._detector_widget.layout().addWidget(self._ini_state_led, 1, 2)
         self._detector_widget.layout().addWidget(bkg_widget, 2, 0, 1, 3)
 
-        bkg_widget.layout().addWidget(self._do_bkg_pb)
+        bkg_widget.layout().addWidget(self._do_bkg_cb)
         bkg_widget.layout().addWidget(self._take_bkg_pb)
 
         self.statusbar = QtWidgets.QStatusBar()
@@ -301,7 +311,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
 
 
-        self._do_bkg_pb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand('do_bkg', checked)))
+        self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand('do_bkg', checked)))
         self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('take_bkg')))
 
     @property
@@ -313,8 +323,9 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._data_ready_led.set_as(status)
 
     def _daq_type_changed(self, daq_type):
-        self.update_viewers([f'Data{daq_type[3:]}'])
-        self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
+        if daq_type in self.daq_types:
+            self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
+            self.update_viewers([f'Data{daq_type[3:]}'])
 
     def show_settings(self, show=True):
         if (self.is_action_checked('show_settings') and not show) or \

@@ -114,10 +114,13 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].command == 'detector_changed'
     assert blocker.args[0].attribute == daq_viewer.detectors[1]
 
-    with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
+    with qtbot.waitSignals([daq_viewer.command_sig, daq_viewer.command_sig]) as blocker:
         daq_viewer.daq_type = daq_viewer.daq_types[1]
-    assert blocker.args[0].command == 'daq_type_changed'
-    assert blocker.args[0].attribute == daq_viewer.daq_types[1]
+
+    assert blocker.all_signals_and_args[0].args[0].command == 'daq_type_changed'
+    assert blocker.all_signals_and_args[0].args[0].attribute == daq_viewer.daq_types[1]
+    assert blocker.all_signals_and_args[1].args[0].command == 'viewers_changed'
+    assert blocker.all_signals_and_args[1].args[0].attribute['viewer_types'][0] == f'Data{daq_viewer.daq_types[1][3:]}'
 
     daq_viewer.daq_type = daq_viewer.daq_types[1]
     daq_viewer.detector = daq_viewer.detectors[2]
@@ -143,14 +146,14 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].command == 'open'
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
-        daq_viewer._do_bkg_pb.click()
+        daq_viewer._do_bkg_cb.click()
     assert blocker.args[0].command == 'do_bkg'
     assert blocker.args[0].attribute
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer._take_bkg_pb.click()
     assert blocker.args[0].command == 'take_bkg'
-    assert blocker.args[0].attribute
+
 
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
@@ -178,6 +181,7 @@ def test_do_init(ini_daq_viewer_ui):
     with pytest.raises(qtbot.TimeoutError):
         with qtbot.waitSignal(daq_viewer.command_sig, timeout=100) as blocker:
             daq_viewer.do_init(False)
+
 
 def test_is_init(ini_daq_viewer_ui):
     IND_daq_type = 1
@@ -232,7 +236,7 @@ def test_update_viewers(ini_daq_viewer_ui):
     assert len(daq_viewer.viewers) == 0
 
     data_dims = ['Data0D', 'Data2D']
-    daq_viewer.update_viewer(data_dims)
+    daq_viewer.update_viewers(data_dims)
 
     assert len(daq_viewer.viewers) == len(data_dims)
     assert daq_viewer.viewer_types == data_dims
@@ -240,10 +244,10 @@ def test_update_viewers(ini_daq_viewer_ui):
     v0 = daq_viewer.viewers[0]
 
     data_dims = ['Data0D', 'Data1D', 'Data2D']
-    daq_viewer.update_viewer(data_dims)
+    daq_viewer.update_viewers(data_dims)
     assert len(daq_viewer.viewers) == len(data_dims)
     assert daq_viewer.viewer_types == data_dims
     assert daq_viewer.viewers[0] is v0
 
-    daq_viewer.update_viewer([])
+    daq_viewer.update_viewers([])
     assert len(daq_viewer.viewers) == 0
