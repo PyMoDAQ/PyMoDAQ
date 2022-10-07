@@ -518,19 +518,25 @@ def getLineInfo():
 
 
 class ThreadCommand:
-    """"""
+    """Generic object to pass info (command) and data (attribute) between thread or objects using signals
+
+    Parameters
+    ----------
+    command: str
+        The command to be analysed for further action
+    attribute: any type
+        the attribute related to the command. The actual type and value depend on the command and the situation
+    attributes: deprecated, attribute should be used instead
+
+    Attributes
+    ----------
+    command : str
+        The command to be analysed for further action
+    attribute : any type
+        the attribute related to the command. The actual type and value depend on the command and the situation
+    """
 
     def __init__(self, command: str, attribute=None, attributes=None):
-        """Object used to transmit info between threads or modules
-
-        Parameters
-        ----------
-        command: str
-            The command to be analysed for further action
-        attribute: any type
-            the attribute related to the command. The actual type and value depend on the command and the situation
-        attributes: deprecated, attribute should be used instead
-        """
         if not isinstance(command, str):
             raise TypeError(f'The command in a Threadcommand object should be a string, not a {type(command)}')
         self.command = command
@@ -1419,8 +1425,8 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-    #                                      exp='from pymodaq.daq_move.utility_classes import comon_parameters, main',
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
+    #                                      exp='crop',
     #                                      paths=[],
     #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
     #                                               '.tox', 'daq_utils.py', '.rst'],

@@ -6,7 +6,7 @@ Created on Wed Jan 10 16:54:14 2018
 """
 import os
 
-from control_modules.utils import ControlModule
+from pymodaq.control_modules.utils import ControlModule
 from pymodaq.daq_utils.gui_utils.file_io import select_file
 import pymodaq.daq_utils.gui_utils.utils
 from qtpy import QtGui, QtWidgets, QtCore
@@ -79,7 +79,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     update_settings_signal = Signal(edict)
     overshoot_signal = Signal(bool)
-    status_signal = Signal(str)
 
     params = daq_viewer_params
 
@@ -161,11 +160,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.do_save_data = False
 
-        self.set_setting_tree()  # to activate parameters of default Mock detector
+        self._set_setting_tree()  # to activate parameters of default Mock detector
 
-
-
-        self.grab_done_signal[OrderedDict].connect(self.save_export_data)
+        self.grab_done_signal[OrderedDict].connect(self._save_export_data)
 
         self.daq_type = config('viewer', 'daq_type')
 
@@ -210,17 +207,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'open':
             self.load_data()
         elif cmd.command == 'detector_changed':
-            self.detector = cmd.attribute
+            if cmd.attribute != '':
+                self.detector = cmd.attribute
         elif cmd.command == 'daq_type_changed':
             self.daq_type = cmd.attribute
         elif cmd.command == 'take_bkg':
             self.take_bkg()
         elif cmd.command == 'do_bkg':
-            self._do_bkg = cmd.attribute
+            self.do_bkg = cmd.attribute
         elif cmd.command == 'viewers_changed':
             self._viewer_types = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
-
 
     @property
     def viewer_docks(self):
@@ -229,12 +226,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @property
     def daq_type(self):
+        """:obj:`str`: Get/Set the daq_type ('DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND')
+
+        Update the detector property with the list of available detectors of a given daq_type
+        """
         return self._daq_type
 
     @daq_type.setter
     def daq_type(self, daq_type):
-        """
-        """
+        if daq_type not in self.daq_types:
+            raise ValueError(f'{daq_type} is not a valid DAQ_TYPE: {self.daq_types}')
         self._daq_type = daq_type
         if self.ui is not None:
             self.ui.daq_type = daq_type
@@ -242,18 +243,27 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type]]
 
     @property
+    def daq_types(self):
+        """:obj:`list` of :obj:`str`: List of available DAQ_TYPES"""
+        return DAQ_TYPES
+
+    @property
     def detector(self):
+        """:obj:`str`: Get/Set the detector among detectors property"""
         return self._detector
 
     @detector.setter
     def detector(self, det):
+        if det not in self.detectors:
+            raise ValueError(f'{det} is not a valid Detector: {self.detectors}')
         self._detector = det
         if self.ui is not None:
             self.ui.detector = det
-        self.set_setting_tree()
+        self._set_setting_tree()
 
     @property
     def detectors(self):
+        """:obj:`list` of :obj:`str`: List of available detectors of the current daq_type"""
         return self._detectors
 
     @detectors.setter
@@ -262,14 +272,37 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.ui is not None:
             self.ui.detectors = detectors
 
-
     @property
     def grab_state(self):
+        """:obj:`bool`: Get the current grabbing status"""
         return self._grabing
 
     @property
     def do_bkg(self):
+        """:obj:`bool`: Get/Set if background subtraction should be done"""
         return self._do_bkg
+
+    @do_bkg.setter
+    def do_bkg(self, doit: bool):
+        self._do_bkg = doit
+
+    @property
+    def viewers(self):
+        return self._viewers
+
+    @viewers.setter
+    def viewers(self, viewers):
+        for viewer in self._viewers:
+            try:
+                viewer.data_to_export_signal.disconnect()
+            except:
+                pass
+        for viewer in viewers:
+            viewer.data_to_export_signal.connect(self._get_data_from_viewer)
+            if hasattr(viewer, 'ROI_select_signal'):
+                viewer.ROI_select_signal.connect(
+                    lambda roi_pos_size: self.command_hardware.emit(ThreadCommand('ROISelect', roi_pos_size)))
+        self._viewers = viewers
 
     #######################
     #  INIT QUIT
@@ -303,6 +336,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     #  Methods for running the acquisition
 
     def init_hardware_ui(self, do_init=True):
+        """Send a command to the underlying UI to click the init button"""
         if self.ui is not None:
             self.ui.do_init()
 
@@ -356,38 +390,48 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.set_enabled_grab_buttons(enable=False)
 
     def snap(self):
+        """Programmatic click on the UI snap button"""
         if self.ui is not None:
             self.ui.do_snap()
 
     def grab(self):
+        """Programmatic click on the UI grab button"""
         if self.ui is not None:
             self.ui.do_grab()
 
     def snapshot(self, pathname=None, dosave=False, send_to_tcpip=False):
-        """
-            Do one single grab and save the data in pathname.
+        """Do one single grab (snap) and eventually save the data.
 
-            =============== =========== =================================================
-            **Parameters**    **Type**    **Description**
-            *pathname*        string      the pathname to the location os the saved file
-            =============== =========== =================================================
-
-            See Also
-            --------
-            grab, update_status
+        Parameters
+        ----------
+        pathname: str or Path object
+            The path where to save data
+        dosave: bool
+            Do save or just grab data
+        send_to_tcpip: bool
+            If True, send the grabed data through the TCP/IP pipe
         """
         try:
             self.do_save_data = dosave
             if pathname is None:
-                raise (Exception("filepathanme has not been defined in snapshot"))
-            self.save_file_pathname = pathname
+                raise (ValueError("filepathanme has not been defined in snapshot"))
 
+            self.save_file_pathname = pathname
             self.grab_data(grab_state=False, send_to_tcpip=send_to_tcpip, snap_state=True)
         except Exception as e:
             self.logger.exception(str(e))
 
     def grab_data(self, grab_state=False, send_to_tcpip=False, snap_state=False):
-        """
+        """Generic method to grab or snap data from the selected (and initialized) detector
+
+        Parameters
+        ----------
+        grab_state: bool
+            Defines the grab status: if True: do live grabing if False stops the grab
+        send_to_tcpip: bool
+            If True, send the grabed data through the TCP/IP pipe
+        snap_state: bool
+            if True performs a single grab
         """
         self._grabing = grab_state
         self._send_to_tcpip = send_to_tcpip
@@ -412,12 +456,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
 
     def take_bkg(self):
-        """
-            Save a new file if bkg check button is on.
+        """Do a snap and store data to be used as background into an attribute: `self.bkg`
 
-            See Also
-            --------
-            save_new
+        The content of the bkg will be saved if data is further saved with do_bkg property set to True
         """
         self._take_bkg = True
         self.snap()
@@ -427,50 +468,34 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.command_hardware.emit(ThreadCommand("stop_all", ))
 
     @Slot()
-    def raise_timeout(self):
-        """
-            Print the "timeout occured" error message in the status bar via the update_status method.
-
-            See Also
-            --------
-            update_status
+    def _raise_timeout(self):
+        """  Print the "timeout occurred" error message in the status bar via the update_status method.
         """
         self.update_status("Timeout occured", log_type="log")
 
-
-    ############ LOADING SAVING
-    ###########################
-    ###### LOADING ##########
-
-    def load_data(self):
+    @staticmethod
+    def load_data():
         """Opens a H5 file in the H5Browser module
+
+        Convenience static method.
         """
         browse_data()
 
-
-    ####### SAVING########
-
-    def set_continuous_save(self):
+    def _set_continuous_save(self):
+        """Setup a new h5file for continuous saving
         """
-            Set a continous save file using the base path located file with
-            a header-name containing date as a string.
-
-            See Also
-            --------
-            daq_utils.set_current_scan_path
-        """
-        if self.h5saver_continuous.settings.child(('do_save')).value():
+        if self.h5saver_continuous.settings.child('do_save').value():
             self.do_continuous_save = True
             self.is_continuous_initialized = False
-            self.h5saver_continuous.settings.child(('base_name')).setValue('Data')
-            self.h5saver_continuous.settings.child(('N_saved')).show()
-            self.h5saver_continuous.settings.child(('N_saved')).setValue(0)
+            self.h5saver_continuous.settings.child('base_name').setValue('Data')
+            self.h5saver_continuous.settings.child('N_saved').show()
+            self.h5saver_continuous.settings.child('N_saved').setValue(0)
             self.h5saver_continuous.init_file(update_h5=True)
 
             settings_str = ioxml.parameter_to_xml_string(self.settings)
             settings_str = b'<All_settings>' + settings_str
-            if hasattr(self.ui.viewers[0], 'roi_manager'):
-                settings_str += ioxml.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
+            if hasattr(self.viewers[0], 'roi_manager'):
+                settings_str += ioxml.parameter_to_xml_string(self.viewers[0].roi_manager.settings)
             settings_str += ioxml.parameter_to_xml_string(self.h5saver_continuous.settings) + b'</All_settings>'
             self.scan_continuous_group = self.h5saver_continuous.add_scan_group("Continuous Saving")
             self.continuous_group = self.h5saver_continuous.add_det_group(self.scan_continuous_group,
@@ -478,7 +503,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.h5saver_continuous.h5_file.flush()
         else:
             self.do_continuous_save = False
-            self.h5saver_continuous.settings.child(('N_saved')).hide()
+            self.h5saver_continuous.settings.child('N_saved').hide()
 
             try:
                 self.h5saver_continuous.close()
@@ -486,14 +511,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.logger.exception(str(e))
 
     def do_save_continuous(self, datas):
-        """
-        method used to perform continuous saving of data, for instance for logging. Will save datas as a function of
-        time in a h5 file set when *continuous_saving* parameter as been set.
+        """Add data to the continuous h5file
 
         Parameters
         ----------
-        datas:  list of OrderedDict as exported by detector plugins
-
+        datas: list of DataFromPlugin
         """
         try:
             # init the enlargeable arrays
@@ -514,7 +536,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                 if self.bkg is not None and self._do_bkg:
                     bkg_container = OrderedDict([])
-                    self.process_data(self.bkg, bkg_container)
+                    self._process_data(self.bkg, bkg_container)
 
                 for data_dim in data_dims:
                     if data_dim in datas.keys() and len(datas[data_dim]) != 0:
@@ -559,44 +581,40 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.logger.exception(str(e))
 
     def save_current(self):
-        """
-
-
-            See Also
-            --------
-            gutils.select_file, save_export_data
-        """
+        """Save current data into a h5file"""
         self.do_save_data = True
         self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True,
                                                                                   ext='h5')  # see daq_utils
-        self.save_export_data(self.data_to_save_export)
+        self._save_export_data(self.data_to_save_export)
 
     def save_new(self):
-        """
-            Do a new save from the select_file obtained pathname into a h5 file structure.
-
-            See Also
-            --------
-            gutils.select_file, snapshot
-        """
+        """Snap data and save them into a h5file"""
         self.do_save_data = True
         self.save_file_pathname = select_file(start_path=self.save_file_pathname, save=True,
                                                                                   ext='h5')  # see daq_utils
         self.snapshot(pathname=self.save_file_pathname, dosave=True)
 
-    def save_datas(self, path=None, datas=None):
-        """
-            Save procedure of .h5 file data.
-            Course the data array and with :
-            * **0D data** : store corresponding datas in a h5 file group (a node of the h5 tree)
-            * **1D data** : store corresponding datas in a h5 file group (a node of the h5 tree) with a special array for x_axis values
-            * **2D data** : store corresponding datas in a h5 file group (a node of the h5 tree) with a special array for x_axis and y_axis values.
+    def _save_data(self, path=None, data=None):
+        """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
 
-            =============== ============= ========================================
-            **Parameters**   **Type**     **Description**
-            *path*           string        the path name of the file to be saved.
-            *datas*          dictionnary   the raw datas to save.
-            =============== ============= ========================================
+        Parameters
+        ----------
+        path: Path
+            where to save the data as returned from browse_file for instance
+        data: OrderedDict
+            contains a timestamp and data (raw and extracted from roi in dataviewers) on the dorm:
+            `data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
+             control_module='DAQ_Viewer')`
+             with extra keys for data dimensionality such as Data0D=OrderedDict(...)
+
+        Notes
+        -----
+        The data to be saved should be put in a better object than an
+        OrderedDict...
+
+        See Also
+        --------
+        browse_file, _get_data_from_viewers
         """
         if path is not None:
             path = Path(path)
@@ -604,21 +622,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
 
         settings_str = b'<All_settings>' + ioxml.parameter_to_xml_string(self.settings)
-        if hasattr(self.ui.viewers[0], 'roi_manager'):
-            settings_str += ioxml.parameter_to_xml_string(self.ui.viewers[0].roi_manager.settings)
+        if hasattr(self.viewers[0], 'roi_manager'):
+            settings_str += ioxml.parameter_to_xml_string(self.viewers[0].roi_manager.settings)
         settings_str += ioxml.parameter_to_xml_string(h5saver.settings)
         settings_str += b'</All_settings>'
 
         det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
-        if 'external_h5' in datas:
+        if 'external_h5' in data:
             try:
                 external_group = h5saver.add_group('external_data', 'external_h5', det_group)
-                if not datas['external_h5'].isopen:
+                if not data['external_h5'].isopen:
                     h5saver = H5Saver()
-                    h5saver.init_file(addhoc_file_path=datas['external_h5'].filename)
+                    h5saver.init_file(addhoc_file_path=data['external_h5'].filename)
                     h5_file = h5saver.h5_file
                 else:
-                    h5_file = datas['external_h5']
+                    h5_file = data['external_h5']
                 h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
                 h5_file.flush()
                 h5_file.close()
@@ -633,31 +651,31 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
             if self.bkg is not None and self._do_bkg:
                 bkg_container = OrderedDict([])
-                self.process_data(self.bkg, bkg_container)
+                self._process_data(self.bkg, bkg_container)
 
             for data_dim in data_dims:
-                if datas[data_dim] is not None:
-                    if data_dim in datas.keys() and len(datas[data_dim]) != 0:
+                if data[data_dim] is not None:
+                    if data_dim in data.keys() and len(data[data_dim]) != 0:
                         if not h5saver.is_node_in_group(det_group, data_dim):
                             self.channel_arrays[data_dim] = OrderedDict([])
 
                             data_group = h5saver.add_data_group(det_group, data_dim)
-                            for ind_channel, channel in enumerate(datas[data_dim]):  # list of OrderedDict
+                            for ind_channel, channel in enumerate(data[data_dim]):  # list of OrderedDict
 
                                 channel_group = h5saver.add_CH_group(data_group, title=channel)
 
                                 self.channel_arrays[data_dim]['parent'] = channel_group
                                 if self.bkg is not None and self._do_bkg:
                                     if channel in bkg_container[data_dim]:
-                                        datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
+                                        data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
                                 self.channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
-                                                                                          datas[data_dim][channel],
+                                                                                          data[data_dim][channel],
                                                                                           scan_type='',
                                                                                           enlargeable=False)
 
                                 if data_dim == 'data2D' and 'Data2D' in self._viewer_types:
                                     ind_viewer = self._viewer_types.index('Data2D')
-                                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.viewers[ind_viewer].parent)
+                                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
                                     self.channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
             self.logger.exception(str(e))
@@ -673,34 +691,34 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         h5saver.close_file()
 
     @Slot(OrderedDict)
-    def save_export_data(self, datas):
-        """
-            Store in data_to_save_export buffer the data to be saved and do save at self.snapshot_pathname.
+    def _save_export_data(self, data):
+        """Auxiliary method (Slot) to receive all data (raw and processed from rois) and save them
 
-            ============== ============= ======================
-            **Parameters**   **Type**     **Description**
-            *datas*         dictionnary  the data to be saved
-            ============== ============= ======================
+        Parameters
+        ----------
+        data: OrderedDict
+            contains a timestamp and data (raw and extracted from roi in dataviewers) on the dorm:
+            `data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
+             control_module='DAQ_Viewer')`
+             with extra keys for data dimensionality such as Data0D=OrderedDict(...)
 
-            See Also
-            --------
-            save_datas
+        See Also
+        --------
+        _save_data
         """
 
         if self.do_save_data:
-            self.save_datas(self.save_file_pathname, datas)
+            self._save_data(self.save_file_pathname, data)
             self.do_save_data = False
 
-    ######################
-    #  ### DATAMANAGEMENT
-
     @Slot(OrderedDict)
-    def get_data_from_viewer(self, data):
+    def _get_data_from_viewer(self, data):
         """Get all data emitted by the current viewers
 
         Each viewer *data_to_export_signal* is connected to this slot. The collected data is stored in an OrderedDict
-        for further processing. When all viewers have emitted this signal, the collected data are emitted  with the
-        *grab_done_signal* signal.
+        `self.data_to_save_export` for further processing. All raw data are also stored in this attribute.
+        When all viewers have emitted this signal, the collected data are emitted  with the
+        `grab_done_signal` signal.
 
         Parameters
         ---------_
@@ -729,89 +747,159 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                 #
                                 # self.data_to_save_export[key][name].update(data[key][k])
 
-            if self.received_data == len(self.ui.viewers):
+            if self.received_data == len(self.viewers):
                 if self.do_continuous_save:
                     self.do_save_continuous(self.data_to_save_export)
 
                 self.grab_done = True
                 self.grab_done_signal.emit(self.data_to_save_export)
 
-    def set_datas_to_viewers(self, datas, temp=False):
-        for ind, data in enumerate(datas):
-            self.ui.viewers[ind].title = data['name']
-            if data['name'] != '':
-                self.ui.viewer_docks[ind].setTitle(self._title + ' ' + data['name'])
-            if data['dim'].lower() != 'datand':
-                self.set_xy_axis(data, ind)
+    @Slot(list)
+    def show_temp_data(self, data: List[utils.DataFromPlugins]):
+        """Send data to their dedicated viewers but those will not emit processed data signal
 
-            if data['dim'] == 'Data0D':
-                if 'labels' in data.keys():
-                    self.ui.viewers[ind].labels = data['labels']
-                if temp:
-                    self.ui.viewers[ind].show_data_temp(data['data'])
-                else:
-                    self.ui.viewers[ind].show_data(data['data'])
+        Slot receiving data from plugins emitted with the `data_grabed_signal_temp`
 
-            elif data['dim'] == 'Data1D':
-                if 'labels' in data.keys():
-                    self.ui.viewers[ind].labels = data['labels']
-                if temp:
-                    self.ui.viewers[ind].show_data_temp(data['data'])
-                else:
-                    self.ui.viewers[ind].show_data(data['data'])
+        Parameters
+        ----------
+        data: list of DataFromPlugins
+        """
+        self._init_show_data(data)
+        self.set_data_to_viewers(data, temp=True)
 
-            elif data['dim'] == 'Data2D':
-                if temp:
-                    self.ui.viewers[ind].show_data_temp(data)
-                else:
-                    self.ui.viewers[ind].show_data(data)
+    @Slot(list)
+    def show_data(self, data: List[utils.DataFromPlugins]):
+        """Send data to their dedicated viewers but those will not emit processed data signal
 
+        Slot receiving data from plugins emitted with the `data_grabed_signal`
+        Process the data as specified in the settings, display them into the dedicated data viewers depending on the
+        settings.
+
+        * create a container (OrderedDict `data_to_save_export`) with info from this DAQ_Viewer (title), a timestamp...
+        * call `_process_data`
+        * do background subtraction if any
+        * check refresh time (if set in the settings) to send or not data to data viewers
+        * either send to the data viewers (if refresh time is ok and/or show data option in settings is set)
+        * either:
+            * save in continuous h5 file if option set
+            * send grab_done_signal (to the slot _save_export_data ) to save the data
+
+        Parameters
+        ----------
+        data: list of DataFromPlugins
+
+        See Also
+        --------
+        _init_show_data, _process_data
+        """
+        try:
+            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
+                self.command_tcpip.emit(ThreadCommand('data_ready', data))
+            if self.ui is not None:
+                self.ui.data_ready = True
+            self._init_show_data(data)
+
+            if self.settings.child('main_settings', 'live_averaging').value():
+                self.settings.child('main_settings', 'N_live_averaging').setValue(self.ind_continuous_grab)
+                # #self.ui.current_Naverage.setValue(self.ind_continuous_grab)
+                self.ind_continuous_grab += 1
+                if self.ind_continuous_grab > 1:
+                    try:
+                        for ind, dic in enumerate(data):
+                            dic['data'] = [((self.ind_continuous_grab - 1) * self.current_datas[ind]['data'][
+                                ind_channel] + dic['data'][ind_channel]) / self.ind_continuous_grab for ind_channel in
+                                range(len(dic['data']))]
+                    except Exception as e:
+                        self.logger.exception(str(e))
+
+            # store raw data for further processing
+            Ndatas = len(data)
+            acq_time = datetime.datetime.now().timestamp()
+            name = self._title
+            self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
+                                                   control_module='DAQ_Viewer')
+
+            self._process_data(data, self.data_to_save_export)
+
+            if self._take_bkg:
+                self.bkg = copy.deepcopy(data)
+                self._take_bkg = False
+            # process bkg if needed
+            if self.do_bkg and self.bkg is not None:
+                try:
+                    for ind_channels, channels in enumerate(data):
+                        for ind_channel, channel in enumerate(channels['data']):
+                            data[ind_channels]['data'][ind_channel] -= self.bkg[ind_channels]['data'][ind_channel]
+                except Exception as e:
+                    self.logger.exception(str(e))
+
+            if self._grabing:  # if live
+                refresh = time.perf_counter() - self.start_grab_time > self.settings.child('main_settings',
+                                                                                           'refresh_time').value() /\
+                          1000
+                if refresh:
+                    self.start_grab_time = time.perf_counter()
             else:
-                if 'nav_axes' in data.keys():
-                    nav_axes = data['nav_axes']
-                else:
-                    nav_axes = None
+                refresh = True  # if single
+            if self.ui is not None and self.settings.child('main_settings', 'show_data').value() and refresh:
+                self.received_data = 0  # so that data send back from viewers can be properly counted
+                self.set_data_to_viewers(data)
+            else:
+                if self.do_continuous_save:
+                    self.do_save_continuous(self.data_to_save_export)
 
-                kwargs = dict()
-                if 'nav_x_axis' in data.keys():
-                    kwargs['nav_x_axis'] = data['nav_x_axis']
-                if 'nav_y_axis' in data.keys():
-                    kwargs['nav_y_axis'] = data['nav_y_axis']
-                if 'x_axis' in data.keys():
-                    kwargs['x_axis'] = data['x_axis']
-                if 'y_axis' in data.keys():
-                    kwargs['y_axis'] = data['y_axis']
+                self.grab_done = True
+                self.grab_done_signal.emit(self.data_to_save_export)
 
-                if isinstance(data['data'], list):
-                    dat = data['data'][0]
-                else:
-                    dat = data['data']
+            self.current_datas = data
 
-                if temp:
-                    self.ui.viewers[ind].show_data_temp(dat, nav_axes=nav_axes, **kwargs)
-                else:
-                    self.ui.viewers[ind].show_data(dat, nav_axes=nav_axes, **kwargs)
+        except Exception as e:
+            self.logger.exception(str(e))
 
-    def init_show_data(self, datas):
-        self.process_overshoot(datas)
-        self._viewer_types = [data['dim'] for data in datas]
+    def _init_show_data(self, data):
+        """Processing before showing data
+
+        * process the data to check if they overshoot
+        * check the data dimensionality to update the dedicated viewers
+
+        Parameters
+        ----------
+        data: list of DataFromPlugins
+
+        See Also
+        --------
+        _process_overshoot
+        """
+        self._process_overshoot(data)
+        self._viewer_types = [data['dim'] for data in data]
         if self.ui is not None:
             self.ui.update_viewers(self._viewer_types)
 
-    def process_data(self, datas, container):
+    def _process_data(self, data, container: OrderedDict):
+        """Process data depending on the settings options
 
+        In particular extract all the given data and sort/store them by dimensionality in dedicated keys ('data0D', ...)
+        in the container. Using a *container* here remove the need to create a copy to be returned by this method
+
+        Parameters
+        ----------
+        data: list of DataFromPlugins
+        container: OrderedDict
+            The container is in general the self.data_to_save_export attribute
+
+        """
         data0D = OrderedDict([])
         data1D = OrderedDict([])
         data2D = OrderedDict([])
         dataND = OrderedDict([])
 
-        for ind_data, data in enumerate(datas):
+        for ind_data, data in enumerate(data):
             if 'external_h5' in data.keys():
                 container['external_h5'] = data.pop('external_h5')
             data_tmp = copy.deepcopy(data)
             data_dim = data_tmp['dim']
             if data_dim.lower() != 'datand':
-                self.set_xy_axis(data_tmp, ind_data)
+                self._set_xy_axis(data_tmp, ind_data)
             data_arrays = data_tmp.pop('data')
 
             name = data_tmp.pop('name')
@@ -847,132 +935,83 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         container['data2D'] = data2D
         container['dataND'] = dataND
 
-    @Slot(list)
-    def show_data(self, datas: List[utils.DataFromPlugins]):
+    def set_data_to_viewers(self, data, temp=False):
+        """Process data dimensionality and send appropriate data to their data viewers
+
+        Parameters
+        ----------
+        data: list of DataFromPlugins
+        temp: bool
+            if True notify the data viewers to display data as temporary (meaning not exporting processed data from roi)
+
+        See Also
+        --------
+        ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
+        for ind, data in enumerate(data):
+            self.viewers[ind].title = data['name']
+            if data['name'] != '':
+                self.ui.viewer_docks[ind].setTitle(self._title + ' ' + data['name'])
+            if data['dim'].lower() != 'datand':
+                self._set_xy_axis(data, ind)
 
-        """
-        try:
-            if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
-                self.command_tcpip.emit(ThreadCommand('data_ready', datas))
-            if self.ui is not None:
-                self.ui.data_ready = True
-            self.init_show_data(datas)
+            if data['dim'] == 'Data0D':
+                if 'labels' in data.keys():
+                    self.viewers[ind].labels = data['labels']
+                if temp:
+                    self.viewers[ind].show_data_temp(data['data'])
+                else:
+                    self.viewers[ind].show_data(data['data'])
 
-            if self.settings.child('main_settings', 'live_averaging').value():
-                self.settings.child('main_settings', 'N_live_averaging').setValue(self.ind_continuous_grab)
-                # #self.ui.current_Naverage.setValue(self.ind_continuous_grab)
-                self.ind_continuous_grab += 1
-                if self.ind_continuous_grab > 1:
-                    try:
-                        for ind, dic in enumerate(datas):
-                            dic['data'] = [((self.ind_continuous_grab - 1) * self.current_datas[ind]['data'][
-                                ind_channel] + dic['data'][ind_channel]) / self.ind_continuous_grab for ind_channel in
-                                range(len(dic['data']))]
-                    except Exception as e:
-                        self.logger.exception(str(e))
+            elif data['dim'] == 'Data1D':
+                if 'labels' in data.keys():
+                    self.viewers[ind].labels = data['labels']
+                if temp:
+                    self.viewers[ind].show_data_temp(data['data'])
+                else:
+                    self.viewers[ind].show_data(data['data'])
 
-            # store raw data for further processing
-            Ndatas = len(datas)
-            acq_time = datetime.datetime.now().timestamp()
-            name = self._title
-            self.data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
-                                                   control_module='DAQ_Viewer')
+            elif data['dim'] == 'Data2D':
+                if temp:
+                    self.viewers[ind].show_data_temp(data)
+                else:
+                    self.viewers[ind].show_data(data)
 
-            self.process_data(datas, self.data_to_save_export)
-
-            if self._take_bkg:
-                self.bkg = copy.deepcopy(datas)
-            # process bkg if needed
-            if self._do_bkg and self.bkg is not None:
-                try:
-                    for ind_channels, channels in enumerate(datas):
-                        for ind_channel, channel in enumerate(channels['data']):
-                            datas[ind_channels]['data'][ind_channel] -= self.bkg[ind_channels]['data'][ind_channel]
-                except Exception as e:
-                    self.logger.exception(str(e))
-
-            if self._grabing:  # if live
-                refresh = time.perf_counter() - self.start_grab_time > self.settings.child('main_settings',
-                                                                                           'refresh_time').value() /\
-                          1000
-                if refresh:
-                    self.start_grab_time = time.perf_counter()
             else:
-                refresh = True  # if single
-            if self.settings.child('main_settings', 'show_data').value() and refresh:
-                self.received_data = 0  # so that data send back from viewers can be properly counted
-                self.set_datas_to_viewers(datas)
-            else:
-                if self.do_continuous_save:
-                    self.do_save_continuous(self.data_to_save_export)
+                if 'nav_axes' in data.keys():
+                    nav_axes = data['nav_axes']
+                else:
+                    nav_axes = None
 
-                self.grab_done = True
-                self.grab_done_signal.emit(self.data_to_save_export)
+                kwargs = dict()
+                if 'nav_x_axis' in data.keys():
+                    kwargs['nav_x_axis'] = data['nav_x_axis']
+                if 'nav_y_axis' in data.keys():
+                    kwargs['nav_y_axis'] = data['nav_y_axis']
+                if 'x_axis' in data.keys():
+                    kwargs['x_axis'] = data['x_axis']
+                if 'y_axis' in data.keys():
+                    kwargs['y_axis'] = data['y_axis']
 
-            self.current_datas = datas
+                if isinstance(data['data'], list):
+                    dat = data['data'][0]
+                else:
+                    dat = data['data']
 
-        except Exception as e:
-            self.logger.exception(str(e))
-
-    @Slot(list)
-    def show_temp_data(self, datas):
-        """
-            | Show the given datas in the different pannels but do not send processed datas signal.
-
-            =============== ====================== ========================
-            **Parameters**    **Type**               **Description**
-            datas             list  of OrderedDict   the datas to be showed.
-            =============== ====================== ========================
-
-        """
-        self.init_show_data(datas)
-        self.set_datas_to_viewers(datas, temp=True)
-
-    @property
-    def viewers(self):
-        return self._viewers
-
-    @viewers.setter
-    def viewers(self, viewers):
-        for viewer in self._viewers:
-            try:
-                viewer.data_to_export_signal.disconnect()
-            except:
-                pass
-        for viewer in viewers:
-            viewer.data_to_export_signal.connect(self.get_data_from_viewer)
-        self._viewers = viewers
-
-
-    #####################
-    ##### PROCESS CHANGES
-    #####################
-
-    def log_messages(self, txt):
-        self.status_signal.emit(txt)
-        self.logger.info(txt)
-
-    def update_status(self, txt, log=True):
-        """
-            | Show the given txt message in the status bar with
-            | Emit a log signal if log_type parameter is defined.
-
-            =============== =========== =====================================
-            **Parameters**    **Type**   **Description**
-            *txt*             string     the message to show
-            *log_type*        string     the type of  the log signal to emit
-            =============== =========== =====================================
-        """
-        if self.ui is not None:
-            self.ui.display_status(txt)
-        self.status_signal.emit(txt)
-        if log:
-            self.logger.info(txt)
+                if temp:
+                    self.viewers[ind].show_data_temp(dat, nav_axes=nav_axes, **kwargs)
+                else:
+                    self.viewers[ind].show_data(dat, nav_axes=nav_axes, **kwargs)
 
     def value_changed(self, param):
-        path = self.settings.childPath(param)
+        """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
 
+        Parameters
+        ----------
+        param: Parameter
+            a given parameter whose value has been changed by user
+        """
+        path = self.settings.childPath(param)
         if param.name() == 'DAQ_type':
             self.h5saver_continuous.settings.child('do_save').setValue(False)
             self.settings.child('main_settings', 'axes').show(param.value() == 'DAQ2D')
@@ -1001,14 +1040,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                             param_obj.child(('axes')).saveState(), addChildren=False, removeChildren=False)
                         self.settings.child('main_settings', 'axes').show()
                 else:
-                    for viewer in self.ui.viewers:
+                    for viewer in self.viewers:
                         viewer.set_scaling_axes(self.get_scaling_options())
 
         elif param.name() == 'continuous_saving_opt':
             self.h5saver_continuous.settings_tree.setVisible(param.value())
 
         elif param.name() == 'do_save':
-            self.set_continuous_save()
+            self._set_continuous_save()
 
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand('update_wait_time', [param.value()]))
@@ -1034,10 +1073,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
     def param_deleted(self, param):
+        """ParameterManager subclassed method. Process events from parameter deleted by user in the UI Settings
+
+        Parameters
+        ----------
+        param: Parameter
+            a given parameter whose value has been changed by user
+        """
         if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
             self.update_settings_signal.emit(edict(path=['detector_settings'], param=param, change='parent'))
 
-    def set_setting_tree(self):
+    def _set_setting_tree(self):
         """Apply the specific settings of the selected detector (plugin)
 
         Remove previous ones and load on the fly the new ones
@@ -1057,23 +1103,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def process_overshoot(self, datas):
+    def _process_overshoot(self, data):
+        """Compare data value (0D) to the given overshoot setting
+        """
         if self.settings.child('main_settings', 'overshoot', 'stop_overshoot').value():
-            for channels in datas:
+            for channels in data:
                 for channel in channels['data']:
                     if any(channel >= self.settings.child('main_settings', 'overshoot', 'overshoot_value').value()):
                         self.overshoot_signal.emit(True)
 
     def get_scaling_options(self):
-        """
-            Return the initialized dictionnary containing the scaling options.
+        """Create axes scaling options depending on the ('main_settings', 'axes') settings
 
-
-            Returns
-            -------
-            dictionnary
-                scaling options dictionnary.
-
+        Returns
+        -------
+        utils.ScalingOptions
         """
         scaling_options = utils.ScalingOptions(
             scaled_xaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
@@ -1090,20 +1134,32 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                                                       'yscaling').value()))
         return scaling_options
 
-    def set_xy_axis(self, data, ind_viewer):
+    def _set_xy_axis(self, data, ind_viewer):
+        """Set data viewers (1D and 2D) axes depending on the content of data
+
+        Parameters
+        ----------
+        data: DataFromPlugins
+            data as exported from the plugins and containing eventually info on axes
+        ind_viewer: int
+
+        Returns
+        -------
+
+        """
         if 'x_axis' in data.keys():
-            self.ui.viewers[ind_viewer].x_axis = data['x_axis']
+            self.viewers[ind_viewer].x_axis = data['x_axis']
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                 self.command_tcpip.emit(ThreadCommand('x_axis', [data['x_axis']]))
 
         if 'y_axis' in data.keys():
-            self.ui.viewers[ind_viewer].y_axis = data['y_axis']
+            self.viewers[ind_viewer].y_axis = data['y_axis']
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                 self.command_tcpip.emit(ThreadCommand('y_axis', [data['y_axis']]))
 
     @Slot(ThreadCommand)
     def thread_status(self, status):
-        """Get back info (using the Threadcommand object) from the hardware
+        """Get back info (using the ThreadCommand object) from the hardware
 
         And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
 
@@ -1168,12 +1224,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             try:
                 x_axis = status.attribute[0]
                 if isinstance(x_axis, list):
-                    if len(x_axis) == len(self.ui.viewers):
-                        for ind, viewer in enumerate(self.ui.viewers):
+                    if len(x_axis) == len(self.viewers):
+                        for ind, viewer in enumerate(self.viewers):
                             viewer.x_axis = x_axis[ind]
                     x_axis = x_axis[0]
                 else:
-                    for viewer in self.ui.viewers:
+                    for viewer in self.viewers:
                         viewer.x_axis = x_axis
 
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
@@ -1186,12 +1242,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             try:
                 y_axis = status.attribute[0]
                 if isinstance(y_axis, list):
-                    if len(y_axis) == len(self.ui.viewers):
-                        for ind, viewer in enumerate(self.ui.viewers):
+                    if len(y_axis) == len(self.viewers):
+                        for ind, viewer in enumerate(self.viewers):
                             viewer.y_axis = y_axis[ind]
                     y_axis = y_axis[0]
                 else:
-                    for viewer in self.ui.viewers:
+                    for viewer in self.viewers:
                         viewer.y_axis = y_axis
 
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
@@ -1239,7 +1295,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         elif status.command == 'raise_timeout':
-            self.raise_timeout()
+            self._raise_timeout()
 
         elif status.command == 'show_splash':
             self.ui.settings_tree.setEnabled(False)
@@ -1271,17 +1327,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
-
-    ###########################
-    #  TCPIP stuff
-
     def connect_tcp_ip(self):
+        """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
+
+        Use the settings: ip_adress and port to specify the connection
+
+        See Also
+        --------
+        TCPServer
+        """
         if self.settings.child('main_settings', 'tcpip', 'connect_server').value():
             self._tcpclient_thread = QThread()
 
             tcpclient = TCPClient(self.settings.child('main_settings', 'tcpip', 'ip_address').value(),
                                   self.settings.child('main_settings', 'tcpip', 'port').value(),
-                                  self.settings.child(('detector_settings')))
+                                  self.settings.child('detector_settings'))
             tcpclient.moveToThread(self._tcpclient_thread)
             self._tcpclient_thread.tcpclient = tcpclient
             tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
@@ -1293,6 +1353,25 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @Slot(ThreadCommand)
     def process_tcpip_cmds(self, status):
+        """Receive commands from the TCP Server (if connected) and process them
+
+        Parameters
+        ----------
+        status: ThreadCommand
+            Possible commands are:
+            * 'Send Data: to trigger a snapshot
+            * 'connected': show that connection is ok
+            * 'disconnected': show that connection is not OK
+            * 'Update_Status': update a status command
+            * 'set_info': receive settings from the server side and update them on this side
+            * 'get_axis': request the plugin to send its axis info
+
+
+        See Also
+        --------
+        connect_tcp_ip, TCPServer
+
+        """
         if 'Send Data' in status.command:
             self.snapshot('', send_to_tcpip=True)
         elif status.command == 'connected':
@@ -1454,10 +1533,11 @@ class DAQ_Detector(QObject):
         elif command.command == 'get_axis':
             self.detector.get_axis()
 
-        else:  # custom commands for particular plugins (see spectrometer module 'get_spectro_wl' for instance)
+        else:  # custom commands for particular plugins (see ROISelect in relation to a Viewer2D and the plugin
+            # Mock2D or the spectrometer module 'get_spectro_wl' for instance)
             if hasattr(self.detector, command.command):
                 cmd = getattr(self.detector, command.command)
-                cmd(*command.attribute)
+                cmd(command.attribute)
 
     def ini_detector(self, params_state=None, controller=None):
         """

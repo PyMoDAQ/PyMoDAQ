@@ -5,6 +5,7 @@ Created the 03/10/2022
 @author: Sebastien Weber
 """
 from qtpy import QtCore
+from qtpy.QtCore import Signal, QObject
 from pymodaq.daq_utils.gui_utils import CustomApp
 from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
 from pymodaq.daq_utils.config import Config
@@ -35,29 +36,24 @@ def get_viewer_plugins(daq_type, det_name):
     return det_params, obj
 
 
-class ControlModule(QtCore.QObject):
+class ControlModule(QObject):
     """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules
 
     Attributes
     ----------
-
-    init_signal: Signal[bool]
+    init_signal : Signal[bool]
         This signal is emitted when the chosen hardware is correctly initialized
-    command_hardware: Signal[ThreadCommand]
+    command_hardware : Signal[ThreadCommand]
         This signal is used to communicate with the instrument plugin within a separate thread
-    command_tcpip: Signal[ThreadCommand]
-        This signal is used to communicate trhough the TCP/IP Network
-    quit_signal: Signal[]
+    command_tcpip : Signal[ThreadCommand]
+        This signal is used to communicate through the TCP/IP Network
+    quit_signal : Signal[]
         This signal is emitted when the user requested to stop the module
-
-    See Also
-    --------
-    :class:`ThreadCommand`
     """
-    init_signal = QtCore.Signal(bool)
-    command_hardware = QtCore.Signal(ThreadCommand)
-    command_tcpip = QtCore.Signal(ThreadCommand)
-    quit_signal = QtCore.Signal()
+    init_signal = Signal(bool)
+    command_hardware = Signal(ThreadCommand)
+    command_tcpip = Signal(ThreadCommand)
+    quit_signal = Signal()
 
     def __init__(self):
         super().__init__()
@@ -73,14 +69,17 @@ class ControlModule(QtCore.QObject):
 
     @property
     def module_type(self):
+        """str: Get the module type, either DAQ_Move or DAQ_viewer"""
         return type(self).__name__
 
     @property
     def initialized_state(self):
+        """bool: Check if the module is initialized"""
         return self._initialized_state
 
     @property
     def title(self):
+        """str: get the title of the module"""
         return self._title
 
     def grab(self):
@@ -96,7 +95,7 @@ class ControlModule(QtCore.QObject):
 
         Parameters
         ----------
-        do_init: bool
+        do_init : bool
             if True initialize the selected hardware else deinitialize it
 
         See Also
@@ -110,7 +109,7 @@ class ControlModule(QtCore.QObject):
 
         Parameters
         ----------
-        do_init: bool
+        do_init : bool
             if True initialize the selected hardware else deinitialize it
 
         Notes
@@ -120,12 +119,29 @@ class ControlModule(QtCore.QObject):
         raise NotImplementedError
 
     def show_log(self):
+        """Open the log file in the default text editor"""
         import webbrowser
         webbrowser.open(self.logger.parent.handlers[0].baseFilename)
+
+    def update_status(self, txt, log=True):
+        """Display a message in the ui status bar and eventually log the message
+
+        Parameters
+        ----------
+        txt : str
+            message to display
+        log : bool
+            if True, log the message in the logger
+        """
+        if self.ui is not None:
+            self.ui.display_status(txt)
+        if log:
+            self.logger.info(txt)
 
 
 class ControlModuleUI(CustomApp):
     """ Base Class for ControlModules UIs
+
     Attributes
     ----------
     command_sig: Signal[Threadcommand]
@@ -135,7 +151,7 @@ class ControlModuleUI(CustomApp):
 
     See Also
     --------
-    pymodaq.control_modules.daq_move_ui:DAQ_Move_UI, pymodaq.control_modules.daq_viewer_ui:DAQ_Viewer_UI
+    :class:`daq_move_ui.DAQ_Move_UI`, :class:`daq_viewer_ui.DAQ_Viewer_UI`
     """
     command_sig = QtCore.Signal(ThreadCommand)
 
