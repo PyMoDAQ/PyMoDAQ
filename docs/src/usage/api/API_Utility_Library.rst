@@ -11,6 +11,7 @@ daq_utils
 .. toctree::
    :maxdepth: 5
 
+   utility_api/utility_classes
    utility_api/tcp_ip
    utility_api/units_conversion
    utility_api/mathematical
