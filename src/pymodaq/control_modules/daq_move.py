@@ -11,7 +11,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
-from control_modules.utils import ControlModule
+from pymodaq.control_modules.utils import ControlModule
 from pymodaq.daq_utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
@@ -201,7 +201,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                     self.ui.move_done = False
                 self._move_done_bool = False
                 self._target_value = value
-                self.update_status("Moving", wait_time=STATUS_WAIT_TIME)
+                self.update_status("Moving")
                 self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
                 self.command_hardware.emit(ThreadCommand(command="move_abs", attribute=[value]))
 
@@ -225,7 +225,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             if self.ui is not None:
                 self.ui.move_done = False
             self._move_done_bool = False
-            self.update_status("Moving", wait_time=STATUS_WAIT_TIME)
+            self.update_status("Moving")
             self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
             self.command_hardware.emit(ThreadCommand(command="move_Home"))
 
@@ -255,7 +255,7 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self.ui.move_done = False
             self._move_done_bool = False
             self._target_value = self._current_value + rel_value
-            self.update_status("Moving", wait_time=STATUS_WAIT_TIME)
+            self.update_status("Moving")
             self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
             self.command_hardware.emit(ThreadCommand(command="move_rel", attribute=[rel_value]))
 
@@ -379,7 +379,7 @@ class DAQ_Move(ParameterManager, ControlModule):
     def raise_timeout(self):
         """Update status with "Timeout occurred" statement and change the timeout flag.
         """
-        self.update_status("Timeout occurred", wait_time=STATUS_WAIT_TIME)
+        self.update_status("Timeout occurred")
         self.wait_position_flag = False
 
     @Slot(ThreadCommand)
@@ -414,15 +414,14 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         if status.command == "Update_Status":
             if len(status.attribute) > 2:
-                self.update_status(status.attribute[0], wait_time=STATUS_WAIT_TIME, log_type=status.attribute[1])
+                self.update_status(status.attribute[0], log=status.attribute[1])
             else:
-                self.update_status(status.attribute[0], wait_time=STATUS_WAIT_TIME)
+                self.update_status(status.attribute[0])
 
         elif status.command == "ini_stage":
             # status.attribute[0]=edict(initialized=bool,info="", controller=)
             self.update_status("Stage initialized: {:} info: {:}".format(status.attribute[0]['initialized'],
-                                                                         status.attribute[0]['info']),
-                               wait_time=STATUS_WAIT_TIME)
+                                                                         status.attribute[0]['info']))
             if status.attribute[0]['initialized']:
                 self.controller = status.attribute[0]['controller']
                 if self.ui is not None:
@@ -436,7 +435,7 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         elif status.command == "close":
             try:
-                self.update_status(status.attribute[0], wait_time=STATUS_WAIT_TIME)
+                self.update_status(status.attribute[0])
                 self._hardware_thread.exit()
                 self._hardware_thread.wait()
                 finished = self._hardware_thread.isFinished()
@@ -569,23 +568,6 @@ class DAQ_Move(ParameterManager, ControlModule):
         else:
             self._refresh_timer.stop()
 
-    def update_status(self, txt, wait_time=0):
-        """Update the message on the ui and in the log
-
-        Parameters
-        ----------
-        txt: str
-            The text to print
-        wait_time: int
-            The time in ms the temporary message will be shown on the ui's StatusBar
-
-        Returns
-        -------
-
-        """
-        if self.ui is not None:
-            self.ui.display_status(txt, wait_time)
-        self.logger.info(txt)
 
     @property
     def actuator(self):
