@@ -97,12 +97,12 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     @detectors.setter
     def detectors(self, detectors: List[str]):
-        self._detectors_combo.currentTextChanged.disconnect()
+        #self._detectors_combo.currentTextChanged.disconnect()
         self._detectors_combo.clear()
         self._detectors_combo.addItems(detectors)
-        self._detectors_combo.currentTextChanged.connect(
-            lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
-        self.detector = detectors[0]
+        #self._detectors_combo.currentTextChanged.connect(
+        #    lambda mod: self.command_sig.emit(ThreadCommand('detector_changed', mod)))
+        #self.detector = detectors[0]
 
     @property
     def daq_type(self):
@@ -118,11 +118,11 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     @daq_types.setter
     def daq_types(self, dtypes: List[str]):
-        self._daq_types_combo.currentTextChanged.disconnect()
+        #self._daq_types_combo.currentTextChanged.disconnect()
         self._daq_types_combo.clear()
         self._daq_types_combo.addItems(dtypes)
         self.daq_type = dtypes[0]
-        self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
+        #self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
 
     @property
     def viewers(self):

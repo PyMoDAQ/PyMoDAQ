@@ -4,6 +4,8 @@ Created the 03/10/2022
 
 @author: Sebastien Weber
 """
+from easydict import EasyDict as edict
+
 from qtpy import QtCore
 from qtpy.QtCore import Signal, QObject
 from pymodaq.daq_utils.gui_utils import CustomApp
@@ -52,9 +54,10 @@ class ControlModule(QObject):
     """
     init_signal = Signal(bool)
     command_hardware = Signal(ThreadCommand)
-    command_tcpip = Signal(ThreadCommand)
+    _command_tcpip = Signal(ThreadCommand)
     quit_signal = Signal()
-
+    _update_settings_signal = Signal(edict)
+    status_sig = Signal(str)
     def __init__(self):
         super().__init__()
         self._title = ""
@@ -135,6 +138,7 @@ class ControlModule(QObject):
         """
         if self.ui is not None:
             self.ui.display_status(txt)
+        self.status_sig.emit(txt)
         if log:
             self.logger.info(txt)
 

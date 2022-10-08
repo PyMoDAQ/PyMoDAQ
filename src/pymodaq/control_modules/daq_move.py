@@ -58,7 +58,7 @@ class DAQ_Move(ParameterManager, ControlModule):
     _current_value_signal = Signal(str, float)
     # to be used in external program to make sure the move has been done,
     # export the current position. str refer to the unique title given to the module
-    update_settings_signal = Signal(edict)
+    _update_settings_signal = Signal(edict)
     bounds_signal = Signal(bool)
     
     params = daq_move_params
@@ -323,7 +323,7 @@ class DAQ_Move(ParameterManager, ControlModule):
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)
                 hardware.status_sig[ThreadCommand].connect(self.thread_status)
-                self.update_settings_signal[edict].connect(hardware.update_settings)
+                self._update_settings_signal[edict].connect(hardware.update_settings)
 
                 self._hardware_thread.hardware = hardware
                 self._hardware_thread.start()
@@ -348,10 +348,10 @@ class DAQ_Move(ParameterManager, ControlModule):
             if param.value():
                 self.connect_tcp_ip()
             else:
-                self.command_tcpip.emit(ThreadCommand('quit', ))
+                self._command_tcpip.emit(ThreadCommand('quit', ))
 
         elif param.name() == 'ip_address' or param.name == 'port':
-            self.command_tcpip.emit(
+            self._command_tcpip.emit(
                 ThreadCommand('update_connection', dict(ipaddress=self.settings.child('main_settings', 'tcpip',
                                                                                       'ip_address').value(),
                                                         port=self.settings.child('main_settings', 'tcpip',
@@ -362,18 +362,18 @@ class DAQ_Move(ParameterManager, ControlModule):
         path = self.settings.childPath(param)
         if path is not None:
             if 'main_settings' not in path:
-                self.update_settings_signal.emit(edict(path=path, param=param, change='value'))
+                self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-                    self.command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
+                    self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
     def param_deleted(self, param):
         if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
-            self.update_settings_signal.emit(edict(path=['move_settings'], param=param, change='parent'))
+            self._update_settings_signal.emit(edict(path=['move_settings'], param=param, change='parent'))
 
     def child_added(self, param, data):
         path = self.settings.childPath(param)
         if 'main_settings' not in path:
-            self.update_settings_signal.emit(edict(path=path, param=data[0].saveState(), change='childAdded'))
+            self._update_settings_signal.emit(edict(path=path, param=data[0].saveState(), change='childAdded'))
 
     @Slot()
     def raise_timeout(self):
@@ -455,7 +455,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._current_value = status.attribute[0]
             self._current_value_signal.emit(self.title, self._current_value)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
-                self.command_tcpip.emit(ThreadCommand('position_is', status.attribute))
+                self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
         elif status.command == "move_done":
             if self.ui is not None:
@@ -465,7 +465,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._move_done_bool = True
             self.move_done_signal.emit(self._title, status.attribute[0])
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
-                self.command_tcpip.emit(ThreadCommand('move_done', status.attribute))
+                self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 
         elif status.command == "Move_Not_Done":
             if self.ui is not None:
@@ -618,7 +618,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._tcpclient_thread.tcpclient = tcpclient
             tcpclient.cmd_signal.connect(self.process_tcpip_cmds)
 
-            self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
+            self._command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
             self._tcpclient_thread.start()
             tcpclient.init_connection()

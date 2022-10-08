@@ -24,7 +24,6 @@ class ViewerBase(QObject):
 
     def __init__(self, parent=None, title=''):
         super().__init__()
-        self.viewer_type = DATATYPES[self.__class__.__name__]
         self.title = title if title != '' else self.__class__.__name__
 
         self._raw_datas = None
@@ -36,6 +35,10 @@ class ViewerBase(QObject):
         self.parent = parent
 
         self._display_temporary = False
+
+    @property
+    def viewer_type(self):
+        return DATATYPES[self.__class__.__name__]
 
     def show_data(self, datas: utils.DataFromPlugins):
         if len(datas['data'][0].shape) != 2:
