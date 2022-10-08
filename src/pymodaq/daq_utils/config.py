@@ -7,9 +7,24 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore
 
 
-def getitem_recursive(dic, *args):
+def getitem_recursive(dic, *args, ndepth=0):
+    """Will scan recursively a dictionary in order to get the item defined by the iterable args
+
+    Parameters
+    ----------
+    dic: dict
+        the dictionary to scan
+    args: an iterable of str
+        keys of the dict
+    ndepth: int
+        by default (0) get the last element defined by args. 1 would mean it get the parent dict, 2 the parent of the
+        parent...
+    Returns
+    -------
+    object or dict
+    """
     args = list(args)
-    while len(args) > 0:
+    while len(args) > ndepth:
         dic = dic[args.pop(0)]
     return dic
 
@@ -154,7 +169,17 @@ class Config:
 
     def __getitem__(self, item):
         """for backcompatibility when it was a dictionnary"""
-        return self._config[item]
+        if isinstance(item, tuple):
+            return getitem_recursive(self._config, *item)
+        else:
+            return self._config[item]
+
+    def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            dic = getitem_recursive(self._config, *key, ndepth=1)
+            dic[key[-1]] = value
+        else:
+            self._config[key] = value
 
 
 def set_config(config_as_dict, config_path=None):
