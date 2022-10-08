@@ -233,7 +233,7 @@ def test_update_viewers(ini_daq_viewer_ui):
     daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
     dockarea.show()
 
-    assert len(daq_viewer.viewers) == 0
+    assert len(daq_viewer.viewers) == 1
 
     data_dims = ['Data0D', 'Data2D']
     daq_viewer.update_viewers(data_dims)
