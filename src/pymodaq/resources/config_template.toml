@@ -36,6 +36,7 @@ name = "User name"  # default name used as author in the hdf5 saving files
 
 [viewer]
 daq_type = 'DAQ0D' #either "DAQ0D", "DAQ1D", "DAQ2D", "DAQND"
+viewer_in_thread = true
 
 [network]
     [network.logging]
