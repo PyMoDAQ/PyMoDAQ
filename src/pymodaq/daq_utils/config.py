@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 import toml
-from PyQt5.QtCore import QObject
+from qtpy.QtCore import QObject
 from pymodaq.daq_utils.messenger import messagebox
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore
