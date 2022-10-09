@@ -107,7 +107,7 @@ class TableParameterItem(WidgetParameterItem):
         if 'height' not in opts:
             opts['height'] = 200
         w.setMaximumHeight(opts['height'])
-        w.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.Stretch)
+        w.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         # self.table.setReadOnly(self.param.opts.get('readonly', False))
         w.value = w.get_table_value
         w.setValue = w.set_table_value
