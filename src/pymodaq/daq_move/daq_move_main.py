@@ -770,8 +770,18 @@ class DAQ_Move_Hardware(QObject):
             class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.actuator_type),
                              'DAQ_Move_' + self.actuator_type)
             self.hardware = class_(self, params_state)
-            status.update(self.hardware.ini_stage(controller))  # return edict(info="", controller=, stage=)
+            try:
+                infos = self.hardware.ini_stage(controller)  # return edict(info="", controller=, stage=)
+            except Exception as e:
+                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                infos = str(e), False
 
+            if isinstance(infos, edict):
+                status.update(infos)
+            else:
+                status.info = infos[0]
+                status.initialized = infos[1]
+            status.controller = self.hardware.controller
             self.hardware.move_done_signal.connect(self.move_done)
 
             # status.initialized=True
