@@ -506,7 +506,7 @@ class Scanner(QObject):
             logger.exception(str(e))
 
         if scan_type == 'Sequential' or scan_type == 'Tabular':
-            self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+            self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
             self.table_view.horizontalHeader().setStretchLastSection(True)
             self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
             self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
