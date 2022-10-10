@@ -2029,9 +2029,22 @@ class DAQ_Detector(QObject):
                 raise Exception(plug_name + " unknown")
 
             self.detector = class_(self, params_state)
-            self.detector.data_grabed_signal.connect(self.data_ready)
-            self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-            status.update(self.detector.ini_detector(controller))
+
+            try:
+                infos = self.detector.ini_detector(controller)  # return edict(info="", controller=, stage=)
+                self.detector.data_grabed_signal.connect(self.data_ready)
+                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
+            except Exception as e:
+                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                infos = str(e), False
+
+            if isinstance(infos, edict):
+                status.update(infos)
+            else:
+                status.info = infos[0]
+                status.initialized = infos[1]
+
+            status.controller = self.detector.controller
 
             if status['x_axis'] is not None:
                 x_axis = status['x_axis']

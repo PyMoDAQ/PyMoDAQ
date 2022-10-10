@@ -171,6 +171,14 @@ class DAQ_Viewer_base(QObject):
         self.x_axis = None
         self.y_axis = None
 
+        self.ini_attributes()
+
+    def ini_attributes(self):
+        """
+        To be reimplemented in subclass
+        """
+        pass
+
     def ini_detector(self, controller=None):
         """
         Mandatory
@@ -287,8 +295,6 @@ class DAQ_Viewer_base(QObject):
         except Exception as e:
             self.emit_status(ThreadCommand("Update_Status", [str(e), 'log']))
 
-
-
     def send_param_status(self, param, changes):
         """
             Check for changes in the given (parameter,change,information) tuple list.
@@ -342,6 +348,36 @@ class DAQ_Viewer_base(QObject):
             daq_utils.ThreadCommand
         """
         self.emit_status(ThreadCommand("y_axis", [self.y_axis]))
+
+    def ini_detector_init(self, old_controller=None, new_controller=None):
+        """Manage the Master/Slave controller issue
+
+        First initialize the status dictionnary
+        Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
+            if it is a multiaxes controller then:
+            * if it is Master: init the controller here
+            * if it is Slave: use an already initialized controller (defined in the preset of the dashboard)
+
+        Parameters
+        ----------
+        old_controller: object
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Slave this one comes from a previously initialized plugin
+        new_controller: object
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Master it is the new instance of your plugin controller
+        """
+        self.status.update(edict(info="", controller=None, initialized=False))
+        if self.settings.child('controller_status').value() == "Slave":
+            if old_controller is None:
+                raise Exception('no controller has been defined externally while this axe is a slave one')
+            else:
+                controller = old_controller
+        else:  # Master stage
+            controller = new_controller
+        self.controller = controller
+        return controller
+
 
 
 class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
