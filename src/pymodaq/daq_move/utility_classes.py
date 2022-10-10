@@ -399,6 +399,7 @@ class DAQ_Move_base(QObject):
                 logger.info(f'Move has been stopped')
 
             self.current_value = self.get_actuator_value()
+            self.emit_value(self.current_value)
             logger.debug(f'Current value: {self.current_value}')
 
             if perf_counter() - self.start_time >= self.settings.child('timeout').value():
