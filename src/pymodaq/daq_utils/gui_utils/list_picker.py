@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject
+from qtpy.QtCore import QObject
 from qtpy import QtWidgets
 
 
