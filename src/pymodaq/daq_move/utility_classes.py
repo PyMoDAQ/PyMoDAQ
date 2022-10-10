@@ -113,7 +113,7 @@ def main(plugin_file, init=True, title='test'):
     Form.show()
     prog.actuator = Path(plugin_file).stem[9:]
     if init:
-        prog.init()
+        prog.init_hardware_ui()
 
     sys.exit(app.exec_())
 
@@ -187,6 +187,35 @@ class DAQ_Move_base(QObject):
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
+
+    def ini_stage_init(self, old_controller=None, new_controller=None):
+        """Manage the Master/Slave controller issue
+
+        First initialize the status dictionnary
+        Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
+            if it is a multiaxes controller then:
+            * if it is Master: init the controller here
+            * if it is Slave: use an already initialized controller (defined in the preset of the dashboard)
+
+        Parameters
+        ----------
+        old_controller: object
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Slave this one comes from a previously initialized plugin
+        new_controller: object
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Master it is the new instance of your plugin controller
+        """
+        self.status.update(edict(info="", controller=None, initialized=False))
+        if self.settings['multiaxes', 'ismultiaxes'] and self.settings['multiaxes', 'multi_status'] == "Slave":
+            if old_controller is None:
+                raise Exception('no controller has been defined externally while this axe is a slave one')
+            else:
+                controller = old_controller
+        else:  # Master stage
+            controller = new_controller
+        self.controller = controller
+        return controller
 
     @property
     def current_position(self):
