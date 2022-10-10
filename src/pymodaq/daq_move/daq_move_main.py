@@ -784,8 +784,8 @@ class DAQ_Move_stage(QObject):
             Get the current position checking the harware position.
 
         """
-        pos = self.hardware.check_position()
-        return pos
+        pos = self.hardware.get_actuator_value()
+        self.status_sig.emit(ThreadCommand('check_position', [pos]))
 
     def ini_stage(self, params_state=None, controller=None):
         """
@@ -812,8 +812,18 @@ class DAQ_Move_stage(QObject):
             class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.stage_name),
                              'DAQ_Move_' + self.stage_name)
             self.hardware = class_(self, params_state)
-            status.update(self.hardware.ini_stage(controller))  # return edict(info="", controller=, stage=)
+            try:
+                infos = self.hardware.ini_stage(controller)  # return edict(info="", controller=, stage=)
+            except Exception as e:
+                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                infos = str(e), False
 
+            if isinstance(infos, edict):
+                status.update(infos)
+            else:
+                status.info = infos[0]
+                status.initialized = infos[1]
+            status.controller = self.hardware.controller
             self.hardware.Move_Done_signal.connect(self.Move_Done)
 
             # status.initialized=True
@@ -841,7 +851,7 @@ class DAQ_Move_stage(QObject):
         self.target_position = position
         self.hardware.move_is_done = False
         self.hardware.ispolling = polling
-        pos = self.hardware.move_Abs(position)
+        pos = self.hardware.move_abs(position)
         self.hardware.poll_moving()
 
     def move_Rel(self, rel_position, polling=True):
@@ -863,7 +873,7 @@ class DAQ_Move_stage(QObject):
         self.hardware.move_is_done = False
         self.target_position = self.current_position + rel_position
         self.hardware.ispolling = polling
-        pos = self.hardware.move_Rel(rel_position)
+        pos = self.hardware.move_rel(rel_position)
         self.hardware.poll_moving()
 
     @Slot(float)
@@ -884,7 +894,7 @@ class DAQ_Move_stage(QObject):
         """
         self.hardware.move_is_done = False
         self.target_position = 0
-        self.hardware.move_Home()
+        self.hardware.move_home()
 
     @Slot(float)
     def Move_Done(self, pos):
@@ -952,7 +962,7 @@ class DAQ_Move_stage(QObject):
                 self.move_Home()
 
             elif command.command == "check_position":
-                pos = self.check_position()
+                self.check_position()
 
             elif command.command == "stop_Motion":
                 self.stop_motion()
@@ -979,6 +989,7 @@ class DAQ_Move_stage(QObject):
         self.motion_stoped = True
         self.hardware.stop_motion()
         self.hardware.poll_timer.stop()
+        self.move_done()
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):

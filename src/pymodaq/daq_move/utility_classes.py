@@ -9,6 +9,7 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.daq_utils.config import Config
 from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.daq_utils.messenger import deprecation_msg
 import numpy as np
 from time import perf_counter
 
@@ -32,6 +33,8 @@ comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value':
                          'default': False},
                         {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
                         {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+
+
 MOVE_COMMANDS = ['abs', 'rel', 'home']
 
 
@@ -43,13 +46,24 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, stage_names=[], master=True):
+def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True):
+    """Function returning the common and mandatory parameters that should be on the actuator plugin level
+
+    Parameters
+    ----------
+    is_multiaxes: bool
+        If True, display the particular settings to define which axis the controller is driving
+    axes_names: list of str
+        The string identifier of every axis the controller can drive
+    master: bool
+        If True consider this plugin has to init the controller, otherwise use an already initialized instance
+    """
     params = [{'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
         {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
          'default': False},
         {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
          'limits': ['Master', 'Slave']},
-        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': stage_names},
+        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
 
     ]}] + comon_parameters
     return params
@@ -100,7 +114,7 @@ def main(plugin_file, init=True, title='test'):
 
 
 class DAQ_Move_base(QObject):
-    """ The base class to be herited by all actuator modules
+    """ The base class to be inherited by all actuator modules
 
     This base class implements all necessary parameters and methods for the plugin to communicate with its parent (the
     DAQ_Move module)
@@ -129,7 +143,7 @@ class DAQ_Move_base(QObject):
     :ivar is_multiaxes: class level attribute (bool). Defines if the plugin controller controls multiple axes. If True, one has to define
                         a Master instance of this plugin and slave instances of this plugin (all sharing the same controller_ID Parameter)
 
-    :ivar current_position: (float) stores the current position after each call to the check_position in the child module
+    :ivar current_position: (float) stores the current position after each call to the get_actuator_value in the child module
 
     :ivar target_position: (float) stores the target position the controller should reach within epsilon
 
@@ -137,7 +151,8 @@ class DAQ_Move_base(QObject):
 
     Move_Done_signal = Signal(float)
     is_multiaxes = False
-    stage_names = []
+    stage_names = [] #deprecated
+    axes_names = []
     params = []
     _controller_units = ''
     _epsilon = 1
@@ -171,6 +186,35 @@ class DAQ_Move_base(QObject):
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
         self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
+
+    def ini_stage_init(self, old_controller=None, new_controller=None):
+        """Manage the Master/Slave controller issue
+
+        First initialize the status dictionnary
+        Then check whether this stage is controlled by a multiaxe controller (to be defined for each plugin)
+            if it is a multiaxes controller then:
+            * if it is Master: init the controller here
+            * if it is Slave: use an already initialized controller (defined in the preset of the dashboard)
+
+        Parameters
+        ----------
+        old_controller: object
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Slave this one comes from a previously initialized plugin
+        new_controller: object
+            The particular object that allow the communication with the hardware, in general a python wrapper around the
+            hardware library. In case of Master it is the new instance of your plugin controller
+        """
+        self.status.update(edict(info="", controller=None, initialized=False))
+        if self.settings['multiaxes', 'ismultiaxes'] and self.settings['multiaxes', 'multi_status'] == "Slave":
+            if old_controller is None:
+                raise Exception('no controller has been defined externally while this axe is a slave one')
+            else:
+                controller = old_controller
+        else:  # Master stage
+            controller = new_controller
+        self.controller = controller
+        return controller
 
     @property
     def controller_units(self):
@@ -211,6 +255,34 @@ class DAQ_Move_base(QObject):
                 position = self.settings.child('bounds', 'min_bound').value()
                 self.emit_status(ThreadCommand('outofbounds', []))
         return position
+
+    def get_actuator_value(self):
+        if hasattr(self, 'check_position'):
+            deprecation_msg('check_position method in plugins is deprecated, use get_actuator_value',3)
+            return self.check_position()
+        else:
+            raise NotImplementedError
+
+    def move_abs(self, value):
+        if hasattr(self, 'move_Abs'):
+            deprecation_msg('move_Abs method in plugins is deprecated, use move_abs',3)
+            self.move_Abs(value)
+        else:
+            raise NotImplementedError
+
+    def move_rel(self, value):
+        if hasattr(self, 'move_Rel'):
+            deprecation_msg('move_Rel method in plugins is deprecated, use move_rel',3)
+            self.move_Rel(value)
+        else:
+            raise NotImplementedError
+
+    def move_home(self):
+        if hasattr(self, 'move_Home'):
+            deprecation_msg('move_Home method in plugins is deprecated, use move_home', 3)
+            self.move_Home()
+        else:
+            raise NotImplementedError
 
     def emit_status(self, status):
         """
@@ -273,7 +345,7 @@ class DAQ_Move_base(QObject):
 
         """
         if position is None:
-            position = self.check_position()
+            position = self.get_actuator_value()
         self.Move_Done_signal.emit(position)
         self.move_is_done = True
 
@@ -290,7 +362,7 @@ class DAQ_Move_base(QObject):
             if self.ispolling:
                 self.poll_timer.start()
             else:
-                self.current_position = self.check_position()
+                self.current_position = self.get_actuator_value()
                 logger.debug(f'Current position: {self.current_position}')
                 self.move_done(self.current_position)
 
@@ -301,7 +373,8 @@ class DAQ_Move_base(QObject):
                 self.emit_status(ThreadCommand('Move has been stopped'))
                 logger.info(f'Move has been stopped')
 
-            self.current_position = self.check_position()
+            self.current_position = self.get_actuator_value()
+            self.emit_status(ThreadCommand('check_position', [self.current_position]))
             logger.debug(f'Current position: {self.current_position}')
 
             if perf_counter() - self.start_time >= self.settings.child('timeout').value():
@@ -427,7 +500,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     command_server = Signal(list)
 
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
-                    'move_home', 'move_rel', 'check_position', 'stop_motion', 'position_is', 'move_done']
+                    'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
     socket_types = ["ACTUATOR"]
     params = comon_parameters + tcp_parameters
 
@@ -456,7 +529,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
 
                 pos = self.get_position_with_scaling(pos)
                 self.current_position = pos
-                self.emit_status(ThreadCommand('check_position', [pos]))
+                self.emit_status(ThreadCommand('get_actuator_value', [pos]))
 
             elif command == 'move_done':
                 pos = sock.get_scalar()
@@ -556,7 +629,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         if sock is not None:  # if client self.client_type is connected then send it the command
             sock.send_string('move_home')
 
-    def check_position(self):
+    def get_actuator_value(self):
         """
             Get the current hardware position with scaling conversion given by get_position_with_scaling.
 
@@ -566,7 +639,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
         """
         sock = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
-            self.send_command(sock, 'check_position')
+            self.send_command(sock, 'get_actuator_value')
 
         return self.current_position
 

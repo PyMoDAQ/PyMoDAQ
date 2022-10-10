@@ -138,7 +138,7 @@ def set_qt_backend():
         logger.warning(f"The chosen Qt backend ({config('qtbackend', 'backend')}) has not been installed...\n"
                        f"Trying another...")
         backends = config('qtbackend', 'backends')
-        backends.pop(config('qtbackend', 'backend'))
+        backends.pop(backends.index(config('qtbackend', 'backend')))
         for backend in backends:
             if backend.lower() in [mod.lower() for mod in sys.modules]:
                 backend_present = True
