@@ -8,8 +8,9 @@ from typing import Union
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
-    """
-    Implements the MixIns ActionManager and ParameterManager methods and attributes, you have to subclass it and make
+    """Class to ease the implementation of User Interfaces
+
+    Inherits the MixIns ActionManager and ParameterManager classes. You have to subclass some methods and make
     concrete implementation of a given number of methods:
 
     * setup_actions: mandatory, see ActionManager
@@ -19,6 +20,16 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     * setup_docks: mandatory
     * setup_menu: non mandatory
     * connect_things: mandatory
+
+    Parameters
+    ----------
+    parent: DockArea or QtWidget
+    dashboard: DashBoard, optional
+
+    See Also
+    --------
+    ActionManager, ParameterManager, ModulesManager, DashBoard
+
     """
     # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
     log_signal = QtCore.Signal(str)
@@ -101,9 +112,18 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         pass
 
     def connect_things(self):
+        """Connect actions and/or other widgets signal to methods"""
         raise NotImplementedError
 
     @property
     def modules_manager(self):
+        """useful tool to interact with DAQ_Moves and DAQ_Viewers
+
+        Will be available if a DashBoard has been set
+
+        Returns
+        -------
+        ModulesManager
+        """
         if self.dashboard is not None:
             return self.dashboard.modules_manager
