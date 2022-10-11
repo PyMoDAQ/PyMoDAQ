@@ -8,15 +8,15 @@ from typing import Union
 
 
 class CustomApp(QObject, ActionManager, ParameterManager):
-    """Class to ease the implementation of User Interfaces
+    """Base Class to ease the implementation of User Interfaces
 
     Inherits the MixIns ActionManager and ParameterManager classes. You have to subclass some methods and make
     concrete implementation of a given number of methods:
 
-    * setup_actions: mandatory, see ActionManager
-    * value_changed: non mandatory, see ParameterManager
-    * child_added: non mandatory, see ParameterManager
-    * param_deleted: non mandatory, see ParameterManager
+    * setup_actions: mandatory, see :class:`pymodaq.daq_utils.managers.action_manager.ActionManager`
+    * value_changed: non mandatory, see :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`
+    * child_added: non mandatory, see :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`
+    * param_deleted: non mandatory, see :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`
     * setup_docks: mandatory
     * setup_menu: non mandatory
     * connect_things: mandatory
@@ -28,13 +28,13 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     See Also
     --------
-    ActionManager, ParameterManager, ModulesManager, DashBoard
-
+    :class:`pymodaq.daq_utils.managers.action_manager.ActionManager`,
+    :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`,
+    :class:`pymodaq.daq_utils.managers.modules_manager.ModulesManager`,
+    :class:`pymodaq.dashboard.DashBoard`
     """
-    # custom signal that will be fired sometimes. Could be connected to an external object method or an internal method
-    log_signal = QtCore.Signal(str)
 
-    # list of dicts enabling the settings tree on the user interface
+    log_signal = QtCore.Signal(str)
     params = []
 
     def __init__(self, parent: Union[DockArea, QtWidgets.QWidget], dashboard=None):
@@ -76,34 +76,34 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         self.connect_things()
 
     def setup_docks(self):
-        """
-        Mandatory method to be subclassed to setup the docks layout
-        for instance:
+        """Mandatory method to be subclassed to setup the docks layout
 
-        self.docks['ADock'] = gutils.Dock('ADock name)
-        self.dockarea.addDock(self.docks['ADock"])
-        self.docks['AnotherDock'] = gutils.Dock('AnotherDock name)
-        self.dockarea.addDock(self.docks['AnotherDock"], 'bottom', self.docks['ADock"])
+        Examples
+        --------
+        >>>self.docks['ADock'] = gutils.Dock('ADock name')
+        >>>self.dockarea.addDock(self.docks['ADock'])
+        >>>self.docks['AnotherDock'] = gutils.Dock('AnotherDock name')
+        >>>self.dockarea.addDock(self.docks['AnotherDock'''], 'bottom', self.docks['ADock'])
 
         See Also
-        ########
+        --------
         pyqtgraph.dockarea.Dock
         """
         raise NotImplementedError
 
     def setup_menu(self):
-        """
-        Non mandatory method to be subclassed in order to create a menubar
+        """Non mandatory method to be subclassed in order to create a menubar
+
         create menu for actions contained into the self._actions, for instance:
 
-        For instance:
+        Examples
+        --------
+        >>>file_menu = self._menubar.addMenu('File')
+        >>>self.affect_to('load', file_menu)
+        >>>self.affect_to('save', file_menu)
 
-        file_menu = self._menubar.addMenu('File')
-        self.affect_to('load', file_menu)
-        self.affect_to('save', file_menu)
-
-        file_menu.addSeparator()
-        self.affect_to('quit', file_menu)
+        >>>file_menu.addSeparator()
+        >>>self.affect_to('quit', file_menu)
 
         See Also
         --------

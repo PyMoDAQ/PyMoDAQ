@@ -18,6 +18,9 @@ API of the various managers, special classes to deals with QAction, Paramaters, 
 
 .. autofunction:: addaction
 
+
+   .. _actionmanager_api:
+
 .. autoclass:: ActionManager
    :members:
 

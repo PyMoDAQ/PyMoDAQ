@@ -93,7 +93,7 @@ class ActionManager:
         #self.setup_actions()
 
     def setup_actions(self):
-        """Method where to create actions
+        """Method where to create actions to be subclassed. Mandatory
 
         Examples
         --------
@@ -313,3 +313,5 @@ class ActionManager:
         """Set the CheckedState of a given action or a list of actions"""
         for action_name in actions_name:
             self.set_action_checked(action_name, checked)
+
+
