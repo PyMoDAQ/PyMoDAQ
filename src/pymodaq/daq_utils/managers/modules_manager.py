@@ -3,13 +3,27 @@ from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import time
 from pymodaq.daq_utils import daq_utils as utils
-
+from pymodaq.daq_utils.config import Config
 from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.daq_utils.managers.parameter_manager import ParameterManager
 
 logger = utils.set_logger(utils.get_module_name(__file__))
+config = Config()
 
+class ModulesManager(QObject, ParameterManager):
+    """Class to manage DAQ_Viewers and DAQ_Moves with UI to select some
 
-class ModulesManager(QObject):
+    Easier to connect control modules signals to slots, test, ...
+
+    Parameters
+    ----------
+    detectors: list of DAQ_Viewer
+    actuators: list of DAQ_Move
+    selected_detectors: list of DAQ_Viewer
+        sublist of detectors
+    selected_actuators: list of DAQ_Move
+        sublist of actuators
+    """
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
     det_done_signal = Signal(OrderedDict)
@@ -38,27 +52,22 @@ class ModulesManager(QObject):
         ]},
     ]
 
-    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], timeout=10000):
-        super().__init__()
+    def __init__(self, detectors=[], actuators=[], selected_detectors=[], selected_actuators=[], **kwargs):
+        QObject.__init__(self)
+        ParameterManager.__init__(self)
 
         for mod in selected_actuators:
             assert mod in actuators
         for mod in selected_detectors:
             assert mod in detectors
 
-        self.timeout = timeout  # in ms
+        self.actuator_timeout = config('actuator', 'timeout')
+        self.detector_timeout = config('viewer', 'timeout')
 
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
         self.move_done_positions = OrderedDict()
         self.move_done_flag = False
-
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setMinimumWidth(300)
-        self.settings_tree.setParameters(self.settings, showTop=False)
-
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         self.settings.child('data_dimensions', 'probe_data').sigActivated.connect(self.get_det_data_list)
         self.settings.child('actuators_positions', 'test_actuator').sigActivated.connect(self.test_move_actuators)
@@ -77,11 +86,25 @@ class ModulesManager(QObject):
 
     @classmethod
     def get_names(cls, modules):
+        """Get the titles of a list of Control Modules
+
+        Parameters
+        ----------
+        modules: list of DAQ_Move and/or DAQ_Viewer
+        """
         if not hasattr(modules, '__iter__'):
             modules = [modules]
         return [mod.title for mod in modules]
 
     def get_mods_from_names(self, names, mod='det'):
+        """Getter of a list of given modules from their name (title)
+
+        Parameters
+        ----------
+        names: list of str
+        mod: str
+            either 'det' for DAQ_Viewer modules or 'act' for DAQ_Move modules
+        """
         mods = []
         for name in names:
             d = self.get_mod_from_name(name, mod)
@@ -90,6 +113,14 @@ class ModulesManager(QObject):
         return mods
 
     def get_mod_from_name(self, name, mod='det'):
+        """Getter of a given module from its name (title)
+
+        Parameters
+        ----------
+        name: str
+        mod: str
+            either 'det' for DAQ_Viewer modules or 'act' for DAQ_Move modules
+        """
         if mod == 'det':
             modules = self._detectors
         else:
@@ -102,45 +133,55 @@ class ModulesManager(QObject):
             return None
 
     def set_actuators(self, actuators, selected_actuators):
+        """Populates actuators and the subset to be selected in the UI"""
         self._actuators = actuators
         self.settings.child('modules', 'actuators').setValue(dict(all_items=self.get_names(actuators),
                                                                   selected=self.get_names(selected_actuators)))
 
     def set_detectors(self, detectors, selected_detectors):
+        """Populates detectors and the subset to be selected in the UI"""
         self._detectors = detectors
         self.settings.child('modules', 'detectors').setValue(dict(all_items=self.get_names(detectors),
                                                                   selected=self.get_names(selected_detectors)))
 
     @property
     def detectors(self):
+        """Get the list of selected detectors"""
         return self.get_mods_from_names(self.selected_detectors_name)
 
     @property
     def detectors_all(self):
+        """Get the list of all detectors"""
         return self._detectors
 
     @property
     def actuators(self):
+        """Get the list of selected actuators"""
         return self.get_mods_from_names(self.selected_actuators_name, mod='act')
 
     @property
     def actuators_all(self):
+        """Get the list of all actuators"""
         return self._actuators
 
     @property
     def Ndetectors(self):
+        """Get the number of selected detectors"""
         return len(self.detectors)
 
     @property
     def Nactuators(self):
+        """Get the number of selected actuators"""
         return len(self.actuators)
 
     @property
     def detectors_name(self):
+        """Get all the names of the detectors"""
         return self.settings.child('modules', 'detectors').value()['all_items']
 
     @property
     def selected_detectors_name(self):
+        """Get/Set the names of the selected detectors"""
         return self.settings.child('modules', 'detectors').value()['selected']
 
     @selected_detectors_name.setter
@@ -151,10 +192,12 @@ class ModulesManager(QObject):
 
     @property
     def actuators_name(self):
+        """Get all the names of the actuators"""
         return self.settings.child('modules', 'actuators').value()['all_items']
 
     @property
     def selected_actuators_name(self):
+        """Get/Set the names of the selected actuators"""
         return self.settings.child('modules', 'actuators').value()['selected']
 
     @selected_actuators_name.setter
@@ -163,37 +206,17 @@ class ModulesManager(QObject):
             self.settings.child('modules', 'actuators').setValue(dict(all_items=self.actuators_name,
                                                                       selected=actuators))
 
+    def value_changed(self, param):
+        if param.name() == 'detectors':
+            self.detectors_changed.emit(param.value()['selected'])
 
-    def parameter_tree_changed(self, param, changes):
-        """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, update the DAQscan_settings tree consequently.
-
-            =============== ============================================ ==============================
-            **Parameters**    **Type**                                     **Description**
-            *param*           instance of pyqtgraph parameter              the parameter to be checked
-            *changes*         (parameter,change,information) tuple list    the current changes state
-            =============== ============================================ ==============================
-        """
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if change == 'childAdded':
-                pass
-
-            elif change == 'value':
-
-                if param.name() == 'detectors':
-                    self.detectors_changed.emit(data['selected'])
-
-                elif param.name() == 'actuators':
-                    self.actuators_changed.emit(data['selected'])
-
-            elif change == 'parent':
-                pass
+        elif param.name() == 'actuators':
+            self.actuators_changed.emit(param.value()['selected'])
 
     def get_det_data_list(self):
-        self.connect_detectors()
+        """Do a snap of selected detectors, to get the list of all the data and processed data"""
 
+        self.connect_detectors()
         datas = self.grab_datas()
 
         data_list0D = []
@@ -223,12 +246,20 @@ class ModulesManager(QObject):
         self.connect_detectors(False)
 
     def get_selected_probed_data(self, dim='0D'):
+        """Get the name of selected data names of a given dimensionality
+
+        Parameters
+        ----------
+        dim: str
+            either '0D', '1D', '2D' or 'ND'
+        """
         return self.settings.child('data_dimensions', f'det_data_list{dim.upper()}').value()['selected']
 
     def grab_datas(self, **kwargs):
+        """Do a single grab of connected and selected detectors"""
         self.det_done_datas = OrderedDict()
         self.det_done_flag = False
-        self.settings.child(('det_done')).setValue(self.det_done_flag)
+        self.settings.child('det_done').setValue(self.det_done_flag)
         tzero = time.perf_counter()
 
         for sig in [mod.command_hardware for mod in self.detectors]:
@@ -238,7 +269,7 @@ class ModulesManager(QObject):
             # wait for grab done signals to end
 
             QtWidgets.QApplication.processEvents()
-            if time.perf_counter() - tzero > self.timeout:
+            if time.perf_counter() - tzero > self.detector_timeout:
                 self.timeout_signal.emit(True)
                 logger.error('Timeout Fired during waiting for data to be acquired')
                 break
@@ -285,15 +316,18 @@ class ModulesManager(QObject):
     def connect_detectors(self, connect=True, slot=None):
         """
         Connect selected DAQ_Viewers's grab_done_signal to the given slot
+
         Parameters
         ----------
-        connect: (bool) if True, connect to the given slot (or default slot)
-                        if False, disconnect all detectors (not only the currently selected ones.
-                        This is made because when selected detectors changed if you only disconnect those ones,
-                        the previously connected ones will stay connected)
-
-        slot: (method) A method that should be connected
+        connect: bool
+            if True, connect to the given slot (or default slot)
+            if False, disconnect all detectors (not only the currently selected ones.
+            This is made because when selected detectors changed if you only disconnect those one,
+            the previously connected ones will stay connected)
+        slot: method
+            A method that should be connected, if None self.det_done is connected by default
         """
+
         if slot is None:
             slot = self.det_done
 
@@ -312,6 +346,7 @@ class ModulesManager(QObject):
         self.detectors_connected = connect
 
     def test_move_actuators(self):
+        """Do a move of selected actuator"""
         positions = dict()
         for act in self.get_names(self.actuators):
             pos, done = QtWidgets.QInputDialog.getDouble(None, f'Enter a target position for actuator {act}',
@@ -335,19 +370,18 @@ class ModulesManager(QObject):
 
         Parameters
         ----------
-        positions: (list) the list of position to apply. Its length must be equal to the number of selected actutors
-        mode: (str) either 'abs' for absolute positionning or 'rel' for relative
-        poll: (bool) if True will wait for the selected actuators to reach their target positions (they have to be
-        connected to a method checking for the position and letting the programm know the move is done (default
-        connection is this object `move_done` method)
+        positions: list
+            the list of position to apply. Its length must be equal to the number of selected actutors
+        mode: str
+            either 'abs' for absolute positionning or 'rel' for relative
+        polling: bool
+            if True will wait for the selected actuators to reach their target positions (they have to be
+            connected to a method checking for the position and letting the programm know the move is done (default
+            connection is this object `move_done` method)
 
         Returns
         -------
         (OrderedDict) with the selected actuators's name as key and current actuators's value as value
-
-        See Also
-        --------
-        move_done
         """
         self.move_done_positions = OrderedDict()
         self.move_done_flag = False
@@ -384,7 +418,7 @@ class ModulesManager(QObject):
             while not self.move_done_flag:  # polling move done
 
                 QtWidgets.QApplication.processEvents()
-                if time.perf_counter() - tzero > self.timeout:
+                if time.perf_counter() - tzero > self.actuator_timeout:
                     self.timeout_signal.emit(True)
                     logger.error('Timeout Fired during waiting for data to be acquired')
                     break
@@ -400,11 +434,8 @@ class ModulesManager(QObject):
             pos.append(positions_as_dict[act])
         return pos
 
-    Slot(str, float)
-
+    @Slot(str, float)
     def move_done(self, name, position):
-        """
-        """
         try:
             if name not in list(self.move_done_positions.keys()):
                 self.move_done_positions[name] = position
@@ -422,7 +453,7 @@ class ModulesManager(QObject):
                 self.det_done_datas[data['name']] = data
             if len(self.det_done_datas.items()) == len(self.detectors):
                 self.det_done_flag = True
-                self.settings.child(('det_done')).setValue(self.det_done_flag)
+                self.settings.child('det_done').setValue(self.det_done_flag)
         except Exception as e:
             logger.exception(str(e))
 
