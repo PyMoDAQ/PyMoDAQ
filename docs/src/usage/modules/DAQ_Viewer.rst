@@ -129,7 +129,7 @@ detector currently activated.
 * **Controller ID**: integer used to deal with a controller controlling multiple hardware, see :ref:`multiple_hardware`
 * **Naverage**: integer to set in order to do data averaging, see :ref:`hardware_averaging`.
 * **Show averaging**: in the case of software averaging (see :ref:`hardware_averaging`), if this is set to ``True``,
-intermediate averaging data will be displayed
+  intermediate averaging data will be displayed
 * **Live averaging**: *show averaging* must be set to ``False``. If set to ``True``, a *live* ``grab`` will perform
   non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one
 should average, then set *Naverage* to this value
