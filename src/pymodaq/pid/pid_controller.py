@@ -520,7 +520,7 @@ class PIDRunner(QObject):
                                              input=self.inputs_from_dets.values))
 
     @Slot(ThreadCommand)
-    def queue_command(self, command=ThreadCommand(,):
+    def queue_command(self, command=ThreadCommand()):
         """
         """
         if command.command == "start_PID":
