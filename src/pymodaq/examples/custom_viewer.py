@@ -58,7 +58,7 @@ class ViewerPointList(QObject):
         self.table_view = get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child(('tabular_table')).setValue(self.table_model)
 
-        self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
