@@ -86,7 +86,7 @@ def main(plugin_file=None, init=True):
     import sys
     from qtpy import QtWidgets
     from pymodaq.daq_utils.gui_utils import DockArea
-    from pymodaq.control_modules.daq_viewer_main import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pathlib import Path
 
     app = QtWidgets.QApplication(sys.argv)
@@ -105,7 +105,7 @@ def main(plugin_file=None, init=True):
     else:
         detector = Path(plugin_file).stem[13:]
         det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
-    prog = DAQ_Viewer(area, title="Testing", DAQ_type=det_type)
+    prog = DAQ_Viewer(area, title="Testing")
     win.show()
     prog.detector = detector
     if init:
