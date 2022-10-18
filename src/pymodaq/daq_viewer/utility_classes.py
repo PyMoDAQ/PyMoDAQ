@@ -171,6 +171,8 @@ class DAQ_Viewer_base(QObject):
         self.x_axis = None
         self.y_axis = None
 
+        self.controller = None
+
         self.ini_attributes()
 
     def ini_attributes(self):
