@@ -6,7 +6,7 @@
 #define MyAppName "PyMoDAQ"
 #define MyAppVersion "1.0"
 #define MyAppPublisher "CEMES-CNRS"
-#define MyAppURL "https://github.com/CEMES-CNRS"
+#define MyAppURL "https://github.com/PyMoDAQ"
 #define MyAppIco "icon.ico"
 
 [Setup]
