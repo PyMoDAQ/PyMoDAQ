@@ -1371,12 +1371,12 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='https://github.com/CEMES-CNRS',
-                                         paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg',
-                                                  '.tox', 'daq_utils.py'],
-                                         replace=True, replace_str="https://github.com/PyMoDAQ")
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
+    #                                      exp='https://github.com/CEMES-CNRS',
+    #                                      paths=[],
+    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg',
+    #                                               '.tox', 'daq_utils.py'],
+    #                                      replace=False, replace_str="https://github.com/PyMoDAQ")
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])
