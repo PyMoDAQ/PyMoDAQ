@@ -12,20 +12,20 @@ PyMoDAQ
 .. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
 
-.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
 
-.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
 
-.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
 
-.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
 
-.. image:: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyside2.yml/badge.svg
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyside2.yml
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyside2.yml/badge.svg
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyside2.yml
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut
@@ -69,6 +69,6 @@ and many others to simplify any application development.
 
 Published under the CeCILL-B FREE SOFTWARE LICENSE
 
-GitHub repo: https://github.com/CEMES-CNRS
+GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/

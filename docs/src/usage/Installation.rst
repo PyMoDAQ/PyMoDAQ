@@ -131,7 +131,7 @@ to interface Andor CCD camera.
    Plugin Manager interface
 
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/doc/PluginList.md
 
 
 What about the Hardware

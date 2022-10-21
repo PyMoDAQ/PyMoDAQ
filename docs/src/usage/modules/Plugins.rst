@@ -5,7 +5,7 @@ It is recommended to start from the *template* plugins (daq_move_Template, daq_N
 and then check from other examples (pymodaq_plugins `repository`__) the proper way of writing a plugin.
 You will find below some information on the **how to** but comparison with existing ones will be beneficial.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins
+__ https://github.com/PyMoDAQ/pymodaq_plugins
 
 Installation
 ------------
@@ -18,7 +18,7 @@ you develop in order to contribute to PyMoDAQ's development.
 PyMoDAQ is looking at startup for all installed packages that it can consider as its plugins. This includes by default
 the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager
 
 Contributions:
 --------------
@@ -29,7 +29,7 @@ Users are welcomed to contribute to PyMoDAQ by writing their own plugins. Two ap
 * Copy the `plugin template package`__ on you disk and work on the templates within then ask to create an official
   plugin package
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 Naming convention:
 ------------------
@@ -43,7 +43,7 @@ For the plugin to be properly recognised by PyMoDAQ, its location and name must 
 * A detector plugin of dimensionality N (N=0, 1, 2 or N) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
 * The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 .. _hardware_settings:
 

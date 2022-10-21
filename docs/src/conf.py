@@ -32,8 +32,8 @@ copyright = u'%d, Weber Sébastien' % year
 author = 'Weber Sebastien'
 
 # 'releases' (changelog) settings
-releases_issue_uri = "https://github.com/CEMES-CNRS/PyMoDAQ/issues/%s"
-releases_release_uri = "https://github.com/CEMES-CNRS/PyMoDAQ/tree/%s"
+releases_issue_uri = "https://github.com/PyMoDAQ/PyMoDAQ/issues/%s"
+releases_release_uri = "https://github.com/PyMoDAQ/PyMoDAQ/tree/%s"
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), '..')))
 from pymodaq.daq_utils.daq_utils import get_version

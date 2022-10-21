@@ -328,10 +328,10 @@
              > (0,0,0,0,2) body
           MixedStyledText('GitHub repo: https://github.com/...')
             SingleStyledText('GitHub repo: ')
-            AnnotatedText('https://github.com/CEMES-CNRS', style='external link')   None:None <reference>
+            AnnotatedText('https://github.com/PyMoDAQ', style='external link')   None:None <reference>
                  > (0,0,1,0,1) external hyperlink
-              MixedStyledText('https://github.com/CEMES-CNRS')
-                SingleStyledText('https://github.com/CEMES-CNRS')
+              MixedStyledText('https://github.com/PyMoDAQ')
+                SingleStyledText('https://github.com/PyMoDAQ')
         Paragraph('Documentation: http://pymodaq.cn...')   index.rst:40 <paragraph>
              > (0,0,0,0,2) body
           MixedStyledText('Documentation: http://pymodaq.cn...')

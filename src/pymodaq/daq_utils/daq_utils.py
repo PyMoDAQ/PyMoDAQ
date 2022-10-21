@@ -734,7 +734,7 @@ class DataToExport(Data):
         source: (str) either 'raw' for raw data or 'roi' for data extracted from a roi
         """
         super().__init__(source=source, **kwargs)
-        if data is None or isinstance(data, np.ndarray) or isinstance(data, float) or isinstance(data, int):
+        if data is None or isinstance(data, np.ndarray) or isinstance(data, numbers.Number):
             self['data'] = data
         else:
             raise TypeError('data for the DataToExport class should be a scalar or a ndarray')
@@ -1372,11 +1372,11 @@ if __name__ == '__main__':
     # mit = license.find('MIT')
     #
     paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='DAQmxTypes',
+                                         exp='https://github.com/CEMES-CNRS',
                                          paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py', '.rst'],
-                                         replace=False, replace_str="'limits'")
+                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg',
+                                                  '.tox', 'daq_utils.py'],
+                                         replace=True, replace_str="https://github.com/PyMoDAQ")
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])

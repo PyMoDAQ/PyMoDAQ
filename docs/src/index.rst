@@ -51,7 +51,7 @@ It is divided in two main components as shown on figure :numref:`overview_submod
 The Control modules are interfacing real instruments using user written plugins. The complete list of available plugins
 is maintained on this GitHub `repository`__ and installabled using the :ref:`PluginManager`
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/blob/main/pymodaq_plugin_manager/doc/PluginList.md
 
 
 
@@ -69,7 +69,7 @@ Training
 Information
 ***********
 
-GitHub repo: https://github.com/CEMES-CNRS
+GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/
 
@@ -85,7 +85,7 @@ Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT license.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/
 
 __ https://youtube.com/playlist?list=PLGdoHByMKfIdn-N51goippSSP_9iG4wds
 
