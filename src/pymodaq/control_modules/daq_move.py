@@ -708,6 +708,7 @@ class DAQ_Move_Hardware(QObject):
     def check_position(self):
         """Get the current position checking the hardware position (deprecated)
         """
+        deprecation_msg('check_position is deprecated, use get_actuator_value')
         pos = self.hardware.get_actuator_value()
         return pos
 
@@ -874,6 +875,7 @@ class DAQ_Move_Hardware(QObject):
 
             elif command.command == "get_actuator_value":
                 pos = self.get_actuator_value()
+                self.status_sig.emit(ThreadCommand('get_actuator_value', [pos]))
 
             elif command.command == "stop_motion":
                 self.stop_motion()
