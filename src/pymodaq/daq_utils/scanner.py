@@ -11,6 +11,7 @@ from pymodaq.daq_utils.daq_utils import linspace_step, odd_even, greater2n
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.gui_utils as gutils
+import pymodaq.daq_utils.math_utils as mutils
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.plotting.utils.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -188,7 +189,7 @@ class ScanParameters:
             axes_indexes = np.zeros_like(positions, dtype=int)
             for ind in range(positions.shape[0]):
                 for ind_pos, pos in enumerate(positions[ind]):
-                    axes_indexes[ind, ind_pos] = utils.find_index(axes_unique[ind_pos], pos)[0][0]
+                    axes_indexes[ind, ind_pos] = mutils.find_index(axes_unique[ind_pos], pos)[0][0]
 
             return ScanInfo(Nsteps=positions.shape[0], axes_unique=axes_unique,
                             axes_indexes=axes_indexes, positions=positions, adaptive_loss=self.adaptive_loss)
@@ -215,7 +216,7 @@ class ScanParameters:
             if self.positions is not None:
                 positions = self.positions
             else:
-                positions = utils.linspace_step(self.starts[0], self.stops[0], self.steps[0])
+                positions = mutils.linspace_step(self.starts[0], self.stops[0], self.steps[0])
 
             if self.scan_subtype == "Linear":
                 self.scan_info = self.get_info_from_positions(positions)

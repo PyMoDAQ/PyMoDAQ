@@ -177,10 +177,8 @@ class PresetScalableGroupDet(GroupParameter):
 
             for main_child in params:
                 if main_child['name'] == 'detector_settings':
-                    while len(main_child['children']) != 1:
-                        for child in main_child['children']:
-                            if child['name'] != 'ROIselect':
-                                main_child['children'].remove(child)
+                    while len(main_child['children']) > 0:
+                        main_child['children'].remove(child)
 
                     main_child['children'].extend(params_hardware)
 

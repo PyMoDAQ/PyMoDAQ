@@ -106,9 +106,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui = DAQ_Viewer_UI(parent, title)
+            self.ui:DAQ_Viewer_UI = DAQ_Viewer_UI(parent, title)
         else:
-            self.ui = None
+            self.ui:DAQ_Viewer_UI = None
 
         if self.ui is not None:
             self.ui.daq_types = DAQ_TYPES
@@ -222,6 +222,29 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'viewers_changed':
             self._viewer_types = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
+
+    def manage_ui_actions(self, action_name:str, attribute:str, value):
+        """Method to manage actions for the UI (if any).
+
+        Will try to apply the given value to the given attribute of the corresponding action
+
+        Parameters
+        ----------
+        action_name: str
+        attribute: method signature or attribute
+        value: object
+            actual type and value depend on the triggered attribute
+
+        Examples
+        --------
+        >>>manage_ui_actions('quit', 'setEnabled', False)
+        # will disable the quit action (button) on the UI
+        """
+        if self.ui is not None:
+            if self.ui.has_action(action_name):
+                action = self.ui.get_action(action_name)
+                if hasattr(action, attribute):
+                    setattr(action, attribute, value)
 
     @property
     def viewer_docks(self):

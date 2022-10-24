@@ -726,11 +726,9 @@ class DashBoard(QObject):
                             else:
                                 self.dockarea.addDock(det_docks_settings[-1], 'right', det_docks_viewer[-2])
                             self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
-                            det_mod_tmp = DAQ_Viewer(self.dockarea, dock_settings=det_docks_settings[-1],
-                                                     dock_viewer=det_docks_viewer[-1], title=plug_name,
-                                                     DAQ_type=plug_type, parent_scan=self)
+                            det_mod_tmp = DAQ_Viewer(self.dockarea, title=plug_name)
                             det_mod_tmp.detector = plug_subtype
-                            det_mod_tmp.ui.Quit_pb.setEnabled(False)
+                            det_mod_tmp.manage_ui_actions('quit', 'setEnabled', False)
                             detector_modules.append(det_mod_tmp)
 
                             try:
@@ -748,7 +746,7 @@ class DashBoard(QObject):
                                     if plugin['status'] != "Master":
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
-                                        detector_modules[-1].init_det()
+                                        detector_modules[-1].init_hardware_ui()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
@@ -758,7 +756,7 @@ class DashBoard(QObject):
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
                                         detector_modules[-1].controller = master_controller
-                                        detector_modules[-1].init_det()
+                                        detector_modules[-1].init_hardware_ui()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
