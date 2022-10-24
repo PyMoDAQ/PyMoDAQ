@@ -287,7 +287,7 @@ class TreeFromToml(QObject):
                     param['type'] = 'str'
                 elif isinstance(config[key], list):
                     param['type'] = 'list'
-                    param['values'] = config[key]
+                    param['limits'] = config[key]
                     param['value'] = config[key][0]
                     param['show_pb'] = True
                 params.append(param)

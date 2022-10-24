@@ -699,11 +699,11 @@ class Data(OrderedDict):
         for k in kwargs:
             self[k] = kwargs[k]
 
-    def __getattr__(self, name):
-        if name in self:
-            return self[name]
-        else:
-            raise AttributeError(f'{name} if not a key of {self}')
+    # def __getattr__(self, name):
+    #     if name in self:
+    #         return self[name]
+    #     else:
+    #         raise AttributeError(f'{name} if not a key of {self}')
 
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
@@ -812,8 +812,8 @@ class DataToExport(Data):
 
 
     def __repr__(self):
-        return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}>' \
-               f' - <source: {self.source}> - <dim: {self.dim}>'
+        return f'{self.__class__.__name__}: <name: {self["name"]}> - <distribution: {self["distribution"]}>' \
+               f' - <source: {self["source"]}> - <dim: {self["dim"]}>'
 
 
 def ensure_ndarray(data):
@@ -1426,13 +1426,13 @@ if __name__ == '__main__':
     # mit = license.find('MIT')
     #
     # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
-    #                                      exp='crop',
+    #                                      exp="'values'",
     #                                      paths=[],
     #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
     #                                               '.tox', 'daq_utils.py', '.rst'],
     #                                      replace=False,
     #                                      replace_str="from pymodaq.control_modules.move_utility_classes import comon_parameters, main")
-    get_version()
+    # get_version()
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])

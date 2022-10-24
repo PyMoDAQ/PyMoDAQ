@@ -563,6 +563,7 @@ class DashBoard(QObject):
 
         mov_mod_tmp.actuator = plug_type
         QtWidgets.QApplication.processEvents()
+        mov_mod_tmp.manage_ui_actions('quit', 'setEnabled', False)
 
         if plug_settings is not None:
             try:
@@ -577,6 +578,37 @@ class DashBoard(QObject):
         mov_mod_tmp.bounds_signal[bool].connect(self.stop_moves)
         move_docks[-1].addWidget(move_forms[-1])
         actuators_modules.append(mov_mod_tmp)
+
+    def add_det(self, plug_name, plug_settings, det_docks_settings, det_docks_viewer, detector_modules):
+
+        plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
+        plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
+        det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
+        det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
+        if len(detector_modules) == 0:
+            self.logger_dock.area.addDock(det_docks_settings[-1], 'bottom')  # dockarea of the logger dock
+        else:
+            self.dockarea.addDock(det_docks_settings[-1], 'right',
+                                  detector_modules[-1].viewers_docks[-1])
+        self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
+        det_mod_tmp = DAQ_Viewer(self.dockarea, title=plug_name, daq_type=plug_type,
+                                 dock_settings=det_docks_settings[-1],
+                                 dock_viewer=det_docks_viewer[-1])
+        QtWidgets.QApplication.processEvents()
+        det_mod_tmp.detector = plug_subtype
+        QtWidgets.QApplication.processEvents()
+        det_mod_tmp.manage_ui_actions('quit', 'setEnabled', False)
+
+        if plug_settings is not None:
+            try:
+                utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
+            except KeyError as e:
+                mssg = f'Could not set this setting: {str(e)}\n' \
+                       f'The Preset is no more compatible with the plugin {plug_subtype}'
+                logger.warning(mssg)
+                self.splash_sc.showMessage(mssg, color=Qt.white)
+
+        detector_modules.append(det_mod_tmp)
 
     def set_file_preset(self, filename):
         """
@@ -686,7 +718,8 @@ class DashBoard(QObject):
                     if plugin['type'] == 'move':
                         try:
                             plug_type = plug_settings.child('main_settings', 'move_type').value()
-                            self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms, actuators_modules)
+                            self.add_move(plug_name, plug_settings, plug_type, move_docks, move_forms,
+                                          actuators_modules)
 
                             if ind_plugin == 0:  # should be a master type plugin
                                 if plugin['status'] != "Master":
@@ -715,30 +748,8 @@ class DashBoard(QObject):
                     else:
                         try:
                             ind_det += 1
-                            plug_type = plug_settings.child('main_settings', 'DAQ_type').value()
-                            plug_subtype = plug_settings.child('main_settings', 'detector_type').value()
-
-                            det_docks_settings.append(Dock(plug_name + " settings", size=(150, 250)))
-                            det_docks_viewer.append(Dock(plug_name + " viewer", size=(350, 350)))
-                            if ind_det == 0:
-                                self.logger_dock.area.addDock(det_docks_settings[-1],
-                                                              'bottom')  # dockarea of the logger dock
-                            else:
-                                self.dockarea.addDock(det_docks_settings[-1], 'right', det_docks_viewer[-2])
-                            self.dockarea.addDock(det_docks_viewer[-1], 'right', det_docks_settings[-1])
-                            det_mod_tmp = DAQ_Viewer(self.dockarea, title=plug_name)
-                            det_mod_tmp.detector = plug_subtype
-                            det_mod_tmp.manage_ui_actions('quit', 'setEnabled', False)
-                            detector_modules.append(det_mod_tmp)
-
-                            try:
-                                utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
-                            except KeyError as e:
-                                mssg = f'Could not set this setting: {str(e)}\n'\
-                                       f'The Preset is no more compatible with the plugin {plug_subtype}'
-                                logger.warning(mssg)
-                                self.splash_sc.showMessage(mssg, color=Qt.white)
-
+                            self.add_det(plug_name, plug_settings, det_docks_settings, det_docks_viewer,
+                                         detector_modules)
                             QtWidgets.QApplication.processEvents()
 
                             try:
@@ -746,7 +757,7 @@ class DashBoard(QObject):
                                     if plugin['status'] != "Master":
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
-                                        detector_modules[-1].init_hardware_ui()
+                                        detector_modules[-1].init_hardware()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()
@@ -756,7 +767,7 @@ class DashBoard(QObject):
                                         logger.error('error in the master/slave type for plugin {}'.format(plug_name))
                                     if plug_init:
                                         detector_modules[-1].controller = master_controller
-                                        detector_modules[-1].init_hardware_ui()
+                                        detector_modules[-1].init_hardware()
                                         QtWidgets.QApplication.processEvents()
                                         self.poll_init(detector_modules[-1])
                                         QtWidgets.QApplication.processEvents()

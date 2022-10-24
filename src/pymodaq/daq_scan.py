@@ -1013,7 +1013,7 @@ class DAQ_Scan(QObject):
         if self.bkg_container is None:
             det_name = self.settings.child('scan_options', 'plot_from').value()
             det_mod = self.modules_manager.get_mod_from_name(det_name)
-            if det_mod.bkg is not None and det_mod.is_bkg:
+            if det_mod.bkg is not None and det_mod.do_bkg:
                 self.bkg_container = OrderedDict([])
                 det_mod.process_data(det_mod.bkg, self.bkg_container)
 
@@ -1772,7 +1772,7 @@ class DAQ_Scan_Acquisition(QObject):
                 data_types.extend(['data2D', 'dataND'])
 
             det_mod = self.modules_manager.get_mod_from_name(det_name)
-            if det_mod.bkg is not None and det_mod.is_bkg:
+            if det_mod.bkg is not None and det_mod.do_bkg:
                 bkg_container = OrderedDict([])
                 det_mod.process_data(det_mod.bkg, bkg_container)
 
@@ -1795,7 +1795,7 @@ class DAQ_Scan_Acquisition(QObject):
                                             self.channel_arrays[det_name][data_type]['parent'] = channel_group
                                             data_tmp = datas[data_type][channel]
 
-                                            if det_mod.bkg is not None and det_mod.is_bkg:
+                                            if det_mod.bkg is not None and det_mod.do_bkg:
                                                 if channel in bkg_container[data_type]:
                                                     data_tmp['bkg'] = bkg_container[data_type][channel]['data']
                                                     if data_tmp['bkg'].shape == ():  # in case one get a numpy.float64 object

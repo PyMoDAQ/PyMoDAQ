@@ -73,10 +73,12 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         # dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
         # and value is the result of a given lineout or measurement
 
+    def activate_roi(self, activate=True):
+        self.ui.Do_math_pb.setChecked(activate)
+        self.ui.Do_math_pb.triggered.emit(activate)
+
     def setupUI(self):
-
         self.ui = QObject()
-
         self.parent.setLayout(QtWidgets.QVBoxLayout())
         splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
 
@@ -243,11 +245,12 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     @Slot(str)
     def remove_ROI(self, roi_name):
-
-        item = self.lo_items.pop(roi_name)
-        self.ui.Graph_Lineouts.plotItem.removeItem(item)
-        self.measure_data_dict.pop("Lineout_{:s}:".format(roi_name))
-        self.update_lineouts()
+        if roi_name in self.lo_items:
+            item = self.lo_items.pop(roi_name)
+            self.ui.Graph_Lineouts.plotItem.removeItem(item)
+        if f'Lineout_{roi_name}:' in self.measure_data_dict:
+            self.measure_data_dict.pop(f'Lineout_{roi_name}:')
+            self.update_lineouts()
 
     @Slot(int, str)
     def add_lineout(self, index, roi_type=''):

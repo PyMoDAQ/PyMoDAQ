@@ -17,7 +17,7 @@ from pyqtgraph import ROI as pgROI
 from pyqtgraph import RectROI as pgRectROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
-from pymodaq.daq_utils.daq_utils import plot_colors
+from pymodaq.daq_utils.daq_utils import plot_colors, set_logger, get_module_name
 from pymodaq.daq_utils.config import get_set_roi_path
 from pymodaq.daq_utils.gui_utils import select_file
 import numpy as np
@@ -25,6 +25,7 @@ from pathlib import Path
 
 
 roi_path = get_set_roi_path()
+logger = set_logger(get_module_name(__file__))
 
 
 class ROIPositionMapper(QtWidgets.QWidget):
@@ -519,7 +520,7 @@ class ROIManager(QObject):
 
         try:
             data = ioxml.parameter_to_xml_string(self.settings.child(('ROIs')))
-            path = select_file(start_path=Path.home(), ext='xml')
+            path = select_file(start_path=Path.home(), ext='xml', save=True, force_save_extension=True)
 
             if path != '':
                 with open(path, 'wb') as f:
@@ -537,7 +538,7 @@ class ROIManager(QObject):
         try:
             if params is None:
                 if path is None:
-                    path = select_file(start_path=Path.home(), save=False, ext='xml')
+                    path = select_file(start_path=Path.home(), save=False, ext='xml', filter=['xml'])
                     if path != '':
                         params = Parameter.create(title='Settings', name='settings', type='group',
                                                   children=ioxml.XML_file_to_parameter(path))
@@ -548,21 +549,13 @@ class ROIManager(QObject):
 
                 for param in params:
                     if 'roi_type' in putils.iter_children(param, []):
-                        self.settings.child(('ROIs')).addNew(param.child(('roi_type')).value())
+                        self.settings.child('ROIs').addNew(param.child('roi_type').value())
                     else:
-                        self.settings.child(('ROIs')).addNew()
-                # self.settings.child(('ROIs')).addChildren(params)
+                        self.settings.child('ROIs').addNew()
                 QtWidgets.QApplication.processEvents()
-
-                # settings = Parameter.create(title='Settings', name='settings', type='group')
-                #
-                # for param in params:
-                #     settings.addChildren(custom_tree.XML_string_to_parameter(custom_tree.parameter_to_xml_string(param)))
-
-                self.set_roi(self.settings.child(('ROIs')).children(), params)
-
+                self.set_roi(self.settings.child('ROIs').children(), params)
         except Exception as e:
-            pass
+            logger.exception(str(e))
 
     def set_roi(self, roi_params, roi_params_new):
         for child, new_child in zip(roi_params, roi_params_new):
@@ -600,7 +593,7 @@ class ROISaver:
 
         if msgbox:
             msgBox = QtWidgets.QMessageBox()
-            msgBox.setText("Overshoot Manager?")
+            msgBox.setText("ROI Manager?")
             msgBox.setInformativeText("What do you want to do?")
             cancel_button = msgBox.addButton(QtWidgets.QMessageBox.Cancel)
             modify_button = msgBox.addButton('Modify', QtWidgets.QMessageBox.AcceptRole)
@@ -623,20 +616,17 @@ class ROISaver:
         self.roi_presets = Parameter.create(title='roi', name='rois', type='group', children=children)
 
         det_children = [child for child in self.roi_presets.children() if 'det' in child.opts['name']]
-        det_names = [child.child(('detname')).value() for child in self.roi_presets.children() if
+        det_names = [child.child('detname').value() for child in self.roi_presets.children() if
                      'det' in child.opts['name']]
         det_module_names = [det.title for det in self.detector_modules]
         for ind_det, det_roi in enumerate(det_children):
             det_module = self.detector_modules[det_module_names.index(det_names[ind_det])]
             viewer_children = [child for child in det_roi.children() if 'viewer' in child.opts['name']]
-            for ind_viewer, viewer in enumerate(det_module.ui.viewers):
+            for ind_viewer, viewer in enumerate(det_module.viewers):
                 rois_params = [child for child in viewer_children[ind_viewer].children() if 'ROI' in child.opts['name']]
                 if hasattr(viewer, 'roi_manager'):
-                    # if hasattr(viewer.ui, 'roiBtn'):
-                    #     viewer.ui.roiBtn.click()
-                    # elif hasattr(viewer.ui, 'Do_math_pb'):
-                    #     viewer.ui.Do_math_pb.click()
-
+                    if hasattr(viewer, 'activate_roi'):  # because for viewer 0D it is irrelevant
+                        viewer.activate_roi()
                     viewer.roi_manager.load_ROI(params=rois_params)
                     QtWidgets.QApplication.processEvents()
 

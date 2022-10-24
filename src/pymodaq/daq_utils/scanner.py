@@ -7,7 +7,6 @@ from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq.daq_utils.parameter import ioxml
 
-from pymodaq.daq_utils.daq_utils import linspace_step, odd_even, greater2n
 from pymodaq.daq_utils.plotting.scan_selector import ScanSelector
 import pymodaq.daq_utils.daq_utils as utils
 import pymodaq.daq_utils.gui_utils as gutils
@@ -1145,10 +1144,10 @@ def set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=10000)
         return np.array([starts])
 
     else:
-        axis_1_unique = linspace_step(starts[0], stops[0], steps[0])
+        axis_1_unique = mutils.linspace_step(starts[0], stops[0], steps[0])
         len1 = len(axis_1_unique)
 
-        axis_2_unique = linspace_step(starts[1], stops[1], steps[1])
+        axis_2_unique = mutils.linspace_step(starts[1], stops[1], steps[1])
         len2 = len(axis_2_unique)
         # if number of steps is over oversteps, reduce both axis in the same ratio
         if len1 * len2 > oversteps:
@@ -1159,7 +1158,7 @@ def set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=10000)
         for ind_x, pos1 in enumerate(axis_1_unique):
             if back_and_force:
                 for ind_y, pos2 in enumerate(axis_2_unique):
-                    if not odd_even(ind_x):
+                    if not mutils.odd_even(ind_x):
                         positions.append([pos1, pos2])
                     else:
                         positions.append([pos1, axis_2_unique[len(axis_2_unique) - ind_y - 1]])
@@ -1229,7 +1228,7 @@ def set_scan_spiral(starts, rmaxs, rsteps, nsteps=None, oversteps=10000):
 
     ind = 0
     flag = True
-    oversteps = greater2n(oversteps)  # make sure the position matrix is still a square
+    oversteps = mutils.greater2n(oversteps)  # make sure the position matrix is still a square
 
     Nlin = np.trunc(rmaxs / rsteps)
     if not np.all(Nlin == Nlin[0]):
@@ -1240,7 +1239,7 @@ def set_scan_spiral(starts, rmaxs, rsteps, nsteps=None, oversteps=10000):
     axis_1_indexes = [0]
     axis_2_indexes = [0]
     while flag:
-        if odd_even(ind):
+        if mutils.odd_even(ind):
             step = 1
         else:
             step = -1

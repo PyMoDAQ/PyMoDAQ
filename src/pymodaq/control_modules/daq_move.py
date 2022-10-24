@@ -147,6 +147,8 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'rel_value':
             self._relative_value = cmd.attribute
 
+
+
     def stop_motion(self):
         """Stop any motion
         """
@@ -748,7 +750,7 @@ class DAQ_Move_Hardware(QObject):
                 status.info = infos[0]
                 status.initialized = infos[1]
             status.controller = self.hardware.controller
-            self.hardware.Move_Done_signal.connect(self.Move_Done)
+            self.hardware.move_done_signal.connect(self.move_done)
 
             return status
         except Exception as e:

@@ -778,6 +778,11 @@ class Viewer2D(ViewerBase):
 
         self.add_attributes_from_view()
 
+    def activate_roi(self, activate=True):
+        """Activate the Roi manager using the corresponding action"""
+        self.set_action_checked('roi', activate)
+        self.get_action('roi').triggered.emit(activate)
+
     @Slot(dict)
     def roi_changed(self):
         self.filter_from_rois.filter_data(self._datas)

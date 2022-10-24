@@ -101,3 +101,7 @@ class ViewerBase(QObject):
         for attribute in self.convenience_attributes:
             if hasattr(self.view, attribute):
                 setattr(self, attribute, getattr(self.view, attribute))
+
+    def activate_roi(self, activate=True):
+        """Activate the Roi manager using the corresponding action"""
+        raise NotImplementedError

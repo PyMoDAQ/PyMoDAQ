@@ -188,6 +188,11 @@ class DAQ_Move_base(QObject):
         self._poll_timeout = config('actuator', 'polling_timeout_s')
         self.poll_timer.timeout.connect(self.check_target_reached)
 
+        self.ini_attributes()
+
+    def ini_attributes(self):
+        self.controller = None
+
     def ini_stage_init(self, old_controller=None, new_controller=None):
         """Manage the Master/Slave controller issue
 

@@ -34,7 +34,7 @@ from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_
 from pymodaq.daq_utils.h5modules import H5Saver
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.messenger import deprecation_msg
-from pymodaq.daq_utils.gui_utils import DockArea, get_splash_sc
+from pymodaq.daq_utils.gui_utils import DockArea, get_splash_sc, Dock
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
@@ -87,7 +87,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     params = daq_viewer_params
 
-    def __init__(self, parent=None, title="Testing"):
+    def __init__(self, parent=None, title="Testing", daq_type='DAQ2D', dock_settings=None, dock_viewer=None):
 
         # TODO
         # check the use case of controller_ID if None remove it
@@ -99,6 +99,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         ParameterManager.__init__(self)
         ControlModule.__init__(self)
 
+        self._viewer_types = []
+        self._viewers = []
+
         if isinstance(parent, DockArea):
             self.dockarea = parent
         else:
@@ -106,31 +109,24 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.parent = parent
         if parent is not None:
-            self.ui:DAQ_Viewer_UI = DAQ_Viewer_UI(parent, title)
+            self.ui: DAQ_Viewer_UI = DAQ_Viewer_UI(parent, title, daq_type=daq_type,
+                                                   dock_settings=dock_settings,
+                                                   dock_viewer=dock_viewer)
         else:
-            self.ui:DAQ_Viewer_UI = None
+            self.ui: DAQ_Viewer_UI = None
 
         if self.ui is not None:
-            self.ui.daq_types = DAQ_TYPES
-            self.ui.detectors = [det_dict['name'] for det_dict in DET_TYPES[config('viewer', 'daq_type')]]
+            QtWidgets.QApplication.processEvents()
             self.ui.add_setting_tree(self.settings_tree)
             self.ui.command_sig.connect(self.process_ui_cmds)
             self.ui.add_setting_tree(self.settings_tree)
-            self.ui.show_settings(True)
+            #self.ui.show_settings(True)
+            self.viewers = self.ui.viewers
+            self._viewer_types = self.ui.viewer_types
 
         self.splash_sc = get_splash_sc()
 
         self._title = title
-
-        self._daq_type = config('viewer', 'daq_type')
-        self._detectors = [det_dict['name'] for det_dict in DET_TYPES[self._daq_type]]
-        self._detector = self._detectors[0]
-        self._viewer_types = []
-        self._viewers = []
-
-        self._grabing = False
-        self._do_bkg = False
-        self._take_bkg = False
 
         self._h5saver_continuous = H5Saver(save_type='detector')
         self._h5saver_continuous.settings_tree.setVisible(False)
@@ -145,11 +141,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._do_continuous_save = False
         self._is_continuous_initialized = False
         self._file_continuous_save = None
-        
+
+        self._daq_type = daq_type
+        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
+        self._detectors = [det_dict['name'] for det_dict in DET_TYPES[self._daq_type]]
+        self._detector = self._detectors[0]
+        self.settings.child('main_settings', 'detector_type').setValue(self._detector)
+
+        self._grabing = False
+        self._do_bkg = False
+        self._take_bkg = False
+
         self._grab_done = False
         self._start_grab_time = 0.  # used for the refreshing rate
         self._received_data = 0
-        
+
         self._lcd = None
 
         self._bkg = None  # buffer to store background
@@ -168,7 +174,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.grab_done_signal[OrderedDict].connect(self._save_export_data)
 
-        self.daq_type = config('viewer', 'daq_type')
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -212,9 +217,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.load_data()
         elif cmd.command == 'detector_changed':
             if cmd.attribute != '':
-                self.detector = cmd.attribute
+                self.detector_changed_from_ui(cmd.attribute)
         elif cmd.command == 'daq_type_changed':
-            self.daq_type = cmd.attribute
+            if cmd.attribute != '':
+                self.daq_type_changed_from_ui(cmd.attribute)
         elif cmd.command == 'take_bkg':
             self.take_bkg()
         elif cmd.command == 'do_bkg':
@@ -223,34 +229,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self._viewer_types = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
 
-    def manage_ui_actions(self, action_name:str, attribute:str, value):
-        """Method to manage actions for the UI (if any).
-
-        Will try to apply the given value to the given attribute of the corresponding action
-
-        Parameters
-        ----------
-        action_name: str
-        attribute: method signature or attribute
-        value: object
-            actual type and value depend on the triggered attribute
-
-        Examples
-        --------
-        >>>manage_ui_actions('quit', 'setEnabled', False)
-        # will disable the quit action (button) on the UI
-        """
-        if self.ui is not None:
-            if self.ui.has_action(action_name):
-                action = self.ui.get_action(action_name)
-                if hasattr(action, attribute):
-                    setattr(action, attribute, value)
+    @property
+    def bkg(self):
+        return self._bkg
 
     @property
     def viewer_docks(self):
         """:obj:`list` of Viewer Docks from the UI"""
         if self.ui is not None:
             return self.ui.viewer_docks
+
+    def daq_type_changed_from_ui(self, daq_type):
+        self._daq_type = daq_type
+        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
+        self.detectors_changed_from_ui([det_dict['name'] for det_dict in DET_TYPES[daq_type]])
+        self.detector = self.detectors[0]
 
     @property
     def daq_type(self):
@@ -276,6 +269,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """:obj:`list` of :obj:`str`: List of available DAQ_TYPES"""
         return DAQ_TYPES
 
+    def detector_changed_from_ui(self, detector):
+        self._detector = detector
+        self._set_setting_tree()
+
     @property
     def detector(self):
         """:obj:`str`: Get/Set the detector among detectors property"""
@@ -289,6 +286,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.ui is not None:
             self.ui.detector = det
         self._set_setting_tree()
+
+    def detectors_changed_from_ui(self, detectors):
+        self._detectors = detectors
 
     @property
     def detectors(self):
@@ -335,6 +335,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 viewer.ROI_select_signal.connect(
                     lambda roi_pos_size: self.command_hardware.emit(ThreadCommand('ROISelect', roi_pos_size)))
         self._viewers = viewers
+
+    @property
+    def viewers_docks(self):
+        if self.ui is not None:
+            return self.ui.viewer_docks
 
     def quit_fun(self):
         """Quit the application, closing the hardware and other modules
@@ -912,7 +917,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._process_overshoot(data)
         self._viewer_types = [data['dim'] for data in data]
         if self.ui is not None:
-            self.ui.update_viewers(self._viewer_types)
+            if self.ui.viewer_types != self._viewer_types:
+                self.ui.update_viewers(self._viewer_types)
 
     def _process_data(self, data, container: OrderedDict):
         """Process data depending on the settings options
@@ -1603,11 +1609,26 @@ class DAQ_Detector(QObject):
         try:
             # status="Not initialized"
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
-            det_params, _class = get_viewer_plugins(self.daq_type, self.detector_name)
-            self.detector = _class(self, params_state)
-            self.detector.data_grabed_signal.connect(self.data_ready)
-            self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-            status.update(self.detector.ini_detector(controller))
+            det_params, class_ = get_viewer_plugins(self.daq_type, self.detector_name)
+            self.detector = class_(self, params_state)
+
+            try:
+                infos = self.detector.ini_detector(controller)  # return edict(info="", controller=, stage=)
+                self.detector.data_grabed_signal.connect(self.data_ready)
+                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
+                status.controller = self.detector.controller
+
+            except Exception as e:
+                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                infos = str(e), False
+                status.controller = None
+
+            if isinstance(infos, edict):
+                status.update(infos)
+            else:
+                status.info = infos[0]
+                status.initialized = infos[1]
+
 
             if status['x_axis'] is not None:
                 x_axis = status['x_axis']
@@ -1616,7 +1637,7 @@ class DAQ_Detector(QObject):
                 y_axis = status['y_axis']
                 self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
 
-            self.hardware_averaging = _class.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
+            self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
 
             return status
         except Exception as e:
@@ -1767,8 +1788,16 @@ class DAQ_Detector(QObject):
         return status
 
 
-def main(init_qt=True):
-    if init_qt: # used for the test suite
+def prepare_docks(area, title):
+    dock_settings = Dock(title + " settings", size=(150, 250))
+    dock_viewer = Dock(title + " viewer", size=(350, 350))
+    area.addDock(dock_settings)
+    area.addDock(dock_viewer, 'right', dock_settings)
+    return dict(dock_settings=dock_settings, dock_viewer=dock_viewer)
+
+
+def main(init_qt=True, init_det=False):
+    if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
         if config('style', 'darkstyle'):
             import qdarkstyle
@@ -1781,7 +1810,10 @@ def main(init_qt=True):
     win.setWindowTitle('PyMoDAQ Viewer')
     win.show()
 
-    viewer = DAQ_Viewer(area, title="Testing")
+    title = "Testing"
+    viewer = DAQ_Viewer(area, title="Testing", daq_type=config('viewer', 'daq_type'),
+                        **prepare_docks(area, title))
+    viewer.init_hardware_ui(init_det)
 
     if init_qt:
         sys.exit(app.exec_())
@@ -1789,5 +1821,4 @@ def main(init_qt=True):
 
 
 if __name__ == '__main__':
-
-    main()
+    main(init_det=False)

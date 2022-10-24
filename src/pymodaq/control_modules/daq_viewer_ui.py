@@ -18,7 +18,7 @@ from pymodaq.daq_utils.plotting.data_viewers import DATA_TYPES, Viewer0D, Viewer
 from pymodaq.daq_utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
 from pymodaq.daq_utils.gui_utils import Dock
 from pymodaq.daq_utils.config import Config
-
+from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 config = Config()
 
 
@@ -58,7 +58,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     command_sig = Signal(ThreadCommand)
 
-    def __init__(self, parent, title="DAQ_Viewer"):
+    def __init__(self, parent, title="DAQ_Viewer", daq_type='DAQ2D', dock_settings=None, dock_viewer=None):
         super().__init__(parent)
         self.title = title
 
@@ -71,18 +71,24 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._ini_state_led = None
         self._do_bkg_cb = None
         self._take_bkg_pb = None
-        self._settings_dock = None
+        self._settings_dock = dock_settings
         self._viewer_docks = []
         self._viewer_widgets = []
         self._viewer_types = []
         self._viewers = []
 
-        self.setup_ui()
+        self.setup_docks()
+        self.daq_types = DAQ_TYPES
+        self.daq_type = daq_type
+        self.detectors = [det['name'] for det in DET_TYPES[daq_type]]
+        self.setup_actions()  # see ActionManager MixIn class
+        self.add_viewer(f'Data{daq_type[3:]}', dock_viewer=dock_viewer)
+        self.connect_things()
+
 
         self._enable_grab_buttons(False)
         self._detector_widget.setVisible(False)
         self._settings_widget.setVisible(False)
-
 
     @property
     def detector(self):
@@ -127,6 +133,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
     @property
     def viewers(self):
         return self._viewers
+
     @property
     def viewer_docks(self):
         return self._viewer_docks
@@ -159,7 +166,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
             self.viewer_types.pop()
             QtWidgets.QApplication.processEvents()
 
-    def add_viewer(self, datadim: str):
+    def add_viewer(self, datadim: str, dock_viewer=None):
         self._viewer_widgets.append(QtWidgets.QWidget())
         if datadim == "Data0D":
             self.viewers.append(Viewer0D(self._viewer_widgets[-1]))
@@ -174,9 +181,9 @@ class DAQ_Viewer_UI(ControlModuleUI):
             self.viewers.append(ViewerND(self._viewer_widgets[-1]))
 
         self.viewer_types.append(datadim)
-
-        self.viewer_docks.append(
-            Dock(f'{self.title}_Viewer_{len(self.viewer_docks) + 1}', size=(500, 300), closable=False))
+        if dock_viewer is None:
+            dock_viewer = Dock(f'{self.title}_Viewer_{len(self.viewer_docks) + 1}', size=(350, 350), closable=False)
+        self.viewer_docks.append(dock_viewer)
         self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
         if len(self.viewer_docks) == 1:
             self.dockarea.addDock(self.viewer_docks[-1], 'right', self._settings_dock)
@@ -213,8 +220,9 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._settings_dock.close()
 
     def setup_docks(self):
-        self._settings_dock = Dock(self.title + "_Settings", size=(10, 10))
-        self.dockarea.addDock(self._settings_dock)
+        if self._settings_dock is None:
+            self._settings_dock = Dock(self.title + "_Settings", size=(150, 250))
+            self.dockarea.addDock(self._settings_dock)
 
         widget = QWidget()
         widget.setLayout(QVBoxLayout())
@@ -278,6 +286,8 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self.add_action('save_new', 'Save New Data', 'Snap&Save', "Save New Data")
         self.add_action('open', 'Load Data', 'Open', "Load Saved Data")
 
+        self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
+                        checkable=True)
         self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True)
 
         self.add_action('quit', 'Quit the module', 'close2')
@@ -287,7 +297,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self.toolbar.addWidget(self._data_ready_led)
 
     def connect_things(self):
-        self.connect_action('show_settings', lambda show: self._detector_widget.setVisible(show))
+        self.connect_action('show_controls', lambda show: self._detector_widget.setVisible(show))
         self.connect_action('show_settings', lambda show: self._settings_widget.setVisible(show))
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit', )))
 
@@ -325,12 +335,18 @@ class DAQ_Viewer_UI(ControlModuleUI):
     def _daq_type_changed(self, daq_type):
         if daq_type in self.daq_types:
             self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
-            self.update_viewers([f'Data{daq_type[3:]}'])
+            if self.viewer_types != [f'Data{daq_type[3:]}']:
+                self.update_viewers([f'Data{daq_type[3:]}'])
 
     def show_settings(self, show=True):
         if (self.is_action_checked('show_settings') and not show) or \
                 (not self.is_action_checked('show_settings') and show):
             self.get_action('show_settings').trigger()
+            
+    def show_controls(self, show=True):
+        if (self.is_action_checked('show_controls') and not show) or \
+                (not self.is_action_checked('show_controls') and show):
+            self.get_action('show_controls').trigger()
 
     def _grab(self):
         """Slot from the *grab* action"""
@@ -437,13 +453,11 @@ def main(init_qt=True):
             prog._enable_grab_buttons(cmd_sig.attribute[0])
             prog.detector_init = cmd_sig.attribute[0]
 
-    prog.detectors = detectors
-    prog.daq_types = daq_types
+    # prog.detectors = detectors
+    # prog.daq_types = daq_types
     prog.command_sig.connect(print_command_sig)
 
     prog.add_setting_tree(tree)
-
-
 
     if init_qt:
         sys.exit(app.exec_())

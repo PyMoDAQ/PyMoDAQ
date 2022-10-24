@@ -142,6 +142,32 @@ class ControlModule(QObject):
         if log:
             self.logger.info(txt)
 
+    def manage_ui_actions(self, action_name: str, attribute: str, value):
+        """Method to manage actions for the UI (if any).
+
+        Will try to apply the given value to the given attribute of the corresponding action
+
+        Parameters
+        ----------
+        action_name: str
+        attribute: method signature or attribute
+        value: object
+            actual type and value depend on the triggered attribute
+
+        Examples
+        --------
+        >>>manage_ui_actions('quit', 'setEnabled', False)
+        # will disable the quit action (button) on the UI
+        """
+        if self.ui is not None:
+            if self.ui.has_action(action_name):
+                action = self.ui.get_action(action_name)
+                if hasattr(action, attribute):
+                    attr = getattr(action, attribute)
+                    if callable(attr):
+                        attr(value)
+                    else:
+                        attr = value
 
 class ControlModuleUI(CustomApp):
     """ Base Class for ControlModules UIs

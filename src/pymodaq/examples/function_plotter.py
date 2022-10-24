@@ -34,7 +34,8 @@ class FunctionPlotter(CustomApp):
             {'title': 'File name:', 'name': 'target_filename', 'type': 'str', 'value': "", 'readonly': True},
             {'title': 'Date:', 'name': 'date', 'type': 'date', 'value': QDate.currentDate()},
 
-            {'title': 'Functions:', 'name': 'functions', 'type': 'list', 'values': ['exp(-(x/5)**2)', 'sin(x)', 'arctan(x)']},
+            {'title': 'Functions:', 'name': 'functions', 'type': 'list',
+             'limits': ['exp(-(x/5)**2)', 'sin(x)', 'arctan(x)']},
             {'title': 'Function:', 'name': 'function', 'type': 'str', 'value': 'sinc(x)'},
             {'title': 'Add function:', 'label': 'Add!', 'name': 'add_function', 'type': 'bool_push', 'value': False},
             {'title': 'Plot refresh (ms):', 'name': 'plot_refresh', 'type': 'int', 'value': 2000},
