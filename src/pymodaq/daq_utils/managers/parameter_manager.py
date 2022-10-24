@@ -2,6 +2,17 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
 class ParameterManager:
+    """Class dealing with Parameter and ParameterTree
+
+    Attributes
+    ----------
+    params: list of dicts
+        Defining the Parameter tree like structure
+    settings: Parameter
+        The higher level (parent) Parameter
+    settings_tree: ParameterTree
+    """
+
     params = []
 
     def __init__(self):
@@ -27,20 +38,21 @@ class ParameterManager:
                 self.param_deleted(param)
 
     def value_changed(self, param):
-        """Non mandatory method  to be subclassed for actions to perform when one of the param's value in self.settings is changed
-
-        For instance:
-        if param.name() == 'do_something':
-            if param.value():
-                print('Do something')
-                self.settings.child('main_settings', 'something_done').setValue(False)
+        """Non mandatory method  to be subclassed for actions to perform (methods to call) when one of the param's
+        value in self.settings is changed
 
         Parameters
         ----------
         param: Parameter
             the parameter whose value just changed
+
+        Examples
+        --------
+        >>> if param.name() == 'do_something':
+        >>>     if param.value():
+        >>>         print('Do something')
+        >>>         self.settings.child('main_settings', 'something_done').setValue(False)
         """
-        pass
 
     def child_added(self, param, data):
         """Non mandatory method to be subclassed for actions to perform when a param  has been added in self.settings

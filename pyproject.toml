@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling>=1.9.0",]
+build-backend = "hatchling.build"
+
+[project]
+name = "pymodaq"
+dynamic = [
+    "version",
+]
+description = "Modular Data Acquisition with Python"
+readme = "README.rst"
+license = { file="LICENSE" }
+requires-python = ">=3.6"
+authors = [
+    { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Other Environment",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Human Machine Interfaces",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
+dependencies = [
+    "docutils==0.17.1",
+    "easydict",
+    "importlib_metadata; python_version<\"3.8\"",
+    "multipledispatch",
+    "numpy",
+    "packaging",
+    "pint",
+    "pymodaq_plugin_manager>=0.0.17",
+    "pymodaq_plugins>=3.0.1",
+    "pyqtgraph>=0.12",
+    "python-dateutil",
+    "qdarkstyle",
+    "qtpy",
+    "scipy",
+    "setuptools>=60",
+    "simple_pid",
+    "tables==3.6.1; python_version<\"3.9\"",
+    "tables>=3.7.0; python_version>\"3.8\"",
+    "toml",
+]
+
+[project.scripts]
+daq_logger = "pymodaq.daq_logger:main"
+daq_move = "pymodaq.control_modules.daq_move:main"
+daq_scan = "pymodaq.daq_scan:main"
+daq_viewer = "pymodaq.control_modules.daq_viewer:main"
+dashboard = "pymodaq.dashboard:main"
+h5browser = "pymodaq.h5browser:main"
+parameter_example = "pymodaq.examples.parameter_ex:main"
+
+[project.urls]
+Homepage = "http://pymodaq.cnrs.fr"
+
+[tool.hatch.version]
+path = "src/pymodaq/resources/VERSION"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]

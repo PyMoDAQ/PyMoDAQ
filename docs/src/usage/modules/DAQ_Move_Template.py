@@ -1,5 +1,5 @@
-from pymodaq.daq_move.utility_classes import DAQ_Move_base
-from pymodaq.daq_move.utility_classes import comon_parameters
+from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
+from pymodaq.control_modules.move_utility_classes import comon_parameters
 from pymodaq.daq_utils.daq_utils import ThreadCommand
 from pymodaq.daq_utils.parameter.utils import iter_children
 from easydict import EasyDict as edict
@@ -59,7 +59,7 @@ class DAQ_Move_Template(DAQ_Move_base):
             self.settings.child('bounds','max_bound').setValue(0.02)
 
         except Exception as e:
-            self.emit_status(ThreadCommand("Update_Status",[str(e)]))
+            self.emit_status(ThreadCommand("Update_Status", [str(e)]))
             raise Exception(str(e))
 
     def check_position(self):
@@ -74,7 +74,7 @@ class DAQ_Move_Template(DAQ_Move_base):
         #convert pos if scaling options have been used, mandatory here
         pos=self.get_position_with_scaling(pos)
         self.current_position=pos
-        self.emit_status(ThreadCommand('check_position',[pos]))
+        self.emit_status(ThreadCommand('check_position', [pos]))
         return pos
 
     def close(self):
@@ -159,7 +159,7 @@ class DAQ_Move_Template(DAQ_Move_base):
             return self.status
 
         except Exception as e:
-            self.emit_status(ThreadCommand('Update_Status',[str(e),'log']))
+            self.emit_status(ThreadCommand('Update_Status', [str(e), 'log']))
             self.status.info=str(e)
             self.status.initialized=False
             return self.status

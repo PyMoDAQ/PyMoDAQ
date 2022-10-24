@@ -634,10 +634,10 @@ class ViewerND(QtWidgets.QWidget, QObject):
 
         # main_layout.addWidget(vsplitter)
 
-        self.ui.set_signals_pb_1D.clicked.connect(self.signal_axes_selection)
-        self.ui.set_signals_pb_2D.clicked.connect(self.signal_axes_selection)
-        self.ui.set_signals_pb_1D_bis.clicked.connect(self.signal_axes_selection)
-        self.ui.set_signals_pb_2D_bis.clicked.connect(self.signal_axes_selection)
+        self.ui.set_signals_pb_1D.triggered.connect(self.signal_axes_selection)
+        self.ui.set_signals_pb_2D.triggered.connect(self.signal_axes_selection)
+        self.ui.set_signals_pb_1D_bis.triggered.connect(self.signal_axes_selection)
+        self.ui.set_signals_pb_2D_bis.triggered.connect(self.signal_axes_selection)
 
         # to start: display as default a 2D navigator and a 1D viewer
         self.ui.navigator1D.parent.setVisible(False)

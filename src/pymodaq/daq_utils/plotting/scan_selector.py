@@ -44,6 +44,23 @@ class PolyLineROI_custom(PolyLineROI):
 
 
 class ScanSelector(QObject):
+    """Allows selection of a given 2D viewer to get scan info
+
+    respectively scan2D or scan Tabular from respectively a rectangular ROI or a polyline
+
+    Parameters
+    ----------
+    viewer_items: dict
+        where the keys are the titles of the sources while the values are dict with keys
+        * viewers: list of plotitems
+        * names: list of viewer titles
+
+    scan_type: str
+        either 'Tabular' corresponding to a polyline ROI or 'Scan2D' for a rect Roi
+    positions: list
+        in case of 'Tabular', should be a sequence of 2 floats sequence [(x1,y1),(x2,y2),(x3,y3),...]
+        in case of 'Scan2D', should be a sequence of 4 floats (x, y , w, h)
+    """
     scan_select_signal = Signal(ROI)
 
     params = [
@@ -65,19 +82,7 @@ class ScanSelector(QObject):
     ]
 
     def __init__(self, viewer_items=[], scan_type='Scan2D', positions=[]):
-        """
-
-        Parameters
-        ----------
-        viewer_items: dict where the keys are the titles of the sources while the values are dict with keys
-                        viewers: list of plotitems
-                        names: list of viewer titles
-        scan_type: (str) either 'Tabular' corresponding to a polyline ROI or 'Scan2D' for a rect Roi
-        positions: list
-                        in case of 'Tabular', should be a sequence of 2 floats sequence [(x1,y1),(x2,y2),(x3,y3),...]
-                        in case of 'Scan2D', should be a sequence of 4 floats (x, y , w, h)
-        """
-        super(ScanSelector, self).__init__()
+        super().__init__()
         self._viewers_items = viewer_items
         self.sources_names = list(viewer_items.keys())
         if len(viewer_items) != 0:
@@ -236,7 +241,7 @@ class ScanSelector(QObject):
 
 if __name__ == '__main__':
     from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
-    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
     class UI:
         def __init__(self):

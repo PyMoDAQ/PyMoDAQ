@@ -338,7 +338,7 @@ class TestTCPClient:
     def test_queue_command(self, mock_connection):
         mock_connection.side_effect = [Expected_1]
         command = ThreadCommand()
-        command.attributes = {'ipaddress': '0.0.0.0', 'port': 5544, 'path': [1, 2, 3],
+        command.attribute = {'ipaddress': '0.0.0.0', 'port': 5544, 'path': [1, 2, 3],
                               'param': Parameter(name='test_param')}
 
 
@@ -365,37 +365,37 @@ class TestTCPClient:
         test_TCP_Client.socket = Socket(MockPythonSocket())
         command.command = 'update_connection'
         test_TCP_Client.queue_command(command)
-        assert test_TCP_Client.ipaddress == command.attributes['ipaddress']
-        assert test_TCP_Client.port == command.attributes['port']
+        assert test_TCP_Client.ipaddress == command.attribute['ipaddress']
+        assert test_TCP_Client.port == command.attribute['port']
 
         command.command = 'send_info'
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'Info_xml'
-        assert test_TCP_Client.socket.get_list() == command.attributes['path']
+        assert test_TCP_Client.socket.get_list() == command.attribute['path']
         assert test_TCP_Client.socket.get_string()
 
-        command.attributes = [{'data': [1, 1.1, 5]}]
+        command.attribute = [{'data': [1, 1.1, 5]}]
         command.command = 'data_ready'
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'Done'
-        assert test_TCP_Client.socket.get_list() == command.attributes[0]['data']
+        assert test_TCP_Client.socket.get_list() == command.attribute[0]['data']
 
-        command.attributes = [10]
+        command.attribute = [10]
         command.command = 'position_is'
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'position_is'
-        assert test_TCP_Client.socket.get_scalar() == command.attributes[0]
+        assert test_TCP_Client.socket.get_scalar() == command.attribute[0]
 
         command.command = 'move_done'
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'move_done'
-        assert test_TCP_Client.socket.get_scalar() == command.attributes[0]
+        assert test_TCP_Client.socket.get_scalar() == command.attribute[0]
 
-        command.attributes = [np.array([1, 2, 3])]
+        command.attribute = [np.array([1, 2, 3])]
         command.command = 'x_axis'
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'x_axis'
-        array = command.attributes[0]
+        array = command.attribute[0]
         result = test_TCP_Client.socket.get_array()
         for val1, val2 in zip(array, result):
             assert val1 == val2
@@ -412,10 +412,10 @@ class TestTCPClient:
         assert test_TCP_Client.socket.get_string() == ''
 
         command.command = 'x_axis'
-        command.attributes = [{'data': np.array([1, 2, 3]), 'label': 'test', 'units': 'cm'}]
+        command.attribute = [{'data': np.array([1, 2, 3]), 'label': 'test', 'units': 'cm'}]
         test_TCP_Client.queue_command(command)
         assert test_TCP_Client.socket.get_string() == 'x_axis'
-        array = command.attributes[0]['data']
+        array = command.attribute[0]['data']
         result = test_TCP_Client.socket.get_array()
         for val1, val2 in zip(array, result):
             assert val1 == val2
@@ -448,7 +448,7 @@ class TestTCPClient:
         cmd_signal.emit.side_effect = [None, Expected_1]
         test_TCP_Client.cmd_signal = cmd_signal
         with pytest.raises(Expected_1):
-            test_TCP_Client.init_connection(extra_commands=[ThreadCommand('test')])
+            test_TCP_Client.init_connection(extra_commands=[ThreadCommand('test', )])
         assert not test_TCP_Client.connected
 
         test_TCP_Client = TCPClient()

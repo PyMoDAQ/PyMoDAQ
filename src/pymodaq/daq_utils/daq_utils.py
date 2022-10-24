@@ -11,8 +11,10 @@ import datetime
 import importlib
 import inspect
 import json
+
 import logging
 import functools
+import re
 import time
 from logging.handlers import TimedRotatingFileHandler
 from packaging import version as version_mod
@@ -71,7 +73,8 @@ def timer(func):
     return wrapper_timer
 
 
-def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
+def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None,
+               logger_base_name='pymodaq', local_dir=None):
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -89,15 +92,15 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
     get_module_name, logging.handlers.TimedRotatingFileHandler
     """
     if not base_logger:
-        logger_name = f'pymodaq.{logger_name}'
+        logger_name = f'{logger_base_name}.{logger_name}'
 
     logger = logging.getLogger(logger_name)
-    log_path = get_set_config_path('log')
+    log_path = get_set_config_path('log', local_dir=local_dir)
     if add_handler:
         if log_level is None:
             log_level = config('general', 'debug_level')
         logger.setLevel(log_level)
-        handler = TimedRotatingFileHandler(log_path.joinpath('pymodaq.log'), when='midnight')
+        handler = TimedRotatingFileHandler(log_path.joinpath(f'{logger_base_name}.log'), when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
@@ -119,9 +122,19 @@ logger = set_logger('daq_utils')
 
 
 def get_version():
+    """Obtain pymodaq version from the VERSION file
+
+    Follows the layout from the packaging tool hatch, hatchling
+    """
+    DEFAULT_PATTERN = r'(?i)^(__version__|VERSION) *= *([\'"])v?(?P<version>.+?)\2'
+
     with open(str(Path(__file__).parent.parent.joinpath('resources/VERSION')), 'r') as fvers:
-        version = fvers.read().strip()
-    return version
+        contents = fvers.read().strip()
+        match = re.search(DEFAULT_PATTERN, contents, flags=re.MULTILINE)
+        groups = match.groupdict()
+        if 'version' not in groups:
+            raise ValueError('no group named `version` was defined in the pattern')
+    return groups['version']
 
 
 def copy_preset():                          # pragma: no cover
@@ -504,31 +517,43 @@ def getLineInfo():
     return res
 
 
-class ThreadCommand(object):
-    """ | Micro class managing the thread commands.
-        |
-        | A thread command is composed of a string name defining the command to execute and an attribute list splitable making arguments of the called function.
+class ThreadCommand:
+    """Generic object to pass info (command) and data (attribute) between thread or objects using signals
 
-        =============== =============
-        **Attributes**  **Type**
-        *command*       string
-        *attributes*    generic list
-        =============== =============
+    Parameters
+    ----------
+    command: str
+        The command to be analysed for further action
+    attribute: any type
+        the attribute related to the command. The actual type and value depend on the command and the situation
+    attributes: deprecated, attribute should be used instead
 
+    Attributes
+    ----------
+    command : str
+        The command to be analysed for further action
+    attribute : any type
+        the attribute related to the command. The actual type and value depend on the command and the situation
     """
 
-    def __init__(self, command="", attributes=[]):
+    def __init__(self, command: str, attribute=None, attributes=None):
+        if not isinstance(command, str):
+            raise TypeError(f'The command in a Threadcommand object should be a string, not a {type(command)}')
         self.command = command
-        self.attributes = attributes
+        if attribute is None and attributes is not None:
+            deprecation_msg('ThreadCommand signature changed, use attribute in place of attribute')
+            self.attribute = attributes
+            self.attributes = attributes
+        self.attribute = attribute
 
     def __repr__(self):
-        return f'Threadcommand: {self.command} with attributes {self.attributes}'
+        return f'Threadcommand: {self.command} with attribute {self.attribute}'
 
 
 class AxisBase(dict):
     """
-    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys or class
-    type attributes
+    Utility class defining an axis for pymodaq's viewers, attribute can be accessed as dictionary keys or class
+    type attribute
     """
 
     def __init__(self, label='', units='', **kwargs):
@@ -559,32 +584,9 @@ class AxisBase(dict):
             raise AttributeError(f'{item} is not a valid attribute')
 
 
-class ControlModule:
-    """Abstract Base class common to both DAQ_Move and DAQ_Viewer control modules"""
-
-    def __init__(self):
-        self._title = ""
-
-    @property
-    def module_type(self):
-        return type(self).__name__
-
-    @property
-    def initialized_state(self):
-        return self._initialized_state
-
-    @property
-    def title(self):
-        return self._title
-
-    def grab(self):
-        """Programmatic entry to grab data from detectors or current value from actuator"""
-        raise NotImplementedError
-
-
 class Axis(AxisBase):
     """
-    Utility class defining an axis for pymodaq's viewers, attributes can be accessed as dictionary keys
+    Utility class defining an axis for pymodaq's viewers, attribute can be accessed as dictionary keys
     """
 
     def __init__(self, data=None, label='', units='', **kwargs):
@@ -644,7 +646,7 @@ class Data(OrderedDict):
                  y_axis: Axis = None, **kwargs):
         """
         Generic class subclassing from OrderedDict defining data being exported from pymodaq's plugin or viewers,
-        attributes can be accessed as dictionary keys. Should be subclassed from for real datas
+        attribute can be accessed as dictionary keys. Should be subclassed from for real datas
         Parameters
         ----------
         source: str
@@ -777,7 +779,7 @@ class DataToEmit(DataTimeStamped):
 class DataToExport(Data):
     def __init__(self, data=None, dim='', source='raw', **kwargs):
         """
-        Utility class defining a data being exported from pymodaq's viewers, attributes can be accessed as dictionary keys
+        Utility class defining a data being exported from pymodaq's viewers, attribute can be accessed as dictionary keys
         Parameters
         ----------
         data: (ndarray or a scalar)
@@ -1423,12 +1425,14 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
-                                         exp='DAQmxTypes',
-                                         paths=[],
-                                         filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py', '.rst'],
-                                         replace=False, replace_str="'limits'")
+    # paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
+    #                                      exp='crop',
+    #                                      paths=[],
+    #                                      filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
+    #                                               '.tox', 'daq_utils.py', '.rst'],
+    #                                      replace=False,
+    #                                      replace_str="from pymodaq.control_modules.move_utility_classes import comon_parameters, main")
+    get_version()
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',
     #                      exp='VERSION', paths=[])

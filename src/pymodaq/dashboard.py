@@ -4,21 +4,19 @@
 import sys
 import datetime
 import subprocess
-import pickle
 import logging
 from pathlib import Path
 from importlib import import_module
 from packaging import version as version_mod
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtGui, QtWidgets, QtCore
-from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale
+from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 
 from pymodaq.daq_utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.daq_utils.gui_utils.layout as layout_mod
 from pymodaq.daq_utils.messenger import messagebox
 from pymodaq.daq_utils.parameter import utils as putils
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as ptypes  # to be placed after importing Parameter
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pymodaq.daq_utils.daq_utils import get_version
@@ -29,8 +27,8 @@ from pymodaq.daq_utils.managers.roi_manager import ROISaver
 from pymodaq.daq_utils.exceptions import DetectorError, ActuatorError
 from pymodaq.daq_utils import config as configmod
 
-from pymodaq.daq_move.daq_move_main import DAQ_Move
-from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+from pymodaq.control_modules.daq_move import DAQ_Move
+from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 from pymodaq.daq_scan import DAQ_Scan
 from pymodaq.daq_logger import DAQ_Logger

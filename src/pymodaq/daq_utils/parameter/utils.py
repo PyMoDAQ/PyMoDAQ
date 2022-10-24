@@ -25,7 +25,6 @@ def get_param_path(param):
     return path[::-1]
 
 
-
 def iter_children(param, childlist=[]):
     """Get a list of parameters name under a given Parameter
         | Returns all childrens names.

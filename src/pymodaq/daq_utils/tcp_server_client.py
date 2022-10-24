@@ -387,7 +387,7 @@ class TCPClient(QObject):
             self.socket.send_string(value_as_string)
 
     @Slot(ThreadCommand)
-    def queue_command(self, command=ThreadCommand()):
+    def queue_command(self, command: ThreadCommand):
         """
         when this TCPClient object is within a thread, the corresponding module communicate with it with signal and slots
         from module to client: module_signal to queue_command slot
@@ -402,19 +402,19 @@ class TCPClient(QObject):
             except Exception as e:
                 pass
             finally:
-                self.cmd_signal.emit(ThreadCommand('disconnected'))
+                self.cmd_signal.emit(ThreadCommand('disconnected', ))
 
         elif command.command == 'update_connection':
-            self.ipaddress = command.attributes['ipaddress']
-            self.port = command.attributes['port']
+            self.ipaddress = command.attribute['ipaddress']
+            self.port = command.attribute['port']
 
         elif command.command == 'data_ready':
-            self.data_ready(command.attributes)
+            self.data_ready(command.attribute)
 
         elif command.command == 'send_info':
             if self.socket is not None:
-                path = command.attributes['path']
-                param = command.attributes['param']
+                path = command.attribute['path']
+                param = command.attribute['param']
 
                 self.socket.send_string('Info_xml')
                 self.socket.send_list(path)
@@ -426,21 +426,21 @@ class TCPClient(QObject):
         elif command.command == 'position_is':
             if self.socket is not None:
                 self.socket.send_string('position_is')
-                self.socket.send_scalar(command.attributes[0])
+                self.socket.send_scalar(command.attribute[0])
 
         elif command.command == 'move_done':
             if self.socket is not None:
                 self.socket.send_string('move_done')
-                self.socket.send_scalar(command.attributes[0])
+                self.socket.send_scalar(command.attribute[0])
 
         elif command.command == 'x_axis':
             if self.socket is not None:
                 self.socket.send_string('x_axis')
                 x_axis = dict(label='', units='')
-                if isinstance(command.attributes[0], np.ndarray):
-                    x_axis['data'] = command.attributes[0]
-                elif isinstance(command.attributes[0], dict):
-                    x_axis.update(command.attributes[0].copy())
+                if isinstance(command.attribute[0], np.ndarray):
+                    x_axis['data'] = command.attribute[0]
+                elif isinstance(command.attribute[0], dict):
+                    x_axis.update(command.attribute[0].copy())
 
                 self.socket.send_array(x_axis['data'])
                 self.socket.send_string(x_axis['label'])
@@ -450,10 +450,10 @@ class TCPClient(QObject):
             if self.socket is not None:
                 self.socket.send_string('y_axis')
                 y_axis = dict(label='', units='')
-                if isinstance(command.attributes[0], np.ndarray):
-                    y_axis['data'] = command.attributes[0]
-                elif isinstance(command.attributes[0], dict):
-                    y_axis.update(command.attributes[0].copy())
+                if isinstance(command.attribute[0], np.ndarray):
+                    y_axis['data'] = command.attribute[0]
+                elif isinstance(command.attribute[0], dict):
+                    y_axis.update(command.attribute[0].copy())
 
                 self.socket.send_array(y_axis['data'])
                 self.socket.send_string(y_axis['label'])
@@ -469,7 +469,7 @@ class TCPClient(QObject):
             self.socket = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
             # now connect to the web server on port 80 - the normal http port
             self.socket.connect((self.ipaddress, self.port))
-            self.cmd_signal.emit(ThreadCommand('connected'))
+            self.cmd_signal.emit(ThreadCommand('connected', ))
             self.socket.send_string(self.client_type)
 
             self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
@@ -491,7 +491,7 @@ class TCPClient(QObject):
 
                     if len(in_error) != 0:
                         self.connected = False
-                        self.cmd_signal.emit(ThreadCommand('disconnected'))
+                        self.cmd_signal.emit(ThreadCommand('disconnected', ))
 
                     QtWidgets.QApplication.processEvents()
 
@@ -507,7 +507,7 @@ class TCPClient(QObject):
 
         except ConnectionRefusedError as e:
             self.connected = False
-            self.cmd_signal.emit(ThreadCommand('disconnected'))
+            self.cmd_signal.emit(ThreadCommand('disconnected', ))
             self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
 
     def get_data(self, message):
@@ -522,20 +522,20 @@ class TCPClient(QObject):
 
         """
         if self.socket is not None:
-            messg = ThreadCommand(message)
+            messg = ThreadCommand(message, )
 
             if message == 'set_info':
                 path = self.socket.get_list()
                 param_xml = self.socket.get_string()
-                messg.attributes = [path, param_xml]
+                messg.attribute = [path, param_xml]
 
             elif message == 'move_abs':
                 position = self.socket.get_scalar()
-                messg.attributes = [position]
+                messg.attribute = [position]
 
             elif message == 'move_rel':
                 position = self.socket.get_scalar()
-                messg.attributes = [position]
+                messg.attribute = [position]
 
             self.cmd_signal.emit(messg)
 
@@ -945,7 +945,7 @@ class Grabber(QObject):
         self.command_tcpip[ThreadCommand].connect(tcpclient.queue_command)
 
         self.tcpclient_thread.start()
-        tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis')])
+        tcpclient.init_connection(extra_commands=[ThreadCommand('get_axis', )])
         self.send_to_tcpip = True
 
     def snapshot(self, info='', send_to_tcpip=True):

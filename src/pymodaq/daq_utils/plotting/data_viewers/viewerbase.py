@@ -13,6 +13,25 @@ DATATYPES = {'Viewer0D': 'Data0D', 'Viewer1D': 'Data1D', 'Viewer2D': 'Data2D', '
 
 
 class ViewerBase(QObject):
+    """Base Class for data viewers implementing all common functionalities
+
+    Parameters
+    ----------
+    parent: QtWidgets.QWidget
+    title: str
+
+    Attributes
+    ----------
+    view: QObject
+        Ui interface of the viewer
+
+    data_to_export_signal: Signal[OrderedDict]
+    ROI_changed: Signal
+    crosshair_dragged: Signal[float, float]
+    crosshair_clicked: Signal[bool]
+    sig_double_clicked: Signal[float, float]
+    status_signal: Signal[str]
+    """
     data_to_export_signal = Signal(OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
     _data_to_show_signal = Signal(utils.DataFromPlugins)
 
@@ -24,11 +43,11 @@ class ViewerBase(QObject):
 
     def __init__(self, parent=None, title=''):
         super().__init__()
-        self.viewer_type = DATATYPES[self.__class__.__name__]
         self.title = title if title != '' else self.__class__.__name__
 
         self._raw_datas = None
         self.data_to_export = OrderedDict(name=self.title)
+        self.view = None
 
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -37,23 +56,43 @@ class ViewerBase(QObject):
 
         self._display_temporary = False
 
-    def show_data(self, datas: utils.DataFromPlugins):
-        if len(datas['data'][0].shape) != 2:
-            raise ViewerError(f'Ndarray of dim: {len(datas["data"][0].shape)} cannot be plotted'
+    @property
+    def viewer_type(self):
+        """str: the viewer data type see DATA_TYPES"""
+        return DATATYPES[self.__class__.__name__]
+
+    def show_data(self, data: utils.DataFromPlugins):
+        """Entrypoint to display data into the viewer
+
+        Parameters
+        ----------
+        data: utils.DataFromPlugins
+        """
+        if len(data['data'][0].shape) != 2:
+            raise ViewerError(f'Ndarray of dim: {len(data["data"][0].shape)} cannot be plotted'
                               f' using a {self.viewer_type}')
         self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict())
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-        self._raw_datas = datas
+        self._raw_datas = data
 
         self._display_temporary = False
 
-        self._show_data(datas)
+        self._show_data(data)
 
-    def show_data_temp(self, datas: utils.DataFromPlugins):
+    def show_data_temp(self, data: utils.DataFromPlugins):
+        """Entrypoint to display temporary data into the viewer
+
+        No processed data signal is emitted from the viewer
+
+        Parameters
+        ----------
+        data: utils.DataFromPlugins
+        """
         self._display_temporary = True
-        self.show_data(datas)
+        self.show_data(data)
 
-    def _show_data(self, datas: utils.DataFromPlugins):
+    def _show_data(self, data: utils.DataFromPlugins):
+        """Specific viewers should implement it"""
         raise NotImplementedError
 
     def add_attributes_from_view(self):

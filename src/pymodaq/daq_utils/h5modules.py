@@ -955,7 +955,7 @@ class H5LogHandler(logging.StreamHandler):
 
 
 class H5SaverBase(H5Backend):
-    """Object containing all methods in order to save datas in a *hdf5 file* with a hierachy compatible with
+    """Object containing all methods in order to save datas in a *hdf5 file* with a hierarchy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
     on a UI using the widget self.settings_tree. At the creation of a new file, a node
     group named **Raw_datas** and represented by the attribute ``raw_group`` is created and set with a metadata attribute:
@@ -1077,7 +1077,6 @@ class H5SaverBase(H5Backend):
     @property
     def h5_file(self):
         return self._h5file
-
 
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([]),
                   raw_group_name='Raw_datas'):
@@ -1973,11 +1972,32 @@ def find_scan_node(scan_node):
 
 
 class H5BrowserUtil(H5Backend):
+    """Utility object to interact and get info and data from a hdf5 file
+
+    Inherits H5Backend and all its functionalities
+
+    Parameters
+    ----------
+    backend: str
+        The used hdf5 backend: either tables, h5py or h5pyd
+    """
     def __init__(self, backend='tables'):
         super().__init__(backend=backend)
 
     def export_data(self, node_path='/', filesavename='datafile.h5'):
+        """Export data in nodes in another file format
 
+        Parameters
+        ----------
+        node_path: str
+            the path in the file
+        filesavename:
+            the exported file name with a particular extension
+            Accepted extensions are:
+            * txt: to save node content in a tab delimited text file
+            * ascii: to save node content in a tab delimited ascii file
+            * h5
+        """
         if filesavename != '':
             file = Path(filesavename)
             node = self.get_node(node_path)
@@ -2029,8 +2049,19 @@ class H5BrowserUtil(H5Backend):
                 copied_file.h5file.remove_node('/Raw_datas', recursive=True)
                 copied_file.close_file()
 
-
     def get_h5file_scans(self, where='/'):
+        """Get the list of the scan nodes in the file
+
+        Parameters
+        ----------
+        where: str
+            the path in the file
+
+        Returns
+        -------
+        list of dict
+            dict with keys: scan_name, path (within the file) and data (the live scan png image)
+        """
         # TODO add a test for this method
         scan_list = []
         where = self.get_node(where)
@@ -2043,10 +2074,23 @@ class H5BrowserUtil(H5Backend):
         return scan_list
 
     def get_h5_attributes(self, node_path):
-        """
+        """Get the list of attributes (metadata) of a given node
 
-        """
+        Parameters
+        ----------
+        node_path: str
+            the path in the file
 
+        Returns
+        -------
+        attr_dict: OrderedDict
+            attributes as a dict
+        settings: str
+            settings attribute
+        scan_settings: str
+            scan settings attribute
+        pixmaps: list of pixmap
+        """
         node = self.get_node(node_path)
         attrs_names = node.attrs.attrs_name
         attr_dict = OrderedDict([])
@@ -2072,6 +2116,22 @@ class H5BrowserUtil(H5Backend):
 
     def get_h5_data(self, node_path):
         """
+
+        Parameters
+        ----------
+        node_path: str
+            the path in the file
+
+        Returns
+        -------
+        data: ndarray
+        axes: dict of Axis
+            all the axis referring to the data: signal axes and navigation axes
+        nav_axes: list of int
+            index of the navigation axes
+        is_spread: bool
+            if True data is not in a regular grid (linear, 2D or ND) but given as a table with coordinates and value
+
         """
         node = self.get_node(node_path)
         is_spread = False
@@ -2198,28 +2258,29 @@ class H5BrowserUtil(H5Backend):
 
 
 class H5Browser(QObject):
-    """UI used to explore h5 files, plot and export subdatas"""
+    """UI used to explore h5 files, plot and export subdatas
+
+    Parameters
+    ----------
+    parent: QtWidgets container
+        either a QWidget or a QMainWindow
+    h5file: h5file instance
+        exact type depends on the backend
+    h5file_path: str or Path
+        if specified load the corresponding file, otherwise open a select file dialog
+    backend: str
+        either 'tables, 'h5py' or 'h5pyd'
+
+    See Also
+    --------
+    H5Backend, H5Backend
+    """
     data_node_signal = Signal(
         str)  # the path of a node where data should be monitored, displayed...whatever use from the caller
     status_signal = Signal(str)
 
     def __init__(self, parent, h5file=None, h5file_path=None, backend='tables'):
-        """
-
-        Parameters
-        ----------
-        parent: QtWidgets container, either a QWidget or a QMainWindow
-        h5file: h5file instance (exact type depends on the backend)
-        h5file_path: (str or Path) if specified load the corresponding file, otherwise open a select file dialog
-        backend: (str) eitre 'tables, 'h5py' or 'h5pyd'
-
-        See Also
-        --------
-        H5Backend, H5Backend
-        """
-
-        
-        super(H5Browser, self).__init__()
+        super().__init__()
         if not (isinstance(parent, QtWidgets.QWidget) or isinstance(parent, QtWidgets.QMainWindow)):
             raise Exception('no valid parent container, expected a QWidget or a QMainWindow')
 
@@ -2255,6 +2316,7 @@ class H5Browser(QObject):
         self.ui.h5file_tree.ui.Open_Tree.click()
 
     def check_version(self):
+        """Check version of PyMoDAQ to assert if file is compatible or not with the current version of the Browser"""
         if 'pymodaq_version' in self.h5utils.root().attrs.attrs_name:
             if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
                 msgBox = QtWidgets.QMessageBox(parent=None)
@@ -2271,7 +2333,19 @@ class H5Browser(QObject):
                 else:
                     self.parent.close()
 
-    def add_comments(self, status, comment=''):
+    def add_comments(self, status: bool, comment=''):
+        """Add comments to a node
+
+        Parameters
+        ----------
+        status: bool
+        comment: str
+            The comment to be added in a comment attribute to the current node path
+
+        See Also
+        --------
+        current_node_path
+        """
         try:
             self.current_node_path = self.get_tree_node_path()
             node = self.h5utils.get_node(self.current_node_path)
@@ -2293,9 +2367,16 @@ class H5Browser(QObject):
             logger.exception(str(e))
 
     def get_tree_node_path(self):
+        """Get the node path of the currently selected node in the UI"""
         return self.ui.h5file_tree.ui.Tree.currentItem().text(2)
 
     def export_data(self):
+        """Opens a dialog to export data
+
+        See Also
+        --------
+        H5BrowserUtil.export_data
+        """
         try:
             file_filter = "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
             file = select_file(save=True, filter=file_filter)
@@ -2307,6 +2388,7 @@ class H5Browser(QObject):
             logger.exception(str(e))
 
     def save_file(self, filename=None):
+
         if filename is None:
             filename = select_file(save=True, ext='txt')
         if filename != '':
@@ -2325,9 +2407,6 @@ class H5Browser(QObject):
             logger.exception(str(e))
 
     def create_menu(self):
-        """
-
-        """
         self.menubar = self.main_window.menuBar()
 
         # %% create Settings menu
@@ -2430,9 +2509,6 @@ class H5Browser(QObject):
         logger.info(txt)
 
     def show_h5_attributes(self, item):
-        """
-
-        """
         try:
             self.current_node_path = self.get_tree_node_path()
 
@@ -2551,8 +2627,22 @@ class H5Browser(QObject):
 
 
 def browse_data(fname=None, ret_all=False, message=None):
-    """
-        | Browse data present in any h5 file, when user has selected the one,
+    """Browse data present in any h5 file using the H5Browser within a dialog window
+    when the user has selected a given node, return its content
+
+    Parameters
+    ----------
+    fname: str
+    ret_all: bool
+    message: str
+
+    Returns
+    -------
+    data: the numpy array in the selected node
+    if argument ret_all is True, returns also:
+    fname: the file name
+    node_path: hte path of the selected node within the H5 file tree
+
     """
     if fname is None:
         fname = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'), save=False, ext='h5'))

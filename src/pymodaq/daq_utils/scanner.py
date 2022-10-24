@@ -49,17 +49,38 @@ except Exception:
 
 
 class ScanInfo:
-    def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, **kwargs):
-        """
+    """Container class for a given scan details
 
-        Parameters
-        ----------
-        Nsteps: (int) Number of steps of the scan
-        positions: (ndarray) multidimensional array of Nsteps 0th dimension length where each element is the position
-        positions_indexes: (ndarray) multidimensional array of Nsteps 0th dimension length where each element is the index
-         of the corresponding positions within the axis_unique
-        axes_unique: (list of ndarray) list of sorted (and with unique values) 1D arrays of unique positions of each defined axes
-        """
+    It includes the number of steps and all the positions for the selected actuators. It also contains these positions
+    as scan axes for easier use.
+
+    Parameters
+    ----------
+    Nsteps: int
+        Number of steps of the scan
+    positions: ndarray
+        multidimensional array. the first dimension has a length of Nsteps and each element is an actuator position
+    positions_indexes: ndarray
+        multidimensional array of Nsteps 0th dimension length where each element is the index
+        of the corresponding positions within the axis_unique
+    axes_unique: list of ndarray
+        list of sorted (and with unique values) 1D arrays of unique positions of each defined axes
+    kwargs: dict of other named parameters to be saved as attributes
+
+    Attributes
+    ----------
+    Nsteps: int
+        Number of steps of the scan
+    positions: ndarray
+        multidimensional array. the first dimension has a length of Nsteps and each element is an actuator position
+    positions_indexes: ndarray
+        multidimensional array of Nsteps 0th dimension length where each element is the index
+        of the corresponding positions within the axis_unique
+    axes_unique: list of ndarray
+        list of sorted (and with unique values) 1D arrays of unique positions of each defined axes
+    kwargs: dict of other named attributes
+    """
+    def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, **kwargs):
         self.Nsteps = Nsteps
         self.positions = positions
         self.axes_indexes = axes_indexes
@@ -75,29 +96,46 @@ class ScanInfo:
 
 
 class ScanParameters:
-    """
-    Utility class to define and store information about scans to be done
+    """Utility class to define and store information about scans to be done
+
+    Composition of a ScanInfo object. You can directly access the ScanInfo attributes from ScanParameters
+
+    Parameters
+    ----------
+    Naxes: int
+        number of axes used to do the scan
+    scan_type: str
+        one value of the SCAN_TYPES list items
+    scan_subtype: str
+        one value of the SCAN_SUBTYPES dict items for the scan_type key
+    starts: list of floats
+        list of starts position of each axis
+    stops: list of floats
+        list of stops position of each axis
+    steps: list of floats
+        list of steps position of each axis
+    positions: ndarray
+        containing the positions already calculated from some method. If not None, this is used to define the scan_info
+        (otherwise one use the starts, stops and steps)
+    adaptive_loss
+
+    Attributes
+    ----------
+    Naxes
+    scan_info: ScanInfo
+    scan_type: str
+    scan_subtype: str
+    starts
+    stops
+    steps
+
+    See Also
+    --------
+    ScanInfo, SCAN_TYPES, SCAN_SUBTYPES
     """
 
     def __init__(self, Naxes=1, scan_type='Scan1D', scan_subtype='Linear', starts=None, stops=None, steps=None,
                  positions=None, adaptive_loss=None):
-        """
-
-        Parameters
-        ----------
-        Naxes: (int) number of axes used to do the scan
-        scan_type: (str) one value of the SCAN_TYPES list items
-        scan_subtype: (str) ne value of the SCAN_SUBTYPES dict items for the scan_type key
-        starts: (list of floats) list of starts position of each axis
-        stops: (list of floats) list of stops position of each axis
-        steps: (list of floats) list of steps position of each axis
-        positions: (ndarray) containing the positions already calculated from some method. If not None, this is used to
-                define the scan_info (otherwise one use the starts, stops and steps)
-
-        See Also
-        --------
-        daq_utils.plotting.scan_selector
-        """
         self.Naxes = Naxes
         if scan_type not in SCAN_TYPES:
             raise ValueError(
@@ -140,6 +178,7 @@ class ScanParameters:
                 raise ValueError(f'no attribute named {item}')
 
     def get_info_from_positions(self, positions):
+        """Get a ScanInfo object from a ndarray of positions"""
         if positions is not None:
             if len(positions.shape) == 1:
                 positions = np.expand_dims(positions, 1)
@@ -157,6 +196,15 @@ class ScanParameters:
             return ScanInfo()
 
     def set_scan(self):
+        """Process the parameters to calculate all the positions
+
+        In case the number of steps is higher that the configured steps limit returns an empty ScanInfo with only the
+        the calculated number of steps (for further warning to the user)
+
+        Returns
+        -------
+        ScanInfo
+        """
         steps_limit = config('scan', 'steps_limit')
         Nsteps = self.evaluate_Nsteps()
         if Nsteps > steps_limit:
@@ -248,6 +296,7 @@ class ScanParameters:
         return self.scan_info
 
     def evaluate_Nsteps(self):
+        """Quick method to evaluated the number of steps for a given scan type and subtype"""
         Nsteps = 1
         if self.starts is not None:
             for ind in range(len(self.starts)):
@@ -272,6 +321,25 @@ class ScanParameters:
 
 
 class Scanner(QObject):
+    """Main Object to define a PyMoDAQ scan and create a UI to set it
+
+    Parameters
+    ----------
+    scanner_items: (items used by ScanSelector for chosing scan area or linear traces)
+    scan_type: type of scan selector
+    actuators: list of actuators names
+    adaptive_losses
+
+    Attributes
+    ----------
+    table_model: TableModelSequential or TableModelTabular
+    table_view: pymodaq_types.TableViewCustom
+    scan_selector: ScanSelector
+
+    See Also
+    --------
+    ScanSelector, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
+    """
     scan_params_signal = Signal(ScanParameters)
 
     params = [#{'title': 'Scanner settings', 'name': 'scan_options', 'type': 'group', 'children': [
@@ -349,14 +417,6 @@ class Scanner(QObject):
     ]#}]
 
     def __init__(self, scanner_items=OrderedDict([]), scan_type='Scan1D', actuators=[], adaptive_losses=None):
-        """
-
-        Parameters
-        ----------
-        scanner_items: (items used by ScanSelector for chosing scan area or linear traces)
-        scan_type: type of scan selector
-        actuators: list of actuators names
-        """
         super().__init__()
 
         self.settings_tree = None
@@ -403,6 +463,12 @@ class Scanner(QObject):
         self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
     def load_xml(self):
+        """Load settings, previously saved, from a xml file
+
+        See Also
+        --------
+        save_xml
+        """
         fname = gutils.select_file(start_path=None, save=False, ext='xml')
         if fname is not None and fname != '':
             par = ioxml.XML_file_to_parameter(fname)
@@ -416,13 +482,23 @@ class Scanner(QObject):
             self.set_scan()
 
     def save_xml(self):
-        """
+        """Save current settings to a xml file
+
+        See Also
+        --------
+        load_xml
         """
         fname = gutils.select_file(start_path=None, save=True, ext='xml')
         if fname is not None and fname != '':
             ioxml.parameter_to_xml_file(self.settings, fname)
 
     def set_config(self):
+        """Set the scanner settings according to configuration file
+
+        See Also
+        --------
+        :ref:`configfile`
+        """
         scan_type = config['scan']['default']
         self.settings.child('scan_type').setValue(scan_type)
 
@@ -454,9 +530,7 @@ class Scanner(QObject):
 
     @property
     def actuators(self):
-        """
-        Returns as a list the name of the actuators selected to describe the actual scan
-        """
+        """list of str: Returns as a list the name of the selected actuators to describe the actual scan"""
         return self._actuators
 
     @actuators.setter
@@ -476,6 +550,13 @@ class Scanner(QObject):
         self.update_model()
 
     def update_model(self, init_data=None):
+        """Update the model of the Sequential or Tabular view according to the selected actuators
+
+        Parameters
+        ----------
+        init_data: list of float (optional)
+            The initial values for the associated table
+        """
         try:
             scan_type = self.settings.child('scan_type').value()
             if scan_type == 'Sequential':
@@ -527,13 +608,22 @@ class Scanner(QObject):
             self.table_view.load_data_signal.connect(self.table_model.load_txt)
             self.table_view.save_data_signal.connect(self.table_model.save_txt)
 
-
     @property
     def viewers_items(self):
         return self.scan_selector.viewers_items
 
     @viewers_items.setter
     def viewers_items(self, items):
+        """Add 2D viewer objects where one can plot ROI or Polylines to define a Scan using the ScanSelector
+
+        Parameters
+        ----------
+        items: list of Viewer2D
+
+        See Also
+        --------
+        Viewer2D, ScanSelector
+        """
         self.scan_selector.remove_scan_selector()
         self.scan_selector.viewers_items = items
         self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
@@ -542,7 +632,15 @@ class Scanner(QObject):
             limits=self.scan_selector.sources_names)
 
     def set_scan_type_and_subtypes(self, scan_type: str, scan_subtype=None):
-        """Convenience function to qzt the main scan type"""
+        """Convenience function to set the main scan type
+
+        Parameters
+        ----------
+        scan_type: str
+            one of SCAN_TYPES
+        scan_subtype: list of str or None
+            one list of SCAN_SUBTYPES
+        """
         if scan_type in SCAN_TYPES:
             self.settings.child('scan_type').setValue(scan_type)
 
@@ -551,9 +649,6 @@ class Scanner(QObject):
                     self.settings.child(*SCAN_SUBTYPES[scan_type]['subpath']).setValue(scan_subtype)
 
     def parameter_tree_changed(self, param, changes):
-        """
-
-        """
         for param, change, data in changes:
             path = self.settings.childPath(param)
             if path is not None:
@@ -688,8 +783,13 @@ class Scanner(QObject):
         # layout.addWidget(self.settings_tree)
 
     def set_scan(self):
-        scan_type = self.settings.child('scan_type').value()
+        """Process the settings options to calculate the scan positions
 
+        Returns
+        -------
+        ScanParameters
+        """
+        scan_type = self.settings.child('scan_type').value()
         if scan_type == "Scan1D":
             start = self.settings.child('scan1D_settings', 'start_1D').value()
             stop = self.settings.child('scan1D_settings', 'stop_1D').value()
@@ -748,7 +848,14 @@ class Scanner(QObject):
         self.scan_params_signal.emit(self.scan_parameters)
         return self.scan_parameters
 
-    def update_tabular_positions(self, positions=None):
+    def update_tabular_positions(self, positions: np.ndarray = None):
+        """Convenience function to write positions directly into the tabular table
+
+        Parameters
+        ----------
+        positions: ndarray
+            a 2D ndarray with as many columns as selected actuators
+        """
         try:
             if self.settings.child('scan_type').value() == 'Tabular':
                 if positions is None:
@@ -779,6 +886,7 @@ class Scanner(QObject):
             logger.exception(str(e))
 
     def update_scan_2D_positions(self):
+        """Compute scan positions from the ROI set with the scan_selector"""
         try:
             viewer = self.scan_selector.scan_selector_source
             pos_dl = self.scan_selector.scan_selector.pos()
@@ -809,17 +917,7 @@ class Scanner(QObject):
             raise ScannerException(str(e))
 
     def update_scan2D_type(self, param):
-        """
-            Update the scan type from the given parameter.
-
-            =============== ================================= ========================
-            **Parameters**    **Type**                         **Description**
-            *param*           instance of pyqtgraph parameter  the parameter to treat
-            =============== ================================= ========================
-
-            See Also
-            --------
-            update_status
+        """Update the 2D scan type from the given parameter.
         """
         try:
             self.settings.child('scan2D_settings', 'step_2d_axis1').show()
@@ -908,6 +1006,7 @@ class Scanner(QObject):
 
 
 class TableModelTabular(gutils.TableModel):
+    """Table Model for the Model/View Qt framework dedicated to the Tabular scan mode"""
     def __init__(self, data, axes_name=None, **kwargs):
         if axes_name is None:
             if 'header' in kwargs:  # when saved as XML the header will be saved and restored here
@@ -968,6 +1067,7 @@ class TableModelTabular(gutils.TableModel):
 
 
 class TableModelSequential(gutils.TableModel):
+    """Table Model for the Model/View Qt framework dedicated to the Sequential scan mode"""
     def __init__(self, data, **kwargs):
         header = ['Actuator', 'Start', 'Stop', 'Step']
         if 'header' in kwargs:
@@ -1221,7 +1321,7 @@ if __name__ == '__main__':
     from pyqtgraph.dockarea import Dock
     from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
     from pymodaq.daq_utils.plotting.navigator import Navigator
-    from pymodaq.daq_viewer.daq_viewer_main import DAQ_Viewer
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
     class UI:
         def __init__(self):

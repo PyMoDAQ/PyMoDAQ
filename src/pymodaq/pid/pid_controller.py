@@ -279,7 +279,7 @@ class DAQ_PID(QObject):
             self.command_pid.emit(ThreadCommand('run_PID', [self.model_class.curr_output]))
         else:
             self.run_action.setIcon(self.iconrun)
-            self.command_pid.emit(ThreadCommand('stop_PID'))
+            self.command_pid.emit(ThreadCommand('stop_PID', ))
 
             QtWidgets.QApplication.processEvents()
 
@@ -524,33 +524,33 @@ class PIDRunner(QObject):
         """
         """
         if command.command == "start_PID":
-            self.start_PID(*command.attributes)
+            self.start_PID(*command.attribute)
 
         elif command.command == "run_PID":
-            self.run_PID(*command.attributes)
+            self.run_PID(*command.attribute)
 
         elif command.command == "pause_PID":
-            self.pause_PID(*command.attributes)
+            self.pause_PID(*command.attribute)
 
         elif command.command == "stop_PID":
             self.stop_PID()
 
         elif command.command == 'update_options':
-            self.set_option(**command.attributes)
+            self.set_option(**command.attribute)
 
         elif command.command == 'update_setpoints':
-            self.update_setpoints(command.attributes)
+            self.update_setpoints(command.attribute)
 
         elif command.command == 'input':
-            self.update_input(*command.attributes)
+            self.update_input(*command.attribute)
 
         elif command.command == 'update_timer':
-            if command.attributes[0] == 'refresh_plot_time':
+            if command.attribute[0] == 'refresh_plot_time':
                 self.killTimer(self.timer)
-                self.refreshing_ouput_time = command.attributes[1]
+                self.refreshing_ouput_time = command.attribute[1]
                 self.timer = self.startTimer(self.refreshing_ouput_time)
-            elif command.attributes[0] == 'timeout':
-                self.timeout_timer.setInterval(command.attributes[1])
+            elif command.attribute[0] == 'timeout':
+                self.timeout_timer.setInterval(command.attribute[1])
 
     def update_input(self, measurements):
         self.inputs_from_dets = self.model_class.convert_input(measurements)

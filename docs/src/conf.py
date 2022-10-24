@@ -67,27 +67,30 @@ extensions = [
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
     #'autoapi.extension',
-    'sphinx.ext.autosummary',
+    #'sphinx.ext.autosummary',
     'releases',
     'crate.sphinx.csv',
-    'numpydoc'
+    'numpydoc',
 ]
 
+qt_documentation = "PySide6"
 # -- Options for autodocumentation ---------------------------------------------
 numfig = True
 
-autoapi_type = 'python'
-autoapi_dirs = ['../../src/pymodaq']
-autoapi_generate_api_docs = False
+# autoapi_type = 'python'
+# autoapi_dirs = ['../../src/pymodaq']
+# autoapi_generate_api_docs = False
+#autoapi_include_summaries = False
 
-autoapi_include_summaries = True
 autodoc_member_order = "groupwise"
 autoclass_content = "class"
 autosummary_generate = []
+numpydoc_show_inherited_class_members = False
 
 napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = True
+napoleon_include_init_with_doc = False
 
+primary_domain = 'py'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -106,7 +109,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -134,7 +137,7 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-html_logo='splash.png'
+html_logo = 'splash.png'
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -200,4 +203,4 @@ texinfo_documents = [
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping ={'python' : ('https://docs.python.org/', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/', None)}
