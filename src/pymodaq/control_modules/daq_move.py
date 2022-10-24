@@ -734,11 +734,22 @@ class DAQ_Move_Hardware(QObject):
             class_ = getattr(getattr(parent_module['module'], 'daq_move_' + self.actuator_type),
                              'DAQ_Move_' + self.actuator_type)
             self.hardware = class_(self, params_state)
-            status.update(self.hardware.ini_stage(controller))  # return edict(info="", controller=, stage=)
+            try:
+                infos = self.hardware.ini_stage(controller)  # return edict(info="", controller=, stage=)
+            except Exception as e:
+                logger.exception('Hardware couldn\'t be initialized' + str(e))
+                infos = str(e), False
 
-            self.hardware.move_done_signal.connect(self.move_done)
+            if isinstance(infos, edict):  # following old plugin templating
+                status.update(infos)
+                deprecation_msg('Returns from init_stage should now be a string and a boolean,'
+                                ' see pymodaq_plugins_template', stacklevel=3)
+            else:
+                status.info = infos[0]
+                status.initialized = infos[1]
+            status.controller = self.hardware.controller
+            self.hardware.Move_Done_signal.connect(self.Move_Done)
 
-            # status.initialized=True
             return status
         except Exception as e:
             self.logger.exception(str(e))
