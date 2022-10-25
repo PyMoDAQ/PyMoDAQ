@@ -58,6 +58,7 @@ class ControlModule(QObject):
     quit_signal = Signal()
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
+
     def __init__(self):
         super().__init__()
         self._title = ""
@@ -87,6 +88,10 @@ class ControlModule(QObject):
 
     def grab(self):
         """Programmatic entry to grab data from detectors or current value from actuator"""
+        raise NotImplementedError
+
+    def stop_grab(self):
+        """Programmatic entry to stop data grabbing from detectors or current value polling from actuator"""
         raise NotImplementedError
 
     def quit_fun(self):
@@ -168,6 +173,7 @@ class ControlModule(QObject):
                         attr(value)
                     else:
                         attr = value
+
 
 class ControlModuleUI(CustomApp):
     """ Base Class for ControlModules UIs

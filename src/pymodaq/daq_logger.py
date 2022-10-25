@@ -84,9 +84,14 @@ class DAQ_Logger(CustomApp):
         self._actions['log_type'] = self.toolbar.addWidget(log_type_combo)
         self.toolbar.addSeparator()
         self.add_action('grab_all', 'Grab All', 'run_all', "Grab all selected detectors's data and actuators's value",
-                        checkable=True, toolbar=self.toolbar)
+                        checkable=False, toolbar=self.toolbar)
+        self.add_action('stop_all', 'Stop All', 'stop_all', "Stop all selected detectors and actuators",
+                        checkable=False, toolbar=self.toolbar)
         self.add_action('infos', 'Log infos', 'information2', "Show log file",
                         checkable=False, toolbar=self.toolbar)
+
+        self.set_action_enabled('start', False)
+        self.set_action_enabled('stop', False)
 
         logger.debug('actions set')
 
@@ -123,6 +128,7 @@ class DAQ_Logger(CustomApp):
         self._actions['start'].connect_to(self.start_logging)
         self._actions['stop'].connect_to(self.stop_logging)
         self._actions['grab_all'].connect_to(self.start_all)
+        self._actions['stop_all'].connect_to(self.stop_all)
 
         self._actions['infos'].connect_to(self.dashboard.show_log)
 
@@ -134,7 +140,10 @@ class DAQ_Logger(CustomApp):
 
     def value_changed(self, param):
         if param.name() == 'log_type':
-            self.set_logger(param.value())
+            if param.value() != 'None':
+                self.set_action_enabled('start', True)
+                self.set_action_enabled('stop', True)
+                self.set_logger(param.value())
 
     def set_logger(self, logger_interface):
         if self.logger is not None:
@@ -174,28 +183,31 @@ class DAQ_Logger(CustomApp):
             --------
             daq_utils.set_current_scan_path
         """
-        self.do_continuous_save = True
-        self.logger.settings.child(('N_saved')).show()
-        self.logger.settings.child(('N_saved')).setValue(0)
+        if self.logger is not None:
+            self.do_continuous_save = True
+            self.logger.settings.child('N_saved').show()
+            self.logger.settings.child('N_saved').setValue(0)
 
-        settings_str = b'<All_settings>'
-        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
-        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-            self.dashboard.preset_manager.preset_params)
-        if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
+            settings_str = b'<All_settings>'
+            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
             settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                self.dashboard.overshoot_manager.overshoot_params)
-        if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
-                self.dashboard.roi_saver.roi_presets)
-        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
-        settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
-        settings_str += b'</All_settings>'
+                self.dashboard.preset_manager.preset_params)
+            if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
+                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                    self.dashboard.overshoot_manager.overshoot_params)
+            if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
+                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                    self.dashboard.roi_saver.roi_presets)
+            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
+            settings_str += b'</All_settings>'
 
-        if not self.logger.init_logger(settings_str):
+            if not self.logger.init_logger(settings_str):
+                return False
+            logger.addHandler(self.logger.get_handler())
+            return True
+        else:
             return False
-        logger.addHandler(self.logger.get_handler())
-        return True
 
     def set_logging(self):
         """
@@ -247,6 +259,12 @@ class DAQ_Logger(CustomApp):
             det.grab()
         for act in self.modules_manager.actuators:
             act.grab()
+
+    def stop_all(self):
+        for det in self.modules_manager.detectors:
+            det.stop_grab()
+        for act in self.modules_manager.actuators:
+            act.stop_grab()
 
     def set_log_type(self, log_type):
         self.settings.child('log_type').setValue(log_type)
@@ -463,7 +481,8 @@ class DAQ_Logging(QObject):
         if self.stop_logging_flag:
             status = 'Data Acquisition has been stopped by user'
             self.status_sig.emit(["Update_Status", status])
-        self.data_logger.stop_logger()
+        if self.data_logger is not None:
+            self.data_logger.stop_logger()
 
     def start_logging(self):
         try:

@@ -314,4 +314,34 @@ class ActionManager:
         for action_name in actions_name:
             self.set_action_checked(action_name, checked)
 
+    @dispatch(str, bool)
+    def set_action_enabled(self, action_name: str, enabled=True):
+        """Set the EnabledState of a given action or a list of actions"""
+        if action_name in self._actions:
+            self._actions[action_name].setEnabled(enabled)
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the actions list: {self._actions}')
 
+    @dispatch(list, bool)
+    def set_action_enabled(self, actions_name: list, enabled=True):
+        """Set the EnabledState of a given action or a list of actions"""
+        for action_name in actions_name:
+            self.set_action_enabled(action_name, enabled)
+
+    @dispatch(str)
+    def is_action_enabled(self, action_name: str):
+        """Get the EnabledState of a given action or a list of actions"""
+        if action_name in self._actions:
+            return self._actions[action_name].isEnabled()
+        else:
+            raise KeyError(f'The action with name: {action_name} is not referenced'
+                           f' in the actions list: {self._actions}')
+
+    @dispatch(list)
+    def is_action_checked(self, actions_name: list):
+        """Get the EnabledState of a given action or a list of actions"""
+        is_enabled = False
+        for action_name in actions_name:
+            is_enabled = is_enabled and self.is_action_enabled(action_name)
+        return is_enabled

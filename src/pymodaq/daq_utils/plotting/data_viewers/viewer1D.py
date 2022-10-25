@@ -512,9 +512,8 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         if len(data_lo) != 0:
             for ind, key in enumerate(self.lo_items):
                 self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
-                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] = utils.DataToExport(name=self.title,
-                                                                                                 data=data_lo[ind],
-                                                                                                 source='roi')
+                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] =\
+                    utils.DataToExport(name=self.title, data=np.array([data_lo[ind]]), source='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
             for ind, key in enumerate(self.lo_items):
@@ -531,7 +530,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         for ind, res in enumerate(data_meas):
             self.measure_data_dict["Meas.{}:".format(ind)] = res
             self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] = \
-                utils.DataToExport(name=self.title, data=res, source='roi')
+                utils.DataToExport(name=self.title, data=np.array([res]), source='roi')
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)

@@ -7,6 +7,8 @@ import pytest
 from pytest import fixture, approx
 
 from pymodaq.control_modules import daq_viewer as daqvm
+from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+from pymodaq.control_modules.utils import ControlModule
 from pymodaq.daq_utils.gui_utils.dock import DockArea
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
@@ -39,6 +41,16 @@ def ini_daq_viewer_ui(init_qt):
     qtbot.addWidget(dockarea)
     prog = daqvm.DAQ_Viewer(dockarea)
     return prog, qtbot, dockarea
+
+
+class TestMethods:
+    def test_overriden(self):
+        assert ControlModule.stop_grab != DAQ_Viewer.stop_grab
+        assert ControlModule.grab != DAQ_Viewer.grab
+        assert ControlModule.quit_fun != DAQ_Viewer.quit_fun
+        assert ControlModule.init_hardware != DAQ_Viewer.init_hardware
+        assert ControlModule.init_hardware_ui != DAQ_Viewer.init_hardware_ui
+
 
 
 class TestWithoutUI:

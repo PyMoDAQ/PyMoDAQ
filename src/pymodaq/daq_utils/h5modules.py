@@ -4,7 +4,7 @@ from collections import OrderedDict
 import warnings
 import logging
 from copy import deepcopy
-
+from numbers import Number
 from pymodaq.daq_utils.config import Config
 from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
@@ -1570,7 +1570,7 @@ class H5SaverBase(H5Backend):
 
         shape, dimension, size = utils.get_data_dimension(data_dict['data'])
         tmp_data_dict = copy.deepcopy(data_dict)
-        array_type = getattr(np, self.settings.child('dynamic').value())
+        array_type = getattr(np, self.settings['dynamic'])
         # save axis
         # this loop covers all type of axis : x_axis, y_axis... nav_x_axis, ...
         axis_keys = [k for k in tmp_data_dict.keys() if 'axis' in k]
@@ -1587,6 +1587,8 @@ class H5SaverBase(H5Backend):
                            enlargeable=False, data_dimension='1D', metadata=tmp_dict)
 
         array_to_save = tmp_data_dict.pop('data')
+        if isinstance(array_to_save, Number) or isinstance(array_to_save, str):
+            array_to_save = np.array([array_to_save])
         if 'type' in tmp_data_dict:
             tmp_data_dict.pop('type')  # otherwise this metadata would overide mandatory attribute 'type' for a h5 node
 
@@ -1908,7 +1910,7 @@ class H5Logger(AbstractLogger):
         time_array.append(np.array([data['acq_time_s']]))
 
         data_types = ['data0D', 'data1D']
-        if self.settings.child(('save_2D')).value():
+        if self.settings['save_2D']:
             data_types.extend(['data2D', 'dataND'])
 
         for data_type in data_types:
@@ -1925,13 +1927,15 @@ class H5Logger(AbstractLogger):
                                                    scan_type='scan1D', enlargeable=True)
                     else:
                         data_array = self.h5saver.get_node(channel_group, 'Data')
-                    # if data_type == 'data0D':
-                    #     data_array.append(np.array([data[data_type][channel]['data']]))
-                    # else:
-                    data_array.append(data[data_type][channel]['data'])
+                    if data_type == 'data0D' and not isinstance(data[data_type][channel]['data'], np.ndarray):
+                        #this is a security as accessing an element in an array can be converted
+                        # to a scalar... Made some other attempts but found this is the most reliable here.
+                        logger.debug('Some data seems to not be properly formated as ndarrays')
+                        data_array.append(np.array([data[data_type][channel]['data']]))
+                    else:
+                        data_array.append(data[data_type][channel]['data'])
         self.h5saver.flush()
-        self.settings.child(('N_saved')).setValue(
-            self.settings.child(('N_saved')).value() + 1)
+        self.settings.child('N_saved').setValue(self.settings.child('N_saved').value() + 1)
 
     def stop_logger(self):
         self.h5saver.flush()

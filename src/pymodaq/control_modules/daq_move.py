@@ -148,7 +148,6 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._relative_value = cmd.attribute
 
 
-
     def stop_motion(self):
         """Stop any motion
         """
@@ -550,7 +549,18 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.logger.exception(str(e))
 
     def grab(self):
-        self.ui.get_action('refresh_value').trigger()
+        if self.ui is not None:
+            self.manage_ui_actions('refresh_value', 'setChecked', 'False')
+        self.get_continuous_actuator_value(False)
+
+    def stop_grab(self):
+        """Stop value polling. Mandatory
+
+        First uncheck the ui action if ui is not None, then stop the polling
+        """
+        if self.ui is not None:
+            self.manage_ui_actions('refresh_value', 'setChecked', 'False')
+        self.get_continuous_actuator_value(False)
 
     def get_continuous_actuator_value(self, get_value=True):
         """Start the continuous getting of the actuator's value
@@ -569,7 +579,6 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._refresh_timer.start()
         else:
             self._refresh_timer.stop()
-
 
     @property
     def actuator(self):

@@ -431,13 +431,13 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     def snap(self):
         """Programmatic click on the UI snap button"""
-        if self.ui is not None:
-            self.ui.do_snap()
+        self.grab_data(False, snap_state=True)
 
     def grab(self):
         """Programmatic click on the UI grab button"""
         if self.ui is not None:
-            self.ui.do_grab()
+            self.manage_ui_actions('grab', 'setChecked', not self._grabing)
+            self.grab_data(not self._grabing, snap_state=False)
 
     def snapshot(self, pathname=None, dosave=False, send_to_tcpip=False):
         """Do one single grab (snap) and eventually save the data.
@@ -502,6 +502,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """
         self._take_bkg = True
         self.grab_data(snap_state=True)
+
+    def stop_grab(self):
+        if self.ui is not None:
+            self.manage_ui_actions('grab', 'setChecked', False)
+        self.stop()
 
     def stop(self):
         self.update_status(f'{self._title}: Stop Grab')
