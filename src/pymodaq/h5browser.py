@@ -11,6 +11,7 @@ args = parser.parse_args()
 
 config = Config()
 
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
     if config['style']['darkstyle']:
@@ -32,5 +33,7 @@ def main():
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())
 
+
 if __name__ == '__main__':
     main()
+
