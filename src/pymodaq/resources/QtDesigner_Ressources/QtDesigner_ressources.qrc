@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="icons">
+	<file>Icon_Library/stop_all.png</file>
 	<file>Icon_Library/load_ROI.png</file>
 	<file>Icon_Library/Open_1D.png</file>
 	<file>Icon_Library/Open_2D.png</file>
