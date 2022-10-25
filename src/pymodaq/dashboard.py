@@ -12,6 +12,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
+import numpy as np
 
 from pymodaq.daq_utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.daq_utils.gui_utils.layout as layout_mod
@@ -30,9 +31,10 @@ from pymodaq.daq_utils import config as configmod
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
-from pymodaq.daq_scan import DAQ_Scan
-from pymodaq.daq_logger import DAQ_Logger
-from pymodaq.pid.pid_controller import DAQ_PID
+from pymodaq.extensions.daq_scan import DAQ_Scan
+from pymodaq.extensions.daq_logger import DAQ_Logger
+from pymodaq.extensions.pid.pid_controller import DAQ_PID
+from pymodaq.extensions import console
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
@@ -200,6 +202,19 @@ class DashBoard(QObject):
         self.pid_window.show()
         return self.pid_module
 
+    def load_console(self):
+        dock_console = Dock('QTConsole')
+        self.dockarea.addDock(dock_console, 'bottom')
+        qtconsole = console.QtConsole(style_sheet=config('style', 'syntax_highlighting'),
+                                    syntax_style=config('style', 'syntax_highlighting'),
+                                    custom_banner=console.BANNER)
+        dock_console.addWidget(qtconsole)
+        self.extensions['qtconsole'] = qtconsole
+
+        qtconsole.push_variables(dict(dashboard=self, mods=self.modules_manager, np=np))
+
+        return qtconsole
+
     def load_extensions_module(self, ext):
         self.extension_windows.append(QtWidgets.QMainWindow())
         area = DockArea()
@@ -314,6 +329,8 @@ class DashBoard(QObject):
         action_log.triggered.connect(lambda: self.load_log_module())
         action_pid = self.actions_menu.addAction('PID module')
         action_pid.triggered.connect(lambda: self.load_pid_module())
+        action_console = self.actions_menu.addAction('IPython Console')
+        action_console.triggered.connect(lambda: self.load_console())
 
         extensions_actions = []
         for ext in extensions:
