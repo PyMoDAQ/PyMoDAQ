@@ -176,6 +176,10 @@ def dict_from_param(param):
         addList = str(param.opts['addList'])
         opts.update(dict(addList=addList))
 
+    if 'addText' in param.opts:
+        addText = str(param.opts['addText'])
+        opts.update(dict(addText=addText))
+
     if 'detlist' in param.opts:
         detlist = str(param.opts['detlist'])
         opts.update(dict(detlist=detlist))
@@ -264,6 +268,10 @@ def elt_to_dict(el):
     if 'addList' in el.attrib.keys():
         addList = eval(el.get('addList'))
         param.update(dict(addList=addList))
+
+    if 'addText' in el.attrib.keys():
+        addText = str(el.get('addText'))
+        param.update(dict(addText=addText))
 
     if 'limits' in el.attrib.keys():
         values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another

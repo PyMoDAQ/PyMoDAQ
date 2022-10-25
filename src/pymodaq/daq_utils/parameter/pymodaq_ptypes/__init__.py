@@ -1,4 +1,4 @@
-from pyqtgraph.parametertree.parameterTypes.basetypes import SimpleParameter, GroupParameter
+from pyqtgraph.parametertree.parameterTypes.basetypes import SimpleParameter, GroupParameter, GroupParameterItem
 from .bool import BoolPushParameterItem
 from .pixmap import PixmapParameterItem, PixmapCheckParameterItem
 from .slide import SliderSpinBox, SliderParameterItem
@@ -13,8 +13,6 @@ from .text import PlainTextPbParameter
 from .numeric import NumericParameter
 
 from pyqtgraph.parametertree.Parameter import registerParameterType, registerParameterItemType
-
-GroupParameterCustom = GroupParameter
 
 registerParameterType('float', NumericParameter, override=True)
 registerParameterType('int',   NumericParameter, override=True)
