@@ -1,4 +1,4 @@
-from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
+from pymodaq.daq_utils.gui_utils.dock import DockArea
 from pymodaq.daq_utils.daq_utils import get_plugins, set_logger, get_module_name
 logger = set_logger(get_module_name(__file__))
 
@@ -137,10 +137,9 @@ class PIDModelGeneric:
 def main(xmlfile):
     from pymodaq.dashboard import DashBoard
     from pymodaq.daq_utils.config import get_set_preset_path
-    from pymodaq.daq_utils import gui_utils as gutils
     from pathlib import Path
     from qtpy import QtWidgets
-    from pymodaq.pid.pid_controller import DAQ_PID
+    from extensions.pid.pid_controller import DAQ_PID
 
     import sys
     app = QtWidgets.QApplication(sys.argv)

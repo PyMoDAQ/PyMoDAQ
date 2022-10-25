@@ -3,7 +3,6 @@ from pathlib import Path
 import pymodaq.daq_utils.gui_utils.dock
 from pymodaq.daq_utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
-from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
 
 
@@ -22,7 +21,7 @@ def init_qt(qtbot):
 def main(qtbot):
     from qtpy import QtWidgets
     from pymodaq.dashboard import DashBoard
-    from pymodaq.daq_scan import DAQ_Scan
+    from extensions.daq_scan import DAQ_Scan
     from pymodaq.daq_utils import gui_utils as gutils
 
     win = QtWidgets.QMainWindow()

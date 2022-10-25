@@ -1012,6 +1012,7 @@ def get_extensions():
 
     return extension_import
 
+
 def find_dict_if_matched_key_val(dict_tmp, key, value):
     """
     check if a key/value pair match in a given dictionnary
@@ -1065,7 +1066,7 @@ def get_models(model_name=None):
     -------
     list: list of disct containting the name and python module of the found models
     """
-    from pymodaq.pid.utils import PIDModelGeneric
+    from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
     entry_points = metadata.entry_points()
     if 'pymodaq.pid_models' in entry_points:

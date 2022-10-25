@@ -10,7 +10,7 @@ from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.daq_utils.gui_utils.widgets import QLED
-from pymodaq.pid.utils import OutputToActuator, InputFromDetector
+from pymodaq.extensions.pid.utils import OutputToActuator, InputFromDetector
 from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
 from simple_pid import PID
 import time
