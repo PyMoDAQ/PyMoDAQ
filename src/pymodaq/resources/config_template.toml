@@ -1,6 +1,7 @@
 #this is the configuration file of PyMoDAQ
 [style]
-darkstyle = false
+darkstyle = true
+syntax_highlighting = 'github-dark'
 language = "English"
 country = "UnitedStates"
 
@@ -66,7 +67,7 @@ default_preset_for_logger = "preset_default"
 
 [scan]
     scan_in_thread = true
-    default = "Scan1D"
+    default = "Scan2D"
     Naverage = 1  # minimum is 1
     steps_limit = 1000  # the limit of the number of steps you can set in a given scan
     sort1D = true
