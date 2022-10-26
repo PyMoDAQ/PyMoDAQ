@@ -12,32 +12,32 @@ import numpy as np
 from pathlib import Path
 import os
 
-import pymodaq.daq_utils.gui_utils.dock
-import pymodaq.daq_utils.gui_utils.file_io
-import pymodaq.daq_utils.gui_utils.utils
-import pymodaq.daq_utils.gui_utils.widgets.spinbox
-import pymodaq.daq_utils.messenger
-from pymodaq.daq_utils.config import Config, get_set_preset_path
-from pymodaq.daq_utils.managers.action_manager import QAction
-import pymodaq.daq_utils.parameter.ioxml
+import pymodaq.utils.gui_utils.dock
+import pymodaq.utils.gui_utils.file_io
+import pymodaq.utils.gui_utils.utils
+import pymodaq.utils.gui_utils.widgets.spinbox
+import pymodaq.utils.messenger
+from pymodaq.utils.config import Config, get_set_preset_path
+from pymodaq.utils.managers.action_manager import QAction
+import pymodaq.utils.parameter.ioxml
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
-from pymodaq.daq_utils import exceptions
-from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
-from pymodaq.daq_utils.plotting.navigator import Navigator
-from pymodaq.daq_utils.scanner import Scanner, adaptive, adaptive_losses
-from pymodaq.daq_utils.managers.batchscan_manager import BatchScanner
-from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils.gui_utils.widgets import QLED
-from pymodaq.daq_utils.messenger import messagebox
+from pymodaq.utils import exceptions
+from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
+from pymodaq.utils.plotting.navigator import Navigator
+from pymodaq.utils.scanner import Scanner, adaptive, adaptive_losses
+from pymodaq.utils.managers.batchscan_manager import BatchScanner
+from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.gui_utils.widgets import QLED
+from pymodaq.utils.messenger import messagebox
 
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.h5modules import H5Saver
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils import gui_utils as gutils
+from pymodaq.utils.h5modules import H5Saver
 
 config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))

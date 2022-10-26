@@ -8,10 +8,10 @@ from easydict import EasyDict as edict
 
 from qtpy import QtCore
 from qtpy.QtCore import Signal, QObject
-from pymodaq.daq_utils.gui_utils import CustomApp
-from pymodaq.daq_utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
-from pymodaq.daq_utils.config import Config
-from pymodaq.daq_utils.parameter import Parameter
+from pymodaq.utils.gui_utils import CustomApp
+from pymodaq.utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
+from pymodaq.utils.config import Config
+from pymodaq.utils.parameter import Parameter
 
 
 DAQ_TYPES = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']

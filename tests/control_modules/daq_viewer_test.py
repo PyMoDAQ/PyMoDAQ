@@ -9,13 +9,13 @@ from pytest import fixture, approx
 from pymodaq.control_modules import daq_viewer as daqvm
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.utils import ControlModule
-from pymodaq.daq_utils.gui_utils.dock import DockArea
+from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
-from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
-from pymodaq.daq_utils.config import Config
-from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils.parameter import Parameter
-from pymodaq.daq_utils.h5modules import H5BrowserUtil
+from pymodaq.utils.conftests import qtbotskip, main_modules_skip
+from pymodaq.utils.config import Config
+from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.h5modules import H5BrowserUtil
 
 config = Config()
 config_viewer = daqvm.config

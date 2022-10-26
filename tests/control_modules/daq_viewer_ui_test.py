@@ -6,9 +6,9 @@ Created the 03/10/2022
 """
 import pytest
 from pytest import fixture
-from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
+from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
-from pymodaq.daq_utils.gui_utils.dock import DockArea
+from pymodaq.utils.gui_utils.dock import DockArea
 
 pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 

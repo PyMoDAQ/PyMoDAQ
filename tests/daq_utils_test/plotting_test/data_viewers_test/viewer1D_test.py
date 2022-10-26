@@ -7,11 +7,11 @@ from qtpy import QtWidgets
 from pyqtgraph import ROI
 from unittest import mock
 from collections import OrderedDict
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.utils import daq_utils as utils
 from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
-from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D, Viewer1D_math
-from pymodaq.daq_utils.exceptions import ExpectedError, Expected_1, Expected_2
-from pymodaq.daq_utils.conftests import qtbotskip
+from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D, Viewer1D_math
+from pymodaq.utils.exceptions import ExpectedError, Expected_1, Expected_2
+from pymodaq.utils.conftests import qtbotskip
 pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture

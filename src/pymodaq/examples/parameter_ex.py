@@ -4,12 +4,12 @@ Examples of custome parameter types derived from pyqtgraph
 """
 import sys
 
-import pymodaq.daq_utils.gui_utils.widgets.table
+import pymodaq.utils.gui_utils.widgets.table
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from collections import OrderedDict
-from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.parameter import pymodaq_ptypes
+from pymodaq.utils import gui_utils as gutils
+from pymodaq.utils.parameter import pymodaq_ptypes
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 

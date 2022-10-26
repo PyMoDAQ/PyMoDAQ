@@ -3,14 +3,14 @@ from qtpy.QtCore import QObject, Slot, Signal, QTimer
 
 
 from easydict import EasyDict as edict
-import pymodaq.daq_utils.daq_utils as utils
-import pymodaq.daq_utils.parameter.utils as putils
-from pymodaq.daq_utils.parameter import ioxml
+import pymodaq.utils.daq_utils as utils
+import pymodaq.utils.parameter.utils as putils
+from pymodaq.utils.parameter import ioxml
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.daq_utils.config import Config
-from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
-from pymodaq.daq_utils.messenger import deprecation_msg
+from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.utils.config import Config
+from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.messenger import deprecation_msg
 import numpy as np
 from time import perf_counter
 

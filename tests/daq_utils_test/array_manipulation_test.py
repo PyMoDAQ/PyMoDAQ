@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pymodaq.daq_utils import array_manipulation as array
+from pymodaq.utils import array_manipulation as array
 
 
 def test_random_step():

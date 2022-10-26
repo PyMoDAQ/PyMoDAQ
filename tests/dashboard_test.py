@@ -1,9 +1,9 @@
-import pymodaq.daq_utils.gui_utils.dock
-from pymodaq.daq_utils.config import Config, get_set_preset_path
+import pymodaq.utils.gui_utils.dock
+from pymodaq.utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.utils import daq_utils as utils
 
-from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
+from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 preset_path = get_set_preset_path()
@@ -19,7 +19,7 @@ class TestGeneral:
         qtbot = init_qt
         from qtpy import QtWidgets
         from pymodaq.dashboard import DashBoard
-        from pymodaq.daq_utils import gui_utils as gutils
+        from pymodaq.utils import gui_utils as gutils
 
         win = QtWidgets.QMainWindow()
         qtbot.addWidget(win)

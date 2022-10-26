@@ -1,17 +1,17 @@
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
-from pymodaq.daq_utils.parameter import ioxml
-from pymodaq.daq_utils.parameter.utils import get_param_path, get_param_from_name, iter_children
+from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.parameter.utils import get_param_path, get_param_from_name, iter_children
 from pyqtgraph.parametertree import Parameter
 from easydict import EasyDict as edict
 
 import numpy as np
-from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
-from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
-from pymodaq.daq_utils.config import Config, get_set_local_dir
-from pymodaq.daq_utils.scanner import ScanParameters
-from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.daq_utils import gauss1D, gauss2D
+from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
+from pymodaq.utils.config import Config, get_set_local_dir
+from pymodaq.utils.scanner import ScanParameters
+from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -85,7 +85,7 @@ def main(plugin_file=None, init=True):
     """
     import sys
     from qtpy import QtWidgets
-    from pymodaq.daq_utils.gui_utils import DockArea
+    from pymodaq.utils.gui_utils import DockArea
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pathlib import Path
 

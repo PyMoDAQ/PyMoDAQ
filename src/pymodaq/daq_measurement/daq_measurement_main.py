@@ -3,8 +3,8 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale, QSize
 
 import sys
 from pymodaq.daq_measurement.daq_measurement_GUI import Ui_Form
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.math_utils import FourierFilterer
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.math_utils import FourierFilterer
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
 import pyqtgraph as pg
@@ -377,7 +377,7 @@ class DAQ_Measurement(Ui_Form, QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
-    from pymodaq.daq_utils.daq_utils import gauss1D
+    from pymodaq.utils.daq_utils import gauss1D
 
     prog = DAQ_Measurement(Form)
     xdata = np.linspace(0, 400, 401)

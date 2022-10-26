@@ -9,23 +9,23 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 import sys
 from collections import OrderedDict
 import datetime
-from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
-from pymodaq.daq_utils.gui_utils.dock import Dock
-from pymodaq.daq_utils.config import Config, get_set_preset_path
-import pymodaq.daq_utils.parameter.ioxml
+from pymodaq.utils.gui_utils.custom_app import CustomApp
+from pymodaq.utils.gui_utils.dock import Dock
+from pymodaq.utils.config import Config, get_set_preset_path
+import pymodaq.utils.parameter.ioxml
 import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 
-from pymodaq.daq_utils.gui_utils.widgets import QLED
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.h5modules import H5Logger
+from pymodaq.utils.gui_utils.widgets import QLED
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.h5modules import H5Logger
 
 config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))
 try:
     import sqlalchemy
-    from pymodaq.daq_utils.db.db_logger.db_logger import DataBaseLogger
+    from pymodaq.utils.db.db_logger.db_logger import DataBaseLogger
     is_sql = True
 except Exception as e:
     is_sql = False
@@ -498,7 +498,7 @@ class DAQ_Logging(QObject):
 def main():
     from pymodaq.dashboard import DashBoard
     from pathlib import Path
-    from pymodaq.daq_utils.gui_utils.dock import DockArea
+    from pymodaq.utils.gui_utils.dock import DockArea
 
     config = Config()
     app = QtWidgets.QApplication(sys.argv)

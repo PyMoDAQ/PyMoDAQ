@@ -6,10 +6,10 @@ from pathlib import PurePosixPath, Path
 from qtpy import QtWidgets, QtCore
 
 
-import pymodaq.daq_utils.parameter.ioxml
-from pymodaq.daq_utils import daq_utils as utils
+import pymodaq.utils.parameter.ioxml
+from pymodaq.utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils import h5modules as h5
+from pymodaq.utils import h5modules as h5
 
 import csv
 

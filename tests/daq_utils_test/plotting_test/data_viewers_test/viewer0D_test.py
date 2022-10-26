@@ -2,11 +2,11 @@ from qtpy import QtWidgets, QtCore
 import numpy as np
 import pytest
 
-from pymodaq.daq_utils.daq_utils import gauss1D
-from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq.utils.daq_utils import gauss1D
+from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from collections import OrderedDict
 
-from pymodaq.daq_utils.conftests import qtbotskip
+from pymodaq.utils.conftests import qtbotskip
 pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture

@@ -1,11 +1,11 @@
 import numpy as np
 import os
 
-import pymodaq.daq_utils.config
+import pymodaq.utils.config
 import pytest
 import re
 
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pathlib import Path
 import datetime

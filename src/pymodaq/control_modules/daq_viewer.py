@@ -20,22 +20,22 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
 from pymodaq.control_modules.utils import ControlModule
-from pymodaq.daq_utils.gui_utils.file_io import select_file
-import pymodaq.daq_utils.gui_utils.utils
-import pymodaq.daq_utils.scanner
-from pymodaq.daq_utils.tcp_server_client import TCPClient
-from pymodaq.daq_utils.gui_utils.widgets.lcd import LCD
-from pymodaq.daq_utils.config import Config, get_set_local_dir
-from pymodaq.daq_utils.h5modules import browse_data
-from pymodaq.daq_utils.daq_utils import ThreadCommand
-from pymodaq.daq_utils.parameter import ioxml
-from pymodaq.daq_utils.parameter import utils as putils
+from pymodaq.utils.gui_utils.file_io import select_file
+import pymodaq.utils.gui_utils.utils
+import pymodaq.utils.scanner
+from pymodaq.utils.tcp_server_client import TCPClient
+from pymodaq.utils.gui_utils.widgets.lcd import LCD
+from pymodaq.utils.config import Config, get_set_local_dir
+from pymodaq.utils.h5modules import browse_data
+from pymodaq.utils.daq_utils import ThreadCommand
+from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
-from pymodaq.daq_utils.h5modules import H5Saver
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.messenger import deprecation_msg
-from pymodaq.daq_utils.gui_utils import DockArea, get_splash_sc, Dock
-from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq.utils.h5modules import H5Saver
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 

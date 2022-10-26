@@ -3,15 +3,15 @@ from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 from pyqtgraph.widgets.SpinBox import SpinBox
 
-from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
+from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
     get_models, find_dict_in_list_from_key_val
-from pymodaq.daq_utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
-from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
-from pymodaq.daq_utils.gui_utils.widgets import QLED
+from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq.utils.gui_utils.widgets import QLED
 from pymodaq.extensions.pid.utils import OutputToActuator, InputFromDetector
-from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
+from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from simple_pid import PID
 import time
 
@@ -645,7 +645,7 @@ class PIDRunner(QObject):
 
 def main():
     from pymodaq.dashboard import DashBoard
-    from pymodaq.daq_utils.config import get_set_preset_path
+    from pymodaq.utils.config import get_set_preset_path
     from pathlib import Path
     import sys
     app = QtWidgets.QApplication(sys.argv)

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from pymodaq.daq_utils import daq_enums as enums
+from pymodaq.utils import daq_enums as enums
 
 
 class Test_Items_Lockin_SR830:

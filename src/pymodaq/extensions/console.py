@@ -7,8 +7,8 @@ Created the 25/10/2022
 from qtpy import QtWidgets
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
-from pymodaq.daq_utils import config as configmod
-from pymodaq.daq_utils.daq_utils import get_version
+from pymodaq.utils import config as configmod
+from pymodaq.utils.daq_utils import get_version
 
 
 config = configmod.Config()

@@ -1,20 +1,20 @@
 from collections import OrderedDict
 import datetime
 import numpy as np
-from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
-from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
+from pymodaq.utils.gui_utils.custom_app import CustomApp
+from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from  pymodaq.daq_utils.gui_utils.file_io import select_file
-from pymodaq.daq_utils.config import Config
+from pymodaq.utils.config import Config
 
 from qtpy import QtWidgets
 from qtpy.QtCore import Slot, QDate, QThread
 
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
-from pymodaq.daq_utils.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 
-from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
+from pymodaq.utils.h5modules import H5Browser, H5Saver
 
 config = Config()
 logger = utils.set_logger(utils.get_module_name(__file__))

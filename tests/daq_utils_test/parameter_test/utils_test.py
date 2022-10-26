@@ -1,4 +1,4 @@
-from pymodaq.daq_utils.parameter import utils
+from pymodaq.utils.parameter import utils
 from unittest import mock
 
 

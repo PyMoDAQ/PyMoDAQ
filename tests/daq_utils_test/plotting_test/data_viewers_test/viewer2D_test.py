@@ -1,12 +1,12 @@
-import pymodaq.daq_utils.managers.action_manager
-import pymodaq.daq_utils.plotting.utils.filter
-import pymodaq.daq_utils.plotting.utils.plot_utils
+import pymodaq.utils.managers.action_manager
+import pymodaq.utils.plotting.utils.filter
+import pymodaq.utils.plotting.utils.plot_utils
 from qtpy import QtWidgets, QtCore
-from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.daq_utils.plotting.data_viewers import viewer2D as v2d
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.exceptions import ViewerError
-from pymodaq.daq_utils.managers.roi_manager import ROIManager
+from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.utils.plotting.data_viewers import viewer2D as v2d
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.exceptions import ViewerError
+from pymodaq.utils.managers.roi_manager import ROIManager
 from pathlib import Path
 import pytest
 from pytest import fixture, approx
@@ -14,7 +14,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from pyqtgraph import mkPen
-from pymodaq.daq_utils.conftests import qtbotskip
+from pymodaq.utils.conftests import qtbotskip
 
 pytestmark = pytest.mark.skipif(False, reason='qtbot issues but tested locally')
 
@@ -29,7 +29,7 @@ def init_data():
     data_random = np.random.normal(size=(Ny, Nx))
     x = np.linspace(0, Nx - 1, Nx)
     y = np.linspace(0, Ny - 1, Ny)
-    from pymodaq.daq_utils.daq_utils import gauss2D
+    from pymodaq.utils.daq_utils import gauss2D
 
     data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x / 5) ** 2
     data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)

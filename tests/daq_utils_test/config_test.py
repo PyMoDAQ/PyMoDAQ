@@ -1,5 +1,5 @@
 import pytest
-from pymodaq.daq_utils.config import load_config, Config
+from pymodaq.utils.config import load_config, Config
 
 
 class TestGeneral:

@@ -14,19 +14,19 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 import numpy as np
 
-from pymodaq.daq_utils.gui_utils import DockArea, Dock, select_file
-import pymodaq.daq_utils.gui_utils.layout as layout_mod
-from pymodaq.daq_utils.messenger import messagebox
-from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.managers.modules_manager import ModulesManager
-from pymodaq.daq_utils.daq_utils import get_version
-from pymodaq.daq_utils.managers.preset_manager import PresetManager
-from pymodaq.daq_utils.managers.overshoot_manager import OvershootManager
-from pymodaq.daq_utils.managers.remote_manager import RemoteManager
-from pymodaq.daq_utils.managers.roi_manager import ROISaver
-from pymodaq.daq_utils.exceptions import DetectorError, ActuatorError
-from pymodaq.daq_utils import config as configmod
+from pymodaq.utils.gui_utils import DockArea, Dock, select_file
+import pymodaq.utils.gui_utils.layout as layout_mod
+from pymodaq.utils.messenger import messagebox
+from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.daq_utils import get_version
+from pymodaq.utils.managers.preset_manager import PresetManager
+from pymodaq.utils.managers.overshoot_manager import OvershootManager
+from pymodaq.utils.managers.remote_manager import RemoteManager
+from pymodaq.utils.managers.roi_manager import ROISaver
+from pymodaq.utils.exceptions import DetectorError, ActuatorError
+from pymodaq.utils import config as configmod
 
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer

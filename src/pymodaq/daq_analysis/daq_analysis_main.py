@@ -1,21 +1,21 @@
-import pymodaq.daq_utils.gui_utils.file_io
+import pymodaq.utils.gui_utils.file_io
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
 import sys
 import pymodaq
-import pymodaq.daq_utils.parameter.ioxml
-from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
+import pymodaq.utils.parameter.ioxml
+from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 
 from collections import OrderedDict
 import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.daq_utils.parameter.pymodaq_ptypes as pymodaq_ptypes
-from pymodaq.daq_utils.tree_layout.tree_layout_main import Tree_layout
-import pymodaq.daq_utils.daq_utils as utils
-from pymodaq.daq_utils import gui_utils as gutils
+import pymodaq.utils.parameter.pymodaq_ptypes as pymodaq_ptypes
+from pymodaq.utils.tree_layout.tree_layout_main import Tree_layout
+import pymodaq.utils.daq_utils as utils
+from pymodaq.utils import gui_utils as gutils
 from easydict import EasyDict as edict
 from pyqtgraph.dockarea import DockArea, Dock
 import tables

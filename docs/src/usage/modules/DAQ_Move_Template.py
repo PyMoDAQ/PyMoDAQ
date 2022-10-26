@@ -1,7 +1,7 @@
 from pymodaq.control_modules.move_utility_classes import DAQ_Move_base
 from pymodaq.control_modules.move_utility_classes import comon_parameters
-from pymodaq.daq_utils.daq_utils import ThreadCommand
-from pymodaq.daq_utils.parameter.utils import iter_children
+from pymodaq.utils.daq_utils import ThreadCommand
+from pymodaq.utils.parameter.utils import iter_children
 from easydict import EasyDict as edict
 
 

@@ -6,8 +6,8 @@ Created the 08/03/2022
 """
 import pytest
 import numpy as np
-from pymodaq.daq_utils import math_utils as mutils
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.utils import math_utils as mutils
+from pymodaq.utils import daq_utils as utils
 
 
 class TestMath:

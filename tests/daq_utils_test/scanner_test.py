@@ -1,9 +1,9 @@
 import numpy as np
 import pytest
 
-import pymodaq.daq_utils
-from pymodaq.daq_utils import scanner
-from pymodaq.daq_utils import exceptions as exceptions
+import pymodaq.utils
+from pymodaq.utils import scanner
+from pymodaq.utils import exceptions as exceptions
 
 
 class TestScanInfo:

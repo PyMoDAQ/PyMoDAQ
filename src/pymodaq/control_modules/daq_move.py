@@ -12,18 +12,18 @@ from qtpy import QtWidgets
 from easydict import EasyDict as edict
 
 from pymodaq.control_modules.utils import ControlModule
-from pymodaq.daq_utils.parameter import ioxml
+from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
-from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.move_utility_classes import MoveCommand
-from pymodaq.daq_utils.tcp_server_client import TCPClient
+from pymodaq.utils.tcp_server_client import TCPClient
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.parameter import utils as putils
-from pymodaq.daq_utils.gui_utils import get_splash_sc
-from pymodaq.daq_utils import config
-from pymodaq.daq_utils.exceptions import ActuatorError
-from pymodaq.daq_utils.messenger import deprecation_msg
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.parameter import utils as putils
+from pymodaq.utils.gui_utils import get_splash_sc
+from pymodaq.utils import config
+from pymodaq.utils.exceptions import ActuatorError
+from pymodaq.utils.messenger import deprecation_msg
 
 
 local_path = config.get_set_local_dir()

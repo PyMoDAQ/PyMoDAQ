@@ -2,8 +2,8 @@ import numpy as np
 from qtpy import QtWidgets, QtCore
 import sys
 import pytest
-from pymodaq.daq_utils import daq_utils
-from pymodaq.daq_utils import gui_utils as gutils
+from pymodaq.utils import daq_utils
+from pymodaq.utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock, DockArea
 import datetime
 

@@ -1,9 +1,9 @@
 from pathlib import Path
 
-import pymodaq.daq_utils.gui_utils.dock
-from pymodaq.daq_utils.config import Config, get_set_preset_path
+import pymodaq.utils.gui_utils.dock
+from pymodaq.utils.config import Config, get_set_preset_path
 from pytest import fixture, mark
-from pymodaq.daq_utils.conftests import qtbotskip, main_modules_skip
+from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 
 
 pytestmark = mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
@@ -22,7 +22,7 @@ def main(qtbot):
     from qtpy import QtWidgets
     from pymodaq.dashboard import DashBoard
     from extensions.daq_scan import DAQ_Scan
-    from pymodaq.daq_utils import gui_utils as gutils
+    from pymodaq.utils import gui_utils as gutils
 
     win = QtWidgets.QMainWindow()
     area = pymodaq.daq_utils.gui_utils.dock.DockArea()
