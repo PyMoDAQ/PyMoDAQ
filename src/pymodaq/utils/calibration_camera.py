@@ -6,7 +6,7 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 
 import sys
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
+from pymodaq.post_treatment.daq_measurement.daq_measurement_main import DAQ_Measurement
 from pymodaq.utils.h5modules import browse_data
 import os
 from pymodaq.utils.config import get_set_local_dir

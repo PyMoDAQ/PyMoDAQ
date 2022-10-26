@@ -1,13 +1,11 @@
-from qtpy import QtGui, QtWidgets
-from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal, QLocale, QSize
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt, QObject, Slot, Signal
 
 import sys
-from pymodaq.daq_measurement.daq_measurement_GUI import Ui_Form
+from post_treatment.daq_measurement.daq_measurement_GUI import Ui_Form
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.math_utils import FourierFilterer
 from scipy.optimize import curve_fit
-from scipy.signal import find_peaks
-import pyqtgraph as pg
 import numpy as np
 from enum import Enum
 
