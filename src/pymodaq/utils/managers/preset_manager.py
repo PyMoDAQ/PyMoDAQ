@@ -12,10 +12,10 @@ import pymodaq.utils.managers.preset_manager_utils  # to register move and det t
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 # check if preset_mode directory exists on the drive
-pid_path = pymodaq.daq_utils.config.get_set_pid_path()
-preset_path = pymodaq.daq_utils.config.get_set_preset_path()
-overshoot_path = pymodaq.daq_utils.config.get_set_overshoot_path()
-layout_path = pymodaq.daq_utils.config.get_set_layout_path()
+pid_path = pymodaq.utils.config.get_set_pid_path()
+preset_path = pymodaq.utils.config.get_set_preset_path()
+overshoot_path = pymodaq.utils.config.get_set_overshoot_path()
+layout_path = pymodaq.utils.config.get_set_layout_path()
 
 pid_models = [mod['name'] for mod in utils.get_models()]
 

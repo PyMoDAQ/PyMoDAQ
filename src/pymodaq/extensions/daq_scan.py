@@ -187,7 +187,7 @@ class DAQ_Scan(QObject):
             # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
     def create_average_dock(self):
-        self.ui.average_dock = pymodaq.daq_utils.gui_utils.dock.Dock("Averaging")
+        self.ui.average_dock = pymodaq.utils.gui_utils.dock.Dock("Averaging")
         average_tab = QtWidgets.QTabWidget()
         average1D_widget = QtWidgets.QWidget()
         average2D_widget = QtWidgets.QWidget()
@@ -332,7 +332,7 @@ class DAQ_Scan(QObject):
         ##################################################################
 
         # %% create scan dock and make it a floating window
-        self.ui.scan_dock = pymodaq.daq_utils.gui_utils.dock.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
+        self.ui.scan_dock = pymodaq.utils.gui_utils.dock.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
         self.ui.scan_dock.setOrientation('vertical')
         self.ui.scan_dock.addWidget(widgetsettings)
 
@@ -388,11 +388,11 @@ class DAQ_Scan(QObject):
         self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
         self.ui.status_message = QtWidgets.QLabel('Initializing')
         self.ui.statusbar.addPermanentWidget(self.ui.status_message)
-        self.ui.N_scan_steps_sb = pymodaq.daq_utils.gui_utils.widgets.spinbox.QSpinBox_ro()
+        self.ui.N_scan_steps_sb = pymodaq.utils.gui_utils.widgets.spinbox.QSpinBox_ro()
         self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb = pymodaq.daq_utils.gui_utils.widgets.spinbox.QSpinBox_ro()
+        self.ui.indice_scan_sb = pymodaq.utils.gui_utils.widgets.spinbox.QSpinBox_ro()
         self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb = pymodaq.daq_utils.gui_utils.widgets.spinbox.QSpinBox_ro()
+        self.ui.indice_average_sb = pymodaq.utils.gui_utils.widgets.spinbox.QSpinBox_ro()
         self.ui.indice_average_sb.setToolTip('Current average value')
         self.ui.scan_done_LED = QLED()
         self.ui.scan_done_LED.setToolTip('Scan done state')
@@ -659,9 +659,9 @@ class DAQ_Scan(QObject):
                                                         scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
+                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
                 else:
-                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
+                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
                 live_group.attrs['pixmap1D'] = string
 
             elif self.scan_data_2D != []:  #if live data is saved as 1D not needed to save as 2D
@@ -723,9 +723,9 @@ class DAQ_Scan(QObject):
                                                     scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
+                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
                 else:
-                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
+                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
                 live_group.attrs['pixmap2D'] = string
 
             if self.navigator is not None:
@@ -737,7 +737,7 @@ class DAQ_Scan(QObject):
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
             os.mkdir(self.h5saver.settings.child(('base_path')).value())
-        filename = pymodaq.daq_utils.gui_utils.file_io.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
+        filename = pymodaq.utils.gui_utils.file_io.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
     def save_metadata(self, node, type_info='dataset_info'):
@@ -778,18 +778,18 @@ class DAQ_Scan(QObject):
         if type_info == 'dataset_info':
             # save contents of given parameter object into an xml string under the attribute settings
             settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params) + \
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
-                           # pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(params) + \
+                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+                           # pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                            #     self.dashboard.preset_manager.preset_params) +\
             settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 
         elif type_info == 'scan_info':
-            settings_all = [pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(params),
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings),
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings),
-                           pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.scanner.settings)]
+            settings_all = [pymodaq.utils.parameter.ioxml.parameter_to_xml_string(params),
+                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.settings),
+                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings),
+                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.scanner.settings)]
 
             settings_str = b'<All_settings title="All Settings" type="group">'
             for set in settings_all:
@@ -1541,7 +1541,7 @@ class DAQ_Scan(QObject):
                 move_group_name = 'Move{:03d}'.format(ind_move)
                 if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, move_group_name):
                     self.h5saver.add_move_group(self.h5saver.current_scan_group, title='',
-                                                settings_as_xml=pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                                settings_as_xml=pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                                                     self.modules_manager.actuators[ind_move].settings),
                                                 metadata=dict(name=move_name))
 
@@ -1550,7 +1550,7 @@ class DAQ_Scan(QObject):
             for ind_det, det_name in enumerate(detector_modules_names):
                 det_group_name = 'Detector{:03d}'.format(ind_det)
                 if not self.h5saver.is_node_in_group(self.h5saver.current_scan_group, det_group_name):
-                    settings_str = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                    settings_str = pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                         self.modules_manager.detectors[ind_det].settings)
                     try:
                         if 'Data0D' not in [viewer.viewer_type for viewer in
@@ -1561,7 +1561,7 @@ class DAQ_Scan(QObject):
                                 if hasattr(viewer, 'roi_manager'):
                                     settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
                                         ind_viewer).encode()
-                                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                    settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                                         viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(
                                         ind_viewer).encode()
                             settings_str += b'</All_settings>'
@@ -2125,7 +2125,7 @@ def main(init_qt=True):
     from pymodaq.dashboard import DashBoard
 
     win = QtWidgets.QMainWindow()
-    area = pymodaq.daq_utils.gui_utils.dock.DockArea()
+    area = pymodaq.utils.gui_utils.dock.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')

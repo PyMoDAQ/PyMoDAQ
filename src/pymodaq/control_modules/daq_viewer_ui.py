@@ -53,7 +53,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     See Also
     --------
-    pymodaq.daq_utils.daq_utils.ThreadCommand
+    pymodaq.utils.daq_utils.ThreadCommand
     """
 
     command_sig = Signal(ThreadCommand)

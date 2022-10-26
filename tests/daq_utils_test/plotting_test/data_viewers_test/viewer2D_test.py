@@ -123,7 +123,7 @@ class TestCurveFactory:
 class TestData0DWithHistory:
     def test_add_datas_list(self, init_qt):
         Nsamplesinhisto = 2
-        data_histo = pymodaq.daq_utils.plotting.utils.plot_utils.Data0DWithHistory(Nsamplesinhisto)
+        data_histo = pymodaq.utils.plotting.utils.plot_utils.Data0DWithHistory(Nsamplesinhisto)
         dat = [[1, 2], [np.array([1]), 2], [1, 2], [1, 2], [1, 2], [1, 2]]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
@@ -135,7 +135,7 @@ class TestData0DWithHistory:
             assert 'data_01' in data_histo.datas
 
     def test_add_datas(self, init_qt):
-        data_histo = pymodaq.daq_utils.plotting.utils.plot_utils.Data0DWithHistory()
+        data_histo = pymodaq.utils.plotting.utils.plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
@@ -145,7 +145,7 @@ class TestData0DWithHistory:
             assert 'CH1' in data_histo.datas
 
     def test_add_datas_and_clear(self, init_qt):
-        data_histo = pymodaq.daq_utils.plotting.utils.plot_utils.Data0DWithHistory()
+        data_histo = pymodaq.utils.plotting.utils.plot_utils.Data0DWithHistory()
         dat = [dict(CH0=1, CH1=2.), dict(CH0=np.array([1]), CH1=2.), dict(CH0=1, CH1=2.), dict(CH0=1, CH1=2.)]
         for ind, d in enumerate(dat):
             data_histo.add_datas(d)
@@ -158,38 +158,38 @@ class TestData0DWithHistory:
 class TestExtractAxis:
     def test_info_data_is_None(self):
         axis = utils.Axis(label='mylabel', units='myunits')
-        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (1, 0, 'mylabel', 'myunits')
+        assert pymodaq.utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (1, 0, 'mylabel', 'myunits')
 
     def test_info(self):
         axis = utils.Axis(label='mylabel', units='myunits', data=np.array([5, 20, 35]))
-        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, 'mylabel', 'myunits')
+        assert pymodaq.utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, 'mylabel', 'myunits')
 
     def test_info_data_is_ndarray(self):
         axis = np.array([5, 20, 35])
-        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, '', '')
+        assert pymodaq.utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (15, 5, '', '')
 
     def test_info_data_is_ndarray_scalingisneg(self):
         axis = np.array([35, 20, 5])
-        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, '', '')
+        assert pymodaq.utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, '', '')
 
     def test_info_neg_scaling(self):
         axis = utils.Axis(label='mylabel', units='myunits', data=np.array([35, 20, 5]))
-        assert pymodaq.daq_utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, 'mylabel', 'myunits')
+        assert pymodaq.utils.plotting.utils.plot_utils.AxisInfosExtractor.extract_axis_info(axis) == (-15, 35, 'mylabel', 'myunits')
 
 
 class TestLineoutData:
     def test_with_error(self):
         with pytest.raises(ValueError):
-            pymodaq.daq_utils.plotting.utils.filter.LineoutData(hor_axis=np.random.random(10), hor_data=np.random.random(12))
+            pymodaq.utils.plotting.utils.filter.LineoutData(hor_axis=np.random.random(10), hor_data=np.random.random(12))
 
         with pytest.raises(ValueError):
-            pymodaq.daq_utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(12))
+            pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(12))
 
     def test_intdataisnotnone(self):
-        pymodaq.daq_utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10), int_data=np.array([10]))
+        pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10), int_data=np.array([10]))
 
     def test_intdataisnone(self):
-        pymodaq.daq_utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
+        pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
 
 
 class TestLineoutPlotter:

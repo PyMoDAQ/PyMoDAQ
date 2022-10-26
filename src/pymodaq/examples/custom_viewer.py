@@ -1,5 +1,5 @@
 from pymodaq.utils.gui_utils.widgets.table import SpinBoxDelegate
-from  pymodaq.daq_utils.parameter.utils import get_widget_from_tree
+from  pymodaq.utils.parameter.utils import get_widget_from_tree
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock

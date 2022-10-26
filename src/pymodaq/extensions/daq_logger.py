@@ -189,17 +189,17 @@ class DAQ_Logger(CustomApp):
             self.logger.settings.child('N_saved').setValue(0)
 
             settings_str = b'<All_settings>'
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                 self.dashboard.preset_manager.preset_params)
             if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                     self.dashboard.overshoot_manager.overshoot_params)
             if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                     self.dashboard.roi_saver.roi_presets)
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
             settings_str += b'</All_settings>'
 
             if not self.logger.init_logger(settings_str):
@@ -226,12 +226,12 @@ class DAQ_Logger(CustomApp):
                 # create the detectors in the chosen logger
                 for mod in modules_log:
                     settings_str = b'<All_settings>'
-                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(mod.settings)
+                    settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(mod.settings)
 
                     if mod.module_type == 'DAQ_Viewer':
                         for viewer in mod.ui.viewers:
                             if hasattr(viewer, 'roi_manager'):
-                                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                                     viewer.roi_manager.settings)
                     settings_str += b'</All_settings>'
                     if mod.module_type == 'DAQ_Viewer':

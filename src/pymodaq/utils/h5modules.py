@@ -192,7 +192,7 @@ class Node(object):
     def parent_node(self):
         if self.path == '/':
             return None
-        mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
+        mod = importlib.import_module('.h5modules', 'pymodaq.utils')
 
         if self.backend == 'tables':
             p = self.node._v_parent
@@ -278,7 +278,7 @@ class GROUP(Node):
         --------
         children_name
         """
-        mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
+        mod = importlib.import_module('.h5modules', 'pymodaq.utils')
         children = dict([])
         if self.backend == 'tables':
             for child_name, child in self.node._v_children.items():
@@ -733,7 +733,7 @@ class H5Backend:
         if isinstance(where, Node):
             where = where.node
 
-        mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
+        mod = importlib.import_module('.h5modules', 'pymodaq.utils')
         children = dict([])
         if self.backend == 'tables':
             for child_name, child in where._v_children.items():
@@ -2529,11 +2529,11 @@ class H5Browser(QObject):
                 for child in self.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-                params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(settings)
+                params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(settings)
                 self.settings.addChildren(params)
 
             if scan_settings is not None:
-                params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(scan_settings)
+                params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(scan_settings)
                 self.settings.addChildren(params)
 
             if pixmaps == []:

@@ -722,7 +722,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                                 if data_dim == 'data2D' and 'Data2D' in self._viewer_types:
                                     ind_viewer = self._viewer_types.index('Data2D')
-                                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
+                                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
                                     self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
             self.logger.exception(str(e))

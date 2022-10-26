@@ -334,7 +334,7 @@ class TestTCPClient:
         assert test_TCP_Client.socket.get_string() == str(value_as_string)
         assert not test_TCP_Client.socket.socket._send
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPClient.init_connection')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPClient.init_connection')
     def test_queue_command(self, mock_connection):
         mock_connection.side_effect = [Expected_1]
         command = ThreadCommand()
@@ -435,9 +435,9 @@ class TestTCPClient:
         with pytest.raises(IOError):
             test_TCP_Client.queue_command(command)
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.QtWidgets.QApplication.processEvents')
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.select.select')
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.Socket')
+    @mock.patch('pymodaq.utils.tcp_server_client.QtWidgets.QApplication.processEvents')
+    @mock.patch('pymodaq.utils.tcp_server_client.select.select')
+    @mock.patch('pymodaq.utils.tcp_server_client.Socket')
     def test_init_connection(self, mock_Socket, mock_select, mock_events):
         mock_Socket.return_value = Socket(MockPythonSocket())
         mock_select.side_effect = [([], [], []), Exception]
@@ -525,8 +525,8 @@ class TestTCPServer:
         for socket in test_TCP_Server.settings.child(('conn_clients')).value():
             assert not 'server' in socket
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.startTimer')
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.socket')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.startTimer')
+    @mock.patch('pymodaq.utils.tcp_server_client.socket')
     def test_init_server(self, mock_socket, mock_timer):
         mock_socket.socket.return_value = MockPythonSocket()
         mock_timer.side_effect = [Expected_1]
@@ -542,8 +542,8 @@ class TestTCPServer:
         with pytest.raises(Expected_1):
             test_TCP_Server.init_server()
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.emit_status')
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.select')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.emit_status')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.select')
     def test_timerEvent(self, mock_select, mock_emit):
         mock_select.return_value = Exception
         mock_emit.side_effect = [ExpectedError]
@@ -592,14 +592,14 @@ class TestTCPServer:
         result = test_TCP_Server.set_connected_clients_table()
         assert result[None] == 'unconnected invalid socket'
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.print')
+    @mock.patch('pymodaq.utils.tcp_server_client.print')
     def test_print_status(self, mock_print):
         mock_print.side_effect = [ExpectedError]
         test_TCP_Server = TCPServer()
         with pytest.raises(ExpectedError):
             test_TCP_Server.print_status('test')
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.emit_status')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.emit_status')
     def test_remove_client(self, mock_emit):
         mock_emit.side_effect = [Expected_1, Expected_2]
 
@@ -634,7 +634,7 @@ class TestTCPServer:
         with pytest.raises(Expected_2):
             test_TCP_Server.remove_client(socket_except)
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.select.select')
+    @mock.patch('pymodaq.utils.tcp_server_client.select.select')
     def test_select(self, mock_select):
         mock_select.return_value = ([1], [2], [3])
         test_TCP_Server = TCPServer()
@@ -644,7 +644,7 @@ class TestTCPServer:
         result = np.array(test_TCP_Server.select([test_mock_socket]))
         assert np.array_equal(result, np.array([[1], [2], [3]]))
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.select')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.select')
     def test_listen_client(self, mock_select):
         socket_1 = Socket(MockPythonSocket())
         socket_1.bind(('0.0.0.1', 4455))
@@ -721,7 +721,7 @@ class TestTCPServer:
 
         assert len(test_TCP_Server.settings.child('conn_clients').value()) == 6
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.emit_status')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.emit_status')
     def test_send_command(self, mock_emit):
         mock_emit.side_effect = [Expected_1, None]
 
@@ -737,7 +737,7 @@ class TestTCPServer:
 
         assert not test_TCP_Server.send_command(test_Socket, command='test')
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.print')
+    @mock.patch('pymodaq.utils.tcp_server_client.print')
     def test_emit_status(self, mock_print):
         mock_print.side_effect = [Expected_1]
         test_TCP_Server = TCPServer()
@@ -761,9 +761,9 @@ class TestTCPServer:
         test_TCP_Server = TCPServer()
         assert not test_TCP_Server.command_to_from_client(MockPythonSocket())
 
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.read_info_xml')
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.emit_status')
-    @mock.patch('pymodaq.daq_utils.tcp_server_client.TCPServer.find_socket_within_connected_clients')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.read_info_xml')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.emit_status')
+    @mock.patch('pymodaq.utils.tcp_server_client.TCPServer.find_socket_within_connected_clients')
     def test_process_cmds(self, mock_find_socket, mock_emit, mock_read):
         mock_emit.side_effect = [None, Expected_1, Expected_2, Expected_3]
 
@@ -800,7 +800,7 @@ class TestTCPServer:
 
         assert not test_TCP_Server.process_cmds('test')
 
-    @mock.patch('pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter')
+    @mock.patch('pymodaq.utils.parameter.ioxml.XML_string_to_parameter')
     def test_read_infos(self, mock_string):
         mock_string.return_value = []
 
@@ -811,7 +811,7 @@ class TestTCPServer:
 
         test_TCP_Server.read_infos()
 
-    @mock.patch('pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter')
+    @mock.patch('pymodaq.utils.parameter.ioxml.XML_string_to_parameter')
     def test_read_info_xml(self, mock_string):
         mock_string.side_effect = [Exception, 'test', 'test']
         test_TCP_Server = TCPServer()
@@ -840,7 +840,7 @@ class TestTCPServer:
         with pytest.raises(ExpectedError):
             test_TCP_Server.read_info_xml(test_Socket)
 
-    @mock.patch('pymodaq.daq_utils.parameter.utils.iter_children')
+    @mock.patch('pymodaq.utils.parameter.utils.iter_children')
     def test_read_info(self, mock_iter_children):
         mock_iter_children.return_value = ['an_info']
         test_TCP_Server = TCPServer()

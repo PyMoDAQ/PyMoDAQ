@@ -13,10 +13,10 @@ class CustomApp(QObject, ActionManager, ParameterManager):
     Inherits the MixIns ActionManager and ParameterManager classes. You have to subclass some methods and make
     concrete implementation of a given number of methods:
 
-    * setup_actions: mandatory, see :class:`pymodaq.daq_utils.managers.action_manager.ActionManager`
-    * value_changed: non mandatory, see :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`
-    * child_added: non mandatory, see :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`
-    * param_deleted: non mandatory, see :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`
+    * setup_actions: mandatory, see :class:`pymodaq.utils.managers.action_manager.ActionManager`
+    * value_changed: non mandatory, see :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`
+    * child_added: non mandatory, see :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`
+    * param_deleted: non mandatory, see :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`
     * setup_docks: mandatory
     * setup_menu: non mandatory
     * connect_things: mandatory
@@ -28,9 +28,9 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
     See Also
     --------
-    :class:`pymodaq.daq_utils.managers.action_manager.ActionManager`,
-    :class:`pymodaq.daq_utils.managers.parameter_manager.ParameterManager`,
-    :class:`pymodaq.daq_utils.managers.modules_manager.ModulesManager`,
+    :class:`pymodaq.utils.managers.action_manager.ActionManager`,
+    :class:`pymodaq.utils.managers.parameter_manager.ParameterManager`,
+    :class:`pymodaq.utils.managers.modules_manager.ModulesManager`,
     :class:`pymodaq.dashboard.DashBoard`
     """
 
@@ -107,7 +107,7 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         See Also
         --------
-        pymodaq.daq_utils.managers.action_manager.ActionManager
+        pymodaq.utils.managers.action_manager.ActionManager
         """
         pass
 

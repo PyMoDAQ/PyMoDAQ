@@ -58,7 +58,7 @@ class TestViewer1D:
         prog.ui.Do_math_pb.trigger()
         assert not prog.ui.Do_math_pb.isChecked()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.show_measurement')
+    @mock.patch('pymodaq.utils.plotting.viewer1D.viewer1D_main.Viewer1D.show_measurement')
     def test_do_measurements_pb(self, mock_show, init_prog):
         mock_show.return_value = None
         prog = init_prog
@@ -121,7 +121,7 @@ class TestViewer1D:
         prog = init_prog
         prog.do_scatter()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_graph1D')
+    @mock.patch('pymodaq.utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_graph1D')
     def test_do_xy(self, mock_graph, init_prog):
         mock_graph.side_effect = [Expected_1, Expected_2]
         prog = init_prog
@@ -191,7 +191,7 @@ class TestViewer1D:
         assert prog.measurement_dict['channels'] == [1, 1, 1, 1]
         assert prog.measurement_dict['operations'] == ['Mean', 'Mean', 'Mean', 'Mean']
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_lineouts')
+    @mock.patch('pymodaq.utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_lineouts')
     def test_remove_ROI(self, mock_update, init_prog):
         mock_update.side_effect = [Expected_1]
         prog = init_prog
@@ -220,7 +220,7 @@ class TestViewer1D:
         assert 'Lineout_item2:' in prog.measure_data_dict
 
     @pytest.mark.skip
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.logger.exception')
+    @mock.patch('pymodaq.utils.plotting.viewer1D.viewer1D_main.logger.exception')
     def test_add_lineout(self, mock_except, init_prog):
         mock_except.side_effect = [None, ExpectedError]
 
@@ -328,7 +328,7 @@ class TestViewer1D:
         with pytest.raises(ExpectedError):
             prog.do_zoom()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_graph1D')
+    @mock.patch('pymodaq.utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_graph1D')
     def test_enable_zoom(self, mock_graph, init_prog):
         mock_graph.return_value = None
 
@@ -385,7 +385,7 @@ class TestViewer1D:
 
         prog.update_labels()
 
-    @mock.patch('pymodaq.daq_utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_labels')
+    @mock.patch('pymodaq.utils.plotting.viewer1D.viewer1D_main.Viewer1D.update_labels')
     def test_labels(self, mock_update, init_prog):
         mock_update.side_effect = [None, ExpectedError]
 

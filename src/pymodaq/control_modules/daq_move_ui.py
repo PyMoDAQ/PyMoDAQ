@@ -49,7 +49,7 @@ class DAQ_Move_UI(ControlModuleUI):
 
     See Also
     --------
-    pymodaq.daq_utils.daq_utils.ThreadCommand
+    pymodaq.utils.daq_utils.ThreadCommand
     """
 
     def __init__(self, parent, title="DAQ_Move"):

@@ -260,7 +260,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
             open_h5_file, update_status, daq_utils.select_file
         """
         try:
-            filename = pymodaq.daq_utils.gui_utils.file_io.select_file(start_path=path, save=False, ext='h5')
+            filename = pymodaq.utils.gui_utils.file_io.select_file(start_path=path, save=False, ext='h5')
             if filename != "":
                 self.open_h5_file(filename)
         except Exception as e:
@@ -363,10 +363,10 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
                 for child in self.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
-                params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(attrs.settings.decode())
+                params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(attrs.settings.decode())
                 self.settings.addChildren(params)
                 if hasattr(attrs, 'scan_settings'):
-                    params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(attrs.scan_settings.decode())
+                    params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(attrs.scan_settings.decode())
                     self.settings.addChildren(params)
         except Exception as e:
             self.update_status(str(e), wait_time=self.wait_time)

@@ -8,7 +8,7 @@ class AbstractLogger(ABC):
 
     See Also
     --------
-    pymodaq.daq_utils.h5modules.H5Logger or pymodaq.daq_utils.db.db_logger.DbLoggerGUI
+    pymodaq.utils.h5modules.H5Logger or pymodaq.utils.db.db_logger.DbLoggerGUI
     """
     @abstractmethod
     def close(self):

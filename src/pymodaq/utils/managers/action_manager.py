@@ -18,13 +18,13 @@ class QAction(QAction):
         super().__init__(*args, **kwargs)
 
     def click(self):
-        pymodaq.daq_utils.messenger.deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
+        pymodaq.utils.messenger.deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
                                                     stacklevel=3)
         self.trigger()
 
     @property
     def clicked(self):
-        pymodaq.daq_utils.messenger.deprecation_msg("clicked for PyMoDAQ's QAction is deprecated, use *trigger*",
+        pymodaq.utils.messenger.deprecation_msg("clicked for PyMoDAQ's QAction is deprecated, use *trigger*",
                                                     stacklevel=3)
         return self.triggered
 
@@ -132,7 +132,7 @@ class ActionManager:
         See Also
         --------
         affect_to, pymodaq.resources.QtDesigner_Ressources.Icon_Library,
-        pymodaq.daq_utils.managers.action_manager.add_action
+        pymodaq.utils.managers.action_manager.add_action
         """
         if toolbar is None:
             toolbar = self._toolbar

@@ -114,7 +114,7 @@ class DAQ_NDViewer_Template(DAQ_Viewer_base):
             if param.name()=='set_point':
                 self.controller.SetTemperature(param.value())
 
-            elif param.name() == 'readout' or param.name() in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child('camera_settings', 'readout_settings')):
+            elif param.name() == 'readout' or param.name() in pymodaq.utils.parameter.utils.iter_children(self.settings.child('camera_settings', 'readout_settings')):
                 self.update_read_mode()
                 
             elif param.name()=='exposure':

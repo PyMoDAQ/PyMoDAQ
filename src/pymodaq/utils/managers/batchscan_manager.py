@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 logger = utils.set_logger(utils.get_module_name(__file__))
 
-batch_path = pymodaq.daq_utils.config.get_set_batch_path()
+batch_path = pymodaq.utils.config.get_set_batch_path()
 
 params = [
     {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
@@ -88,7 +88,7 @@ class BatchManager:
         """
 
         if filename is None or filename == False:
-            filename = pymodaq.daq_utils.gui_utils.file_io.select_file(start_path=self.batch_path, save=False, ext='xml')
+            filename = pymodaq.utils.gui_utils.file_io.select_file(start_path=self.batch_path, save=False, ext='xml')
             if filename == '':
                 return
 
@@ -100,7 +100,7 @@ class BatchManager:
         self.settings = Parameter.create(title='Batch', name='settings', type='group', children=self.params)
         actuators = children[0].child('modules', 'actuators').value()['all_items']
         if actuators != self.actuators:
-            pymodaq.daq_utils.messenger.show_message('The loaded actuators from the batch file do not corresponds to the'
+            pymodaq.utils.messenger.show_message('The loaded actuators from the batch file do not corresponds to the'
                                 ' dashboard actuators')
             return
         else:
@@ -108,7 +108,7 @@ class BatchManager:
 
         detectors = children[0].child('modules', 'detectors').value()['all_items']
         if detectors != self.detectors:
-            pymodaq.daq_utils.messenger.show_message('The loaded detectors from the batch file do not corresponds to the'
+            pymodaq.utils.messenger.show_message('The loaded detectors from the batch file do not corresponds to the'
                                 ' dashboard detectors')
             return
         else:
@@ -236,7 +236,7 @@ class BatchScanner(QtCore.QObject):
 
     def setupUI(self):
         # %% create scan dock and make it a floating window
-        self.batch_dock = pymodaq.daq_utils.gui_utils.dock.Dock("BatchScanner", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
+        self.batch_dock = pymodaq.utils.gui_utils.dock.Dock("BatchScanner", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
         self.dockarea.addDock(self.batch_dock, 'left')
         self.batch_dock.float()
 
@@ -282,7 +282,7 @@ class BatchScanner(QtCore.QObject):
 
     def load_file(self, filepath=None):
         if filepath is None:
-            path = pymodaq.daq_utils.gui_utils.file_io.select_file(start_path=batch_path, save=False, ext='xml')
+            path = pymodaq.utils.gui_utils.file_io.select_file(start_path=batch_path, save=False, ext='xml')
             if path != '':
                 filepath = path
             else:
@@ -300,7 +300,7 @@ class BatchScanner(QtCore.QObject):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
-    area = pymodaq.daq_utils.gui_utils.dock.DockArea()
+    area = pymodaq.utils.gui_utils.dock.DockArea()
     win.setCentralWidget(area)
 
     # prog = BatchManager(msgbox=False, actuators=['Xaxis', 'Yaxis'], detectors=['Det0D', 'Det1D'])

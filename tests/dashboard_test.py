@@ -23,7 +23,7 @@ class TestGeneral:
 
         win = QtWidgets.QMainWindow()
         qtbot.addWidget(win)
-        area = pymodaq.daq_utils.gui_utils.dock.DockArea()
+        area = pymodaq.utils.gui_utils.dock.DockArea()
         win.setCentralWidget(area)
         win.resize(1000, 500)
         win.setWindowTitle('PyMoDAQ Dashboard')

@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
-from  pymodaq.daq_utils.gui_utils.file_io import select_file
+from  pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.config import Config
 
 from qtpy import QtWidgets

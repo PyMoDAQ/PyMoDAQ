@@ -135,7 +135,7 @@ class CalibrationCamera(QtWidgets.QWidget, QObject):
                        ]},
                    ]}, ]
         param_obj = Parameter.create(name='Axes_Settings', type='group', children=params)
-        pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_file(param_obj,
+        pymodaq.utils.parameter.ioxml.parameter_to_xml_file(param_obj,
                                                                 os.path.join(calib_path, os.path.split(self.fname)[1]))
         self.settings.child(('data_saved')).setValue(True)
         self.settings.child(('filepath')).setValue(os.path.join(calib_path, os.path.split(self.fname)[1]))
