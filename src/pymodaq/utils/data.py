@@ -7,9 +7,22 @@ Created the 27/10/2022
 import numbers
 from collections import OrderedDict
 import numpy as np
+from pymodaq.utils.daq_enums import BaseEnum
 
 DATASOURCES = ('raw', 'roi')
 DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
+
+
+class DataDims(BaseEnum):
+    Data0D = 0
+    Data1D = 1
+    Data2D = 2
+    DataND = 3
+
+
+class DataSource(BaseEnum):
+    raw = 0
+    roi = 1
 
 
 class DataSourceError(Exception):

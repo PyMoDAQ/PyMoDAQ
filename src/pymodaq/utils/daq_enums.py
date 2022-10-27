@@ -5,6 +5,12 @@ import numpy as np
 from scipy.optimize import curve_fit
 
 
+class BaseEnum(Enum):
+    @classmethod
+    def names(cls):
+        return list(cls.__members__.keys())
+
+
 class Items_Lockin_SR830(Enum):
     X = 0
     Y = 1
