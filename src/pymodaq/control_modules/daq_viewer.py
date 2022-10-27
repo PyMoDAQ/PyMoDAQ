@@ -1620,9 +1620,9 @@ class DAQ_Detector(QObject):
             self.detector = class_(self, params_state)
 
             try:
-                infos = self.detector.ini_detector(controller)  # return edict(info="", controller=, stage=)
                 self.detector.data_grabed_signal.connect(self.data_ready)
                 self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
+                infos = self.detector.ini_detector(controller)  # return edict(info="", controller=, stage=)
                 status.controller = self.detector.controller
 
             except Exception as e:
