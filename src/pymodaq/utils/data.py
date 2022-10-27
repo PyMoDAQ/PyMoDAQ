@@ -165,11 +165,11 @@ class Data(OrderedDict):
         for k in kwargs:
             self[k] = kwargs[k]
 
-    # def __getattr__(self, name):
-    #     if name in self:
-    #         return self[name]
-    #     else:
-    #         raise AttributeError(f'{name} if not a key of {self}')
+    def __getattr__(self, name):
+        if name in self:
+            return self[name]
+        else:
+            raise AttributeError(f'{name} if not a key of {self}')
 
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self.name}> - <distribution: {self.distribution}> - <source: {self.source}>'
