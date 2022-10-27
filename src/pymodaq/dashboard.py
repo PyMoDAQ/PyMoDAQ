@@ -14,6 +14,7 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 import numpy as np
 
+import utils.parameter.utils
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.utils.gui_utils.layout as layout_mod
@@ -585,7 +586,7 @@ class DashBoard(QObject):
 
         if plug_settings is not None:
             try:
-                utils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
+                putils.set_param_from_param(mov_mod_tmp.settings, plug_settings)
             except KeyError as e:
                 mssg = f'Could not set this setting: {str(e)}\n' \
                        f'The Preset is no more compatible with the plugin {plug_type}'
@@ -619,7 +620,7 @@ class DashBoard(QObject):
 
         if plug_settings is not None:
             try:
-                utils.set_param_from_param(det_mod_tmp.settings, plug_settings)
+                putils.set_param_from_param(det_mod_tmp.settings, plug_settings)
             except KeyError as e:
                 mssg = f'Could not set this setting: {str(e)}\n' \
                        f'The Preset is no more compatible with the plugin {plug_subtype}'

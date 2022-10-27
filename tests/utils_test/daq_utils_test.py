@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+from pymodaq.utils.parameter import utils as putils
 import utils.units
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import config
@@ -464,16 +465,16 @@ def test_set_param_from_param():
     settings_old = Parameter.create(name='settings', type='group', children=params)
 
     settings.child('main_settings', 'detector_type').setValue('new string')
-    utils.set_param_from_param(param_old=settings_old, param_new=settings)
+    putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
 
     settings.child('main_settings', 'DAQ_type').opts['limits'].append('new type')
     settings.child('main_settings', 'DAQ_type').setValue('new type')
-    utils.set_param_from_param(param_old=settings_old, param_new=settings)
+    putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'DAQ_type').value() == 'new type'
 
     settings.child('main_settings', 'detector_type').setValue('')
-    utils.set_param_from_param(param_old=settings_old, param_new=settings)
+    putils.set_param_from_param(param_old=settings_old, param_new=settings)
     assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
 
 

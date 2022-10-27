@@ -133,3 +133,33 @@ if __name__ == '__main__':              # pragma: no cover
 
     d['readonly'] = False
     print(parent[0]['children'][1]['children'])
+
+
+def set_param_from_param(param_old, param_new):
+    """
+        Walk through parameters children and set values using new parameter values.
+    """
+    for child_old in param_old.children():
+        # try:
+        path = param_old.childPath(child_old)
+        child_new = param_new.child(*path)
+        param_type = child_old.type()
+
+        if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
+            # try:
+            if 'list' in param_type:  # check if the value is in the limits of the old params (limits are usually set at initialization)
+                if child_new.value() not in child_old.opts['limits']:
+                    child_old.opts['limits'].append(child_new.value())
+
+                child_old.setValue(child_new.value())
+            elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
+                if child_new.value() != "":  # to make sure one doesnt overwrite something
+                    child_old.setValue(child_new.value())
+            else:
+                child_old.setValue(child_new.value())
+            # except Exception as e:
+            #    print(str(e))
+        else:
+            set_param_from_param(child_old, child_new)
+        # except Exception as e:
+        #    print(str(e))
