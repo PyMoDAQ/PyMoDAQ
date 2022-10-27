@@ -230,42 +230,6 @@ def get_data_dimension(arr, scan_type='scan1D', remove_scan_dimension=False):
     return arr.shape, f'{dimension}D', arr.size
 
 
-def scroll_log(scroll_val, min_val, max_val):
-    """
-    Convert a scroll value [0-100] to a log scale between min_val and max_val
-    Parameters
-    ----------
-    scroll
-    min_val
-    max_val
-    Returns
-    -------
-
-    """
-    assert scroll_val >= 0
-    assert scroll_val <= 100
-    value = scroll_val * (np.log10(max_val) - np.log10(min_val)) / 100 + np.log10(min_val)
-    return 10 ** value
-
-
-def scroll_linear(scroll_val, min_val, max_val):
-    """
-    Convert a scroll value [0-100] to a linear scale between min_val and max_val
-    Parameters
-    ----------
-    scroll
-    min_val
-    max_val
-    Returns
-    -------
-
-    """
-    assert scroll_val >= 0
-    assert scroll_val <= 100
-    value = scroll_val * (max_val - min_val) / 100 + min_val
-    return value
-
-
 def getLineInfo():
     """get information about where the Exception has been triggered"""
     tb = sys.exc_info()[2]

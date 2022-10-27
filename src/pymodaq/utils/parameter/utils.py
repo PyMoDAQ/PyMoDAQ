@@ -1,3 +1,6 @@
+import numpy as np
+
+
 def get_widget_from_tree(parameter_tree, widget_instance):
     widgets = []
     for item in parameter_tree.listAllItems():
@@ -163,3 +166,39 @@ def set_param_from_param(param_old, param_new):
             set_param_from_param(child_old, child_new)
         # except Exception as e:
         #    print(str(e))
+
+
+def scroll_log(scroll_val, min_val, max_val):
+    """
+    Convert a scroll value [0-100] to a log scale between min_val and max_val
+    Parameters
+    ----------
+    scroll
+    min_val
+    max_val
+    Returns
+    -------
+
+    """
+    assert scroll_val >= 0
+    assert scroll_val <= 100
+    value = scroll_val * (np.log10(max_val) - np.log10(min_val)) / 100 + np.log10(min_val)
+    return 10 ** value
+
+
+def scroll_linear(scroll_val, min_val, max_val):
+    """
+    Convert a scroll value [0-100] to a linear scale between min_val and max_val
+    Parameters
+    ----------
+    scroll
+    min_val
+    max_val
+    Returns
+    -------
+
+    """
+    assert scroll_val >= 0
+    assert scroll_val <= 100
+    value = scroll_val * (max_val - min_val) / 100 + min_val
+    return value

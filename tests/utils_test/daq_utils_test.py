@@ -150,7 +150,7 @@ class TestScroll:
         min_val = 50
         max_val = 51
         for scroll_val in range(101):
-            assert utils.scroll_log(scroll_val, min_val, max_val) == \
+            assert putils.scroll_log(scroll_val, min_val, max_val) == \
                    pytest.approx(10 ** (scroll_val * (np.log10(max_val) - np.log10(min_val)) / 100 + np.log10(min_val)),
                                  rel=1e-4)
 
@@ -158,7 +158,7 @@ class TestScroll:
         min_val = 50
         max_val = 51
         for scroll_val in range(101):
-            assert utils.scroll_linear(scroll_val, min_val, max_val) == \
+            assert putils.scroll_linear(scroll_val, min_val, max_val) == \
                    pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
 
 
