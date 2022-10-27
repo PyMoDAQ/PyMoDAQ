@@ -674,6 +674,7 @@ def count_lines(ini_path, count=0, filters=['lextab', 'yacctab','pycache', 'pyc'
                 pass
     return count
 
+
 def remove_spaces(string):
     """
     return a string without any white spaces in it
@@ -742,8 +743,6 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     return plugins
 
 
-
-
 def find_dict_if_matched_key_val(dict_tmp, key, value):
     """
     check if a key/value pair match in a given dictionnary
@@ -787,45 +786,6 @@ def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
         return None, -1
     else:
         return None
-
-
-def get_models(model_name=None):
-    """
-    Get PID Models as a list to instantiate Control Actuators per degree of liberty in the model
-
-    Returns
-    -------
-    list: list of disct containting the name and python module of the found models
-    """
-    from pymodaq.extensions.pid.utils import PIDModelGeneric
-    models_import = []
-    entry_points = metadata.entry_points()
-    if 'pymodaq.pid_models' in entry_points:
-        discovered_models = entry_points['pymodaq.pid_models']
-        for pkg in discovered_models:
-            try:
-                module = importlib.import_module(pkg.value)
-                module_name = pkg.value
-
-                for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
-                    try:
-                        model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
-                        classes = inspect.getmembers(model_module, inspect.isclass)
-                        for name, klass in classes:
-                            if klass.__base__ is PIDModelGeneric:
-                                models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
-                                break
-
-                    except Exception as e:  # pragma: no cover
-                        logger.warning(str(e))
-
-            except Exception as e:  # pragma: no cover
-                logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
-
-    if model_name is None:
-        return models_import
-    else:
-        return find_dict_in_list_from_key_val(models_import, 'name', model_name)
 
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover

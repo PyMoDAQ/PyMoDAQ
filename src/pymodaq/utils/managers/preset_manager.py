@@ -1,3 +1,4 @@
+from pymodaq.extensions import get_models
 import pymodaq.utils.config
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.gui_utils.file_io import select_file
@@ -18,7 +19,7 @@ preset_path = pymodaq.utils.config.get_set_preset_path()
 overshoot_path = pymodaq.utils.config.get_set_overshoot_path()
 layout_path = pymodaq.utils.config.get_set_layout_path()
 
-pid_models = [mod['name'] for mod in utils.get_models()]
+pid_models = [mod['name'] for mod in get_models()]
 
 
 class PresetManager:
@@ -68,7 +69,7 @@ class PresetManager:
 
     def get_set_pid_model_params(self, model_file):
         self.preset_params.child('model_settings').clearChildren()
-        model = utils.get_models(model_file)
+        model = get_models(model_file)
         if model is not None:
             params = model['class'].params
             self.preset_params.child('model_settings').addChildren(params)

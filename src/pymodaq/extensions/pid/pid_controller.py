@@ -4,7 +4,8 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal
 from pyqtgraph.widgets.SpinBox import SpinBox
 
 from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.daq_utils import ThreadCommand, get_models, find_dict_in_list_from_key_val
+from pymodaq.utils.daq_utils import ThreadCommand, find_dict_in_list_from_key_val
+from pymodaq.extensions import get_models
 from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree

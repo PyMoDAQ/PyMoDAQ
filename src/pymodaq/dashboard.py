@@ -14,8 +14,6 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 import numpy as np
 
-import extensions.utils
-import utils.parameter.utils
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.utils.gui_utils.layout as layout_mod
@@ -53,7 +51,7 @@ overshoot_path = configmod.get_set_overshoot_path()
 roi_path = configmod.get_set_roi_path()
 remote_path = configmod.get_set_remote_path()
 
-extensions = extmod.utils.get_extensions()
+extensions = extmod.get_extensions()
 
 
 class DashBoard(QObject):
@@ -676,7 +674,7 @@ class DashBoard(QObject):
                         path.extend(preset_path)
                         self.pid_module.settings.child(*path).setValue(child.value())
 
-                    model_class = utils.get_models(
+                    model_class = extmod.get_models(
                         self.preset_manager.preset_params.child('pid_models').value())['class']
                     for setp in model_class.setpoints_names:
                         self.add_move(setp, None, 'PID', move_docks, move_forms, actuators_modules)

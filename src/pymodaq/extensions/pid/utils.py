@@ -1,6 +1,13 @@
+import importlib
+import inspect
+import pkgutil
+from importlib import metadata
+from pathlib import Path
+
 from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.logger import get_module_name, set_logger
+from utils.daq_utils import logger, find_dict_in_list_from_key_val
 
 logger = set_logger(get_module_name(__file__))
 
@@ -176,3 +183,42 @@ def main(xmlfile):
         ret = msgBox.exec()
 
     sys.exit(app.exec_())
+
+
+def get_models(model_name=None):
+    """
+    Get PID Models as a list to instantiate Control Actuators per degree of liberty in the model
+
+    Returns
+    -------
+    list: list of disct containting the name and python module of the found models
+    """
+    from pymodaq.extensions.pid.utils import PIDModelGeneric
+    models_import = []
+    entry_points = metadata.entry_points()
+    if 'pymodaq.pid_models' in entry_points:
+        discovered_models = entry_points['pymodaq.pid_models']
+        for pkg in discovered_models:
+            try:
+                module = importlib.import_module(pkg.value)
+                module_name = pkg.value
+
+                for mod in pkgutil.iter_modules([str(Path(module.__file__).parent.joinpath('models'))]):
+                    try:
+                        model_module = importlib.import_module(f'{module_name}.models.{mod.name}', module)
+                        classes = inspect.getmembers(model_module, inspect.isclass)
+                        for name, klass in classes:
+                            if klass.__base__ is PIDModelGeneric:
+                                models_import.append({'name': mod.name, 'module': model_module, 'class': klass})
+                                break
+
+                    except Exception as e:  # pragma: no cover
+                        logger.warning(str(e))
+
+            except Exception as e:  # pragma: no cover
+                logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
+
+    if model_name is None:
+        return models_import
+    else:
+        return find_dict_in_list_from_key_val(models_import, 'name', model_name)
