@@ -19,27 +19,29 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
+from pymodaq.utils import data as data_mod
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
-from pymodaq.daq_utils.gui_utils.file_io import select_file
-import pymodaq.daq_utils.gui_utils.utils
-import pymodaq.daq_utils.scanner
-from pymodaq.daq_utils.tcp_server_client import TCPClient
-from pymodaq.daq_utils.gui_utils.widgets.lcd import LCD
-from pymodaq.daq_utils.config import Config, get_set_local_dir
-from pymodaq.daq_utils.h5modules import browse_data
-from pymodaq.daq_utils.daq_utils import ThreadCommand
-from pymodaq.daq_utils.parameter import ioxml
-from pymodaq.daq_utils.parameter import utils as putils
+from pymodaq.utils.gui_utils.file_io import select_file
+import pymodaq.utils.gui_utils.utils
+import pymodaq.utils.scanner
+from pymodaq.utils.tcp_server_client import TCPClient
+from pymodaq.utils.gui_utils.widgets.lcd import LCD
+from pymodaq.utils.config import Config, get_set_local_dir
+from pymodaq.utils.h5modules import browse_data
+from pymodaq.utils.daq_utils import ThreadCommand
+from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
-from pymodaq.daq_utils.h5modules import H5Saver
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.messenger import deprecation_msg
-from pymodaq.daq_utils.gui_utils import DockArea, get_splash_sc, Dock
-from pymodaq.daq_utils.managers.parameter_manager import ParameterManager, Parameter
+from pymodaq.utils.h5modules import H5Saver
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 config = Config()
 
 local_path = get_set_local_dir()
@@ -92,7 +94,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         # TODO
         # check the use case of controller_ID if None remove it
 
-        self.logger = utils.set_logger(f'{logger.name}.{title}')
+        self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
         QObject.__init__(self)
@@ -722,7 +724,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
                                 if data_dim == 'data2D' and 'Data2D' in self._viewer_types:
                                     ind_viewer = self._viewer_types.index('Data2D')
-                                    string = pymodaq.daq_utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
+                                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
                                     self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
             self.logger.exception(str(e))
@@ -791,7 +793,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                         for k in data[key]:
                             if data[key][k]['source'] != 'raw':
                                 name = f'{self._title}_{data["name"]}_{k}'
-                                self._data_to_save_export[key][name] = utils.DataToExport(**data[key][k])
+                                self._data_to_save_export[key][name] = data_mod.DataToExport(**data[key][k])
                                 # if name not in self._data_to_save_export[key]:
                                 #
                                 # self._data_to_save_export[key][name].update(data[key][k])
@@ -804,7 +806,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.grab_done_signal.emit(self._data_to_save_export)
 
     @Slot(list)
-    def show_temp_data(self, data: List[utils.DataFromPlugins]):
+    def show_temp_data(self, data: List[data_mod.DataFromPlugins]):
         """Send data to their dedicated viewers but those will not emit processed data signal
 
         Slot receiving data from plugins emitted with the `data_grabed_signal_temp`
@@ -818,7 +820,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.set_data_to_viewers(data, temp=True)
 
     @Slot(list)
-    def show_data(self, data: List[utils.DataFromPlugins]):
+    def show_data(self, data: List[data_mod.DataFromPlugins]):
         """Send data to their dedicated viewers but those will not emit processed data signal
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
@@ -956,7 +958,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             for ind_sub_data, dat in enumerate(data_arrays):
                 if 'labels' in data_tmp:
                     data_tmp.pop('labels')
-                subdata_tmp = utils.DataToExport(name=self._title, data=dat, **data_tmp)
+                subdata_tmp = data_mod.DataToExport(name=self._title, data=dat, **data_tmp)
                 sub_name = f'{self._title}_{name}_CH{ind_sub_data:03}'
                 if data_dim.lower() == 'data0d':
                     subdata_tmp['data'] = subdata_tmp['data'][0]
@@ -964,17 +966,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 elif data_dim.lower() == 'data1d':
                     if 'x_axis' not in subdata_tmp:
                         Nx = len(dat)
-                        x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
+                        x_axis = data_mod.Axis(data=np.linspace(0, Nx - 1, Nx))
                         subdata_tmp['x_axis'] = x_axis
                     data1D[sub_name] = subdata_tmp
                 elif data_dim.lower() == 'data2d':
                     if 'x_axis' not in subdata_tmp:
                         Nx = dat.shape[1]
-                        x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
+                        x_axis = data_mod.Axis(data=np.linspace(0, Nx - 1, Nx))
                         subdata_tmp['x_axis'] = x_axis
                     if 'y_axis' not in subdata_tmp:
                         Ny = dat.shape[0]
-                        y_axis = utils.Axis(data=np.linspace(0, Ny - 1, Ny))
+                        y_axis = data_mod.Axis(data=np.linspace(0, Ny - 1, Ny))
                         subdata_tmp['y_axis'] = y_axis
                     data2D[sub_name] = subdata_tmp
                 elif data_dim.lower() == 'datand':
@@ -1166,20 +1168,20 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         Returns
         -------
-        utils.ScalingOptions
+        pymodaq.utils.data.ScalingOptions
         """
-        scaling_options = utils.ScalingOptions(
-            scaled_xaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
-                                          units=self.settings.child('main_settings', 'axes', 'xaxis', 'xunits').value(),
-                                          offset=self.settings.child('main_settings', 'axes', 'xaxis',
+        scaling_options = data_mod.ScalingOptions(
+            scaled_xaxis=data_mod.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
+                                               units=self.settings.child('main_settings', 'axes', 'xaxis', 'xunits').value(),
+                                               offset=self.settings.child('main_settings', 'axes', 'xaxis',
                                                                      'xoffset').value(),
-                                          scaling=self.settings.child('main_settings', 'axes', 'xaxis',
+                                               scaling=self.settings.child('main_settings', 'axes', 'xaxis',
                                                                       'xscaling').value()),
-            scaled_yaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'yaxis', 'ylabel').value(),
-                                          units=self.settings.child('main_settings', 'axes', 'yaxis', 'yunits').value(),
-                                          offset=self.settings.child('main_settings', 'axes', 'yaxis',
+            scaled_yaxis=data_mod.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'yaxis', 'ylabel').value(),
+                                               units=self.settings.child('main_settings', 'axes', 'yaxis', 'yunits').value(),
+                                               offset=self.settings.child('main_settings', 'axes', 'yaxis',
                                                                      'yoffset').value(),
-                                          scaling=self.settings.child('main_settings', 'axes', 'yaxis',
+                                               scaling=self.settings.child('main_settings', 'axes', 'yaxis',
                                                                       'yscaling').value()))
         return scaling_options
 
@@ -1485,7 +1487,7 @@ class DAQ_Detector(QObject):
         super().__init__()
         self.waiting_for_data = False
         self.controller = None
-        self.logger = utils.set_logger(f'{logger.name}.{title}.detector')
+        self.logger = set_logger(f'{logger.name}.{title}.detector')
         self.detector_name = detector_name
         self.detector = None
         self.controller_adress = None
@@ -1673,7 +1675,7 @@ class DAQ_Detector(QObject):
         # datas validation check for backcompatibility with plugins not exporting new DataFromPlugins list of objects
 
         for dat in datas:
-            if not isinstance(dat, utils.DataFromPlugins):
+            if not isinstance(dat, data_mod.DataFromPlugins):
                 if 'type' in dat:
                     dat['dim'] = dat['type']
                     dat['type'] = 'raw'

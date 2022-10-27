@@ -12,12 +12,12 @@ import sys
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QToolBar, QComboBox
-from pymodaq.daq_utils.daq_utils import ThreadCommand
+from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.utils import ControlModuleUI, ViewerError
-from pymodaq.daq_utils.plotting.data_viewers import DATA_TYPES, Viewer0D, Viewer1D, Viewer2D, ViewerND
-from pymodaq.daq_utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
-from pymodaq.daq_utils.gui_utils import Dock
-from pymodaq.daq_utils.config import Config
+from pymodaq.utils.plotting.data_viewers import DATA_TYPES, Viewer0D, Viewer1D, Viewer2D, ViewerND
+from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
+from pymodaq.utils.gui_utils import Dock
+from pymodaq.utils.config import Config
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 config = Config()
 
@@ -53,7 +53,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     See Also
     --------
-    pymodaq.daq_utils.daq_utils.ThreadCommand
+    pymodaq.utils.daq_utils.ThreadCommand
     """
 
     command_sig = Signal(ThreadCommand)
@@ -428,8 +428,8 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
 
 def main(init_qt=True):
-    from pymodaq.daq_utils.gui_utils.dock import DockArea
-    from pymodaq.daq_utils.managers.parameter_manager import ParameterTree, Parameter
+    from pymodaq.utils.gui_utils.dock import DockArea
+    from pymodaq.utils.managers.parameter_manager import ParameterTree, Parameter
     from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 
     if init_qt:  # used for the test suite

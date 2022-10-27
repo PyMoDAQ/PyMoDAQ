@@ -4,12 +4,12 @@ Examples of custome parameter types derived from pyqtgraph
 """
 import sys
 
-import pymodaq.daq_utils.gui_utils.widgets.table
+import pymodaq.utils.gui_utils.widgets.table
 from qtpy import QtWidgets, QtCore
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from collections import OrderedDict
-from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils.parameter import pymodaq_ptypes
+from pymodaq.utils import gui_utils as gutils
+from pymodaq.utils.parameter import pymodaq_ptypes
 from pymodaq.resources.QtDesigner_Ressources import QtDesigner_ressources_rc
 
 
@@ -80,13 +80,13 @@ class ParameterEx:
             {'title': 'Table widget', 'name': 'tablewidget', 'type': 'table', 'value':
                 OrderedDict(key1='data1', key2=24), 'header': ['keys', 'limits'], 'height': 100},
             {'title': 'Table view', 'name': 'tabular_table', 'type': 'table_view',
-             'delegate': pymodaq.daq_utils.gui_utils.widgets.table.SpinBoxDelegate, 'menu': True,
-             'value': pymodaq.daq_utils.gui_utils.widgets.table.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),
+             'delegate': pymodaq.utils.gui_utils.widgets.table.SpinBoxDelegate, 'menu': True,
+             'value': pymodaq.utils.gui_utils.widgets.table.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),
              'tip': 'The advantage of the Table model lies in its modularity.\n For concrete examples see the'
                     'TableModelTabular and the TableModelSequential custom models in the'
-                    ' pymodaq.daq_utils.scanner module'},
+                    ' pymodaq.utils.scanner module'},
         ]},  # The advantage of the Table model lies in its modularity for concrete examples see the
-        # TableModelTabular and the TableModelSequential custom models in the pymodaq.daq_utils.scanner module
+        # TableModelTabular and the TableModelSequential custom models in the pymodaq.utils.scanner module
     ]
 
     def __init__(self, tree):

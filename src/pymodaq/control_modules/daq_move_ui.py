@@ -12,9 +12,9 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QToolBar, QComboBox
 
-from pymodaq.daq_utils.daq_utils import ThreadCommand
-from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
-from pymodaq.daq_utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
+from pymodaq.utils.daq_utils import ThreadCommand
+from pymodaq.utils.gui_utils.custom_app import CustomApp
+from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
 from pymodaq.control_modules.utils import ControlModuleUI
 
 
@@ -49,7 +49,7 @@ class DAQ_Move_UI(ControlModuleUI):
 
     See Also
     --------
-    pymodaq.daq_utils.daq_utils.ThreadCommand
+    pymodaq.utils.daq_utils.ThreadCommand
     """
 
     def __init__(self, parent, title="DAQ_Move"):
@@ -290,7 +290,7 @@ class DAQ_Move_UI(ControlModuleUI):
 
 
 def main(init_qt=True):
-    from pymodaq.daq_utils.gui_utils.dock import DockArea
+    from pymodaq.utils.gui_utils.dock import DockArea
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
 

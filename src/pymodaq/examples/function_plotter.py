@@ -9,20 +9,22 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Slot, QDate, QThread, QTimer
 
-from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
-from pymodaq.daq_utils.gui_utils.dock import DockArea, Dock
-from pymodaq.daq_utils.gui_utils.file_io import select_file
-from pymodaq.daq_utils.config import Config
+from pymodaq.utils import data as data_mod
+from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.gui_utils.custom_app import CustomApp
+from pymodaq.utils.gui_utils.dock import DockArea, Dock
+from pymodaq.utils.gui_utils.file_io import select_file
+from pymodaq.utils.config import Config
 
-from pymodaq.daq_utils import gui_utils as gutils
-from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.utils import gui_utils as gutils
+from pymodaq.utils import daq_utils as utils
 
-from pymodaq.daq_utils.parameter import ioxml
-from pymodaq.daq_utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.daq_utils.h5modules import H5Browser, H5Saver
+from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
+from pymodaq.utils.h5modules import H5Browser, H5Saver
 
 config = Config()
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 
 class FunctionPlotter(CustomApp):
@@ -111,8 +113,8 @@ class FunctionPlotter(CustomApp):
 
         function_vals = eval(f'np.{function_str}')
 
-        self.viewer.show_data([function_vals], labels=[function_str], x_axis=utils.Axis(x, label='An axis',
-                                                                                        units='arb. units'))
+        self.viewer.show_data([function_vals], labels=[function_str], x_axis=data_mod.Axis(x, label='An axis',
+                                                                                             units='arb. units'))
 
     def value_changed(self, param):
         if param.name() == 'add_function':

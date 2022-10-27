@@ -9,23 +9,26 @@ Contains all objects related to the DAQ_Scan module, to do automated scans, savi
 import sys
 from collections import OrderedDict
 import datetime
-from pymodaq.daq_utils.gui_utils.custom_app import CustomApp
-from pymodaq.daq_utils.gui_utils.dock import Dock
-from pymodaq.daq_utils.config import Config, get_set_preset_path
-import pymodaq.daq_utils.parameter.ioxml
+
+import utils.data
+from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.gui_utils.custom_app import CustomApp
+from pymodaq.utils.gui_utils.dock import Dock
+from pymodaq.utils.config import Config, get_set_preset_path
+import pymodaq.utils.parameter.ioxml
 import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
-
-from pymodaq.daq_utils.gui_utils.widgets import QLED
-from pymodaq.daq_utils import daq_utils as utils
-from pymodaq.daq_utils.h5modules import H5Logger
+from pymodaq.utils import data as data_mod
+from pymodaq.utils.gui_utils.widgets import QLED
+from pymodaq.utils import daq_utils as utils
+from pymodaq.utils.h5modules import H5Logger
 
 config = Config()
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 try:
     import sqlalchemy
-    from pymodaq.daq_utils.db.db_logger.db_logger import DataBaseLogger
+    from pymodaq.utils.db.db_logger.db_logger import DataBaseLogger
     is_sql = True
 except Exception as e:
     is_sql = False
@@ -189,17 +192,17 @@ class DAQ_Logger(CustomApp):
             self.logger.settings.child('N_saved').setValue(0)
 
             settings_str = b'<All_settings>'
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.dashboard.settings)
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                 self.dashboard.preset_manager.preset_params)
             if self.dashboard.settings.child('loaded_files', 'overshoot_file').value() != '':
-                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                     self.dashboard.overshoot_manager.overshoot_params)
             if self.dashboard.settings.child('loaded_files', 'roi_file').value() != '':
-                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                     self.dashboard.roi_saver.roi_presets)
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings)
-            settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.settings)
+            settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.logger.settings)
             settings_str += b'</All_settings>'
 
             if not self.logger.init_logger(settings_str):
@@ -226,12 +229,12 @@ class DAQ_Logger(CustomApp):
                 # create the detectors in the chosen logger
                 for mod in modules_log:
                     settings_str = b'<All_settings>'
-                    settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(mod.settings)
+                    settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(mod.settings)
 
                     if mod.module_type == 'DAQ_Viewer':
                         for viewer in mod.ui.viewers:
                             if hasattr(viewer, 'roi_manager'):
-                                settings_str += pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(
+                                settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
                                     viewer.roi_manager.settings)
                     settings_str += b'</All_settings>'
                     if mod.module_type == 'DAQ_Viewer':
@@ -433,8 +436,8 @@ class DAQ_Logging(QObject):
     def format_actuators_data(self, act_name, act_value):
         acq_time = datetime.datetime.now().timestamp()
         data = OrderedDict(name=act_name, acq_time_s=acq_time, control_module='DAQ_Move',
-                           data0D=OrderedDict(data=utils.DataToExport(name=act_name, dim='Data0D', source='raw',
-                                                                          data=np.array([act_value]))))
+                           data0D=OrderedDict(data=data_mod.DataToExport(name=act_name, dim='Data0D', source='raw',
+                                                                           data=np.array([act_value]))))
         self.do_save_continuous(data)
 
     def connect_actuators(self, connect=True):
@@ -498,7 +501,7 @@ class DAQ_Logging(QObject):
 def main():
     from pymodaq.dashboard import DashBoard
     from pathlib import Path
-    from pymodaq.daq_utils.gui_utils.dock import DockArea
+    from pymodaq.utils.gui_utils.dock import DockArea
 
     config = Config()
     app = QtWidgets.QApplication(sys.argv)

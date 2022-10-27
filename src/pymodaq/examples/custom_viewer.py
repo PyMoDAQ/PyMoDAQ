@@ -1,11 +1,11 @@
-from pymodaq.daq_utils.gui_utils.widgets.table import SpinBoxDelegate
-from  pymodaq.daq_utils.parameter.utils import get_widget_from_tree
-from pymodaq.daq_utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.daq_utils import gui_utils as gutils
+from pymodaq.utils.gui_utils.widgets.table import SpinBoxDelegate
+from  pymodaq.utils.parameter.utils import get_widget_from_tree
+from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+from pymodaq.utils import gui_utils as gutils
 from pyqtgraph.dockarea import Dock
 from pyqtgraph.parametertree import ParameterTree, Parameter
-from pymodaq.daq_utils.parameter.pymodaq_ptypes.tableview import TableViewCustom
-from pymodaq.daq_utils.scanner import TableModelTabular
+from pymodaq.utils.parameter.pymodaq_ptypes.tableview import TableViewCustom
+from pymodaq.utils.scanner import TableModelTabular
 from qtpy.QtCore import QObject, Qt, Slot
 from qtpy import QtWidgets
 
@@ -81,8 +81,8 @@ class ViewerPointList(QObject):
 
 
 if __name__ == '__main__':
-    from pymodaq.daq_utils.gui_utils import DockArea
-    from pymodaq.daq_utils.daq_utils import Axis
+    from pymodaq.utils.gui_utils import DockArea
+    from pymodaq.utils.data import Axis
     import sys
     import numpy as np
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     Ny = 200
     x = (np.linspace(0, Nx - 1, Nx) + 100) / 2
     y = (np.linspace(0, Ny - 1, Ny) - 10) * 2
-    from pymodaq.daq_utils.daq_utils import gauss2D
+    from pymodaq.utils.daq_utils import gauss2D
 
     data_red = 3 * gauss2D(x, np.mean(x), (np.max(x)-np.min(x)) / 5, y, np.mean(y), (np.max(y)-np.min(y)) / 5, 1)
     data_red += np.random.random(data_red.shape)
