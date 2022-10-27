@@ -1,13 +1,12 @@
 import os
 import sys
 from collections import OrderedDict
-from ctypes import CFUNCTYPE
 
 from pymodaq.utils import logger as logger_module
 from pymodaq.utils.config import get_set_preset_path, Config
 from pymodaq.utils.messenger import deprecation_msg
 if 'win32' in sys.platform:
-    from ctypes import WINFUNCTYPE
+    pass
 import datetime
 import importlib
 import inspect
@@ -192,10 +191,6 @@ def decode_data(encoded_data):
             item[QtCore.Qt.ItemDataRole(key)] = value.value()
         data.append(item)
     return data
-
-
-# ###################################
-# # Units conversion
 
 
 #############################
@@ -747,33 +742,6 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     return plugins
 
 
-def get_extensions():
-    """
-    Get pymodaq extensions as a list
-
-    Returns
-    -------
-    list: list of disct containting the name and module of the found extension
-    """
-    extension_import = []
-    entry_points = metadata.entry_points()
-    if 'pymodaq.extensions' in entry_points:
-        discovered_extension = entry_points['pymodaq.extensions']
-
-        for pkg in discovered_extension:
-            try:
-                module = importlib.import_module(pkg.value)
-                if hasattr(module, 'NICE_NAME'):
-                    name = module.NICE_NAME
-                else:
-                    name = pkg.value
-                extension = {'name': name, 'module': module}
-                extension_import.append(extension)
-
-            except Exception as e:  # pragma: no cover
-                logger.warning(f'Impossible to import the {pkg.value} extension: {str(e)}')
-
-    return extension_import
 
 
 def find_dict_if_matched_key_val(dict_tmp, key, value):
@@ -858,6 +826,7 @@ def get_models(model_name=None):
         return models_import
     else:
         return find_dict_in_list_from_key_val(models_import, 'name', model_name)
+
 
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
@@ -974,83 +943,6 @@ def zeros_aligned(n, align, dtype=np.uint32):
     return buff[start_index:start_index + nbytes].view(dtype)
 
 
-def cfunc(name, dll, result, *args):
-    """build and apply a ctypes prototype complete with parameter flags
-
-    Parameters
-    ----------
-    name: (str) function name in the dll
-    dll: (ctypes.windll) dll object
-    result : result is the type of the result (c_int,..., python function handle,...)
-    args: list of tuples with 3 or 4 elements each like (argname, argtype, in/out, default) where argname is the
-    name of the argument, argtype is the type, in/out is 1 for input and 2 for output, and default is an optional
-    default value.
-
-    Returns
-    -------
-    python function
-    """
-    atypes = []
-    aflags = []
-    for arg in args:
-        atypes.append(arg[1])
-        aflags.append((arg[2], arg[0]) + arg[3:])
-    return CFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
-
-
-def winfunc(name, dll, result, *args):
-    """build and apply a ctypes prototype complete with parameter flags
-    Parameters
-    ----------
-    name:(str) function name in the dll
-    dll: (ctypes.windll) dll object
-    result: result is the type of the result (c_int,..., python function handle,...)
-    args: list of tuples with 3 or 4 elements each like (argname, argtype, in/out, default) where argname is the
-    name of the argument, argtype is the type, in/out is 1 for input and 2 for output, and default is an optional
-    default value.
-
-    Returns
-    -------
-    python function
-    """
-    atypes = []
-    aflags = []
-    for arg in args:
-        atypes.append(arg[1])
-        aflags.append((arg[2], arg[0]) + arg[3:])
-    return WINFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
-
-
-def set_param_from_param(param_old, param_new):
-    """
-        Walk through parameters children and set values using new parameter values.
-    """
-    for child_old in param_old.children():
-        # try:
-        path = param_old.childPath(child_old)
-        child_new = param_new.child(*path)
-        param_type = child_old.type()
-
-        if 'group' not in param_type:  # covers 'group', custom 'groupmove'...
-            # try:
-            if 'list' in param_type:  # check if the value is in the limits of the old params (limits are usually set at initialization)
-                if child_new.value() not in child_old.opts['limits']:
-                    child_old.opts['limits'].append(child_new.value())
-
-                child_old.setValue(child_new.value())
-            elif 'str' in param_type or 'browsepath' in param_type or 'text' in param_type:
-                if child_new.value() != "":  # to make sure one doesnt overwrite something
-                    child_old.setValue(child_new.value())
-            else:
-                child_old.setValue(child_new.value())
-            # except Exception as e:
-            #    print(str(e))
-        else:
-            set_param_from_param(child_old, child_new)
-        # except Exception as e:
-        #    print(str(e))
-
-
 # ########################
 # #File management
 
@@ -1085,7 +977,6 @@ def get_new_file_name(base_path=Path(config('data_saving', 'h5file', 'save_path'
 
 # ##############
 # Math utilities
-
 # math utility functions, should now be imported from the math_utils module
 import pymodaq.utils.math_utils as mutils
 
