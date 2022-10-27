@@ -1,3 +1,4 @@
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from pymodaq.utils.managers.action_manager import addaction
 from qtpy import QtWidgets
@@ -20,7 +21,7 @@ import copy
 from pymodaq.utils.plotting.utils.signalND import Signal as SignalND
 import datetime
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 
 class ViewerND(QtWidgets.QWidget, QObject):

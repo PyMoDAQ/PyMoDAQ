@@ -1,6 +1,8 @@
 import logging
 import datetime
 from typing import List
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
 from qtpy import QtCore
 from contextlib import contextmanager
@@ -16,7 +18,7 @@ from pymodaq.utils.abstract.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 config = Config()
 
 

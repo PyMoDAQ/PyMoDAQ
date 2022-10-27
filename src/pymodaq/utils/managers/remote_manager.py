@@ -5,13 +5,14 @@ import pymodaq.utils.config
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtGui, QtWidgets
 
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.gui_utils import select_file
 from pyqtgraph.parametertree import Parameter, ParameterTree, registerParameterType
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 remote_path = pymodaq.utils.config.get_set_remote_path()
 remote_types = ['ShortCut', 'Joystick']
 

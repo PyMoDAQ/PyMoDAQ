@@ -1,6 +1,8 @@
 from collections import OrderedDict
 import datetime
 import numpy as np
+
+from pymodaq.utils.logger import set_logger
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from  pymodaq.utils.gui_utils.file_io import select_file
@@ -17,7 +19,7 @@ from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.h5modules import H5Browser, H5Saver
 
 config = Config()
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(utils.logger.get_module_name(__file__))
 
 
 class CustomAppExample(CustomApp):

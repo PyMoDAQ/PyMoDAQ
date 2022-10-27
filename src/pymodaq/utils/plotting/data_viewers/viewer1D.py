@@ -3,6 +3,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt
 from qtpy.QtGui import QIcon, QPixmap
 import sys
 
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import utils as putils
 #from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 DAQ_Measurement = None
@@ -17,7 +18,7 @@ from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.managers.roi_manager import ROIManager
 import datetime
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 
 class Viewer1D(QtWidgets.QWidget, QObject):

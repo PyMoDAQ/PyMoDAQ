@@ -4,7 +4,7 @@ from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Signal
 from pyqtgraph import LinearRegionItem
 
-from pymodaq.utils.daq_utils import set_logger, get_module_name
+from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 
 logger = set_logger(get_module_name(__file__))

@@ -1,11 +1,13 @@
 import random
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.control_modules.move_utility_classes import params as daq_move_params
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
 
 from pyqtgraph.parametertree.Parameter import registerParameterType
 from pyqtgraph.parametertree.parameterTypes.basetypes import GroupParameter
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
 DAQ_0DViewer_Det_types = utils.get_plugins('daq_0Dviewer')

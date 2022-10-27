@@ -14,6 +14,7 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 import numpy as np
 
+from pymodaq.utils.logger import set_logger
 from pymodaq.utils.gui_utils import DockArea, Dock, select_file
 import pymodaq.utils.gui_utils.layout as layout_mod
 from pymodaq.utils.messenger import messagebox
@@ -39,7 +40,7 @@ from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(utils.logger.get_module_name(__file__))
 
 config = configmod.Config()
 

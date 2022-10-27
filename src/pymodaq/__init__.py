@@ -12,7 +12,8 @@ try:
         __version__ = fvers.read().strip()
 
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
-    from pymodaq.utils.daq_utils import set_logger, copy_preset, setLocale, set_qt_backend
+    from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
+    from utils.logger import set_logger
     from pymodaq.utils.config import Config
 
     try:

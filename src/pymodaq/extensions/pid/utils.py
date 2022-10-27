@@ -1,5 +1,7 @@
 from pymodaq.utils.gui_utils.dock import DockArea
-from pymodaq.utils.daq_utils import get_plugins, set_logger, get_module_name
+from pymodaq.utils.daq_utils import get_plugins
+from pymodaq.utils.logger import get_module_name, set_logger
+
 logger = set_logger(get_module_name(__file__))
 
 DAQ_Move_Stage_type = get_plugins('daq_move')

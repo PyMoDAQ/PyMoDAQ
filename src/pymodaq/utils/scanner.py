@@ -1,6 +1,8 @@
 import sys
 from collections import OrderedDict
 import numpy as np
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Signal, Slot
@@ -18,7 +20,7 @@ import pymodaq.utils.parameter.pymodaq_ptypes as pymodaq_types  # to be placed a
 
 from pymodaq.utils.exceptions import ScannerException
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 config = Config()
 
 SCAN_TYPES = ['Scan1D', 'Scan2D', 'Sequential', 'Tabular']

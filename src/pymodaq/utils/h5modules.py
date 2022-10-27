@@ -5,6 +5,8 @@ import warnings
 import logging
 from copy import deepcopy
 from numbers import Number
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
 from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
@@ -36,7 +38,7 @@ from packaging import version as version_mod
 
 config = Config()
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 backends_available = []
 
 # default backend

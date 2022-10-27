@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+from pymodaq.utils.logger import set_logger
 from pymodaq.utils import config
 import pytest
 import re

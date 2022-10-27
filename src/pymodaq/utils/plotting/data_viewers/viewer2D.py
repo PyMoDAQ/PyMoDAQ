@@ -11,6 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewer2D_basic import ImageWidget
@@ -24,7 +25,7 @@ from pymodaq.utils.plotting.utils.filter import FilterFromCrosshair, FilterFromR
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils.exceptions import ViewerError
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 Gradients.update(OrderedDict([
     ('red', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),

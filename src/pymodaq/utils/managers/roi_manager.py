@@ -17,7 +17,8 @@ from pyqtgraph import ROI as pgROI
 from pyqtgraph import RectROI as pgRectROI
 from pyqtgraph import functions as fn
 from pyqtgraph import LinearRegionItem as pgLinearROI
-from pymodaq.utils.daq_utils import plot_colors, set_logger, get_module_name
+from pymodaq.utils.daq_utils import plot_colors
+from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.config import get_set_roi_path
 from pymodaq.utils.gui_utils import select_file
 import numpy as np

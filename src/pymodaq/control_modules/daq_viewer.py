@@ -19,6 +19,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
+from pymodaq.utils.logger import set_logger
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
 import pymodaq.utils.gui_utils.utils
@@ -39,7 +40,7 @@ from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(utils.logger.get_module_name(__file__))
 config = Config()
 
 local_path = get_set_local_dir()
@@ -92,7 +93,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         # TODO
         # check the use case of controller_ID if None remove it
 
-        self.logger = utils.set_logger(f'{logger.name}.{title}')
+        self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
         QObject.__init__(self)
@@ -1485,7 +1486,7 @@ class DAQ_Detector(QObject):
         super().__init__()
         self.waiting_for_data = False
         self.controller = None
-        self.logger = utils.set_logger(f'{logger.name}.{title}.detector')
+        self.logger = set_logger(f'{logger.name}.{title}.detector')
         self.detector_name = detector_name
         self.detector = None
         self.controller_adress = None

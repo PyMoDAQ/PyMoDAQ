@@ -3,9 +3,11 @@ from qtpy.QtCore import Slot, QObject, QThread, Signal, QLocale, QDateTime, QSiz
 import sys
 import pyqtgraph as pg
 import numpy as np
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import daq_utils as utils
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 
 class Viewer1DBasic(QObject):

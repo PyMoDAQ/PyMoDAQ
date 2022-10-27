@@ -11,6 +11,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
+from pymodaq.utils.logger import set_logger
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
@@ -28,7 +29,7 @@ from pymodaq.utils.messenger import deprecation_msg
 
 local_path = config.get_set_local_dir()
 sys.path.append(local_path)
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(utils.logger.get_module_name(__file__))
 DAQ_Move_Actuators = utils.get_plugins('daq_move')
 ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
 
@@ -74,7 +75,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             The unique (should be unique) string identifier for the underlying actuator
         """
 
-        self.logger = utils.set_logger(f'{logger.name}.{title}')
+        self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Move: {title}')
 
         QObject.__init__(self)
@@ -689,7 +690,7 @@ class DAQ_Move_Hardware(QObject):
 
     def __init__(self, actuator_type, position, title='actuator'):
         super().__init__()
-        self.logger = utils.set_logger(f'{logger.name}.{title}.actuator')
+        self.logger = set_logger(f'{logger.name}.{title}.actuator')
         self._title = title
         self.hardware = None
         self.actuator_type = actuator_type

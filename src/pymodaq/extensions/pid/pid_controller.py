@@ -4,8 +4,8 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal
 from pyqtgraph.widgets.SpinBox import SpinBox
 
 from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
-    get_models, find_dict_in_list_from_key_val
+from pymodaq.utils.daq_utils import ThreadCommand, get_models, find_dict_in_list_from_key_val
+from pymodaq.utils.logger import get_module_name, set_logger
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
@@ -16,6 +16,7 @@ from simple_pid import PID
 import time
 
 logger = set_logger(get_module_name(__file__))
+
 
 def convert_output_limits(lim_min=-10., min_status=False, lim_max=10., max_status=False):
     output = [None, None]

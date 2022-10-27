@@ -1,4 +1,5 @@
 import pymodaq.utils.config
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.file_io import select_file
 from qtpy import QtWidgets
 import sys
@@ -9,7 +10,7 @@ from pymodaq.utils import daq_utils as utils
 from pathlib import Path
 import pymodaq.utils.managers.preset_manager_utils  # to register move and det types
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 # check if preset_mode directory exists on the drive
 pid_path = pymodaq.utils.config.get_set_pid_path()

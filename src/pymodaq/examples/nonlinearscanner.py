@@ -1,5 +1,7 @@
 
 import numpy as np
+
+from pymodaq.utils.logger import set_logger
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from pymodaq.utils.config import Config, get_set_preset_path
@@ -11,7 +13,7 @@ from pymodaq.utils import daq_utils as utils
 
 
 config = Config()
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(utils.logger.get_module_name(__file__))
 
 
 class NonLinearScanner(CustomApp):

@@ -17,6 +17,7 @@ import pymodaq.utils.gui_utils.file_io
 import pymodaq.utils.gui_utils.utils
 import pymodaq.utils.gui_utils.widgets.spinbox
 import pymodaq.utils.messenger
+from pymodaq.utils.logger import set_logger
 from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.managers.action_manager import QAction
 import pymodaq.utils.parameter.ioxml
@@ -40,7 +41,7 @@ from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.h5modules import H5Saver
 
 config = Config()
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(utils.logger.get_module_name(__file__))
 
 
 class DAQ_Scan(QObject):

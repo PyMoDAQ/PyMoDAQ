@@ -2,13 +2,14 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import sys
 import pymodaq.utils.daq_utils as utils
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer0D_GUI import Ui_Form
 
 import numpy as np
 from collections import OrderedDict
 import datetime
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 
 class Viewer0D(QtWidgets.QWidget, QObject):

@@ -1,3 +1,4 @@
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.file_io import select_file
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtCore import Qt, QObject, Slot, Signal
@@ -21,7 +22,7 @@ navigator_path = os.path.join(local_path, 'navigator_temp_files')
 if not os.path.isdir(navigator_path):
     os.makedirs(navigator_path)
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 
 Ntick = 128
 colors_red = np.array([(int(r), 0, 0) for r in np.linspace(0, 255, Ntick)])

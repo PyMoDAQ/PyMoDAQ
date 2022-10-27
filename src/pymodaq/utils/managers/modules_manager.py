@@ -2,12 +2,14 @@ from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import time
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
-logger = utils.set_logger(utils.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 config = Config()
 
 class ModulesManager(QObject, ParameterManager):
