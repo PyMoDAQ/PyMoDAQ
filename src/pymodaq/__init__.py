@@ -4,6 +4,27 @@ import sys
 from pint import UnitRegistry
 from pathlib import Path
 
+import warnings
+
+
+def check_qt_presence():
+    try:
+        from qtpy import QtWidgets
+    except ImportError as e:
+        msg = f"\n\n" \
+              f"****************************************************************************************\n" \
+              f"No Qt backend could be found in your system, please install either pyqt5/6 or pyside2/6.\n\n" \
+              f"pyqt5 is still preferred, while pyqt6 should mostly work.\n\n" \
+              f"do:\n" \
+              f"pip install pyqt5\n for instance\n"\
+              f"****************************************************************************************\n"
+        warnings.warn(msg, FutureWarning, 2)
+        sys.exit()
+
+
+check_qt_presence()
+
+
 try:
     with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
         __version__ = fvers.read().strip()
@@ -11,7 +32,7 @@ try:
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
     from pymodaq.utils import data
     from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
-    from utils.logger import set_logger
+    from pymodaq.utils.logger import set_logger
     from pymodaq.utils.config import Config
 
     try:
