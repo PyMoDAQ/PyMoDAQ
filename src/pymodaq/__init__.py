@@ -12,7 +12,7 @@ try:
         __version__ = fvers.read().strip()
 
     # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
-    from .daq_utils.daq_utils import set_logger, copy_preset, setLocale, set_qt_backend
+    from .utils.daq_utils import set_logger, copy_preset, setLocale, set_qt_backend
     from pymodaq.utils.config import Config
 
     try:
@@ -76,7 +76,6 @@ sys.modules['pymodaq.daq_utils.calibration_camera'] = import_module('.calibratio
 sys.modules['pymodaq.daq_utils.chrono_timer'] = import_module('.chrono_timer', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.config'] = import_module('.config', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.conftests'] = import_module('.conftests', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.custom_parameter_tree'] = import_module('.custom_parameter_tree', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.daq_enums'] = import_module('.daq_enums', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.daq_utils'] = import_module('.daq_utils', 'pymodaq.utils')
 try:
@@ -141,12 +140,6 @@ sys.modules['pymodaq.daq_utils.plotting.scan_selector'] = import_module('.plotti
 sys.modules['pymodaq.daq_utils.plotting.utils.filter'] = import_module('.plotting.utils.filter', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.utils.plot_utils'] = import_module('.plotting.utils.plot_utils', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.utils.signalND'] = import_module('.plotting.utils.signalND', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.viewer0D.viewer0D_main'] = import_module('.plotting.viewer0D.viewer0D_main', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.viewer1D.viewer1Dbasic'] = import_module('.plotting.viewer1D.viewer1Dbasic', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.viewer1D.viewer1D_main'] = import_module('.plotting.viewer1D.viewer1D_main', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.viewer2D.viewer_2D_basic'] = import_module('.plotting.viewer2D.viewer_2D_basic', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.viewer2D.viewer_2D_main'] = import_module('.plotting.viewer2D.viewer_2D_main', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.viewerND.viewerND_main'] = import_module('.plotting.viewerND.viewerND_main', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.qvariant'] = import_module('.qvariant', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.scanner'] = import_module('.scanner', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.tcp_server_client'] = import_module('.tcp_server_client', 'pymodaq.utils')
