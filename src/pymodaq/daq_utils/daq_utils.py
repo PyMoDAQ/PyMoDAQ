@@ -1080,9 +1080,9 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
                     else:
                         importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
                     plugins_import.append(mod)
-                except Exception:  # pragma: no cover
+                except Exception as e:  # pragma: no cover
                     pass
-        except Exception:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
             pass
 
     #add utility plugin for PID
