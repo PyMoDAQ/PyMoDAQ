@@ -3,7 +3,25 @@ import os
 import sys
 from pint import UnitRegistry
 from pathlib import Path
+import warnings
 
+
+def check_qt_presence():
+    try:
+        from qtpy import QtWidgets
+    except ImportError as e:
+        msg = f"\n\n" \
+              f"****************************************************************************************\n" \
+              f"No Qt backend could be found in your system, please install either pyqt5/6 or pyside2/6.\n\n" \
+              f"pyqt5 is still preferred, while pyqt6 should mostly work.\n\n" \
+              f"do:\n" \
+              f"pip install pyqt5\n for instance\n"\
+              f"****************************************************************************************\n"
+        warnings.warn(msg, FutureWarning, 2)
+        sys.exit()
+
+
+check_qt_presence()
 
 
 try:
