@@ -6,6 +6,8 @@ Created the 08/03/2022
 """
 import pytest
 import numpy as np
+
+import utils.units
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import daq_utils as utils
 
@@ -116,7 +118,7 @@ class TestMath:
             mutils.gauss2D(x, x0, dx, y, y0, dy, n) == pytest.approx(mutils.gauss2D(x, x0, dy, y, y0, dx, n, 90)))
 
     def test_ftAxis(self):
-        omega_max = utils.l2w(800)
+        omega_max = utils.units.l2w(800)
         Npts = 1024
         omega_grid, time_grid = mutils.ftAxis(Npts, omega_max)
         assert len(omega_grid) == Npts
@@ -142,8 +144,8 @@ class TestMath:
             assert utils.ftAxis_time(0, time_max)
 
     def test_ft(self):
-        omega_max = utils.l2w(300)
-        omega0 = utils.l2w(800)
+        omega_max = utils.units.l2w(300)
+        omega0 = utils.units.l2w(800)
         Npts = 2 ** 10
         omega_grid, time_grid = mutils.ftAxis(Npts, omega_max)
         signal_temp = np.sin(omega0 * time_grid) * mutils.gauss1D(time_grid, 0, 100, 1)
@@ -159,8 +161,8 @@ class TestMath:
             mutils.ft(signal_temp, "40")
 
     def test_ift(self):
-        omega_max = utils.l2w(300)
-        omega0 = utils.l2w(800)
+        omega_max = utils.units.l2w(300)
+        omega0 = utils.units.l2w(800)
         Npts = 2 ** 10
         omega_grid, time_grid = mutils.ftAxis(Npts, omega_max)
         signal_temp = np.sin(omega0 * time_grid) * mutils.gauss1D(time_grid, 0, 100, 1)

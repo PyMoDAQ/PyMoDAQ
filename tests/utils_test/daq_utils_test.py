@@ -1,7 +1,8 @@
 import numpy as np
 import os
 
-from pymodaq.utils.logger import set_logger
+import utils.units
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import config
 import pytest
 import re
@@ -75,37 +76,37 @@ class TestJsonConverter:
 
 class TestUnits:
     def test_Enm2cmrel(self):
-        assert utils.Enm2cmrel(520, 515) == pytest.approx(186.70649738)
+        assert utils.units.Enm2cmrel(520, 515) == pytest.approx(186.70649738)
 
     def test_Ecmrel2Enm(self):
-        assert utils.Ecmrel2Enm(500, 515) == pytest.approx(528.6117526)
+        assert utils.units.Ecmrel2Enm(500, 515) == pytest.approx(528.6117526)
 
     def test_eV2nm(self):
-        assert utils.eV2nm(1.55) == pytest.approx(799.89811299)
+        assert utils.units.eV2nm(1.55) == pytest.approx(799.89811299)
 
     def test_nm2eV(self):
-        assert utils.nm2eV(800) == pytest.approx(1.54980259)
+        assert utils.units.nm2eV(800) == pytest.approx(1.54980259)
 
     def test_E_J2eV(self):
-        assert utils.E_J2eV(1e-18) == pytest.approx(6.24151154)
+        assert utils.units.E_J2eV(1e-18) == pytest.approx(6.24151154)
 
     def test_eV2cm(self):
-        assert utils.eV2cm(0.07) == pytest.approx(564.5880342655)
+        assert utils.units.eV2cm(0.07) == pytest.approx(564.5880342655)
 
     def test_nm2cm(self):
-        assert utils.nm2cm(0.04) == pytest.approx(0.0000025)
+        assert utils.units.nm2cm(0.04) == pytest.approx(0.0000025)
 
     def test_cm2nm(self):
-        assert utils.cm2nm(1e5) == pytest.approx(100)
+        assert utils.units.cm2nm(1e5) == pytest.approx(100)
 
     def test_eV2E_J(self):
-        assert utils.eV2E_J(800) == pytest.approx(1.2817408e-16)
+        assert utils.units.eV2E_J(800) == pytest.approx(1.2817408e-16)
 
     def test_eV2radfs(self):
-        assert utils.eV2radfs(1.55) == pytest.approx(2.3548643)
+        assert utils.units.eV2radfs(1.55) == pytest.approx(2.3548643)
 
     def test_l2w(self):
-        assert utils.l2w(800) == pytest.approx(2.35619449)
+        assert utils.units.l2w(800) == pytest.approx(2.35619449)
 
 
 class TestString:
@@ -439,7 +440,7 @@ class TestGetSet:
 
     def test_get_module_name(self):
         config_path = config.get_set_config_path()
-        assert utils.logger.get_module_name(config_path) == 'config'
+        assert get_module_name(config_path) == 'config'
 
 
 def test_zeros_aligned():
