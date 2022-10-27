@@ -14,6 +14,7 @@ from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 from time import perf_counter
 import numpy as np
 
+import extensions.utils
 import utils.parameter.utils
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils import DockArea, Dock, select_file
@@ -33,10 +34,8 @@ from pymodaq.utils import config as configmod
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
-from pymodaq.extensions.daq_scan import DAQ_Scan
-from pymodaq.extensions.daq_logger import DAQ_Logger
-from pymodaq.extensions.pid.pid_controller import DAQ_PID
-from pymodaq.extensions import console
+from pymodaq import extensions as extmod
+
 from pymodaq_plugin_manager.manager import PluginManager
 from pymodaq_plugin_manager.validate import get_pypi_pymodaq
 
@@ -54,7 +53,7 @@ overshoot_path = configmod.get_set_overshoot_path()
 roi_path = configmod.get_set_roi_path()
 remote_path = configmod.get_set_remote_path()
 
-extensions = utils.get_extensions()
+extensions = extmod.utils.get_extensions()
 
 
 class DashBoard(QObject):
@@ -173,7 +172,7 @@ class DashBoard(QObject):
             win = QtWidgets.QMainWindow()
         area = DockArea()
         win.setCentralWidget(area)
-        self.scan_module = DAQ_Scan(dockarea=area, dashboard=self)
+        self.scan_module = extmod.DAQ_Scan(dockarea=area, dashboard=self)
         self.extensions['DAQ_Scan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()
@@ -184,7 +183,7 @@ class DashBoard(QObject):
             win = QtWidgets.QMainWindow()
         area = DockArea()
         win.setCentralWidget(area)
-        self.log_module = DAQ_Logger(dockarea=area, dashboard=self)
+        self.log_module = extmod.DAQ_Logger(dockarea=area, dashboard=self)
         self.extensions['DAQ_Logger'] = self.log_module
         self.log_module.status_signal.connect(self.add_status)
         win.show()
@@ -198,7 +197,7 @@ class DashBoard(QObject):
         dockarea = DockArea()
         self.pid_window.setCentralWidget(dockarea)
         self.pid_window.setWindowTitle('PID Controller')
-        self.pid_module = DAQ_PID(dockarea=dockarea)
+        self.pid_module = extmod.DAQ_PID(dockarea=dockarea)
         self.pid_module.set_module_manager(self.detector_modules, self.actuators_modules)
         self.extensions['DAQ_PID'] = self.pid_module
         self.pid_window.show()
@@ -207,9 +206,9 @@ class DashBoard(QObject):
     def load_console(self):
         dock_console = Dock('QTConsole')
         self.dockarea.addDock(dock_console, 'bottom')
-        qtconsole = console.QtConsole(style_sheet=config('style', 'syntax_highlighting'),
+        qtconsole = extmod.QtConsole(style_sheet=config('style', 'syntax_highlighting'),
                                     syntax_style=config('style', 'syntax_highlighting'),
-                                    custom_banner=console.BANNER)
+                                    custom_banner=extmod.console.BANNER)
         dock_console.addWidget(qtconsole)
         self.extensions['qtconsole'] = qtconsole
 
