@@ -1,4 +1,4 @@
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 from pymodaq.utils.managers.action_manager import addaction
 from qtpy import QtWidgets

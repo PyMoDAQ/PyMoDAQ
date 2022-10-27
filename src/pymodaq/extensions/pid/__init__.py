@@ -1,7 +1,7 @@
 import importlib
 from pathlib import Path
 
-from pymodaq.utils.logger import set_logger
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import daq_utils as utils
 logger = set_logger('move_plugins', add_to_console=False)
 

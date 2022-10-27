@@ -19,7 +19,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq.utils.logger import set_logger
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
 import pymodaq.utils.gui_utils.utils
@@ -40,7 +40,7 @@ from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
 
-logger = set_logger(utils.logger.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 config = Config()
 
 local_path = get_set_local_dir()

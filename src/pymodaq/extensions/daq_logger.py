@@ -10,7 +10,7 @@ import sys
 from collections import OrderedDict
 import datetime
 
-from pymodaq.utils.logger import set_logger
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.dock import Dock
 from pymodaq.utils.config import Config, get_set_preset_path
@@ -24,7 +24,7 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.h5modules import H5Logger
 
 config = Config()
-logger = set_logger(utils.logger.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 try:
     import sqlalchemy
     from pymodaq.utils.db.db_logger.db_logger import DataBaseLogger

@@ -1,5 +1,5 @@
 import pymodaq.utils.config
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.gui_utils.file_io import select_file
 from qtpy import QtWidgets
 import sys

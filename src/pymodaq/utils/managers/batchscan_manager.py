@@ -7,7 +7,7 @@ import sys
 import os
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter import pymodaq_ptypes
 from pymodaq.utils.managers import preset_manager_utils

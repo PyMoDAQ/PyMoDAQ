@@ -4,9 +4,6 @@ import sys
 from pint import UnitRegistry
 from pathlib import Path
 
-from qtpy import QtWidgets, QtGui
-from qtpy.QtCore import Qt
-
 try:
     with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
         __version__ = fvers.read().strip()

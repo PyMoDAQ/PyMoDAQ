@@ -3,7 +3,7 @@ from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import time
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
 from pyqtgraph.parametertree import Parameter, ParameterTree

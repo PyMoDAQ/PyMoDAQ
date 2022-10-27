@@ -2,7 +2,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import sys
 import pymodaq.utils.daq_utils as utils
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer0D_GUI import Ui_Form
 
 import numpy as np

@@ -5,7 +5,7 @@ from qtpy.QtCore import QObject, Slot, Signal, QTimer
 from easydict import EasyDict as edict
 import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.parameter.utils as putils
-from pymodaq.utils.logger import set_logger
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.parameter import ioxml
 from pyqtgraph.parametertree import Parameter
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
@@ -15,7 +15,7 @@ from pymodaq.utils.messenger import deprecation_msg
 import numpy as np
 from time import perf_counter
 
-logger = set_logger(utils.logger.get_module_name(__file__))
+logger = set_logger(get_module_name(__file__))
 config = Config()
 
 comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},

@@ -9,8 +9,9 @@ import warnings
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-from utils.config import get_set_config_path
-from utils.daq_utils import config
+from pymodaq.utils.config import get_set_config_path, Config
+
+config = Config()
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None,

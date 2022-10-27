@@ -5,7 +5,7 @@ import pymodaq.utils.config
 from qtpy.QtCore import QObject, Signal
 from qtpy import QtGui, QtWidgets
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.gui_utils import select_file

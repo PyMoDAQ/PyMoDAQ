@@ -7,7 +7,7 @@ from pyqtgraph import ROI, RectROI, PolyLineROI, Point
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pyqtgraph.dockarea import Dock
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.gui_utils import DockArea
 from pymodaq.utils.plotting.utils.plot_utils import QVector
 from pymodaq.utils import daq_utils as utils

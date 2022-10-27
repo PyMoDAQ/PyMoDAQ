@@ -2,7 +2,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.config import Config
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Signal, Slot

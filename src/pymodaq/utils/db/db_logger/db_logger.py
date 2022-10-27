@@ -2,7 +2,7 @@ import logging
 import datetime
 from typing import List
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.config import Config
 from qtpy import QtCore
 from contextlib import contextmanager

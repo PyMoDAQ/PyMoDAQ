@@ -3,7 +3,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt
 from qtpy.QtGui import QIcon, QPixmap
 import sys
 
-from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.parameter import utils as putils
 #from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 DAQ_Measurement = None
