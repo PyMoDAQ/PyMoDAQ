@@ -70,6 +70,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         Parameters
         ----------
         parent: QWidget or None
+        parent: QWidget or None
             if it is a valid QWidget, it will hold the user interface to drive it
         title: str
             The unique (should be unique) string identifier for the underlying actuator

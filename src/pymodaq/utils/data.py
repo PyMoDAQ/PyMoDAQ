@@ -7,26 +7,14 @@ Created the 27/10/2022
 import numbers
 from collections import OrderedDict
 import numpy as np
-from pymodaq.utils.daq_enums import BaseEnum
+from typing import List, Union
+import warnings
+from time import time
+
+
 
 DATASOURCES = ('raw', 'roi')
 DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
-
-
-class DataDims(BaseEnum):
-    Data0D = 0
-    Data1D = 1
-    Data2D = 2
-    DataND = 3
-
-
-class DataSource(BaseEnum):
-    raw = 0
-    roi = 1
-
-
-class DataSourceError(Exception):
-    pass
 
 
 class AxisBase(dict):
@@ -119,6 +107,9 @@ class ScalingOptions(dict):
         self['scaled_xaxis'] = scaled_xaxis
         self['scaled_yaxis'] = scaled_yaxis
 
+
+class DataSourceError(Exception):
+    pass
 
 class Data(OrderedDict):
     def __init__(self, name='', source='raw', distribution='uniform', x_axis: Axis = None,
