@@ -4,6 +4,8 @@ import sys
 from pint import UnitRegistry
 from pathlib import Path
 
+
+
 try:
     with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
         __version__ = fvers.read().strip()

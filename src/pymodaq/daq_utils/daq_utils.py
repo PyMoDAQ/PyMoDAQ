@@ -150,7 +150,10 @@ def set_qt_backend():
         logger.info(f"{config('qtbackend', 'backend')} Qt backend loaded")
         logger.info('************************')
     else:
-        logger.critical(f"No Qt backend could be found in your system, plese install either pyqt5/6 or pyside2/6")
+        msg = f"No Qt backend could be found in your system, please install either pyqt5/6 or pyside2/6." \
+              f"pyqt5 is still preferred, while pyqt6 should mostly work."
+        logger.critical(msg)
+        print(msg.upper())
 
 
 class JsonConverter:
