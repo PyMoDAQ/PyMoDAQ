@@ -60,6 +60,13 @@ def is_64bits():
     return sys.maxsize > 2**32
 
 
+def convert_daq_type_data_dim(item: str):
+    if item in DATADIMS:
+        return f'DAQ{4:}'
+    elif 'DAQ' in item:
+        return f'Data{3:}'
+
+
 def timer(func):
     """Print the runtime of the decorated function"""
     @functools.wraps(func)
@@ -1131,10 +1138,10 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
                     else:
                         importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
                     plugins_import.append(mod)
-                except Exception:  # pragma: no cover
+                except Exception as e:  # pragma: no cover
                     pass
-        except Exception:  # pragma: no cover
-            pass
+        except Exception as e:  # pragma: no cover
+            logger.warning(str(e))
 
     #add utility plugin for PID
     if plugin_type == 'daq_move':
@@ -1330,7 +1337,7 @@ def get_new_file_name(base_path=Path(config('data_saving', 'h5file', 'save_path'
 # Math utilities
 
 # math utility functions, should now be imported from the math_utils module
-import pymodaq.daq_utils.math_utils as mutils
+import pymodaq.utils.math_utils as mutils
 
 def my_moment(x, y):
     deprecation_msg(f'my_moment function should now be imported from the {mutils.__name__} module', stacklevel=3)

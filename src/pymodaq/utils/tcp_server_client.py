@@ -10,12 +10,12 @@ import socket
 import select
 import numpy as np
 
-import pymodaq.daq_utils.parameter.ioxml
-import pymodaq.daq_utils.parameter.utils
-import pymodaq.daq_utils.parameter.pymodaq_ptypes
-from pymodaq.daq_utils.daq_utils import getLineInfo, ThreadCommand, DataFromPlugins
-from pymodaq.daq_utils import math_utils as mutils
-from pymodaq.daq_utils.config import Config
+from pymodaq.utils.parameter import ioxml
+from  pymodaq.utils.parameter import utils as putils
+import pymodaq.utils.parameter.pymodaq_ptypes
+from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand, DataFromPlugins
+from pymodaq.utils import math_utils as mutils
+from pymodaq.utils.config import Config
 from pyqtgraph.parametertree import Parameter
 from collections import OrderedDict
 from typing import List
@@ -420,7 +420,7 @@ class TCPClient(QObject):
                 self.socket.send_list(path)
 
                 # send value
-                data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
+                data = ioxml.parameter_to_xml_string(param)
                 self.socket.send_string(data)
 
         elif command.command == 'position_is':
@@ -472,7 +472,7 @@ class TCPClient(QObject):
             self.cmd_signal.emit(ThreadCommand('connected', ))
             self.socket.send_string(self.client_type)
 
-            self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
+            self.send_infos_xml(ioxml.parameter_to_xml_string(self.settings))
             for command in extra_commands:
                 if isinstance(command, ThreadCommand):
                     self.cmd_signal.emit(command)
@@ -854,7 +854,7 @@ class TCPServer(QObject):
     def read_infos(self, sock=None, infos=''):
         if sock is not None:
             infos = sock.get_string()
-        params = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(infos)
+        params = ioxml.XML_string_to_parameter(infos)
 
         param_state = {'title': 'Infos Client:', 'name': 'settings_client', 'type': 'group', 'children': params}
         self.settings.child(('settings_client')).restoreState(param_state)
@@ -864,7 +864,7 @@ class TCPServer(QObject):
             path = sock.get_list()
             param_xml = sock.get_string()
         try:
-            param_dict = pymodaq.daq_utils.parameter.ioxml.XML_string_to_parameter(param_xml)[0]
+            param_dict = ioxml.XML_string_to_parameter(param_xml)[0]
         except Exception as e:
             raise Exception(f'Invalid xml structure for TCP server settings: {str(e)}')
         try:
@@ -885,7 +885,7 @@ class TCPServer(QObject):
             info = sock.get_string()
             data = sock.get_string()
 
-        if info not in pymodaq.daq_utils.parameter.utils.iter_children(self.settings.child(('infos')), []):
+        if info not in putils.iter_children(self.settings.child(('infos')), []):
             self.settings.child('infos').addChild({'name': info, 'type': 'str', 'value': data})
             pass
         else:
@@ -985,7 +985,7 @@ class Grabber(QObject):
 
 if __name__ == '__main__':  # pragma: no cover
     import sys
-    from pymodaq.daq_utils.parameter import ioxml
+    from pymodaq.utils.parameter import ioxml
 
     app = QtWidgets.QApplication(sys.argv)
     mockdata_grabber = MockDataGrabber('2D')

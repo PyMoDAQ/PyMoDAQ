@@ -612,7 +612,7 @@ class ROISaver:
 
         """
 
-        children = pymodaq.utils.parameter.ioxml.XML_file_to_parameter(filename)
+        children = ioxml.XML_file_to_parameter(filename)
         self.roi_presets = Parameter.create(title='roi', name='rois', type='group', children=children)
 
         det_children = [child for child in self.roi_presets.children() if 'det' in child.opts['name']]
@@ -656,7 +656,7 @@ class ROISaver:
                 det_param.addChild(viewer_param)
             self.roi_presets.addChild(det_param)
 
-        pymodaq.utils.parameter.ioxml.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path, file))
+        ioxml.parameter_to_xml_file(self.roi_presets, os.path.join(roi_path, file))
         self.show_rois()
 
     def show_rois(self):
@@ -687,6 +687,6 @@ class ROISaver:
             # save managers parameters in a xml file
             # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
             # start = os.path.join("..",'daq_scan')
-            pymodaq.utils.parameter.ioxml.parameter_to_xml_file(
+            ioxml.parameter_to_xml_file(
                 self.roi_presets, os.path.join(roi_path, self.roi_presets.child('filename').value()))
 
