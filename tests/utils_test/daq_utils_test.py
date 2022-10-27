@@ -1,19 +1,30 @@
 import numpy as np
 import os
 
-import pymodaq.utils.config
+from pymodaq.utils import config
 import pytest
 import re
-
 from pymodaq.utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pathlib import Path
 import datetime
+from pymodaq.control_modules.utils import DAQ_TYPES
+
+DATADIMS = utils.DATADIMS
 
 
 class MockEntryPoints:
     def __init__(self, value):
         self.value = value
+
+
+@pytest.mark.parametrize("daq_type, datadim", [(daq, datadim) for daq, datadim in zip(DAQ_TYPES,DATADIMS)])
+def test_convert_daq_type_data_dim(daq_type, datadim):
+    assert utils.convert_daq_type_data_dim(daq_type) == datadim
+    assert utils.convert_daq_type_data_dim(datadim) == daq_type
+
+    with pytest.raises(ValueError):
+        utils.convert_daq_type_data_dim('DAQ5D')
 
 
 def test_get_version():
@@ -22,7 +33,7 @@ def test_get_version():
 
 
 def test_get_set_local_dir():
-    local_path = pymodaq.utils.config.get_set_local_dir()
+    local_path = config.get_set_local_dir()
     assert Path(local_path).is_dir()
 
 
@@ -30,8 +41,8 @@ def test_check_config():
     dict1 = {'name': 'test', 'status': True}
     dict2 = {'name': 'test_2', 'status': False}
     dict3 = {'status': None}
-    assert not pymodaq.utils.config.check_config(dict1, dict2)
-    assert pymodaq.utils.config.check_config(dict1, dict3)
+    assert not config.check_config(dict1, dict2)
+    assert config.check_config(dict1, dict3)
     assert dict1 == {'name': 'test', 'status': True}
     assert dict2 == {'name': 'test_2', 'status': False}
     assert dict3 == {'status': None, 'name': 'test'}
@@ -378,56 +389,56 @@ def test_check_vals_in_iterable():
 
 class TestGetSet:
     def test_get_set_config_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        config_path = pymodaq.utils.config.get_set_config_path()
+        local_path = config.get_set_local_dir()
+        config_path = config.get_set_config_path()
         assert Path(config_path) == Path(local_path).joinpath('config')
         assert Path(config_path).is_dir()
 
     def test_get_set_preset_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        preset_path = pymodaq.utils.config.get_set_preset_path()
+        local_path = config.get_set_local_dir()
+        preset_path = config.get_set_preset_path()
         assert Path(preset_path) == Path(local_path).joinpath('preset_configs')
         assert Path(preset_path).is_dir()
 
     def test_get_set_pid_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        pid_path = pymodaq.utils.config.get_set_pid_path()
+        local_path = config.get_set_local_dir()
+        pid_path = config.get_set_pid_path()
         assert Path(pid_path) == Path(local_path).joinpath('pid_configs')
         assert Path(pid_path).is_dir()
 
     def test_get_set_log_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        log_path = pymodaq.utils.config.get_set_log_path()
+        local_path = config.get_set_local_dir()
+        log_path = config.get_set_log_path()
         assert Path(log_path) == Path(local_path).joinpath('log')
         assert Path(log_path).is_dir()
 
     def test_get_set_layout_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        layout_path = pymodaq.utils.config.get_set_layout_path()
+        local_path = config.get_set_local_dir()
+        layout_path = config.get_set_layout_path()
         assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
         assert Path(layout_path).is_dir()
 
     def test_get_set_remote_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        remote_path = pymodaq.utils.config.get_set_remote_path()
+        local_path = config.get_set_local_dir()
+        remote_path = config.get_set_remote_path()
         assert Path(remote_path) == Path(local_path).joinpath('remote_configs')
         assert Path(remote_path).is_dir()
 
     def test_get_set_overshoot_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        overshoot_path = pymodaq.utils.config.get_set_overshoot_path()
+        local_path = config.get_set_local_dir()
+        overshoot_path = config.get_set_overshoot_path()
         assert Path(overshoot_path) == Path(local_path).joinpath('overshoot_configs')
         assert Path(overshoot_path).is_dir()
 
     def test_get_set_roi_path(self):
-        local_path = pymodaq.utils.config.get_set_local_dir()
-        roi_path = pymodaq.utils.config.get_set_roi_path()
+        local_path = config.get_set_local_dir()
+        roi_path = config.get_set_roi_path()
         assert Path(roi_path) == Path(local_path).joinpath('roi_configs')
         assert Path(roi_path).is_dir()
 
     def test_get_module_name(self):
-        config_path = pymodaq.utils.config.get_set_config_path()
-        assert utils.get_module_name(config_path) == 'config'
+        config_path = config.get_set_config_path()
+        assert utils.logger.get_module_name(config_path) == 'config'
 
 
 def test_zeros_aligned():

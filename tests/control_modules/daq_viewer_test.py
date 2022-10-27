@@ -52,7 +52,6 @@ class TestMethods:
         assert ControlModule.init_hardware_ui != DAQ_Viewer.init_hardware_ui
 
 
-
 class TestWithoutUI:
     def test_instanciation(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
