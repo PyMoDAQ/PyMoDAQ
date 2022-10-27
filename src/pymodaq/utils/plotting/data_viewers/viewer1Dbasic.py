@@ -4,7 +4,7 @@ import sys
 import pyqtgraph as pg
 import numpy as np
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import daq_utils as utils
 
 logger = set_logger(get_module_name(__file__))

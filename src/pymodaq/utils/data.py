@@ -6,11 +6,14 @@ Created the 27/10/2022
 """
 import numbers
 from collections import OrderedDict
-
 import numpy as np
 
-from utils.daq_utils import DATADIMS, DATASOURCES
-from utils.exceptions import DataSourceError
+DATASOURCES = ('raw', 'roi')
+DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
+
+
+class DataSourceError(Exception):
+    pass
 
 
 class AxisBase(dict):
@@ -277,3 +280,10 @@ class DataToExport(Data):
     def __repr__(self):
         return f'{self.__class__.__name__}: <name: {self["name"]}> - <distribution: {self["distribution"]}>' \
                f' - <source: {self["source"]}> - <dim: {self["dim"]}>'
+
+
+def convert_daq_type_data_dim(item: str):
+    if item in DATADIMS:
+        return f'DAQ{4:}'
+    elif 'DAQ' in item:
+        return f'Data{3:}'

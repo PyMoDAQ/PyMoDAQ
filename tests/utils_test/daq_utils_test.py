@@ -1,6 +1,7 @@
 import numpy as np
 import os
 
+import utils.data
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.parameter import utils as putils
 import utils.units
@@ -14,7 +15,7 @@ from pathlib import Path
 import datetime
 from pymodaq.control_modules.utils import DAQ_TYPES
 
-DATADIMS = utils.DATADIMS
+DATADIMS = utils.data.DATADIMS
 
 
 class MockEntryPoints:
@@ -24,11 +25,11 @@ class MockEntryPoints:
 
 @pytest.mark.parametrize("daq_type, datadim", [(daq, datadim) for daq, datadim in zip(DAQ_TYPES,DATADIMS)])
 def test_convert_daq_type_data_dim(daq_type, datadim):
-    assert utils.convert_daq_type_data_dim(daq_type) == datadim
-    assert utils.convert_daq_type_data_dim(datadim) == daq_type
+    assert utils.data.convert_daq_type_data_dim(daq_type) == datadim
+    assert utils.data.convert_daq_type_data_dim(datadim) == daq_type
 
     with pytest.raises(ValueError):
-        utils.convert_daq_type_data_dim('DAQ5D')
+        utils.data.convert_daq_type_data_dim('DAQ5D')
 
 
 def test_get_version():

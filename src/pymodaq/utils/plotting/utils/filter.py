@@ -29,7 +29,7 @@ class Filter:
             if filtered_data is not None and self._slot_to_send_data is not None:
                 self._slot_to_send_data(filtered_data)
 
-    def _filter_data(self, data: utils.data.DataFromPlugins):
+    def _filter_data(self, data: data_mod.DataFromPlugins):
         raise NotImplementedError
 
 
@@ -50,7 +50,7 @@ class FilterFromCrosshair(Filter):
         self.crosshair = crosshair
         self._x, self._y = 0., 0.
 
-    def _filter_data(self, datas: utils.data.DataFromPlugins):
+    def _filter_data(self, datas: data_mod.DataFromPlugins):
         data_dict = dict([])
         if datas is not None:
             self._x, self._y = self.crosshair.get_positions()
@@ -152,7 +152,7 @@ class FilterFromRois(Filter):
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
 
-    def _filter_data(self, datas: utils.data.DataFromPlugins) -> dict:
+    def _filter_data(self, datas: data_mod.DataFromPlugins) -> dict:
         data_dict = dict([])
         if datas is not None:
             for roi_key, roi in self._ROIs.items():

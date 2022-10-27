@@ -20,7 +20,6 @@ from pymodaq.utils import logger as logger_module
 from pymodaq.utils.config import get_set_preset_path, Config
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.qvariant import QVariant
-from pymodaq.utils import data as data_mod
 
 if 'win32' in sys.platform:
     pass
@@ -37,15 +36,16 @@ logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 plot_colors = [(255, 255, 255), (255, 0, 0), (0, 255, 0), (0, 0, 255), (14, 207, 189), (207, 14, 166), (207, 204, 14)]
 config = Config()
 
-DATASOURCES = ('raw', 'roi')
-DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
-
 
 def __getattr__(name):
     if name in ['Axis', 'NavAxis', 'ScaledAxis', 'ScalingOptions', 'Data', 'DataTimeStamped', 'DataFromPlugins',
                 'DataToEmit', 'DataToExport']:
-        return importlib.import_module(f'.{name}', 'pymodaq.utils.data')
-
+        data_mod = importlib.import_module('.data', 'pymodaq.utils')
+        deprecation_msg('Loading Axis or Data and their derived classes from daq_utils is deprecated, import them from'
+                        ' pymodaq.utils.data module', 3)
+        return getattr(data_mod, name)
+    else:
+        raise AttributeError
 
 
 def load_config():
@@ -71,13 +71,6 @@ def get_module_name(*args, **kwargs):
 
 def is_64bits():
     return sys.maxsize > 2**32
-
-
-def convert_daq_type_data_dim(item: str):
-    if item in DATADIMS:
-        return f'DAQ{4:}'
-    elif 'DAQ' in item:
-        return f'Data{3:}'
 
 
 def timer(func):
