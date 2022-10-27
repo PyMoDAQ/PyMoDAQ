@@ -13,7 +13,8 @@ import numpy as np
 from pymodaq.utils.parameter import ioxml
 from  pymodaq.utils.parameter import utils as putils
 import pymodaq.utils.parameter.pymodaq_ptypes
-from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand, DataFromPlugins
+from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand
+from pymodaq.utils.data import DataFromPlugins
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.config import Config
 from pyqtgraph.parametertree import Parameter

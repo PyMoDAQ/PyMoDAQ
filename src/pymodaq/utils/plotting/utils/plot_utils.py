@@ -1,4 +1,6 @@
 from multipledispatch import dispatch
+
+from pymodaq.utils import data as data_mod
 from pymodaq.utils.plotting.items.axis_scaled import AxisItem_Scaled
 from qtpy import QtGui, QtCore
 import pyqtgraph as pg
@@ -337,8 +339,8 @@ class AxisInfosExtractor:
         return scaling, offset, label, units
 
     @staticmethod
-    @dispatch(utils.Axis)
-    def extract_axis_info(axis: utils.Axis):
+    @dispatch(data_mod.Axis)
+    def extract_axis_info(axis: data_mod.Axis):
         data = None
         if 'data' in axis:
             data = axis['data']

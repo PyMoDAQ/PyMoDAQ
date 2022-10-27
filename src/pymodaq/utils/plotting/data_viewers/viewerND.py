@@ -8,7 +8,7 @@ import sys
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
-from pymodaq.utils.daq_utils import Axis
+from pymodaq.utils.data import Axis
 from collections import OrderedDict
 import numpy as np
 from pyqtgraph.parametertree import Parameter, ParameterTree

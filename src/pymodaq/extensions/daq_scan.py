@@ -17,7 +17,8 @@ import pymodaq.utils.gui_utils.file_io
 import pymodaq.utils.gui_utils.utils
 import pymodaq.utils.gui_utils.widgets.spinbox
 import pymodaq.utils.messenger
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils import data as data_mod
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.managers.action_manager import QAction
 import pymodaq.utils.parameter.ioxml
@@ -620,15 +621,15 @@ class DAQ_Scan(QObject):
                         if len(self.scan_data_1D[:, 0]) > 1:  # means data are 1D (so save corresponding axis)
                             if scan_type == 'Scan1D' or \
                                     (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1):
-                                datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(
+                                datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(
                                     data=self.scan_x_axis,
                                     units=self.modules_manager.actuators[0].settings.child(
                                         'move_settings', 'units').value(),
                                     label=self.modules_manager.actuators[0].title)
                             else:
-                                datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(data=self.scan_x_axis,
-                                                                                             units='',
-                                                                                             label='Scan indexes')
+                                datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(data=self.scan_x_axis,
+                                                                                                  units='',
+                                                                                                  label='Scan indexes')
 
                     for ind_channel, channel in enumerate(datas):  # list of OrderedDict
                         channel_group = self.h5saver.add_CH_group(live_group, title=channel)
@@ -643,13 +644,13 @@ class DAQ_Scan(QObject):
                         averaged_datas['Scan_Data_{:03d}'.format(ind)]['data'] = self.scan_data_1D_average[:, ind]
                         if scan_type == 'Scan1D' or \
                                 (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1):
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(
                                 data=self.scan_x_axis,
                                 units=self.modules_manager.actuators[0].settings.child(
                                     'move_settings', 'units').value(),
                                 label=self.modules_manager.actuators[0].title)
                         else:
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = utils.Axis(
+                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(
                                 data=self.scan_x_axis, units='', label='Scan indexes')
 
                     for ind_channel, channel in enumerate(averaged_datas):  # list of OrderedDict
@@ -1175,15 +1176,15 @@ class DAQ_Scan(QObject):
                 x_axis_to_plot = np.squeeze(self.scan_x_axis)
 
             if not display_as_sequence:
-                x_axis = utils.Axis(data=x_axis_to_plot,
-                                    label=self.modules_manager.actuators[0].title,
-                                    units=self.modules_manager.actuators[0].settings.child('move_settings',
+                x_axis = data_mod.Axis(data=x_axis_to_plot,
+                                         label=self.modules_manager.actuators[0].title,
+                                         units=self.modules_manager.actuators[0].settings.child('move_settings',
                                                                                            'units').value())
             else:
                 if isadaptive:
-                    x_axis = utils.Axis(data=x_axis_to_plot, label='Curvilinear value', units='')
+                    x_axis = data_mod.Axis(data=x_axis_to_plot, label='Curvilinear value', units='')
                 else:
-                    x_axis = utils.Axis(data=x_axis_to_plot, label='Scan index', units='')
+                    x_axis = data_mod.Axis(data=x_axis_to_plot, label='Scan index', units='')
 
             #self.ui.scan1D_graph.x_axis = x_axis
             self.ui.scan1D_graph.show_data(data_to_plot, x_axis=x_axis)
@@ -1260,28 +1261,28 @@ class DAQ_Scan(QObject):
                         self.scan_data_2D = [np.zeros((len(self.scan_y_axis),
                                                        len(self.scan_x_axis2D)))
                                              for ind in range(min((3, len(datas))))]
-                    self.ui.scan2D_graph.x_axis = utils.Axis(data=self.scan_x_axis2D,
-                                                       units=self.modules_manager.actuators[0].settings.child(
+                    self.ui.scan2D_graph.x_axis = data_mod.Axis(data=self.scan_x_axis2D,
+                                                                  units=self.modules_manager.actuators[0].settings.child(
                                                            'move_settings', 'units').value(),
-                                                       label=self.modules_manager.actuators[0].title)
-                    self.ui.scan2D_graph.y_axis = utils.Axis(data=self.scan_y_axis,
-                                                       units=self.modules_manager.actuators[1].settings.child(
+                                                                  label=self.modules_manager.actuators[0].title)
+                    self.ui.scan2D_graph.y_axis = data_mod.Axis(data=self.scan_y_axis,
+                                                                  units=self.modules_manager.actuators[1].settings.child(
                                                            'move_settings', 'units').value(),
 
-                                                       label=self.modules_manager.actuators[1].title)
+                                                                  label=self.modules_manager.actuators[1].title)
                     size = (self.scanner.scan_parameters.steps[0] / self.ui.scan2D_graph.x_axis.axis_scaling,
                             self.scanner.scan_parameters.steps[1] / self.ui.scan2D_graph.y_axis.axis_scaling)
                     self.ui.scan2D_graph.move_scale_roi_target(size=size)
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.ui.average2D_graph.x_axis = utils.Axis(data=self.scan_x_axis2D,
-                                                              units=self.modules_manager.actuators[0].settings.child(
+                        self.ui.average2D_graph.x_axis = data_mod.Axis(data=self.scan_x_axis2D,
+                                                                         units=self.modules_manager.actuators[0].settings.child(
                                                                   'move_settings', 'units').value(),
-                                                              label=self.modules_manager.actuators[0].title)
-                        self.ui.average2D_graph.y_axis = utils.Axis(data=self.scan_y_axis,
-                                                              units=self.modules_manager.actuators[1].settings.child(
+                                                                         label=self.modules_manager.actuators[0].title)
+                        self.ui.average2D_graph.y_axis = data_mod.Axis(data=self.scan_y_axis,
+                                                                         units=self.modules_manager.actuators[1].settings.child(
                                                                   'move_settings', 'units').value(),
-                                                              label=self.modules_manager.actuators[1].title)
+                                                                         label=self.modules_manager.actuators[1].title)
                         self.scan_data_2D_average = [np.zeros((len(self.scanner.scan_parameters.axis_2D_2),
                                                                len(self.scanner.scan_parameters.axis_2D_1)))
                                                      for ind in range(min((3, len(datas))))]
@@ -1301,7 +1302,7 @@ class DAQ_Scan(QObject):
                                 (self.ind_average * self.scan_data_2D_average[ind_plot][
                                     ind_pos_axis_2, ind_pos_axis_1] + datas[
                                     keys[ind_plot]]['data']) / (self.ind_average + 1)
-                    self.ui.scan2D_graph.show_data(utils.DataFromPlugins(dim='Data2D', data=self.scan_data_2D))
+                    self.ui.scan2D_graph.show_data(data_mod.DataFromPlugins(dim='Data2D', data=self.scan_data_2D))
 
                     if self.settings.child('scan_options', 'scan_average').value() > 1:
                         self.ui.average2D_graph.setImage(*self.scan_data_2D_average)
@@ -1339,15 +1340,15 @@ class DAQ_Scan(QObject):
                         else:
                             self.scan_x_axis2D = np.array(self.scanner.scan_parameters.positions[:, 0])
 
-                        x_axis = utils.Axis(data=self.scan_x_axis2D,
-                                            label=self.modules_manager.actuators[0].title,
-                                            units=self.modules_manager.actuators[0].settings.child('move_settings',
+                        x_axis = data_mod.Axis(data=self.scan_x_axis2D,
+                                                 label=self.modules_manager.actuators[0].title,
+                                                 units=self.modules_manager.actuators[0].settings.child('move_settings',
                                                                                                    'units').value())
 
                     else:
-                        x_axis = utils.Axis(data=self.scan_x_axis2D,
-                                            label='Scan index',
-                                            units='')
+                        x_axis = data_mod.Axis(data=self.scan_x_axis2D,
+                                                 label='Scan index',
+                                                 units='')
                         self.scan_x_axis2D = np.linspace(0, Nx - 1, Nx)
 
                     self.ui.scan2D_graph.x_axis = x_axis
@@ -1371,9 +1372,9 @@ class DAQ_Scan(QObject):
                             units = self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].axis_settings['units']
 
                     self.ui.scan2D_graph.y_axis =\
-                        utils.Axis(data=self.scan_y_axis,
-                                   units=units,
-                                   label=f'{self.modules_manager.detectors_all[ind_plot_det].title} {label}')
+                        data_mod.Axis(data=self.scan_y_axis,
+                                        units=units,
+                                        label=f'{self.modules_manager.detectors_all[ind_plot_det].title} {label}')
                     self.scan_data_2D = []
                     self.scan_data_2D_average = []
                     for ind, key in enumerate(datas):

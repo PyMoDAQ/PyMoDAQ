@@ -3,6 +3,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt
 from qtpy.QtGui import QIcon, QPixmap
 import sys
 
+from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.parameter import utils as putils
 #from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
@@ -454,7 +455,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
             for ind, data in enumerate(datas):
-                self.data_to_export['data1D']['CH{:03d}'.format(ind)] = utils.DataToExport()
+                self.data_to_export['data1D']['CH{:03d}'.format(ind)] = data_mod.DataToExport()
 
             if self.plot_channels == [] or self.plot_channels is None:  # initialize data and plots
                 self.ini_data_plots(len(datas))
@@ -514,7 +515,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
             for ind, key in enumerate(self.lo_items):
                 self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
                 self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] =\
-                    utils.DataToExport(name=self.title, data=np.array([data_lo[ind]]), source='roi')
+                    data_mod.DataToExport(name=self.title, data=np.array([data_lo[ind]]), source='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
             for ind, key in enumerate(self.lo_items):
@@ -531,7 +532,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
         for ind, res in enumerate(data_meas):
             self.measure_data_dict["Meas.{}:".format(ind)] = res
             self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] = \
-                utils.DataToExport(name=self.title, data=np.array([res]), source='roi')
+                data_mod.DataToExport(name=self.title, data=np.array([res]), source='roi')
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)
@@ -583,8 +584,8 @@ class Viewer1D(QtWidgets.QWidget, QObject):
                                                          pxMode=True)
                 if self.ui.zoom_pb.isChecked():
                     self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
-                x_axis = utils.Axis(data=self.x_axis, units=self.axis_settings['units'],
-                                    label=self.axis_settings['label'])
+                x_axis = data_mod.Axis(data=self.x_axis, units=self.axis_settings['units'],
+                                         label=self.axis_settings['label'])
                 self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(
                     OrderedDict(name=self.title, data=data, x_axis=x_axis, source='raw'))  # to be saved or exported
 

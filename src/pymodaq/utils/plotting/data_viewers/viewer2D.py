@@ -11,6 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
+from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -595,7 +596,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
 
-    @Slot(utils.DataFromPlugins)
+    @Slot(data_mod.DataFromPlugins)
     def display_images(self, datas):
         self.data_displayer.update_data(datas)
         if self.is_action_checked('isocurve'):
@@ -823,19 +824,19 @@ class Viewer2D(ViewerBase):
             distribution = 'spread'
             data_list = [data_spread]
 
-        datas = utils.DataFromPlugins(name='', distribution=distribution, data=data_list)
+        datas = data_mod.DataFromPlugins(name='', distribution=distribution, data=data_list)
         return datas
 
     def set_gradient(self, image_key, gradient):
         """convenience function"""
         self.view.histogrammer.set_gradient(image_key, 'grey')
 
-    def _show_data(self, datas: utils.DataFromPlugins):
+    def _show_data(self, datas: data_mod.DataFromPlugins):
         """
         numpy arrays to be plotted and eventually filtered using ROI...
         Parameters
         ----------
-        datas: (utils.DataToExport)
+        datas: (data_mod.DataToExport)
 
         """
 
@@ -948,7 +949,7 @@ class Viewer2D(ViewerBase):
             self.crosshair_changed()
         self.sig_double_clicked.emit(posx, posy)
 
-    def set_scaling_axes(self, scaling_options: utils.ScalingOptions):
+    def set_scaling_axes(self, scaling_options: data_mod.ScalingOptions):
         """
         metod used to update the scaling of the right and top axes in order to translate pixels to real coordinates
         scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))
@@ -998,19 +999,19 @@ class Viewer2D(ViewerBase):
         for roi_key, lineout_data in roi_dict.items():
             if not self._display_temporary:
                 self.data_to_export['data1D'][f'{self.title}_Hlineout_{roi_key}'] = \
-                    utils.DataToExport(name=self.title, data=lineout_data.hor_data, source='roi',
-                                       x_axis=utils.Axis(data=lineout_data.hor_axis,
-                                                         units=self.x_axis.axis_units,
-                                                         label=self.x_axis.axis_label))
+                    data_mod.DataToExport(name=self.title, data=lineout_data.hor_data, source='roi',
+                                            x_axis=data_mod.Axis(data=lineout_data.hor_axis,
+                                                                   units=self.x_axis.axis_units,
+                                                                   label=self.x_axis.axis_label))
 
                 self.data_to_export['data1D'][f'{self.title}_Vlineout_{roi_key}'] = \
-                    utils.DataToExport(name=self.title, data=lineout_data.ver_data, source='roi',
-                                       x_axis=utils.Axis(data=lineout_data.ver_axis,
-                                                         units=self.y_axis.axis_units,
-                                                         label=self.y_axis.axis_units))
+                    data_mod.DataToExport(name=self.title, data=lineout_data.ver_data, source='roi',
+                                            x_axis=data_mod.Axis(data=lineout_data.ver_axis,
+                                                                   units=self.y_axis.axis_units,
+                                                                   label=self.y_axis.axis_units))
 
                 self.data_to_export['data0D'][f'{self.title}_Integrated_{roi_key}'] = \
-                    utils.DataToExport(name=self.title, data=lineout_data.int_data, source='roi', )
+                    data_mod.DataToExport(name=self.title, data=lineout_data.int_data, source='roi', )
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
 
@@ -1059,7 +1060,7 @@ def main_controller():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    prog.show_data(data_mod.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
     #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     #prog.ROI_select_signal.connect(print_roi_select)

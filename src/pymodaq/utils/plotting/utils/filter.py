@@ -1,5 +1,7 @@
 import numpy as np
 from qtpy.QtCore import QPointF, Slot
+
+from pymodaq.utils import data as data_mod
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.items.crosshair import Crosshair
@@ -21,13 +23,13 @@ class Filter:
     def set_active(self, activate=True):
         self._is_active = activate
 
-    def filter_data(self, data: utils.DataFromPlugins):
+    def filter_data(self, data: data_mod.DataFromPlugins):
         if self._is_active:
             filtered_data = self._filter_data(data)
             if filtered_data is not None and self._slot_to_send_data is not None:
                 self._slot_to_send_data(filtered_data)
 
-    def _filter_data(self, data: utils.DataFromPlugins):
+    def _filter_data(self, data: utils.data.DataFromPlugins):
         raise NotImplementedError
 
 
@@ -48,7 +50,7 @@ class FilterFromCrosshair(Filter):
         self.crosshair = crosshair
         self._x, self._y = 0., 0.
 
-    def _filter_data(self, datas: utils.DataFromPlugins):
+    def _filter_data(self, datas: utils.data.DataFromPlugins):
         data_dict = dict([])
         if datas is not None:
             self._x, self._y = self.crosshair.get_positions()
@@ -150,7 +152,7 @@ class FilterFromRois(Filter):
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
 
-    def _filter_data(self, datas: utils.DataFromPlugins) -> dict:
+    def _filter_data(self, datas: utils.data.DataFromPlugins) -> dict:
         data_dict = dict([])
         if datas is not None:
             for roi_key, roi in self._ROIs.items():

@@ -19,7 +19,8 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils import data as data_mod
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
 import pymodaq.utils.gui_utils.utils
@@ -792,7 +793,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                         for k in data[key]:
                             if data[key][k]['source'] != 'raw':
                                 name = f'{self._title}_{data["name"]}_{k}'
-                                self._data_to_save_export[key][name] = utils.DataToExport(**data[key][k])
+                                self._data_to_save_export[key][name] = data_mod.DataToExport(**data[key][k])
                                 # if name not in self._data_to_save_export[key]:
                                 #
                                 # self._data_to_save_export[key][name].update(data[key][k])
@@ -805,7 +806,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.grab_done_signal.emit(self._data_to_save_export)
 
     @Slot(list)
-    def show_temp_data(self, data: List[utils.DataFromPlugins]):
+    def show_temp_data(self, data: List[data_mod.DataFromPlugins]):
         """Send data to their dedicated viewers but those will not emit processed data signal
 
         Slot receiving data from plugins emitted with the `data_grabed_signal_temp`
@@ -819,7 +820,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.set_data_to_viewers(data, temp=True)
 
     @Slot(list)
-    def show_data(self, data: List[utils.DataFromPlugins]):
+    def show_data(self, data: List[data_mod.DataFromPlugins]):
         """Send data to their dedicated viewers but those will not emit processed data signal
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
@@ -957,7 +958,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             for ind_sub_data, dat in enumerate(data_arrays):
                 if 'labels' in data_tmp:
                     data_tmp.pop('labels')
-                subdata_tmp = utils.DataToExport(name=self._title, data=dat, **data_tmp)
+                subdata_tmp = data_mod.DataToExport(name=self._title, data=dat, **data_tmp)
                 sub_name = f'{self._title}_{name}_CH{ind_sub_data:03}'
                 if data_dim.lower() == 'data0d':
                     subdata_tmp['data'] = subdata_tmp['data'][0]
@@ -965,17 +966,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 elif data_dim.lower() == 'data1d':
                     if 'x_axis' not in subdata_tmp:
                         Nx = len(dat)
-                        x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
+                        x_axis = data_mod.Axis(data=np.linspace(0, Nx - 1, Nx))
                         subdata_tmp['x_axis'] = x_axis
                     data1D[sub_name] = subdata_tmp
                 elif data_dim.lower() == 'data2d':
                     if 'x_axis' not in subdata_tmp:
                         Nx = dat.shape[1]
-                        x_axis = utils.Axis(data=np.linspace(0, Nx - 1, Nx))
+                        x_axis = data_mod.Axis(data=np.linspace(0, Nx - 1, Nx))
                         subdata_tmp['x_axis'] = x_axis
                     if 'y_axis' not in subdata_tmp:
                         Ny = dat.shape[0]
-                        y_axis = utils.Axis(data=np.linspace(0, Ny - 1, Ny))
+                        y_axis = data_mod.Axis(data=np.linspace(0, Ny - 1, Ny))
                         subdata_tmp['y_axis'] = y_axis
                     data2D[sub_name] = subdata_tmp
                 elif data_dim.lower() == 'datand':
@@ -1167,20 +1168,20 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         Returns
         -------
-        utils.ScalingOptions
+        pymodaq.utils.data.ScalingOptions
         """
-        scaling_options = utils.ScalingOptions(
-            scaled_xaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
-                                          units=self.settings.child('main_settings', 'axes', 'xaxis', 'xunits').value(),
-                                          offset=self.settings.child('main_settings', 'axes', 'xaxis',
+        scaling_options = data_mod.ScalingOptions(
+            scaled_xaxis=data_mod.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
+                                               units=self.settings.child('main_settings', 'axes', 'xaxis', 'xunits').value(),
+                                               offset=self.settings.child('main_settings', 'axes', 'xaxis',
                                                                      'xoffset').value(),
-                                          scaling=self.settings.child('main_settings', 'axes', 'xaxis',
+                                               scaling=self.settings.child('main_settings', 'axes', 'xaxis',
                                                                       'xscaling').value()),
-            scaled_yaxis=utils.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'yaxis', 'ylabel').value(),
-                                          units=self.settings.child('main_settings', 'axes', 'yaxis', 'yunits').value(),
-                                          offset=self.settings.child('main_settings', 'axes', 'yaxis',
+            scaled_yaxis=data_mod.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'yaxis', 'ylabel').value(),
+                                               units=self.settings.child('main_settings', 'axes', 'yaxis', 'yunits').value(),
+                                               offset=self.settings.child('main_settings', 'axes', 'yaxis',
                                                                      'yoffset').value(),
-                                          scaling=self.settings.child('main_settings', 'axes', 'yaxis',
+                                               scaling=self.settings.child('main_settings', 'axes', 'yaxis',
                                                                       'yscaling').value()))
         return scaling_options
 
@@ -1674,7 +1675,7 @@ class DAQ_Detector(QObject):
         # datas validation check for backcompatibility with plugins not exporting new DataFromPlugins list of objects
 
         for dat in datas:
-            if not isinstance(dat, utils.DataFromPlugins):
+            if not isinstance(dat, data_mod.DataFromPlugins):
                 if 'type' in dat:
                     dat['dim'] = dat['type']
                     dat['type'] = 'raw'

@@ -7,6 +7,8 @@ from qtpy import QtWidgets
 from pyqtgraph import ROI
 from unittest import mock
 from collections import OrderedDict
+
+from pymodaq.utils import data as data_mod
 from pymodaq.utils import daq_utils as utils
 from pymodaq.post_treatment.daq_measurement.daq_measurement_main import DAQ_Measurement
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D, Viewer1D_math
@@ -490,7 +492,7 @@ class TestViewer1D:
 
         for ind, data in enumerate(datas):
             assert isinstance(export['data1D']['CH{:03d}'.format(ind)],
-                              utils.DataToExport)
+                              data_mod.DataToExport)
 
         assert np.array_equal(prog.x_axis, x_axis)
         assert prog.labels == labels
@@ -512,7 +514,7 @@ class TestViewer1D:
 
         for ind, data in enumerate(datas):
             assert isinstance(export['data1D']['CH{:03d}'.format(ind)],
-                              utils.DataToExport)
+                              data_mod.DataToExport)
 
         assert np.array_equal(prog.x_axis, x_axis)
         assert prog.labels == labels
@@ -626,7 +628,7 @@ class TestViewer1D:
         prog.update_labels(prog.labels)
         prog.data_to_export = OrderedDict(name=prog.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
         for ind, data in enumerate(datas):
-            prog.data_to_export['data1D']['CH{:03d}'.format(ind)] = utils.DataToExport()
+            prog.data_to_export['data1D']['CH{:03d}'.format(ind)] = data_mod.DataToExport()
 
         prog.ini_data_plots(len(datas))
 

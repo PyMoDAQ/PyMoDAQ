@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, Slot
+
+from pymodaq.utils import data as data_mod
 from pymodaq.utils.plotting.utils.filter import Filter
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
@@ -33,7 +35,7 @@ class ViewerBase(QObject):
     status_signal: Signal[str]
     """
     data_to_export_signal = Signal(OrderedDict)  # OrderedDict(name=self.DAQ_type,data0D=None,data1D=None,data2D=None)
-    _data_to_show_signal = Signal(utils.DataFromPlugins)
+    _data_to_show_signal = Signal(data_mod.DataFromPlugins)
 
     ROI_changed = Signal()
     crosshair_dragged = Signal(float, float)  # Crosshair position in units of scaled top/right axes
@@ -61,12 +63,12 @@ class ViewerBase(QObject):
         """str: the viewer data type see DATA_TYPES"""
         return DATATYPES[self.__class__.__name__]
 
-    def show_data(self, data: utils.DataFromPlugins):
+    def show_data(self, data: data_mod.DataFromPlugins):
         """Entrypoint to display data into the viewer
 
         Parameters
         ----------
-        data: utils.DataFromPlugins
+        data: data_mod.DataFromPlugins
         """
         if len(data['data'][0].shape) != 2:
             raise ViewerError(f'Ndarray of dim: {len(data["data"][0].shape)} cannot be plotted'
@@ -79,19 +81,19 @@ class ViewerBase(QObject):
 
         self._show_data(data)
 
-    def show_data_temp(self, data: utils.DataFromPlugins):
+    def show_data_temp(self, data: data_mod.DataFromPlugins):
         """Entrypoint to display temporary data into the viewer
 
         No processed data signal is emitted from the viewer
 
         Parameters
         ----------
-        data: utils.DataFromPlugins
+        data: data_mod.DataFromPlugins
         """
         self._display_temporary = True
         self.show_data(data)
 
-    def _show_data(self, data: utils.DataFromPlugins):
+    def _show_data(self, data: data_mod.DataFromPlugins):
         """Specific viewers should implement it"""
         raise NotImplementedError
 

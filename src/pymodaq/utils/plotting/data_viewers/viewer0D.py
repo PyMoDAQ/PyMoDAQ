@@ -2,7 +2,8 @@ from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import sys
 import pymodaq.utils.daq_utils as utils
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils import data as data_mod
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.plotting.data_viewers.viewer0D_GUI import Ui_Form
 
 import numpy as np
@@ -141,9 +142,9 @@ class Viewer0D(QtWidgets.QWidget, QObject):
                 data_tot.append(data_tmp)
 
                 self.plot_channels[ind_plot].setData(x=self.x_axis, y=data_tmp)
-                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)] = utils.DataToExport(name=self.title,
-                                                                                                data=data[0],
-                                                                                                source='raw')
+                self.data_to_export['data0D']['CH{:03d}'.format(ind_plot)] = data_mod.DataToExport(name=self.title,
+                                                                                                     data=data[0],
+                                                                                                     source='raw')
             self.datas = data_tot
 
             self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()

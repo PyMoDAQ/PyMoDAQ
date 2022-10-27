@@ -15,7 +15,8 @@ import pymodaq.utils.parameter.ioxml
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.tree_layout.tree_layout_main import Tree_layout
-from pymodaq.utils.daq_utils import capitalize, Axis, JsonConverter, NavAxis
+from pymodaq.utils.daq_utils import capitalize, JsonConverter
+from pymodaq.utils.data import Axis, NavAxis
 from pymodaq.utils.gui_utils.utils import h5tree_to_QTree, pngbinary2Qlabel
 from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.gui_utils.dock import DockArea

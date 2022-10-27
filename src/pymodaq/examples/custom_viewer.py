@@ -82,7 +82,7 @@ class ViewerPointList(QObject):
 
 if __name__ == '__main__':
     from pymodaq.utils.gui_utils import DockArea
-    from pymodaq.utils.daq_utils import Axis
+    from pymodaq.utils.data import Axis
     import sys
     import numpy as np
 
