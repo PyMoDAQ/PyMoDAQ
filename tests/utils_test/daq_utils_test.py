@@ -2,7 +2,7 @@ import numpy as np
 import os
 
 import utils.data
-from pymodaq.utils import data as data_mod
+
 from pymodaq.utils.parameter import utils as putils
 import utils.units
 from pymodaq.utils.logger import set_logger, get_module_name
@@ -37,22 +37,6 @@ def test_get_version():
     assert bool(re.match("[0-9].[0-9].[0-9]", version))
 
 
-def test_get_set_local_dir():
-    local_path = config.get_set_local_dir()
-    assert Path(local_path).is_dir()
-
-
-def test_check_config():
-    dict1 = {'name': 'test', 'status': True}
-    dict2 = {'name': 'test_2', 'status': False}
-    dict3 = {'status': None}
-    assert not config.check_config(dict1, dict2)
-    assert config.check_config(dict1, dict3)
-    assert dict1 == {'name': 'test', 'status': True}
-    assert dict2 == {'name': 'test_2', 'status': False}
-    assert dict3 == {'status': None, 'name': 'test'}
-
-
 class TestJsonConverter:
     def test_object2json(self):
         conv = utils.JsonConverter()
@@ -76,40 +60,6 @@ class TestJsonConverter:
         assert conv.json2object(conv.object2json(1j)) == {'module': 'builtins', 'type': 'complex', 'data': '1j'}
         assert isinstance(conv.json2object(conv), utils.JsonConverter)
 
-
-class TestUnits:
-    def test_Enm2cmrel(self):
-        assert utils.units.Enm2cmrel(520, 515) == pytest.approx(186.70649738)
-
-    def test_Ecmrel2Enm(self):
-        assert utils.units.Ecmrel2Enm(500, 515) == pytest.approx(528.6117526)
-
-    def test_eV2nm(self):
-        assert utils.units.eV2nm(1.55) == pytest.approx(799.89811299)
-
-    def test_nm2eV(self):
-        assert utils.units.nm2eV(800) == pytest.approx(1.54980259)
-
-    def test_E_J2eV(self):
-        assert utils.units.E_J2eV(1e-18) == pytest.approx(6.24151154)
-
-    def test_eV2cm(self):
-        assert utils.units.eV2cm(0.07) == pytest.approx(564.5880342655)
-
-    def test_nm2cm(self):
-        assert utils.units.nm2cm(0.04) == pytest.approx(0.0000025)
-
-    def test_cm2nm(self):
-        assert utils.units.cm2nm(1e5) == pytest.approx(100)
-
-    def test_eV2E_J(self):
-        assert utils.units.eV2E_J(800) == pytest.approx(1.2817408e-16)
-
-    def test_eV2radfs(self):
-        assert utils.units.eV2radfs(1.55) == pytest.approx(2.3548643)
-
-    def test_l2w(self):
-        assert utils.units.l2w(800) == pytest.approx(2.35619449)
 
 
 class TestString:
@@ -147,23 +97,6 @@ def test_get_data_dimension():
                 assert utils.get_data_dimension(arr, scan, rem) == (shape, f'{dim}D', size)
 
 
-class TestScroll:
-    def test_scroll_log(self):
-        min_val = 50
-        max_val = 51
-        for scroll_val in range(101):
-            assert putils.scroll_log(scroll_val, min_val, max_val) == \
-                   pytest.approx(10 ** (scroll_val * (np.log10(max_val) - np.log10(min_val)) / 100 + np.log10(min_val)),
-                                 rel=1e-4)
-
-    def test_scroll_linear(self):
-        min_val = 50
-        max_val = 51
-        for scroll_val in range(101):
-            assert putils.scroll_linear(scroll_val, min_val, max_val) == \
-                   pytest.approx(scroll_val * (max_val - min_val) / 100 + min_val)
-
-
 def test_getLineInfo():
     try:
         1 / 0
@@ -178,146 +111,6 @@ def test_ThreadCommand():
     assert threadcomm.command is command
     assert threadcomm.attribute is attributes
 
-
-def test_Axis():
-    ax = data_mod.Axis()
-    assert 'data' in ax
-    assert 'label' in ax
-    assert 'units' in ax
-
-    assert ax.label == ax['label']
-
-    ax = data_mod.Axis(np.array([1, 2, 3, 5, 7]), 'a label', 'seconds')
-    assert np.all(ax['data'] == np.array([1, 2, 3, 5, 7]))
-    assert ax['label'] == 'a label'
-    assert ax['units'] == 'seconds'
-
-    ax = data_mod.Axis(label=None, units=None)
-    assert ax['label'] == ''
-    assert ax['units'] == ''
-
-    with pytest.raises(TypeError):
-        data_mod.Axis(10)
-    with pytest.raises(TypeError):
-        data_mod.Axis(label=10)
-    with pytest.raises(TypeError):
-        data_mod.Axis(units=10)
-
-
-def test_NavAxis():
-    navaxis_tmp = data_mod.NavAxis(nav_index=1)
-    assert isinstance(navaxis_tmp, data_mod.NavAxis)
-    assert navaxis_tmp['nav_index'] == 1
-    with pytest.raises(ValueError):
-        data_mod.NavAxis()
-
-
-class TestData:
-    def test_Data(self):
-        name = 'data_test'
-        x = utils.linspace_step(1, 100, 1)
-        y = utils.linspace_step(0.01, 1, 0.01)
-        data_test = data_mod.Data(name=name, x_axis=x, y_axis=y)
-        assert isinstance(data_test, data_mod.Data)
-        assert data_test['name'] == name
-        assert data_test['x_axis'] == data_mod.Axis(data=x)
-        assert data_test['y_axis'] == data_mod.Axis(data=y)
-
-        x = data_mod.Axis(x)
-        y = data_mod.Axis(y)
-        kwargs = [1, 2.0, 'kwargs', True, None]
-        data_test = data_mod.Data(name=name, x_axis=x, y_axis=y, kwargs=kwargs)
-        assert data_test['x_axis'] == x
-        assert data_test['y_axis'] == y
-        assert data_test['kwargs'] == kwargs
-
-        with pytest.raises(TypeError):
-            data_mod.Data(name=None)
-        with pytest.raises(TypeError):
-            data_mod.Data(source=None)
-        with pytest.raises(ValueError):
-            data_mod.Data(source='source')
-
-        with pytest.raises(TypeError):
-            data_mod.Data(distribution=None)
-        with pytest.raises(ValueError):
-            data_mod.Data(distribution='distribution')
-
-        with pytest.raises(TypeError):
-            data_mod.Data(x_axis=10)
-        with pytest.raises(TypeError):
-            data_mod.Data(y_axis=10)
-
-    def test_DataFromPlugins(self):
-        data = [utils.linspace_step(1, 100, 1), utils.linspace_step(0.01, 1, 0.01)]
-        nav_axes = ["test"]
-        x_axis = data_mod.Axis(data=utils.linspace_step(1, 100, 1))
-        y_axis = data_mod.Axis(data=utils.linspace_step(1, 100, 1))
-        data_test = data_mod.DataFromPlugins(data=data, nav_axes=nav_axes, nav_x_axis=x_axis, nav_y_axis=y_axis)
-        assert isinstance(data_test, data_mod.DataFromPlugins)
-        assert data_test['data'] == data
-        assert data_test['nav_axes'] == nav_axes
-        assert data_test['nav_x_axis'] == x_axis
-        assert data_test['nav_y_axis'] == y_axis
-        assert data_test['dim'] == 'Data1D'
-        data = [np.array([1])]
-        data_test = data_mod.DataFromPlugins(data=data)
-        assert data_test['dim'] == 'Data0D'
-        data = [np.array([[1, 1], [1, 2]])]
-        data_test = data_mod.DataFromPlugins(data=data)
-        assert data_test['dim'] == 'Data2D'
-        data = [np.array([[[1, 1], [1, 2]], [[2, 1], [2, 2]]])]
-        data_test = data_mod.DataFromPlugins(data=data)
-        assert data_test['dim'] == 'DataND'
-
-        with pytest.raises(TypeError):
-            data_mod.DataFromPlugins(data=[1, 2, 3, 4, 5])
-        with pytest.raises(TypeError):
-            data_mod.DataFromPlugins(data="str")
-
-    def test_DataToExport(self):
-        data = np.array([1])
-        data_test = data_mod.DataToExport(data=data)
-        assert isinstance(data_test, data_mod.DataToExport)
-        assert data_test['data'] == data
-        assert data_test['dim'] == 'Data0D'
-        data_test = data_mod.DataToExport()
-        assert data_test['dim'] == 'Data0D'
-        data = np.array([1, 1])
-        data_test = data_mod.DataToExport(data=data)
-        assert data_test['dim'] == 'Data1D'
-        data = np.array([[1, 1], [1, 2]])
-        data_test = data_mod.DataToExport(data=data)
-        assert data_test['dim'] == 'Data2D'
-        data = np.array([[[1, 1], [1, 2]], [[2, 1], [2, 2]]])
-        data_test = data_mod.DataToExport(data=data)
-        assert data_test['dim'] == 'DataND'
-
-        with pytest.raises(TypeError):
-            data_mod.DataToExport(data="data")
-
-
-def test_ScaledAxis():
-    scaled_axis = data_mod.ScaledAxis()
-    assert isinstance(scaled_axis, data_mod.ScaledAxis)
-    assert scaled_axis['offset'] == 0
-    assert scaled_axis['scaling'] == 1
-
-    with pytest.raises(TypeError):
-        data_mod.ScaledAxis(offset=None)
-    with pytest.raises(TypeError):
-        data_mod.ScaledAxis(scaling=None)
-    with pytest.raises(ValueError):
-        data_mod.ScaledAxis(scaling=0)
-
-    assert scaled_axis['scaling'] == scaled_axis.scaling
-
-
-def test_ScalingOptions():
-    scaling_options = data_mod.ScalingOptions(data_mod.ScaledAxis(), data_mod.ScaledAxis())
-    assert isinstance(scaling_options, data_mod.ScalingOptions)
-    assert isinstance(scaling_options['scaled_xaxis'], data_mod.ScaledAxis)
-    assert isinstance(scaling_options['scaled_yaxis'], data_mod.ScaledAxis)
 
 
 def test_recursive_find_files_extension():
@@ -392,92 +185,12 @@ def test_check_vals_in_iterable():
     assert not utils.check_vals_in_iterable(np.array([1, 2.0, 4]), np.array((1, 2, 4)))
 
 
-class TestGetSet:
-    def test_get_set_config_path(self):
-        local_path = config.get_set_local_dir()
-        config_path = config.get_set_config_path()
-        assert Path(config_path) == Path(local_path).joinpath('config')
-        assert Path(config_path).is_dir()
-
-    def test_get_set_preset_path(self):
-        local_path = config.get_set_local_dir()
-        preset_path = config.get_set_preset_path()
-        assert Path(preset_path) == Path(local_path).joinpath('preset_configs')
-        assert Path(preset_path).is_dir()
-
-    def test_get_set_pid_path(self):
-        local_path = config.get_set_local_dir()
-        pid_path = config.get_set_pid_path()
-        assert Path(pid_path) == Path(local_path).joinpath('pid_configs')
-        assert Path(pid_path).is_dir()
-
-    def test_get_set_log_path(self):
-        local_path = config.get_set_local_dir()
-        log_path = config.get_set_log_path()
-        assert Path(log_path) == Path(local_path).joinpath('log')
-        assert Path(log_path).is_dir()
-
-    def test_get_set_layout_path(self):
-        local_path = config.get_set_local_dir()
-        layout_path = config.get_set_layout_path()
-        assert Path(layout_path) == Path(local_path).joinpath('layout_configs')
-        assert Path(layout_path).is_dir()
-
-    def test_get_set_remote_path(self):
-        local_path = config.get_set_local_dir()
-        remote_path = config.get_set_remote_path()
-        assert Path(remote_path) == Path(local_path).joinpath('remote_configs')
-        assert Path(remote_path).is_dir()
-
-    def test_get_set_overshoot_path(self):
-        local_path = config.get_set_local_dir()
-        overshoot_path = config.get_set_overshoot_path()
-        assert Path(overshoot_path) == Path(local_path).joinpath('overshoot_configs')
-        assert Path(overshoot_path).is_dir()
-
-    def test_get_set_roi_path(self):
-        local_path = config.get_set_local_dir()
-        roi_path = config.get_set_roi_path()
-        assert Path(roi_path) == Path(local_path).joinpath('roi_configs')
-        assert Path(roi_path).is_dir()
-
-    def test_get_module_name(self):
-        config_path = config.get_set_config_path()
-        assert get_module_name(config_path) == 'config'
-
-
 def test_zeros_aligned():
     # just one example...
     align = 64
     data = utils.zeros_aligned(1230, align, np.uint32)
     assert data.ctypes.data % align == 0
 
-
-def test_set_param_from_param():
-    params = [
-        {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': False, 'type': 'group', 'children': [
-            {'title': 'DAQ type:', 'name': 'DAQ_type', 'type': 'list', 'limits': ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND'],
-             'readonly': True},
-            {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1,
-             'readonly': True},
-        ]}
-    ]
-    settings = Parameter.create(name='settings', type='group', children=params)
-    settings_old = Parameter.create(name='settings', type='group', children=params)
-
-    settings.child('main_settings', 'detector_type').setValue('new string')
-    putils.set_param_from_param(param_old=settings_old, param_new=settings)
-    assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
-
-    settings.child('main_settings', 'DAQ_type').opts['limits'].append('new type')
-    settings.child('main_settings', 'DAQ_type').setValue('new type')
-    putils.set_param_from_param(param_old=settings_old, param_new=settings)
-    assert settings_old.child('main_settings', 'DAQ_type').value() == 'new type'
-
-    settings.child('main_settings', 'detector_type').setValue('')
-    putils.set_param_from_param(param_old=settings_old, param_new=settings)
-    assert settings_old.child('main_settings', 'detector_type').value() == 'new string'
 
 
 def test_get_new_file_name(tmp_path):

@@ -22,6 +22,10 @@ class DataLengthError(Exception):
     pass
 
 
+class AxisError(Exception):
+    pass
+
+
 class DataDim(BaseEnum):
     """Enum for dimensionality representation of data"""
     Data0D = 0
@@ -37,8 +41,23 @@ class DataSource(BaseEnum):
     calculated = 2
 
 
-class Axis:
-    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, nav_index: int = -1):
+class AxisBase:
+    """Object holding info and data about physical axis of data
+
+    Parameters
+    ----------
+    label: str
+        The label of the axis, for instance 'time' for a temporal axis
+    units: str
+        The units of the data in the object, for instance 's' for seconds
+    data: ndarray
+        A 1D ndarray holding the data of the axis
+    index: int
+        a integer representing the index of the Data object this axis is related to
+    """
+
+    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0):
+
         super().__init__()
         if not isinstance(label, str):
             raise TypeError('label for the Axis class should be a string')
@@ -46,10 +65,58 @@ class Axis:
         if not isinstance(units, str):
             raise TypeError('units for the Axis class should be a string')
 
+        self._check_index_valid(index)
+        self._check_data_valid(data)
+
         self.units = units
         self.label = label
         self.data = data
-        self.nav_index = nav_index
+        self.index = index
+
+    @staticmethod
+    def _check_index_valid(index):
+        if not isinstance(index, int):
+            raise TypeError('index for the Axis class should be a positive integer')
+        elif index < 0:
+            raise ValueError('index for the Axis class should be a positive integer')
+
+    @staticmethod
+    def _check_data_valid(data):
+        if data is None:
+            raise ValueError(f'data for the Axis class should be a 1D numpy array')
+        elif not isinstance(data, np.ndarray):
+            raise TypeError(f'data for the Axis class should be a 1D numpy array')
+        elif len(data.shape) != 1:
+            raise ValueError(f'data for the Axis class should be a 1D numpy array')
+
+    def __getitem__(self, item):
+        """For back compatibility when axis was a dict"""
+        if hasattr(self, item):
+            return getattr(self, item)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}: <label: {self.label}> - <units: {self.units}>'
+
+    def __mul__(self, scale: numbers.Real):
+        if isinstance(scale, numbers.Real):
+            return self.__class__(data=self.data * scale, label=self.label, units=self.units, index=self.index)
+
+    def __add__(self, offset: numbers.Real):
+        if isinstance(offset, numbers.Real):
+            return self.__class__(data=self.data + offset, label=self.label, units=self.units, index=self.index)
+
+    def __eq__(self, other):
+        eq = self.label == other.label
+        eq = eq and (self.units == other.units)
+        eq = eq and (np.any(np.abs(self.data - other.data) < 1e-10))
+        eq = eq and (self.index == other.index)
+        return eq
+
+
+class Axis(AxisBase):
+    """Axis object inheriting AxisBase"""
+    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = -1):
+        super().__init__(label, units, data, index)
 
 
 class DataBase:
@@ -59,16 +126,19 @@ class DataBase:
     ----------
     name: str
         the identifier of these data
-    source: DataSource
+    source: DataSource or str
         Enum specifying if data are raw or processed (for instance from roi)
-    dim: DataDim
+    dim: DataDim or str
         The identifier of the data type
     data: list of ndarray
         The data the object is storing
+    labels: list of str
+        The labels of the data nd-arrays
     kwargs
     """
 
-    def __init__(self, name: str, source: DataSource, dim: DataDim = None, data: List[np.ndarray] = None, **kwargs):
+    def __init__(self, name: str, source: DataSource, dim: DataDim = None, data: List[np.ndarray] = None,
+                 labels: List[str] = [], **kwargs):
 
         super().__init__()
 
@@ -77,17 +147,28 @@ class DataBase:
         self._data = None
         self._timestamp = time()
         self._length = None
+        self._labels = None
 
         if not isinstance(source, DataSource):
-            raise TypeError(f'{source} is an invalid source for these data. Should be in {DataSource.names()}')
-        if not isinstance(dim, DataDim) or None:
-            raise TypeError(f'{dim} is an invalid Data dimensionality. Should be in {DataDim.names()}')
+            if source in DataSource.names():
+                source = DataSource[source]
+            else:
+                raise TypeError(f'{source} is an invalid source for these data. Should be a DataSource enum or a string'
+                                f' in {DataSource.names()}')
+        if not isinstance(dim, DataDim):
+            if dim is not None:
+                if dim in DataDim.names():
+                    dim = DataDim[dim]
+                else:
+                    raise ValueError(f'{dim} is an invalid Data dimensionality. Should be a DataDim enum or a string in'
+                                     f' {DataDim.names()}')
 
         self._name = name
         self._source = source
         self._dim = dim
         self.data = data
 
+        self._check_labels(labels)
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -125,6 +206,19 @@ class DataBase:
     def length(self):
         """The length of data. This is the length of the list containing the nd-arrays"""
         return self._length
+
+    @property
+    def labels(self):
+        return self._labels
+
+    def _check_labels(self, labels):
+        while len(labels) < self.length:
+            labels.append(f'CH{len(labels) - 1:02d}')
+        self._labels = labels
+
+    def get_data_index(self, index: int = 0):
+        """Get the data by its index in the list"""
+        return self.data[index]
 
     @staticmethod
     def _check_data_type(data: List[np.ndarray]):
@@ -166,7 +260,7 @@ class DataBase:
             self._dim = dim
         else:
             if self._dim != dim:
-                warnings.warn('The specified dimensionality is not coherent with the data shape')
+                warnings.warn(UserWarning('The specified dimensionality is not coherent with the data shape'))
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):
@@ -181,7 +275,7 @@ class DataBase:
         return self._data
 
     @data.setter
-    def data(self, data: list[np.ndarray]):
+    def data(self, data: List[np.ndarray]):
         self._check_data_type(data)
         self._check_shape_dim_consistency(data)
         self._check_same_shape(data)
@@ -191,22 +285,29 @@ class DataBase:
 class DataMetadata(DataBase):
     def __init__(self, name: str, source: DataSource, dim: DataDim = None, data: List[np.ndarray] = None,
                  labels: List[str] = [], axes: List[Axis] = [], **kwargs):
-        super().__init__(name, source, dim, data, **kwargs)
+        super().__init__(name, source, dim, data, labels, **kwargs)
 
-        self._labels = None
-
-        self._check_labels()
-        for axis in axes:
-            self._check_axis(axis)
-
-    def _check_axis(self, axis, dim=0, ):
+        self._axes = None
+        self._check_axis(axes)
 
     @property
-    def labels(self):
-        return self._labels
+    def axes(self):
+        return self._axes
 
-    def _check_labels(self, labels):
-        while len(labels) < self.length:
-            labels.append(f'CH{len(labels) - 1:02d}')
-        self._labels = labels
+    def _check_axis(self, axes):
+        for ind, axis in enumerate(axes):
+            if not isinstance(axis, Axis):
+                raise TypeError(f'An axis of {self.__class__.name} should be an Axis object')
+            if self.get_data_index(0).shape[axis.index] != axis.size:
+                warnings.warn('The size of the axis is not coherent with the shape of the data. Replacing it '
+                              'with an index version: 0, 1, 2, ...')
+                axes[ind] =np.linspace(0, self.get_data_index(0).shape[axis.index]-1,
+                                       self.get_data_index(0).shape[axis.index])
+            self._axes = axes
+
+    def get_axis_from_dim(self, dim: int):
+        for axis in self.axes:
+            if axis.index == dim:
+                return axis
+
 

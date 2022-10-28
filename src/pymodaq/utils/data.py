@@ -12,7 +12,6 @@ import warnings
 from time import time
 
 
-
 DATASOURCES = ('raw', 'roi')
 DATADIMS = ('Data0D', 'Data1D', 'Data2D', 'DataND')
 
