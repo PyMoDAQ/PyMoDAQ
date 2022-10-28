@@ -1,7 +1,7 @@
 Hdf5 module and classes
 =======================
 
-.. currentmodule:: pymodaq.daq_utils.h5modules
+.. currentmodule:: pymodaq.utils.h5modules
 
 Summary of the classes in the h5module
 

@@ -5,9 +5,6 @@
 Utility Libraries
 *****************
 
-daq_utils
----------
-
 .. toctree::
    :maxdepth: 5
 

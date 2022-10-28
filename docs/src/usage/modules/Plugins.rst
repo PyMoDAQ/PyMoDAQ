@@ -84,7 +84,7 @@ Here is an example of such a list of dictionaries corresponding to :numref:`figu
 .. _parameter_tree:
 
 The list of available types of parameters :module:`pymodaq_ptypes`
-(defined in ``pymodaq.daq_utils.parameter.pymodaq_ptypes.py``) is:
+(defined in ``pymodaq.utils.parameter.pymodaq_ptypes.py``) is:
 
 * ``group`` : "camera settings" on :numref:`figure_settings` is of type group
 * ``int`` : settable integer (SpinBox_Custom object)
@@ -160,8 +160,8 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
 
 .. code-block:: python
 
-    from pymodaq.daq_utils.daq_utils import Axis
-    from pymodaq.daq_utils.daq_utils import DataFromPlugins
+    from pymodaq.utils.daq_utils import Axis
+    from pymodaq.utils.daq_utils import DataFromPlugins
     x_axis = Axis(label='Wavelength', units= "nm", data = vector_X)
     y_axis = Axis(data=vector_Y)
     self.data_grabed_signal.emit([DataFromPlugins(name='Camera',data=[data2D_0, data2D_1,...],

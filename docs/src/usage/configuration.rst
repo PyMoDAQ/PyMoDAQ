@@ -87,13 +87,13 @@ or accessed within the *Dashboard* in the file menu.
         timeout = 10000  # in millisecond
 
         [scan.scan1D]
-        type = "Linear" # either "Linear", "Adaptive", "Linear back to start", "Random" see pymodaq.daq_utils.scanner.py
+        type = "Linear" # either "Linear", "Adaptive", "Linear back to start", "Random" see pymodaq.utils.scanner.py
         start = 1.0
         stop = 2.0
         step = 0.01
 
         [scan.scan2D]
-        type = "Spiral" # either "Spiral", "Linear", "Adaptive", "Back&Forth", "Random" see pymodaq.daq_utils.scanner.py
+        type = "Spiral" # either "Spiral", "Linear", "Adaptive", "Back&Forth", "Random" see pymodaq.utils.scanner.py
         start1 = -5
         start2 = -5
         stop1 = 5
@@ -103,5 +103,5 @@ or accessed within the *Dashboard* in the file menu.
         npts = 10
 
         [scan.tabular]
-        type = "Linear" #either "Linear", "Adaptive" see pymodaq.daq_utils.scanner.py
+        type = "Linear" #either "Linear", "Adaptive" see pymodaq.utils.scanner.py
         curvilinear = 0.1

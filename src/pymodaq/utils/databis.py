@@ -349,6 +349,12 @@ class DataWithAxis(DataBase):
         return self._axes
 
     def _check_axis(self, axes):
+        """Check all axis to make sure of their type and make sure their data are properly referring to the data index
+
+        See Also
+        --------
+        :py:meth:`Axis.create_linear_data`
+        """
         for ind, axis in enumerate(axes):
             if not isinstance(axis, Axis):
                 raise TypeError(f'An axis of {self.__class__.name} should be an Axis object')
@@ -358,19 +364,28 @@ class DataWithAxis(DataBase):
                 axes[ind].create_linear_data(self.get_shape_from_index(axis.index))
         self._axes = axes
 
-    def get_shape_from_index(self, index):
+    def get_shape_from_index(self, index: int) -> int:
+        """Get the data shape at the given index"""
         if index > len(self.shape) or index < 0:
             raise IndexError('The specified index does not correspond to any data dimension')
         return self.shape[index]
 
-    def get_axis_from_index(self, index: int):
+    def get_axis_from_index(self, index: int) -> Axis:
+        """Get the axis referred by a given data dimensionality index
+
+        If the axis is absent, create a linear one to fit the data shape
+
+        See Also
+        --------
+        :py:meth:`Axis.create_linear_data`
+        """
         if index > len(self.shape) or index < 0:
             raise IndexError('The specified index does not correspond to any data dimension')
         for axis in self.axes:
             if axis.index == index:
                 return axis
         warnings.warn(UserWarning(f'The axis requested with index {index} is not present, creating a linear one...'))
-        axis = Axis(data = np.zeros((1,)), index=index)
+        axis = Axis(data=np.zeros((1,)), index=index)
         axis.create_linear_data(self.get_shape_from_index(index))
         return axis
 

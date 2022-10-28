@@ -1,7 +1,7 @@
 Plotting utility classes
 ==========================
 
-.. currentmodule:: pymodaq.daq_utils.plotting.scan_selector
+.. currentmodule:: pymodaq.utils.plotting.scan_selector
 
 Summary of the classes
 
