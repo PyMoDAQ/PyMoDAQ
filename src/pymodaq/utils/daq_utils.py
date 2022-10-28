@@ -741,13 +741,13 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\',
-                                         exp="import pymodaq.daq_utils",
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq\\docs',
+                                         exp="pymodaq.daq_utils",
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py', '.rst'],
+                                                  '.tox', 'daq_utils.py',],
                                          replace=True,
-                                         replace_str="import pymodaq.utils")
+                                         replace_str="pymodaq.utils")
     get_version()
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',

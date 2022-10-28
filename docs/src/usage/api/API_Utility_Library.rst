@@ -17,6 +17,7 @@ daq_utils
    utility_api/mathematical
    utility_api/scan
    utility_api/file_management
+   utility_api/data_management
 
 
 parameter
