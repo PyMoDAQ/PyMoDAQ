@@ -11,8 +11,8 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.utils import data as data_mod
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, ScalingOptions
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewer2D_basic import ImageWidget
@@ -125,11 +125,11 @@ class ImageDisplayer(QObject):
     def set_autolevels(self, isautolevel):
         self._autolevels = isautolevel
 
-    def update_data(self, datas):
-        if datas['distribution'] != self.display_type:
-            self.display_type = datas['distribution']
+    def update_data(self, data):
+        if data.distribution != self.display_type:
+            self.display_type = data.distribution
             self.update_display_items()
-        for ind_data, data in enumerate(datas['data']):
+        for ind_data, data in enumerate(data.data):
             if data.size > 0:
                 self._image_items[IMAGE_TYPES[ind_data]].setImage(data, self.autolevels)
 
@@ -596,11 +596,11 @@ class View2D(ActionManager, QtCore.QObject):
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
 
-    @Slot(data_mod.DataFromPlugins)
+    @Slot(DataFromPlugins)
     def display_images(self, datas):
         self.data_displayer.update_data(datas)
         if self.is_action_checked('isocurve'):
-            self.isocurver.set_isocurve_data(datas['data'][0])
+            self.isocurver.set_isocurve_data(datas.data[0])
 
     def display_roi_lineouts(self, roi_dict):
         self.lineout_plotter.plot_roi_lineouts(roi_dict)
@@ -824,28 +824,28 @@ class Viewer2D(ViewerBase):
             distribution = 'spread'
             data_list = [data_spread]
 
-        datas = data_mod.DataFromPlugins(name='', distribution=distribution, data=data_list)
+        datas = DataFromPlugins(name='', distribution=distribution, data=data_list)
         return datas
 
     def set_gradient(self, image_key, gradient):
         """convenience function"""
-        self.view.histogrammer.set_gradient(image_key, 'grey')
+        self.view.histogrammer.set_gradient(image_key, gradient)
 
-    def _show_data(self, datas: data_mod.DataFromPlugins):
-        """
-        numpy arrays to be plotted and eventually filtered using ROI...
+    def _show_data(self, data: DataFromPlugins):
+        """Data to be plotted and eventually filtered using ROI...
+
         Parameters
         ----------
-        datas: (data_mod.DataToExport)
+        data: DataFromPlugins
 
         """
 
-        if len(datas['data']) == 1 and not self._is_gradient_manually_set:
+        if len(data) == 1 and not self._is_gradient_manually_set:
             self.set_gradient('red', 'grey')
 
-        self.isdata['red'] = len(datas['data']) > 0
-        self.isdata['green'] = len(datas['data']) > 1
-        self.isdata['blue'] = len(datas['data']) > 2
+        self.isdata['red'] = len(data) > 0
+        self.isdata['green'] = len(data) > 1
+        self.isdata['blue'] = len(data) > 2
 
         self.set_visible_items()
         self.update_data()
@@ -869,12 +869,12 @@ class Viewer2D(ViewerBase):
         Deactivate some tool buttons if data type is "spread" then apply transform_image
         """
         data = copy.deepcopy(self._raw_datas)
-        self.view.set_action_visible('flip_ud', data['distribution'] != 'spread')
-        self.view.set_action_visible('flip_lr', data['distribution'] != 'spread')
-        self.view.set_action_visible('rotate', data['distribution'] != 'spread')
-        if data['distribution'] != 'spread':
-            for ind_data in range(len(data['data'])):
-                data['data'][ind_data] = self.transform_image(data['data'][ind_data])
+        self.view.set_action_visible('flip_ud', data.distribution != 'spread')
+        self.view.set_action_visible('flip_lr', data.distribution != 'spread')
+        self.view.set_action_visible('rotate', data.distribution != 'spread')
+        if data.distribution != 'spread':
+            for ind_data in range(len(data)):
+                data.data[ind_data] = self.transform_image(data.data[ind_data])
         return data
 
     def transform_image(self, data):
@@ -949,7 +949,7 @@ class Viewer2D(ViewerBase):
             self.crosshair_changed()
         self.sig_double_clicked.emit(posx, posy)
 
-    def set_scaling_axes(self, scaling_options: data_mod.ScalingOptions):
+    def set_scaling_axes(self, scaling_options: ScalingOptions):
         """
         metod used to update the scaling of the right and top axes in order to translate pixels to real coordinates
         scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))
@@ -998,20 +998,19 @@ class Viewer2D(ViewerBase):
         self.measure_data_dict = dict([])
         for roi_key, lineout_data in roi_dict.items():
             if not self._display_temporary:
-                self.data_to_export['data1D'][f'{self.title}_Hlineout_{roi_key}'] = \
-                    data_mod.DataToExport(name=self.title, data=lineout_data.hor_data, source='roi',
-                                            x_axis=data_mod.Axis(data=lineout_data.hor_axis,
-                                                                   units=self.x_axis.axis_units,
-                                                                   label=self.x_axis.axis_label))
+                self.data_to_export.append(
+                    DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
+                                x_axis=Axis(data=lineout_data.hor_axis,
+                                            units=self.x_axis.axis_units,
+                                            label=self.x_axis.axis_label)))
 
-                self.data_to_export['data1D'][f'{self.title}_Vlineout_{roi_key}'] = \
-                    data_mod.DataToExport(name=self.title, data=lineout_data.ver_data, source='roi',
-                                            x_axis=data_mod.Axis(data=lineout_data.ver_axis,
-                                                                   units=self.y_axis.axis_units,
-                                                                   label=self.y_axis.axis_units))
+                self.data_to_export.append(
+                    DataFromRoi(name=f'Vlineout_{roi_key}', data=[lineout_data.ver_data],
+                                x_axis=Axis(data=lineout_data.ver_axis,
+                                            units=self.y_axis.axis_units,
+                                            label=self.y_axis.axis_label)))
 
-                self.data_to_export['data0D'][f'{self.title}_Integrated_{roi_key}'] = \
-                    data_mod.DataToExport(name=self.title, data=lineout_data.int_data, source='roi', )
+                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
 
@@ -1033,7 +1032,7 @@ def main_controller():
     data_random = np.random.normal(size=(Ny, Nx))
     x = np.linspace(0, Nx - 1, Nx)
     y = np.linspace(0, Ny - 1, Ny)
-    from pymodaq.utils.daq_utils import gauss2D
+    from pymodaq.utils.math_utils import gauss2D
 
     data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x/5)**2 + 0.1 * data_random
     # data_red = pg.gaussianFilter(data_red, (2, 2))
@@ -1044,11 +1043,17 @@ def main_controller():
     data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
 
+    def print_data(data):
+        print(data)
+        print('******')
+        print(data.get_data_by_dim('Data1D'))
+
     prog = Viewer2D(form)
     # prog.set_axis_scaling(scaling_options=utils.ScalingOptions(
     #     scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
     #     scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     form.show()
+    prog.data_to_export_signal.connect(print_data)
     #prog.auto_levels_action_sym.trigger()
     #prog.view.actions['autolevels'].trigger()
 
@@ -1060,7 +1065,7 @@ def main_controller():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    prog.show_data(data_mod.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
     #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     #prog.ROI_select_signal.connect(print_roi_select)
