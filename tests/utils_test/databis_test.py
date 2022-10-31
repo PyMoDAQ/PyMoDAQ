@@ -11,7 +11,7 @@ from pytest import approx, mark
 import time
 
 from pymodaq.utils import math_utils as mutils
-from pymodaq.utils import databis as data_mod
+from pymodaq.utils import data as data_mod
 
 LABEL = 'A Label'
 UNITS = 'units'

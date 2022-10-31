@@ -23,15 +23,6 @@ class MockEntryPoints:
         self.value = value
 
 
-@pytest.mark.parametrize("daq_type, datadim", [(daq, datadim) for daq, datadim in zip(DAQ_TYPES,DATADIMS)])
-def test_convert_daq_type_data_dim(daq_type, datadim):
-    assert utils.data.convert_daq_type_data_dim(daq_type) == datadim
-    assert utils.data.convert_daq_type_data_dim(datadim) == daq_type
-
-    with pytest.raises(ValueError):
-        utils.data.convert_daq_type_data_dim('DAQ5D')
-
-
 def test_get_version():
     version = utils.get_version()
     assert bool(re.match("[0-9].[0-9].[0-9]", version))

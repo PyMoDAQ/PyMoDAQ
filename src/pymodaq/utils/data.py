@@ -284,9 +284,3 @@ class DataToExport(Data):
         return f'{self.__class__.__name__}: <name: {self["name"]}> - <distribution: {self["distribution"]}>' \
                f' - <source: {self["source"]}> - <dim: {self["dim"]}>'
 
-
-def convert_daq_type_data_dim(item: str):
-    if item in DATADIMS:
-        return f'DAQ{4:}'
-    elif 'DAQ' in item:
-        return f'Data{3:}'

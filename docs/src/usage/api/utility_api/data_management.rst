@@ -1,7 +1,7 @@
 Data Management
 ***************
 
-.. py:currentmodule:: pymodaq.utils.databis
+.. py:currentmodule:: pymodaq.utils.data
 
 .. autosummary::
 
@@ -14,5 +14,5 @@ Data Management
    DataFromPlugins
    DataFromRoi
 
-.. automodule:: pymodaq.utils.databis
+.. automodule:: pymodaq.utils.data
    :members:
