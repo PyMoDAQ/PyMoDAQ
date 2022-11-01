@@ -6,7 +6,7 @@ Created the 28/10/2022
 """
 import copy
 import numbers
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 import copy
 import numpy as np
 from typing import List, Union
@@ -14,7 +14,7 @@ import warnings
 from time import time
 
 from multipledispatch import dispatch
-from pymodaq.utils.enums import BaseEnum
+from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 
@@ -32,13 +32,6 @@ class DataDim(BaseEnum):
     Data1D = 1
     Data2D = 2
     DataND = 3
-
-
-def data_dim_checker(dim: DataDim):
-    if not isinstance(dim, DataDim):
-        if dim is not None:
-            if dim in DataDim.names():
-                dim = DataDim[dim]
 
 
 class DataSource(BaseEnum):
@@ -292,21 +285,15 @@ class DataBase(DataLowLevel):
         self._data = None
         self._length = None
         self._labels = None
-
-        if not isinstance(source, DataSource):
-            if source in DataSource.names():
-                source = DataSource[source]
-            else:
-                raise TypeError(f'{source} is an invalid source for these data. Should be a DataSource enum or a string'
-                                f' in {DataSource.names()}')
-
-        dim = DataDim.enforcer(dim)
-        distribution = DataDistribution.enforcer(distribution)
-
-        self._source = source
         self._dim = dim
+
+        source = enum_checker(DataSource, source)
+        self._source = source
+
+        distribution = enum_checker(DataDistribution, distribution)
         self._distribution = distribution
-        self.data = data
+
+        self.data = data  # dim consistency is actually checked within the setter method
 
         self._check_labels(labels)
         for key in kwargs:
@@ -608,6 +595,8 @@ class DataToExport(DataLowLevel):
     """Object to store all raw and calculated data in for later exporting, saving, sending signal...
 
     Includes methods to retrieve data from dim, source...
+    Stored data have a unique identifier their name. If some data is appended with an existing name, it will replace
+    the existing data
 
     Parameters
     ----------
@@ -632,10 +621,13 @@ class DataToExport(DataLowLevel):
         data
         """
         super().__init__(name)
-
+        if not isinstance(data, list):
+            raise TypeError('Data stored in a DataToExport object should be as a list of objects'
+                            ' inherited from DataWithAxis')
         for dat in data:
             self._check_data_type(dat)
-        self._data: List[DataWithAxes] = data
+        self._data: List[DataWithAxes] = [dat for dat in data]  # to make sure that if the original list is changed,
+        # the change will not be applied in here
 
     def __repr__(self):
         return f'{self.__class__.__name__} <len:{len(self)}>'
@@ -643,10 +635,16 @@ class DataToExport(DataLowLevel):
     def __len__(self):
         return len(self.data)
 
-    def get_data_by_dim(self, dim: DataDim):
-        dim = DataDim.enforcer(dim)
+    def get_data_from_dim(self, dim: DataDim) -> List[DataWithAxes]:
+        """Get the data matching the given DataDim"""
+        dim = enum_checker(DataDim, dim)
         selection = find_objects_in_list_from_attr_name_val(self.data, 'dim', dim, return_first=False)
-        return selection
+        return [sel[0] for sel in selection]
+
+    def get_data_from_name(self, name: str) -> List[DataWithAxes]:
+        """Get the data matching the given name"""
+        data, index = find_objects_in_list_from_attr_name_val(self.data, 'name', name)
+        return data
 
     @property
     def data(self):
@@ -659,13 +657,6 @@ class DataToExport(DataLowLevel):
         if not isinstance(data, DataWithAxes):
             raise TypeError('Data stored in a DataToExport object should be objects inherited from DataWithAxis')
 
-    def get_data_from_dim(self, dim: DataDim):
-        selection = []
-        for data in self.data:
-            dim = DataDim.enforcer(dim)
-            if data.dim == dim:
-                selection.append(data)
-        return selection
 
     @dispatch(list)
     def append(self, data: List[DataWithAxes]):
@@ -679,9 +670,9 @@ class DataToExport(DataLowLevel):
         Make sure only one DataWithAxes object with a given name is in the list
         """
         self._check_data_type(data)
-        obj, index = find_objects_in_list_from_attr_name_val(self.data, 'name', data.name)
-        if index >= 0:
-            self._data.pop(index)
+        obj = self.get_data_from_name(data.name)
+        if obj is not None:
+            self._data.pop(self.data.index(obj))
         self._data.append(data)
 
 

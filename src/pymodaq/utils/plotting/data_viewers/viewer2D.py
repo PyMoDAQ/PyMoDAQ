@@ -1043,7 +1043,7 @@ def main_controller():
     data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
     data_blue = pg.gaussianFilter(data_blue, (2, 2))
 
-    def print_data(data):
+    def print_data(data: DataToExport):
         print(data)
         print('******')
         print(data.get_data_by_dim('Data1D'))

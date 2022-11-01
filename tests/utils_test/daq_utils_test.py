@@ -1,26 +1,22 @@
 import numpy as np
 import os
-
-import utils.data
-
-from pymodaq.utils.parameter import utils as putils
-import utils.units
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils import config
 import pytest
 import re
-from pymodaq.utils import daq_utils as utils
-from pyqtgraph.parametertree import Parameter
 from pathlib import Path
 import datetime
-from pymodaq.control_modules.utils import DAQ_TYPES
 
-DATADIMS = utils.data.DATADIMS
+from pymodaq.utils import daq_utils as utils
 
 
 class MockEntryPoints:
     def __init__(self, value):
         self.value = value
+
+
+class MockObject:
+    def __init__(self, **kwargs):
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
 
 
 def test_get_version():
@@ -50,7 +46,6 @@ class TestJsonConverter:
 
         assert conv.json2object(conv.object2json(1j)) == {'module': 'builtins', 'type': 'complex', 'data': '1j'}
         assert isinstance(conv.json2object(conv), utils.JsonConverter)
-
 
 
 class TestString:
@@ -183,7 +178,6 @@ def test_zeros_aligned():
     assert data.ctypes.data % align == 0
 
 
-
 def test_get_new_file_name(tmp_path):
     base_name = 'tttr_data'
     file, direct = utils.get_new_file_name(tmp_path, base_name)
@@ -208,20 +202,42 @@ def test_get_new_file_name(tmp_path):
     assert file == f'{base_name}_000'
 
 
-def test_find_dict_if_matched_key_val():
-    dict_tmp = {1: 'abc', 2: 'def'}
-    assert utils.find_dict_if_matched_key_val(dict_tmp, 1, 'abc')
-    assert not utils.find_dict_if_matched_key_val(dict_tmp, 2, 'abc')
+class TestFindInIterable:
 
+    def test_find_dict_if_matched_key_val(self):
+        dict_tmp = {1: 'abc', 2: 'def'}
+        assert utils.find_dict_if_matched_key_val(dict_tmp, 1, 'abc')
+        assert not utils.find_dict_if_matched_key_val(dict_tmp, 2, 'abc')
 
-def test_find_dict_in_list_from_key_val():
-    dict_tmp_1 = {1: 'abc', 2: 'def'}
-    dict_tmp_2 = {1: 'def', 2: 'abc'}
-    dict_tmp_3 = {'abc': 1, 'def': 2}
-    dicts = [dict_tmp_1, dict_tmp_2, dict_tmp_3]
+    def test_find_dict_in_list_from_key_val(self):
+        dict_tmp_1 = {1: 'abc', 2: 'def'}
+        dict_tmp_2 = {1: 'def', 2: 'abc'}
+        dict_tmp_3 = {'abc': 1, 'def': 2}
+        dicts = [dict_tmp_1, dict_tmp_2, dict_tmp_3]
 
-    assert utils.find_dict_in_list_from_key_val(dicts, 1, 'abc') == dict_tmp_1
-    assert utils.find_dict_in_list_from_key_val(dicts, 1, 'abc', True) == tuple([dict_tmp_1, 0])
+        assert utils.find_dict_in_list_from_key_val(dicts, 1, 'abc') == dict_tmp_1
+        assert utils.find_dict_in_list_from_key_val(dicts, 1, 'abc', True) == tuple([dict_tmp_1, 0])
 
-    assert utils.find_dict_in_list_from_key_val(dicts, 'def', 1) is None
-    assert utils.find_dict_in_list_from_key_val(dicts, 'def', 1, True) == tuple([None, -1])
+        assert utils.find_dict_in_list_from_key_val(dicts, 'def', 1) is None
+        assert utils.find_dict_in_list_from_key_val(dicts, 'def', 1, True) == tuple([None, -1])
+
+    def test_find_object_if_matched_attr_name_val(self):
+        obj = MockObject(attr1=12, attr2='ghj')
+        assert utils.find_object_if_matched_attr_name_val(obj, 'attr1', 12)
+        assert utils.find_object_if_matched_attr_name_val(obj, 'attr2', 'ghj')
+        assert not utils.find_object_if_matched_attr_name_val(obj, 'attr3', 12)
+        assert not utils.find_object_if_matched_attr_name_val(obj, 'attr2', 12)
+
+    def find_objects_in_list_from_attr_name_val(self):
+        objects = [MockObject(attr1=elt1, attr2=elt2) for elt1, elt2 in zip(['abc', 'abc', 'bgf'], [12, 45, 45])]
+
+        assert utils.find_objects_in_list_from_attr_name_val(objects, 'attr1', 'abc') == objects[0], 0
+        selection = utils.find_objects_in_list_from_attr_name_val(objects, 'attr1', 'abc', return_first=False)
+        assert len(selection) == 2
+        assert selection[0] == objects[0], 0
+        assert selection[1] == objects[1], 1
+
+        selection = utils.find_objects_in_list_from_attr_name_val(objects, 'attr2', 45, return_first=False)
+        assert len(selection) == 2
+        assert selection[0] == objects[1], 1
+        assert selection[1] == objects[2], 2

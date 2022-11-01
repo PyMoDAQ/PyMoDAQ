@@ -21,23 +21,30 @@ class BaseEnum(Enum):
                 return True
         return super().__eq__(other)
 
-    def enforcer(self, item):
 
-        if item is None:
-            raise ValueError(f'{item} is an invalid {self.__class__.__name__}. Should be a'
-                             f' {self.__class__.__name__} enum or '
-                             f'a string in'
-                             f' {self.__class__.names()}')
+def enum_checker(enum: BaseEnum, item: Union[BaseEnum, str]):
+    """Check if the item parameter is a valid enum or at least one valid string name of the enum
 
-        if not isinstance(item, self.__class__):
-            if item in self.__class__.names():
-                item = self.__class__[item]
-            else:
-                raise ValueError(f'{item} is an invalid {self.__class__.__name__}. Should be a'
-                                 f' {self.__class__.__name__} enum or '
-                                 f'a string in'
-                                 f' { self.__class__.names()}')
+    If a string, transforms it to a valid enum
 
-        return item
+    Parameters
+    ----------
+    enum: BaseEnum class or one of its derivated class
+
+    item: str or BaseEnum instance
+
+    Returns
+    -------
+    BaseEnum class or one of its derivated class
+    """
+
+    if not isinstance(item, enum):
+        if item in enum.names():
+            item = enum[item]
+        else:
+            raise ValueError(f'{item} is an invalid {enum}. Should be a {enum} enum or '
+                             f'a string in {enum.names()}')
+    return item
+
 
 

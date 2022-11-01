@@ -495,16 +495,22 @@ def find_objects_in_list_from_attr_name_val(objects, attr_name, attr_value, retu
     """
     selection = []
     obj = None
-    for ind, obj in enumerate(objects):
-        if find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
+    for ind, obj_tmp in enumerate(objects):
+        if find_object_if_matched_attr_name_val(obj_tmp, attr_name, attr_value):
+            obj = obj_tmp
             if return_first:
                 break
             else:
-                selection.append((obj, ind))
+                selection.append((obj_tmp, ind))
 
     if obj is None:
         if return_first:
             return None, -1
+        else:
+            return []
+    else:
+        if return_first:
+            return obj, ind
         else:
             return selection
 

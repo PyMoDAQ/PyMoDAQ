@@ -23,16 +23,17 @@ DATA2D = np.zeros((5, 6))
 DATAND = np.zeros((5, 6, 3))
 
 
+
 def init_axis(data=None, index=0):
     if data is None:
         data = DATA
     return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
 
 
-def init_data(data=None, Ndata=1, axes=[]):
+def init_data(data=None, Ndata=1, axes=[], name='myData') -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
-    return data_mod.DataWithAxes('myData', data_mod.DataSource(0), data=[data for ind in range(Ndata)],
+    return data_mod.DataWithAxes(name, data_mod.DataSource(0), data=[data for ind in range(Ndata)],
                                  axes=axes)
 
 
@@ -44,6 +45,14 @@ def init_axis_fixt():
 @pytest.fixture()
 def init_data_fixt():
     return init_data()
+
+
+@pytest.fixture()
+def ini_data_to_export():
+    dat1 = init_data(data=DATA2D, Ndata=2, name='data2D')
+    dat2 = init_data(data=DATA1D, Ndata=3, name='data1D')
+    data = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+    return dat1, dat2, data
 
 
 class TestAxisBase:
@@ -91,6 +100,20 @@ class TestAxisBase:
         assert ax_offset.data == approx(ax.data + offset)
 
 
+class TestDataLowLevel:
+    def test_init(self):
+        data = data_mod.DataLowLevel('myData')
+        assert hasattr(data, 'timestamp')
+        assert hasattr(data, 'name')
+        assert data.name == 'myData'
+
+    def test_timestamp(self):
+        t1 = time.time()
+        data = data_mod.DataLowLevel('myData')
+        t2 = time.time()
+        assert t1 <= data.timestamp <= t2
+
+
 class TestDataBase:
     def test_init(self):
         Ndata = 2
@@ -127,18 +150,12 @@ class TestDataBase:
 
     def test_force_dim(self):
         with pytest.warns(UserWarning):
-            data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA1D], dim='Data0D')
-
-    def test_timestamp(self):
-        t1 = time.time()
-        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA1D])
-        t2 = time.time()
-        assert t1 <= data.timestamp <= t2
+            data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA1D], dim='Data0D')
 
     def test_errors(self):
         with pytest.raises(TypeError):
             data_mod.DataBase()
-        with pytest.raises(TypeError):
+        with pytest.raises(ValueError):
             data_mod.DataBase('myData')
         with pytest.raises(TypeError):
             data_mod.DataBase('myData', data_mod.DataSource(0))
@@ -265,3 +282,62 @@ def test_ScalingOptions():
     assert isinstance(scaling_options, data_mod.ScalingOptions)
     assert isinstance(scaling_options['scaled_xaxis'], data_mod.ScaledAxis)
     assert isinstance(scaling_options['scaled_yaxis'], data_mod.ScaledAxis)
+
+
+class TestDataToExport:
+    def test_init(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+
+        assert data.name == 'toexport'
+        assert data.data == [dat1, dat2]
+        assert len(data) == 2
+
+    def test_data_type(self):
+        with pytest.raises(TypeError):
+            data_mod.DataToExport(name='toexport', data=[np.zeros((10,))])
+        with pytest.raises(TypeError):
+            data_mod.DataToExport(name='toexport', data=init_data())
+
+        data_mod.DataToExport(name='toexport', data=[data_mod.DataFromRoi('mydata', data=[np.zeros((10,))])])
+
+    def test_append(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+
+        data.append([dat1, dat2])
+        assert data.data == [dat1, dat2]
+        assert len(data) == 2
+
+        dat3 = init_data(data=DATA0D, Ndata=1, name='data0D')
+        data.append(dat3)
+        assert len(data) == 3
+        assert data.data == [dat1, dat2, dat3]
+
+    def test_get_data_by_dim(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        assert len(data.get_data_from_dim(data_mod.DataDim['Data0D'])) == 0
+
+        dat3 = init_data(data=DATA0D, Ndata=1, name='data0D')
+        data.append(dat3)
+
+        assert data.get_data_from_dim('Data0D') == [dat3]
+        assert data.get_data_from_dim(data_mod.DataDim['Data0D']) == [dat3]
+
+        assert data.get_data_from_dim(data_mod.DataDim['Data1D']) == [dat2]
+        assert data.get_data_from_dim(data_mod.DataDim['Data2D']) == [dat1]
+
+        dat4 = init_data(data=DATA2D, Ndata=1, name='data2Dbis')
+        data.append(dat4)
+        assert data.get_data_from_dim(data_mod.DataDim['Data2D']) == [dat1, dat4]
+
+    def test_get_data_by_name(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+
+        assert data.get_data_from_name('data2D') == dat1
+        assert data.get_data_from_name('data1D') == dat2
+        dat3 = init_data(data=DATA2D, Ndata=1, name='data2Dbis')
+        data.append(dat3)
+        assert data.get_data_from_name('data2Dbis') == dat3
+        dat4 = init_data(data=DATA2D, Ndata=1, name='data2D')
+        data.append(dat4)
+        assert data.get_data_from_name('data2D') == dat4
+        assert dat1 not in data.data
