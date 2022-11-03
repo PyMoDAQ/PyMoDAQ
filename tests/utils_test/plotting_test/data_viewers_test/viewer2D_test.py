@@ -111,15 +111,7 @@ class TestHistoFactory:
         assert histo.imageItem() is image_item
 
 
-class TestCurveFactory:
-    @pytest.mark.parametrize('pen', list(v2d.COLORS_DICT.keys())+v2d.COLOR_LIST)
-    def test_create_curve(self, init_qt, pen):
-        curve = v2d.curve_item_factory(pen=pen)
-        assert isinstance(curve, pg.PlotCurveItem)
 
-    def test_wrong_pen(self, init_qt):
-        with pytest.raises(ValueError):
-            curve = v2d.curve_item_factory(pen='this is not a valid color key')
 
 
 class TestData0DWithHistory:
@@ -170,10 +162,6 @@ class TestLineoutData:
 
     def test_intdataisnone(self):
         pymodaq.utils.plotting.utils.filter.LineoutData(ver_axis=np.random.random(10), ver_data=np.random.random(10))
-
-
-class TestLineoutPlotter:
-    pass
 
 
 class TestViewer2D:

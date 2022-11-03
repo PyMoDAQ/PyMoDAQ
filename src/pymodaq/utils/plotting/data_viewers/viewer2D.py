@@ -24,6 +24,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.utils.plot_utils import Data0DWithHistory, AxisInfosExtractor
 from pymodaq.utils.plotting.utils.filter import FilterFromCrosshair, FilterFromRois
 import pymodaq.utils.daq_utils as utils
+from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
 from pymodaq.utils.exceptions import ViewerError
 
 logger = set_logger(get_module_name(__file__))
@@ -36,7 +37,7 @@ Gradients.update(OrderedDict([
 
 COLORS_DICT = dict(red=(255, 0, 0), green=(0, 255, 0), blue=(0, 0, 255), spread=(128, 128, 128))
 IMAGE_TYPES = ['red', 'green', 'blue']
-LINEOUT_WIDGETS = ['hor', 'ver', 'int']
+
 COLOR_LIST = utils.plot_colors
 
 
@@ -73,23 +74,6 @@ def histogram_factory(image_item=None, gradient='red'):
     histo.gradient.loadPreset(gradient)
     return histo
 
-
-def curve_item_factory(pen='red'):
-    """
-    Create a PlotCurveItem with the given pen
-    Parameters
-    ----------
-    pen: any type of arguments accepted by pyqtgraph.function.mkColor or one of the COLORS_DICT key
-
-    Returns
-    -------
-    PlotCurveItem
-    """
-    if isinstance(pen, str):
-        if pen in COLORS_DICT:
-            pen = COLORS_DICT[pen]
-
-    return PlotCurveItem(pen=pen)
 
 
 class ImageDisplayer(QObject):
@@ -269,34 +253,26 @@ class IsoCurver(QObject):
             self._isoLine.hide()
 
 
-class LineoutPlotter(QObject):
+class LineoutPlotter(LineoutPlotter):
+    """class to manage and display data filtered out into lineouts (1D, 0D)
 
-    roi_changed = Signal(dict)
-    crosshair_lineout_plotted = Signal(dict)
-    roi_lineout_plotted = Signal(dict)
+    Should be inherited and subclass some methods as appropriate
 
-    def __init__(self, graph_widgets, roi_manager, crosshair):
-        super().__init__()
+    Parameters
+    ----------
+    graph_widgets: OrderedDict
+        Includes plotwidgets to display data
+    roi_manager:
+        The ROIManager to create ROIs and manage their properties
+    crosshair:
+        The Crosshair object
+    """
+    lineout_widgets = ['hor', 'ver', 'int']
 
-        self._roi_manager = roi_manager
-        self._crosshair = crosshair
+    def __init__(self, graph_widgets: OrderedDict, roi_manager: ROIManager, crosshair: Crosshair):
+        super().__init__(graph_widgets, roi_manager, crosshair)
 
-        self._lineout_widgets = graph_widgets['lineouts']
-
-        self.integrated_data = Data0DWithHistory()
-
-        self._roi_curves = OrderedDict()
-        self._crosshair_curves = OrderedDict()
-        self._data_integrated = []
-
-        self.setup_crosshair()
-
-        self._roi_manager.new_ROI_signal.connect(self.add_ROI)
-        self._roi_manager.remove_ROI_signal.connect(self.remove_ROI)
-        self._roi_manager.roi_value_changed.connect(self.update_roi)
-
-    def plot_roi_lineouts(self, roi_dicts):
-        self.integrated_data.add_datas({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
+    def plot_other_lineouts(self, roi_dicts):
         for roi_key, lineout_data in roi_dicts.items():
             if roi_key in self._roi_curves:
                 if lineout_data.hor_data.size > 0:
@@ -304,140 +280,12 @@ class LineoutPlotter(QObject):
                     self._roi_curves[roi_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
                 self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
                                                          self.integrated_data.datas[roi_key])
-        logger.debug('roi lineouts plotted')
-        self.roi_lineout_plotted.emit(roi_dicts)
 
-    def plot_crosshair_lineouts(self, crosshair_dict):
+    def plot_other_crosshair_lineouts(self, crosshair_dict):
         for data_key, lineout_data in crosshair_dict.items():
             if data_key in self._crosshair_curves:
                 self._crosshair_curves[data_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
                 self._crosshair_curves[data_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
-        logger.debug('crosshair lineouts plotted')
-        self.crosshair_lineout_plotted.emit(crosshair_dict)
-
-    def get_lineout_widget(self, name):
-        if name not in LINEOUT_WIDGETS:
-            raise KeyError(f'The lineout_widget reference should be within {LINEOUT_WIDGETS} not {name}')
-        return self._lineout_widgets[name]
-
-    @Slot(str, tuple)
-    def update_roi(self, roi_key, param_changed):
-        param, param_value = param_changed
-
-        if param.name() == 'Color':
-            for curve in self._roi_curves[roi_key].values():
-                curve.setPen(param_value)
-
-        self.roi_changed.emit(self._roi_manager.ROIs)
-
-    @Slot(str)
-    def remove_ROI(self, roi_name):
-        index = int(roi_name.split('_')[1])
-        self.remove_roi_lineout_items(index)
-
-        self.roi_changed.emit(self._roi_manager.ROIs)
-
-    @Slot(int, str)
-    def add_ROI(self, newindex, roi_type):
-        item = self._roi_manager.get_roi_from_index(newindex)
-        item.sigRegionChanged.connect(lambda: self.roi_changed.emit(self._roi_manager.ROIs))
-        item_param = self._roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(newindex))
-        color = item_param.child(('Color')).value()
-
-        self.add_roi_lineout_items(newindex, color)
-        self.roi_changed.emit(self._roi_manager.ROIs)
-
-    def add_roi_lineout_items(self, index, pen):
-        """
-        Add specifics lineouts generated from ROIs
-        Parameters
-        ----------
-        index: (int) index of the ROI generating these lineouts
-        pen: (str, tuple) any argument able to generate a QPen, see pyqtgraph.functions.mkPen
-        """
-        self._roi_curves[f'ROI_{index:02d}'] = \
-            {curv_key: curve_item_factory(pen) for curv_key in LINEOUT_WIDGETS}
-        self.add_lineout_items(*self._roi_curves[f'ROI_{index:02d}'].values())
-
-    def remove_roi_lineout_items(self, index):
-        """
-        Remove specifics lineouts generated from ROI referenced by a unique integer
-        Parameters
-        ----------
-        index: (int) index of the ROI generating these lineouts
-        """
-        items = self._roi_curves.pop(f'ROI_{index:02d}')
-        self.remove_lineout_items(*items.values())
-
-    def add_lineout_items(self, *curve_items):
-        """
-        Add Curve items sequentially to lineouts widgets: (hor, ver and int)
-        Parameters
-        ----------
-        curve_items: (PlotCurveItem) at most 3 of them
-        """
-        for ind, curve_item in enumerate(curve_items):
-            self.get_lineout_widget(LINEOUT_WIDGETS[ind]).addItem(curve_item)
-
-    def remove_lineout_items(self, *curve_items):
-        """
-        Remove Curve items sequentially to lineouts widgets: (hor, ver and int)
-        Parameters
-        ----------
-        curve_items: (PlotCurveItem) at most 3 of them
-        """
-
-        for ind, curve_item in enumerate(curve_items):
-            self.get_lineout_widget(LINEOUT_WIDGETS[ind]).removeItem(curve_item)
-
-    @Slot(bool)
-    def roi_clicked(self, isroichecked=True):
-        self._roi_manager.roiwidget.setVisible(isroichecked)
-
-        for k, roi in self._roi_manager.ROIs.items():
-            roi.setVisible(isroichecked)
-            for item in self.get_roi_curves_triplet()[k].values():
-                item.setVisible(isroichecked)
-
-    Slot(bool)
-    def crosshair_clicked(self, iscrosshairchecked=True):
-        for image_key in IMAGE_TYPES:
-            self.show_crosshair_curves(image_key, iscrosshairchecked)
-
-    def get_roi_curves_triplet(self):
-        """
-        Get the dictionary (one key by ROI) containing dicts with ROI PlotCurveItem
-
-        Example:
-        --------
-        >>> roi_dict_triplet = self.get_roi_cruves_triplet()
-        >>> hor_curve = roi_dict_triplet['ROI_00']['hor']  # where 'hor' is an entry of LINEOUT_WIDGETS
-        """
-        return self._roi_curves
-
-    def get_crosshair_curves_triplet(self):
-        """
-        Get the dictionary (one key by ImageItem, see IMAGE_TYPES) containing dicts with PlotCurveItem
-
-        Example:
-        --------
-        >>> crosshair_dict_triplet = self.get_crosshair_curves_triplet()
-        >>> hor_curve = crosshair_dict_triplet['blue']['hor']  # where 'hor' is an entry of LINEOUT_WIDGETS
-        """
-        return self._crosshair_curves
-
-    def get_crosshair_curve_triplet(self, curve_name):
-        return self._crosshair_curves[curve_name]
-
-    def setup_crosshair(self):
-        for image_key in IMAGE_TYPES:
-            self._crosshair_curves[image_key] = \
-                {curv_key: curve_item_factory(image_key) for curv_key in LINEOUT_WIDGETS}
-            self.add_lineout_items(self._crosshair_curves[image_key]['hor'], self._crosshair_curves[image_key]['ver'])
-
-    def show_crosshair_curves(self, curve_key, show=True):
-        for curve in self._crosshair_curves[curve_key].values():
-            curve.setVisible(show)
 
 
 class View2D(ActionManager, QtCore.QObject):
@@ -532,7 +380,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter.addWidget(self.splitter_VLeft)
         self.splitter.addWidget(self.splitter_VRight)
 
-        self._lineout_widgets = {widg_key: pg.PlotWidget() for widg_key in LINEOUT_WIDGETS}
+        self._lineout_widgets = {widg_key: pg.PlotWidget() for widg_key in LineoutPlotter.lineout_widgets}
         self.graphical_widgets = dict(lineouts=self._lineout_widgets, image=self.image_widget)
         self.splitter_VLeft.addWidget(self.image_widget)
         self.splitter_VLeft.addWidget(self._lineout_widgets['hor'])
@@ -610,7 +458,7 @@ class View2D(ActionManager, QtCore.QObject):
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('roi') or self.is_action_checked('crosshair')
-        for lineout_name in LINEOUT_WIDGETS:
+        for lineout_name in LineoutPlotter.lineout_widgets:
             lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
             lineout.setMouseEnabled(state, state)
             lineout.showAxis('left', state)
@@ -750,6 +598,8 @@ class View2D(ActionManager, QtCore.QObject):
 
 
 class Viewer2D(ViewerBase):
+    """Object managing plotting and manipulation of 2D data using a View2D"""
+
     crosshair_clicked = Signal(bool)
     ROI_select_signal = Signal(QtCore.QRectF)
     convenience_attributes = ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
@@ -1067,8 +917,8 @@ def main_controller():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    #prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
-    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
+    prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     #prog.ROI_select_signal.connect(print_roi_select)
     #prog.view.get_action('ROIselect').trigger()

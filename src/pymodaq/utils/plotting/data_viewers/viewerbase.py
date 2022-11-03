@@ -46,6 +46,7 @@ class ViewerBase(QObject):
     def __init__(self, parent=None, title=''):
         super().__init__()
         self.title = title if title != '' else self.__class__.__name__
+        self.viewer_type == self.__class__.__name__
 
         self._raw_datas = None
         self.data_to_export: DataToExport = DataToExport(name=self.title)

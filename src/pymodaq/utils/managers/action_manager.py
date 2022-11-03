@@ -32,7 +32,7 @@ class QAction(QAction):
         self.triggered.connect(slot)
 
 
-def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar=None, menu=None):
+def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar=None, menu=None, visible=True):
     """Create a new action and add it eventually to a toolbar and a menu
 
     Parameters
@@ -51,6 +51,8 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
         a toolbar where action should be added.
     menu: QMenu
         a menu where action should be added.
+    visible: bool
+        display or not the action in the toolbar/menu
     """
     if icon_name != '':
         icon = QtGui.QIcon()
@@ -72,6 +74,7 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
         toolbar.addAction(action)
     if menu is not None:
         menu.addAction(action)
+    action.setVisible(visible)
     return action
 
 
@@ -109,7 +112,8 @@ class ActionManager:
         raise NotImplementedError(f'You have to define actions here in the following form:'
                                   f'{self.setup_actions.__doc__}')
 
-    def add_action(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
+    def add_action(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None,
+                   visible=True):
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -128,6 +132,8 @@ class ActionManager:
             a toolbar where action should be added. Actions can also be added later see *affect_to*
         menu: QMenu
             a menu where action should be added. Actions can also be added later see *affect_to*
+        visible: bool
+            display or not the action in the toolbar/menu
 
         See Also
         --------
@@ -138,7 +144,8 @@ class ActionManager:
             toolbar = self._toolbar
         if menu is None:
             menu = self._menu
-        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
+        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu,
+                                              visible=visible)
 
     def set_toolbar(self, toolbar):
         """affect a toolbar to self
