@@ -1,5 +1,8 @@
 import numpy
 import numpy as np
+from numbers import Number
+from typing import List
+
 from qtpy import QtWidgets, QtGui
 from qtpy.QtCore import QObject, Signal
 
@@ -122,13 +125,13 @@ def linspace_step_N(start, step, Npts):
     return linspace_step(start, stop, step)
 
 
-def find_index(x, threshold):
-    """
-    find_index finds the index ix such that x(ix) is the closest from threshold
+def find_index(x, threshold: List[Number]) -> List[tuple]:
+    """find_index finds the index ix such that x(ix) is the closest from threshold
+
     Parameters
     ----------
     x : vector
-    threshold : list of scalar
+    threshold : list of real numbers
 
     Returns
     -------
