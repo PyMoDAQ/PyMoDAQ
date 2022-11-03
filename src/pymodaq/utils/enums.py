@@ -25,7 +25,7 @@ class BaseEnum(Enum):
 def enum_checker(enum: BaseEnum, item: Union[BaseEnum, str]):
     """Check if the item parameter is a valid enum or at least one valid string name of the enum
 
-    If a string, transforms it to a valid enum
+    If a string, transforms it to a valid enum (case not important)
 
     Parameters
     ----------
@@ -39,8 +39,13 @@ def enum_checker(enum: BaseEnum, item: Union[BaseEnum, str]):
     """
 
     if not isinstance(item, enum):
-        if item in enum.names():
-            item = enum[item]
+        if not isinstance(item, str):
+            raise ValueError(f'{item} is an invalid {enum}. Should be a {enum} enum or '
+                             f'a string in {enum.names()}')
+        for ind, name in enumerate(enum.names()):
+            if item.lower() == name.lower():
+                item = enum[name]
+                break
         else:
             raise ValueError(f'{item} is an invalid {enum}. Should be a {enum} enum or '
                              f'a string in {enum.names()}')

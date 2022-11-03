@@ -58,13 +58,11 @@ def ini_data_to_export():
 class TestAxisBase:
 
     def test_errors(self):
-        with pytest.raises(ValueError):
-            data_mod.AxisBase()
         with pytest.raises(TypeError):
             data_mod.AxisBase(label=24)
         with pytest.raises(TypeError):
             data_mod.AxisBase(units=42)
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             data_mod.AxisBase(index=1.)
         with pytest.raises(ValueError):
             data_mod.AxisBase(index=-2)
@@ -318,16 +316,16 @@ class TestDataToExport:
 
         dat3 = init_data(data=DATA0D, Ndata=1, name='data0D')
         data.append(dat3)
+        assert isinstance(data.get_data_from_dim('Data0D'), data_mod.DataToExport)
+        assert data.get_data_from_dim('Data0D').data == [dat3]
+        assert data.get_data_from_dim(data_mod.DataDim['Data0D']).data == [dat3]
 
-        assert data.get_data_from_dim('Data0D') == [dat3]
-        assert data.get_data_from_dim(data_mod.DataDim['Data0D']) == [dat3]
-
-        assert data.get_data_from_dim(data_mod.DataDim['Data1D']) == [dat2]
-        assert data.get_data_from_dim(data_mod.DataDim['Data2D']) == [dat1]
+        assert data.get_data_from_dim(data_mod.DataDim['Data1D']).data == [dat2]
+        assert data.get_data_from_dim(data_mod.DataDim['Data2D']).data == [dat1]
 
         dat4 = init_data(data=DATA2D, Ndata=1, name='data2Dbis')
         data.append(dat4)
-        assert data.get_data_from_dim(data_mod.DataDim['Data2D']) == [dat1, dat4]
+        assert data.get_data_from_dim(data_mod.DataDim['Data2D']).data == [dat1, dat4]
 
     def test_get_data_by_name(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
@@ -341,3 +339,13 @@ class TestDataToExport:
         data.append(dat4)
         assert data.get_data_from_name('data2D') == dat4
         assert dat1 not in data.data
+
+    def test_get_names(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        assert data.get_names() == ['data2D', 'data1D']
+        assert data.get_names('Data1D') == ['data1D']
+        assert data.get_names('Data2D') == ['data2D']
+
+        dat3 = init_data(data=DATA2D, Ndata=1, name='data2Dbis')
+        data.append(dat3)
+        assert data.get_names('data2d') == ['data2D', 'data2Dbis']

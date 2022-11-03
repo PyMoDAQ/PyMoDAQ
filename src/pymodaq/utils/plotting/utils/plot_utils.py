@@ -1,5 +1,5 @@
 from multipledispatch import dispatch
-
+from numbers import Real
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.plotting.items.axis_scaled import AxisItem_Scaled
 from qtpy import QtGui, QtCore
@@ -317,8 +317,67 @@ class Data0DWithHistory:
         self._xaxis = np.array([])
 
 
-class AxisInfosExtractor:
+class AxisInfos:
+    def __init__(self, scaling=1, offset=0, label='', units=''):
+        self._label = label
+        self._units = units
+        self._scaling = scaling
+        self._offset = offset
 
+        self.label = label
+        self.units = units
+        self.scaling = scaling
+        self.offset = offset
+
+    @property
+    def label(self):
+        return self._label
+
+    @label.setter
+    def label(self, label: str):
+        if not isinstance(label, str):
+            raise TypeError(f'The label should be a string')
+        self._label = label
+
+    @property
+    def units(self):
+        return self._units
+
+    @units.setter
+    def units(self, units: str):
+        if not isinstance(units, str):
+            raise TypeError(f'The units should be a string')
+        self._units = units
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, scaling: Real):
+        if not isinstance(scaling, Real):
+            raise TypeError(f'The scaling should be a real number')
+        self._scaling = scaling
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, offset: Real):
+        if not isinstance(offset, Real):
+            raise TypeError(f'The offset should be a real number')
+        self._offset = offset
+
+    def __eq__(self, other):
+        if isinstance(other, AxisInfos):
+            return self.label == other.label and self.units == other.units and self.scaling == other.scaling \
+                   and self.offset == other.offset
+        else:
+            super().__eq__(other)
+
+
+class AxisInfosExtractor:
     @staticmethod
     @dispatch(np.ndarray)
     def extract_axis_info(axis: np.ndarray):
@@ -336,16 +395,14 @@ class AxisInfosExtractor:
                 else:
                     offset = np.max(data)
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
 
     @staticmethod
     @dispatch(data_mod.Axis)
     def extract_axis_info(axis: data_mod.Axis):
-        data = None
-        if 'data' in axis:
-            data = axis['data']
-        label = axis['label']
-        units = axis['units']
+        data = axis.data
+        label = axis.label
+        units = axis.units
 
         scaling = 1
         offset = 0
@@ -357,7 +414,7 @@ class AxisInfosExtractor:
                 else:
                     offset = np.max(data)
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
 
     @staticmethod
     @dispatch(edict)
@@ -379,7 +436,7 @@ class AxisInfosExtractor:
                 else:
                     offset = np.max(data)
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
 
     @staticmethod
     @dispatch(AxisItem_Scaled)
@@ -389,4 +446,4 @@ class AxisInfosExtractor:
         scaling = axis.axis_scaling
         offset = axis.axis_offset
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)

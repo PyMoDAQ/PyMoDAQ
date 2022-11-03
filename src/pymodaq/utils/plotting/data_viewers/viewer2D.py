@@ -966,8 +966,9 @@ class Viewer2D(ViewerBase):
 
     @x_axis.setter
     def x_axis(self, axis):
-        scaling, offset, label, units = AxisInfosExtractor.extract_axis_info(axis)
-        self.view.set_axis_scaling('top', scaling=scaling, offset=offset, label=label, units=units)
+        axis_info = AxisInfosExtractor.extract_axis_info(axis)
+        self.view.set_axis_scaling('top', scaling=axis_info.scaling, offset=axis_info.offset,
+                                   label=axis_info.label, units=axis_info.units)
 
     @property
     def y_axis(self):
@@ -975,8 +976,9 @@ class Viewer2D(ViewerBase):
 
     @y_axis.setter
     def y_axis(self, axis):
-        scaling, offset, label, units = AxisInfosExtractor.extract_axis_info(axis)
-        self.view.set_axis_scaling('right', scaling=scaling, offset=offset, label=label, units=units)
+        axis_info = AxisInfosExtractor.extract_axis_info(axis)
+        self.view.set_axis_scaling('right', scaling=axis_info.scaling, offset=axis_info.offset,
+                                   label=axis_info.label, units=axis_info.units)
 
     def scale_lineout_dicts(self, lineout_dicts):
         for lineout_data in lineout_dicts.values():
@@ -1046,7 +1048,7 @@ def main_controller():
     def print_data(data: DataToExport):
         print(data)
         print('******')
-        print(data.get_data_by_dim('Data1D'))
+        print(data.get_data_from_dim('Data1D'))
 
     prog = Viewer2D(form)
     # prog.set_axis_scaling(scaling_options=utils.ScalingOptions(
@@ -1065,8 +1067,8 @@ def main_controller():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
-    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
+    #prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     #prog.ROI_select_signal.connect(print_roi_select)
     #prog.view.get_action('ROIselect').trigger()

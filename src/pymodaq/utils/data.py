@@ -18,6 +18,7 @@ from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 
+
 class DataShapeError(Exception):
     pass
 
@@ -112,10 +113,14 @@ class AxisBase:
         return self._data
 
     @data.setter
-    def data(self, dat: np.ndarray):
-        self._check_data_valid(dat)
-        self._data = dat
-        self._size = dat.size
+    def data(self, data: np.ndarray):
+        if data is not None:
+            self._check_data_valid(data)
+            self._size = data.size
+        else:
+            self._size = 0
+        self._data = data
+
 
     @property
     def size(self) -> int:
@@ -194,27 +199,12 @@ class ScaledAxis(Axis):
             raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
         self.scaling = scaling
 
-    @staticmethod
-    def _check_data_valid(data):
-        if data is not None:
-            if not isinstance(data, np.ndarray):
-                raise TypeError(f'data for the Axis class should be a 1D numpy array')
-            elif len(data.shape) != 1:
-                raise ValueError(f'data for the Axis class should be a 1D numpy array')
+    def keys(self):
+        return ['label', 'units', 'offset', 'scaling']
 
-    @property
-    def data(self):
-        """np.ndarray: get/set the data of Axis"""
-        return self._data
-
-    @data.setter
-    def data(self, data: np.ndarray):
-        self._check_data_valid(data)
-        self._data = data
-        if data is not None:
-            self._size = data.size
-        else:
-            self._size = 0
+    def __getitem__(self, item):
+        if item in self.keys():
+            return getattr(self, item)
 
 
 class ScalingOptions(dict):
@@ -635,11 +625,32 @@ class DataToExport(DataLowLevel):
     def __len__(self):
         return len(self.data)
 
-    def get_data_from_dim(self, dim: DataDim) -> List[DataWithAxes]:
-        """Get the data matching the given DataDim"""
+    def get_names(self, dim: DataDim = None):
+        """Get the names of the name eventually filtered by dim
+
+        Parameters
+        ----------
+        dim: DataDim or str
+
+        Returns
+        -------
+        list of str: the names of the (filtered) data
+        """
+        if dim is None:
+            return [data.name for data in self.data]
+        else:
+            return [data.name for data in self.get_data_from_dim(dim).data]
+
+    def get_data_from_dim(self, dim: DataDim):
+        """Get the data matching the given DataDim
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the dimensionality
+        """
         dim = enum_checker(DataDim, dim)
         selection = find_objects_in_list_from_attr_name_val(self.data, 'dim', dim, return_first=False)
-        return [sel[0] for sel in selection]
+        return DataToExport(name=self.name, data=[sel[0] for sel in selection])
 
     def get_data_from_name(self, name: str) -> List[DataWithAxes]:
         """Get the data matching the given name"""
