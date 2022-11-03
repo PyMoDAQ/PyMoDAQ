@@ -7,13 +7,14 @@ from pyqtgraph import LinearRegionItem
 from pymodaq.utils import data as data_mod
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import math_utils as mutils
-from pymodaq.utils.managers.roi_manager import ROIManager
+from pymodaq.utils.managers.roi_manager import ROIManager, LinearROI, RectROI
 from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.items.image import UniformImageItem
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
 
 logger = set_logger(get_module_name(__file__))
+
 
 class Filter:
     def __init__(self):
@@ -40,7 +41,37 @@ class Filter:
         raise NotImplementedError
 
 
-class FilterFromCrosshair(Filter):
+class Filter1DFromCrosshair(Filter):
+    def __init__(self, crosshair: Crosshair):
+        """
+        Extract data along a crosshair using coordinates and data displayed in graph_items such as  imageItems
+        Parameters
+        ----------
+        crosshair : Crosshair
+        """
+        super().__init__()
+        self.crosshair = crosshair
+        self._x, self._y = 0., 0.
+        self._axis: data_mod.Axis = None
+
+    def update_axis(self, axis: data_mod.Axis):
+        self._axis = axis
+
+    def _filter_data(self, data: data_mod.DataFromPlugins):
+        data_dict = dict([])
+        axis = data.get_axis_from_index(0, create=False)
+        if axis is not None:
+            self.update_axis(axis)
+
+        if data is not None:
+            self._x, self._y = self.crosshair.get_positions()
+            ind_x, axis_val = mutils.find_index(self._axis, (self._x,))
+            for label, dat in zip(data.labels, data.data):
+                data_dict[label] = LineoutData(int_data=axis_val)
+        return data_dict
+
+
+class Filter2DFromCrosshair(Filter):
     def __init__(self, crosshair: Crosshair, graph_items, image_keys):
         """
         Extract data along a crosshair using coordinates and data displayed in graph_items such as  imageItems
@@ -141,17 +172,59 @@ class FilterFromCrosshair(Filter):
         return point.x(), point.y()
 
 
-class FilterFromRois(Filter):
-    def __init__(self, roi_manager: ROIManager, graph_item: UniformImageItem, image_keys):
-        """
+class Filter1DFromRois(Filter):
+    """
 
-        Parameters
-        ----------
-        roi_manager
-        graph_item
-        image_keys : (list) list of string identifier to link datas to their graph_items. This means that in
-            _filter_data, datas['data'][key] is plotted on graph_items[key] for key in image_keys
-        """
+    Parameters
+    ----------
+    roi_manager:ROIManager
+    graph_item: PlotItems
+    """
+    def __init__(self, roi_manager: ROIManager):
+
+        super().__init__()
+        self._roi_settings = roi_manager.settings
+        self._ROIs = roi_manager.ROIs
+        self._axis: data_mod.Axis = None
+
+    def update_axis(self, axis: data_mod.Axis):
+        self._axis = axis
+
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
+        data_dict = dict([])
+        axis = data.get_axis_from_index(0, create=False)
+        if axis is not None:
+            self.update_axis(axis)
+        if data is not None:
+            for roi_key, roi in self._ROIs.items():
+                plot_index = self._roi_settings.child('ROIs', roi_key, 'use_channel').value()
+                data_dict[roi_key] = self.get_data_from_roi(roi, data.data[plot_index])
+        return data_dict
+
+    def get_data_from_roi(self, roi: LinearROI, data: np.ndarray):
+        xmin, xmax = roi.pos()
+        (ind_xmin, _), (ind_xmax, _) = utils.find_index(self._axis.data, [xmin, xmax])
+        if data is not None:
+            filtered_data = data[ind_xmin:ind_xmax]
+            int_data = np.array([np.mean(data[ind_xmin:ind_xmax])])
+            filtered_axis = data_mod.Axis(label=self._axis.label, units=self._axis.units,
+                                          data=self._axis.data[ind_xmin:ind_xmax])
+            return LineoutData(hor_axis=filtered_axis, hor_data=filtered_data, int_data=int_data)
+
+
+class Filter2DFromRois(Filter):
+    """Filters 2D data using 2D ROIs
+
+    Parameters
+    ----------
+    roi_manager: ROIManager
+    graph_item: UniformImageItem or SpreadImageItem
+        The graphical item where data and ROIs are plotted
+    image_keys : (list) list of string identifier to link datas to their graph_items. This means that in
+        _filter_data, datas.data[key] is plotted on graph_items[key] for key in image_keys
+    """
+    def __init__(self, roi_manager: ROIManager, graph_item: UniformImageItem, image_keys):
+
         super().__init__()
         self._roi_settings = roi_manager.settings
         self._image_keys = image_keys
@@ -159,19 +232,16 @@ class FilterFromRois(Filter):
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
 
-    def _filter_data(self, datas: data_mod.DataFromPlugins) -> dict:
+    def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
         data_dict = dict([])
-        if datas is not None:
+        if data is not None:
             for roi_key, roi in self._ROIs.items():
                 image_key = self._roi_settings.child('ROIs', roi_key, 'use_channel').value()
                 image_index = self._image_keys.index(image_key)
 
-                data_type = datas['distribution']
-                data = datas['data'][image_index]
-                data_dict[roi_key] = self.get_xydata_from_roi(data_type, roi, data)
+                data_type = data.distribution
+                data_dict[roi_key] = self.get_xydata_from_roi(data_type, roi, data.data[image_index])
         return data_dict
-
-
 
     def get_xydata_from_roi(self, data_type, roi, data):
 
@@ -243,7 +313,6 @@ class LineoutData:
             self.int_data = np.array([np.sum(self.ver_data)])
         else:
             self.int_data = int_data
-
 
 
 class FourierFilterer(QObject):

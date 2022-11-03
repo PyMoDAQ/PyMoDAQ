@@ -11,7 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, ScalingOptions
+from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, ScalingOptions, DataRaw
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -22,9 +22,9 @@ from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS
 from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.utils.plot_utils import Data0DWithHistory, AxisInfosExtractor
-from pymodaq.utils.plotting.utils.filter import FilterFromCrosshair, FilterFromRois
+from pymodaq.utils.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 import pymodaq.utils.daq_utils as utils
-from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
+from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
 from pymodaq.utils.exceptions import ViewerError
 
 logger = set_logger(get_module_name(__file__))
@@ -73,7 +73,6 @@ def histogram_factory(image_item=None, gradient='red'):
 
     histo.gradient.loadPreset(gradient)
     return histo
-
 
 
 class ImageDisplayer(QObject):
@@ -287,6 +286,17 @@ class LineoutPlotter(LineoutPlotter):
                 self._crosshair_curves[data_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
                 self._crosshair_curves[data_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
 
+    def setup_crosshair(self):
+        for image_key in IMAGE_TYPES:
+            self._crosshair_curves[image_key] = \
+                {curv_key: curve_item_factory(image_key) for curv_key in self.lineout_widgets}
+            self.add_lineout_items(self._crosshair_curves[image_key]['hor'], self._crosshair_curves[image_key]['ver'])
+
+    def show_crosshair_curves(self, curve_key, show=True):
+        for curve in self._crosshair_curves[curve_key].values():
+            curve.setVisible(show)
+
+
 
 class View2D(ActionManager, QtCore.QObject):
     def __init__(self, parent_widget=None):
@@ -444,7 +454,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
 
-    @Slot(DataFromPlugins)
+    @Slot(DataRaw)
     def display_images(self, datas):
         self.data_displayer.update_data(datas)
         if self.is_action_checked('isocurve'):
@@ -616,13 +626,13 @@ class Viewer2D(ViewerBase):
 
         self.view = View2D(parent)
 
-        self.filter_from_rois = FilterFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
-                                               IMAGE_TYPES)
+        self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
+                                                 IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
         self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
 
-        self.filter_from_crosshair = FilterFromCrosshair(self.view.crosshair, self.view.data_displayer.get_images(),
-                                                         IMAGE_TYPES)
+        self.filter_from_crosshair = Filter2DFromCrosshair(self.view.crosshair, self.view.data_displayer.get_images(),
+                                                           IMAGE_TYPES)
         self.filter_from_crosshair.register_activation_signal(self.view.get_action('crosshair').triggered)
         self.filter_from_crosshair.register_target_slot(self.process_crosshair_lineouts)
 

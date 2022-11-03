@@ -1,7 +1,7 @@
 import sys
 import datetime
 from collections import OrderedDict
-
+from typing import List
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 from qtpy.QtGui import QIcon, QPixmap
@@ -18,13 +18,16 @@ from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewerbase import ViewerBase
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.managers.roi_manager import ROIManager
-from pymodaq.utils.plotting.utils.filter import FilterFromCrosshair, FilterFromRois
-from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
+from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
+from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
 
 # from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 DAQ_Measurement = None
 
 logger = set_logger(get_module_name(__file__))
+
+PLOT_COLORS = utils.plot_colors
+
 
 class LineoutPlotter(LineoutPlotter):
     """class to manage and display data filtered out into lineouts (1D, 0D)
@@ -52,12 +55,78 @@ class LineoutPlotter(LineoutPlotter):
         pass
 
 
+class DataDisplayer(QObject):
+    """
+    This Object deals with the display of 1D data  on a plotitem
+    """
+
+    updated_item = Signal(dict)
+
+    def __init__(self, plotitem):
+        super().__init__()
+        self._plotitem = plotitem
+        self._plot_items: List[pg.PlotDataItem] = []
+        self._axis = None
+
+    def update_axis(self, axis: data_mod.Axis):
+        self._axis = axis
+
+    def get_plot_items(self):
+        return self._plot_items
+
+    def get_plot_item(self, index: int):
+        return self._plot_items[index]
+
+    def update_data(self, data):
+        if len(data) != len(self._plot_items):
+            self.update_display_items(len(data))
+
+        axis = data.get_axis_from_index(0, create=False)
+        if axis is not None:
+            self.update_axis(axis)
+
+        for ind_data, data in enumerate(data.data):
+            if data.size > 0:
+                self._plot_items[ind_data].setData(self._axis.data, data)
+
+    def plot_with_scatter(self, with_scatter=True):
+        symbolSize = 5
+        for ind, plot_item in enumerate(self.get_plot_items()):
+            if with_scatter:
+                pen = None
+                symbol = 'o'
+                brush = PLOT_COLORS[ind]
+
+            else:
+                pen = PLOT_COLORS[ind]
+                symbol = None
+                brush = None
+
+            plot_item.setPen(pen)
+            plot_item.setSymbolBrush(brush)
+            plot_item.setSymbol(symbol)
+            plot_item.setSymbolSize(symbolSize)
+
+    def update_display_items(self, ncurve: int):
+        while len(self._plot_items) > 0:
+            self._plotitem.removeItem(self._plot_items.pop(0))
+
+        for ind in range(ncurve):
+            self._plot_items.append(pg.PlotDataItem())
+            self._plotitem.addItem(self._plot_items[-1])
+        self.updated_item.emit(self._plot_items)
+
+
 class View1D(ActionManager, QObject):
-    def __init__(self, parent_widget=None):
+    def __init__(self, parent_widget: QtWidgets.QWidget = None):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
 
-        self.data_displayer = None
+        self._data = None
+
+        self.data_displayer: DataDisplayer = None
+        self.plot_widget: pg.PlotWidget = None
+
         self.setup_actions()
         self.roi_manager = ROIManager('1D')
 
@@ -65,11 +134,31 @@ class View1D(ActionManager, QObject):
         if self.parent_widget is None:
             self.parent_widget = QtWidgets.QWidget()
             self.parent_widget.show()
+
         self.setup_widgets()
 
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
-        self.connect_actions()
+        self.connect_things()
         self.prepare_ui()
+
+    @property
+    def plotitem(self):
+        return self.plot_widget.plotItem
+
+    def get_crosshair_signal(self):
+        """Convenience function from the Crosshair"""
+        return self.crosshair.crosshair_dragged
+
+    def get_crosshair_position(self):
+        """Convenience function from the Crosshair"""
+        return self.crosshair.get_positions()
+
+    def set_crosshair_position(self, *positions):
+        """Convenience function from the Crosshair"""
+        self.crosshair.set_crosshair_position(*positions)
+
+    def display_data(self, data: data_mod.DataRaw):
+        self.data_displayer.update_data(data)
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
@@ -77,21 +166,18 @@ class View1D(ActionManager, QObject):
 
     def do_xy(self):
         if self.ui.xyplot_action.isChecked():
-            axis = self.data_displayer.plotwidget.plotItem.getAxis('bottom')
+            axis = self.plotitem.getAxis('bottom')
             axis.setLabel(text=self.labels[0], units='')
-            axis = self.data_displayer.plotwidget.plotItem.getAxis('left')
+            axis = self.plotitem.getAxis('left')
             axis.setLabel(text=self.labels[1], units='')
             self.legend.setVisible(False)
         else:
             self.set_axis_label(dict(orientation='bottom', label=self.axis_settings['label'],
                                      units=self.axis_settings['units']))
-            axis = self.data_displayer.plotwidget.plotItem.getAxis('left')
+            axis = self.plotitem.getAxis('left')
             axis.setLabel(text='', units='')
             self.legend.setVisible(True)
-        self.update_graph1D(self.datas)
-
-    def do_scatter(self):
-        self.update_graph1D(self.datas)
+        self.update_graph1D(self._data)
 
     def enable_zoom(self):
         try:
@@ -104,11 +190,11 @@ class View1D(ActionManager, QObject):
 
             else:
                 self.zoom_plot = []
-                for ind, data in enumerate(self.datas):
+                for ind, data in enumerate(self._data):
                     channel = self.graph_zoom.plot()
                     channel.setPen(self.plot_colors[ind])
                     self.zoom_plot.append(channel)
-                self.update_graph1D(self.datas)
+                self.update_graph1D(self._data)
                 self.zoom_region.setRegion([np.min(self._x_axis), np.max(self._x_axis)])
 
                 self.zoom_widget.show()
@@ -116,33 +202,14 @@ class View1D(ActionManager, QObject):
         except Exception as e:
             logger.exception(str(e))
 
-
-    def open_measurement_module(self):
-        if not self.is_action_checked('do_math'):
-            self.set_action_checked('do_math', True)
-            QtWidgets.QApplication.processEvents()
-            self.get_action('do_math').triggered.emit()
-            QtWidgets.QApplication.processEvents()
-
-        self.measurement_widget.setVisible(True)
-        if self.ui.do_measurements_pb.isChecked():
-            widget = self.measurement_widget
-            self.measurement_module = DAQ_Measurement(widget)
-            # self.measurement_widget.addWidget(Form)
-            self.measurement_module.measurement_signal[list].connect(self.show_measurement)
-            self.update_measurement_module()
-
-        elif self.measurement_module is not None:
-            self.measurement_module.Quit_fun()
-
     def do_math_fun(self):
         try:
             if self.is_action_checked('do_math'):
                 self.roi_manager.roiwidget.show()
-                self.graph_lineouts.show()
+                self.lineout_widgets.show()
 
             else:
-                self.graph_lineouts.hide()
+                self.lineout_widgets.hide()
                 self.roi_manager.roiwidget.hide()
 
         except Exception as e:
@@ -165,7 +232,7 @@ class View1D(ActionManager, QObject):
                 if child.type() != 'group':
                     child.sigValueChanged.connect(self.update_lineouts)
 
-            item_lo = self.graph_lineouts.plot()
+            item_lo = self.lineout_widgets.plot()
             item_lo.setPen(item_param.child(('Color')).value())
             self.lo_items['ROI_{:02d}'.format(index)] = item_lo
             self.lo_data = OrderedDict([])
@@ -179,7 +246,7 @@ class View1D(ActionManager, QObject):
     def remove_ROI(self, roi_name):
         if roi_name in self.lo_items:
             item = self.lo_items.pop(roi_name)
-            self.graph_lineouts.plotItem.removeItem(item)
+            self.lineout_widgets.plotItem.removeItem(item)
         if f'Lineout_{roi_name}:' in self.measure_data_dict:
             self.measure_data_dict.pop(f'Lineout_{roi_name}:')
             self.update_lineouts()
@@ -197,57 +264,59 @@ class View1D(ActionManager, QObject):
 
         splitter_ver.addWidget(self.toolbar)
 
-        self.graph_lineouts = pg.PlotWidget()
+        self.lineout_widgets = pg.PlotWidget()
+        self.plot_widget = pg.PlotWidget()
+        self.data_displayer = DataDisplayer(self.plotitem)
+        self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
-        widg = QtWidgets.QWidget()
-        self.data_displayer = Viewer1DBasic(widg)
-        splitter_ver.addWidget(widg)
-        splitter_ver.addWidget(self.graph_lineouts)
-        self.roi_manager.viewer_widget = self.data_displayer.plotwidget
+        splitter_ver.addWidget(self.plot_widget)
+        splitter_ver.addWidget(self.lineout_widgets)
+        self.roi_manager.viewer_widget = self.plot_widget
 
         self.setup_zoom()
 
         self.legend = None
         self.axis_settings = dict(orientation='bottom', label='x axis', units='pxls')
 
-        self.xaxis_item = self.data_displayer.plotwidget.plotItem.getAxis('bottom')
-        self.graph_lineouts.hide()
+        self.xaxis_item = self.plotitem.getAxis('bottom')
+        self.lineout_widgets.hide()
       
         # #crosshair
-        self.crosshair = Crosshair(self.data_displayer.plotwidget.plotItem, orientation='vertical')
+        self.crosshair = Crosshair(self.plotitem, orientation='vertical')
         self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
         self.show_hide_crosshair()
 
-        # self.measurement_widget=Dock("Measurement Module", size=(300, 100), closable=True)
-        # self.dockarea.addDock(self.measurement_widget)
-        self.measurement_widget = QtWidgets.QWidget()
-        self.measurement_widget.setVisible(False)
 
-        self._lineout_widgets = {widg_key: pg.PlotWidget() for widg_key in LineoutPlotter.lineout_widgets}
-        self.graphical_widgets = dict(lineouts=self._lineout_widgets, image=self.image_widget)
-        
-    def connect_actions(self):
+    def connect_things(self):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
-        self.connect_action('crosshair', self.show_hide_crosshair)
 
         # #Connecting buttons:
         self.connect_action('do_math', self.do_math_fun)
         self.connect_action('do_math', self.lineout_plotter.roi_clicked)
-        self.connect_action('do_measurements', self.open_measurement_module)
+
         self.connect_action('zoom', self.enable_zoom)
-        self.connect_action('scatter', self.do_scatter)
+        self.connect_action('scatter', self.data_displayer.plot_with_scatter)
         self.connect_action('xyplot', self.do_xy)
+        self.connect_action('crosshair', self.show_hide_crosshair)
+        self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
 
         self.roi_manager.new_ROI_signal.connect(self.add_lineout)
         self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
-        
+
+    def show_lineout_widgets(self):
+        state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
+        for lineout_name in LineoutPlotter.lineout_widgets:
+            lineout = self.lineout_plotter.get_lineout_widget(lineout_name)
+            lineout.setMouseEnabled(state, state)
+            lineout.showAxis('left', state)
+            lineout.setVisible(state)
+            lineout.update()
+
     def setup_actions(self):
         self.add_action('zoom', 'Zoom Widget', 'Zoom_to_Selection', tip='Display a Zoom Widget', checkable=True)
         self.add_action('do_math', 'Math', 'Calculator', 'Do Math using ROI', checkable=True)
-        self.add_action('do_measurements', 'Measurements', 'MeasurementStudio_32',
-                        tip='Do Advanced measurements (fits,...)', checkable=True)
         self.add_action('crosshair', 'Crosshair', 'reset', 'Show data cursor', checkable=True)
-        self.add_action('aspect_ratio', 'AspectRatio', 'Show data cursor', 'Fix the aspect ratio', checkable=True)
+        self.add_action('aspect_ratio', 'AspectRatio', 'Zoom_1_1', 'Fix the aspect ratio', checkable=True)
         self.add_action('scatter', 'Scatter', 'Marker', 'Switch between line or scatter plots', checkable=True)
         self.add_action('xyplot', 'XYPlotting', '2d',
                         'Switch between normal or XY representation (valid for 2 channels)', checkable=True,
@@ -275,17 +344,17 @@ class View1D(ActionManager, QObject):
         self.zoom_widget.setVisible(False)
 
     def lock_aspect_ratio(self):
-        if self.ui.aspect_ratio_pb.isChecked():
-            self.data_displayer.plotwidget.plotItem.vb.setAspectLocked(lock=True, ratio=1)
+        if self.is_action_checked('aspect_ratio'):
+            self.plotitem.vb.setAspectLocked(lock=True, ratio=1)
         else:
-            self.data_displayer.plotwidget.plotItem.vb.setAspectLocked(lock=False)
+            self.plotitem.vb.setAspectLocked(lock=False)
 
     def update_crosshair_data(self, posx, posy, name=""):
         try:
             indx = mutils.find_index(self._x_axis, posx)[0][0]
 
             string = "y="
-            for data in self.datas:
+            for data in self._data:
                 string += "{:.6e} / ".format(data[indx])
             self.get_action('y_label').setText(string)
             self.get_action('x_label').setText("x={:.6e} ".format(posx))
@@ -299,7 +368,7 @@ class View1D(ActionManager, QObject):
         self.set_action_visible('x_label', show)
         self.set_action_visible('y_label', show)
         if self.is_action_checked('crosshair'):
-            range = self.data_displayer.plotwidget.plotItem.vb.viewRange()
+            range = self.plotitem.vb.viewRange()
             self.crosshair.set_crosshair_position(xpos=np.mean(np.array(range[0])))
 
 
@@ -324,13 +393,11 @@ class Viewer1D(ViewerBase):
 
         self.view = View1D(parent)
 
-        self.filter_from_rois = FilterFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
-                                               IMAGE_TYPES)
-        self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
+        self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
+        self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
         self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
 
-        self.filter_from_crosshair = FilterFromCrosshair(self.view.crosshair, self.view.data_displayer.get_images(),
-                                                         IMAGE_TYPES)
+        self.filter_from_crosshair = Filter1DFromCrosshair(self.view.crosshair)
         self.filter_from_crosshair.register_activation_signal(self.view.get_action('crosshair').triggered)
         self.filter_from_crosshair.register_target_slot(self.process_crosshair_lineouts)
 
@@ -340,13 +407,8 @@ class Viewer1D(ViewerBase):
 
 
 
-        self.wait_time = 3000
-        self.measurement_module = None
-
         self.math_module = Viewer1D_math()
 
-        if DAQ_Measurement is None:  # pragma: no cover
-            self.ui.do_measurements_pb.setVisible(False)
 
         self._labels = []
         self.plot_channels = None
@@ -358,13 +420,19 @@ class Viewer1D(ViewerBase):
 
         self._x_axis = None
 
-        self.datas = []  # datas on each channel. list of 1D arrays
+        self._data = []  # datas on each channel. list of 1D arrays
         self.data_to_export = None
         self.measurement_dict = OrderedDict(x_axis=None, datas=[], ROI_bounds=[], operations=[], channels=[])
         # OrderedDict to be send to the daq_measurement module
         self.measure_data_dict = OrderedDict()
         # dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
         # and value is the result of a given lineout or measurement
+
+    def prepare_connect_ui(self):
+        self._data_to_show_signal.connect(self.view.display_data)
+        self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
+        self.view.get_crosshair_signal().connect(self.crosshair_changed)
+        self.view.get_double_clicked().connect(self.double_clicked)
 
     def activate_roi(self, activate=True):
         self.set_action_checked('do_math', activate)
@@ -384,7 +452,7 @@ class Viewer1D(ViewerBase):
                 self.lo_items[key].setPen(self.roi_manager.settings.child('ROIs', key,
                                                                           'Color').value())
 
-            self.measurement_dict['datas'] = self.datas
+            self.measurement_dict['datas'] = self._data
             self.measurement_dict['ROI_bounds'] = [self.roi_manager.ROIs[item].getRegion() for item in
                                                    self.roi_manager.ROIs]
             self.measurement_dict['channels'] = channels
@@ -395,16 +463,13 @@ class Viewer1D(ViewerBase):
         except Exception as e:
             pass
 
-
     def clear_lo(self):
         self.lo_data = [[] for ind in range(len(self.lo_data))]
         self.update_lineouts()
 
-
     def do_zoom(self):
         bounds = self.zoom_region.getRegion()
         self.data_displayer.plotwidget.setXRange(bounds[0], bounds[1])
-
 
     def ini_data_plots(self, Nplots):
         try:
@@ -433,8 +498,8 @@ class Viewer1D(ViewerBase):
         try:
             labels_tmp = labels[:]
             if self.labels == labels:
-                if self.labels == [] or len(self.labels) < len(self.datas):
-                    self._labels = [f"CH{ind:02d}" for ind in range(len(self.datas))]
+                if self.labels == [] or len(self.labels) < len(self._data):
+                    self._labels = [f"CH{ind:02d}" for ind in range(len(self._data))]
             else:
                 if self.legend is not None:
                     flag = True
@@ -496,9 +561,9 @@ class Viewer1D(ViewerBase):
         self.axis_settings = axis_settings
 
     @Slot(list)
-    def show_data(self, datas, labels=None, x_axis=None):
+    def _show_data(self, data: data_mod.DataRaw):
         try:
-            self.datas = datas
+            self._data = data
             self.update_labels(self.labels)
 
             self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
@@ -528,33 +593,6 @@ class Viewer1D(ViewerBase):
         except Exception as e:
             logger.exception(str(e))
 
-    @Slot(list)
-    def show_data_temp(self, datas):
-        """f
-        to plot temporary data, for instance when all pixels are not yet populated...
-        """
-        try:
-            self.update_labels(self.labels)
-            self.datas = datas
-
-            if self.plot_channels is None:  # initialize data and plots
-                self.ini_data_plots(len(datas))
-            elif len(self.plot_channels) != len(datas):
-                self.remove_plots()
-                self.ini_data_plots(len(datas))
-
-            for ind_plot, data in enumerate(datas):
-                if self.x_axis is None:
-                    self.x_axis = np.linspace(0, len(data), len(data), endpoint=False)
-                    x_axis = self.x_axis
-                elif len(self.x_axis) != len(data):
-                    x_axis = np.linspace(0, len(data), len(data), endpoint=False)
-                else:
-                    x_axis = self.x_axis
-
-                self.plot_channels[ind_plot].setData(x=x_axis, y=data)
-        except Exception as e:
-            logger.exception(str(e))
 
     @Slot(list)
     def show_math(self, data_lo):
@@ -584,7 +622,6 @@ class Viewer1D(ViewerBase):
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)
-
 
 
     def update_graph1D(self, datas):
@@ -644,13 +681,7 @@ class Viewer1D(ViewerBase):
         except Exception as e:
             logger.exception(str(e))
 
-    def update_measurement_module(self):
-        xdata = self.measurement_dict['x_axis']
-        ydata = self.measurement_dict['datas'][0]
-        if xdata is None:
-            self.measurement_module.update_data(ydata=ydata)
-        else:
-            self.measurement_module.update_data(xdata=xdata, ydata=ydata)
+
 
     def update_status(self, txt):
         logger.info(txt)
@@ -662,8 +693,8 @@ class Viewer1D(ViewerBase):
     @x_axis.setter
     def x_axis(self, x_axis):
         self.set_x_axis(x_axis)
-        if self.datas:
-            self.show_data_temp(self.datas)
+        if self._data:
+            self.show_data_temp(self._data)
 
     def set_x_axis(self, x_axis):
         label = 'Pxls'
@@ -687,7 +718,7 @@ class Viewer1D_math(QObject):
 
     def __init__(self):
         super(QObject, self).__init__()
-        self.datas = []
+        self._data = []
         self.ROI_bounds = []
         self.x_axis = None
         self.operations = []
@@ -696,7 +727,7 @@ class Viewer1D_math(QObject):
     def update_math(self, measurement_dict):
         try:
             if 'datas' in measurement_dict:
-                self.datas = measurement_dict['datas']
+                self._data = measurement_dict['datas']
             if 'ROI_bounds' in measurement_dict:
                 self.ROI_bounds = measurement_dict['ROI_bounds']
             if 'x_axis' in measurement_dict:
@@ -712,7 +743,7 @@ class Viewer1D_math(QObject):
                 indexes = mutils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
                 ind1 = indexes[0][0]
                 ind2 = indexes[1][0]
-                sub_data = self.datas[self.channels[ind_meas]][ind1:ind2]
+                sub_data = self._data[self.channels[ind_meas]][ind1:ind2]
                 sub_xaxis = self.x_axis[ind1:ind2]
 
                 if self.operations[ind_meas] == "Mean":

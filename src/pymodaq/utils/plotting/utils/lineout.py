@@ -225,11 +225,9 @@ class LineoutPlotter(QObject):
         return self._crosshair_curves[curve_name]
 
     def setup_crosshair(self):
-        for image_key in IMAGE_TYPES:
-            self._crosshair_curves[image_key] = \
-                {curv_key: curve_item_factory(image_key) for curv_key in self.lineout_widgets}
-            self.add_lineout_items(self._crosshair_curves[image_key]['hor'], self._crosshair_curves[image_key]['ver'])
+        """to reimplement if needed"""
+        pass
 
     def show_crosshair_curves(self, curve_key, show=True):
-        for curve in self._crosshair_curves[curve_key].values():
-            curve.setVisible(show)
+        """to reimplement if needed"""
+        pass
