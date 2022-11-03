@@ -175,7 +175,20 @@ class AxisBase:
 
 
 class Axis(AxisBase):
-    """Axis object to be used to described physical axes of data"""
+    """Axis object to be used to described physical axes of data
+
+    Parameters
+    ----------
+    label: str
+        The label of the axis, for instance 'time' for a temporal axis
+    units: str
+        The units of the data in the object, for instance 's' for seconds
+    data: ndarray
+        A 1D ndarray holding the data of the axis
+    index: int
+        an integer representing the index of the Data object this axis is related to
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -269,7 +282,7 @@ class DataBase(DataLowLevel):
                  labels: List[str] = [], **kwargs):
 
         super().__init__(name=name)
-
+        self._iter_index = 0
         self._shape = None
         self._size = None
         self._data = None
@@ -294,6 +307,17 @@ class DataBase(DataLowLevel):
 
     def __len__(self):
         return self.length
+
+    def __iter__(self):
+        self._iter_index = 0
+        return self
+
+    def __next__(self):
+        if self._iter_index < len(self):
+            self._iter_index += 1
+            return self.data[self._iter_index]
+        else:
+            raise StopIteration
 
     @property
     def shape(self):
@@ -624,6 +648,17 @@ class DataToExport(DataLowLevel):
 
     def __len__(self):
         return len(self.data)
+
+    def __iter__(self):
+        self._iter_index = 0
+        return self
+
+    def __next__(self):
+        if self._iter_index < len(self):
+            self._iter_index += 1
+            return self.data[self._iter_index]
+        else:
+            raise StopIteration
 
     def get_names(self, dim: DataDim = None):
         """Get the names of the name eventually filtered by dim
