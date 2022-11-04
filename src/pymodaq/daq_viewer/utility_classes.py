@@ -12,7 +12,7 @@ from pymodaq.daq_utils.daq_utils import gauss1D, gauss2D
 from pymodaq.daq_utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.daq_utils.config import Config, get_set_local_dir
 from pymodaq.daq_utils.scanner import ScanParameters
-from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.daq_utils.tcp_server_client import TCPServer, tcp_parameters, Socket
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -427,7 +427,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         self.data_mock = None
 
     def command_to_from_client(self, command):
-        sock = self.find_socket_within_connected_clients(self.client_type)
+        sock: Socket = self.find_socket_within_connected_clients(self.client_type)
         if sock is not None:  # if client self.client_type is connected then send it the command
 
             if command == 'x_axis':
@@ -458,7 +458,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                 data = self.data_mock
             self.process_cmds('Done')
 
-    def send_data(self, sock, data):
+    def send_data(self, sock: Socket, data):
         """
             To match digital and labview, send again a command.
 
@@ -492,7 +492,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
         #
         # check_sended(sock, data_bytes)  # then send data
 
-    def read_data(self, sock):
+    def read_data(self, sock: Socket):
         """
             Read the unsigned 32bits int data contained in the given socket in five steps :
                 * get back the message
@@ -528,7 +528,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
 
     def command_done(self, command_sock):
         try:
-            sock = self.find_socket_within_connected_clients(self.client_type)
+            sock: Socket = self.find_socket_within_connected_clients(self.client_type)
             if sock is not None:  # if client self.client_type is connected then send it the command
                 data = self.read_data(sock)
             else:
