@@ -226,6 +226,7 @@ class Socket:
         data_bytes = self.check_received_length(data_len)
         data = np.frombuffer(data_bytes, dtype=data_type)
         data = data.reshape(tuple(shape))
+        data = np.squeeze(data)  # remove singleton dimensions
         return data
 
     def send_array(self, data_array):
