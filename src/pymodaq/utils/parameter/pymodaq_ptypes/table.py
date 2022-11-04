@@ -54,7 +54,7 @@ class TableWidget(QtWidgets.QTableWidget):
                 item0 = QtWidgets.QTableWidgetItem(key)
                 item0.setFlags(item0.flags() ^ QtCore.Qt.ItemIsEditable)
                 if isinstance(value, float):
-                    item1 = QtWidgets.QTableWidgetItem('{:.6e}'.format(value))
+                    item1 = QtWidgets.QTableWidgetItem('{:.3e}'.format(value))
                 else:
                     item1 = QtWidgets.QTableWidgetItem(str(value))
                 item1.setFlags(item1.flags() ^ QtCore.Qt.ItemIsEditable)

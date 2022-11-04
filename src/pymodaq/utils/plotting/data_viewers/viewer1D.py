@@ -4,7 +4,6 @@ from collections import OrderedDict
 from typing import List
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt
-from qtpy.QtGui import QIcon, QPixmap
 import pyqtgraph as pg
 import numpy as np
 
@@ -16,10 +15,10 @@ from pymodaq.utils import daq_utils as utils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewerbase import ViewerBase
-from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
+
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
-from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
+from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
 from pymodaq.utils.plotting.widgets import PlotWidget
 
 # from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
@@ -100,10 +99,10 @@ class DataDisplayer(QObject):
         if data is None:
             data = self._data
 
-        for ind_data, data in enumerate(data.data):
+        for ind_data, dat in enumerate(data.data):
             if data.size > 0:
                 if not do_xy:
-                    self._plot_items[ind_data].setData(self._axis.data, data)
+                    self._plot_items[ind_data].setData(self._axis.data, dat)
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 
@@ -229,11 +228,11 @@ class View1D(ActionManager, QObject):
 
             else:
                 self.zoom_plot = []
-                for ind, data in enumerate(self._data):
+                for ind, data in enumerate(self.data_displayer._data):
                     channel = self.graph_zoom.plot()
                     channel.setPen(PLOT_COLORS[ind])
                     self.zoom_plot.append(channel)
-                self.update_graph1D(self._data)
+                self.update_graph1D(self.data_displayer._data)
                 self.zoom_region.setRegion([np.min(self._x_axis), np.max(self._x_axis)])
 
                 self.zoom_widget.show()
@@ -303,7 +302,7 @@ class View1D(ActionManager, QObject):
         # self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
 
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
-        self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
+        #self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
@@ -351,15 +350,13 @@ class View1D(ActionManager, QObject):
         else:
             self.plotitem.vb.setAspectLocked(lock=False)
 
-    def update_crosshair_data(self, posx, posy, name=""):
+    def update_crosshair_data(self, crosshair_dict: dict):
         try:
-            indx = mutils.find_index(self._x_axis, posx)[0][0]
-
             string = "y="
-            for data in self._data:
-                string += "{:.6e} / ".format(data[indx])
+            for key in crosshair_dict:
+                string += "{:.3e} / ".format(crosshair_dict[key]['value'])
             self.get_action('y_label').setText(string)
-            self.get_action('x_label').setText("x={:.6e} ".format(posx))
+            self.get_action('x_label').setText(f"x={crosshair_dict[key]['pos']:.3e} ")
 
         except Exception as e:
             pass
@@ -404,8 +401,6 @@ class Viewer1D(ViewerBase):
 
         self.add_attributes_from_view()
 
-        self.math_module = Viewer1D_math()
-
         self._labels = []
         self.plot_channels = None
         self.color_list = ROIManager.color_list
@@ -415,24 +410,14 @@ class Viewer1D(ViewerBase):
 
         self._x_axis = None
 
-        self._data = []  # datas on each channel. list of 1D arrays
-        self.data_to_export = None
-        self.measurement_dict = OrderedDict(x_axis=None, datas=[], ROI_bounds=[], operations=[], channels=[])
-        # OrderedDict to be send to the daq_measurement module
-        self.measure_data_dict = OrderedDict()
-        # dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
-        # and value is the result of a given lineout or measurement
-
     @Slot(dict)
     def process_crosshair_lineouts(self, crosshair_dict):
-        self.view.display_crosshair_lineouts(crosshair_dict)
-        self.update_crosshair_data(crosshair_dict)
-        self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
+        self.view.update_crosshair_data(crosshair_dict)
+        self.crosshair_dragged.emit(*self.view.crosshair.get_positions())
 
     @Slot(dict)
     def process_roi_lineouts(self, roi_dict):
         self.view.display_roi_lineouts(roi_dict)
-
         self.measure_data_dict = dict([])
         for roi_key, lineout_data in roi_dict.items():
             if not self._display_temporary:
@@ -442,7 +427,8 @@ class Viewer1D(ViewerBase):
                                             units=lineout_data.hor_axis.units,
                                             label=lineout_data.hor_axis.label)))
 
-                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data]))
+                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}',
+                                                       data=[np.array([lineout_data.int_data])]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
 
@@ -499,62 +485,6 @@ class Viewer1D(ViewerBase):
         logger.info(txt)
 
 
-class Viewer1D_math(QObject):
-    status_sig = Signal(list)
-
-    def __init__(self):
-        super(QObject, self).__init__()
-        self._data = []
-        self.ROI_bounds = []
-        self.x_axis = None
-        self.operations = []
-        self.channels = []
-
-    def update_math(self, measurement_dict):
-        try:
-            if 'datas' in measurement_dict:
-                self._data = measurement_dict['datas']
-            if 'ROI_bounds' in measurement_dict:
-                self.ROI_bounds = measurement_dict['ROI_bounds']
-            if 'x_axis' in measurement_dict:
-                self.x_axis = measurement_dict['x_axis']
-            if 'operations' in measurement_dict:
-                self.operations = measurement_dict['operations']
-            if 'channels' in measurement_dict:
-                self.channels = measurement_dict['channels']
-
-            # self.status_sig.emit(["Update_Status","doing math"])
-            data_lo = []
-            for ind_meas in range(len(self.operations)):
-                indexes = mutils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
-                ind1 = indexes[0][0]
-                ind2 = indexes[1][0]
-                sub_data = self._data[self.channels[ind_meas]][ind1:ind2]
-                sub_xaxis = self.x_axis[ind1:ind2]
-
-                if self.operations[ind_meas] == "Mean":
-                    data_lo.append(float(np.mean(sub_data)))
-                elif self.operations[ind_meas] == "Sum":
-                    data_lo.append(float(np.sum(sub_data)))
-                elif self.operations[ind_meas] == 'half-life' or self.operations[ind_meas] == 'expotime':
-                    ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
-                    x0 = sub_xaxis[ind_x0]
-                    sub_xaxis = sub_xaxis[ind_x0:]
-                    sub_data = sub_data[ind_x0:]
-                    offset = sub_data[-1]
-                    N0 = np.max(sub_data) - offset
-                    if self.operations[ind_meas] == 'half-life':
-                        time = sub_xaxis[mutils.find_index(sub_data - offset, 0.5 * N0)[0][0]] - x0
-                    elif self.operations[ind_meas] == 'expotime':
-                        time = sub_xaxis[mutils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
-                    data_lo.append(time)
-
-            return data_lo
-        except Exception as e:
-            logger.exception(str(e))
-            return []
-
-
 def main():
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
@@ -576,11 +506,23 @@ def main():
 
     # x = np.sin(np.linspace(0,6*np.pi,201))
     # y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
-    data = DataRaw('mydata', data=[y1, y2, ydata_expodec],
+    data = DataRaw('mydata', data=[y1, ydata_expodec],
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
     prog.get_action('do_math').trigger()
+
+    def print_data(data: DataToExport):
+        print(data.data)
+        print('******')
+        print(data.get_data_from_dim('Data1D'))
+        print('******')
+        print(data.get_data_from_dim('Data0D'))
+        print('***********************************')
+
+    prog.data_to_export_signal.connect(print_data)
+
+
     QtWidgets.QApplication.processEvents()
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()

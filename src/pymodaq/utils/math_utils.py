@@ -2,11 +2,6 @@ import numpy
 import numpy as np
 from numbers import Number
 from typing import List
-
-from qtpy import QtWidgets, QtGui
-from qtpy.QtCore import QObject, Signal
-
-
 from pymodaq.utils.logger import get_module_name, set_logger
 
 
@@ -547,28 +542,3 @@ def make_test_ellipse(center=[1, 1], width=1, height=.6, phi=3.14 / 5):
 
     return [ellipse_x, ellipse_y]
 
-
-
-if __name__ == '__main__':
-    import sys
-
-    app = QtWidgets.QApplication(sys.argv)
-    prog = FourierFilterer()
-
-    from pymodaq.utils.daq_utils import gauss1D
-
-    xdata = np.linspace(0, 400, 401)
-    x0 = 50
-    dx = 20
-    tau = 27
-    tau2 = 100
-    ydata_gauss = 10 * gauss1D(xdata, x0, dx) + np.random.rand(len(xdata))
-    ydata_expodec = np.zeros((len(xdata)))
-    ydata_expodec[:50] = 10 * gauss1D(xdata[:50], x0, dx, 2)
-    ydata_expodec[50:] = 10 * np.exp(-(xdata[50:] - x0) / tau)  # +10*np.exp(-(xdata[50:]-x0)/tau2)
-    ydata_expodec += 2 * np.random.rand(len(xdata))
-    ydata_sin = 10 + 2 * np.sin(2 * np.pi * 0.1 * xdata - np.deg2rad(55)) + np.sin(
-        2 * np.pi * 0.008 * xdata - np.deg2rad(-10)) + 2 * np.random.rand(len(xdata))
-
-    prog.show_data(dict(data=ydata_sin, xaxis=xdata))
-    sys.exit(app.exec_())

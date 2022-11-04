@@ -23,7 +23,7 @@ from pymodaq.utils.config import get_set_roi_path
 from pymodaq.utils.gui_utils import select_file
 import numpy as np
 from pathlib import Path
-
+from pymodaq.post_treatment.process_1d_to_scalar import processors
 
 roi_path = get_set_roi_path()
 logger = set_logger(get_module_name(__file__))
@@ -291,9 +291,8 @@ class ROIScalableGroup(GroupParameter):
         else:
             children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
 
-        functions = ['Sum', 'Mean', 'half-life', 'expotime']
-        children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'limits': functions,
-                         'value': 'Sum', 'visible': self.roi_type == '1D'})
+        children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'limits': processors.functions,
+                         'visible': self.roi_type == '1D'})
         children.extend([
             {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])}, ])
         if self.roi_type == '2D':

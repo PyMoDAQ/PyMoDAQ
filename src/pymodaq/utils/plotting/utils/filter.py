@@ -1,4 +1,5 @@
 import numpy as np
+from pyqtgraph.parametertree import Parameter
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QPointF, Slot, Signal, QObject
 
@@ -12,6 +13,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.items.image import UniformImageItem
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.post_treatment.process_1d_to_scalar import processors
 
 logger = set_logger(get_module_name(__file__))
 
@@ -65,9 +67,9 @@ class Filter1DFromCrosshair(Filter):
 
         if data is not None:
             self._x, self._y = self.crosshair.get_positions()
-            ind_x, axis_val = mutils.find_index(self._axis, (self._x,))
+            ind_x, axis_val = mutils.find_index(self._axis.data, (self._x,))[0]
             for label, dat in zip(data.labels, data.data):
-                data_dict[label] = LineoutData(int_data=axis_val)
+                data_dict[label] = dict(pos=axis_val, value=dat[ind_x])
         return data_dict
 
 
@@ -201,19 +203,19 @@ class Filter1DFromRois(Filter):
                     plot_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
                 except ValueError:
                     plot_index = 0
-                data_dict[roi_key] = self.get_data_from_roi(roi, data.data[plot_index])
+                data_dict[roi_key] = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
+                                                            data.data[plot_index])
 
         return data_dict
 
-    def get_data_from_roi(self, roi: LinearROI, data: np.ndarray):
-        xmin, xmax = roi.pos()
-        (ind_xmin, _), (ind_xmax, _) = mutils.find_index(self._axis.data, [xmin, xmax])
+    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: np.ndarray):
         if data is not None:
-            filtered_data = data[ind_xmin:ind_xmax]
-            int_data = np.array([np.mean(data[ind_xmin:ind_xmax])])
+            limits = roi.pos()
+            sub_axis, sub_data, processed_value = processors.get(roi_param['math_function']).process(
+                limits, self._axis.data, data)
             filtered_axis = data_mod.Axis(label=self._axis.label, units=self._axis.units,
-                                          data=self._axis.data[ind_xmin:ind_xmax])
-            return LineoutData(hor_axis=filtered_axis, hor_data=filtered_data, int_data=int_data)
+                                          data=sub_axis)
+            return LineoutData(hor_axis=filtered_axis, hor_data=sub_data, int_data=processed_value)
 
 
 class Filter2DFromRois(Filter):
@@ -453,3 +455,28 @@ class FourierFilterer(QObject):
                 self.data_filtered_plot.setVisible(True)
                 self.viewer1D.ROIfft.setVisible(False)
                 self.viewer1D.ROI.setVisible(True)
+
+
+if __name__ == '__main__':
+    import sys
+
+    app = QtWidgets.QApplication(sys.argv)
+    prog = FourierFilterer()
+
+    from pymodaq.utils.daq_utils import gauss1D
+
+    xdata = np.linspace(0, 400, 401)
+    x0 = 50
+    dx = 20
+    tau = 27
+    tau2 = 100
+    ydata_gauss = 10 * gauss1D(xdata, x0, dx) + np.random.rand(len(xdata))
+    ydata_expodec = np.zeros((len(xdata)))
+    ydata_expodec[:50] = 10 * gauss1D(xdata[:50], x0, dx, 2)
+    ydata_expodec[50:] = 10 * np.exp(-(xdata[50:] - x0) / tau)  # +10*np.exp(-(xdata[50:]-x0)/tau2)
+    ydata_expodec += 2 * np.random.rand(len(xdata))
+    ydata_sin = 10 + 2 * np.sin(2 * np.pi * 0.1 * xdata - np.deg2rad(55)) + np.sin(
+        2 * np.pi * 0.008 * xdata - np.deg2rad(-10)) + 2 * np.random.rand(len(xdata))
+
+    prog.show_data(dict(data=ydata_sin, xaxis=xdata))
+    sys.exit(app.exec_())
