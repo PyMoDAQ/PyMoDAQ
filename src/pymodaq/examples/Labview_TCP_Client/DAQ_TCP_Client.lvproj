@@ -1,5 +1,5 @@
 ﻿<?xml version='1.0' encoding='UTF-8'?>
-<Project Type="Project" LVVersion="15008000">
+<Project Type="Project" LVVersion="16008000">
 	<Item Name="My Computer" Type="My Computer">
 		<Property Name="server.app.propertiesEnabled" Type="Bool">true</Property>
 		<Property Name="server.control.propertiesEnabled" Type="Bool">true</Property>
@@ -16,8 +16,11 @@
 		</Item>
 		<Item Name="subvis" Type="Folder">
 			<Item Name="DAQ_TCP_read_cmd.vi" Type="VI" URL="../DAQ_TCP_read_cmd.vi"/>
+			<Item Name="DAQ_TCP_read_float.vi" Type="VI" URL="../DAQ_TCP_read_float.vi"/>
+			<Item Name="DAQ_TCP_read_int.vi" Type="VI" URL="../DAQ_TCP_read_int.vi"/>
 			<Item Name="DAQ_TCP_send_data.vi" Type="VI" URL="../DAQ_TCP_send_data.vi"/>
 			<Item Name="DAQ_TCP_send_int.vi" Type="VI" URL="../DAQ_TCP_send_int.vi"/>
+			<Item Name="DAQ_TCP_send_scalar.vi" Type="VI" URL="../DAQ_TCP_send_scalar.vi"/>
 			<Item Name="DAQ_TCP_send_string.vi" Type="VI" URL="../DAQ_TCP_send_string.vi"/>
 			<Item Name="DAQ_TCP_Server_1Dgaussian.vi" Type="VI" URL="../DAQ_TCP_Server_1Dgaussian.vi"/>
 			<Item Name="DAQ_TCP_Server_2Dgaussian.vi" Type="VI" URL="../DAQ_TCP_Server_2Dgaussian.vi"/>
