@@ -277,8 +277,6 @@ class LineoutPlotter(LineoutPlotter):
                 if lineout_data.hor_data.size > 0:
                     self._roi_curves[roi_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
                     self._roi_curves[roi_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
-                self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
-                                                         self.integrated_data.datas[roi_key])
 
     def plot_other_crosshair_lineouts(self, crosshair_dict):
         for data_key, lineout_data in crosshair_dict.items():
@@ -713,7 +711,7 @@ class Viewer2D(ViewerBase):
             self.data_to_export_signal.emit(self.data_to_export)
 
     def update_data(self):
-        if self._raw_datas is not None:
+        if self._raw_data is not None:
             self._datas = self.set_image_transform()
             self._data_to_show_signal.emit(self._datas)
 
@@ -728,7 +726,7 @@ class Viewer2D(ViewerBase):
         """
         Deactivate some tool buttons if data type is "spread" then apply transform_image
         """
-        data = copy.deepcopy(self._raw_datas)
+        data = copy.deepcopy(self._raw_data)
         self.view.set_action_visible('flip_ud', data.distribution != 'spread')
         self.view.set_action_visible('flip_lr', data.distribution != 'spread')
         self.view.set_action_visible('rotate', data.distribution != 'spread')

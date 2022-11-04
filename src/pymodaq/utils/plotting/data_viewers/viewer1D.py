@@ -61,7 +61,7 @@ class DataDisplayer(QObject):
     This Object deals with the display of 1D data  on a plotitem
     """
 
-    updated_item = Signal(dict)
+    updated_item = Signal(list)
     labels_changed = Signal(list)
 
     def __init__(self, plotitem):
@@ -152,6 +152,10 @@ class DataDisplayer(QObject):
         self.updated_item.emit(self._plot_items)
         self.labels_changed.emit(data.labels)
 
+    @property
+    def labels(self):
+        return self._data.labels
+
     def legend_items(self):
         return [item[1].text for item in self.legend.items]
 
@@ -161,10 +165,11 @@ class View1D(ActionManager, QObject):
         QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
 
-        self._data = None
-
         self.data_displayer: DataDisplayer = None
         self.plot_widget: PlotWidget = None
+        self.lineout_widgets: PlotWidget = None
+        self.graphical_widgets: dict = None
+        self.crosshair: Crosshair = None
 
         self.setup_actions()
 
@@ -250,43 +255,13 @@ class View1D(ActionManager, QObject):
             logger.exception(str(e))
 
     @Slot(int, str)
-    def add_lineout(self, index, roi_type=''):
-        try:
-            item = self.roi_manager.ROIs['ROI_{:02d}'.format(index)]
-            item_param = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(index))
-            item_param.child(('use_channel')).setOpts(limits=self.labels)
-            if len(self.labels) == 0:  # pragma: no cover
-                lab = ''
-            else:
-                lab = self.labels[0]
-            item_param.child(('use_channel')).setValue(lab)
-            item.sigRegionChanged.connect(self.update_lineouts)
-            item.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
-            for child in putils.iter_children_params(item_param, childlist=[]):
-                if child.type() != 'group':
-                    child.sigValueChanged.connect(self.update_lineouts)
-
-            item_lo = self.lineout_widgets.plot()
-            item_lo.setPen(item_param.child(('Color')).value())
-            self.lo_items['ROI_{:02d}'.format(index)] = item_lo
-            self.lo_data = OrderedDict([])
-            for k in self.lo_items:
-                self.lo_data[k] = np.zeros((1,))
-            self.update_lineouts()
-        except Exception as e:
-            logger.exception(str(e))
-
-    @Slot(str)
-    def remove_ROI(self, roi_name):
-        if roi_name in self.lo_items:
-            item = self.lo_items.pop(roi_name)
-            self.lineout_widgets.plotItem.removeItem(item)
-        if f'Lineout_{roi_name}:' in self.measure_data_dict:
-            self.measure_data_dict.pop(f'Lineout_{roi_name}:')
-            self.update_lineouts()
+    def update_roi_channels(self, index, roi_type=''):
+        """Update the use_channel setting each time a ROI is added"""
+        item_param = self.roi_manager.settings.child('ROIs', self.roi_manager.roi_format(index))
+        item_param.child('use_channel').setOpts(limits=self.data_displayer.labels)
+        item_param.child('use_channel').setValue(self.data_displayer.labels[0])
 
     def setup_widgets(self):
-
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
         splitter_hor = QtWidgets.QSplitter(Qt.Horizontal)
         self.parent_widget.layout().addWidget(splitter_hor)
@@ -299,8 +274,6 @@ class View1D(ActionManager, QObject):
         splitter_ver.addWidget(self.toolbar)
 
         self.lineout_widgets = PlotWidget()
-
-
         self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
         splitter_ver.addWidget(self.plot_widget)
@@ -309,15 +282,8 @@ class View1D(ActionManager, QObject):
 
         self.setup_zoom()
 
-        self.legend = None
-        self.axis_settings = dict(orientation='bottom', label='x axis', units='pxls')
-
-        self.xaxis_item = self.plotitem.getAxis('bottom')
-        self.lineout_widgets.hide()
-      
         # #crosshair
         self.crosshair = Crosshair(self.plotitem, orientation='vertical')
-        self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
         self.show_hide_crosshair()
 
     def connect_things(self):
@@ -333,10 +299,11 @@ class View1D(ActionManager, QObject):
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
 
-        self.roi_manager.new_ROI_signal.connect(self.add_lineout)
-        self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
+        self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
+        # self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
 
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
+        self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
@@ -423,9 +390,6 @@ class Viewer1D(ViewerBase):
     def __init__(self, parent=None, title=''):
         super().__init__()
 
-
-        # self.roi_manager.ROI_changed_finished.connect(self.update_lineouts)
-
         self.view = View1D(parent)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
@@ -440,10 +404,7 @@ class Viewer1D(ViewerBase):
 
         self.add_attributes_from_view()
 
-
-
         self.math_module = Viewer1D_math()
-
 
         self._labels = []
         self.plot_channels = None
@@ -477,15 +438,9 @@ class Viewer1D(ViewerBase):
             if not self._display_temporary:
                 self.data_to_export.append(
                     DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                                x_axis=Axis(data=lineout_data.hor_axis,
-                                            units=self.x_axis.axis_units,
-                                            label=self.x_axis.axis_label)))
-
-                self.data_to_export.append(
-                    DataFromRoi(name=f'Vlineout_{roi_key}', data=[lineout_data.ver_data],
-                                x_axis=Axis(data=lineout_data.ver_axis,
-                                            units=self.y_axis.axis_units,
-                                            label=self.y_axis.axis_label)))
+                                x_axis=Axis(data=lineout_data.hor_axis.data,
+                                            units=lineout_data.hor_axis.units,
+                                            label=lineout_data.hor_axis.label)))
 
                 self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data]))
 
@@ -513,48 +468,18 @@ class Viewer1D(ViewerBase):
 
     @Slot(dict)
     def roi_changed(self):
-        self.filter_from_rois.filter_data(self._datas)
+        self.filter_from_rois.filter_data(self._raw_data)
 
     def crosshair_changed(self):
-        self.filter_from_crosshair.filter_data(self._datas)
+        self.filter_from_crosshair.filter_data(self._raw_data)
 
     def activate_roi(self, activate=True):
         self.set_action_checked('do_math', activate)
         self.get_action('do_math').triggered.emit(activate)
 
-    def update_lineouts(self):
-        try:
-            operations = []
-            channels = []
-            for ind, key in enumerate(self.roi_manager.ROIs):
-                operations.append(self.roi_manager.settings.child('ROIs', key, 'math_function').value())
-                channels.append(
-                    self.roi_manager.settings.child('ROIs', key,
-                                                    'use_channel').opts['limits'].index(
-                        self.roi_manager.settings.child('ROIs',
-                                                        key, 'use_channel').value()))
-                self.lo_items[key].setPen(self.roi_manager.settings.child('ROIs', key,
-                                                                          'Color').value())
-
-            self.measurement_dict['datas'] = self._data
-            self.measurement_dict['ROI_bounds'] = [self.roi_manager.ROIs[item].getRegion() for item in
-                                                   self.roi_manager.ROIs]
-            self.measurement_dict['channels'] = channels
-            self.measurement_dict['operations'] = operations
-
-            data_lo = self.math_module.update_math(self.measurement_dict)
-            self.show_math(data_lo)
-        except Exception as e:
-            pass
-
-    def clear_lo(self):
-        self.lo_data = [[] for ind in range(len(self.lo_data))]
-        self.update_lineouts()
-
     def do_zoom(self):
         bounds = self.zoom_region.getRegion()
         self.data_displayer.plotwidget.setXRange(bounds[0], bounds[1])
-
 
     @property
     def labels(self):
@@ -565,118 +490,13 @@ class Viewer1D(ViewerBase):
         if labels != self._labels:
             self._labels = labels
 
-    def remove_plots(self):
-        if self.plot_channels is not None:
-            for channel in self.plot_channels:
-                self.data_displayer.plotwidget.removeItem(channel)
-            self.plot_channels = None
-        if self.legend is not None:
-            self.data_displayer.plotwidget.removeItem(self.legend)
-
-
     @Slot(list)
     def _show_data(self, data: DataRaw):
-        try:
-            self._data = data
-            self.labels = data.labels
-            self.data_to_export = DataToExport(name=self.title)
-
-            self.view.display_data(data)
-
-        except Exception as e:
-            logger.exception(str(e))
-
-
-    @Slot(list)
-    def show_math(self, data_lo):
-        # self.data_to_export=OrderedDict(x_axis=None,y_axis=None,z_axis=None,data0D=None,data1D=None,data2D=None)
-        if len(data_lo) != 0:
-            for ind, key in enumerate(self.lo_items):
-                self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
-                self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] =\
-                    DataToExport(name=self.title, data=np.array([data_lo[ind]]), source='roi')
-            self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
-
-            for ind, key in enumerate(self.lo_items):
-                self.lo_data[key] = np.append(self.lo_data[key], data_lo[ind])
-                self.lo_items[key].setData(y=self.lo_data[key])
-
-        if not (self.ui.do_measurements_pb.isChecked()):  # otherwise you export data from measurement
-            self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-            self.data_to_export_signal.emit(self.data_to_export)
-
-    @Slot(list)
-    def show_measurement(self, data_meas):
-        ind_offset = len(self.data_to_export['data0D'])
-        for ind, res in enumerate(data_meas):
-            self.measure_data_dict["Meas.{}:".format(ind)] = res
-            self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] = \
-                DataToExport(name=self.title, data=np.array([res]), source='roi')
-        self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
-        self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-        self.data_to_export_signal.emit(self.data_to_export)
-
-
-    def update_graph1D(self, datas):
-        # self.data_to_export=OrderedDict(data0D=OrderedDict(),data1D=OrderedDict(),data2D=None)
-        try:
-
-            pens = []
-            symbolBrushs = []
-            symbolSize = 5
-            for ind, ch in enumerate(self.plot_channels):
-                if self.ui.scatter.isChecked():
-                    pens.append(None)
-                    symbol = 'o'
-                    symbolBrushs.append(PLOT_COLORS[ind])
-                else:
-                    pens.append(PLOT_COLORS[ind])
-                    symbol = None
-
-                    symbolBrushs.append(None)
-
-            if self.x_axis is None:
-                self._x_axis = np.linspace(0, len(datas[0]), len(datas[0]), endpoint=False)
-            elif len(self.x_axis) != len(datas[0]):
-                self._x_axis = np.linspace(0, len(datas[0]), len(datas[0]), endpoint=False)
-
-            for ind_plot, data in enumerate(datas):
-                if not self.ui.xyplot_action.isChecked() or len(datas) == 0:
-                    self.plot_channels[ind_plot].setData(x=self.x_axis, y=data, pen=pens[ind_plot], symbol=symbol,
-                                                     symbolBrush=symbolBrushs[ind_plot], symbolSize=symbolSize,
-                                                     pxMode=True)
-                else:
-                    self.plot_channels[ind_plot].setData(x=np.array([]), y=np.array([]), pen=pens[ind_plot], symbol=symbol,
-                                                         symbolBrush=symbolBrushs[ind_plot], symbolSize=symbolSize,
-                                                         pxMode=True)
-                if self.ui.zoom_pb.isChecked():
-                    self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
-                x_axis = Axis(data=self.x_axis, units=self.axis_settings['units'],
-                                         label=self.axis_settings['label'])
-                self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(
-                    OrderedDict(name=self.title, data=data, x_axis=x_axis, source='raw'))  # to be saved or exported
-
-            if self.ui.xyplot_action.isChecked() and len(datas) > 1:
-                self.plot_channels[0].setData(x=datas[0], y=datas[1], pen=pens[0], symbol=symbol,
-                                              symbolBrush=symbolBrushs[0], symbolSize=symbolSize,
-                                              pxMode=True)
-
-            if not self.ui.Do_math_pb.isChecked():  # otherwise math is done and then data is exported
-                self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
-                self.data_to_export_signal.emit(self.data_to_export)
-            else:
-                self.measurement_dict['datas'] = datas
-                if self.measurement_dict['x_axis'] is None:
-                    self.measurement_dict['x_axis'] = self._x_axis
-                data_lo = self.math_module.update_math(self.measurement_dict)
-                self.show_math(data_lo)
-
-        except Exception as e:
-            logger.exception(str(e))
+        self.labels = data.labels
+        self.view.display_data(data)
 
     def update_status(self, txt):
         logger.info(txt)
-
 
 
 class Viewer1D_math(QObject):
@@ -762,8 +582,6 @@ def main():
     Form.show()
     prog.get_action('do_math').trigger()
     QtWidgets.QApplication.processEvents()
-    prog.x_axis = x
-
     prog.show_data(data)
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())

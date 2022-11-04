@@ -47,7 +47,7 @@ class ViewerBase(QObject):
         super().__init__()
         self.title = title if title != '' else self.__class__.__name__
 
-        self._raw_datas = None
+        self._raw_data = None
         self.data_to_export: DataToExport = DataToExport(name=self.title)
         self.view = None
 
@@ -74,7 +74,7 @@ class ViewerBase(QObject):
             raise ViewerError(f'Ndarray of dim: {len(data.shape)} cannot be plotted'
                               f' using a {self.viewer_type}')
         self.data_to_export = DataToExport(name=self.title)
-        self._raw_datas = data
+        self._raw_data = data
 
         self._display_temporary = False
 

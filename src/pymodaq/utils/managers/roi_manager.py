@@ -434,7 +434,7 @@ class ROIManager(QObject):
                     else:
                         newroi = EllipseROI(index=newindex, pos=pos,
                                             size=[width, height])
-                    newroi.setPen(par.child(('Color')).value())
+                    newroi.setPen(par['Color'])
 
                 newroi.sigRegionChanged.connect(lambda: self.ROI_changed.emit())
                 newroi.sigRegionChangeFinished.connect(lambda: self.ROI_changed_finished.emit())
@@ -452,7 +452,7 @@ class ROIManager(QObject):
                 self.update_roi_tree(newindex)
 
             elif change == 'value':
-                if param.name() in putils.iter_children(self.settings.child(('ROIs')), []):
+                if param.name() in putils.iter_children(self.settings.child('ROIs'), []):
                     parent_name = putils.get_param_path(param)[putils.get_param_path(param).index('ROIs')+1]
                     self.update_roi(parent_name, param)
                     self.roi_value_changed.emit(parent_name, (param, param.value()))

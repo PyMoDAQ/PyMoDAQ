@@ -197,13 +197,17 @@ class Filter1DFromRois(Filter):
             self.update_axis(axis)
         if data is not None:
             for roi_key, roi in self._ROIs.items():
-                plot_index = self._roi_settings.child('ROIs', roi_key, 'use_channel').value()
+                try:
+                    plot_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
+                except ValueError:
+                    plot_index = 0
                 data_dict[roi_key] = self.get_data_from_roi(roi, data.data[plot_index])
+
         return data_dict
 
     def get_data_from_roi(self, roi: LinearROI, data: np.ndarray):
         xmin, xmax = roi.pos()
-        (ind_xmin, _), (ind_xmax, _) = utils.find_index(self._axis.data, [xmin, xmax])
+        (ind_xmin, _), (ind_xmax, _) = mutils.find_index(self._axis.data, [xmin, xmax])
         if data is not None:
             filtered_data = data[ind_xmin:ind_xmax]
             int_data = np.array([np.mean(data[ind_xmin:ind_xmax])])

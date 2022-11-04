@@ -472,6 +472,7 @@ class DataWithAxes(DataBase):
         modified = False
         if x_axis is not None:
             modified = True
+            index = 0
             if self.dim == DataDim['Data1D'] and not self._has_get_axis_from_index(0)[0]:
                 # in case of Data1D the x_axis corresponds to the first data dim
                 index = 0
@@ -492,6 +493,13 @@ class DataWithAxes(DataBase):
                 modified = True
                 # in case of Data2D the y_axis corresponds to the first data dim (lines)
                 axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=self._nav_indexes[0]))
+
+        if nav_y_axis is not None:
+            if self.dim == DataDim['DataND']:
+                modified = True
+                # in case of Data2D the y_axis corresponds to the first data dim (lines)
+                axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=self._nav_indexes[1]))
+
         if modified:
             self._check_axis(axes)
 

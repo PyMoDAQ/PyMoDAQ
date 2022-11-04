@@ -81,7 +81,10 @@ class LineoutPlotter(QObject):
 
     def plot_roi_lineouts(self, roi_dicts):
         self.integrated_data.add_datas({roi_key: roi_dicts[roi_key].int_data for roi_key in roi_dicts})
-
+        for roi_key, lineout_data in roi_dicts.items():
+            if roi_key in self._roi_curves:
+                self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
+                                                         self.integrated_data.datas[roi_key])
         self.plot_other_lineouts(roi_dicts)
 
         logger.debug('roi lineouts plotted')
@@ -89,14 +92,6 @@ class LineoutPlotter(QObject):
 
     def plot_other_lineouts(self, roi_dicts):
         raise NotImplementedError
-        for roi_key, lineout_data in roi_dicts.items():
-            if roi_key in self._roi_curves:
-                if lineout_data.hor_data.size > 0:
-                    self._roi_curves[roi_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
-                    self._roi_curves[roi_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
-                self._roi_curves[roi_key]['int'].setData(self.integrated_data.xaxis,
-                                                         self.integrated_data.datas[roi_key])
-
 
     def plot_crosshair_lineouts(self, crosshair_dict):
         self.plot_other_lineouts(crosshair_dict)
@@ -106,10 +101,6 @@ class LineoutPlotter(QObject):
 
     def plot_other_crosshair_lineouts(self, crosshair_dict):
         raise NotImplementedError
-        for data_key, lineout_data in crosshair_dict.items():
-            if data_key in self._crosshair_curves:
-                self._crosshair_curves[data_key]['hor'].setData(lineout_data.hor_axis, lineout_data.hor_data)
-                self._crosshair_curves[data_key]['ver'].setData(lineout_data.ver_data, lineout_data.ver_axis)
 
     def get_lineout_widget(self, name):
         if name not in self.lineout_widgets:
@@ -194,7 +185,7 @@ class LineoutPlotter(QObject):
             for item in self.get_roi_curves_triplet()[k].values():
                 item.setVisible(isroichecked)
 
-    Slot(bool)
+    @Slot(bool)
     def crosshair_clicked(self, iscrosshairchecked=True):
         for image_key in IMAGE_TYPES:
             self.show_crosshair_curves(image_key, iscrosshairchecked)
