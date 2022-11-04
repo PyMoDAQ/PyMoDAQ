@@ -15,8 +15,8 @@ from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins,
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
-from pymodaq.utils.plotting.data_viewers.viewer2D_basic import ImageWidget
-from pyqtgraph import PlotCurveItem
+from pymodaq.utils.plotting.widgets import ImageWidget
+
 from pymodaq.utils.plotting.data_viewers.viewerbase import ViewerBase
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS

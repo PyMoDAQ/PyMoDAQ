@@ -1,6 +1,6 @@
 import os
 import sys
-
+from typing import List
 import pymodaq.utils
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QPointF
@@ -347,6 +347,9 @@ class ROIManager(QObject):
     def ROIs(self):
         return self._ROIs
 
+    def __len__(self):
+        return len(self._ROIs)
+
     def get_roi_from_index(self, index: int):
         return self.ROIs[self.roi_format(index)]
 
@@ -408,17 +411,17 @@ class ROIManager(QObject):
                 par = data[0]
                 newindex = int(par.name()[-2:])
 
-                if par.child(('type')).value() == '1D':
+                if par.child('type').value() == '1D':
                     roi_type = ''
 
                     pos = self.viewer_widget.plotItem.vb.viewRange()[0]
                     newroi = LinearROI(index=newindex, pos=pos)
                     newroi.setZValue(-10)
-                    newroi.setBrush(par.child(('Color')).value())
+                    newroi.setBrush(par.child('Color').value())
                     newroi.setOpacity(0.2)
 
-                elif par.child(('type')).value() == '2D':
-                    roi_type = par.child(('roi_type')).value()
+                elif par.child('type').value() == '2D':
+                    roi_type = par.child('roi_type').value()
                     xrange = self.viewer_widget.plotItem.vb.viewRange()[0]
                     yrange = self.viewer_widget.plotItem.vb.viewRange()[1]
                     width = np.max(((xrange[1] - xrange[0]) / 10, 2))
@@ -461,6 +464,13 @@ class ROIManager(QObject):
                     self.remove_ROI_signal.emit(param.name())
 
         self.ROI_changed_finished.emit()
+
+    def update_use_channel(self, channels: List[str]):
+        for ind in range(len(self)):
+            val = self.settings['ROIs', self.roi_format(ind), 'use_channel']
+            self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setOpts(limits=channels)
+            if val not in channels:
+                self.roi_manager.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
 
     def update_roi(self, roi_key, param):
         self._ROIs[roi_key].index_signal[int].disconnect()
@@ -569,7 +579,7 @@ class ROIManager(QObject):
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    from pymodaq.utils.plotting.data_viewers.viewer2D_basic import ImageWidget
+    from pymodaq.utils.plotting.widgets import ImageWidget
     from pyqtgraph import PlotWidget
 
     im = ImageWidget()

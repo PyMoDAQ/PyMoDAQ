@@ -8,7 +8,7 @@ from qtpy.QtGui import QIcon, QPixmap
 import pyqtgraph as pg
 import numpy as np
 
-from pymodaq.utils import data as data_mod
+from pymodaq.utils.data import DataRaw, DataFromRoi, Axis, DataToExport
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.items.crosshair import Crosshair
@@ -20,6 +20,7 @@ from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
 from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
+from pymodaq.utils.plotting.widgets import PlotWidget
 
 # from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
 DAQ_Measurement = None
@@ -61,14 +62,21 @@ class DataDisplayer(QObject):
     """
 
     updated_item = Signal(dict)
+    labels_changed = Signal(list)
 
     def __init__(self, plotitem):
         super().__init__()
         self._plotitem = plotitem
+        self._plotitem.addLegend()
         self._plot_items: List[pg.PlotDataItem] = []
         self._axis = None
+        self._data = None
 
-    def update_axis(self, axis: data_mod.Axis):
+    @property
+    def legend(self):
+        return self._plotitem.legend
+
+    def update_axis(self, axis: Axis):
         self._axis = axis
 
     def get_plot_items(self):
@@ -77,20 +85,45 @@ class DataDisplayer(QObject):
     def get_plot_item(self, index: int):
         return self._plot_items[index]
 
-    def update_data(self, data):
+    def update_data(self, data: DataRaw, do_xy=False):
+        self._data = data
         if len(data) != len(self._plot_items):
-            self.update_display_items(len(data))
+            self.update_display_items(data)
 
         axis = data.get_axis_from_index(0, create=False)
         if axis is not None:
             self.update_axis(axis)
 
+        self.update_xyplot(do_xy, data)
+
+    def update_xyplot(self, do_xy=True, data=None):
+        if data is None:
+            data = self._data
+
         for ind_data, data in enumerate(data.data):
             if data.size > 0:
-                self._plot_items[ind_data].setData(self._axis.data, data)
+                if not do_xy:
+                    self._plot_items[ind_data].setData(self._axis.data, data)
+                else:
+                    self._plot_items[ind_data].setData(np.array([]), np.array([]))
+
+        if do_xy and len(data) == 2:
+            self._plot_items[0].setData(data.data[0], data.data[1])
+            axis = self._plotitem.getAxis('bottom')
+            axis.setLabel(text=data.labels[0], units='')
+            axis = self._plotitem.getAxis('left')
+            axis.setLabel(text=data.labels[1], units='')
+            self.legend.setVisible(False)
+
+        else:
+            axis = self._plotitem.getAxis('bottom')
+            axis.setLabel(text=self._axis.label, units=self._axis.units)
+            axis = self._plotitem.getAxis('left')
+            axis.setLabel(text='', units='')
+            self.legend.setVisible(True)
 
     def plot_with_scatter(self, with_scatter=True):
-        symbolSize = 5
+        symbol_size = 5
         for ind, plot_item in enumerate(self.get_plot_items()):
             if with_scatter:
                 pen = None
@@ -105,16 +138,22 @@ class DataDisplayer(QObject):
             plot_item.setPen(pen)
             plot_item.setSymbolBrush(brush)
             plot_item.setSymbol(symbol)
-            plot_item.setSymbolSize(symbolSize)
+            plot_item.setSymbolSize(symbol_size)
 
-    def update_display_items(self, ncurve: int):
+    def update_display_items(self, data: DataRaw):
         while len(self._plot_items) > 0:
             self._plotitem.removeItem(self._plot_items.pop(0))
+            self.legend.removeItem(self.legend_items[0])
 
-        for ind in range(ncurve):
-            self._plot_items.append(pg.PlotDataItem())
+        for ind in range(len(data)):
+            self._plot_items.append(pg.PlotDataItem(pen=PLOT_COLORS[ind]))
             self._plotitem.addItem(self._plot_items[-1])
+            self.legend.addItem(self._plot_items[-1], data.labels[ind])
         self.updated_item.emit(self._plot_items)
+        self.labels_changed.emit(data.labels)
+
+    def legend_items(self):
+        return [item[1].text for item in self.legend.items]
 
 
 class View1D(ActionManager, QObject):
@@ -125,21 +164,30 @@ class View1D(ActionManager, QObject):
         self._data = None
 
         self.data_displayer: DataDisplayer = None
-        self.plot_widget: pg.PlotWidget = None
+        self.plot_widget: PlotWidget = None
 
         self.setup_actions()
-        self.roi_manager = ROIManager('1D')
 
         self.parent_widget = parent_widget
         if self.parent_widget is None:
             self.parent_widget = QtWidgets.QWidget()
             self.parent_widget.show()
 
+        self.plot_widget = PlotWidget()
+        self.roi_manager = ROIManager('1D')
+        self.data_displayer = DataDisplayer(self.plotitem)
+
         self.setup_widgets()
 
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
         self.connect_things()
         self.prepare_ui()
+
+    def get_double_clicked(self):
+        return self.plot_widget.view.sig_double_clicked
+
+    def display_roi_lineouts(self, roi_dict):
+        self.lineout_plotter.plot_roi_lineouts(roi_dict)
 
     @property
     def plotitem(self):
@@ -157,27 +205,13 @@ class View1D(ActionManager, QObject):
         """Convenience function from the Crosshair"""
         self.crosshair.set_crosshair_position(*positions)
 
-    def display_data(self, data: data_mod.DataRaw):
-        self.data_displayer.update_data(data)
+    def display_data(self, data: DataRaw):
+        self.set_action_visible('xyplot', len(data) == 2)
+        self.data_displayer.update_data(data, self.is_action_checked('xyplot'))
 
     def prepare_ui(self):
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
-
-    def do_xy(self):
-        if self.ui.xyplot_action.isChecked():
-            axis = self.plotitem.getAxis('bottom')
-            axis.setLabel(text=self.labels[0], units='')
-            axis = self.plotitem.getAxis('left')
-            axis.setLabel(text=self.labels[1], units='')
-            self.legend.setVisible(False)
-        else:
-            self.set_axis_label(dict(orientation='bottom', label=self.axis_settings['label'],
-                                     units=self.axis_settings['units']))
-            axis = self.plotitem.getAxis('left')
-            axis.setLabel(text='', units='')
-            self.legend.setVisible(True)
-        self.update_graph1D(self._data)
 
     def enable_zoom(self):
         try:
@@ -192,7 +226,7 @@ class View1D(ActionManager, QObject):
                 self.zoom_plot = []
                 for ind, data in enumerate(self._data):
                     channel = self.graph_zoom.plot()
-                    channel.setPen(self.plot_colors[ind])
+                    channel.setPen(PLOT_COLORS[ind])
                     self.zoom_plot.append(channel)
                 self.update_graph1D(self._data)
                 self.zoom_region.setRegion([np.min(self._x_axis), np.max(self._x_axis)])
@@ -264,9 +298,9 @@ class View1D(ActionManager, QObject):
 
         splitter_ver.addWidget(self.toolbar)
 
-        self.lineout_widgets = pg.PlotWidget()
-        self.plot_widget = pg.PlotWidget()
-        self.data_displayer = DataDisplayer(self.plotitem)
+        self.lineout_widgets = PlotWidget()
+
+
         self.graphical_widgets = dict(lineouts=dict(int=self.lineout_widgets))
 
         splitter_ver.addWidget(self.plot_widget)
@@ -286,7 +320,6 @@ class View1D(ActionManager, QObject):
         self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
         self.show_hide_crosshair()
 
-
     def connect_things(self):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
@@ -296,12 +329,14 @@ class View1D(ActionManager, QObject):
 
         self.connect_action('zoom', self.enable_zoom)
         self.connect_action('scatter', self.data_displayer.plot_with_scatter)
-        self.connect_action('xyplot', self.do_xy)
+        self.connect_action('xyplot', self.data_displayer.update_xyplot)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
 
         self.roi_manager.new_ROI_signal.connect(self.add_lineout)
         self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
+
+        self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
@@ -412,7 +447,6 @@ class Viewer1D(ViewerBase):
 
         self._labels = []
         self.plot_channels = None
-        self.plot_colors = utils.plot_colors
         self.color_list = ROIManager.color_list
         self.lo_items = OrderedDict([])
         self.lo_data = OrderedDict([])
@@ -428,11 +462,61 @@ class Viewer1D(ViewerBase):
         # dictionnary with data to be put in the table on the form: key="Meas.{}:".format(ind)
         # and value is the result of a given lineout or measurement
 
+    @Slot(dict)
+    def process_crosshair_lineouts(self, crosshair_dict):
+        self.view.display_crosshair_lineouts(crosshair_dict)
+        self.update_crosshair_data(crosshair_dict)
+        self.crosshair_dragged.emit(*self.view.scale_axis(*self.view.crosshair.get_positions()))
+
+    @Slot(dict)
+    def process_roi_lineouts(self, roi_dict):
+        self.view.display_roi_lineouts(roi_dict)
+
+        self.measure_data_dict = dict([])
+        for roi_key, lineout_data in roi_dict.items():
+            if not self._display_temporary:
+                self.data_to_export.append(
+                    DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
+                                x_axis=Axis(data=lineout_data.hor_axis,
+                                            units=self.x_axis.axis_units,
+                                            label=self.x_axis.axis_label)))
+
+                self.data_to_export.append(
+                    DataFromRoi(name=f'Vlineout_{roi_key}', data=[lineout_data.ver_data],
+                                x_axis=Axis(data=lineout_data.ver_axis,
+                                            units=self.y_axis.axis_units,
+                                            label=self.y_axis.axis_label)))
+
+                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data]))
+
+            self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
+
+            QtWidgets.QApplication.processEvents()
+
+        self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
+        if not self._display_temporary:
+            self.data_to_export_signal.emit(self.data_to_export)
+        self.ROI_changed.emit()
+
     def prepare_connect_ui(self):
         self._data_to_show_signal.connect(self.view.display_data)
         self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
         self.view.get_double_clicked().connect(self.double_clicked)
+
+    @Slot(float, float)
+    def double_clicked(self, posx, posy):
+        if self.view.is_action_checked('crosshair'):
+            self.view.crosshair.set_crosshair_position(posx)
+            self.crosshair_changed()
+        self.sig_double_clicked.emit(posx, posy)
+
+    @Slot(dict)
+    def roi_changed(self):
+        self.filter_from_rois.filter_data(self._datas)
+
+    def crosshair_changed(self):
+        self.filter_from_crosshair.filter_data(self._datas)
 
     def activate_roi(self, activate=True):
         self.set_action_checked('do_math', activate)
@@ -471,69 +555,6 @@ class Viewer1D(ViewerBase):
         bounds = self.zoom_region.getRegion()
         self.data_displayer.plotwidget.setXRange(bounds[0], bounds[1])
 
-    def ini_data_plots(self, Nplots):
-        try:
-            self.plot_channels = []
-            # if self.legend is not None:
-            #     self.data_displayer.plotwidget.plotItem.removeItem(self.legend)
-            self.legend = self.data_displayer.plotwidget.plotItem.legend
-            flag = True
-            while flag:
-                items = [item[1].text for item in self.legend.items]
-                if len(items) == 0:
-                    flag = False
-                else:
-                    self.legend.removeItem(items[0])
-            channels = []
-            for ind in range(Nplots):
-                channel = self.data_displayer.plotwidget.plot()
-                channel.setPen(self.plot_colors[ind])
-                self.legend.addItem(channel, self._labels[ind])
-                channels.append(ind)
-                self.plot_channels.append(channel)
-        except Exception as e:
-            logger.exception(str(e))
-
-    def update_labels(self, labels=[]):
-        try:
-            labels_tmp = labels[:]
-            if self.labels == labels:
-                if self.labels == [] or len(self.labels) < len(self._data):
-                    self._labels = [f"CH{ind:02d}" for ind in range(len(self._data))]
-            else:
-                if self.legend is not None:
-                    flag = True
-                    while flag:
-                        items = [item[1].text for item in self.legend.items]
-                        if len(items) == 0:
-                            flag = False
-                        else:
-                            self.legend.removeItem(items[0])
-
-                    if len(labels) < len(self.plot_channels):
-                        for ind in range(len(labels), len(self.plot_channels)):
-                            labels_tmp.append(f'CH{ind:02d}')
-
-                    if len(labels_tmp) == len(self.plot_channels):
-                        for ind, channel in enumerate(self.plot_channels):
-                            self.legend.addItem(channel, labels_tmp[ind])
-
-                    self._labels = labels_tmp
-
-            if self.labels != labels:
-                for ind in range(len(self.roi_manager.ROIs)):
-                    val = self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind), 'use_channel').value()
-                    self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind), 'use_channel').setOpts(
-                        limits=self.labels)
-                    if val not in self.labels:
-                        self.roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(ind), 'use_channel').setValue(
-                            self.labels[0])
-
-            self.ui.xyplot_action.setVisible(len(self.labels) == 2)
-
-
-        except Exception as e:
-            logger.exception(str(e))
 
     @property
     def labels(self):
@@ -541,11 +562,8 @@ class Viewer1D(ViewerBase):
 
     @labels.setter
     def labels(self, labels):
-        self.update_labels(labels)
-        self._labels = labels
-
-
-
+        if labels != self._labels:
+            self._labels = labels
 
     def remove_plots(self):
         if self.plot_channels is not None:
@@ -555,40 +573,15 @@ class Viewer1D(ViewerBase):
         if self.legend is not None:
             self.data_displayer.plotwidget.removeItem(self.legend)
 
-    def set_axis_label(self, axis_settings=dict(orientation='bottom', label='x axis', units='pxls')):
-        axis = self.data_displayer.plotwidget.plotItem.getAxis(axis_settings['orientation'])
-        axis.setLabel(text=axis_settings['label'], units=axis_settings['units'])
-        self.axis_settings = axis_settings
 
     @Slot(list)
-    def _show_data(self, data: data_mod.DataRaw):
+    def _show_data(self, data: DataRaw):
         try:
             self._data = data
-            self.update_labels(self.labels)
+            self.labels = data.labels
+            self.data_to_export = DataToExport(name=self.title)
 
-            self.data_to_export = OrderedDict(name=self.title, data0D=OrderedDict(), data1D=OrderedDict(), data2D=None)
-            for ind, data in enumerate(datas):
-                self.data_to_export['data1D']['CH{:03d}'.format(ind)] = data_mod.DataToExport()
-
-            if self.plot_channels == [] or self.plot_channels is None:  # initialize data and plots
-                self.ini_data_plots(len(datas))
-
-            elif len(self.plot_channels) != len(datas):
-                self.remove_plots()
-                self.ini_data_plots(len(datas))
-
-            if x_axis is not None:
-                self.set_x_axis(x_axis)
-
-            self.update_graph1D(datas)
-
-
-
-            if labels is not None:
-                self.update_labels(labels)
-
-            if self.ui.do_measurements_pb.isChecked():
-                self.update_measurement_module()
+            self.view.display_data(data)
 
         except Exception as e:
             logger.exception(str(e))
@@ -601,7 +594,7 @@ class Viewer1D(ViewerBase):
             for ind, key in enumerate(self.lo_items):
                 self.measure_data_dict["Lineout_{:s}:".format(key)] = data_lo[ind]
                 self.data_to_export['data0D']['Measure_{:03d}'.format(ind)] =\
-                    data_mod.DataToExport(name=self.title, data=np.array([data_lo[ind]]), source='roi')
+                    DataToExport(name=self.title, data=np.array([data_lo[ind]]), source='roi')
             self.roi_manager.settings.child(('measurements')).setValue(self.measure_data_dict)
 
             for ind, key in enumerate(self.lo_items):
@@ -618,7 +611,7 @@ class Viewer1D(ViewerBase):
         for ind, res in enumerate(data_meas):
             self.measure_data_dict["Meas.{}:".format(ind)] = res
             self.data_to_export['data0D']['Measure_{:03d}'.format(ind + ind_offset)] = \
-                data_mod.DataToExport(name=self.title, data=np.array([res]), source='roi')
+                DataToExport(name=self.title, data=np.array([res]), source='roi')
         self.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
         self.data_to_export['acq_time_s'] = datetime.datetime.now().timestamp()
         self.data_to_export_signal.emit(self.data_to_export)
@@ -635,9 +628,9 @@ class Viewer1D(ViewerBase):
                 if self.ui.scatter.isChecked():
                     pens.append(None)
                     symbol = 'o'
-                    symbolBrushs.append(self.plot_colors[ind])
+                    symbolBrushs.append(PLOT_COLORS[ind])
                 else:
-                    pens.append(self.plot_colors[ind])
+                    pens.append(PLOT_COLORS[ind])
                     symbol = None
 
                     symbolBrushs.append(None)
@@ -658,7 +651,7 @@ class Viewer1D(ViewerBase):
                                                          pxMode=True)
                 if self.ui.zoom_pb.isChecked():
                     self.zoom_plot[ind_plot].setData(x=self.x_axis, y=data)
-                x_axis = data_mod.Axis(data=self.x_axis, units=self.axis_settings['units'],
+                x_axis = Axis(data=self.x_axis, units=self.axis_settings['units'],
                                          label=self.axis_settings['label'])
                 self.data_to_export['data1D']['CH{:03d}'.format(ind_plot)].update(
                     OrderedDict(name=self.title, data=data, x_axis=x_axis, source='raw'))  # to be saved or exported
@@ -681,36 +674,9 @@ class Viewer1D(ViewerBase):
         except Exception as e:
             logger.exception(str(e))
 
-
-
     def update_status(self, txt):
         logger.info(txt)
 
-    @property
-    def x_axis(self):
-        return self._x_axis
-
-    @x_axis.setter
-    def x_axis(self, x_axis):
-        self.set_x_axis(x_axis)
-        if self._data:
-            self.show_data_temp(self._data)
-
-    def set_x_axis(self, x_axis):
-        label = 'Pxls'
-        units = ''
-        if isinstance(x_axis, dict):
-            if 'data' in x_axis:
-                xdata = x_axis['data']
-            if 'label' in x_axis:
-                label = x_axis['label']
-            if 'units' in x_axis:
-                units = x_axis['units']
-        else:
-            xdata = x_axis
-        self._x_axis = xdata
-        self.measurement_dict['x_axis'] = self._x_axis
-        self.set_axis_label(dict(orientation='bottom', label=label, units=units))
 
 
 class Viewer1D_math(QObject):
@@ -774,7 +740,7 @@ def main():
     Form = QtWidgets.QWidget()
     prog = Viewer1D(Form)
 
-    from pymodaq.utils.daq_utils import gauss1D
+    from pymodaq.utils.math_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
     y1 = gauss1D(x, 75, 25)
@@ -790,15 +756,16 @@ def main():
 
     # x = np.sin(np.linspace(0,6*np.pi,201))
     # y = np.sin(np.linspace(0, 6*np.pi, 201)+np.pi/2)
+    data = DataRaw('mydata', data=[y1, y2, ydata_expodec],
+                   axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
-    prog.ui.Do_math_pb.click()
+    prog.get_action('do_math').trigger()
     QtWidgets.QApplication.processEvents()
     prog.x_axis = x
-    # prog.show_data([y, y+2])
-    prog.show_data([y1, y2, ydata_expodec])
+
+    prog.show_data(data)
     QtWidgets.QApplication.processEvents()
-    prog.update_labels(['coucou', 'label2'])
     sys.exit(app.exec_())
 
 
@@ -846,7 +813,7 @@ def main_nans():
     sys.exit(app.exec_())
 
 if __name__ == '__main__':  # pragma: no cover
-    #main()
+    main()
     #main_unsorted()
     main_view1D()
     #main_nans()

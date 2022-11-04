@@ -1,3 +1,4 @@
+from PyQt5.QtCore import pyqtSignal
 from multipledispatch import dispatch
 from numbers import Real
 from pymodaq.utils import data as data_mod
@@ -447,3 +448,22 @@ class AxisInfosExtractor:
         offset = axis.axis_offset
 
         return AxisInfos(scaling, offset, label, units)
+
+
+class View_cust(pg.ViewBox):
+    """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
+
+    """
+    sig_double_clicked = QtCore.Signal(float, float)
+
+    def __init__(self, parent=None, border=None, lockAspect=False, enableMouse=True, invertY=False,
+                 enableMenu=True, name=None, invertX=False):
+        super().__init__(parent, border, lockAspect, enableMouse, invertY, enableMenu, name, invertX)
+
+    def mouseClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton and self.menuEnabled():
+            ev.accept()
+            self.raiseContextMenu(ev)
+        if ev.double():
+            pos = self.mapToView(ev.pos())
+            self.sig_double_clicked.emit(pos.x(), pos.y())
