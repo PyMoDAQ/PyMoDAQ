@@ -17,7 +17,7 @@ from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.widgets import ImageWidget
 
-from pymodaq.utils.plotting.data_viewers.viewerbase import ViewerBase
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS
 from pymodaq.utils.plotting.items.crosshair import Crosshair
@@ -25,7 +25,7 @@ from pymodaq.utils.plotting.utils.plot_utils import Data0DWithHistory, AxisInfos
 from pymodaq.utils.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
-from pymodaq.utils.exceptions import ViewerError
+
 
 logger = set_logger(get_module_name(__file__))
 

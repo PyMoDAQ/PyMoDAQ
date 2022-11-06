@@ -97,11 +97,15 @@ class ViewerBase(QObject):
         raise NotImplementedError
 
     def add_attributes_from_view(self):
-        """Convenience function to set attributes to self for the public API
-        """
+        """Convenience function to add attributes from the view to self"""
         for attribute in self.convenience_attributes:
             if hasattr(self.view, attribute):
                 setattr(self, attribute, getattr(self.view, attribute))
+
+    def trigger_action(self, action_name: str):
+        """Convenience function to trigger programmatically one of the action of the related view"""
+        if self.has_action(action_name):
+            self.get_action(action_name).trigger()
 
     def activate_roi(self, activate=True):
         """Activate the Roi manager using the corresponding action"""

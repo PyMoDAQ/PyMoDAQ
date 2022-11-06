@@ -9,6 +9,7 @@ from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.conftests import qtbotskip
 pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
+
 @pytest.fixture
 def init_prog(qtbot):
     form = QtWidgets.QWidget()

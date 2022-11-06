@@ -2,6 +2,8 @@ import sys
 import datetime
 from collections import OrderedDict
 from typing import List
+
+import pyqtgraph
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 import pyqtgraph as pg
@@ -14,7 +16,7 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils import daq_utils as utils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.managers.action_manager import ActionManager
-from pymodaq.utils.plotting.data_viewers.viewerbase import ViewerBase
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 
 from pymodaq.utils.managers.roi_manager import ROIManager
 from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DFromRois
@@ -63,7 +65,7 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem):
+    def __init__(self, plotitem: pyqtgraph.PlotItem):
         super().__init__()
         self._plotitem = plotitem
         self._plotitem.addLegend()
@@ -217,35 +219,11 @@ class View1D(ActionManager, QObject):
         self.show_hide_crosshair(False)
         self.show_lineout_widgets()
 
-    def enable_zoom(self):
-        try:
-            if not self.is_action_checked('zoom'):
-                if self.zoom_plot != []:
-                    for plot in self.zoom_plot:
-                        self.graph_zoom.removeItem(plot)
-                self.zoom_widget.hide()
-                self.zoom_region.sigRegionChanged.disconnect(self.do_zoom)
-
-            else:
-                self.zoom_plot = []
-                for ind, data in enumerate(self.data_displayer._data):
-                    channel = self.graph_zoom.plot()
-                    channel.setPen(PLOT_COLORS[ind])
-                    self.zoom_plot.append(channel)
-                self.update_graph1D(self.data_displayer._data)
-                self.zoom_region.setRegion([np.min(self._x_axis), np.max(self._x_axis)])
-
-                self.zoom_widget.show()
-                self.zoom_region.sigRegionChanged.connect(self.do_zoom)
-        except Exception as e:
-            logger.exception(str(e))
-
-    def do_math_fun(self):
+    def do_math(self):
         try:
             if self.is_action_checked('do_math'):
                 self.roi_manager.roiwidget.show()
                 self.lineout_widgets.show()
-
             else:
                 self.lineout_widgets.hide()
                 self.roi_manager.roiwidget.hide()
@@ -279,30 +257,23 @@ class View1D(ActionManager, QObject):
         splitter_ver.addWidget(self.lineout_widgets)
         self.roi_manager.viewer_widget = self.plot_widget
 
-        self.setup_zoom()
-
-        # #crosshair
         self.crosshair = Crosshair(self.plotitem, orientation='vertical')
         self.show_hide_crosshair()
 
     def connect_things(self):
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
 
-        # #Connecting buttons:
-        self.connect_action('do_math', self.do_math_fun)
+        self.connect_action('do_math', self.do_math)
         self.connect_action('do_math', self.lineout_plotter.roi_clicked)
 
-        self.connect_action('zoom', self.enable_zoom)
         self.connect_action('scatter', self.data_displayer.plot_with_scatter)
         self.connect_action('xyplot', self.data_displayer.update_xyplot)
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
 
         self.roi_manager.new_ROI_signal.connect(self.update_roi_channels)
-        # self.roi_manager.remove_ROI_signal.connect(self.remove_ROI)
-
         self.data_displayer.labels_changed.connect(self.roi_manager.update_use_channel)
-        #self.crosshair.crosshair_dragged.connect(self.update_crosshair_data)
+
 
     def show_lineout_widgets(self):
         state = self.is_action_checked('do_math') or self.is_action_checked('crosshair')
@@ -314,7 +285,6 @@ class View1D(ActionManager, QObject):
             lineout.update()
 
     def setup_actions(self):
-        self.add_action('zoom', 'Zoom Widget', 'Zoom_to_Selection', tip='Display a Zoom Widget', checkable=True)
         self.add_action('do_math', 'Math', 'Calculator', 'Do Math using ROI', checkable=True)
         self.add_action('crosshair', 'Crosshair', 'reset', 'Show data cursor', checkable=True)
         self.add_action('aspect_ratio', 'AspectRatio', 'Zoom_1_1', 'Fix the aspect ratio', checkable=True)
@@ -324,25 +294,6 @@ class View1D(ActionManager, QObject):
                         visible=False)
         self.add_action('x_label', 'x:')
         self.add_action('y_label', 'y:')
-
-    def setup_zoom(self):
-        # create and set the zoom widget
-        # self.zoom_widget=Dock("1DViewer zoom", size=(300, 100), closable=True)
-        self.zoom_widget = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout()
-
-        self.graph_zoom = pg.PlotWidget()
-        layout.addWidget(self.graph_zoom)
-        self.zoom_widget.setLayout(layout)
-
-        self.zoom_region = pg.LinearRegionItem()
-        self.zoom_region.setZValue(-10)
-        self.zoom_region.setBrush('r')
-        self.zoom_region.setOpacity(0.2)
-        self.graph_zoom.addItem(self.zoom_region)
-        self.zoom_plot = []
-        # self.dockarea.addDock(self.zoom_widget)
-        self.zoom_widget.setVisible(False)
 
     def lock_aspect_ratio(self):
         if self.is_action_checked('aspect_ratio'):
@@ -376,18 +327,14 @@ class Viewer1D(ViewerBase):
 
     Datas and measurements are then exported with the signal data_to_export_signal
     """
-
-    math_signal = Signal(OrderedDict)  # OrderedDict:=[x_axis=...,data=...,ROI_bounds=...,operation=]
-    ROI_changed_finished = Signal()
-    convenience_attributes = ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
+    convenience_attributes = ('has_action', 'is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
                               'get_action', 'addAction', 'toolbar', 'crosshair',
-                              'viewer', 'scale_axis', 'unscale_axis', 'roi_manager', 'show_roi_target',
-                              'move_scale_roi_target', 'get_data_at')
+                              'viewer', 'roi_manager')
 
     def __init__(self, parent=None, title=''):
-        super().__init__()
+        super().__init__(parent=parent, title=title)
 
-        self.view = View1D(parent)
+        self.view = View1D(self.parent)
 
         self.filter_from_rois = Filter1DFromRois(self.view.roi_manager)
         self.filter_from_rois.register_activation_signal(self.view.get_action('do_math').triggered)
@@ -402,13 +349,6 @@ class Viewer1D(ViewerBase):
         self.add_attributes_from_view()
 
         self._labels = []
-        self.plot_channels = None
-        self.color_list = ROIManager.color_list
-        self.lo_items = OrderedDict([])
-        self.lo_data = OrderedDict([])
-        self.ROI_bounds = []
-
-        self._x_axis = None
 
     @Slot(dict)
     def process_crosshair_lineouts(self, crosshair_dict):
@@ -462,10 +402,6 @@ class Viewer1D(ViewerBase):
     def activate_roi(self, activate=True):
         self.set_action_checked('do_math', activate)
         self.get_action('do_math').triggered.emit(activate)
-
-    def do_zoom(self):
-        bounds = self.zoom_region.getRegion()
-        self.data_displayer.plotwidget.setXRange(bounds[0], bounds[1])
 
     @property
     def labels(self):
@@ -540,9 +476,10 @@ def main_unsorted():
     xaxis = np.concatenate((x, x[::-1]))
     y = gauss1D(x, 75, 25)
     yaxis = np.concatenate((y, -y))
-
+    data = DataRaw('mydata', data=[yaxis],
+                   axes=[Axis('myaxis', 'units', data=xaxis)])
     widget.show()
-    prog.show_data([yaxis], x_axis=xaxis)
+    prog.show_data(data)
 
     sys.exit(app.exec_())
 
@@ -566,14 +503,16 @@ def main_nans():
     y = gauss1D(x, 75, 25)
 
     y[100:150] = np.nan
+    data = DataRaw('mydata', data=[y],
+                   axes=[Axis('myaxis', 'units', data=x)])
 
     widget.show()
-    prog.show_data([y], x_axis=x)
+    prog.show_data(data)
 
     sys.exit(app.exec_())
 
 if __name__ == '__main__':  # pragma: no cover
-    main()
-    #main_unsorted()
-    main_view1D()
+    #main()
+    main_unsorted()
+    #main_view1D()
     #main_nans()

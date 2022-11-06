@@ -169,13 +169,6 @@ class TestViewer2D:
         prog, qtbot = init_prog
         assert isinstance(prog, Viewer2D)
 
-    @pytest.mark.parametrize('dim', [(0,), (10,), (3, 3, 3)])
-    def test_viewer_error(self, init_prog, dim):
-        prog, qtbot = init_prog
-        data = prog.format_data_as_datafromplugins(data_red=np.zeros(dim))
-        with pytest.raises(ViewerError):
-            prog.show_data(data)
-
     def test_show_data_triggers_data_to_export_signal(self, init_prog):
         prog, qtbot = init_prog
         data_red, data_green, data_blue, data_spread = init_data()
