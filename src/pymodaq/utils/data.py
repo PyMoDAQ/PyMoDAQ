@@ -315,7 +315,7 @@ class DataBase(DataLowLevel):
     def __next__(self):
         if self._iter_index < len(self):
             self._iter_index += 1
-            return self.data[self._iter_index]
+            return self.data[self._iter_index-1]
         else:
             raise StopIteration
 

@@ -256,12 +256,30 @@ def makePolygons(tri):
 
 
 class Data0DWithHistory:
+    """Object to store scalar values and keep a history of a given length to them"""
     def __init__(self, Nsamples=200):
         super().__init__()
         self._datas = dict([])
-        self.Nsamples = Nsamples
+        self._Nsamples = Nsamples
         self._xaxis = None
         self._data_length = 0
+
+    @property
+    def length(self):
+        return self._Nsamples
+
+    @length.setter
+    def length(self, history_length: int):
+        if history_length > 0:
+            self._Nsamples = history_length
+
+    def __len__(self):
+        return self.length
+
+    @dispatch(data_mod.DataRaw)
+    def add_datas(self, data: data_mod.DataRaw):
+        datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
+        self.add_datas(datas)
 
     @dispatch(list)
     def add_datas(self, datas: list):
@@ -287,7 +305,7 @@ class Data0DWithHistory:
 
         self._data_length += 1
 
-        if self._data_length > self.Nsamples:
+        if self._data_length > self._Nsamples:
             self._xaxis += 1
         else:
             self._xaxis = np.linspace(0, self._data_length, self._data_length, endpoint=False)
@@ -301,7 +319,7 @@ class Data0DWithHistory:
             else:
                 self._datas[data_key] = np.concatenate((self._datas[data_key], data))
 
-            if self._data_length > self.Nsamples:
+            if self._data_length > self._Nsamples:
                 self._datas[data_key] = self._datas[data_key][1:]
 
     @property
