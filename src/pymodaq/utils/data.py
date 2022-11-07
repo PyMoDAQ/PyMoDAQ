@@ -8,15 +8,17 @@ Created the 28/10/2022
 import numbers
 import numpy as np
 from typing import List, Tuple
+
 import warnings
 from time import time
+import copy
 
 from multipledispatch import dispatch
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 from pymodaq.utils.logger import set_logger, get_module_name
-
+from pymodaq.utils.slicing import SpecialSlicersData
 
 logger = set_logger(get_module_name(__file__))
 
@@ -443,64 +445,36 @@ class DataBase(DataLowLevel):
         self._data = data
 
 
-class DataWithAxes(DataBase):
-    """Data object with Axis objects corresponding to underlying data nd-arrays
+class AxesManager:
+    def __init__(self, data: DataBase, axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
 
-    Parameters
-    ----------
-    axes: list of Axis
-        the list of Axis object for proper plotting, calibration ...
-    nav_indexes: tuple of int
-        highlight which Axis in axes is Signal or Navigation axis depending on the content:
-        For instance, nav_indexes = (2,), means that the axis with index 2 in a at least 3D ndarray data is the first
-        navigation axis
-        For instance, nav_indexes = (3,2), means that the axis with index 3 in a at least 4D ndarray data is the first
-        navigation axis while the axis with index 2 is the second navigation Axis. Axes with index 0 and 1 are signal
-        axes of 2D ndarray data
-    """
-
-    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), **kwargs):
-        self._axes: List[Axis] = []
-        axes = [axis for axis in axes]
-
-        if 'nav_axes' in kwargs:
-            deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
-            nav_indexes = kwargs['nav_axes']
-
-        x_axis = kwargs.pop('x_axis') if 'x_axis' in kwargs else None
-        y_axis = kwargs.pop('y_axis') if 'y_axis' in kwargs else None
-
-        nav_x_axis = kwargs.pop('nav_x_axis') if 'nav_x_axis' in kwargs else None
-        nav_y_axis = kwargs.pop('nav_y_axis') if 'nav_y_axis' in kwargs else None
-        super().__init__(*args, **kwargs)
+        self._data = data
+        self._axes = axes[:]
+        self._nav_indexes = nav_indexes
+        self._sig_indexes = sig_indexes
+        self._check_axis(axes)
 
         self._check_axis(axes)
-        self._manage_named_axes(axes, x_axis, y_axis, nav_x_axis, nav_y_axis)
-
-        self._nav_indexes = nav_indexes
+        self._manage_named_axes(axes, **kwargs)
 
     @property
-    def nav_indexes(self) -> List[int]:
-        return self._nav_indexes
+    def axes(self):
+        return self._axes
 
-    @nav_indexes.setter
-    def nav_indexes(self, nav_indexes: List[int]):
-        for index in nav_indexes:
-            if index not in self.get_axes_index():
-                logger.warning('Could not set the corresponding nav_index into the data object, not enough'
-                               ' Axis declared')
-        else:
-            self._nav_indexes = nav_indexes
+    def _has_get_axis_from_index(self, index: int):
+        """Check if the axis referred by a given data dimensionality index is present
 
-    @property
-    def nav_axes(self) -> List[int]:
-        deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
-        return self._nav_indexes
-
-    @nav_axes.setter
-    def nav_axes(self, nav_indexes: List[int]):
-        deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
-        self.nav_indexes = nav_indexes
+        Returns
+        -------
+        bool: True if the axis has been found else False
+        Axis or None: return the axis instance if has the axis else None
+        """
+        if index > len(self.shape) or index < 0:
+            raise IndexError('The specified index does not correspond to any data dimension')
+        for axis in self.axes:
+            if axis.index == index:
+                return True, axis
+        return False, None
 
     def _manage_named_axes(self, axes, x_axis=None, y_axis=None, nav_x_axis=None, nav_y_axis=None):
         """This method make sur old style Data is still compatible, especially when using x_axis or y_axis parameters"""
@@ -539,8 +513,74 @@ class DataWithAxes(DataBase):
             self._check_axis(axes)
 
     @property
-    def axes(self):
-        return self._axes
+    def shape(self):
+        return self._data.shape
+
+    @property
+    def sig_shape(self) -> tuple:
+        return tuple([self.shape[ind] for ind in self.sig_indexes])
+
+    @property
+    def nav_shape(self) -> tuple:
+        return tuple([self.shape[ind] for ind in self.nav_indexes])
+
+    def append_axis(self, axis: Axis):
+        self._axes.append(axis)
+        self._check_axis([axis])
+
+    @property
+    def nav_indexes(self) -> List[int]:
+        return self._nav_indexes
+
+    @nav_indexes.setter
+    def nav_indexes(self, nav_indexes: List[int]):
+        for index in nav_indexes:
+            if index not in self.get_axes_index():
+                logger.warning('Could not set the corresponding nav_index into the data object, not enough'
+                               ' Axis declared')
+            else:
+                self._nav_indexes = nav_indexes
+
+    @property
+    def sig_indexes(self) -> List[int]:
+        return self._sig_indexes
+
+    @sig_indexes.setter
+    def sig_indexes(self, sig_indexes: List[int]):
+        for index in sig_indexes:
+            if index in self._nav_indexes:
+                logger.warning('Could not set the corresponding sig_index into the axis manager object, '
+                               'the axis is already affected to the navigation axis')
+                return None
+            if index not in self.get_axes_index():
+                logger.warning('Could not set the corresponding nav_index into the data object, not enough'
+                               ' Axis declared')
+            else:
+                self._sig_indexes = sig_indexes
+
+    @property
+    def nav_axes(self) -> List[int]:
+        deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
+        return self._nav_indexes
+
+    @nav_axes.setter
+    def nav_axes(self, nav_indexes: List[int]):
+        deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
+        self.nav_indexes = nav_indexes
+
+    def is_axis_signal(self, axis: Axis) -> bool:
+        """Check if an axis is considered signal or navigation"""
+        return axis.index in self._nav_indexes
+
+    def is_axis_navigation(self, axis: Axis) -> bool:
+        """Check if an axis  is considered signal or navigation"""
+        return axis.index not in self._nav_indexes
+
+    def get_shape_from_index(self, index: int) -> int:
+        """Get the data shape at the given index"""
+        if index > len(self.shape) or index < 0:
+            raise IndexError('The specified index does not correspond to any data dimension')
+        return self.shape[index]
 
     def _check_axis(self, axes: List[Axis]):
         """Check all axis to make sure of their type and make sure their data are properly referring to the data index
@@ -557,35 +597,6 @@ class DataWithAxes(DataBase):
                                           'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
                 axes[ind].create_linear_data(self.get_shape_from_index(axis.index))
         self._axes = axes
-
-    def get_shape_from_index(self, index: int) -> int:
-        """Get the data shape at the given index"""
-        if index > len(self.shape) or index < 0:
-            raise IndexError('The specified index does not correspond to any data dimension')
-        return self.shape[index]
-
-    def is_axis_signal(self, axis: Axis) -> bool:
-        """Check if an axis is considered signal or navigation"""
-        return axis.index in self._nav_indexes
-
-    def is_axis_navigation(self, axis: Axis) -> bool:
-        """Check if an axis  is considered signal or navigation"""
-        return axis.index not in self._nav_indexes
-
-    def _has_get_axis_from_index(self, index: int):
-        """Check if the axis referred by a given data dimensionality index is present
-
-        Returns
-        -------
-        bool: True if the axis has been found else False
-        Axis or None: return the axis instance if has the axis else None
-        """
-        if index > len(self.shape) or index < 0:
-            raise IndexError('The specified index does not correspond to any data dimension')
-        for axis in self.axes:
-            if axis.index == index:
-                return True, axis
-        return False, None
 
     def get_axes_index(self) -> List[int]:
         """Get the index list from the axis objects"""
@@ -624,10 +635,157 @@ class DataWithAxes(DataBase):
         return axis
 
     def get_nav_axes(self):
-        return [self.get_axis_from_index(index, create=True) for index in self.nav_indexes]
+        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]
 
     def get_signal_axes(self):
-        return [axis for axis in self.axes if axis.index not in self.nav_indexes]
+        if self.sig_indexes is None:
+            self._sig_indexes = [axis.index for axis in self.axes if axis.index not in self.nav_indexes]
+        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]
+
+    def is_axis_signal(self, axis: Axis) -> bool:
+        """Check if an axis is considered signal or navigation"""
+        return axis.index in self._nav_indexes
+
+    def is_axis_navigation(self, axis: Axis) -> bool:
+        """Check if an axis  is considered signal or navigation"""
+        return axis.index not in self._nav_indexes
+
+    def __repr__(self):
+        return self._get_dimension_str()
+
+    def _get_dimension_str(self):
+        string = "("
+        for axis in self.get_nav_axes():
+            string += str(axis.size) + ", "
+        string = string.rstrip(", ")
+        string += "|"
+        for axis in self.get_signal_axes():
+            string += str(axis.size) + ", "
+        string = string.rstrip(", ")
+        string += ")"
+        return string
+
+
+class DataWithAxes(DataBase):
+    """Data object with Axis objects corresponding to underlying data nd-arrays
+
+    Parameters
+    ----------
+    axes: list of Axis
+        the list of Axis object for proper plotting, calibration ...
+    nav_indexes: tuple of int
+        highlight which Axis in axes is Signal or Navigation axis depending on the content:
+        For instance, nav_indexes = (2,), means that the axis with index 2 in a at least 3D ndarray data is the first
+        navigation axis
+        For instance, nav_indexes = (3,2), means that the axis with index 3 in a at least 4D ndarray data is the first
+        navigation axis while the axis with index 2 is the second navigation Axis. Axes with index 0 and 1 are signal
+        axes of 2D ndarray data
+    """
+
+    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), **kwargs):
+
+        if 'nav_axes' in kwargs:
+            deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
+            nav_indexes = kwargs.pop('nav_axes')
+
+        x_axis = kwargs.pop('x_axis') if 'x_axis' in kwargs else None
+        y_axis = kwargs.pop('y_axis') if 'y_axis' in kwargs else None
+
+        nav_x_axis = kwargs.pop('nav_x_axis') if 'nav_x_axis' in kwargs else None
+        nav_y_axis = kwargs.pop('nav_y_axis') if 'nav_y_axis' in kwargs else None
+
+        super().__init__(*args, **kwargs)
+
+        other_kwargs = dict(x_axis=x_axis, y_axis=y_axis, nav_x_axis=nav_x_axis, nav_y_axis=nav_y_axis)
+
+        self.axes_manager = AxesManager(data=self, axes=axes, nav_indexes=nav_indexes, **other_kwargs)
+
+        self.inav = SpecialSlicersData(self, True)
+        self.isig = SpecialSlicersData(self, False)
+
+    def _compute_slices(self, slices, is_navigation=True):
+        """Compute the total slice to apply to the data
+
+        Filling in Ellipsis when no slicing should be done
+        """
+        if is_navigation:
+            indexes = self._am.nav_indexes
+        else:
+            indexes = self._am.sig_indexes
+        total_slices = []
+        slices = list(slices)
+        for ind in range(len(self.shape)):
+            if ind in indexes:
+                total_slices.append(slices.pop(0))
+            elif len(total_slices) == 0 or total_slices[-1] != Ellipsis:
+                total_slices.append(Ellipsis)
+        total_slices = tuple(total_slices)
+        return total_slices
+
+    def _slicer(self, slices, is_navigation=True):
+        """Apply a given slice to the data either navigation or signal dimension
+
+        Parameters
+        ----------
+        slices: tuple of slice or int
+            the slices to apply to the data
+        is_navigation: bool
+            if True apply the slices to the navigation dimension else to the signal ones
+
+        Returns
+        -------
+        DataWithAxes
+            Object of the same type as the initial data, derived from DataWithAxes. But with lower data size due to the
+             slicing and with eventually less axes.
+        """
+
+        if isinstance(slices, numbers.Number) or isinstance(slices, slice):
+            slices = [slices]
+        total_slices = self._compute_slices(slices, is_navigation)
+        new_arrays_data = [np.atleast_1d(np.squeeze(dat[total_slices])) for dat in self.data]
+        axes_to_append = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
+        indexes_to_get = self._am.nav_indexes if is_navigation else self._am.sig_indexes
+
+        lower_indexes = 0
+        axes = []
+        nav_indexes = [] if is_navigation else self._am.nav_indexes
+        for ind_slice, slisse in enumerate(slices):
+            ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
+            ax_data = ax.data[slisse]
+            if isinstance(ax_data, np.ndarray):  # means the slice keep part of the axis
+                if is_navigation:
+                    nav_indexes.append(self._am.nav_indexes[ind_slice])
+                ax = copy.copy(ax)
+                ax.data = ax_data
+                axes.append(ax)
+            else:
+                for axis in axes_to_append:  # means we removed one of the nav axes (and data dim),
+                    # hence axis index above current nav_index should be lowered by 1
+                    if axis.index > indexes_to_get[ind_slice]:
+                        lower_indexes += 1
+        for axis in axes_to_append:
+            axis.index -= lower_indexes
+
+        axes.extend(axes_to_append)
+        data = self.__class__(self.name, data=new_arrays_data, nav_indexes=nav_indexes, axes=axes)
+        return data
+
+    @property
+    def _am(self) -> AxesManager:
+        return self.axes_manager
+
+    def __getattr__(self, item):
+        if hasattr(self.axes_manager, item):
+            return getattr(self.axes_manager, item)
+        else:
+            raise AttributeError(f'{item} is neither a Data or Axis attribute')
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
+
+    def get_data_dimension(self) -> str:
+        return str(self._am)
+
 
 
 class DataRaw(DataWithAxes):
