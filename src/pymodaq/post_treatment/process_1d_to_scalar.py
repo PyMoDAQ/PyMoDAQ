@@ -34,25 +34,40 @@ class Data1DProcessorBase(metaclass=ABCMeta):
         ind2 = indexes[1][0]
         sub_data = data[ind1:ind2]
         sub_axis = axis[ind1:ind2]
-        return sub_axis, sub_data, self.operate(sub_axis, sub_data)
+        return sub_axis, sub_data, self.operate(sub_axis, sub_data, operation_axis=-1)
 
     @abstractmethod
-    def operate(self, sub_axis, sub_data):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
         pass
 
 
 class MeanProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data):
-        return np.mean(sub_data)
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
+        return np.mean(sub_data, axis=operation_axis)
+
+
+class StdProcessor(Data1DProcessorBase):
+    def operate(self, sub_data, sub_axis, operation_axis=-1):
+        return np.std(sub_data, axis=operation_axis)
 
 
 class SumProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data):
-        return np.mean(sub_data)
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
+        return np.sum(sub_data, axis=operation_axis)
+
+
+class MaxProcessor(Data1DProcessorBase):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
+        return np.max(sub_data, axis=operation_axis)
+
+
+class MinProcessor(Data1DProcessorBase):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
+        return np.min(sub_data, axis=operation_axis)
 
 
 class HalfLifeProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
         ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
         x0 = sub_axis[ind_x0]
         sub_xaxis = sub_axis[ind_x0:]
@@ -63,7 +78,7 @@ class HalfLifeProcessor(Data1DProcessorBase):
 
 
 class ExpoDecayProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
         ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
         x0 = sub_axis[ind_x0]
         sub_xaxis = sub_axis[ind_x0:]
@@ -74,7 +89,7 @@ class ExpoDecayProcessor(Data1DProcessorBase):
 
 
 class FWHMProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
         sub_data = sub_data - np.min(sub_data)
         ind_x0, value = mutils.find_index(sub_data, np.max(sub_data))[0]
         ind_x0m, fwhm_value = mutils.find_index(sub_data, value / 2)[0]
@@ -86,6 +101,21 @@ class FWHMProcessor(Data1DProcessorBase):
 @Data1DProcessorFactory.register('mean')
 def create_mean_processor(**_ignored):
     return MeanProcessor()
+
+
+@Data1DProcessorFactory.register('std')
+def create_std_processor(**_ignored):
+    return StdProcessor()
+
+
+@Data1DProcessorFactory.register('max')
+def create_max_processor(**_ignored):
+    return MaxProcessor()
+
+
+@Data1DProcessorFactory.register('min')
+def create_min_processor(**_ignored):
+    return MinProcessor()
 
 
 @Data1DProcessorFactory.register('sum')
