@@ -40,19 +40,16 @@ class DataDisplayer(QObject):
         self._navigator1D = navigator1D
         self._navigator2D = navigator2D
 
-        self._data: SignalND = None
-        self._data_raw: DataRaw = None
+        self._data: DataRaw = None
         self._nav_axes: List[Axis] = None
         self._nav_limits: tuple = (None, None)
         self._signal_at: tuple = (0, 0)
         self._data_buffer = []
 
     def update_data(self, data: DataRaw):
-        self._data_raw = data
         if self._data is None or self._data.shape != data.shape:
             self._nav_axes = data.get_nav_axes()
-            axes = self.get_signal_axes_from_data(data)
-            self._data = SignalND(data.data[0], axes=axes)
+            self._data = data
         else:
             self._data.data = data.data[0]
 
@@ -61,37 +58,60 @@ class DataDisplayer(QObject):
         self.update_nav_data(*self._nav_limits)
 
     def update_nav_data(self, x, y, width=None, height=None):
-        nav_data = self.get_nav_data(self._data, *self._nav_limits)
+        nav_data = self.get_nav_data(self._data, x, y, width, height)
 
-        self.navigator2D.show_data(navigator_data)
+        if len(nav_data.shape) < 2:
+            self._navigator1D.show_data(nav_data)
+        else:
+            self._navigator2D.show_data(nav_data)
         # todo plot
 
-    def get_nav_data(self, data, x, y, width=None, height=None):
+    def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
 
-        if len(data.axes_manager.signal_shape) == 0:  # signal data is 0D
+        if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
             navigator_data = [data.data]
 
-        elif len(data.axes_manager.signal_shape) == 1:  # signal data is 1D
+        elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
             navigator_data = self.get_data_from_1Dsignal_roi(data, (x, y))
 
-        elif len(data.axes_manager.signal_shape) == 2:  # signal data is 2D
-            if width is not None and height is not None :
+        elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
+            if width is not None and height is not None:
                 navigator_data = [data.isig[x: x + width, y: y + height].sum((-1, -2)).data]
             else:
                 navigator_data = [data.sum((-1, -2)).data]
         else:
             navigator_data = None
-
-        # todo shape nav data as a Rawdata
-
-        return navigator_data
-
-    def get_signal_axes_from_data(self, data: DataRaw):
         axes = []
-        for axis in data.axes:
-            axes.append(dict(size=len(axis), name=axis.label, units=axis.units, scale=axis.get_scale(),
-                             offset=axis.get_offset(), navigate=axis.index in data.nav_indexes))
-        return axes
+        for ind, axis in enumerate(self._data_raw.get_nav_axes()):
+            axis.index = ind
+
+        nav_data = DataRaw('NavData', data=navigator_data, )
+        nav_data = self._data.get_navigator_data()
+        return nav_data
+
+    def get_data_from_1Dsignal_roi(self, data, x, y):
+        self._nav_limits[0, 2] = [x, y]
+
+        # if [x, y] != []:
+        #     if self.ui.combomath.currentText() == 'Sum':
+        #         navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].sum((-1)).data for pt in
+        #                           ROI_bounds_1D]
+        #     elif self.ui.combomath.currentText() == 'Mean':
+        #         navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].mean((-1)).data for pt in
+        #                           ROI_bounds_1D]
+        #     elif self.ui.combomath.currentText() == 'Half-life':
+        #         navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].halflife((-1)).data for pt in
+        #                           ROI_bounds_1D]
+        # else:
+        #     if self.ui.combomath.currentText() == 'Sum':
+        #         navigator_data = [datas_transposed.isig[:].sum((-1)).data]
+        #     elif self.ui.combomath.currentText() == 'Mean':
+        #         navigator_data = [datas_transposed.isig[:].mean((-1)).data]
+        #     elif self.ui.combomath.currentText() == 'Half-life':
+        #         navigator_data = [datas_transposed.isig[:].halflife((-1)).data]
+        # return navigator_data
+        return  data
+
 
     def update_nav_axes(self, nav_axes: List[Axis]):
         self._nav_axes = nav_axes
@@ -113,50 +133,50 @@ class DataDisplayer(QObject):
         self._signal_at = posx, posy
         if self._data is not None:
             try:
-                if len(self._nav_axes) == 0:
-                    data = self._data.data
-                elif len(self._nav_axes) == 1:
-                    if posx < self._nav_axes[0]['data'][0] or posx > self._nav_axes[0]['data'][-1]:
-                        return
-                    ind_x = mutils.find_index(self._nav_axes[0]['data'], posx)[0][0]
-                    logger.debug(f'Getting the data at nav index {ind_x}')
-                    data = self._data.inav[ind_x].data
-                elif len(self._nav_axes) == 2:
-                    if posx < self._nav_axes[0]['data'][0] or posx > self._nav_axes[0]['data'][-1]:
-                        return
-                    if posy < self._nav_axes[1]['data'][0] or posy > self._nav_axes[1]['data'][-1]:
-                        return
-                    ind_x = mutils.find_index(self._nav_axes[0]['data'], posx)[0][0]
-                    ind_y = mutils.find_index(self._nav_axes[1]['data'], posy)[0][0]
-                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
-                    data = self._data.inav[ind_y, ind_x].data
+                # if len(self._nav_axes) == 0:
+                #     data = self._data.data
+                # elif len(self._nav_axes) == 1:
+                #     if posx < self._nav_axes[0]['data'][0] or posx > self._nav_axes[0]['data'][-1]:
+                #         return
+                #     ind_x = mutils.find_index(self._nav_axes[0]['data'], posx)[0][0]
+                #     logger.debug(f'Getting the data at nav index {ind_x}')
+                #     data = self._data.inav[ind_x].data
+                # elif len(self._nav_axes) == 2:
+                #     if posx < self._nav_axes[0]['data'][0] or posx > self._nav_axes[0]['data'][-1]:
+                #         return
+                #     if posy < self._nav_axes[1]['data'][0] or posy > self._nav_axes[1]['data'][-1]:
+                #         return
+                #     ind_x = mutils.find_index(self._nav_axes[0]['data'], posx)[0][0]
+                #     ind_y = mutils.find_index(self._nav_axes[1]['data'], posy)[0][0]
+                #     logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
+                #     data = self._data.inav[ind_y, ind_x].data
+                #
+                # else:
+                #     pos = []
+                #     for ind_view, view in enumerate(self.nav_axes_viewers):
+                #         p = view.roi_line.getPos()[0]
+                #         if p < 0 or p > len(self._nav_axes[ind_view]['data']):
+                #             return
+                #         ind = int(np.rint(p))
+                #         pos.append(ind)
+                #     data = self._data.inav.__getitem__(pos).data
 
-                else:
-                    pos = []
-                    for ind_view, view in enumerate(self.nav_axes_viewers):
-                        p = view.roi_line.getPos()[0]
-                        if p < 0 or p > len(self._nav_axes[ind_view]['data']):
-                            return
-                        ind = int(np.rint(p))
-                        pos.append(ind)
-                    data = self._data.inav.__getitem__(pos).data
+                data = self._data.get_signal_data()
 
                 signal_axes = self._data_raw.get_signal_axes()
                 for ind, axis in enumerate(signal_axes):
                     axis.index = ind
 
-                if len(self._data.axes_manager.signal_shape) == 0:  # means 0D data, plot on 1D viewer
+                if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 1D viewer
                     self._data_buffer.extend(data)
-                    self._viewer1D.show_data(DataRaw(name='signal', data=[self.data_buffer]))
+                    self._viewer1D.show_data(data)
 
                 elif len(self._data.axes_manager.signal_shape) == 1:  # means 1D data, plot on 1D viewer
-
-                    self._viewer1D.show_data(DataRaw(name='signal', data=[data],
-                                                     axes=signal_axes))
+                    self._viewer1D.show_data(data)
 
                 elif len(self._data.axes_manager.signal_shape) == 2:  # means 2D data, plot on 2D viewer
-                    self._viewer2D.show_data(DataRaw(name='signal', data=[data],
-                                                     axes=signal_axes))
+                    self._viewer2D.show_data(data)
+
             except Exception as e:
                 logger.exception(str(e))
 
