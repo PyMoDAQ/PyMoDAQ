@@ -63,14 +63,14 @@ class ViewerBase(QObject):
         """str: the viewer data type see DATA_TYPES"""
         return DATATYPES[self.__class__.__name__]
 
-    def show_data(self, data: DataRaw):
+    def show_data(self, data: DataRaw, **kwargs):
         """Entrypoint to display data into the viewer
 
         Parameters
         ----------
         data: data_mod.DataFromPlugins
         """
-        if not(len(data.shape) == 2 or len(data.shape) == 1):
+        if not(len(data.shape) == 2 or len(data.shape) == 1 or len(data.shape) == 0):
             raise ViewerError(f'Ndarray of dim: {len(data.shape)} cannot be plotted'
                               f' using a {self.viewer_type}')
         self.data_to_export = DataToExport(name=self.title)
@@ -78,9 +78,9 @@ class ViewerBase(QObject):
 
         self._display_temporary = False
 
-        self._show_data(data)
+        self._show_data(data, **kwargs)
 
-    def show_data_temp(self, data: DataRaw):
+    def show_data_temp(self, data: DataRaw, **kwargs):
         """Entrypoint to display temporary data into the viewer
 
         No processed data signal is emitted from the viewer
@@ -90,7 +90,7 @@ class ViewerBase(QObject):
         data: data_mod.DataFromPlugins
         """
         self._display_temporary = True
-        self.show_data(data)
+        self.show_data(data, **kwargs)
 
     def _show_data(self, data: DataRaw):
         """Specific viewers should implement it"""
@@ -110,3 +110,7 @@ class ViewerBase(QObject):
     def activate_roi(self, activate=True):
         """Activate the Roi manager using the corresponding action"""
         raise NotImplementedError
+
+    def setVisible(self, show=True):
+        """convenience method to show or hide the paretn widget"""
+        self.parent.setVisible(show)

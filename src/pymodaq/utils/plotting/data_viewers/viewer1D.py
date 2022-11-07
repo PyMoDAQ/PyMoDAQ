@@ -321,6 +321,9 @@ class View1D(ActionManager, QObject):
             range = self.plotitem.vb.viewRange()
             self.crosshair.set_crosshair_position(xpos=np.mean(np.array(range[0])))
 
+    def add_plot_item(self, item):
+        self.plotitem.addItem(item)
+
 
 class Viewer1D(ViewerBase):
     """this plots 1D data on a plotwidget. Math and measurement can be done on it.
@@ -349,6 +352,9 @@ class Viewer1D(ViewerBase):
         self.add_attributes_from_view()
 
         self._labels = []
+
+    def add_plot_item(self, item):
+        self.view.add_item(item)
 
     @Slot(dict)
     def process_crosshair_lineouts(self, crosshair_dict):
