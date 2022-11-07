@@ -390,16 +390,6 @@ class DataAxis(object):
 
         return my_slice
 
-    @property
-    def index_in_array(self):
-        if self.axes_manager is not None:
-            return self.axes_manager._axes.index(self)
-        else:
-            raise AttributeError(
-                "This DataAxis does not belong to an AxesManager"
-                " and therefore its index_in_array attribute "
-                " is not defined")
-
     def value2index(self, value, rounding=round):
         """Return the closest index to the given value if between the limit.
 
@@ -741,7 +731,7 @@ class AxesManager(object):
 
 class Signal(FancySlicing):
 
-    def __init__(self, data, **kwds):
+    def __init__(self, data: np.ndarray, **kwds):
         """Create a Signal from a numpy array.
 
         Parameters
@@ -760,6 +750,20 @@ class Signal(FancySlicing):
 
         self.inav = SpecialSlicersSignal(self, True)
         self.isig = SpecialSlicersSignal(self, False)
+
+    def get_data_dimension(self):
+        dimension = "("
+        for ind, ax in enumerate(self.axes_manager.navigation_shape):
+            if ind != len(self.axes_manager.navigation_shape) - 1:
+                dimension += str(ax) + ','
+            else:
+                dimension += str(ax) + '|'
+        for ind, ax in enumerate(self.axes_manager.signal_shape):
+            if ind != len(self.axes_manager.signal_shape) - 1:
+                dimension += str(ax) + ','
+            else:
+                dimension += str(ax) + ')'
+        return dimension
 
     def _remove_axis(self, axes):
         am = self.axes_manager
@@ -788,6 +792,10 @@ class Signal(FancySlicing):
     @data.setter
     def data(self, value):
         self._data = np.atleast_1d(np.asanyarray(value))
+
+    @property
+    def shape(self):
+        return self._data.shape
 
     def __repr__(self):
         unfolded = ""
