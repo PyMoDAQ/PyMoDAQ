@@ -24,8 +24,11 @@ from pymodaq.utils.plotting.utils.signalND import DataAxis
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq.post_treatment.process_Nd_to_scalar import DataNDProcessorFactory
+
 
 logger = set_logger(get_module_name(__file__))
+processors = DataNDProcessorFactory()
 
 
 class DataDisplayer(QObject):
@@ -41,14 +44,18 @@ class DataDisplayer(QObject):
         self._navigator2D = navigator2D
 
         self._data: DataRaw = None
-        self._nav_axes: List[Axis] = None
         self._nav_limits: tuple = (None, None)
         self._signal_at: tuple = (0, 0)
         self._data_buffer = []
 
+        self._filter_type: str = processors.functions[0]
+
+    def update_filter(self, filter_type: str):
+        if filter in processors.functions:
+            self._filter_type = filter_type
+
     def update_data(self, data: DataRaw):
         if self._data is None or self._data.shape != data.shape:
-            self._nav_axes = data.get_nav_axes()
             self._data = data
         else:
             self._data.data = data.data[0]
@@ -57,6 +64,68 @@ class DataDisplayer(QObject):
         self.update_viewer_data(*self._signal_at)
         self.update_nav_data(*self._nav_limits)
 
+    def update_viewer_data(self, posx=0, posy=0):
+        """ Update the signal display depending on the position of the crosshair in the navigation panels
+
+        Parameters
+        ----------
+        posx: float
+            from the 1D or 2D Navigator crosshair or from one of the navigation axis viewer (in that case
+            nav_axis tells from wich navigation axis the position comes from)
+        posy: float
+            from the 2D Navigator crosshair
+        """
+        self._signal_at = posx, posy
+        if self._data is not None:
+            try:
+                if len(self._data.nav_indexes) == 0:
+                    pass
+
+                elif len(self._data.nav_indexes) == 1:
+                    nav_axis_data = self._data.axes_manager.get_nav_axes()[0].data
+                    if posx < nav_axis_data[0] or posx > nav_axis_data[-1]:
+                        return
+                    ind_x = mutils.find_index(nav_axis_data, posx)[0][0]
+                    logger.debug(f'Getting the data at nav index {ind_x}')
+                    data = self._data.inav[ind_x]
+
+                elif len(self._data.nav_indexes) == 2:
+                    nav_xaxis_data = self._data.axes_manager.get_nav_axes()[0].data
+                    nav_yaxis_data = self._data.axes_manager.get_nav_axes()[1].data
+                    if posx < nav_xaxis_data[0] or posx > nav_xaxis_data[-1]:
+                        return
+                    if posy < nav_yaxis_data or posy > nav_yaxis_data[-1]:
+                        return
+                    ind_x = mutils.find_index(nav_xaxis_data, posx)[0][0]
+                    ind_y = mutils.find_index(nav_yaxis_data, posy)[0][0]
+                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
+                    data = self._data.inav[ind_y, ind_x]
+                else:
+                    return
+                    #todo check this and update code
+                    pos = []
+                    for ind_view, view in enumerate(self.nav_axes_viewers):
+                        p = view.roi_line.getPos()[0]
+                        if p < 0 or p > len(self._nav_axes[ind_view]['data']):
+                            return
+                        ind = int(np.rint(p))
+                        pos.append(ind)
+                    data = self._data.inav.__getitem__(pos).data
+
+                if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 1D viewer
+                    self._data_buffer.extend(data.data)
+                    data.data = self._data_buffer
+                    self._viewer1D.show_data(data)
+
+                elif len(self._data.axes_manager.sig_shape) == 1:  # means 1D data, plot on 1D viewer
+                    self._viewer1D.show_data(data)
+
+                elif len(self._data.axes_manager.sig_shape) == 2:  # means 2D data, plot on 2D viewer
+                    self._viewer2D.show_data(data)
+
+            except Exception as e:
+                logger.exception(str(e))
+
     def update_nav_data(self, x, y, width=None, height=None):
         nav_data = self.get_nav_data(self._data, x, y, width, height)
 
@@ -64,30 +133,25 @@ class DataDisplayer(QObject):
             self._navigator1D.show_data(nav_data)
         else:
             self._navigator2D.show_data(nav_data)
-        # todo plot
 
     def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
 
         if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
-            navigator_data = [data.data]
+            navigator_data = data
 
         elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-            navigator_data = self.get_data_from_1Dsignal_roi(data, (x, y))
+            navigator_data = processors.get(self._filter_type).operate(data.isig[x: x + width])
+            self.get_data_from_1Dsignal_roi(data, (x, y))
 
         elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
             if width is not None and height is not None:
-                navigator_data = [data.isig[x: x + width, y: y + height].sum((-1, -2)).data]
+                navigator_data = processors.get('sum').operate(data.isig[x: x + width, y: y + height])
             else:
-                navigator_data = [data.sum((-1, -2)).data]
+                navigator_data = processors.get('sum').operate(data)
         else:
             navigator_data = None
-        axes = []
-        for ind, axis in enumerate(self._data_raw.get_nav_axes()):
-            axis.index = ind
 
-        nav_data = DataRaw('NavData', data=navigator_data, )
-        nav_data = self._data.get_navigator_data()
-        return nav_data
+        return navigator_data
 
     def get_data_from_1Dsignal_roi(self, data, x, y):
         self._nav_limits[0, 2] = [x, y]
@@ -112,73 +176,12 @@ class DataDisplayer(QObject):
         # return navigator_data
         return  data
 
-
     def update_nav_axes(self, nav_axes: List[Axis]):
         self._nav_axes = nav_axes
 
     def update_nav_limits(self, x, y, width=None, height=None):
         self._nav_limits = x, y, width, height
 
-    def update_viewer_data(self, posx=0, posy=0):
-        """ Update the signal display depending on the position of the crosshair in the navigation panels
-
-        Parameters
-        ----------
-        posx: float
-            from the 1D or 2D Navigator crosshair or from one of the navigation axis viewer (in that case
-            nav_axis tells from wich navigation axis the position comes from)
-        posy: float
-            from the 2D Navigator crosshair
-        """
-        self._signal_at = posx, posy
-        if self._data is not None:
-            try:
-                # if len(self._nav_axes) == 0:
-                #     data = self._data.data
-                # elif len(self._nav_axes) == 1:
-                #     if posx < self._nav_axes[0]['data'][0] or posx > self._nav_axes[0]['data'][-1]:
-                #         return
-                #     ind_x = mutils.find_index(self._nav_axes[0]['data'], posx)[0][0]
-                #     logger.debug(f'Getting the data at nav index {ind_x}')
-                #     data = self._data.inav[ind_x].data
-                # elif len(self._nav_axes) == 2:
-                #     if posx < self._nav_axes[0]['data'][0] or posx > self._nav_axes[0]['data'][-1]:
-                #         return
-                #     if posy < self._nav_axes[1]['data'][0] or posy > self._nav_axes[1]['data'][-1]:
-                #         return
-                #     ind_x = mutils.find_index(self._nav_axes[0]['data'], posx)[0][0]
-                #     ind_y = mutils.find_index(self._nav_axes[1]['data'], posy)[0][0]
-                #     logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
-                #     data = self._data.inav[ind_y, ind_x].data
-                #
-                # else:
-                #     pos = []
-                #     for ind_view, view in enumerate(self.nav_axes_viewers):
-                #         p = view.roi_line.getPos()[0]
-                #         if p < 0 or p > len(self._nav_axes[ind_view]['data']):
-                #             return
-                #         ind = int(np.rint(p))
-                #         pos.append(ind)
-                #     data = self._data.inav.__getitem__(pos).data
-
-                data = self._data.get_signal_data()
-
-                signal_axes = self._data_raw.get_signal_axes()
-                for ind, axis in enumerate(signal_axes):
-                    axis.index = ind
-
-                if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 1D viewer
-                    self._data_buffer.extend(data)
-                    self._viewer1D.show_data(data)
-
-                elif len(self._data.axes_manager.signal_shape) == 1:  # means 1D data, plot on 1D viewer
-                    self._viewer1D.show_data(data)
-
-                elif len(self._data.axes_manager.signal_shape) == 2:  # means 2D data, plot on 2D viewer
-                    self._viewer2D.show_data(data)
-
-            except Exception as e:
-                logger.exception(str(e))
 
 class ViewND(ParameterManager, ActionManager, QObject):
     params = [
@@ -234,13 +237,13 @@ class ViewND(ParameterManager, ActionManager, QObject):
                     mutils.gauss2D(z, 0 + indx * 2, 20, t, 0 + 3 * indy, 30) + np.random.rand(len(t), len(z)) / 10)
 
         if data_shape == '4D':
-            dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[2, 3],
+            dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
                               axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
                                     Axis(data=x, index=1, label='x_axis', units='xunits'),
                                     Axis(data=t, index=2, label='t_axis', units='tunits'),
                                     Axis(data=z, index=3, label='z_axis', units='zunits')])
         elif data_shape == '3D':
-            data = [np.sum(data, axis=3)]
+            data = [np.sum(data, axis=2)]
             dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
                               axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
                                     Axis(data=x, index=1, label='x_axis', units='xunits'),
@@ -256,18 +259,17 @@ class ViewND(ParameterManager, ActionManager, QObject):
                               axes=[Axis(data=y, index=0, label='y_axis', units='yunits')])
         self.display_data(dataraw)
 
-
     def display_data(self, data: DataRaw):
         self.settings.child('data_shape_settings', 'data_shape_init').setValue(str(data.shape))
         self.settings.child('data_shape_settings', 'navigator_axes').setValue(
             dict(all_items=[ax['label'] for ax in data.axes],
                  selected=[ax['label'] for ax in data.get_nav_axes()]))
 
-        self.viewer1D.setVisible(len(data.shape)-len(data.nav_axes) in (0, 1))
-        self.viewer2D.setVisible(len(data.shape)-len(data.nav_axes) == 2)
+        self.viewer1D.setVisible(len(data.shape)-len(data.nav_indexes) in (0, 1))
+        self.viewer2D.setVisible(len(data.shape)-len(data.nav_indexes) == 2)
 
-        self.navigator1D.setVisible(len(data.nav_axes) == 1)
-        self.navigator2D.setVisible(len(data.nav_axes) == 2)
+        self.navigator1D.setVisible(len(data.nav_indexes) == 1)
+        self.navigator2D.setVisible(len(data.nav_indexes) == 2)
 
         self.data_displayer.update_data(data)
 

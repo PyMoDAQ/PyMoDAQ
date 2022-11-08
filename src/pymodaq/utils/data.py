@@ -8,6 +8,8 @@ Created the 28/10/2022
 import numbers
 import numpy as np
 from typing import List, Tuple
+from typing import Iterable as IterableType
+from collections.abc import Iterable
 
 import warnings
 from time import time
@@ -446,16 +448,28 @@ class DataBase(DataLowLevel):
 
 
 class AxesManager:
-    def __init__(self, data: DataBase, axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
-
-        self._data = data
+    def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
+        self._data_shape = data_shape[:]  # initial shape needed for self._check_axis
         self._axes = axes[:]
         self._nav_indexes = nav_indexes
-        self._sig_indexes = sig_indexes
-        self._check_axis(axes)
+        self._sig_indexes = sig_indexes if sig_indexes is not None else self.compute_sig_indexes()
 
         self._check_axis(axes)
         self._manage_named_axes(axes, **kwargs)
+
+    def compute_sig_indexes(self):
+        _shape = list(self._data_shape)
+        indexes = list(np.arange(len(self._data_shape)))
+        for index in self.nav_indexes:
+            if index in indexes:
+                indexes.pop(indexes.index(index))
+        return tuple(indexes)
+
+    def compute_shape_from_axes(self):
+        shape = []
+        for ind in range(len(self.axes)):
+            shape.append(len(self.get_axis_from_index(ind, create=True)))
+        return tuple(shape)
 
     @property
     def axes(self):
@@ -469,7 +483,7 @@ class AxesManager:
         bool: True if the axis has been found else False
         Axis or None: return the axis instance if has the axis else None
         """
-        if index > len(self.shape) or index < 0:
+        if index > len(self._data_shape) or index < 0:
             raise IndexError('The specified index does not correspond to any data dimension')
         for axis in self.axes:
             if axis.index == index:
@@ -482,39 +496,40 @@ class AxesManager:
         if x_axis is not None:
             modified = True
             index = 0
-            if self.dim == DataDim['Data1D'] and not self._has_get_axis_from_index(0)[0]:
+            if len(self._data_shape) == 1 and not self._has_get_axis_from_index(0)[0]:
                 # in case of Data1D the x_axis corresponds to the first data dim
                 index = 0
-            elif self.dim == DataDim['Data2D'] and not self._has_get_axis_from_index(1)[0]:
+            elif len(self._data_shape) == 2 and not self._has_get_axis_from_index(1)[0]:
                 # in case of Data2D the x_axis corresponds to the second data dim (columns)
                 index = 1
             axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=index))
 
         if y_axis is not None:
 
-            if self.dim == DataDim['Data2D'] and not self._has_get_axis_from_index(0)[0]:
+            if len(self._data_shape) == 2 and not self._has_get_axis_from_index(0)[0]:
                 modified = True
                 # in case of Data2D the y_axis corresponds to the first data dim (lines)
-                axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=index))
+                axes.append(Axis(y_axis.label, y_axis.units, y_axis.data, index=0))
 
         if nav_x_axis is not None:
-            if self.dim == DataDim['DataND']:
+            if len(self.nav_indexes) > 0:
                 modified = True
-                # in case of Data2D the y_axis corresponds to the first data dim (lines)
-                axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=self._nav_indexes[0]))
+                # in case of DataND the y_axis corresponds to the first data dim (lines)
+                axes.append(Axis(nav_x_axis.label, nav_x_axis.units, nav_x_axis.data, index=self._nav_indexes[0]))
 
         if nav_y_axis is not None:
-            if self.dim == DataDim['DataND']:
+            if len(self.nav_indexes) > 1:
                 modified = True
                 # in case of Data2D the y_axis corresponds to the first data dim (lines)
-                axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=self._nav_indexes[1]))
+                axes.append(Axis(nav_y_axis.label, nav_y_axis.units, nav_y_axis.data, index=self._nav_indexes[1]))
 
         if modified:
             self._check_axis(axes)
 
     @property
-    def shape(self):
-        return self._data.shape
+    def shape(self) -> Tuple[int]:
+        self._data_shape = self.compute_shape_from_axes()
+        return self._data_shape
 
     @property
     def sig_shape(self) -> tuple:
@@ -529,34 +544,49 @@ class AxesManager:
         self._check_axis([axis])
 
     @property
-    def nav_indexes(self) -> List[int]:
+    def nav_indexes(self) -> IterableType[int]:
         return self._nav_indexes
 
     @nav_indexes.setter
-    def nav_indexes(self, nav_indexes: List[int]):
-        for index in nav_indexes:
-            if index not in self.get_axes_index():
-                logger.warning('Could not set the corresponding nav_index into the data object, not enough'
-                               ' Axis declared')
-            else:
+    def nav_indexes(self, nav_indexes: IterableType[int]):
+        if isinstance(nav_indexes, Iterable):
+            nav_indexes = tuple(nav_indexes)
+            valid = True
+            for index in nav_indexes:
+                if index not in self.get_axes_index():
+                    logger.warning('Could not set the corresponding nav_index into the data object, not enough'
+                                   ' Axis declared')
+                    valid = False
+                    break
+            if valid:
                 self._nav_indexes = nav_indexes
+        else:
+            logger.warning('Could not set the corresponding sig_indexes into the data object, should be an iterable')
 
     @property
-    def sig_indexes(self) -> List[int]:
+    def sig_indexes(self) -> IterableType[int]:
         return self._sig_indexes
 
     @sig_indexes.setter
-    def sig_indexes(self, sig_indexes: List[int]):
-        for index in sig_indexes:
-            if index in self._nav_indexes:
-                logger.warning('Could not set the corresponding sig_index into the axis manager object, '
-                               'the axis is already affected to the navigation axis')
-                return None
-            if index not in self.get_axes_index():
-                logger.warning('Could not set the corresponding nav_index into the data object, not enough'
-                               ' Axis declared')
-            else:
+    def sig_indexes(self, sig_indexes: IterableType[int]):
+        if isinstance(sig_indexes, Iterable):
+            sig_indexes = tuple(sig_indexes)
+            valid = True
+            for index in sig_indexes:
+                if index in self._nav_indexes:
+                    logger.warning('Could not set the corresponding sig_index into the axis manager object, '
+                                   'the axis is already affected to the navigation axis')
+                    valid = False
+                    break
+                if index not in self.get_axes_index():
+                    logger.warning('Could not set the corresponding nav_index into the data object, not enough'
+                                   ' Axis declared')
+                    valid = False
+                    break
+            if valid:
                 self._sig_indexes = sig_indexes
+        else:
+            logger.warning('Could not set the corresponding sig_indexes into the data object, should be an iterable')
 
     @property
     def nav_axes(self) -> List[int]:
@@ -578,9 +608,9 @@ class AxesManager:
 
     def get_shape_from_index(self, index: int) -> int:
         """Get the data shape at the given index"""
-        if index > len(self.shape) or index < 0:
+        if index > len(self._data_shape) or index < 0:
             raise IndexError('The specified index does not correspond to any data dimension')
-        return self.shape[index]
+        return self._data_shape[index]
 
     def _check_axis(self, axes: List[Axis]):
         """Check all axis to make sure of their type and make sure their data are properly referring to the data index
@@ -639,7 +669,7 @@ class AxesManager:
 
     def get_signal_axes(self):
         if self.sig_indexes is None:
-            self._sig_indexes = [axis.index for axis in self.axes if axis.index not in self.nav_indexes]
+            self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
         return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]
 
     def is_axis_signal(self, axis: Axis) -> bool:
@@ -655,12 +685,12 @@ class AxesManager:
 
     def _get_dimension_str(self):
         string = "("
-        for axis in self.get_nav_axes():
-            string += str(axis.size) + ", "
+        for nav_index in self.nav_indexes:
+            string += str(self._data_shape[nav_index]) + ", "
         string = string.rstrip(", ")
         string += "|"
-        for axis in self.get_signal_axes():
-            string += str(axis.size) + ", "
+        for sig_index in self.sig_indexes:
+            string += str(self._data_shape[sig_index]) + ", "
         string = string.rstrip(", ")
         string += ")"
         return string
@@ -696,12 +726,27 @@ class DataWithAxes(DataBase):
 
         super().__init__(*args, **kwargs)
 
+        self._axes = axes
+
         other_kwargs = dict(x_axis=x_axis, y_axis=y_axis, nav_x_axis=nav_x_axis, nav_y_axis=nav_y_axis)
 
-        self.axes_manager = AxesManager(data=self, axes=axes, nav_indexes=nav_indexes, **other_kwargs)
+        self.axes_manager = AxesManager(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes, **other_kwargs)
 
         self.inav = SpecialSlicersData(self, True)
         self.isig = SpecialSlicersData(self, False)
+
+    @property
+    def axes(self):
+        """convenience property to fetch attribute from axis_manager"""
+        return self._am.axes
+
+    @property
+    def nav_indexes(self):
+        """convenience property to fetch attribute from axis_manager"""
+        return self._am.nav_indexes
+
+    def get_nav_axes(self):
+        return self._am.get_nav_axes()
 
     def _compute_slices(self, slices, is_navigation=True):
         """Compute the total slice to apply to the data
@@ -749,9 +794,9 @@ class DataWithAxes(DataBase):
         lower_indexes = 0
         axes = []
         nav_indexes = [] if is_navigation else self._am.nav_indexes
-        for ind_slice, slisse in enumerate(slices):
+        for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            ax_data = ax.data[slisse]
+            ax_data = ax.data[_slice]
             if isinstance(ax_data, np.ndarray):  # means the slice keep part of the axis
                 if is_navigation:
                     nav_indexes.append(self._am.nav_indexes[ind_slice])
@@ -770,15 +815,43 @@ class DataWithAxes(DataBase):
         data = self.__class__(self.name, data=new_arrays_data, nav_indexes=nav_indexes, axes=axes)
         return data
 
+    def deepcopy_with_new_data(self, data: List[np.ndarray] = None, remove_axes_index: List[int] = None):
+        """deepcopy without copying the initial data (saving memory)
+
+        The new data, may have some axes stripped as specified in remove_axes_index
+        """
+        try:
+            old_data = self.data
+            self._data = None
+            new_data = self.deepcopy()
+            new_data._data = data
+
+            if not isinstance(remove_axes_index, Iterable):
+                remove_axes_index = [remove_axes_index]
+
+            if remove_axes_index is not None:
+                for index in remove_axes_index:
+                    new_data._am.axes.pop(new_data._am.axes.index(new_data._am.get_axis_from_index(index)))
+                    if index in new_data._am.nav_indexes:
+                        nav_indexes = list(new_data._am.nav_indexes)
+                        nav_indexes.pop(nav_indexes.index(index))
+                        new_data._am.nav_indexes = tuple(nav_indexes)
+                    if index in new_data._am.sig_indexes:
+                        sig_indexes = list(new_data._am.sig_indexes)
+                        sig_indexes.pop(sig_indexes.index(index))
+                        new_data._am.sig_indexes = tuple(sig_indexes)
+            return new_data
+        except Exception as e:
+            pass
+        finally:
+            self._data = old_data
+
+    def deepcopy(self):
+        return copy.deepcopy(self)
+
     @property
     def _am(self) -> AxesManager:
         return self.axes_manager
-
-    def __getattr__(self, item):
-        if hasattr(self.axes_manager, item):
-            return getattr(self.axes_manager, item)
-        else:
-            raise AttributeError(f'{item} is neither a Data or Axis attribute')
 
     def __repr__(self):
         return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
@@ -934,11 +1007,30 @@ class DataToExport(DataLowLevel):
 
 
 if __name__ == '__main__':
+    from pymodaq.utils import math_utils as mutils
+
     d1 = DataFromRoi(name=f'Hlineout_', data=[np.zeros((24,))],
-                     x_axis=Axis(data=np.zeros((24,)),
-                                 units='myunits',
-                                 label='mylabel1'))
+                     x_axis=Axis(data=np.zeros((24,)), units='myunits', label='mylabel1'))
     d2 = DataFromRoi(name=f'Hlineout_', data=[np.zeros((12,))],
                      x_axis=Axis(data=np.zeros((12,)),
                                  units='myunits2',
                                  label='mylabel2'))
+
+    Nsig = 200
+    Nnav = 10
+    x = np.linspace(-Nsig/2, Nsig/2-1, Nsig)
+
+    dat = np.zeros((Nnav, Nsig))
+    for ind in range(Nnav):
+        dat[ind] = mutils.gauss1D(x,  50 * (ind -Nnav / 2), 25 / np.sqrt(2))
+
+    data = DataRaw('mydata', data=[dat], nav_indexes=(0,),
+                   axes=[Axis('nav', data=np.linspace(0, Nnav-1, Nnav), index=0),
+                         Axis('sig', data=x, index=1)])
+
+    data2 = copy.copy(data)
+
+    data3 = data._deepcopy_with_new_data([np.sum(dat, 1)], remove_axes_index=(1,))
+
+    print('done')
+
