@@ -748,6 +748,9 @@ class DataWithAxes(DataBase):
     def get_nav_axes(self):
         return self._am.get_nav_axes()
 
+    def get_axis_from_index(self, index, create=False):
+        return self._am.get_axis_from_index(index, create)
+
     def _compute_slices(self, slices, is_navigation=True):
         """Compute the total slice to apply to the data
 
@@ -791,7 +794,7 @@ class DataWithAxes(DataBase):
         axes_to_append = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
         indexes_to_get = self._am.nav_indexes if is_navigation else self._am.sig_indexes
 
-        lower_indexes = 0
+        lower_indexes = dict(zip([ind for ind in range(len(self.axes))], [0 for _ in range(len(self.axes))]))
         axes = []
         nav_indexes = [] if is_navigation else self._am.nav_indexes
         for ind_slice, _slice in enumerate(slices):
@@ -807,9 +810,9 @@ class DataWithAxes(DataBase):
                 for axis in axes_to_append:  # means we removed one of the nav axes (and data dim),
                     # hence axis index above current nav_index should be lowered by 1
                     if axis.index > indexes_to_get[ind_slice]:
-                        lower_indexes += 1
+                        lower_indexes[axis.index] += 1
         for axis in axes_to_append:
-            axis.index -= lower_indexes
+            axis.index -= lower_indexes[axis.index]
 
         axes.extend(axes_to_append)
         data = self.__class__(self.name, data=new_arrays_data, nav_indexes=nav_indexes, axes=axes)

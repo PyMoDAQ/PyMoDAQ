@@ -20,15 +20,19 @@ import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.data import DataRaw, Axis
 from pymodaq.utils.plotting.utils.signalND import Signal as SignalND
-from pymodaq.utils.plotting.utils.signalND import DataAxis
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.post_treatment.process_Nd_to_scalar import DataNDProcessorFactory
+from pymodaq.post_treatment.process_1d_to_scalar import Data1DProcessorFactory
+
+
+from pymodaq.utils.managers.roi_manager import SimpleRectROI, LinearROI
 
 
 logger = set_logger(get_module_name(__file__))
-processors = DataNDProcessorFactory()
+processorsND = DataNDProcessorFactory()
+processors1D = Data1DProcessorFactory()
 
 
 class DataDisplayer(QObject):
@@ -44,15 +48,26 @@ class DataDisplayer(QObject):
         self._navigator2D = navigator2D
 
         self._data: DataRaw = None
-        self._nav_limits: tuple = (None, None)
+        self._nav_limits: tuple = (0, 10, None, None)
         self._signal_at: tuple = (0, 0)
         self._data_buffer = []
 
-        self._filter_type: str = processors.functions[0]
+        self._filter_type: str = processorsND.functions[0]
+        self.processor_type = processorsND
+
+    @property
+    def data_shape(self):
+        return self._data.shape if self._data is not None else None
 
     def update_filter(self, filter_type: str):
-        if filter in processors.functions:
+        if filter_type in self.processor_type.functions:
             self._filter_type = filter_type
+
+    def update_processor(self, processor_type='ND'):
+        if processor_type == 'ND':
+            self.processor_type = processorsND
+        elif processor_type == '1D':
+            self.processor_type = processors1D
 
     def update_data(self, data: DataRaw):
         if self._data is None or self._data.shape != data.shape:
@@ -90,11 +105,11 @@ class DataDisplayer(QObject):
                     data = self._data.inav[ind_x]
 
                 elif len(self._data.nav_indexes) == 2:
-                    nav_xaxis_data = self._data.axes_manager.get_nav_axes()[0].data
-                    nav_yaxis_data = self._data.axes_manager.get_nav_axes()[1].data
+                    nav_xaxis_data = self._data.axes_manager.get_nav_axes()[1].data
+                    nav_yaxis_data = self._data.axes_manager.get_nav_axes()[0].data
                     if posx < nav_xaxis_data[0] or posx > nav_xaxis_data[-1]:
                         return
-                    if posy < nav_yaxis_data or posy > nav_yaxis_data[-1]:
+                    if posy < nav_yaxis_data[0] or posy > nav_yaxis_data[-1]:
                         return
                     ind_x = mutils.find_index(nav_xaxis_data, posx)[0][0]
                     ind_y = mutils.find_index(nav_yaxis_data, posy)[0][0]
@@ -126,6 +141,16 @@ class DataDisplayer(QObject):
             except Exception as e:
                 logger.exception(str(e))
 
+    def update_nav_data_from_roi(self, roi: Union[SimpleRectROI, LinearROI]):
+        if isinstance(roi, LinearROI):
+            x, y = roi.getRegion()
+            self._nav_limits = (int(x), int(y), None, None)
+        elif isinstance(roi, SimpleRectROI):
+            x, y = roi.pos().x(), roi.pos().y()
+            width, height = roi.size().x(), roi.size().x()
+            self._nav_limits = (int(x), int(y), int(width), int(height))
+        self.update_nav_data(*self._nav_limits)
+
     def update_nav_data(self, x, y, width=None, height=None):
         nav_data = self.get_nav_data(self._data, x, y, width, height)
 
@@ -140,41 +165,17 @@ class DataDisplayer(QObject):
             navigator_data = data
 
         elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-            navigator_data = processors.get(self._filter_type).operate(data.isig[x: x + width])
-            self.get_data_from_1Dsignal_roi(data, (x, y))
+            _, navigator_data = processors1D.get(self._filter_type).process((x, y), data)
 
         elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
             if width is not None and height is not None:
-                navigator_data = processors.get('sum').operate(data.isig[x: x + width, y: y + height])
+                navigator_data = processorsND.get(self._filter_type).operate(data.isig[x: x + width, y: y + height])
             else:
-                navigator_data = processors.get('sum').operate(data)
+                navigator_data = processorsND.get(self._filter_type).operate(data)
         else:
             navigator_data = None
 
         return navigator_data
-
-    def get_data_from_1Dsignal_roi(self, data, x, y):
-        self._nav_limits[0, 2] = [x, y]
-
-        # if [x, y] != []:
-        #     if self.ui.combomath.currentText() == 'Sum':
-        #         navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].sum((-1)).data for pt in
-        #                           ROI_bounds_1D]
-        #     elif self.ui.combomath.currentText() == 'Mean':
-        #         navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].mean((-1)).data for pt in
-        #                           ROI_bounds_1D]
-        #     elif self.ui.combomath.currentText() == 'Half-life':
-        #         navigator_data = [datas_transposed.isig[pt.x():pt.y() + 1].halflife((-1)).data for pt in
-        #                           ROI_bounds_1D]
-        # else:
-        #     if self.ui.combomath.currentText() == 'Sum':
-        #         navigator_data = [datas_transposed.isig[:].sum((-1)).data]
-        #     elif self.ui.combomath.currentText() == 'Mean':
-        #         navigator_data = [datas_transposed.isig[:].mean((-1)).data]
-        #     elif self.ui.combomath.currentText() == 'Half-life':
-        #         navigator_data = [datas_transposed.isig[:].halflife((-1)).data]
-        # return navigator_data
-        return  data
 
     def update_nav_axes(self, nav_axes: List[Axis]):
         self._nav_axes = nav_axes
@@ -230,11 +231,13 @@ class ViewND(ParameterManager, ActionManager, QObject):
         t = mutils.linspace_step(-200, 200, 2)
         z = mutils.linspace_step(-50, 50, 0.5)
         data = np.zeros((len(y), len(x), len(t), len(z)))
-        amp = mutils.gauss2D(x, 0, 1, y, 0, 2)
+        amp = mutils.gauss2D(x, 0, 5, y, 0, 4) + 0.1 * np.random.rand(len(y), len(x))
         for indx in range(len(x)):
             for indy in range(len(y)):
                 data[indy, indx, :, :] = amp[indy, indx] * (
-                    mutils.gauss2D(z, 0 + indx * 2, 20, t, 0 + 3 * indy, 30) + np.random.rand(len(t), len(z)) / 10)
+                    mutils.gauss2D(z, 0 + indx * 0.5, 20,
+                                   t, 0 + 0.6 * indy, 30)
+                    + np.random.rand(len(t), len(z)) / 10)
 
         if data_shape == '4D':
             dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
@@ -271,6 +274,11 @@ class ViewND(ParameterManager, ActionManager, QObject):
         self.navigator1D.setVisible(len(data.nav_indexes) == 1)
         self.navigator2D.setVisible(len(data.nav_indexes) == 2)
 
+        if self.data_displayer.data_shape is None or self.data_displayer.data_shape != data.shape:
+            self.data_displayer.update_processor('ND' if len(data.axes_manager.sig_shape) > 1 else '1D')
+            self.get_action('filters').clear()
+            self.get_action('filters').addItems(self.data_displayer.processor_type.functions)
+
         self.data_displayer.update_data(data)
 
     def signal_axes_selection(self):
@@ -284,6 +292,7 @@ class ViewND(ParameterManager, ActionManager, QObject):
 
     def setup_actions(self):
         self.add_action('setaxes', icon_name='cartesian', checkable=True, tip='Change navigation/signal axes')
+        self.add_widget('filters', QtWidgets.QComboBox, tip='Filter type to apply to signal data')
 
     def connect_things(self):
         self.settings.child('set_data_1D').sigActivated.connect(lambda: self.set_data_test('1D'))
@@ -298,6 +307,11 @@ class ViewND(ParameterManager, ActionManager, QObject):
         self.connect_action('setaxes', self.signal_axes_selection)
         self.data_displayer.data_dim_signal.connect(self.update_data_dim)
 
+        self.viewer1D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
+        self.viewer2D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
+
+        self.get_action('filters').currentTextChanged.connect(self.data_displayer.update_filter)
+
     def setup_widgets(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
         self.parent_widget.layout().addWidget(self.toolbar)
@@ -307,8 +321,13 @@ class ViewND(ParameterManager, ActionManager, QObject):
 
         viewer1D_widget = QtWidgets.QWidget()
         self.viewer1D = Viewer1D(viewer1D_widget)
+        self.viewer1D.roi = LinearROI()
+        self.viewer1D.view.plotitem.addItem(self.viewer1D.roi)
+
         viewer2D_widget = QtWidgets.QWidget()
         self.viewer2D = Viewer2D(viewer2D_widget)
+        self.viewer2D.roi = SimpleRectROI(centered=True)
+        self.viewer2D.view.plotitem.addItem(self.viewer2D.roi)
         
         self.viewer2D.set_action_visible('flip_ud', False)
         self.viewer2D.set_action_visible('flip_lr', False)
@@ -1000,7 +1019,7 @@ def main_view():
     prog.settings.child('set_data_2D').show(True)
     prog.settings.child('set_data_1D').show(True)
 
-    prog.settings.child('set_data_4D').activate()
+    prog.settings.child('set_data_3D').activate()
 
     widget.show()
     sys.exit(app.exec_())

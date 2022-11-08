@@ -13,9 +13,15 @@ from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.items.image import UniformImageItem
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.post_treatment.process_1d_to_scalar import processors
+
+
+from pymodaq.post_treatment.process_1d_to_scalar import Data1DProcessorFactory
+
 
 logger = set_logger(get_module_name(__file__))
+
+
+processors1D = Data1DProcessorFactory()
 
 
 class Filter:
@@ -206,22 +212,20 @@ class Filter1DFromRois(Filter):
         if data is not None:
             for roi_key, roi in self._ROIs.items():
                 try:
-                    plot_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
+                    data_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
                 except ValueError:
-                    plot_index = 0
+                    data_index = 0
                 data_dict[roi_key] = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                            data.data[plot_index])
+                                                            data, data_index)
 
         return data_dict
 
-    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: np.ndarray):
+    def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes, data_index=0):
         if data is not None:
             limits = roi.pos()
-            sub_axis, sub_data, processed_value = processors.get(roi_param['math_function']).process(
-                limits, self._axis.data, data)
-            filtered_axis = data_mod.Axis(label=self._axis.label, units=self._axis.units,
-                                          data=sub_axis)
-            return LineoutData(hor_axis=filtered_axis, hor_data=sub_data, int_data=processed_value)
+            sub_data, processed_data = processors1D.get(roi_param['math_function']).process(limits, data)
+            return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
+                               int_data=processed_data.data[data_index])
 
 
 class Filter2DFromRois(Filter):

@@ -23,8 +23,6 @@ from pymodaq.utils.plotting.utils.filter import Filter1DFromCrosshair, Filter1DF
 from pymodaq.utils.plotting.utils.lineout import LineoutPlotter
 from pymodaq.utils.plotting.widgets import PlotWidget
 
-# from pymodaq.daq_measurement.daq_measurement_main import DAQ_Measurement
-DAQ_Measurement = None
 
 logger = set_logger(get_module_name(__file__))
 
@@ -518,7 +516,7 @@ def main_nans():
     sys.exit(app.exec_())
 
 if __name__ == '__main__':  # pragma: no cover
-    #main()
-    main_unsorted()
+    main()
+    #main_unsorted()
     #main_view1D()
     #main_nans()

@@ -43,9 +43,11 @@ class ObjectFactory:
     @classmethod
     def register(cls, key: str) -> Callable:
         def inner_wrapper(wrapped_class: Union[BuilderBase, Callable]) -> Callable:
-            if key in cls._builders:
+            if cls.__name__ not in cls._builders:
+                cls._builders[cls.__name__] = {}
+            if key in cls._builders[cls.__name__]:
                 pass
-            cls._builders[key] = wrapped_class
+            cls._builders[cls.__name__][key] = wrapped_class
             return wrapped_class
         return inner_wrapper
 
@@ -53,9 +55,13 @@ class ObjectFactory:
     def builders(self):
         return self._builders
 
+    @property
+    def keys(self):
+        return list(self.builders[self.__class__.__name__].keys())
+
     @classmethod
     def create(cls, key, **kwargs):
-        builder = cls._builders.get(key)
+        builder = cls._builders[cls.__name__].get(key)
         if not builder:
             raise ValueError(key)
         return builder(**kwargs)

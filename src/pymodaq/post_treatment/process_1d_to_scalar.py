@@ -6,11 +6,12 @@ Created the 04/11/2022
 """
 import numpy as np
 from numbers import Number
-from typing import List
+from typing import List, Tuple
 from abc import ABCMeta, abstractmethod
 
 from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils import math_utils as mutils
+from pymodaq.utils.data import DataWithAxes, Axis, DataRaw, DataBase
 
 
 config_processors = {
@@ -23,61 +24,89 @@ class Data1DProcessorFactory(ObjectFactory):
 
     @property
     def functions(self):
-        return list(self.builders.keys())
+        return self.keys
 
 
 class Data1DProcessorBase(metaclass=ABCMeta):
 
-    def process(self, limits: List, axis: np.ndarray, data: np.ndarray):
-        indexes = mutils.find_index(axis, limits)
-        ind1 = indexes[0][0]
-        ind2 = indexes[1][0]
-        sub_data = data[ind1:ind2]
-        sub_axis = axis[ind1:ind2]
-        return sub_axis, sub_data, self.operate(sub_axis, sub_data, operation_axis=-1)
+    def process(self, limits: Tuple[float], data: DataWithAxes):
+        axis = data.axes_manager.get_signal_axes()[0]
+        (ind_1, _), (ind_2, _) = mutils.find_index(axis.data, limits)
+        subdata = data.isig[ind_1:ind_2]
+        return subdata, self.operate(subdata)
 
     @abstractmethod
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
+    def operate(self, sub_data: DataWithAxes):
         pass
 
 
 class MeanProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
-        return np.mean(sub_data, axis=operation_axis)
+    def operate(self, sub_data):
+        data_arrays = [np.mean(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class StdProcessor(Data1DProcessorBase):
-    def operate(self, sub_data, sub_axis, operation_axis=-1):
-        return np.std(sub_data, axis=operation_axis)
+    def operate(self, sub_data):
+        data_arrays = [np.std(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class SumProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
-        return np.sum(sub_data, axis=operation_axis)
+    def operate(self, sub_data):
+        data_arrays = [np.sum(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class MaxProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
-        return np.max(sub_data, axis=operation_axis)
+    def operate(self, sub_data):
+        data_arrays = [np.max(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class MinProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
-        return np.min(sub_data, axis=operation_axis)
+    def operate(self, sub_data):
+        data_arrays = [np.min(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class ArgMaxProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
-        return np.argmax(sub_data, axis=operation_axis)
+    def process(self, limits: Tuple[int], data: DataWithAxes):
+        axis = data.axes_manager.get_signal_axes()[0]
+        (ind_1, _), (ind_2, _) = mutils.find_index(axis.data, limits)
+        subdata = data.isig[ind_1:ind_2]
+        filtered_data = self.operate(subdata)
+        filtered_data.data = [data_array + ind_1 for data_array in filtered_data.data]
+        return subdata, filtered_data
+
+    def operate(self, sub_data):
+        data_arrays = [np.atleast_1d(np.argmax(data, axis=sub_data.axes_manager.sig_indexes[0])) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class ArgMinProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
-        return np.argmin(sub_data, axis=operation_axis)
+    def process(self, limits: Tuple[int], data: DataWithAxes):
+        axis = data.axes_manager.get_signal_axes()[0]
+        (ind_1, _), (ind_2, _) = mutils.find_index(axis.data, limits)
+        subdata = data.isig[ind_1:ind_2]
+        filtered_data = self.operate(subdata)
+        filtered_data.data = [data_array + ind_1 for data_array in filtered_data.data]
+        return subdata, filtered_data
+
+    def operate(self, sub_data):
+        data_arrays = [np.atleast_1d(np.argmin(data, axis=sub_data.axes_manager.sig_indexes[0])) for data in sub_data]
+        return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
 class HalfLifeProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
+    #todo Write it properly
+    def process(self, limits: Tuple[int], data: DataWithAxes):
+        axis = data.axes_manager.get_signal_axes()[0]
+        (ind_1, _), (ind_2, _) = mutils.find_index(axis.data, limits)
+        subdata = data.isig[ind_1:ind_2]
+        return subdata, self.operate(subdata) + limits[0]
+
+    def operate(self, sub_data):
         ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
         x0 = sub_axis[ind_x0]
         sub_xaxis = sub_axis[ind_x0:]
@@ -88,7 +117,12 @@ class HalfLifeProcessor(Data1DProcessorBase):
 
 
 class ExpoDecayProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
+    #todo Write it properly
+    def process(self, limits: Tuple[int], data: DataWithAxes):
+        subdata = data.isig[slice(*limits)]
+        return subdata, self.operate(subdata) + limits[0]
+
+    def operate(self, sub_data):
         ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
         x0 = sub_axis[ind_x0]
         sub_xaxis = sub_axis[ind_x0:]
@@ -99,7 +133,12 @@ class ExpoDecayProcessor(Data1DProcessorBase):
 
 
 class FWHMProcessor(Data1DProcessorBase):
-    def operate(self, sub_axis, sub_data, operation_axis=-1):
+    #todo Write it properly
+    def process(self, limits: Tuple[int], data: DataWithAxes):
+        subdata = data.isig[slice(*limits)]
+        return subdata, self.operate(subdata) + limits[0]
+
+    def operate(self, sub_data):
         sub_data = sub_data - np.min(sub_data)
         ind_x0, value = mutils.find_index(sub_data, np.max(sub_data))[0]
         ind_x0m, fwhm_value = mutils.find_index(sub_data, value / 2)[0]
@@ -143,36 +182,22 @@ def create_sum_processor(**_ignored):
     return SumProcessor()
 
 
-@Data1DProcessorFactory.register('half-life')
+#@Data1DProcessorFactory.register('half-life')
 def create_half_life_processor(**_ignored):
     return HalfLifeProcessor()
 
 
-@Data1DProcessorFactory.register('expo-decay')
+#@Data1DProcessorFactory.register('expo-decay')
 def create_expo_decay_processor(**_ignored):
     return ExpoDecayProcessor()
 
 
-@Data1DProcessorFactory.register('fwhm')
+#@Data1DProcessorFactory.register('fwhm')
 def create_expo_decay_processor(**_ignored):
     return FWHMProcessor()
 
 
-processors = Data1DProcessorFactory()
-
-
 if __name__ == '__main__':
-    x = np.linspace(0, 200, 201)
-    y1 = mutils.gauss1D(x, 75, 25 / np.sqrt(2))
-    y2 = mutils.gauss1D(x, 120, 50, 2)
-    tau_half = 27
-    x0 = 50
-    dx = 20
-    ydata_expodec = np.zeros((len(x)))
-    ydata_expodec[:50] = 1 * mutils.gauss1D(x[:50], x0, dx, 2)
-    ydata_expodec[50:] = 1 * np.exp(-(x[50:] - x0) / (tau_half / np.log(2)))  # +1*np.exp(-(x[50:]-x0)/tau2)
-    ydata_expodec += 0.05 * np.random.rand(len(x))
-
     processors = Data1DProcessorFactory()
     print('Builders:\n'
           f'{processors.builders}')
@@ -180,9 +205,23 @@ if __name__ == '__main__':
     print('Math functions:\n'
           f'{processors.functions}')
 
-    print(f"Math_mean: {processors.get('mean', **config_processors).process((0, 200), x, ydata_expodec)[2]}\n"
-          f"Mean tot: {np.mean(ydata_expodec)}")
-    sum_processor = processors.get('sum', **config_processors)
-    sum_processor.process((50, 200), x, ydata_expodec)
+    # tests 1D signal
+    Nsig = 200
+    Nnav = 10
+    x = np.linspace(-Nsig/2, Nsig/2-1, Nsig)
 
-    print(f"FWHM should be 25, calculated at :{processors.get('fwhm').process((0, 200), x, y1)[2]}")
+    dat = np.zeros((Nnav, Nsig))
+    for ind in range(Nnav):
+        dat[ind] = ind * mutils.gauss1D(x,  10 * (ind -Nnav / 2), 25 / np.sqrt(2))
+
+    data = DataRaw('mydata', data=[dat], nav_indexes=(0,),
+                   axes=[Axis('nav', data=np.linspace(0, Nnav-1, Nnav), index=0),
+                         Axis('sig', data=x, index=1)])
+
+    filtered_data, new_data = processors.get('max', **config_processors).process((-50, 50), data)
+    print(new_data)
+    print(new_data.data)
+
+
+
+
