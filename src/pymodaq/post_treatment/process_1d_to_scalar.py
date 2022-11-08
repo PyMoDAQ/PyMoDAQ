@@ -66,6 +66,16 @@ class MinProcessor(Data1DProcessorBase):
         return np.min(sub_data, axis=operation_axis)
 
 
+class ArgMaxProcessor(Data1DProcessorBase):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
+        return np.argmax(sub_data, axis=operation_axis)
+
+
+class ArgMinProcessor(Data1DProcessorBase):
+    def operate(self, sub_axis, sub_data, operation_axis=-1):
+        return np.argmin(sub_data, axis=operation_axis)
+
+
 class HalfLifeProcessor(Data1DProcessorBase):
     def operate(self, sub_axis, sub_data, operation_axis=-1):
         ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
@@ -116,6 +126,16 @@ def create_max_processor(**_ignored):
 @Data1DProcessorFactory.register('min')
 def create_min_processor(**_ignored):
     return MinProcessor()
+
+
+@Data1DProcessorFactory.register('argmax')
+def create_max_processor(**_ignored):
+    return ArgMaxProcessor()
+
+
+@Data1DProcessorFactory.register('argmin')
+def create_min_processor(**_ignored):
+    return ArgMinProcessor()
 
 
 @Data1DProcessorFactory.register('sum')
