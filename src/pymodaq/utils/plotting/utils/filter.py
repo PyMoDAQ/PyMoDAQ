@@ -90,6 +90,12 @@ class Filter2DFromCrosshair(Filter):
         self.crosshair = crosshair
         self._x, self._y = 0., 0.
 
+    @Slot(bool)
+    def set_active(self, activate=True):
+        self._is_active = activate
+        if activate:
+            self.crosshair.crosshair_dragged.emit(*self.crosshair.get_positions())
+
     def _filter_data(self, datas: data_mod.DataFromPlugins):
         data_dict = dict([])
         if datas is not None:

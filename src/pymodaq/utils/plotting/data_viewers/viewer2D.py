@@ -295,7 +295,6 @@ class LineoutPlotter(LineoutPlotter):
             curve.setVisible(show)
 
 
-
 class View2D(ActionManager, QtCore.QObject):
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
@@ -355,20 +354,15 @@ class View2D(ActionManager, QtCore.QObject):
         self.parent_widget.setLayout(vertical_layout)
         splitter_vertical = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         vertical_layout.addWidget(splitter_vertical)
-
-
         splitter_vertical.addWidget(self.toolbar)
 
-        # ####### Graphs, ImageItem, Histograms ############
         self.graphs_widget = QtWidgets.QWidget()
         self.graphs_widget.setLayout(QtWidgets.QHBoxLayout())
         self.graphs_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.setupGraphs(self.graphs_widget.layout())
         splitter_vertical.addWidget(self.graphs_widget)
 
-
         self.plotitem.addItem(self.ROIselect)
-
         self.plotitem.addItem(self.roi_target)
 
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
@@ -572,7 +566,6 @@ class View2D(ActionManager, QtCore.QObject):
         axis = self.get_axis(position)
         return axis.axis_label, axis.axis_units
 
-
     def set_axis_scaling(self, position='top', scaling=1, offset=0, label='', units='Pxls'):
         """
         Method used to update the scaling of the right and top axes in order to translate pixels to real coordinates
@@ -584,16 +577,17 @@ class View2D(ActionManager, QtCore.QObject):
         label: (str) text of the axis label
         units: (str) units of the axis label
         """
-
         self.get_axis(position).axis_scaling = scaling
         self.get_axis(position).axis_offset = offset
         self.set_axis_label(position, label=label, units=units)
 
     def scale_axis(self, xaxis, yaxis):
+        """scale view coordinates from the regular axes to the scaled/offset ones"""
         x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
         return xaxis * x_scaling + x_offset, yaxis * y_scaling + y_offset
 
     def unscale_axis(self, xaxis, yaxis):
+        """scale view coordinates from the scaled/offset axes to the regular ones"""
         x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
         return (xaxis - x_offset) / x_scaling, (yaxis - y_offset) / y_scaling
 
@@ -650,41 +644,6 @@ class Viewer2D(ViewerBase):
     def crosshair_changed(self):
         self.filter_from_crosshair.filter_data(self._datas)
 
-    def setImage(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        pymodaq.utils.messenger.deprecation_msg(f'setImage for PyMoDAQ Viewer2D is deprecated, use *show_data* with'
-                                                    f'one argument as utils.DataFromPlugins', stacklevel=3)
-        datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
-                                                    data_blue=data_blue, data_spread=data_spread)
-        self.show_data(datas)
-
-    def setImageTemp(self, data_red=None, data_green=None, data_blue=None, data_spread=None):
-        pymodaq.utils.messenger.deprecation_msg(f'setImageTemp for PyMoDAQ Viewer2D is deprecated, use *show_data_temp* with'
-                         f'one argument as utils.DataFromPlugins')
-        datas = self.format_data_as_datafromplugins(data_red=data_red, data_green=data_green,
-                                                    data_blue=data_blue, data_spread=data_spread)
-        self.show_data_temp(datas)
-
-    @staticmethod
-    def format_data_as_datafromplugins(data_red=None, data_green=None, data_blue=None, data_spread=None):
-        if data_spread is None:
-            distribution = 'uniform'
-            shape = (0, 0)
-            for data in [data_red, data_green, data_blue]:
-                if data is not None:
-                    shape = data.shape
-                    break
-
-            data_list = [data_red if data_red is not None else np.zeros(shape),
-                         data_green if data_green is not None else np.zeros(shape),
-                         data_blue if data_blue is not None else np.zeros(shape),
-                         ]
-        else:
-            distribution = 'spread'
-            data_list = [data_spread]
-
-        datas = DataFromPlugins(name='', distribution=distribution, data=data_list)
-        return datas
-
     def set_gradient(self, image_key, gradient):
         """convenience function"""
         self.view.histogrammer.set_gradient(image_key, gradient)
@@ -713,6 +672,8 @@ class Viewer2D(ViewerBase):
     def update_data(self):
         if self._raw_data is not None:
             self._datas = self.set_image_transform()
+            self.x_axis = self._datas.axes_manager.get_axis_from_index(1)
+            self.y_axis = self._datas.axes_manager.get_axis_from_index(0)
             self._data_to_show_signal.emit(self._datas)
 
             if self.view.is_action_checked('roi'):
@@ -722,7 +683,7 @@ class Viewer2D(ViewerBase):
                 self.crosshair_changed()
 
 
-    def set_image_transform(self):
+    def set_image_transform(self) -> DataRaw:
         """
         Deactivate some tool buttons if data type is "spread" then apply transform_image
         """
@@ -807,36 +768,28 @@ class Viewer2D(ViewerBase):
             self.crosshair_changed()
         self.sig_double_clicked.emit(posx, posy)
 
-    def set_scaling_axes(self, scaling_options: ScalingOptions):
-        """
-        metod used to update the scaling of the right and top axes in order to translate pixels to real coordinates
-        scaling_options=dict(scaled_xaxis=dict(label="",units=None,offset=0,scaling=1),scaled_yaxis=dict(label="",units=None,offset=0,scaling=1))
-        """
-        self.view.set_axis_scaling(position='top', **scaling_options['scaled_xaxis'])
-        self.view.set_axis_scaling(position='right', **scaling_options['scaled_yaxis'])
-
-        self.x_axis.linkedViewChanged(self.view.image_widget.view)
-        self.y_axis.linkedViewChanged(self.view.image_widget.view)
 
     @property
     def x_axis(self):
         return self.view.get_axis('top')
 
     @x_axis.setter
-    def x_axis(self, axis):
-        axis_info = AxisInfosExtractor.extract_axis_info(axis)
-        self.view.set_axis_scaling('top', scaling=axis_info.scaling, offset=axis_info.offset,
-                                   label=axis_info.label, units=axis_info.units)
+    def x_axis(self, axis: Axis = None):
+        if axis is not None:
+            axis_info = AxisInfosExtractor.extract_axis_info(axis)
+            self.view.set_axis_scaling('top', scaling=axis_info.scaling, offset=axis_info.offset,
+                                       label=axis_info.label, units=axis_info.units)
 
     @property
     def y_axis(self):
         return self.view.get_axis('right')
 
     @y_axis.setter
-    def y_axis(self, axis):
-        axis_info = AxisInfosExtractor.extract_axis_info(axis)
-        self.view.set_axis_scaling('right', scaling=axis_info.scaling, offset=axis_info.offset,
-                                   label=axis_info.label, units=axis_info.units)
+    def y_axis(self, axis: Axis = None):
+        if axis is not None:
+            axis_info = AxisInfosExtractor.extract_axis_info(axis)
+            self.view.set_axis_scaling('right', scaling=axis_info.scaling, offset=axis_info.offset,
+                                       label=axis_info.label, units=axis_info.units)
 
     def scale_lineout_dicts(self, lineout_dicts):
         for lineout_data in lineout_dicts.values():
@@ -890,13 +843,15 @@ def main_controller():
     Nx = 100
     Ny = 200
     data_random = np.random.normal(size=(Ny, Nx))
-    x = np.linspace(0, Nx - 1, Nx)
-    y = np.linspace(0, Ny - 1, Ny)
+    x = np.linspace(-Nx/2, Nx/2 - 1, Nx)
+    y = 0.2 * np.linspace(-Ny/2, Ny/2 - 1, Ny)
     from pymodaq.utils.math_utils import gauss2D
 
-    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x/5)**2 + 0.1 * data_random
-    # data_red = pg.gaussianFilter(data_red, (2, 2))
-    data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+    data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10,
+                                            y, -1, Ny / 10, 1, 90) \
+               + 0.1 * data_random
+    data_green = 10 * gauss2D(x, -20, Nx / 10,
+                              y, -10, Ny / 20, 1, 0)
     # data_green = pg.gaussianFilter(data_green, (2, 2))
     data_green[70:80, 7:12] = np.nan
 
@@ -909,29 +864,23 @@ def main_controller():
         print(data.get_data_from_dim('Data1D'))
 
     prog = Viewer2D(form)
-    # prog.set_axis_scaling(scaling_options=utils.ScalingOptions(
-    #     scaled_xaxis=utils.ScaledAxis(label="eV", units=None, offset=100, scaling=0.1),
-    #     scaled_yaxis=utils.ScaledAxis(label="time", units='s', offset=-20, scaling=2)))
     form.show()
     prog.data_to_export_signal.connect(print_data)
-    #prog.auto_levels_action_sym.trigger()
-    #prog.view.actions['autolevels'].trigger()
 
     data_spread = np.load('../../../resources/triangulation_data.npy')
     # data_shuffled = data
     # np.random.shuffle(data_shuffled)
     # prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread',
     #                                      data=[data, data_shuffled]))
+
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green]))
+    prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
+                                   axes=[Axis('xaxis', units='xpxl', data=x, index=1),
+                                         Axis('yaxis', units='ypxl', data=y, index=0),]))
     #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
-    #prog.ROI_select_signal.connect(print_roi_select)
-    #prog.view.get_action('ROIselect').trigger()
-    #prog.view.ROIselect.setSize((20, 35))
-    #prog.view.ROIselect.setPos((45, 123))
     prog.show_roi_target(True)
     prog.move_scale_roi_target((50, 40), (20, 20))
 

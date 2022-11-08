@@ -94,7 +94,7 @@ class LineoutPlotter(QObject):
         raise NotImplementedError
 
     def plot_crosshair_lineouts(self, crosshair_dict):
-        self.plot_other_lineouts(crosshair_dict)
+        self.plot_other_crosshair_lineouts(crosshair_dict)
 
         logger.debug('crosshair lineouts plotted')
         self.crosshair_lineout_plotted.emit(crosshair_dict)
