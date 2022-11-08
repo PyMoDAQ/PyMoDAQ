@@ -4,6 +4,9 @@ Created on Fri Aug 30 12:21:56 2019
 
 @author: Weber
 """
+from abc import ABCMeta, abstractmethod
+
+
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
 import socket
@@ -311,8 +314,113 @@ class Socket:
                 data.append(self.get_array())
         return data
 
+class TCPClientTemplate:
+    params = []
 
-class TCPClient(QObject):
+    def __init__(self, ipaddress="192.168.1.62", port=6341, params_state=None, client_type=""):
+        """Create a socket client
+
+        Parameters
+        ----------
+        ipaddress: (str) the IP address of the server
+        port: (int) the port where to communicate with the server
+        params_state: (dict) state of the Parameter settings of the module instantiating this client and wishing to
+                            export its settings to the server. Obtained from param.saveState() where param is an
+                            instance of Parameter object, see pyqtgraph.parametertree::Parameter
+        client_type: (str) should be one of the accepted client_type by the TCPServer instance (within pymodaq it is
+                            either 'GRABBER' or 'ACTUATOR'
+        """
+        super().__init__()
+
+        self.ipaddress = ipaddress
+        self.port = port
+        self._socket = None
+        self.connected = False
+        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
+        if params_state is not None:
+            if isinstance(params_state, dict):
+                self.settings.restoreState(params_state)
+            elif isinstance(params_state, Parameter):
+                self.settings.restoreState(params_state.saveState())
+
+        self.client_type = client_type
+
+    @property
+    def socket(self):
+        return self._socket
+
+    @socket.setter
+    def socket(self, sock):
+        self._socket = sock
+
+    def close(self):
+        if self.socket is not None:
+            self.socket.close()
+
+    def _connect_socket(self):
+        # create an INET, STREAMing socket
+        self.socket = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+        # now connect to the web server on port 80 - the normal http port
+        self.socket.connect((self.ipaddress, self.port))
+
+    def init_connection(self, extra_commands=[]):
+        """init the socket connection then call the post_init method where to place custom initialization"""
+        try:
+            self._connect_socket()
+            self.post_init(extra_commands)
+            self.connected = True
+            self.poll_connection()
+
+        except ConnectionRefusedError as e:
+            self.not_connected(e)
+            self.connected = False
+
+    def poll_connection(self):
+        while True:
+            try:
+                ready_to_read, ready_to_write, in_error = \
+                    select.select([self.socket.socket], [self.socket.socket], [self.socket.socket], 0)
+
+                if len(ready_to_read) != 0:
+                    self.ready_to_read()
+
+                if len(in_error) != 0:
+                    self.ready_with_error()
+
+                if  len(ready_to_write) != 0:
+                    self.ready_to_write()
+
+                QtWidgets.QApplication.processEvents()
+
+            except Exception as e:
+                self.process_error_in_polling(e)
+                break
+
+    def not_connected(self, e: ConnectionRefusedError):
+        raise NotImplementedError
+
+    def ready_to_read(self):
+        """Do stuff (like read data) when messages arrive through the socket"""
+        raise NotImplementedError
+
+    def ready_to_write(self):
+        """Send stuff into the socket"""
+        raise NotImplementedError
+
+    def ready_with_error(self):
+        """Error in the socket communication"""
+        raise NotImplementedError
+
+
+    def process_error_in_polling(self, e: Exception):
+        raise NotImplementedError
+
+    def post_init(self, extra_commands=[]):
+        """To implement in a real object implementation"""
+        raise NotImplementedError
+
+
+class TCPClient(TCPClientTemplate, QObject):
     """
     PyQt5 object initializing a TCP socket client. Can be used by any module but is a builtin functionnality of all
     actuators and detectors of PyMoDAQ
@@ -341,32 +449,8 @@ class TCPClient(QObject):
         client_type: (str) should be one of the accepted client_type by the TCPServer instance (within pymodaq it is
                             either 'GRABBER' or 'ACTUATOR'
         """
-        super().__init__()
-
-        self.ipaddress = ipaddress
-        self.port = port
-        self._socket = None
-        self.connected = False
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-        if params_state is not None:
-            if isinstance(params_state, dict):
-                self.settings.restoreState(params_state)
-            elif isinstance(params_state, Parameter):
-                self.settings.restoreState(params_state.saveState())
-
-        self.client_type = client_type  # "GRABBER" or "ACTUATOR"
-
-    @property
-    def socket(self):
-        return self._socket
-
-    @socket.setter
-    def socket(self, sock):
-        self._socket = sock
-
-    def close(self):
-        if self.socket is not None:
-            self.socket.close()
+        QObject.__init__(self)
+        TCPClientTemplate.__init__(self, ipaddress, port, params_state, client_type)
 
     def send_data(self, data_list):
         # first send 'Done' and then send the length of the list
@@ -463,53 +547,39 @@ class TCPClient(QObject):
         else:
             raise IOError('Unknown TCP client command')
 
-    def init_connection(self, extra_commands=[]):
-        # %%
+    def not_connected(self, e):
+        self.connected = False
+        self.cmd_signal.emit(ThreadCommand('disconnected'))
+        self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
+
+    def ready_to_read(self):
+        message = self.socket.get_string()
+        self.get_data(message)
+
+    def ready_to_write(self):
+        pass
+
+    def ready_with_error(self):
+        self.connected = False
+        self.cmd_signal.emit(ThreadCommand('disconnected'))
+
+    def process_error_in_polling(self, e: Exception):
         try:
-            # create an INET, STREAMing socket
-            self.socket = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
-            # now connect to the web server on port 80 - the normal http port
-            self.socket.connect((self.ipaddress, self.port))
-            self.cmd_signal.emit(ThreadCommand('connected'))
-            self.socket.send_string(self.client_type)
-
-            self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
-            for command in extra_commands:
-                if isinstance(command, ThreadCommand):
-                    self.cmd_signal.emit(command)
-            self.connected = True
-            # %%
-
-            while True:
-                try:
-                    ready_to_read, ready_to_write, in_error = \
-                        select.select([self.socket.socket], [self.socket.socket], [self.socket.socket], 0)
-
-                    if len(ready_to_read) != 0:
-                        message = self.socket.get_string()
-                        # print(message)
-                        self.get_data(message)
-
-                    if len(in_error) != 0:
-                        self.connected = False
-                        self.cmd_signal.emit(ThreadCommand('disconnected'))
-
-                    QtWidgets.QApplication.processEvents()
-
-                except Exception as e:
-                    try:
-                        self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
-                        self.socket.send_string('Quit')
-                        self.socket.close()
-                    except Exception:  # pragma: no cover
-                        pass
-                    finally:
-                        break
-
-        except ConnectionRefusedError as e:
-            self.connected = False
-            self.cmd_signal.emit(ThreadCommand('disconnected'))
             self.cmd_signal.emit(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
+            self.socket.send_string('Quit')
+            self.socket.close()
+        except Exception:  # pragma: no cover
+            pass
+
+    def post_init(self, extra_commands=[]):
+
+        self.cmd_signal.emit(ThreadCommand('connected'))
+        self.socket.send_string(self.client_type)
+
+        self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
+        for command in extra_commands:
+            if isinstance(command, ThreadCommand):
+                self.cmd_signal.emit(command)
 
     def get_data(self, message):
         """
