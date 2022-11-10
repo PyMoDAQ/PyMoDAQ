@@ -632,6 +632,10 @@ class Viewer2D(ViewerBase):
 
         self.add_attributes_from_view()
 
+    def set_crosshair_position(self, xpos, ypos):
+        """Convenience method to set the crosshair positions"""
+        self.view.crosshair.set_crosshair_position(xpos=xpos, ypos=ypos)
+
     def activate_roi(self, activate=True):
         """Activate the Roi manager using the corresponding action"""
         self.set_action_checked('roi', activate)

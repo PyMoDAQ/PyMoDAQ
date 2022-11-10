@@ -114,7 +114,7 @@ class DataDisplayer(QObject):
                     if posx < nav_axis_data[0] or posx > nav_axis_data[-1]:
                         return
                     ind_x = mutils.find_index(nav_axis_data, posx)[0][0]
-                    logger.DEBUG_VIEWER(f'Getting the data at nav index {ind_x}')
+                    logger.debug(f'Getting the data at nav index {ind_x}')
                     data = self._data.inav[ind_x]
 
                 elif len(self._data.nav_indexes) == 2:
@@ -126,7 +126,7 @@ class DataDisplayer(QObject):
                         return
                     ind_x = mutils.find_index(nav_xaxis_data, posx)[0][0]
                     ind_y = mutils.find_index(nav_yaxis_data, posy)[0][0]
-                    logger.DEBUG_VIEWER(f'Getting the data at nav indexes {ind_y} and {ind_x}')
+                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
                     data = self._data.inav[ind_y, ind_x]
                 else:
                     return
@@ -176,22 +176,29 @@ class DataDisplayer(QObject):
                     self._navigator2D.show_data(nav_data)
 
     def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
-        if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
-            navigator_data = data
+        try:
+            navigator_data = None
+            if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
+                navigator_data = data
 
-        elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-            _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
+            elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
+                _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
 
-        elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
-            x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
-            if not (width is None or height is None or width < 2 or height < 2):
-                navigator_data = self._processor.get(self._filter_type).process(data.isig[y: y + height, x: x + width])
+            elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
+                x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
+                if not (width is None or height is None or width < 2 or height < 2):
+                    navigator_data = self._processor.get(self._filter_type).process(data.isig[y: y + height, x: x + width])
+                else:
+                    navigator_data = None
             else:
                 navigator_data = None
-        else:
-            navigator_data = None
 
-        return navigator_data
+            return navigator_data
+
+        except Exception as e:
+            logger.warning('Could not compute the mathematical function')
+        finally:
+            return navigator_data
 
     @staticmethod
     def get_out_of_range_limits(x, y, width, height):
@@ -255,37 +262,39 @@ class ViewerND(ParameterManager, ActionManager, QObject):
         self.prepare_ui()
 
     def _show_data(self, data: DataRaw):
-
+        force_update = False
         self.settings.child('data_shape_settings', 'data_shape_init').setValue(str(data.shape))
         self.settings.child('data_shape_settings', 'navigator_axes').setValue(
             dict(all_items=[str(ax.index) for ax in data.axes],
                  selected=[str(ax.index) for ax in data.get_nav_axes()]))
-
         if self._data is None or self._data.shape != data.shape or self._data.nav_indexes != data.nav_indexes:
             self.update_widget_visibility(data)
             self.init_rois(data)
+            force_update = True
+        self.data_displayer.update_data(data, force_update=force_update)
+
         self._data = data
-        self.data_displayer.update_data(data)
 
     def init_rois(self, data: DataRaw):
         means = []
-        # for axis in data.axes_manager.get_nav_axes():
-        #     means.append(np.mean(axis.data))
-        #
-        # self.navigator1D.double_clicked(*means)
-        # self.navigator2D.double_clicked(*means)
-        #
-        # mins = []
-        # maxs = []
-        # for axis in data.axes_manager.get_signal_axes():
-        #     mins.append(np.mins(axis.data))
-        #     maxs.append(np.maxs(axis.data))
-        #
-        # self.viewer1D.roi.setPos(mins[0], maxs[0])
-        # if len(data.axes_manager.sig_indexes) > 1:
-        #     self.viewer2D.roi.setPos(0, 0)
-        #     self.viewer2D.roi.setSize(len(data.get_axis_from_index(data.axes_manager.sig_indexes[1])),
-        #                               len(data.get_axis_from_index(data.axes_manager.sig_indexes[0])))
+        for axis in data.axes_manager.get_nav_axes():
+            means.append(np.mean(axis.data))
+        if len(data.nav_indexes) == 1:
+            self.navigator1D.set_crosshair_position(*means)
+        elif len(data.nav_indexes) == 2:
+            self.navigator2D.set_crosshair_position(*means)
+
+        mins = []
+        maxs = []
+        for axis in data.axes_manager.get_signal_axes():
+            mins.append(np.min(axis.data))
+            maxs.append(np.max(axis.data))
+        if len(data.axes_manager.sig_indexes) == 1:
+            self.viewer1D.roi.setPos((mins[0], maxs[0]))
+        elif len(data.axes_manager.sig_indexes) > 1:
+            self.viewer2D.roi.setPos((0, 0))
+            self.viewer2D.roi.setSize((len(data.get_axis_from_index(data.axes_manager.sig_indexes[1])),
+                                      len(data.get_axis_from_index(data.axes_manager.sig_indexes[0]))))
 
     def set_data_test(self, data_shape='3D'):
 
