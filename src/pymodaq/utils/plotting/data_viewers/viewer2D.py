@@ -835,36 +835,18 @@ class Viewer2D(ViewerBase):
         self.ROI_changed.emit()
 
 
-
-
-def main_controller():
+def main_spread():
     app = QtWidgets.QApplication(sys.argv)
-    form = QtWidgets.QWidget()
-    Nx = 100
-    Ny = 200
-    data_random = np.random.normal(size=(Ny, Nx))
-    x = np.linspace(-Nx/2, Nx/2 - 1, Nx)
-    y = 0.2 * np.linspace(-Ny/2, Ny/2 - 1, Ny)
-    from pymodaq.utils.math_utils import gauss2D
-
-    data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10,
-                                            y, -1, Ny / 10, 1, 90) \
-               + 0.1 * data_random
-    data_green = 10 * gauss2D(x, -20, Nx / 10,
-                              y, -10, Ny / 20, 1, 0)
-    # data_green = pg.gaussianFilter(data_green, (2, 2))
-    data_green[70:80, 7:12] = np.nan
-
-    data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
-    data_blue = pg.gaussianFilter(data_blue, (2, 2))
+    widget = QtWidgets.QWidget()
+    prog = Viewer2D(widget)
+    widget.show()
 
     def print_data(data: DataToExport):
         print(data)
         print('******')
         print(data.get_data_from_dim('Data1D'))
 
-    prog = Viewer2D(form)
-    form.show()
+
     prog.data_to_export_signal.connect(print_data)
 
     data_spread = np.load('../../../resources/triangulation_data.npy')
@@ -876,19 +858,52 @@ def main_controller():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
+    prog.show_data(DataFromPlugins(name='mydata', distribution='spread', data=[data_spread],
+                                   axes=[]))
+
+    sys.exit(app.exec_())
+
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+
+    Nx = 100
+    Ny = 200
+    data_random = np.random.normal(size=(Ny, Nx))
+    x = np.linspace(-Nx/2, Nx/2 - 1, Nx)
+    y = 0.2 * np.linspace(-Ny/2, Ny/2 - 1, Ny)
+
+    from pymodaq.utils.math_utils import gauss2D
+
+    data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10,
+                                            y, -1, Ny / 10, 1, 90) \
+               + 0.1 * data_random
+    data_green = 10 * gauss2D(x, -20, Nx / 10,
+                              y, -10, Ny / 20, 1, 0)
+    data_green[70:80, 7:12] = np.nan
+
+
+    def print_data(data: DataToExport):
+        print(data)
+        print('******')
+        print(data.get_data_from_dim('Data1D'))
+
+    prog = Viewer2D(widget)
+    widget.show()
+    prog.data_to_export_signal.connect(print_data)
+
+    prog.view.get_action('histo').trigger()
+    prog.view.get_action('autolevels').trigger()
+
     prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
                                          Axis('yaxis', units='ypxl', data=y, index=0),]))
-    #prog.show_data(utils.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread]))
 
     prog.show_roi_target(True)
     prog.move_scale_roi_target((50, 40), (20, 20))
 
     QtWidgets.QApplication.processEvents()
-
-    # prog.setImage(data_spread=data)
-    #app.processEvents()
-
     sys.exit(app.exec_())
 
 
@@ -907,4 +922,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    main_controller()
+    #main()
+    main_spread()

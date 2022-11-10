@@ -89,7 +89,7 @@ class DataDisplayer(QObject):
         if len(data) != len(self._plot_items):
             self.update_display_items(data)
 
-        axis = data.get_axis_from_index(0, create=False)
+        axis = data.get_axis_from_index(0, create=True)
         if axis is not None:
             self.update_axis(axis)
 
@@ -102,7 +102,8 @@ class DataDisplayer(QObject):
         for ind_data, dat in enumerate(data.data):
             if data.size > 0:
                 if not do_xy:
-                    self._plot_items[ind_data].setData(self._axis.data, dat)
+                    if self._axis is not None:
+                        self._plot_items[ind_data].setData(self._axis.data, dat)
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 

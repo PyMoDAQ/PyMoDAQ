@@ -57,7 +57,7 @@ class ObjectFactory:
 
     @property
     def keys(self):
-        return list(self.builders[self.__class__.__name__].keys())
+        return sorted(list(self.builders[self.__class__.__name__].keys()))
 
     @classmethod
     def create(cls, key, **kwargs):
