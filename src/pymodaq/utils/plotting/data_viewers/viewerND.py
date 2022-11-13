@@ -110,22 +110,22 @@ class DataDisplayer(QObject):
                     data = self._data
 
                 elif len(self._data.nav_indexes) == 1:
-                    nav_axis_data = self._data.axes_manager.get_nav_axes()[0].data
-                    if posx < nav_axis_data[0] or posx > nav_axis_data[-1]:
+                    nav_axis = self._data.axes_manager.get_nav_axes()[0]
+                    if posx < nav_axis.min() or posx > nav_axis.max():
                         return
-                    ind_x = mutils.find_index(nav_axis_data, posx)[0][0]
+                    ind_x = nav_axis.find_index(posx)
                     logger.debug(f'Getting the data at nav index {ind_x}')
                     data = self._data.inav[ind_x]
 
                 elif len(self._data.nav_indexes) == 2:
-                    nav_xaxis_data = self._data.axes_manager.get_nav_axes()[1].data
-                    nav_yaxis_data = self._data.axes_manager.get_nav_axes()[0].data
-                    if posx < nav_xaxis_data[0] or posx > nav_xaxis_data[-1]:
+                    nav_x = self._data.axes_manager.get_nav_axes()[1]
+                    nav_y = self._data.axes_manager.get_nav_axes()[0]
+                    if posx < nav_x.min() or posx > nav_x.max():
                         return
-                    if posy < nav_yaxis_data[0] or posy > nav_yaxis_data[-1]:
+                    if posy < nav_y.min() or posy > nav_y.max():
                         return
-                    ind_x = mutils.find_index(nav_xaxis_data, posx)[0][0]
-                    ind_y = mutils.find_index(nav_yaxis_data, posy)[0][0]
+                    ind_x = nav_x.find_index(posx)
+                    ind_y = nav_y.find_index(posy)
                     logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
                     data = self._data.inav[ind_y, ind_x]
                 else:
@@ -278,7 +278,7 @@ class ViewerND(ParameterManager, ActionManager, QObject):
     def init_rois(self, data: DataRaw):
         means = []
         for axis in data.axes_manager.get_nav_axes():
-            means.append(np.mean(axis.data))
+            means.append(axis.mean())
         if len(data.nav_indexes) == 1:
             self.navigator1D.set_crosshair_position(*means)
         elif len(data.nav_indexes) == 2:
@@ -287,8 +287,8 @@ class ViewerND(ParameterManager, ActionManager, QObject):
         mins = []
         maxs = []
         for axis in data.axes_manager.get_signal_axes():
-            mins.append(np.min(axis.data))
-            maxs.append(np.max(axis.data))
+            mins.append(axis.min())
+            maxs.append(axis.max())
         if len(data.axes_manager.sig_indexes) == 1:
             self.viewer1D.roi.setPos((mins[0], maxs[0]))
         elif len(data.axes_manager.sig_indexes) > 1:

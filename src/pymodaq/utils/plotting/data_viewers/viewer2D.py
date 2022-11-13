@@ -11,7 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, ScalingOptions, DataRaw
+from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -21,7 +21,6 @@ from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS
 from pymodaq.utils.plotting.items.crosshair import Crosshair
-from pymodaq.utils.plotting.utils.plot_utils import Data0DWithHistory, AxisInfosExtractor
 from pymodaq.utils.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils.plotting.utils.lineout import LineoutPlotter, curve_item_factory
@@ -780,9 +779,8 @@ class Viewer2D(ViewerBase):
     @x_axis.setter
     def x_axis(self, axis: Axis = None):
         if axis is not None:
-            axis_info = AxisInfosExtractor.extract_axis_info(axis)
-            self.view.set_axis_scaling('top', scaling=axis_info.scaling, offset=axis_info.offset,
-                                       label=axis_info.label, units=axis_info.units)
+            self.view.set_axis_scaling('top', scaling=axis.scaling, offset=axis.offset,
+                                       label=axis.label, units=axis.units)
 
     @property
     def y_axis(self):
@@ -791,9 +789,8 @@ class Viewer2D(ViewerBase):
     @y_axis.setter
     def y_axis(self, axis: Axis = None):
         if axis is not None:
-            axis_info = AxisInfosExtractor.extract_axis_info(axis)
-            self.view.set_axis_scaling('right', scaling=axis_info.scaling, offset=axis_info.offset,
-                                       label=axis_info.label, units=axis_info.units)
+            self.view.set_axis_scaling('right', scaling=axis.scaling, offset=axis.offset,
+                                       label=axis.label, units=axis.units)
 
     def scale_lineout_dicts(self, lineout_dicts):
         for lineout_data in lineout_dicts.values():
@@ -926,5 +923,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    #main()
-    main_spread()
+    main()
+    #main_spread()

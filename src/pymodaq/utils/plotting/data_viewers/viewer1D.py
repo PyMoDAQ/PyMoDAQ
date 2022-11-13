@@ -68,8 +68,8 @@ class DataDisplayer(QObject):
         self._plotitem = plotitem
         self._plotitem.addLegend()
         self._plot_items: List[pg.PlotDataItem] = []
-        self._axis = None
-        self._data = None
+        self._axis: Axis = None
+        self._data: DataRaw = None
 
     @property
     def legend(self):
@@ -77,6 +77,8 @@ class DataDisplayer(QObject):
 
     def update_axis(self, axis: Axis):
         self._axis = axis
+        if self._axis.data is None: # create real data vector once here for subsequent use
+            self._axis.create_linear_data(axis.size)
 
     def get_plot_items(self):
         return self._plot_items

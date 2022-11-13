@@ -73,7 +73,7 @@ class MinProcessor(Data1DProcessorBase):
 class ArgMaxProcessor(Data1DProcessorBase):
     def process(self, limits: Tuple[int], data: DataWithAxes):
         axis = data.axes_manager.get_signal_axes()[0]
-        (ind_1, _), (ind_2, _) = mutils.find_index(axis.data, limits)
+        ind_1, ind_2 = (axis.find_index(lim) for lim in limits)
         subdata = data.isig[ind_1:ind_2]
         filtered_data = self.operate(subdata)
         filtered_data.data = [data_array + ind_1 for data_array in filtered_data.data]

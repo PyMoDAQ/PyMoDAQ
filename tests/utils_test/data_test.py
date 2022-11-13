@@ -15,7 +15,10 @@ from pymodaq.utils import data as data_mod
 
 LABEL = 'A Label'
 UNITS = 'units'
-DATA = np.linspace(0, 10, 11)
+OFFSET = -20.4
+SCALING = 0.22
+SIZE = 20
+DATA = OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE)
 
 DATA0D = np.array([0.])
 DATA1D = np.zeros((10,))
@@ -55,28 +58,36 @@ def ini_data_to_export():
     return dat1, dat2, data
 
 
-class TestAxisBase:
+class TestAxis:
 
     def test_errors(self):
         with pytest.raises(TypeError):
-            data_mod.AxisBase(label=24)
+            data_mod.Axis(label=24)
         with pytest.raises(TypeError):
-            data_mod.AxisBase(units=42)
+            data_mod.Axis(units=42)
         with pytest.raises(TypeError):
-            data_mod.AxisBase(index=1.)
+            data_mod.Axis(index=1.)
         with pytest.raises(ValueError):
-            data_mod.AxisBase(index=-2)
+            data_mod.Axis(index=-2)
 
     def test_attributes(self, init_axis_fixt):
         ax = init_axis_fixt
-        assert hasattr(ax, 'data')
-        assert ax.data == pytest.approx(DATA)
         assert hasattr(ax, 'label')
         assert ax.label == LABEL
         assert hasattr(ax, 'units')
         assert ax.units == UNITS
         assert hasattr(ax, 'index')
         assert ax.index == 0
+        assert hasattr(ax, 'data')
+        assert ax.data is None
+        assert ax.offset == pytest.approx(OFFSET)
+        assert ax.scaling == pytest.approx(SCALING)
+
+        data_tmp = np.array([0.1, 2, 23, 44, 21, 20])  # non linear axis
+        ax = init_axis(data=data_tmp)
+        assert np.all(ax.data == pytest.approx(data_tmp))
+        assert ax.offset is None
+        assert ax.scaling is None
 
     def test_getitem(self, init_axis_fixt):
         ax = init_axis_fixt
@@ -91,11 +102,39 @@ class TestAxisBase:
         ax = init_axis_fixt
         ax_scaled = ax * scale
         ax_offset = ax + offset
-        assert isinstance(ax_scaled, data_mod.AxisBase)
-        assert isinstance(ax_offset, data_mod.AxisBase)
+        assert isinstance(ax_scaled, data_mod.Axis)
+        assert isinstance(ax_offset, data_mod.Axis)
 
+        assert ax_scaled.scaling == approx(ax.scaling * scale)
+        assert ax_offset.offset == approx(ax.offset + offset)
+
+        data_tmp = np.array([0.1, 2, 23, 44, 21, 20])  # non linear axis
+        ax = init_axis(data=data_tmp)
+        ax_scaled = ax * scale
+        ax_offset = ax + offset
         assert ax_scaled.data == approx(ax.data * scale)
         assert ax_offset.data == approx(ax.data + offset)
+
+    def test_math(self, init_axis_fixt):
+        ax = init_axis_fixt
+        assert ax.mean() == pytest.approx(OFFSET + SIZE / 2 * SCALING)
+        assert ax.min() == pytest.approx(OFFSET)
+        assert ax.max() == pytest.approx(OFFSET + SIZE * SCALING)
+
+        data_tmp = np.array([0.1, 2, 23, 44, 21, 20])  # non linear axis
+        ax = init_axis(data=data_tmp)
+        assert ax.mean() == pytest.approx(np.mean(data_tmp))
+        assert ax.min() == pytest.approx(np.min(data_tmp))
+        assert ax.max() == pytest.approx(np.max(data_tmp))
+
+    def test_find_index(self, init_axis_fixt):
+        ax = init_axis_fixt
+        assert ax.find_index(0.01 + OFFSET + 4 * SCALING) == 4
+
+        data_tmp = np.array([0.1, 2, 23, 44, 21, 20])  # non linear axis
+        ax = init_axis(data=data_tmp)
+        assert ax.find_index(5) == 1
+
 
 
 class TestDataLowLevel:
@@ -203,12 +242,12 @@ class TestDataWithAxes:
         index = 1
         data = init_data(DATA2D, 2, axes=[init_axis(np.zeros((DATA2D.shape[index],)), index)])
 
-        assert data.get_shape_from_index(0) == DATA2D.shape[0]
-        assert data.get_shape_from_index(1) == DATA2D.shape[1]
+        assert data.axes_manager.get_shape_from_index(0) == DATA2D.shape[0]
+        assert data.axes_manager.get_shape_from_index(1) == DATA2D.shape[1]
         with pytest.raises(IndexError):
-            data.get_shape_from_index(-1)
+            data.axes_manager.get_shape_from_index(-1)
         with pytest.raises(IndexError):
-            data.get_shape_from_index(2)
+            data.axes_manager.get_shape_from_index(2)
 
     def test_get_axis_from_dim(self):
 
@@ -221,7 +260,7 @@ class TestDataWithAxes:
         axis = data.get_axis_from_index(index0)
         assert axis is None
         axis = data.get_axis_from_index(index0, create=True)
-        assert len(axis) == data.get_shape_from_index(index0)
+        assert len(axis) == data.axes_manager.get_shape_from_index(index0)
 
 
 def test_data_from_plugins():
@@ -257,29 +296,6 @@ def test_data_from_roi():
     data = data_mod.DataFromRoi('myData', data=[DATA2D for ind in range(Ndata)])
     assert isinstance(data, data_mod.DataWithAxes)
     assert data.source == data_mod.DataSource['calculated']
-
-
-def test_ScaledAxis():
-    scaled_axis = data_mod.ScaledAxis()
-    assert isinstance(scaled_axis, data_mod.ScaledAxis)
-    assert scaled_axis['offset'] == 0
-    assert scaled_axis['scaling'] == 1
-
-    with pytest.raises(TypeError):
-        data_mod.ScaledAxis(offset=None)
-    with pytest.raises(TypeError):
-        data_mod.ScaledAxis(scaling=None)
-    with pytest.raises(ValueError):
-        data_mod.ScaledAxis(scaling=0)
-
-    assert scaled_axis['scaling'] == scaled_axis.scaling
-
-
-def test_ScalingOptions():
-    scaling_options = data_mod.ScalingOptions(data_mod.ScaledAxis(), data_mod.ScaledAxis())
-    assert isinstance(scaling_options, data_mod.ScalingOptions)
-    assert isinstance(scaling_options['scaled_xaxis'], data_mod.ScaledAxis)
-    assert isinstance(scaling_options['scaled_yaxis'], data_mod.ScaledAxis)
 
 
 class TestDataToExport:

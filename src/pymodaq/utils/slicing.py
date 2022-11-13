@@ -22,13 +22,14 @@ class SpecialSlicersData(SpecialSlicers):
     def __setitem__(self, i, j):
         """x.__setitem__(i, y) <==> x[i]=y
         """
+        raise NotImplementedError
         if hasattr(j, 'data'):
             j = j.data
         array_slices = self.obj._get_array_slices(i, self.is_navigation)
         self.obj.data[array_slices] = j
 
     def __len__(self):
-        return self.obj.axes_manager.signal_shape[0]
+        return self.obj.axes_manager.sig_shape[0]
 
 
 if __name__ == '__main__':

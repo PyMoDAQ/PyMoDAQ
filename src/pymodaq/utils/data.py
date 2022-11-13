@@ -21,6 +21,7 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
+from pymodaq.utils import math_utils as mutils
 
 logger = set_logger(get_module_name(__file__))
 
@@ -53,8 +54,10 @@ class DataDistribution(BaseEnum):
     spread = 1
 
 
-class AxisBase:
-    """Object holding info and data about physical axis of data
+class Axis:
+    """Object holding info and data about physical axis of some data
+
+    In case the axis's data is linear, store the info as a scale and offset else store the data
 
     Parameters
     ----------
@@ -65,21 +68,33 @@ class AxisBase:
     data: ndarray
         A 1D ndarray holding the data of the axis
     index: int
-        a integer representing the index of the Data object this axis is related to
+        an integer representing the index of the Data object this axis is related to
+    scaling: float
+        The scaling to apply to a linspace version in order to obtain the proper scaling
+    offset: float
+        The offset to apply to a linspace/scaled version in order to obtain the proper axis
     """
 
-    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0):
+    def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
+                 offset=None):
         super().__init__()
+
+        self.iaxis = SpecialSlicersData(self, False)
+
         self._size = None
         self._data = None
         self._index = None
         self._label = None
         self._units = None
+        self._scaling = scaling
+        self._offset = offset
 
         self.units = units
         self.label = label
         self.data = data
         self.index = index
+
+        self.get_scale_offset_from_data(data)
 
     @property
     def label(self) -> str:
@@ -127,11 +142,51 @@ class AxisBase:
             self._size = 0
         self._data = data
 
+    def get_data(self):
+        return self._data if self._data is not None else self.create_linear_data(self.size)
+
+    def get_scale_offset_from_data(self, data: np.ndarray = None):
+        """Get the scaling and offset from the axis's data
+
+        If data is not None, extract the scaling and offset
+
+        Parameters
+        ----------
+        data: ndarray
+        """
+        if data is None and self._data is not None:
+            data = self._data
+        if data is not None:
+            if np.allclose(np.diff(data), np.mean(np.diff(data))):
+                self._scaling = np.mean(np.diff(data))
+                self._offset = data[0]
+                self._data = None
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, _scaling: float):
+        self._scaling = _scaling
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, _offset: float):
+        self._offset = _offset
 
     @property
     def size(self) -> int:
-        """int: the size/length of the 1D ndarray"""
+        """int: get/set the size/length of the 1D ndarray"""
         return self._size
+
+    @size.setter
+    def size(self, _size: int):
+        if self._data is None:
+            self._size = _size
 
     @staticmethod
     def _check_index_valid(index: int):
@@ -150,15 +205,29 @@ class AxisBase:
             raise ValueError(f'data for the Axis class should be a 1D numpy array')
 
     def create_linear_data(self, dim):
-        """replace the axis data with a linear version of dim steps of size 1"""
-        self.data = np.linspace(0, dim-1, dim)
+        """replace the axis data with a linear version using scaling and offset if specified"""
+        self.data = self._offset + self._scaling * np.linspace(0, dim-1, dim)
 
     def __len__(self):
-        return self.data.size
+        return self.size
+
+    def _slicer(self, _slice, *ignored, **ignored_also):
+        ax = copy.deepcopy(self)
+        if isinstance(_slice, int):
+            return None
+        elif isinstance(_slice, slice):
+            if ax._data is not None:
+                ax.data = ax._data.__getitem__(_slice)
+                return ax
+            else:
+                ax._offset = ax.offset + _slice.start * ax.scaling
+                ax._size = _slice.stop - _slice.start
+                return ax
 
     def __getitem__(self, item):
-        """For back compatibility when axis was a dict"""
         if hasattr(self, item):
+            # for when axis was a dict
+            deprecation_msg('attributes from an Axis object should not be fetched using __getitem__')
             return getattr(self, item)
 
     def __repr__(self):
@@ -166,43 +235,59 @@ class AxisBase:
 
     def __mul__(self, scale: numbers.Real):
         if isinstance(scale, numbers.Real):
-            return self.__class__(data=self.data * scale, label=self.label, units=self.units, index=self.index)
+            ax = copy.deepcopy(self)
+            if self.data is not None:
+                ax.data *= scale
+            else:
+                ax._offset *= scale
+                ax._scaling *= scale
+            return ax
 
     def __add__(self, offset: numbers.Real):
         if isinstance(offset, numbers.Real):
-            return self.__class__(data=self.data + offset, label=self.label, units=self.units, index=self.index)
+            ax = copy.deepcopy(self)
+            if self.data is not None:
+                ax.data += offset
+            else:
+                ax._offset += offset
+            return ax
 
     def __eq__(self, other):
         eq = self.label == other.label
         eq = eq and (self.units == other.units)
-        eq = eq and (np.any(np.abs(self.data - other.data) < 1e-10))
         eq = eq and (self.index == other.index)
+        if self.data is not None:
+            eq = eq and (np.allclose(self.data, other.data))
+        else:
+            eq = eq and self.offset == other.offset
+            eq = eq and self.scaling == other.scaling
+
         return eq
 
-    def get_scale(self):
-        return np.mean(np.diff(self.data))
+    def mean(self):
+        if self._data is not None:
+            return np.mean(self._data)
+        else:
+            return self.offset + self.size / 2 * self.scaling
 
-    def get_offset(self):
-        return  self.data[0]
+    def min(self):
+        if self._data is not None:
+            return np.min(self._data)
+        else:
+            return self.offset + (self.size * self.scaling if self.scaling < 0 else 0)
 
+    def max(self):
+        if self._data is not None:
+            return np.max(self._data)
+        else:
+            return self.offset + (self.size * self.scaling if self.scaling > 0 else 0)
 
-class Axis(AxisBase):
-    """Axis object to be used to described physical axes of data
-
-    Parameters
-    ----------
-    label: str
-        The label of the axis, for instance 'time' for a temporal axis
-    units: str
-        The units of the data in the object, for instance 's' for seconds
-    data: ndarray
-        A 1D ndarray holding the data of the axis
-    index: int
-        an integer representing the index of the Data object this axis is related to
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def find_index(self, threshold: float):
+        """find the index of hte threshold value within the axis"""
+        if self._data is not None:
+            return mutils.find_index(self._data, threshold)[0][0]
+        else:
+            return int((threshold - self.offset) / self.scaling)
 
 
 class NavAxis(Axis):
@@ -210,34 +295,6 @@ class NavAxis(Axis):
         super().__init__(*args, **kwargs)
         deprecation_msg('NavAxis should not be used anymore, please use Axis object with correct index.'
                         'The navigation index should be specified in the Data object')
-
-
-class ScaledAxis(Axis):
-    def __init__(self, label='', units='', offset=0, scaling=1, **kwargs):
-        super().__init__(label=label, units=units, **kwargs)
-        if not (isinstance(offset, float) or isinstance(offset, int)):
-            raise TypeError('offset for the ScalingAxis class should be a float (or int)')
-        self.offset = offset
-        if not (isinstance(scaling, float) or isinstance(scaling, int)):
-            raise TypeError('scaling for the ScalingAxis class should be a non null float (or int)')
-        if scaling == 0 or scaling == 0.:
-            raise ValueError('scaling for the ScalingAxis class should be a non null float (or int)')
-        self.scaling = scaling
-
-    def keys(self):
-        return ['label', 'units', 'offset', 'scaling']
-
-    def __getitem__(self, item):
-        if item in self.keys():
-            return getattr(self, item)
-
-
-class ScalingOptions(dict):
-    def __init__(self, scaled_xaxis: ScaledAxis, scaled_yaxis: ScaledAxis):
-        assert isinstance(scaled_xaxis, ScaledAxis)
-        assert isinstance(scaled_yaxis, ScaledAxis)
-        self['scaled_xaxis'] = scaled_xaxis
-        self['scaled_yaxis'] = scaled_yaxis
 
 
 class DataLowLevel:
@@ -622,11 +679,14 @@ class AxesManager:
         """
         for ind, axis in enumerate(axes):
             if not isinstance(axis, Axis):
-                raise TypeError(f'An axis of {self.__class__.name} should be an Axis object')
+                raise TypeError(f'An axis of {self.__class__.__name__} should be an Axis object')
             if self.get_shape_from_index(axis.index) != axis.size:
                 warnings.warn(UserWarning('The size of the axis is not coherent with the shape of the data. '
                                           'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
-                axes[ind].create_linear_data(self.get_shape_from_index(axis.index))
+                axis.size = self.get_shape_from_index(axis.index)
+                axis.scaling = 1
+                axis.offset = 0
+                axes[ind] = axis
         self._axes = axes
 
     def get_axes_index(self) -> List[int]:
@@ -1057,12 +1117,10 @@ class DataWithAxes(DataBase):
         nav_indexes = [] if is_navigation else self._am.nav_indexes
         for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            ax_data = ax.data[_slice]
-            if isinstance(ax_data, np.ndarray):  # means the slice keep part of the axis
+            ax = ax.iaxis[_slice]
+            if ax is not None:  # means the slice keep part of the axis
                 if is_navigation:
                     nav_indexes.append(self._am.nav_indexes[ind_slice])
-                ax = copy.copy(ax)
-                ax.data = ax_data
                 axes.append(ax)
             else:
                 for axis in axes_to_append:  # means we removed one of the nav axes (and data dim),
