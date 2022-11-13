@@ -336,6 +336,7 @@ class ViewerND(ParameterManager, ActionManager, QObject):
         self._show_data(dataraw)
 
     def update_widget_visibility(self, data: DataRaw = None):
+        #todo use a factory to create navigator and viewer as needed, shoudl be fine as they have the same interface
         if data is None:
             data = self._data
         self.viewer0D.setVisible(len(data.shape) - len(data.nav_indexes) == 0)
