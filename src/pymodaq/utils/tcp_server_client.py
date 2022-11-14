@@ -470,7 +470,7 @@ class TCPClient(TCPClientTemplate, QObject):
             self.socket.send_string(value_as_string)
 
     @Slot(ThreadCommand)
-    def queue_command(self, command=ThreadCommand()):
+    def queue_command(self, command=ThreadCommand):
         """
         when this TCPClient object is within a thread, the corresponding module communicate with it with signal and slots
         from module to client: module_signal to queue_command slot
