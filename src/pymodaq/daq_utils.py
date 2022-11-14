@@ -19,7 +19,7 @@ sys.modules['pymodaq.daq_utils.calibration_camera'] = import_module('.calibratio
 sys.modules['pymodaq.daq_utils.chrono_timer'] = import_module('.chrono_timer', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.config'] = import_module('.config', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.conftests'] = import_module('.conftests', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.daq_enums'] = import_module('.daq_enums', 'pymodaq.utils')
+sys.modules['pymodaq.daq_utils.daq_enums'] = import_module('.enums', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.daq_utils'] = import_module('.daq_utils', 'pymodaq.utils')
 try:
     import sqlalchemy
