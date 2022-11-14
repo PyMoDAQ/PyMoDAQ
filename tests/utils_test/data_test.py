@@ -20,11 +20,10 @@ SCALING = 0.22
 SIZE = 20
 DATA = OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE)
 
-DATA0D = np.array([0.])
-DATA1D = np.zeros((10,))
-DATA2D = np.zeros((5, 6))
-DATAND = np.zeros((5, 6, 3))
-
+DATA0D = np.array([2.7])
+DATA1D = np.arange(0, 10)
+DATA2D = np.arange(0, 5*6).reshape((5, 6))
+DATAND = np.arange(0, 5 * 6 * 3).reshape((5, 6, 3))
 
 
 def init_axis(data=None, index=0):
@@ -161,7 +160,6 @@ class TestDataBase:
         assert data.size == DATA2D.size
         assert hasattr(data, 'timestamp')
 
-
     def test_labels(self):
         Ndata = 3
         labels = ['label0', 'label1']
@@ -210,6 +208,34 @@ class TestDataBase:
             data_mod.DataBase('myData', data_mod.DataSource(0), data=[DATA2D, DATA0D])  # list of different ndarray shape length
         with pytest.raises(TypeError):
             data_mod.DataBase('myData', data_mod.DataSource(0), data=['12', 5])  # list of non ndarray
+
+    def test_dunder(self):
+        LENGTH = 24
+        data = init_data(DATA0D, Ndata=LENGTH)
+        assert len(data) == LENGTH
+        count = 0
+        for dat in data:
+            assert np.all(dat == pytest.approx(DATA0D))
+            count += 1
+        assert count == len(data)
+
+        with pytest.raises(IndexError):
+            data[-1]
+        with pytest.raises(IndexError):
+            data['str']
+        with pytest.raises(IndexError):
+            data[len(data) + 1]
+
+    def test_maths(self):
+        ax = init_data(data=DATA2D, Ndata=2)
+        ax1 = init_data(data=DATA2D, Ndata=2)
+
+        ax_sum = ax + ax1
+        for ind_data in range(len(ax)):
+            assert np.all(ax_sum[ind_data] == pytest.approx(2 * DATA2D))
+        ax_diff = ax - ax1
+        for ind_data in range(len(ax)):
+            assert np.all(ax_diff[ind_data] == pytest.approx(0 * DATA2D))
 
 
 class TestDataWithAxes:
@@ -365,3 +391,31 @@ class TestDataToExport:
         dat3 = init_data(data=DATA2D, Ndata=1, name='data2Dbis')
         data.append(dat3)
         assert data.get_names('data2d') == ['data2D', 'data2Dbis']
+
+    def test_math(self):
+        dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
+        dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
+        dat2bis = init_data(data=0.2 * DATA2D.reshape(DATA2D.shape[-1::-1]), Ndata=2, name='data2D2bis')
+        dat3 = init_data(data=-0.7 * DATA2D, Ndata=2, name='data2D3')
+
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+        data2 = data_mod.DataToExport(name='toexport', data=[dat3, dat2])
+        data3 = data_mod.DataToExport(name='toexport', data=[dat3, dat2bis])
+        data4 = data_mod.DataToExport(name='toexport', data=[dat3, dat2, dat1])
+
+        data_sum = data1 + data2
+        data_diff = data1 - data2
+
+        assert data_sum[0] == dat1 + dat3
+        assert data_sum[1] == dat2 + dat2
+
+        assert data_diff[0] == dat1 - dat3
+        assert data_diff[1] == dat2 - dat2
+
+        with pytest.raises(ValueError):
+            data1 + data3
+
+        with pytest.raises(TypeError):
+            data1 + data4
+
+
