@@ -267,13 +267,16 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.settings.child('data_shape_settings', 'navigator_axes').setValue(
             dict(all_items=[str(ax.index) for ax in data.axes],
                  selected=[str(ax.index) for ax in data.get_nav_axes()]))
-        if self._data is None or self._data.shape != data.shape or self._data.nav_indexes != data.nav_indexes:
+
+        if self._data is None or self._data.dim != data.dim or self._data.nav_indexes != data.nav_indexes:
             self.update_widget_visibility(data)
             self.init_rois(data)
             force_update = True
-        self.data_displayer.update_data(data, force_update=force_update)
 
+        self.data_displayer.update_data(data, force_update=force_update)
         self._data = data
+
+        self.data_to_export_signal.emit(self.data_to_export)
 
     def init_rois(self, data: DataRaw):
         means = []
