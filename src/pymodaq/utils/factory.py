@@ -22,7 +22,7 @@ class BuilderBase(ABCMeta):
         pass
 
 
-class ObjectFactory:
+class ObjectFactory(metaclass=ABCMeta):
     """Generic ObjectFactory with a decorator register to add object builders to the factory with a unique key
     identifier
 

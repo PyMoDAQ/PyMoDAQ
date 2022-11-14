@@ -1054,6 +1054,11 @@ class DataWithAxes(DataBase):
         return self._am.axes
 
     @property
+    def sig_indexes(self):
+        """convenience property to fetch attribute from axis_manager"""
+        return self._am.sig_indexes
+
+    @property
     def nav_indexes(self):
         """convenience property to fetch attribute from axis_manager"""
         return self._am.nav_indexes

@@ -24,6 +24,8 @@ def test_base_enum():
     assert myenum == Enum['name2']
     assert myenum != 'name1'
 
+    assert Enum.values() == [45, 'str', -2]
+
 
 def test_enum_checker():
     txt = 'name2'

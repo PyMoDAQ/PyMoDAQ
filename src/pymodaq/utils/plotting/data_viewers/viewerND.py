@@ -218,7 +218,7 @@ class DataDisplayer(QObject):
         self._nav_limits = x, y, width, height
 
 
-class ViewerND(ParameterManager, ActionManager, QObject):
+class ViewerND(ParameterManager, ActionManager, ViewerBase):
     params = [
         {'title': 'Set data 4D', 'name': 'set_data_4D', 'type': 'action', 'visible': False},
         {'title': 'Set data 3D', 'name': 'set_data_3D', 'type': 'action', 'visible': False},
@@ -235,15 +235,15 @@ class ViewerND(ParameterManager, ActionManager, QObject):
         ]},
     ]
 
-    def __init__(self, parent_widget: QtWidgets.QWidget):
-        QObject.__init__(self)
+    def __init__(self, parent_widget: QtWidgets.QWidget, title=''):
+        ViewerBase.__init__(self, parent_widget, title=title)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
         ParameterManager.__init__(self)
 
         self._area = None
         self._data = None
 
-        self.parent_widget: QtWidgets.QWidget = parent_widget
+        self.parent: QtWidgets.QWidget = parent_widget
 
         self.viewer0D: Viewer0D = None
         self.viewer1D: Viewer1D = None
@@ -395,11 +395,11 @@ class ViewerND(ParameterManager, ActionManager, QObject):
         self.data_displayer.processor_changed.connect(self.update_filters)
 
     def setup_widgets(self):
-        self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.parent_widget.layout().addWidget(self.toolbar)
+        self.parent.setLayout(QtWidgets.QVBoxLayout())
+        self.parent.layout().addWidget(self.toolbar)
 
         self._area = DockArea()
-        self.parent_widget.layout().addWidget(self._area)
+        self.parent.layout().addWidget(self._area)
 
         viewer0D_widget = QtWidgets.QWidget()
         self.viewer0D = Viewer0D(viewer0D_widget)

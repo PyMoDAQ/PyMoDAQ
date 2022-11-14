@@ -9,7 +9,7 @@ from numbers import Number
 from typing import List, Tuple
 from abc import ABCMeta, abstractmethod
 
-from pymodaq.utils.factory import ObjectFactory
+from pymodaq.utils.factory import ObjectFactory, BuilderBase
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils.data import DataWithAxes, Axis, DataRaw, DataBase
 
