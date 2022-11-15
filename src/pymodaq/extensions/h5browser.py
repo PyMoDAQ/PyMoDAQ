@@ -5,6 +5,7 @@ from pymodaq.utils.config import Config
 
 config = Config()
 
+
 def main():
     app = QtWidgets.QApplication(sys.argv)
     if config['style']['darkstyle']:

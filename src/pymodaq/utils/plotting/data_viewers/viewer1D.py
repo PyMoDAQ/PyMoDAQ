@@ -354,9 +354,7 @@ class Viewer1D(ViewerBase):
 
         self._labels = []
 
-
-
-    def set_crosshair_position(self, xpos, ypos):
+    def set_crosshair_position(self, xpos, ypos=0):
         """Convenience method to set the crosshair positions"""
         self.view.crosshair.set_crosshair_position(xpos=xpos, ypos=ypos)
 
