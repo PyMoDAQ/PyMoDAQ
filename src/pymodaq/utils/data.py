@@ -352,7 +352,7 @@ class DataBase(DataLowLevel):
         self._data = None
         self._length = None
         self._labels = None
-        self._dim = enum_checker(DataDim, dim)
+        self._dim = dim
 
         source = enum_checker(DataSource, source)
         self._source = source
@@ -524,6 +524,7 @@ class DataBase(DataLowLevel):
         if self._dim is None:
             self._dim = dim
         else:
+            self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
                 warnings.warn(UserWarning('The specified dimensionality is not coherent with the data shape'))
                 self._dim = dim
@@ -1340,7 +1341,7 @@ class DataToExport(DataLowLevel):
     def __next__(self):
         if self._iter_index < len(self):
             self._iter_index += 1
-            return self.data[self._iter_index]
+            return self.data[self._iter_index-1]
         else:
             raise StopIteration
 
@@ -1411,11 +1412,22 @@ class DataToExport(DataLowLevel):
 
         Make sure only one DataWithAxes object with a given name is in the list
         """
+        data = copy.deepcopy(data)
         self._check_data_type(data)
         obj = self.get_data_from_name(data.name)
         if obj is not None:
             self._data.pop(self.data.index(obj))
         self._data.append(data)
+
+    @dispatch(object)
+    def append(self, data: 'DataToExport'):
+        """Append/replace DataWithAxes object to the data attribute
+
+        Make sure only one DataWithAxes object with a given name is in the list
+        """
+        if isinstance(data, DataToExport):
+            for dat in data:
+                self.append(dat)
 
 
 if __name__ == '__main__':
