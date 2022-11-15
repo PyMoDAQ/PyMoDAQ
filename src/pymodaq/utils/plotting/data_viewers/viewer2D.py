@@ -814,15 +814,15 @@ class Viewer2D(ViewerBase):
             if not self._display_temporary:
                 self.data_to_export.append(
                     DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                                x_axis=Axis(data=lineout_data.hor_axis,
+                                axes=[Axis(data=lineout_data.hor_axis,
                                             units=self.x_axis.axis_units,
-                                            label=self.x_axis.axis_label)))
+                                            label=self.x_axis.axis_label)]))
 
                 self.data_to_export.append(
                     DataFromRoi(name=f'Vlineout_{roi_key}', data=[lineout_data.ver_data],
-                                x_axis=Axis(data=lineout_data.ver_axis,
+                                axes=[Axis(data=lineout_data.ver_axis,
                                             units=self.y_axis.axis_units,
-                                            label=self.y_axis.axis_label)))
+                                            label=self.y_axis.axis_label)]))
 
                 self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data]))
 
