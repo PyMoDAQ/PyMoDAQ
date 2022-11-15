@@ -147,8 +147,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._ind_continuous_grab: int = 0
 
         self._external_h5_data = None
-        
-
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
@@ -964,11 +962,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                             os.path.join(local_path, 'camera_calibrations', param.value() + '.xml'))
                         param_obj = Parameter.create(name='calib', type='group', children=params)
                         self.settings.child('main_settings', 'axes').restoreState(
-                            param_obj.child(('axes')).saveState(), addChildren=False, removeChildren=False)
+                            param_obj.child('axes').saveState(), addChildren=False, removeChildren=False)
                         self.settings.child('main_settings', 'axes').show()
                 else:
                     for viewer in self.viewers:
-                        viewer.set_scaling_axes(self.get_scaling_options())
+                        viewer.x_axis, viewer.y_axis = self.get_scaling_options()
 
         elif param.name() == 'continuous_saving_opt':
             self._h5saver_continuous.settings_tree.setVisible(param.value())
@@ -1039,50 +1037,22 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     if any(channel >= self.settings.child('main_settings', 'overshoot', 'overshoot_value').value()):
                         self.overshoot_signal.emit(True)
 
-    # def get_scaling_options(self):
-    #     """Create axes scaling options depending on the ('main_settings', 'axes') settings
-    #
-    #     Returns
-    #     -------
-    #     pymodaq.utils.data.ScalingOptions
-    #     """
-    #     scaling_options = data_mod.ScalingOptions(
-    #         scaled_xaxis=data_mod.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'xaxis', 'xlabel').value(),
-    #                                            units=self.settings.child('main_settings', 'axes', 'xaxis', 'xunits').value(),
-    #                                            offset=self.settings.child('main_settings', 'axes', 'xaxis',
-    #                                                                  'xoffset').value(),
-    #                                            scaling=self.settings.child('main_settings', 'axes', 'xaxis',
-    #                                                                   'xscaling').value()),
-    #         scaled_yaxis=data_mod.ScaledAxis(label=self.settings.child('main_settings', 'axes', 'yaxis', 'ylabel').value(),
-    #                                            units=self.settings.child('main_settings', 'axes', 'yaxis', 'yunits').value(),
-    #                                            offset=self.settings.child('main_settings', 'axes', 'yaxis',
-    #                                                                  'yoffset').value(),
-    #                                            scaling=self.settings.child('main_settings', 'axes', 'yaxis',
-    #                                                                   'yscaling').value()))
-    #     return scaling_options
+    def get_scaling_options(self):
+        """Create axes scaling options depending on the ('main_settings', 'axes') settings
 
-    # def _set_xy_axis(self, data, ind_viewer):
-    #     """Set data viewers (1D and 2D) axes depending on the content of data
-    #
-    #     Parameters
-    #     ----------
-    #     data: DataFromPlugins
-    #         data as exported from the plugins and containing eventually info on axes
-    #     ind_viewer: int
-    #
-    #     Returns
-    #     -------
-    #
-    #     """
-    #     if 'x_axis' in data.keys():
-    #         self.viewers[ind_viewer].x_axis = data['x_axis']
-    #         if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-    #             self._command_tcpip.emit(ThreadCommand('x_axis', [data['x_axis']]))
-    #
-    #     if 'y_axis' in data.keys():
-    #         self.viewers[ind_viewer].y_axis = data['y_axis']
-    #         if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-    #             self._command_tcpip.emit(ThreadCommand('y_axis', [data['y_axis']]))
+        Returns
+        -------
+        pymodaq.utils.data.ScalingOptions
+        """
+        scaled_xaxis = Axis(label=self.settings['main_settings', 'axes', 'xaxis', 'xlabel'],
+                            units=self.settings['main_settings', 'axes', 'xaxis', 'xunits'],
+                            offset=self.settings['main_settings', 'axes', 'xaxis', 'xoffset'],
+                            scaling=self.settings['main_settings', 'axes', 'xaxis', 'xscaling'])
+        scaled_yaxis = Axis(label=self.settings['main_settings', 'axes', 'yaxis', 'ylabel'],
+                            units=self.settings['main_settings', 'axes', 'yaxis', 'yunits'],
+                            offset=self.settings['main_settings', 'axes', 'yaxis', 'yoffset'],
+                            scaling=self.settings['main_settings', 'axes', 'yaxis', 'yscaling'])
+        return scaled_xaxis, scaled_yaxis
 
     @Slot(ThreadCommand)
     def thread_status(self, status):
