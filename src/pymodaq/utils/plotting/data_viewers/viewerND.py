@@ -243,8 +243,6 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self._area = None
         self._data = None
 
-        self.parent: QtWidgets.QWidget = parent_widget
-
         self.viewer0D: Viewer0D = None
         self.viewer1D: Viewer1D = None
         self.viewer2D: Viewer2D = None

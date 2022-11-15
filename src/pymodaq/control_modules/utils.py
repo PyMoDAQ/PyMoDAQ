@@ -12,13 +12,38 @@ from pymodaq.utils.gui_utils import CustomApp
 from pymodaq.utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
 from pymodaq.utils.config import Config
 from pymodaq.utils.parameter import Parameter
+from pymodaq.utils.enums import BaseEnum, enum_checker
+from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 
 
-DAQ_TYPES = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
+class DAQTypesEnum(BaseEnum):
+    """enum relating a given DAQType and a viewer type
+    See Also
+    --------
+    pymodaq.utils.plotting.data_viewers.viewer.ViewersEnum
+    """
+    DAQ0D = 'Viewer0D'
+    DAQ1D = 'Viewer1D'
+    DAQ2D = 'Viewer2D'
+    DAQND = 'ViewerND'
+
+    def to_data_type(self):
+        return ViewersEnum[self.value].value
+
+    def to_viewer_type(self):
+        return self.value
+
+    def to_daq_type(self):
+        return self.name
+
+
+DAQ_TYPES = DAQTypesEnum
+
 DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
              'DAQ1D': get_plugins('daq_1Dviewer'),
              'DAQ2D': get_plugins('daq_2Dviewer'),
              'DAQND': get_plugins('daq_NDviewer'),}
+
 
 config = Config()
 

@@ -15,6 +15,7 @@ config_viewers = {
 
 
 class ViewersEnum(BaseEnum):
+    """enum relating a given viewer with data type"""
     Viewer0D = 'Data0D'
     Viewer1D = 'Data1D'
     Viewer2D = 'Data2D'

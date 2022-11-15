@@ -77,7 +77,7 @@ class DataDisplayer(QObject):
 
     def update_axis(self, axis: Axis):
         self._axis = axis
-        if self._axis.data is None: # create real data vector once here for subsequent use
+        if self._axis.data is None:  # create real data vector once here for subsequent use
             self._axis.create_linear_data(axis.size)
 
     def get_plot_items(self):
@@ -91,7 +91,7 @@ class DataDisplayer(QObject):
         if len(data) != len(self._plot_items):
             self.update_display_items(data)
 
-        axis = data.get_axis_from_index(0, create=True)
+        axis = data.get_axis_from_index(0, create=False)
         if axis is not None:
             self.update_axis(axis)
 

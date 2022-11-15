@@ -39,8 +39,10 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
-from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
-from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
+from pymodaq.utils.enums import enum_checker
+
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -98,8 +100,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         ParameterManager.__init__(self)
         ControlModule.__init__(self)
 
-        self._viewer_types = []
-        self._viewers = []
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self._daq_type: DAQTypesEnum = daq_type
+
+        self._viewer_types: List[ViewersEnum] = []
+        self._viewers: List[ViewerBase] = []
 
         if isinstance(parent, DockArea):
             self.dockarea = parent
@@ -143,9 +148,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self._external_h5_data = None
         
-        self._daq_type = daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
-        self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self._daq_type]]
+
+
+        self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
+        self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
         self._detector: str = self._detectors[0]
         self.settings.child('main_settings', 'detector_type').setValue(self._detector)
 
@@ -224,7 +230,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif cmd.command == 'do_bkg':
             self.do_bkg = cmd.attribute
         elif cmd.command == 'viewers_changed':
-            self._viewer_types = cmd.attribute['viewer_types']
+            self._viewer_types: List[ViewersEnum] = cmd.attribute['viewer_types']
             self.viewers = cmd.attribute['viewers']
 
     @property
@@ -237,35 +243,36 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.ui is not None:
             return self.ui.viewer_docks
 
-    def daq_type_changed_from_ui(self, daq_type):
+    def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
         self._daq_type = daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
-        self.detectors_changed_from_ui([det_dict['name'] for det_dict in DET_TYPES[daq_type]])
+        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
+        self.detectors_changed_from_ui([det_dict['name'] for det_dict in DET_TYPES[daq_type.name]])
         self.detector = self.detectors[0]
 
     @property
     def daq_type(self):
-        """:obj:`str`: Get/Set the daq_type ('DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND')
+        """:obj:`DAQTypesEnum`: Get/Set the daq_type
 
         Update the detector property with the list of available detectors of a given daq_type
         """
         return self._daq_type
 
     @daq_type.setter
-    def daq_type(self, daq_type):
-        if daq_type not in self.daq_types:
-            raise ValueError(f'{daq_type} is not a valid DAQ_TYPE: {self.daq_types}')
+    def daq_type(self, daq_type: DAQTypesEnum):
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+
         self._daq_type = daq_type
         if self.ui is not None:
             self.ui.daq_type = daq_type
-        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type)
-        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type]]
+        self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
+        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type.name]]
         self.detector = self.detectors[0]
 
     @property
     def daq_types(self):
         """:obj:`list` of :obj:`str`: List of available DAQ_TYPES"""
-        return DAQ_TYPES
+        return DAQTypesEnum.names()
 
     def detector_changed_from_ui(self, detector):
         self._detector = detector
@@ -717,8 +724,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                                                                           scan_type='',
                                                                                           enlargeable=False)
 
-                                if data_dim == 'data2D' and 'Data2D' in self._viewer_types:
-                                    ind_viewer = self._viewer_types.index('Data2D')
+                                if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
+                                    ind_viewer = self._viewer_types.names().index('Data2D')
                                     string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
                                     self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
         except Exception as e:
@@ -896,72 +903,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         _process_overshoot
         """
         self._process_overshoot(data)
-        self._viewer_types = [data.dim for data in data]
+        self._viewer_types = [ViewersEnum(data.dim.name) for data in data]
         if self.ui is not None:
             if self.ui.viewer_types != self._viewer_types:
                 self.ui.update_viewers(self._viewer_types)
-
-    def _process_data(self, data: List[DataFromPlugins], container: DataToExport):
-        """Process data depending on the settings options
-
-        In particular extract all the given data and sort/store them by dimensionality in dedicated keys ('data0D', ...)
-        in the container. Using a *container* here remove the need to create a copy to be returned by this method
-
-        Parameters
-        ----------
-        data: list of DataFromPlugins
-        container: OrderedDict
-            The container is in general the self._data_to_save_export attribute
-
-        """
-        # data0D = OrderedDict([])
-        # data1D = OrderedDict([])
-        # data2D = OrderedDict([])
-        # dataND = OrderedDict([])
-
-        for ind_data, data in enumerate(data):
-            if hasattr(data, 'external_h5'):
-                self._external_h5_data = data.external_h5
-
-            container.append(data)
-        #
-        #     data_tmp = copy.deepcopy(data)
-        #     data_dim = data_tmp['dim']
-        #
-        #     data_arrays = data_tmp.pop('data')
-        #
-        #     name = data_tmp.pop('name')
-        #     for ind_sub_data, dat in enumerate(data_arrays):
-        #         if 'labels' in data_tmp:
-        #             data_tmp.pop('labels')
-        #         subdata_tmp = DataToExport(name=self._title, data=dat, **data_tmp)
-        #         sub_name = f'{self._title}_{name}_CH{ind_sub_data:03}'
-        #         if data_dim.lower() == 'data0d':
-        #             subdata_tmp['data'] = subdata_tmp['data'][0]
-        #             data0D[sub_name] = subdata_tmp
-        #         elif data_dim.lower() == 'data1d':
-        #             if 'x_axis' not in subdata_tmp:
-        #                 Nx = len(dat)
-        #                 x_axis = Axis(data=np.linspace(0, Nx - 1, Nx))
-        #                 subdata_tmp['x_axis'] = x_axis
-        #             data1D[sub_name] = subdata_tmp
-        #         elif data_dim.lower() == 'data2d':
-        #             if 'x_axis' not in subdata_tmp:
-        #                 Nx = dat.shape[1]
-        #                 x_axis = Axis(data=np.linspace(0, Nx - 1, Nx))
-        #                 subdata_tmp['x_axis'] = x_axis
-        #             if 'y_axis' not in subdata_tmp:
-        #                 Ny = dat.shape[0]
-        #                 y_axis = Axis(data=np.linspace(0, Ny - 1, Ny))
-        #                 subdata_tmp['y_axis'] = y_axis
-        #             data2D[sub_name] = subdata_tmp
-        #         elif data_dim.lower() == 'datand':
-        #             dataND[sub_name] = subdata_tmp
-        #
-        # container['data0D'] = data0D
-        # container['data1D'] = data1D
-        # container['data2D'] = data2D
-        # container['dataND'] = dataND
 
     def set_data_to_viewers(self, data, temp=False):
         """Process data dimensionality and send appropriate data to their data viewers
@@ -1012,7 +957,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.settings.child('main_settings', 'N_live_averaging').hide()
 
         elif param.name() in putils.iter_children(self.settings.child('main_settings', 'axes'), []):
-            if self.daq_type == "DAQ2D":
+            if self.daq_type.name == "DAQ2D":
                 if param.name() == 'use_calib':
                     if param.value() != 'None':
                         params = ioxml.XML_file_to_parameter(
@@ -1080,7 +1025,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 for child in self.settings.child('detector_settings').children():
                     child.remove()
 
-            det_params, _class = get_viewer_plugins(self.daq_type, self.detector)
+            det_params, _class = get_viewer_plugins(self.daq_type.name, self.detector)
             self.settings.child('detector_settings').addChildren(det_params.children())
         except Exception as e:
             self.logger.exception(str(e))
@@ -1209,40 +1154,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.grab_status.emit(False)
 
         elif status.command == "x_axis":
-            try:
-                x_axis = status.attribute[0]
-                if isinstance(x_axis, list):
-                    if len(x_axis) == len(self.viewers):
-                        for ind, viewer in enumerate(self.viewers):
-                            viewer.x_axis = x_axis[ind]
-                    x_axis = x_axis[0]
-                else:
-                    for viewer in self.viewers:
-                        viewer.x_axis = x_axis
-
-                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('x_axis', [x_axis]))
-
-            except Exception as e:
-                self.logger.exception(str(e))
+            deprecation_msg(f'using emit_x_axis in plugins is deprecated use data emission with correct axis to set it')
 
         elif status.command == "y_axis":
-            try:
-                y_axis = status.attribute[0]
-                if isinstance(y_axis, list):
-                    if len(y_axis) == len(self.viewers):
-                        for ind, viewer in enumerate(self.viewers):
-                            viewer.y_axis = y_axis[ind]
-                    y_axis = y_axis[0]
-                else:
-                    for viewer in self.viewers:
-                        viewer.y_axis = y_axis
-
-                if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
-                    self._command_tcpip.emit(ThreadCommand('y_axis', [y_axis]))
-
-            except Exception as e:
-                self.logger.exception(str(e))
+            deprecation_msg(f'using emit_y_axis in plugins is deprecated use data emission with correct axis to set it')
 
         elif status.command == "update_channels":
             pass
@@ -1430,8 +1345,8 @@ class DAQ_Detector(QObject):
         self.average_done = False
         self.hardware_averaging = False
         self.show_averaging = False
-        self.wait_time = settings_parameter.child('main_settings', 'wait_time').value()
-        self.daq_type = settings_parameter.child('main_settings', 'DAQ_type').value()
+        self.wait_time = settings_parameter['main_settings', 'wait_time']
+        self.daq_type = DAQTypesEnum[settings_parameter['main_settings', 'DAQ_type']]
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
@@ -1547,7 +1462,7 @@ class DAQ_Detector(QObject):
         try:
             # status="Not initialized"
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
-            det_params, class_ = get_viewer_plugins(self.daq_type, self.detector_name)
+            det_params, class_ = get_viewer_plugins(self.daq_type.name, self.detector_name)
             self.detector = class_(self, params_state)
 
             try:

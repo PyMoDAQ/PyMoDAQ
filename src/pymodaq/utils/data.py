@@ -352,7 +352,7 @@ class DataBase(DataLowLevel):
         self._data = None
         self._length = None
         self._labels = None
-        self._dim = dim
+        self._dim = enum_checker(DataDim, dim)
 
         source = enum_checker(DataSource, source)
         self._source = source
@@ -554,8 +554,8 @@ class AxesManager:
         self._nav_indexes = nav_indexes
         self._sig_indexes = sig_indexes if sig_indexes is not None else self.compute_sig_indexes()
 
-        self._check_axis(axes)
-        self._manage_named_axes(axes, **kwargs)
+        self._check_axis(self._axes)
+        self._manage_named_axes(self._axes, **kwargs)
 
     def compute_sig_indexes(self):
         _shape = list(self._data_shape)
@@ -574,6 +574,11 @@ class AxesManager:
     @property
     def axes(self):
         return self._axes
+
+    @axes.setter
+    def axes(self, axes: List[Axis]):
+        self._axes = axes[:]
+        self._check_axis(self._axes)
 
     def _has_get_axis_from_index(self, index: int):
         """Check if the axis referred by a given data dimensionality index is present
@@ -1098,6 +1103,11 @@ class DataWithAxes(DataBase):
     def axes(self):
         """convenience property to fetch attribute from axis_manager"""
         return self._am.axes
+
+    @axes.setter
+    def axes(self, axes: List[Axis]):
+        """convenience property to set attribute from axis_manager"""
+        self._am.axes = axes
 
     @property
     def sig_indexes(self):
