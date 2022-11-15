@@ -2499,10 +2499,9 @@ class H5Browser(QObject):
 
         H_splitter.addWidget(V_splitter2)
 
-        form_viewer = QtWidgets.QWidget()
-        self.viewer_area = DockArea()
-        self.hyperviewer = ViewerND(self.viewer_area)
-        H_splitter.addWidget(self.viewer_area)
+        widget_viewer = QtWidgets.QWidget()
+        self.hyperviewer = ViewerND(widget_viewer)
+        H_splitter.addWidget(widget_viewer)
 
         layout.addWidget(H_splitter)
         self.parent.setLayout(layout)
