@@ -6,7 +6,7 @@ Created the 15/11/2022
 """
 import os
 from numbers import Number
-
+import xml.etree.ElementTree as ET
 from pymodaq.utils.logger import set_logger, get_module_name
 from qtpy.QtCore import QObject, Signal
 
@@ -14,13 +14,14 @@ from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.gui_utils.file_io import select_file
-
+from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.gui_utils.utils import dashboard_submodules_params
 
 from qtpy import QtWidgets
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
-from pymodaq.utils.data import DataDim
+from pymodaq.utils.data import DataDim, DataToExport
+from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 import datetime
 from dateutil import parser
@@ -31,7 +32,7 @@ import copy
 
 from .backends import (H5Backend, backends_available, SaveTypeEnum, InvalidSave, InvalidExport, InvalidDataType,
                        InvalidGroupType, InvalidGroupDataType, Node, group_types, InvalidDataDimension, InvalidScanType,
-                       data_types, scan_types, data_dimensions)
+                       data_types, scan_types, data_dimensions, Group)
 
 from .browsing import H5Browser
 
@@ -162,7 +163,7 @@ class H5SaverBase(H5Backend, ParameterManager):
         return self._h5file
 
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([]),
-                  raw_group_name='Raw_datas'):
+                  raw_group_name='raw_data'):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
@@ -189,21 +190,21 @@ class H5SaverBase(H5Backend, ParameterManager):
         datetime_now = datetime.datetime.now()
 
         if addhoc_file_path is None:
-            if not os.path.isdir(self.settings.child(('base_path')).value()):
-                os.mkdir(self.settings.child(('base_path')).value())
+            if not os.path.isdir(self.settings['base_path']):
+                os.mkdir(self.settings['base_path'])
 
             # set the filename and path
-            base_name = self.settings.child(('base_name')).value()
+            base_name = self.settings['base_name']
 
             if not custom_naming:
-                custom_naming = self.settings.child(('custom_name')).value()
+                custom_naming = self.settings['custom_name']
 
             if not custom_naming:
-                scan_type = self.settings.child(('save_type')).value() == 'scan'
+                scan_type = self.settings['save_type'] == 'scan'
                 scan_path, current_scan_name, save_path = self.update_file_paths(update_h5)
                 self.current_scan_name = current_scan_name
-                self.settings.child(('current_scan_name')).setValue(current_scan_name)
-                self.settings.child(('current_scan_path')).setValue(str(scan_path))
+                self.settings.child('current_scan_name').setValue(current_scan_name)
+                self.settings.child('current_scan_path').setValue(str(scan_path))
 
                 if not scan_type:
                     self.h5_file_path = save_path.parent  # will remove the dataset part used for DAQ_scan datas
@@ -223,7 +224,7 @@ class H5SaverBase(H5Backend, ParameterManager):
             self.h5_file_name = addhoc_file_path.name
 
         fullpathname = str(self.h5_file_path.joinpath(self.h5_file_name))
-        self.settings.child(('current_h5_file')).setValue(fullpathname)
+        self.settings.child('current_h5_file').setValue(fullpathname)
 
         if update_h5:
             self.current_scan_group = None
@@ -248,8 +249,7 @@ class H5SaverBase(H5Backend, ParameterManager):
         else:
             self.current_scan_group = self.get_last_scan()
 
-        self.raw_group.attrs['type'] = self.settings.child(
-            ('save_type')).value()  # first possibility to set a node attribute
+        self.raw_group.attrs['type'] = self.settings['save_type']  # first possibility to set a node attribute
         self.root().set_attr('file', self.h5_file_name)  # second possibility
         if update_h5:
             self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
@@ -917,3 +917,91 @@ class H5Saver(H5SaverBase, QObject):
         self.new_file_sig.emit(status)
 
 
+class DetectorDataSaver:
+    def __init__(self, path: Path = None):
+
+        if path is not None:
+            path = Path(path)
+            
+        self._det_group: Group = None
+
+        self.h5saver = H5Saver(save_type='detector')
+        self.h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
+
+    def add_detector(self, detector: DAQ_Viewer):
+        settings_xml = ET.Element('All_settings')
+        settings_xml.append(ioxml.walk_parameters_to_xml(param=detector.settings))
+        settings_xml.append(ioxml.walk_parameters_to_xml(param=self.h5saver.settings))
+
+        if self.ui is not None:
+            for ind, viewer in enumerate(detector.viewers):
+                if hasattr(viewer, 'roi_manager'):
+                    roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}')
+                    roi_xml.append(ioxml.walk_parameters_to_xml(viewer.roi_manager.settings))
+
+        self._det_group = self.h5saver.add_det_group(self.h5saver.raw_group, "Data", ET.tostring(settings_xml))
+
+    def add_external_h5(self, external_h5_file):
+
+        external_group = self.h5saver.add_group('external_data', 'external_h5', self._det_group)
+        if not external_h5_file.isopen:
+            h5saver = H5Saver()
+            h5saver.init_file(addhoc_file_path=external_h5_file.filename)
+            h5_file = h5saver.h5_file
+        else:
+            h5_file = external_h5_file
+        h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
+        h5_file.flush()
+        h5_file.close()
+
+    def add_data(self, data: DataToExport):
+
+    try:
+        self._channel_arrays = OrderedDict([])
+        data_dims = ['data1D']  # we don't recrod 0D data in this mode (only in continuous)
+        if h5saver.settings.child(('save_2D')).value():
+            data_dims.extend(['data2D', 'dataND'])
+
+        if self._bkg is not None and self._do_bkg:
+            bkg_container = OrderedDict([])
+            self._process_data(self._bkg, bkg_container)
+
+        for data_dim in data_dims:
+            if data[data_dim] is not None:
+                if data_dim in data.keys() and len(data[data_dim]) != 0:
+                    if not h5saver.is_node_in_group(det_group, data_dim):
+                        self._channel_arrays[data_dim] = OrderedDict([])
+
+                        data_group = h5saver.add_data_group(det_group, data_dim)
+                        for ind_channel, channel in enumerate(data[data_dim]):  # list of OrderedDict
+
+                            channel_group = h5saver.add_CH_group(data_group, title=channel)
+
+                            self._channel_arrays[data_dim]['parent'] = channel_group
+                            if self._bkg is not None and self._do_bkg:
+                                if channel in bkg_container[data_dim]:
+                                    data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
+                            self._channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
+                                                                                       data[data_dim][channel],
+                                                                                       scan_type='',
+                                                                                       enlargeable=False)
+
+                            if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
+                                ind_viewer = self._viewer_types.names().index('Data2D')
+                                string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(
+                                    self.viewers[ind_viewer].parent)
+                                self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
+    except Exception as e:
+        self.logger.exception(str(e))
+
+    try:
+        if self.ui is not None:
+            (root, filename) = os.path.split(str(path))
+            filename, ext = os.path.splitext(filename)
+            image_path = os.path.join(root, filename + '.png')
+            self.dockarea.parent().grab().save(image_path)
+    except Exception as e:
+        self.logger.exception(str(e))
+
+    h5saver.close_file()
+    self.data_saved.emit()
