@@ -9,7 +9,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt
 import pyqtgraph as pg
 import numpy as np
 
-from pymodaq.utils.data import DataRaw, DataFromRoi, Axis, DataToExport
+from pymodaq.utils.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.items.crosshair import Crosshair
@@ -378,7 +378,7 @@ class Viewer1D(ViewerBase):
                                             units=lineout_data.hor_axis.units,
                                             label=lineout_data.hor_axis.label)))
 
-                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}',
+                self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
                                                        data=[np.array([lineout_data.int_data])]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
