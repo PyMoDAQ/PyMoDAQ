@@ -205,7 +205,7 @@ class ROIScalableGroup(GroupParameter):
         else:
             children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
 
-        functions = ['Sum', 'Mean', 'half-life', 'expotime']
+        functions = ['Sum', 'Mean', 'half-life', 'expotime', 'fwhm', 'moment', 'fwhm_moment2']
         children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list', 'limits': functions,
                          'value': 'Sum', 'visible': self.roi_type == '1D'})
         children.extend([

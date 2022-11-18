@@ -10,6 +10,7 @@ from pymodaq.daq_utils.plotting.items.crosshair import Crosshair
 import pyqtgraph as pg
 import numpy as np
 from pymodaq.daq_utils import daq_utils as utils
+from pymodaq.daq_utils import math_utils as mutils
 from pymodaq.daq_utils.managers.action_manager import QAction
 from pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.daq_utils.managers.roi_manager import ROIManager
@@ -533,7 +534,7 @@ class Viewer1D(QtWidgets.QWidget, QObject):
 
     def update_crosshair_data(self, posx, posy, name=""):
         try:
-            indx = utils.find_index(self._x_axis, posx)[0][0]
+            indx = mutils.find_index(self._x_axis, posx)[0][0]
 
             string = "y="
             for data in self.datas:
@@ -666,7 +667,7 @@ class Viewer1D_math(QObject):
             # self.status_sig.emit(["Update_Status","doing math"])
             data_lo = []
             for ind_meas in range(len(self.operations)):
-                indexes = utils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
+                indexes = mutils.find_index(self.x_axis, self.ROI_bounds[ind_meas])
                 ind1 = indexes[0][0]
                 ind2 = indexes[1][0]
                 sub_data = self.datas[self.channels[ind_meas]][ind1:ind2]
@@ -676,18 +677,29 @@ class Viewer1D_math(QObject):
                     data_lo.append(float(np.mean(sub_data)))
                 elif self.operations[ind_meas] == "Sum":
                     data_lo.append(float(np.sum(sub_data)))
-                elif self.operations[ind_meas] == 'half-life' or self.operations[ind_meas] == 'expotime':
-                    ind_x0 = utils.find_index(sub_data, np.max(sub_data))[0][0]
+                else:
+                    ind_x0 = mutils.find_index(sub_data, np.max(sub_data))[0][0]
                     x0 = sub_xaxis[ind_x0]
-                    sub_xaxis = sub_xaxis[ind_x0:]
-                    sub_data = sub_data[ind_x0:]
-                    offset = sub_data[-1]
-                    N0 = np.max(sub_data) - offset
+                    max = np.max(sub_data)
+                    moments = mutils.my_moment(sub_xaxis, sub_data)
+
+                    sub_data = sub_data - np.min(sub_data)
+                    if self.operations[ind_meas] in ['half-life', 'expotime']:
+                        sub_xaxis = sub_xaxis[ind_x0:]
+                        sub_data = sub_data[ind_x0:]
+
                     if self.operations[ind_meas] == 'half-life':
-                        time = sub_xaxis[utils.find_index(sub_data - offset, 0.5 * N0)[0][0]] - x0
+                        val_to_append = sub_xaxis[mutils.find_index(sub_data, 0.5 * max)[0][0]] - x0
                     elif self.operations[ind_meas] == 'expotime':
-                        time = sub_xaxis[utils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
-                    data_lo.append(time)
+                        val_to_append = sub_xaxis[mutils.find_index(sub_data, 0.37 * max)[0][0]] - x0
+                    elif self.operations[ind_meas] == 'fwhm':
+                        ind_x0m, fwhm_value = mutils.find_index(sub_data, max / 2)[0]
+                        val_to_append = (sub_xaxis[ind_x0] - sub_xaxis[ind_x0m]) * 2
+                    elif self.operations[ind_meas] == 'moment':
+                        val_to_append = moments[0]
+                    elif self.operations[ind_meas] == 'fwhm_moment2':
+                        val_to_append = np.sqrt(8*np.log(2)) * moments[1]
+                    data_lo.append(val_to_append)
 
             return data_lo
         except Exception as e:
@@ -700,10 +712,10 @@ def main():
     Form = QtWidgets.QWidget()
     prog = Viewer1D(Form)
 
-    from pymodaq.daq_utils.daq_utils import gauss1D
+    from pymodaq.daq_utils.math_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
-    y1 = gauss1D(x, 75, 25)
+    y1 = gauss1D(x, 75, 25 / (np.sqrt(2)))  # so the measured FWHM should be 25
     y2 = gauss1D(x, 120, 50, 2)
     tau_half = 27
     tau2 = 100
@@ -764,6 +776,6 @@ def main_nans():
     sys.exit(app.exec_())
 
 if __name__ == '__main__':  # pragma: no cover
-    #main()
+    main()
     #main_unsorted()
-    main_nans()
+    #main_nans()
