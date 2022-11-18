@@ -22,6 +22,7 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
 from pymodaq.utils.data import DataDim, DataToExport
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+from pymodaq.utils.enums import BaseEnum, enum_checker
 
 import datetime
 from dateutil import parser
@@ -31,7 +32,7 @@ import copy
 
 
 from .backends import (H5Backend, backends_available, SaveTypeEnum, InvalidSave, InvalidExport, InvalidDataType,
-                       InvalidGroupType, InvalidGroupDataType, Node, group_types, InvalidDataDimension, InvalidScanType,
+                       InvalidGroupType, InvalidGroupDataType, Node, GroupType, InvalidDataDimension, InvalidScanType,
                        data_types, scan_types, data_dimensions, Group)
 
 from .browsing import H5Browser
@@ -43,6 +44,261 @@ logger = set_logger(get_module_name(__file__))
 
 
 group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
+
+
+class FileTypes(BaseEnum):
+    detector = 0
+    actuator = 1
+    axis = 2
+    scan = 3
+
+
+class H5SaverLowLevel(H5Backend):
+    """Object containing basic methods in order to strucutre and interact with a h5file compatible with the h5 browser
+
+    See Also
+    --------
+    H5Browser
+
+    Parameters
+    ----------
+    h5_file: pytables hdf5 file
+             object used to save all datas and metadas
+    h5_file_path: str or Path
+                  Signal signal represented by a float. Is emitted each time the hardware reached the target
+                  position within the epsilon precision (see comon_parameters variable)
+    save_type: str
+       an element of the enum module attribute SaveTypeEnum
+       * 'scan' is used for DAQ_Scan module and should be used for similar application
+       * 'detector' is used for DAQ_Viewer module and should be used for similar application
+       * 'custom' should be used for customized applications
+
+    Attributes
+    ----------
+
+    settings: Parameter
+               Parameter instance (pyqtgraph) containing all settings (could be represented using the settings_tree widget)
+
+    settings_tree: ParameterTree
+                   Widget representing as a Tree structure, all the settings defined in the class preamble variable ``params``
+
+    """
+
+    def __init__(self, backend='tables'):
+        """
+
+        Parameters
+        ----------
+        save_type (str): one of ['scan', 'detector', 'logger', 'custom']
+        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend
+
+        See Also
+        --------
+        https://github.com/HDFGroup/hsds
+        """
+        H5Backend.__init__(self, backend)
+
+        self.h5_file_path = None
+        self.h5_file_name = None
+        self.file_loaded = False
+
+        self._current_group
+        self._raw_group = None
+        self._logger_array = None
+
+    @property
+    def h5_file(self):
+        return self._h5file
+
+    def init_file(self, file_name: Path, file_type: FileTypes, raw_group_name='raw_data', **metadata):
+        """Initializes a new h5 file.
+
+        Parameters
+        ----------
+        file_name: Path
+            a complete Path pointing to a h5 file
+        file_type: FileTypes
+            the file type FileTypes enum
+        raw_group_name: str
+            Base node name
+
+        Returns
+        -------
+        bool
+            True if new file has been created, False otherwise
+        """
+        datetime_now = datetime.datetime.now()
+
+        file_type = enum_checker(FileTypes, file_type)
+
+        if file_name is not None and isinstance(file_name, Path):
+            self.h5_file_name = file_name.name + ".h5"
+            self.h5_file_path = file_name.parent
+
+        else:
+            self.h5_file_name = select_file(save=True, ext='h5')
+            self.h5_file_path = self.h5_file_name.parent
+
+        self._raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
+        self.get_set_logger(self.raw_group)
+
+
+        self._raw_group.attrs['type'] = file_type.name  # first possibility to set a node attribute
+        self.root().set_attr('file', self.h5_file_name)  # second possibility
+
+        self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
+        self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
+
+        for metadata_key in metadata:
+            self.raw_group.attrs[metadata_key] = metadata[metadata_key]
+
+    def save_file(self, filename=None):
+        if filename is None:
+            filename = select_file(None, save=True, ext='h5')
+        if filename != '':
+            super().save_file_as(filename)
+
+    def get_set_logger(self, where):
+        """ Retrieve or create (if absent) a logger enlargeable array to store logs
+        Get attributed to the class attribute ``logger_array``
+        Parameters
+        ----------
+        where: node
+               location within the tree where to save or retrieve the array
+
+        Returns
+        -------
+        vlarray
+            enlargeable array accepting strings as elements
+        """
+        if isinstance(where, Node):
+            where = where.node
+        logger = 'Logger'
+        if logger not in list(self.get_children(where)):
+            # check if logger node exist
+            self._logger_array = self.add_string_array(where, logger)
+            self._logger_array.attrs['type'] = 'log'
+        else:
+            self._logger_array = self.get_node(where, name=logger)
+        return self._logger_array
+
+    def add_log(self, msg):
+        self._logger_array.append(msg)
+
+    def add_string_array(self, where, name, title='', metadata=dict([])):
+        array = self.create_vlarray(where, name, dtype='string', title=title)
+        array.attrs['shape'] = (0,)
+
+        for metadat in metadata:
+            array.attrs[metadat] = metadata[metadat]
+        return array
+
+    def get_set_group(self, where, name, title=''):
+        """Get the group located at where if it exists otherwise creates it
+
+        This also set the _current_group property
+        """
+        self._current_group = super().get_set_group(where, name, title)
+        return self._current_group
+
+    def add_incremental_group(self, group_type, where, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a node in the h5 file tree of the group type with an increment in the given name
+        Parameters
+        ----------
+        group_type: str or GroupType enum
+            one of the possible values of **group_types**
+        where: str or node
+            parent node where to create the new group
+        title: str
+            node title
+        settings_as_xml: str
+            XML string containing Parameter representation
+        metadata: dict
+            extra metadata to be saved with this new group node
+
+        Returns
+        -------
+        node: newly created group node
+        """
+        enum_checker(group_type, GroupType)
+
+        nodes = [name for name in self.get_children(self.get_node(where))]
+        nodes_tmp = []
+        for node in nodes:
+            if utils.capitalize(group_type.name) in node:
+                nodes_tmp.append(node)
+        nodes_tmp.sort()
+        if len(nodes_tmp) == 0:
+            ind_group = -1
+        else:
+            ind_group = int(nodes_tmp[-1][-3:])
+        group = self.get_set_group(where, f'{utils.capitalize(group_type)}{ind_group + 1:03d}', title)
+        self.set_attr(group, 'settings', settings_as_xml)
+        if group_type.lower() != 'ch':
+            self.set_attr(group, 'type', group_type.lower())
+        else:
+            self.set_attr(group, 'type', '')
+        for metadat in metadata:
+            self.set_attr(group, metadat, metadata[metadat])
+        return group
+
+    def add_det_group(self, where, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type detector
+        See Also
+        -------
+        add_incremental_group
+        """
+        group = self.add_incremental_group('detector', where, title, settings_as_xml, metadata)
+        return group
+
+    def add_ch_group(self, where, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type channel
+        See Also
+        -------
+        add_incremental_group
+        """
+        group = self.add_incremental_group('ch', where, title, settings_as_xml, metadata)
+        return group
+
+    def add_live_scan_group(self, where, dimensionality, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type live scan
+        See Also
+        -------
+        add_incremental_group
+        """
+        metadata.update(settings=settings_as_xml)
+        group = self.add_group(utils.capitalize('Live_scan_{:s}'.format(dimensionality)), '', where, title=title,
+                               metadata=metadata)
+        return group
+
+    def add_move_group(self, where, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type move
+        See Also
+        -------
+        add_incremental_group
+        """
+        group = self.add_incremental_group('move', where, title, settings_as_xml, metadata)
+        return group
+
+    def show_file_content(self):
+        form = QtWidgets.QWidget()
+        if not self.isopen():
+            if self.h5_file_path is not None:
+                if self.h5_file_path.exists():
+                    self.analysis_prog = H5Browser(form, h5file_path=self.h5_file_path)
+                else:
+                    logger.warning('The h5 file path has not been defined yet')
+            else:
+                logger.warning('The h5 file path has not been defined yet')
+        else:
+            self.flush()
+            self.analysis_prog = H5Browser(form, h5file=self.h5file)
+        form.show()
 
 
 class H5SaverBase(H5Backend, ParameterManager):
@@ -917,6 +1173,11 @@ class H5Saver(H5SaverBase, QObject):
         self.new_file_sig.emit(status)
 
 
+class AxisDataSaver:
+    def __init__(self, ):
+
+
+
 class DetectorDataSaver:
     def __init__(self, path: Path = None):
 
@@ -954,54 +1215,44 @@ class DetectorDataSaver:
         h5_file.flush()
         h5_file.close()
 
-    def add_data(self, data: DataToExport):
-
-    try:
-        self._channel_arrays = OrderedDict([])
-        data_dims = ['data1D']  # we don't recrod 0D data in this mode (only in continuous)
-        if h5saver.settings.child(('save_2D')).value():
+    def add_data(self, data: DataToExport, bkg: DataToExport = None):
+        data_dims = ['data1D']  # we don't record 0D data in this mode (only in continuous)
+        if self.h5saver.settings['save_2D']:
             data_dims.extend(['data2D', 'dataND'])
 
-        if self._bkg is not None and self._do_bkg:
-            bkg_container = OrderedDict([])
-            self._process_data(self._bkg, bkg_container)
+        # self._channel_arrays = OrderedDict([])
 
         for data_dim in data_dims:
-            if data[data_dim] is not None:
-                if data_dim in data.keys() and len(data[data_dim]) != 0:
-                    if not h5saver.is_node_in_group(det_group, data_dim):
-                        self._channel_arrays[data_dim] = OrderedDict([])
+            data_from_dim = data.get_data_from_dim(DataDim[data_dim])
+            if bkg is not None:
+                bkg_from_dim = bkg.get_data_from_dim(DataDim[data_dim])
 
-                        data_group = h5saver.add_data_group(det_group, data_dim)
-                        for ind_channel, channel in enumerate(data[data_dim]):  # list of OrderedDict
+            if len(data_from_dim) != 0:
+                data_group = self.h5saver.add_data_group(self._det_group, data_dim)
+                for ind_channel, data_with_axes in enumerate(data_from_dim):
+                    channel_group = self.h5saver.add_CH_group(data_group, title=data_with_axes.name)
+                    if bkg is not None:
+                        if channel in bkg_container[data_dim]:
+                            data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
+                    self._channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
+                                                                               data[data_dim][channel],
+                                                                               scan_type='',
+                                                                               enlargeable=False)
 
-                            channel_group = h5saver.add_CH_group(data_group, title=channel)
+                    if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
+                        ind_viewer = self._viewer_types.names().index('Data2D')
+                        string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(
+                            self.viewers[ind_viewer].parent)
+                        self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
 
-                            self._channel_arrays[data_dim]['parent'] = channel_group
-                            if self._bkg is not None and self._do_bkg:
-                                if channel in bkg_container[data_dim]:
-                                    data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
-                            self._channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
-                                                                                       data[data_dim][channel],
-                                                                                       scan_type='',
-                                                                                       enlargeable=False)
+        try:
+            if self.ui is not None:
+                (root, filename) = os.path.split(str(path))
+                filename, ext = os.path.splitext(filename)
+                image_path = os.path.join(root, filename + '.png')
+                self.dockarea.parent().grab().save(image_path)
+        except Exception as e:
+            self.logger.exception(str(e))
 
-                            if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
-                                ind_viewer = self._viewer_types.names().index('Data2D')
-                                string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(
-                                    self.viewers[ind_viewer].parent)
-                                self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
-    except Exception as e:
-        self.logger.exception(str(e))
-
-    try:
-        if self.ui is not None:
-            (root, filename) = os.path.split(str(path))
-            filename, ext = os.path.splitext(filename)
-            image_path = os.path.join(root, filename + '.png')
-            self.dockarea.parent().grab().save(image_path)
-    except Exception as e:
-        self.logger.exception(str(e))
-
-    h5saver.close_file()
-    self.data_saved.emit()
+        h5saver.close_file()
+        self.data_saved.emit()

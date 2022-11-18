@@ -1238,7 +1238,6 @@ class DataWithAxes(DataBase):
         return str(self._am)
 
 
-
 class DataRaw(DataWithAxes):
     """Specialized DataWithAxes set with source as 'raw'. To be used for raw data"""
     def __init__(self, *args,  **kwargs):
@@ -1338,20 +1337,20 @@ class DataToExport(DataLowLevel):
         self._iter_index = 0
         return self
 
-    def __next__(self):
+    def __next__(self) -> DataWithAxes:
         if self._iter_index < len(self):
             self._iter_index += 1
             return self.data[self._iter_index-1]
         else:
             raise StopIteration
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> DataWithAxes:
         if isinstance(item, int) and 0 <= item < len(self):
             return self.data[item]
         else:
             raise IndexError(f'The index should be a positive integer lower than the data length')
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value: DataWithAxes):
         if isinstance(key, int) and 0 <= key < len(self) and isinstance(value, DataWithAxes):
             self.data[key] = value
         else:
@@ -1373,7 +1372,7 @@ class DataToExport(DataLowLevel):
         else:
             return [data.name for data in self.get_data_from_dim(dim).data]
 
-    def get_data_from_dim(self, dim: DataDim):
+    def get_data_from_dim(self, dim: DataDim) -> 'DataToExport':
         """Get the data matching the given DataDim
 
         Returns
@@ -1428,6 +1427,12 @@ class DataToExport(DataLowLevel):
         if isinstance(data, DataToExport):
             for dat in data:
                 self.append(dat)
+
+
+class DataScan(DataToExport):
+    """Specialized DataToExport.To be used for data to be saved """
+    def __init__(self, name: str, data: List[DataWithAxes] = [], **kwargs):
+        super().__init__(name, data, **kwargs)
 
 
 if __name__ == '__main__':

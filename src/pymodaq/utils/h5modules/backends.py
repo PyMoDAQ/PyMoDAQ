@@ -62,12 +62,20 @@ class SaveTypeEnum(BaseEnum):
 
 save_types = ['scan', 'detector', 'logger', 'custom']
 
-group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
 
 data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings', 'bkg']
 data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['']
 scan_types.extend(stypes)
+
+
+class GroupType(BaseEnum):
+    detector = 0
+    move = 1
+    data = 2
+    ch = 3
+    scan = 4
+    external_h5 = 5
 
 
 class InvalidExport(Exception):
@@ -906,7 +914,8 @@ class H5Backend:
         Parameters
         ----------
         group_name: (str) a custom name for this group
-        group_type: (str) one of the possible values of **group_types**
+        group_type: str or GroupType enum
+            one of the possible values of GroupType
         where: (str or node) parent node where to create the new group
         metadata: (dict) extra metadata to be saved with this new group node
 
@@ -916,7 +925,8 @@ class H5Backend:
         """
         if isinstance(where, Node):
             where = where.node
-        if group_type not in group_types:
+
+        if group_type not in GroupType:
             raise InvalidGroupType('Invalid group type')
 
         if group_name in self.get_children(self.get_node(where)):
