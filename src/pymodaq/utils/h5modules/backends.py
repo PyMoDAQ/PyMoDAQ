@@ -12,9 +12,7 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
 from pymodaq.utils.daq_utils import capitalize, JsonConverter
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.scanner import SCAN_TYPES as stypes
 from pymodaq.utils.enums import BaseEnum
-
 
 
 config = Config()
@@ -53,20 +51,11 @@ if not (is_tables or is_h5py or is_h5pyd):
     logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')
 
 
-class SaveTypeEnum(BaseEnum):
+class SaveType(BaseEnum):
     scan = 0
     detector = 1
     logger = 2
     custom = 3
-
-
-save_types = ['scan', 'detector', 'logger', 'custom']
-
-
-data_types = ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings', 'bkg']
-data_dimensions = ['0D', '1D', '2D', 'ND']
-scan_types = ['']
-scan_types.extend(stypes)
 
 
 class GroupType(BaseEnum):
@@ -418,6 +407,20 @@ class Attributes(object):
     def __setitem__(self, key, value):
         set_attr(self._node.node, key, value, backend=self.backend)
 
+    def __iter__(self):
+        self._iter_index = 0
+        return self
+
+    def __next__(self):
+        if self._iter_index < len(self):
+            self._iter_index += 1
+            return self.attrs_name[self._iter_index-1]
+        else:
+            raise StopIteration
+
+    def __len__(self):
+        return len(self.attrs_name)
+
     @property
     def node(self):
         return self._node
@@ -545,6 +548,9 @@ class H5Backend:
         if isinstance(node, Node):
             node = node.node
         return set_attr(node, attr_name, attr_value, self.backend)
+
+    def has_attr(self, node, attr_name):
+        return attr_name in self.get_node(node).attrs.attrs_name
 
     def flush(self):
         if self._h5file is not None:
