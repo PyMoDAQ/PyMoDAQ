@@ -143,7 +143,8 @@ class JsonConverter:
 
     @classmethod
     def trusted_types(cls):
-        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes']
+        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes',
+                'float64']
 
     @classmethod
     def istrusted(cls, type_name):

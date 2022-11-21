@@ -4,105 +4,82 @@ Created the 15/11/2022
 
 @author: Sebastien Weber
 """
-import os
+import copy
+import datetime
+from dateutil import parser
 from numbers import Number
-import xml.etree.ElementTree as ET
-from pymodaq.utils.logger import set_logger, get_module_name
-from qtpy.QtCore import QObject, Signal
+import os
+from pathlib import Path
+from typing import Union, Iterable
 
+
+import numpy as np
+from qtpy.QtCore import QObject, Signal
+from qtpy import QtWidgets
+
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.gui_utils.file_io import select_file
-from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.gui_utils.utils import dashboard_submodules_params
 
-from qtpy import QtWidgets
+from pymodaq.utils.gui_utils.utils import dashboard_submodules_params
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
-from pymodaq.utils.data import DataDim, DataToExport
-from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+from pymodaq.utils.data import DataDim, DataToExport, Axis, DataWithAxes
 from pymodaq.utils.enums import BaseEnum, enum_checker
-
-import datetime
-from dateutil import parser
-import numpy as np
-from pathlib import Path
-import copy
+from pymodaq.utils.scanner import ScanType, SCAN_SUBTYPES
 
 
-from .backends import (H5Backend, backends_available, SaveTypeEnum, InvalidSave, InvalidExport, InvalidDataType,
+from .backends import (H5Backend, backends_available, SaveType, InvalidSave, InvalidExport, InvalidDataType,
                        InvalidGroupType, InvalidGroupDataType, Node, GroupType, InvalidDataDimension, InvalidScanType,
-                       data_types, scan_types, data_dimensions, Group)
-
+                       Group)
 from .browsing import H5Browser
 
 
 config = Config()
-
 logger = set_logger(get_module_name(__file__))
 
 
-group_data_types = ['data0D', 'data1D', 'data2D', 'dataND']
-
-
-class FileTypes(BaseEnum):
+class FileType(BaseEnum):
     detector = 0
     actuator = 1
     axis = 2
     scan = 3
+    
+
+class DataType(BaseEnum):
+    data = 0
+    axis = 1
+    live_scan = 2
+    external_h5 = 3
+    strings = 4
+    bkg = 5
 
 
 class H5SaverLowLevel(H5Backend):
-    """Object containing basic methods in order to strucutre and interact with a h5file compatible with the h5 browser
+    """Object containing basic methods in order to structure and interact with a h5file compatible with the h5browser
 
     See Also
     --------
     H5Browser
 
-    Parameters
-    ----------
-    h5_file: pytables hdf5 file
-             object used to save all datas and metadas
-    h5_file_path: str or Path
-                  Signal signal represented by a float. Is emitted each time the hardware reached the target
-                  position within the epsilon precision (see comon_parameters variable)
-    save_type: str
-       an element of the enum module attribute SaveTypeEnum
-       * 'scan' is used for DAQ_Scan module and should be used for similar application
-       * 'detector' is used for DAQ_Viewer module and should be used for similar application
-       * 'custom' should be used for customized applications
-
     Attributes
     ----------
-
-    settings: Parameter
-               Parameter instance (pyqtgraph) containing all settings (could be represented using the settings_tree widget)
-
-    settings_tree: ParameterTree
-                   Widget representing as a Tree structure, all the settings defined in the class preamble variable ``params``
-
+    h5_file: pytables hdf5 file
+        object used to save all datas and metadas
+    h5_file_path: str or Path
+        The file path
     """
 
     def __init__(self, backend='tables'):
-        """
-
-        Parameters
-        ----------
-        save_type (str): one of ['scan', 'detector', 'logger', 'custom']
-        backend (str): either 'tables' for pytables backend, 'h5py' for h5py backends or 'h5pyd' for HSDS backend
-
-        See Also
-        --------
-        https://github.com/HDFGroup/hsds
-        """
         H5Backend.__init__(self, backend)
 
         self.h5_file_path = None
         self.h5_file_name = None
         self.file_loaded = False
 
-        self._current_group
+        self._current_group = None
         self._raw_group = None
         self._logger_array = None
 
@@ -110,15 +87,15 @@ class H5SaverLowLevel(H5Backend):
     def h5_file(self):
         return self._h5file
 
-    def init_file(self, file_name: Path, file_type: FileTypes, raw_group_name='raw_data', **metadata):
+    def init_file(self, file_name: Path, file_type: FileType, raw_group_name='RawData', **metadata):
         """Initializes a new h5 file.
 
         Parameters
         ----------
         file_name: Path
             a complete Path pointing to a h5 file
-        file_type: FileTypes
-            the file type FileTypes enum
+        file_type: FileType
+            the file type FileType enum
         raw_group_name: str
             Base node name
 
@@ -129,18 +106,21 @@ class H5SaverLowLevel(H5Backend):
         """
         datetime_now = datetime.datetime.now()
 
-        file_type = enum_checker(FileTypes, file_type)
+        file_type = enum_checker(FileType, file_type)
 
         if file_name is not None and isinstance(file_name, Path):
-            self.h5_file_name = file_name.name + ".h5"
+            self.h5_file_name = file_name.stem + ".h5"
             self.h5_file_path = file_name.parent
 
         else:
             self.h5_file_name = select_file(save=True, ext='h5')
             self.h5_file_path = self.h5_file_name.parent
 
+        self.close_file()
+        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'a', title='PyMoDAQ file')
+
         self._raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
-        self.get_set_logger(self.raw_group)
+        self.get_set_logger(self._raw_group)
 
 
         self._raw_group.attrs['type'] = file_type.name  # first possibility to set a node attribute
@@ -150,7 +130,7 @@ class H5SaverLowLevel(H5Backend):
         self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
 
         for metadata_key in metadata:
-            self.raw_group.attrs[metadata_key] = metadata[metadata_key]
+            self._raw_group.attrs[metadata_key] = metadata[metadata_key]
 
     def save_file(self, filename=None):
         if filename is None:
@@ -191,6 +171,84 @@ class H5SaverLowLevel(H5Backend):
 
         for metadat in metadata:
             array.attrs[metadat] = metadata[metadat]
+        return array
+    
+    def add_array(self, where: Union[Group, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
+                  data_shape: tuple = None, array_type: np.dtype = None, data_dimension: DataDim = None,
+                  scan_type: ScanType = ScanType['NoScan'], scan_subtype='', scan_shape: tuple = tuple([]),
+                  add_scan_dim=False, enlargeable: bool = False, erase_data=False,
+                  title: str = '', metadata=dict([]), ):
+
+        """save data arrays on the hdf5 file together with metadata
+        Parameters
+        ----------
+        where: Group
+            node where to save the array
+        name: str
+            name of the array in the hdf5 file
+        data_type: DataType
+            mandatory so that the h5Browser can interpret correctly the array
+        data_shape: Iterable
+            the shape of the array to save, mandatory if array_to_save is None
+        data_dimension: DataDim
+         The data's dimension
+        scan_type: ScanType
+            The type of scan to be saved (default NoScan)
+        scan_subtype: str
+        scan_shape: Iterable
+            the shape of the scan dimensions
+        title: str
+            the title attribute of the array node
+        array_to_save: ndarray or None
+            data to be saved in the array. If None, array_type and data_shape should be specified in order to init
+            correctly the memory
+        array_type: np.dtype or numpy types
+            eg np.float, np.int32 ...
+        enlargeable: bool
+            if False, data are saved as a CARRAY, otherwise as a EARRAY (for ragged data, see add_sting_array)
+        metadata: dict
+            dictionnary whose keys will be saved as the array attributes
+        add_scan_dim: if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
+                      In that case, the array is usually initialized as zero and further populated
+
+        Returns
+        -------
+        array (CARRAY or EARRAY)
+
+        See Also
+        --------
+        add_data, add_string_array
+        """
+        if array_type is None:
+            if array_to_save is None:
+                array_type = config('data_saving', 'data_type', 'dynamic')
+            else:
+                array_type = array_to_save.dtype
+
+        data_type = enum_checker(DataType, data_type)
+        data_dimension = enum_checker(DataDim, data_dimension)
+        scan_type = enum_checker(ScanType, scan_type)
+
+        if enlargeable:
+            if data_shape == (1,):
+                data_shape = None
+            array = self.create_earray(where, utils.capitalize(name), dtype=np.dtype(array_type),
+                                       data_shape=data_shape, title=title)
+        else:
+            if add_scan_dim:  # means it is an array initialization to zero
+                shape = list(scan_shape[:])
+                shape.extend(data_shape)
+                if array_to_save is None:
+                    array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
+
+            array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
+        self.set_attr(array, 'type', data_type.name)
+        self.set_attr(array, 'data_dimension', data_dimension.name)
+        self.set_attr(array, 'scan_type', scan_type.name)
+        self.set_attr(array, 'scan_subtype', scan_subtype)
+
+        for metadat in metadata:
+            self.set_attr(array, metadat, metadata[metadat])
         return array
 
     def get_set_group(self, where, name, title=''):
@@ -330,7 +388,7 @@ class H5SaverBase(H5Backend, ParameterManager):
                   Signal signal represented by a float. Is emitted each time the hardware reached the target
                   position within the epsilon precision (see comon_parameters variable)
     save_type: str
-       an element of the enum module attribute SaveTypeEnum
+       an element of the enum module attribute SaveType
        * 'scan' is used for DAQ_Scan module and should be used for similar application
        * 'detector' is used for DAQ_Viewer module and should be used for similar application
        * 'custom' should be used for customized applications
@@ -347,7 +405,7 @@ class H5SaverBase(H5Backend, ParameterManager):
     """
 
     params = [
-        {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': SaveTypeEnum.names(), 'readonly': True},
+        {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': SaveType.names(), 'readonly': True},
     ] + dashboard_submodules_params + \
         [{'title': 'Backend:', 'name': 'backend', 'type': 'group', 'children': [
             {'title': 'Backend type:', 'name': 'backend_type', 'type': 'list', 'limits': backends_available,
@@ -399,7 +457,7 @@ class H5SaverBase(H5Backend, ParameterManager):
         H5Backend.__init__(self, backend)
         ParameterManager.__init__(self)
 
-        if save_type not in SaveTypeEnum.names():
+        if save_type not in SaveType.names():
             raise InvalidSave('Invalid saving type')
 
         self.h5_file_path = None
@@ -976,10 +1034,9 @@ class H5SaverBase(H5Backend, ParameterManager):
             else:
                 array_type = array_to_save.dtype
 
-        if data_dimension not in data_dimensions:
-            raise InvalidDataDimension('Invalid data dimension')
-        if data_type not in data_types:
-            raise InvalidDataType('Invalid data type')
+        data_dimension = enum_checker(data_dimension)
+        data_type = enum_checker(DataType, data_type)
+
         if scan_type != '':
             scan_type = utils.uncapitalize(scan_type)
         if scan_type.lower() not in [s.lower() for s in scan_types]:
@@ -1172,87 +1229,3 @@ class H5Saver(H5SaverBase, QObject):
         """
         self.new_file_sig.emit(status)
 
-
-class AxisDataSaver:
-    def __init__(self, ):
-
-
-
-class DetectorDataSaver:
-    def __init__(self, path: Path = None):
-
-        if path is not None:
-            path = Path(path)
-            
-        self._det_group: Group = None
-
-        self.h5saver = H5Saver(save_type='detector')
-        self.h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
-
-    def add_detector(self, detector: DAQ_Viewer):
-        settings_xml = ET.Element('All_settings')
-        settings_xml.append(ioxml.walk_parameters_to_xml(param=detector.settings))
-        settings_xml.append(ioxml.walk_parameters_to_xml(param=self.h5saver.settings))
-
-        if self.ui is not None:
-            for ind, viewer in enumerate(detector.viewers):
-                if hasattr(viewer, 'roi_manager'):
-                    roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}')
-                    roi_xml.append(ioxml.walk_parameters_to_xml(viewer.roi_manager.settings))
-
-        self._det_group = self.h5saver.add_det_group(self.h5saver.raw_group, "Data", ET.tostring(settings_xml))
-
-    def add_external_h5(self, external_h5_file):
-
-        external_group = self.h5saver.add_group('external_data', 'external_h5', self._det_group)
-        if not external_h5_file.isopen:
-            h5saver = H5Saver()
-            h5saver.init_file(addhoc_file_path=external_h5_file.filename)
-            h5_file = h5saver.h5_file
-        else:
-            h5_file = external_h5_file
-        h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
-        h5_file.flush()
-        h5_file.close()
-
-    def add_data(self, data: DataToExport, bkg: DataToExport = None):
-        data_dims = ['data1D']  # we don't record 0D data in this mode (only in continuous)
-        if self.h5saver.settings['save_2D']:
-            data_dims.extend(['data2D', 'dataND'])
-
-        # self._channel_arrays = OrderedDict([])
-
-        for data_dim in data_dims:
-            data_from_dim = data.get_data_from_dim(DataDim[data_dim])
-            if bkg is not None:
-                bkg_from_dim = bkg.get_data_from_dim(DataDim[data_dim])
-
-            if len(data_from_dim) != 0:
-                data_group = self.h5saver.add_data_group(self._det_group, data_dim)
-                for ind_channel, data_with_axes in enumerate(data_from_dim):
-                    channel_group = self.h5saver.add_CH_group(data_group, title=data_with_axes.name)
-                    if bkg is not None:
-                        if channel in bkg_container[data_dim]:
-                            data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
-                    self._channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
-                                                                               data[data_dim][channel],
-                                                                               scan_type='',
-                                                                               enlargeable=False)
-
-                    if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
-                        ind_viewer = self._viewer_types.names().index('Data2D')
-                        string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(
-                            self.viewers[ind_viewer].parent)
-                        self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
-
-        try:
-            if self.ui is not None:
-                (root, filename) = os.path.split(str(path))
-                filename, ext = os.path.splitext(filename)
-                image_path = os.path.join(root, filename + '.png')
-                self.dockarea.parent().grab().save(image_path)
-        except Exception as e:
-            self.logger.exception(str(e))
-
-        h5saver.close_file()
-        self.data_saved.emit()
