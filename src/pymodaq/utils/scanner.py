@@ -17,13 +17,23 @@ from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.utils.plot_utils import QVector
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.utils.parameter.pymodaq_ptypes as pymodaq_types  # to be placed after importing Parameter
-
+from pymodaq.utils.enums import BaseEnum
 from pymodaq.utils.exceptions import ScannerException
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
 
-SCAN_TYPES = ['Scan1D', 'Scan2D', 'Sequential', 'Tabular']
+#TODO add an objectfactory to add/register various type of scans and subscans and remove the enum
+
+
+class ScanType(BaseEnum):
+    NoScan = -1
+    Scan1D = 0
+    Scan2D = 1
+    ScanSequential = 2
+    ScanTabular = 3
+
+
 SCAN_SUBTYPES = dict(Scan1D=dict(subpath=('scan1D_settings', 'scan1D_type'),
                                  limits=['Linear', 'Adaptive', 'Linear back to start', 'Random']),
                      Scan2D=dict(subpath=('scan2D_settings', 'scan2D_type'),
@@ -107,7 +117,7 @@ class ScanParameters:
     Naxes: int
         number of axes used to do the scan
     scan_type: str
-        one value of the SCAN_TYPES list items
+        one value of the ScanType list items
     scan_subtype: str
         one value of the SCAN_SUBTYPES dict items for the scan_type key
     starts: list of floats
@@ -139,9 +149,9 @@ class ScanParameters:
     def __init__(self, Naxes=1, scan_type='Scan1D', scan_subtype='Linear', starts=None, stops=None, steps=None,
                  positions=None, adaptive_loss=None):
         self.Naxes = Naxes
-        if scan_type not in SCAN_TYPES:
+        if scan_type not in ScanType.names():
             raise ValueError(
-                f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(SCAN_TYPES)}')
+                f'Chosen scan_type value ({scan_type}) is not possible. Should be among : {str(ScanType.names())}')
         if scan_subtype not in SCAN_SUBTYPES[scan_type]['limits']:
             raise ValueError(
                 f'Chosen scan_subtype value ({scan_subtype}) is not possible. Should be among'
@@ -348,7 +358,7 @@ class Scanner(QObject):
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
         {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
 
-        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': SCAN_TYPES,
+        {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': ScanType.names(),
          'value': config('scan', 'default')},
         {'title': 'Scan1D settings', 'name': 'scan1D_settings', 'type': 'group', 'children': [
             {'title': 'Scan subtype:', 'name': 'scan1D_type', 'type': 'list',
@@ -451,7 +461,7 @@ class Scanner(QObject):
         # if actuators != []:
         #     self.actuators = actuators
         # else:
-        #     stypes = SCAN_TYPES[:]
+        #     stypes = ScanType[:]
         #     stypes.pop(stypes.index('Sequential'))
         #     self.settings.child('scan_type').setLimits(stypes)
         #     self.settings.child('scan_type').setValue(stypes[0])
@@ -639,11 +649,11 @@ class Scanner(QObject):
         Parameters
         ----------
         scan_type: str
-            one of SCAN_TYPES
+            one of ScanType
         scan_subtype: list of str or None
             one list of SCAN_SUBTYPES
         """
-        if scan_type in SCAN_TYPES:
+        if scan_type in ScanType.names():
             self.settings.child('scan_type').setValue(scan_type)
 
             if scan_subtype is not None:
