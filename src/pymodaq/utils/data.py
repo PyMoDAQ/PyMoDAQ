@@ -204,9 +204,9 @@ class Axis:
         elif len(data.shape) != 1:
             raise ValueError(f'data for the Axis class should be a 1D numpy array')
 
-    def create_linear_data(self, dim):
+    def create_linear_data(self, nsteps:int):
         """replace the axis data with a linear version using scaling and offset if specified"""
-        self.data = self._offset + self._scaling * np.linspace(0, dim-1, dim)
+        self.data = self._offset + self._scaling * np.linspace(0, nsteps-1, nsteps)
 
     def __len__(self):
         return self.size
@@ -256,7 +256,7 @@ class Axis:
         eq = self.label == other.label
         eq = eq and (self.units == other.units)
         eq = eq and (self.index == other.index)
-        if self.data is not None:
+        if self.data is not None and other.data is not None:
             eq = eq and (np.allclose(self.data, other.data))
         else:
             eq = eq and self.offset == other.offset
