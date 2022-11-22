@@ -344,7 +344,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
             ================= ====================== ====================================
             **Parameters**      **Type**              **Description**
 
-             *item*           tables Group instance   contain the root node of the tree
+             *item*           tables GROUP instance   contain the root node of the tree
 
              *col*                                    not used
             ================= ====================== ====================================
@@ -382,7 +382,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
             =============== ====================== ===================================
             **Parameters**   **Type**               **Description**
 
-             *item*          tables Group instance  contain the root node of the tree
+             *item*          tables GROUP instance  contain the root node of the tree
              *col*                                  not used
             =============== ====================== ===================================
 
@@ -521,7 +521,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
             ================ ======================= ==========================================
             **Parameters**     **Type**                **Description**
 
-             *node*           tables Group instance   the root node of the local treated tree
+             *node*           tables GROUP instance   the root node of the local treated tree
             ================ ======================= ==========================================
 
             Returns

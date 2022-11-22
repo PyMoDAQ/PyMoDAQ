@@ -1372,6 +1372,13 @@ class DataToExport(DataLowLevel):
         else:
             return [data.name for data in self.get_data_from_dim(dim).data]
 
+    def get_dim_presents(self) -> List[str]:
+        dims = []
+        for dim in DataDim.names():
+            if len(self.get_data_from_dim(dim)) != 0:
+                dims.append(dim)
+        return dims
+
     def get_data_from_dim(self, dim: DataDim) -> 'DataToExport':
         """Get the data matching the given DataDim
 

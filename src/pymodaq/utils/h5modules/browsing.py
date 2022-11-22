@@ -115,7 +115,7 @@ class H5BrowserUtil(H5Backend):
                                    data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
                                    '%.6e', '\t')
 
-                elif 'Group' in node.attrs['CLASS']:
+                elif 'GROUP' in node.attrs['CLASS']:
                     data_tot = []
                     header = []
                     dtypes = []

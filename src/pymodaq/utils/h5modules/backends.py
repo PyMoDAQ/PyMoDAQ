@@ -228,7 +228,7 @@ class Node(object):
             return self._node.name
 
 
-class Group(Node):
+class GROUP(Node):
     def __init__(self, node, backend):
         super().__init__(node, backend)
 
@@ -272,7 +272,7 @@ class Group(Node):
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
-                    _cls = Group
+                    _cls = GROUP
                 children[child_name] = _cls(child, self.backend)
         else:
             for child_name, child in self.node.items():
@@ -281,7 +281,7 @@ class Group(Node):
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
-                    _cls = Group
+                    _cls = GROUP
                 children[child_name] = _cls(child, self.backend)
         return children
 
@@ -535,9 +535,9 @@ class H5Backend:
 
     def root(self):
         if self.backend == 'tables':
-            return Group(self._h5file.get_node('/'), self.backend)
+            return GROUP(self._h5file.get_node('/'), self.backend)
         else:
-            return Group(self._h5file, self.backend)
+            return GROUP(self._h5file, self.backend)
 
     def get_attr(self, node, attr_name=None):
         if isinstance(node, Node):
@@ -600,11 +600,11 @@ class H5Backend:
             else:
                 group = self.get_node(where).node.create_group(name)
                 group.attrs['TITLE'] = title
-                group.attrs['CLASS'] = 'Group'
+                group.attrs['CLASS'] = 'GROUP'
 
         else:
             group = self.get_node(where, name)
-        return Group(group, self.backend)
+        return GROUP(group, self.backend)
 
     def get_group_by_title(self, where, title):
         if isinstance(where, Node):
@@ -614,8 +614,8 @@ class H5Backend:
         for child_name in self.get_children(node):
             child = node[child_name]
             if 'TITLE' in self.get_attr(child):
-                if self.get_attr(child, 'TITLE') == title and self.get_attr(child, 'CLASS') == 'Group':
-                    return Group(child, self.backend)
+                if self.get_attr(child, 'TITLE') == title and self.get_attr(child, 'CLASS') == 'GROUP':
+                    return GROUP(child, self.backend)
         return None
 
     def is_node_in_group(self, where, name):
@@ -638,7 +638,7 @@ class H5Backend:
 
         return name.lower() in [name.lower() for name in self.get_children(where)]
 
-    def get_node(self, where, name=None):
+    def get_node(self, where, name=None) -> Node:
         if isinstance(where, Node):
             where = where.node
 
@@ -659,12 +659,12 @@ class H5Backend:
                     node = where
 
         if 'CLASS' not in self.get_attr(node):
-            self.set_attr(node, 'CLASS', 'Group')
-            return Group(node, self.backend)
+            self.set_attr(node, 'CLASS', 'GROUP')
+            return GROUP(node, self.backend)
         else:
             attr = self.get_attr(node, 'CLASS')
             if 'ARRAY' not in attr:
-                return Group(node, self.backend)
+                return GROUP(node, self.backend)
             elif attr == 'CARRAY':
                 return CARRAY(node, self.backend)
             elif attr == 'EARRAY':
@@ -729,7 +729,7 @@ class H5Backend:
 
         See Also
         --------
-        :meth:`.Group.children_name`
+        :meth:`.GROUP.children_name`
 
         """
         where = self.get_node(where)  # return a node object in case where is a string
@@ -744,7 +744,7 @@ class H5Backend:
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
-                    _cls = Group
+                    _cls = GROUP
                 children[child_name] = _cls(child, self.backend)
         else:
             for child_name, child in where.items():
@@ -752,7 +752,7 @@ class H5Backend:
                 if 'ARRAY' in klass:
                     _cls = getattr(mod, klass)
                 else:
-                    _cls = Group
+                    _cls = GROUP
                 children[child_name] = _cls(child, self.backend)
         return children
 
@@ -765,7 +765,7 @@ class H5Backend:
 
     def walk_groups(self, where):
         where = self.get_node(where)  # return a node object in case where is a string
-        if where.attrs['CLASS'] != 'Group':
+        if where.attrs['CLASS'] != 'GROUP':
             return None
         if self.backend == 'tables':
             for ch in self.h5file.walk_groups(where.node):
@@ -775,7 +775,7 @@ class H5Backend:
             yield where
             while stack:
                 obj = stack.pop()
-                children = [child for child in self.get_children(obj).values() if child.attrs['CLASS'] == 'Group']
+                children = [child for child in self.get_children(obj).values() if child.attrs['CLASS'] == 'GROUP']
                 for child in children:
                     stack.append(child)
                     yield child

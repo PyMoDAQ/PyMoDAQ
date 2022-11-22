@@ -33,7 +33,7 @@ from pymodaq.utils.scanner import ScanType, SCAN_SUBTYPES
 
 from .backends import (H5Backend, backends_available, SaveType, InvalidSave, InvalidExport, InvalidDataType,
                        InvalidGroupType, InvalidGroupDataType, Node, GroupType, InvalidDataDimension, InvalidScanType,
-                       Group)
+                       GROUP)
 from .browsing import H5Browser
 
 
@@ -173,16 +173,16 @@ class H5SaverLowLevel(H5Backend):
             array.attrs[metadat] = metadata[metadat]
         return array
     
-    def add_array(self, where: Union[Group, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
+    def add_array(self, where: Union[GROUP, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
                   data_shape: tuple = None, array_type: np.dtype = None, data_dimension: DataDim = None,
                   scan_type: ScanType = ScanType['NoScan'], scan_subtype='', scan_shape: tuple = tuple([]),
-                  add_scan_dim=False, enlargeable: bool = False, erase_data=False,
+                  add_scan_dim=False, enlargeable: bool = False,
                   title: str = '', metadata=dict([]), ):
 
         """save data arrays on the hdf5 file together with metadata
         Parameters
         ----------
-        where: Group
+        where: GROUP
             node where to save the array
         name: str
             name of the array in the hdf5 file
@@ -242,7 +242,7 @@ class H5SaverLowLevel(H5Backend):
                     array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
 
             array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
-        self.set_attr(array, 'type', data_type.name)
+        self.set_attr(array, 'data_type', data_type.name)
         self.set_attr(array, 'data_dimension', data_dimension.name)
         self.set_attr(array, 'scan_type', scan_type.name)
         self.set_attr(array, 'scan_subtype', scan_subtype)
@@ -279,7 +279,7 @@ class H5SaverLowLevel(H5Backend):
         -------
         node: newly created group node
         """
-        enum_checker(group_type, GroupType)
+        group_type = enum_checker(GroupType, group_type)
 
         nodes = [name for name in self.get_children(self.get_node(where))]
         nodes_tmp = []
@@ -291,10 +291,10 @@ class H5SaverLowLevel(H5Backend):
             ind_group = -1
         else:
             ind_group = int(nodes_tmp[-1][-3:])
-        group = self.get_set_group(where, f'{utils.capitalize(group_type)}{ind_group + 1:03d}', title)
+        group = self.get_set_group(where, f'{utils.capitalize(group_type.name)}{ind_group + 1:03d}', title)
         self.set_attr(group, 'settings', settings_as_xml)
-        if group_type.lower() != 'ch':
-            self.set_attr(group, 'type', group_type.lower())
+        if group_type.name.lower() != 'ch':
+            self.set_attr(group, 'type', group_type.name.lower())
         else:
             self.set_attr(group, 'type', '')
         for metadat in metadata:
