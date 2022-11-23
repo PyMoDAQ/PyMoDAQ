@@ -6,7 +6,6 @@ Created the 21/11/2022
 """
 
 from typing import Union, List
-import xml.etree.ElementTree as ET
 
 import numpy as np
 
@@ -16,15 +15,14 @@ from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
 from .saving import DataType, H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node
 from pymodaq.utils.daq_utils import capitalize
-from pymodaq.utils.parameter import ioxml
 
 
 class AxisError(Exception):
     pass
 
 
-class Saver(metaclass=ABCMeta):
-    """Base abstract class to be used for all specialized object saving and loading stuff to/from a h5file
+class DataSaver(metaclass=ABCMeta):
+    """Base abstract class to be used for all specialized object saving and loading data to/from a h5file
 
     Attributes
     ----------
@@ -122,7 +120,7 @@ class Saver(metaclass=ABCMeta):
         return nodes
 
 
-class AxisSaverLoader(Saver):
+class AxisSaverLoader(DataSaver):
     """Specialized Object to save and load Axis object to and from a h5file
 
     Parameters
@@ -193,7 +191,7 @@ class AxisSaverLoader(Saver):
         return [self.load_axis(node) for node in self._get_nodes_from_data_type(where)]
 
 
-class DataSaverLoader(Saver):
+class DataSaverLoader(DataSaver):
     """Specialized Object to save and load DataWithAxes object to and from a h5file
 
     Parameters
@@ -214,6 +212,18 @@ class DataSaverLoader(Saver):
         self._axis_saver = AxisSaverLoader(hsaver)
 
     def add_data(self, where: Union[Node, str], data: DataWithAxes):
+        """
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data
+
+        Returns
+        -------
+
+        """
         for ind_data in range(len(data)):
             self._h5saver.add_array(where, self._get_node_name(where), self.data_type, title=data.name,
                                     array_to_save=data[ind_data], data_dimension=data.dim.name,
@@ -224,13 +234,41 @@ class DataSaverLoader(Saver):
             self._axis_saver.add_axis(where, axis)
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
+        """
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+
+        Returns
+        -------
+
+        """
         return self._axis_saver.get_axes(where)
 
     def get_data_arrays(self, where: Union[Node, str]) -> List[np.ndarray]:
+        """
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+
+        Returns
+        -------
+
+        """
         return [array.read() for array in self._get_nodes_from_data_type(where)]
 
     def load_data(self, where) -> DataWithAxes:
-        """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node"""
+        """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        """
 
         node = self._h5saver.get_node(where)
         if isinstance(node, GROUP):
@@ -257,6 +295,20 @@ class DataToExportSaver:
         self._data_saver = DataSaverLoader(hsaver)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
+        """
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data
+        settings_as_xml
+        metadata
+
+        Returns
+        -------
+
+        """
         dims = data.get_dim_presents()
         for dim in dims:
             dim_group = self._h5saver.get_set_group(where, dim)
@@ -264,81 +316,3 @@ class DataToExportSaver:
                 dwa_group = self._h5saver.add_ch_group(dim_group, dwa.name, settings_as_xml, metadata)
                 self._data_saver.add_data(dwa_group, dwa)
 
-
-
-# class DetectorDataSaver:
-#     data_type = 'data'
-#
-#     def __init__(self, hsaver: H5SaverLowLevel):
-#         self.data_type = enum_checker(DataType, self.data_type)
-#         self._h5saver = hsaver
-#
-#         self._det_group: GROUP = None
-#
-#     def add_detector(self, detector):
-#         settings_xml = ET.Element('All_settings')
-#         settings_xml.append(ioxml.walk_parameters_to_xml(param=detector.settings))
-#         settings_xml.append(ioxml.walk_parameters_to_xml(param=self.h5saver.settings))
-#
-#         if self.ui is not None:
-#             for ind, viewer in enumerate(detector.viewers):
-#                 if hasattr(viewer, 'roi_manager'):
-#                     roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}')
-#                     roi_xml.append(ioxml.walk_parameters_to_xml(viewer.roi_manager.settings))
-#
-#         self._det_group = self.h5saver.add_det_group(self.h5saver.raw_group, "Data", ET.tostring(settings_xml))
-#
-#     def add_external_h5(self, external_h5_file):
-#
-#         external_group = self.h5saver.add_group('external_data', 'external_h5', self._det_group)
-#         if not external_h5_file.isopen:
-#             h5saver = H5Saver()
-#             h5saver.init_file(addhoc_file_path=external_h5_file.filename)
-#             h5_file = h5saver.h5_file
-#         else:
-#             h5_file = external_h5_file
-#         h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
-#         h5_file.flush()
-#         h5_file.close()
-#
-#     def add_data(self, data: DataToExport, bkg: DataToExport = None):
-#         data_dims = ['data1D']  # we don't record 0D data in this mode (only in continuous)
-#         if self.h5saver.settings['save_2D']:
-#             data_dims.extend(['data2D', 'dataND'])
-#
-#         # self._channel_arrays = OrderedDict([])
-#
-#         for data_dim in data_dims:
-#             data_from_dim = data.get_data_from_dim(DataDim[data_dim])
-#             if bkg is not None:
-#                 bkg_from_dim = bkg.get_data_from_dim(DataDim[data_dim])
-#
-#             if len(data_from_dim) != 0:
-#                 data_group = self.h5saver.add_data_group(self._det_group, data_dim)
-#                 for ind_channel, data_with_axes in enumerate(data_from_dim):
-#                     channel_group = self.h5saver.add_CH_group(data_group, title=data_with_axes.name)
-#                     if bkg is not None:
-#                         if channel in bkg_container[data_dim]:
-#                             data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
-#                     self._channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
-#                                                                                data[data_dim][channel],
-#                                                                                scan_type='',
-#                                                                                enlargeable=False)
-#
-#                     if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
-#                         ind_viewer = self._viewer_types.names().index('Data2D')
-#                         string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(
-#                             self.viewers[ind_viewer].parent)
-#                         self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
-#
-#         try:
-#             if self.ui is not None:
-#                 (root, filename) = os.path.split(str(path))
-#                 filename, ext = os.path.splitext(filename)
-#                 image_path = os.path.join(root, filename + '.png')
-#                 self.dockarea.parent().grab().save(image_path)
-#         except Exception as e:
-#             self.logger.exception(str(e))
-#
-#         h5saver.close_file()
-#         self.data_saved.emit()

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from pymodaq.utils.h5modules import saving
-from pymodaq.utils.h5modules.data_saving import Saver, AxisSaverLoader
+from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader
 from pymodaq.utils.daq_utils import capitalize
 
 
@@ -34,19 +34,19 @@ def generate_random_data(shape, dtype=float):
     return (100 * np.random.rand(*shape)).astype(dtype=dtype)
 
 
-class NoAttribute(Saver):
+class NoAttribute(DataSaver):
     pass
 
 
-class EnumAttribute(Saver):
+class EnumAttribute(DataSaver):
     data_type = saving.DataType(0)
 
 
-class StrAttribute(Saver):
+class StrAttribute(DataSaver):
     data_type = saving.DataType.names()[2]
 
 
-class UnknownStrAttribute(Saver):
+class UnknownStrAttribute(DataSaver):
     data_type = 'azertyuiop'
 
 
@@ -80,7 +80,7 @@ class TestH5SaverLowLevel:
         assert h5saver.h5_file_path == addhoc_file_path.parent
         assert h5saver.h5_file_name == addhoc_file_path.name
 
-        assert h5saver.get_node_path(h5saver._raw_group) == '/RawData'
+        assert h5saver.get_node_path(h5saver.raw_group) == '/RawData'
         assert h5saver.get_node_path(h5saver._logger_array) == '/RawData/Logger'
         h5saver.close_file()
 

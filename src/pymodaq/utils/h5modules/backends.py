@@ -60,7 +60,7 @@ class SaveType(BaseEnum):
 
 class GroupType(BaseEnum):
     detector = 0
-    move = 1
+    actuator = 1
     data = 2
     ch = 3
     scan = 4
@@ -210,6 +210,10 @@ class Node(object):
                 return path
             else:
                 return path.split('/')[-1]
+
+    @property
+    def title(self):
+        return self.attrs['TITLE']
 
     @property
     def path(self):

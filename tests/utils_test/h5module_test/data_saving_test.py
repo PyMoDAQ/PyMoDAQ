@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from pymodaq.utils.h5modules import saving
-from pymodaq.utils.h5modules.data_saving import Saver, AxisSaverLoader, DataSaverLoader, DataToExportSaver
+from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader, DataSaverLoader, DataToExportSaver
 from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
 
 
@@ -71,7 +71,7 @@ class TestAxisSaverLoader:
         UNITS = 'myunits'
         axis = Axis(label=LABEL, units=UNITS, data=OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE), index=INDEX)
 
-        axis_node = axis_saver.add_axis(h5saver._raw_group, axis)
+        axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
 
         attrs = ['label', 'units', 'offset', 'scaling', 'index']
         attrs_values = [LABEL, UNITS, OFFSET, SCALING, INDEX]
@@ -94,7 +94,7 @@ class TestAxisSaverLoader:
         UNITS = 'myunits'
         axis = Axis(label=LABEL, units=UNITS, data=OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE), index=INDEX)
 
-        axis_node = axis_saver.add_axis(h5saver._raw_group, axis)
+        axis_node = axis_saver.add_axis(h5saver.raw_group, axis)
 
         axis_back = axis_saver.load_axis(axis_node)
         assert isinstance(axis_back, Axis)
@@ -113,13 +113,13 @@ class TestAxisSaverLoader:
             axes_ini.append(Axis(label=f'LABEL{ind}', units=f'UNITS{ind}',
                                  data=OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE),
                                  index=ind))
-            axis_node = axis_saver.add_axis(h5saver._raw_group, axes_ini[-1])
+            axis_node = axis_saver.add_axis(h5saver.raw_group, axes_ini[-1])
             assert axis_node.name == axis_saver._format_node_name(ind)
             assert axis_node.attrs['label'] == f'LABEL{ind}'
             assert axis_node.attrs['index'] == ind
             assert axis_node.attrs['data_type'] == axis_saver.data_type
 
-        axes_out = axis_saver.get_axes(h5saver._raw_group)
+        axes_out = axis_saver.get_axes(h5saver.raw_group)
         for axis_ini, axis_out in zip(axes_ini, axes_out):
             assert axis_ini == axis_out
 
@@ -146,13 +146,13 @@ class TestDataSaverLoader:
                                   Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
                                        index=1),])
 
-        data_saver.add_data(h5saver._raw_group, data)
-        assert len(data_saver.get_axes(h5saver._raw_group)) == Ndata
-        for axis_in, axis_out in zip(data.axes, data_saver.get_axes(h5saver._raw_group)):
+        data_saver.add_data(h5saver.raw_group, data)
+        assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
+        for axis_in, axis_out in zip(data.axes, data_saver.get_axes(h5saver.raw_group)):
             assert axis_in == axis_out
 
         assert data_saver.load_data(h5saver.get_node('/RawData/Data00')) == data
-        assert data_saver.load_data(h5saver._raw_group) == data
+        assert data_saver.load_data(h5saver.raw_group) == data
 
 
 class TestDataToExportSaver:
@@ -162,32 +162,28 @@ class TestDataToExportSaver:
         Ndata = 2
         data_saver = DataToExportSaver(h5saver)
         data2D = DataWithAxes(name='mydata2D', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                            source='raw',
+                              source='raw',
                             dim='Data2D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
-                                       index=0),
-                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                       index=1), ])
+                              axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                                         index=0),
+                                    Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                         index=1), ])
 
         data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                            source='raw',
-                            dim='Data1D', distribution='uniform',
-                            axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
-                                       index=0)])
+                              source='raw',
+                              dim='Data1D', distribution='uniform',
+                              axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
+                                         index=0)])
 
         data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                            source='raw',
-                            dim='Data0D', distribution='uniform',
-                            )
+                              source='raw', dim='Data0D', distribution='uniform')
 
-        data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                            source='raw',
-                            dim='Data0D', distribution='uniform',
-                            )
+        data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)],
+                                 labels=['mylabel1', 'mylabel2'], source='raw', dim='Data0D', distribution='uniform')
 
         data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
 
-        det_group = h5saver.get_set_group(h5saver._raw_group, 'MyDet')
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
         data_saver.add_data(det_group, data_to_export)
         pass

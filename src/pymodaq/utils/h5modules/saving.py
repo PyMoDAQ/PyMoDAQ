@@ -84,6 +84,10 @@ class H5SaverLowLevel(H5Backend):
         self._logger_array = None
 
     @property
+    def raw_group(self):
+        return self._raw_group
+
+    @property
     def h5_file(self):
         return self._h5file
 
@@ -311,6 +315,16 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_incremental_group('detector', where, title, settings_as_xml, metadata)
         return group
 
+    def add_scan_group(self, where, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type detector
+        See Also
+        -------
+        add_incremental_group
+        """
+        group = self.add_incremental_group('scan', where, title, settings_as_xml, metadata)
+        return group
+
     def add_ch_group(self, where, title='', settings_as_xml='', metadata=dict([])):
         """
         Add a new group of type channel
@@ -335,12 +349,12 @@ class H5SaverLowLevel(H5Backend):
 
     def add_move_group(self, where, title='', settings_as_xml='', metadata=dict([])):
         """
-        Add a new group of type move
+        Add a new group of type actuator
         See Also
         -------
         add_incremental_group
         """
-        group = self.add_incremental_group('move', where, title, settings_as_xml, metadata)
+        group = self.add_incremental_group('actuator', where, title, settings_as_xml, metadata)
         return group
 
     def show_file_content(self):

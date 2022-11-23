@@ -28,12 +28,13 @@ import pymodaq.utils.scanner
 from pymodaq.utils.tcp_server_client import TCPClient
 from pymodaq.utils.gui_utils.widgets.lcd import LCD
 from pymodaq.utils.config import Config, get_set_local_dir
-from pymodaq.utils.h5modules import browse_data
+from pymodaq.utils.h5modules.browsing import browse_data
+from pymodaq.utils.h5modules.saving import H5Saver
+from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.control_modules.viewer_utility_classes import params as daq_viewer_params
-from pymodaq.utils.h5modules import H5Saver
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
@@ -130,6 +131,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.splash_sc = get_splash_sc()
 
         self._title = title
+
+        self.module_and_data_saver = module_saving.DetectorSaver(self)
 
         self._h5saver_continuous = H5Saver(save_type='detector')
         self._h5saver_continuous.settings_tree.setVisible(False)

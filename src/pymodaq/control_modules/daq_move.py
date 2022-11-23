@@ -25,6 +25,7 @@ from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.utils import config
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.h5modules import module_saving
 
 
 local_path = config.get_set_local_dir()
@@ -98,6 +99,9 @@ class DAQ_Move(ParameterManager, ControlModule):
         self._title = title
 
         self.actuator = ACTUATOR_TYPES[0]
+
+        self.module_and_data_saver = module_saving.ActuatorSaver(self)
+
         self._move_done_bool = True
 
         self._current_value = 0.

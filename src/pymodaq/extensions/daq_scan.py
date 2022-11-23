@@ -39,7 +39,8 @@ from pymodaq.utils.messenger import messagebox
 
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
-from pymodaq.utils.h5modules import H5Saver
+from pymodaq.utils.h5modules.saving import H5Saver
+from pymodaq.utils.h5modules import module_saving
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -107,8 +108,12 @@ class DAQ_Scan(QObject):
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
 
         self.h5saver = H5Saver()
-        self.h5saver.settings.child(('do_save')).hide()
-        self.h5saver.settings.child(('custom_name')).hide()
+        self.module_and_data_saver = module_saving.ScanSaver(self)
+        self.module_and_data_saver.h5saver = self.h5saver
+
+        self.h5saver.settings.child('do_save').hide()
+        self.h5saver.settings.child('custom_name').hide()
+
         self.h5saver.new_file_sig.connect(self.create_new_file)
         self.h5arrays = OrderedDict([])
 

@@ -95,6 +95,7 @@ class ControlModule(QObject):
         self._send_to_tcpip = False
         self._tcpclient_thread = None
         self._hardware_thread = None
+        self.module_and_data_saver = None
 
     @property
     def module_type(self):

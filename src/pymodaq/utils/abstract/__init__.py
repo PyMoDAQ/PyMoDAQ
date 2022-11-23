@@ -9,6 +9,7 @@ See https://stackoverflow.com/a/50381071/8090831
 """
 
 from abc import ABCMeta as NativeABCMeta
+from abc import abstractmethod
 from typing import cast, Any, Callable, TypeVar
 
 
