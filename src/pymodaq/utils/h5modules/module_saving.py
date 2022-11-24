@@ -61,6 +61,11 @@ class ModuleSaver(metaclass=ABCMeta):
     @h5saver.setter
     def h5saver(self, _h5saver: H5SaverLowLevel):
         self._h5saver = _h5saver
+        self.update_after_h5changed()
+
+    @abstractmethod
+    def update_after_h5changed(self):
+        ...
 
 
 class DetectorSaver(ModuleSaver):
@@ -77,16 +82,10 @@ class DetectorSaver(ModuleSaver):
         self._datatoexport_saver = None
 
         self._module: DAQ_Viewer = module
-        self.h5saver = module.h5saver
+        self._h5saver = None
 
-    @property
-    def h5saver(self):
-        return self._h5saver
-
-    @h5saver.setter
-    def h5saver(self, _h5saver: H5SaverLowLevel):
-        self._h5saver = _h5saver
-        self._datatoexport_saver = DataToExportSaver(_h5saver)
+    def update_after_h5changed(self, ):
+        self._datatoexport_saver = DataToExportSaver(self.h5saver)
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}) -> Node:
         """
@@ -106,19 +105,22 @@ class DetectorSaver(ModuleSaver):
 
         settings_xml = ET.Element('All_settings')
         settings_xml.append(ioxml.walk_parameters_to_xml(param=self._module.settings))
-        settings_xml.append(ioxml.walk_parameters_to_xml(param=self._module.h5saver.settings))
+        settings_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
         if self._module.ui is not None:
             for ind, viewer in enumerate(self._module.viewers):
                 if hasattr(viewer, 'roi_manager'):
                     roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}')
-                    roi_xml.append(ioxml.walk_parameters_to_xml(viewer.roi_manager.settings))
+                    roi_xml.append(ioxml.walk_parameters_to_xml(param=viewer.roi_manager.settings))
 
         return self._h5saver.add_det_group(where, title=self._module.title, settings_as_xml=ET.tostring(settings_xml),
                                            metadata=metadata)
 
     def add_data(self, where: Union[Node, str], data: DataToExport):
         self._datatoexport_saver.add_data(where, data)
+
+    def add_bkg(self, where: Union[Node, str], data_bkg: DataToExport):
+        self._datatoexport_saver.add_bkg(where, data_bkg)
 
 
 class ActuatorSaver(ModuleSaver):
@@ -135,16 +137,9 @@ class ActuatorSaver(ModuleSaver):
         self._axis_saver = None
 
         self._module: DAQ_Move = module
-        self.h5saver = module.h5saver
 
-    @property
-    def h5saver(self):
-        return self._h5saver
-
-    @h5saver.setter
-    def h5saver(self, _h5saver: H5SaverLowLevel):
-        self._h5saver = _h5saver
-        self._axis_saver = AxisSaverLoader(_h5saver)
+    def update_after_h5changed(self):
+        self._axis_saver = AxisSaverLoader(self.h5saver)
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}):
         if where is None:
@@ -170,18 +165,11 @@ class ScanSaver(ModuleSaver):
     def __init__(self, module: DAQ_Scan):
 
         self._module: DAQ_Scan = module
-        self.h5saver = module.h5saver
 
-    @property
-    def h5saver(self):
-        return self._h5saver
-
-    @h5saver.setter
-    def h5saver(self, _h5saver: H5SaverLowLevel):
-        self._h5saver = _h5saver
+    def update_after_h5changed(self):
         for module in self._module.modules_manager.modules:
             if hasattr(module, 'module_and_data_saver'):
-                module.module_and_data_saver.h5saver = _h5saver
+                module.module_and_data_saver.h5saver = self.h5saver
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}) -> Node:
         """

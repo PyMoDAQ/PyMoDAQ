@@ -72,8 +72,10 @@ class H5SaverLowLevel(H5Backend):
         The file path
     """
 
-    def __init__(self, backend='tables'):
+    def __init__(self, save_type: SaveType = 'scan', backend='tables'):
         H5Backend.__init__(self, backend)
+
+        self.save_type = enum_checker(SaveType, save_type)
 
         self.h5_file_path = None
         self.h5_file_name = None
@@ -91,17 +93,17 @@ class H5SaverLowLevel(H5Backend):
     def h5_file(self):
         return self._h5file
 
-    def init_file(self, file_name: Path, file_type: FileType, raw_group_name='RawData', **metadata):
+    def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False, **metadata):
         """Initializes a new h5 file.
 
         Parameters
         ----------
         file_name: Path
             a complete Path pointing to a h5 file
-        file_type: FileType
-            the file type FileType enum
         raw_group_name: str
             Base node name
+        new_file: bool
+            If True create a new file, otherwise append to a potential existing one
 
         Returns
         -------
@@ -109,8 +111,6 @@ class H5SaverLowLevel(H5Backend):
             True if new file has been created, False otherwise
         """
         datetime_now = datetime.datetime.now()
-
-        file_type = enum_checker(FileType, file_type)
 
         if file_name is not None and isinstance(file_name, Path):
             self.h5_file_name = file_name.stem + ".h5"
@@ -121,20 +121,20 @@ class H5SaverLowLevel(H5Backend):
             self.h5_file_path = self.h5_file_name.parent
 
         self.close_file()
-        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'a', title='PyMoDAQ file')
+        self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a', title='PyMoDAQ file')
 
         self._raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
         self.get_set_logger(self._raw_group)
 
+        if new_file:
+            self._raw_group.attrs['type'] = self.save_type.name  # first possibility to set a node attribute
+            self.root().set_attr('file', self.h5_file_name)  # second possibility
 
-        self._raw_group.attrs['type'] = file_type.name  # first possibility to set a node attribute
-        self.root().set_attr('file', self.h5_file_name)  # second possibility
+            self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
+            self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
 
-        self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
-        self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
-
-        for metadata_key in metadata:
-            self._raw_group.attrs[metadata_key] = metadata[metadata_key]
+            for metadata_key in metadata:
+                self._raw_group.attrs[metadata_key] = metadata[metadata_key]
 
     def save_file(self, filename=None):
         if filename is None:
@@ -263,6 +263,44 @@ class H5SaverLowLevel(H5Backend):
         self._current_group = super().get_set_group(where, name, title)
         return self._current_group
 
+    def get_node_from_attribute_match(self, where, attr_name, attr_value):
+        """Get a Node starting from a given node (Group) matching a pair of node attribute name and value"""
+        for node in self.walk_nodes(where):
+            if attr_name in node.attrs and node.attrs[attr_name] == attr_value:
+                return node
+
+    def get_node_from_title(self, where, title: str):
+        """Get a Node starting from a given node (Group) matching the given title"""
+        return self.get_node_from_attribute_match(where, 'TITLE', title)
+
+    def add_data_group(self, where, data_dim: DataDim, title='', settings_as_xml='', metadata=dict([])):
+        """Creates a group node at given location in the tree
+
+        Parameters
+        ----------
+        where: group node
+               where to create data group
+        group_data_type: DataDim
+        title: str, optional
+               a title for this node, will be saved as metadata
+        settings_as_xml: str, optional
+                         XML string created from a Parameter object to be saved as metadata
+        metadata: dict, optional
+                  will be saved as a new metadata attribute with name: key and value: dict value
+
+        Returns
+        -------
+        group: group node
+
+        See Also
+        --------
+        :py:meth:`add_group`
+        """
+        data_dim = enum_checker(DataDim, data_dim)
+        metadata.update(settings=settings_as_xml)
+        group = self.add_group(data_dim.name, 'data_dim', where, title, metadata)
+        return group
+
     def add_incremental_group(self, group_type, where, title='', settings_as_xml='', metadata=dict([])):
         """
         Add a node in the h5 file tree of the group type with an increment in the given name
@@ -373,7 +411,7 @@ class H5SaverLowLevel(H5Backend):
         form.show()
 
 
-class H5SaverBase(H5Backend, ParameterManager):
+class H5SaverBase(H5SaverLowLevel, ParameterManager):
     """Object containing all methods in order to save datas in a *hdf5 file* with a hierarchy compatible with
     the H5Browser. The saving parameters are contained within a **Parameter** object: self.settings that can be displayed
     on a UI using the widget self.settings_tree. At the creation of a new file, a node
@@ -468,30 +506,15 @@ class H5SaverBase(H5Backend, ParameterManager):
         --------
         https://github.com/HDFGroup/hsds
         """
-        H5Backend.__init__(self, backend)
+        H5SaverLowLevel.__init__(self, save_type, backend)
         ParameterManager.__init__(self)
 
-        if save_type not in SaveType.names():
-            raise InvalidSave('Invalid saving type')
-
-        self.h5_file_path = None
-        self.h5_file_name = None
-        self.logger_array = None
-        self.file_loaded = False
-
-        self.current_group = None
         self.current_scan_group = None
         self.current_scan_name = None
-        self.raw_group = None
 
-        self.settings.child('save_type').setValue(save_type)
+        self.settings.child('save_type').setValue(self.save_type.name)
 
-    @property
-    def h5_file(self):
-        return self._h5file
-
-    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([]),
-                  raw_group_name='raw_data'):
+    def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([])):
         """Initializes a new h5 file.
         Could set the h5_file attributes as:
 
@@ -516,7 +539,6 @@ class H5SaverBase(H5Backend, ParameterManager):
                    True if new file has been created, False otherwise
         """
         datetime_now = datetime.datetime.now()
-
         if addhoc_file_path is None:
             if not os.path.isdir(self.settings['base_path']):
                 os.mkdir(self.settings['base_path'])
@@ -551,8 +573,8 @@ class H5SaverBase(H5Backend, ParameterManager):
             self.h5_file_path = addhoc_file_path.parent
             self.h5_file_name = addhoc_file_path.name
 
-        fullpathname = str(self.h5_file_path.joinpath(self.h5_file_name))
-        self.settings.child('current_h5_file').setValue(fullpathname)
+        fullpathname = self.h5_file_path.joinpath(self.h5_file_name)
+        self.settings.child('current_h5_file').setValue(str(fullpathname))
 
         if update_h5:
             self.current_scan_group = None
@@ -561,15 +583,8 @@ class H5SaverBase(H5Backend, ParameterManager):
         if self.current_scan_group is not None:
             scan_group = self.get_node_name(self.current_scan_group)
 
-        if update_h5:
-            self.close_file()
-            self.open_file(fullpathname, 'w', title='PyMoDAQ file')
+        super().init_file(fullpathname, new_file=update_h5)
 
-        else:
-            self.close_file()
-            self.open_file(fullpathname, 'a', title='PyMoDAQ file')
-
-        self.raw_group = self.get_set_group(self.root(), raw_group_name, title='Data from PyMoDAQ modules')
         self.get_set_logger(self.raw_group)
 
         if scan_group is not None:
@@ -577,36 +592,7 @@ class H5SaverBase(H5Backend, ParameterManager):
         else:
             self.current_scan_group = self.get_last_scan()
 
-        self.raw_group.attrs['type'] = self.settings['save_type']  # first possibility to set a node attribute
-        self.root().set_attr('file', self.h5_file_name)  # second possibility
-        if update_h5:
-            self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
-            self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
-            for metadat in metadata:
-                self.raw_group.attrs[metadat] = metadata[metadat]
         return update_h5
-
-    def add_scan_group(self, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type scan
-        See Also
-        -------
-        add_incremental_group
-        """
-        if self.current_scan_group is not None:
-            if len(self.get_children(self.current_scan_group)) == 0:
-                new_scan = False
-            else:
-                new_scan = True
-        else:
-            new_scan = True
-        if new_scan:
-            self.current_scan_group = self.add_incremental_group('scan', self.raw_group, title, settings_as_xml,
-                                                                 metadata)
-            self.set_attr(self.current_scan_group, 'description', '')
-            self.settings.child('current_scan_name').setValue(self.get_node_name(self.current_scan_group))
-
-        return self.current_scan_group
 
     def update_file_paths(self, update_h5=False):
         """
@@ -824,63 +810,6 @@ class H5SaverBase(H5Backend, ParameterManager):
         if filename != '':
             super().save_file_as(filename)
 
-    def get_set_logger(self, where):
-        """ Retrieve or create (if absent) a logger enlargeable array to store logs
-        Get attributed to the class attribute ``logger_array``
-        Parameters
-        ----------
-        where: node
-               location within the tree where to save or retrieve the array
-
-        Returns
-        -------
-        logger_array: vlarray
-                      enlargeable array accepting strings as elements
-        """
-        if isinstance(where, Node):
-            where = where.node
-        logger = 'Logger'
-        if logger not in list(self.get_children(where)):
-            # check if logger node exist
-            self.logger_array = self.add_string_array(where, logger)
-            self.logger_array.attrs['type'] = 'log'
-        else:
-            self.logger_array = self.get_node(where, name=logger)
-        return self.logger_array
-
-    def add_log(self, msg):
-        self.logger_array.append(msg)
-
-    def add_data_group(self, where, group_data_type, title='', settings_as_xml='', metadata=dict([])):
-        """Creates a group node at given location in the tree
-
-        Parameters
-        ----------
-        where: group node
-               where to create data group
-        group_data_type: list of str
-                         either ['data0D', 'data1D', 'data2D', 'dataND']
-        title: str, optional
-               a title for this node, will be saved as metadata
-        settings_as_xml: str, optional
-                         XML string created from a Parameter object to be saved as metadata
-        metadata: dict, optional
-                  will be saved as a new metadata attribute with name: key and value: dict value
-
-        Returns
-        -------
-        group: group node
-
-        See Also
-        --------
-        :py:meth:`add_group`
-        """
-        if group_data_type not in DataDim.names():
-            raise InvalidGroupDataType('Invalid data group type')
-        metadata.update(settings=settings_as_xml)
-        group = self.add_group(group_data_type, '', where, title, metadata)
-        return group
-
     def add_navigation_axis(self, data, parent_group, axis='x_axis', enlargeable=False, title='', metadata=dict([])):
         """
         Create carray or earray for navigation axis within a scan
@@ -937,217 +866,6 @@ class H5SaverBase(H5Backend, ParameterManager):
                            enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
 
-    def add_data(self, channel_group, data_dict, scan_type='scan1D', scan_subtype='',
-                 scan_shape=[], title='', enlargeable=False,
-                 init=False, add_scan_dim=False, metadata=dict([])):
-        """save data within the hdf5 file together with axes data (if any) and metadata, node name will be 'Data'
-
-        Parameters
-        ----------
-        channel_group: (hdf5 node) node where to save the array, in general within a channel type group
-        data_dict: (dict) dictionnary containing the data to save and all the axis and metadata mandatory key: 'data':
-         (ndarray) data to save other keys: 'xxx_axis' (for instance x_axis, y_axis, 'nav_x_axis'....) or background
-        scan_type: (str) either '', 'scan1D' or 'scan2D' or Tabular or sequential
-        scan_subtype: (str) see scanner module
-        scan_shape: (iterable) the shape of the scan dimensions
-        title: (str) the title attribute of the array node
-        enlargeable: (bool) if False, data are save as a CARRAY, otherwise as a EARRAY (for ragged data, see add_sting_array)
-        init: (bool) if True, the array saved in the h5 file is initialized with the correct type but all element equal
-                     to zero. Else, the 'data' key of data_dict is saved as is
-        add_scan_dim: (bool) if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
-                      In that case, the array is usually initialized as zero and further populated
-        metadata: (dict) dictionnary whose keys will be saved as the array attributes
-
-
-        Returns
-        -------
-        array (CARRAY or EARRAY)
-
-        See Also
-        --------
-        add_array, add_string_array
-        """
-
-        shape, dimension, size = utils.get_data_dimension(data_dict['data'])
-        tmp_data_dict = copy.deepcopy(data_dict)
-        array_type = getattr(np, self.settings['dynamic'])
-        # save axis
-        # this loop covers all type of axis : x_axis, y_axis... nav_x_axis, ...
-        axis_keys = [k for k in tmp_data_dict.keys() if 'axis' in k]
-        for key in axis_keys:
-            if not isinstance(tmp_data_dict[key], dict):
-                array_to_save = tmp_data_dict[key]
-                tmp_dict = dict(label='', units='')
-            else:
-                tmp_dict = copy.deepcopy(tmp_data_dict[key])
-                array_to_save = tmp_dict.pop('data')
-                tmp_data_dict.pop(key)
-
-            self.add_array(channel_group, key, 'axis', array_type=None, array_to_save=array_to_save,
-                           enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-
-        array_to_save = tmp_data_dict.pop('data')
-        if isinstance(array_to_save, Number) or isinstance(array_to_save, str):
-            array_to_save = np.array([array_to_save])
-        if 'type' in tmp_data_dict:
-            tmp_data_dict.pop('type')  # otherwise this metadata would overide mandatory attribute 'type' for a h5 node
-
-        if 'bkg' in tmp_data_dict:
-            bkg = tmp_data_dict.pop('bkg')
-            self.add_array(channel_group, 'Bkg', 'bkg', array_type=array_type, array_to_save=bkg,
-                           data_dimension=dimension)
-        tmp_data_dict.update(metadata)
-        array_to_save = array_to_save.astype(array_type)
-        data_array = self.add_array(channel_group, 'Data', 'data', array_type=array_type,
-                                    title=title, data_shape=shape, enlargeable=enlargeable, data_dimension=dimension,
-                                    scan_type=scan_type, scan_subtype=scan_subtype, scan_shape=scan_shape,
-                                    array_to_save=array_to_save,
-                                    init=init, add_scan_dim=add_scan_dim, metadata=tmp_data_dict)
-
-
-        self.flush()
-        return data_array
-
-    def add_array(self, where, name, data_type, data_shape=None, data_dimension=None, scan_type='', scan_subtype='',
-                  scan_shape=[],
-                  title='', array_to_save=None, array_type=None, enlargeable=False, metadata=dict([]),
-                  init=False, add_scan_dim=False):
-        """save data arrays on the hdf5 file together with metadata
-        Parameters
-        ----------
-        where: (hdf5 node) node where to save the array
-        name: (str) name of the array in the hdf5 file
-        data_type: (str) one of ['data', 'axis', 'live_scan', 'navigation_axis', 'external_h5', 'strings', 'bkg'], mandatory
-            so that the h5Browsr interpret correctly the array (see add_data)
-        data_shape: (iterable) the shape of the array to save, mandatory if array_to_save is None
-        data_dimension: (str) one of ['0D', '1D', '2D', 'ND']
-        scan_type: (str) either '', 'scan1D' or 'scan2D'
-        scan_shape: (iterable): the shape of the scan dimensions
-        title: (str) the title attribute of the array node
-        array_to_save: (ndarray or None) data to be saved in the array. If None, array_type and data_shape
-                        should be specified
-        array_type: (np.dtype or numpy types), eg np.float, np.int32 ...
-        enlargeable: (bool) if False, data are save as a CARRAY, otherwise as a EARRAY (for ragged data, see add_sting_array)
-        metadata: (dict) dictionnary whose keys will be saved as the array attributes
-        init: (bool) if True, the array saved in the h5 file is initialized with the correct type but all element equal
-                     to zero. Else, the 'data' key of data_dict is saved as is
-        add_scan_dim: if True, the scan axes dimension (scan_shape iterable) is prepended to the array shape on the hdf5
-                      In that case, the array is usually initialized as zero and further populated
-
-        Returns
-        -------
-        array (CARRAY or EARRAY)
-
-        See Also
-        --------
-        add_data, add_string_array
-        """
-        if array_type is None:
-            if array_to_save is None:
-                array_type = getattr(np, self.settings.child('dynamic').value())
-            else:
-                array_type = array_to_save.dtype
-
-        data_dimension = enum_checker(data_dimension)
-        data_type = enum_checker(DataType, data_type)
-
-        if scan_type != '':
-            scan_type = utils.uncapitalize(scan_type)
-        if scan_type.lower() not in [s.lower() for s in scan_types]:
-            raise InvalidScanType('Invalid scan type')
-        if enlargeable:
-            if data_shape == (1,):
-                data_shape = None
-            array = self.create_earray(where, utils.capitalize(name), dtype=np.dtype(array_type),
-                                       data_shape=data_shape, title=title)
-        else:
-            if add_scan_dim:  # means it is an array initialization to zero
-                shape = list(scan_shape[:])
-                shape.extend(data_shape)
-                if init or array_to_save is None:
-                    array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
-
-            array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
-        self.set_attr(array, 'type', data_type)
-        self.set_attr(array, 'data_dimension', data_dimension)
-        self.set_attr(array, 'scan_type', scan_type)
-        self.set_attr(array, 'scan_subtype', scan_subtype)
-
-        for metadat in metadata:
-            self.set_attr(array, metadat, metadata[metadat])
-        return array
-
-    def add_string_array(self, where, name, title='', metadata=dict([])):
-        array = self.create_vlarray(where, name, dtype='string', title=title)
-        array.attrs['shape'] = (0,)
-        array.attrs['data_dimension'] = '0D'
-        array.attrs['scan_type'] = 'scan1D'
-
-        for metadat in metadata:
-            array.attrs[metadat] = metadata[metadat]
-        return array
-
-    def get_set_group(self, where, name, title=''):
-        self.current_group = super().get_set_group(where, name, title)
-        return self.current_group
-
-    def add_incremental_group(self, group_type, where, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a node in the h5 file tree of the group type with an increment in the given name
-        Parameters
-        ----------
-        group_type: (str) one of the possible values of **group_types**
-        where: (str or node) parent node where to create the new group
-        title: (str) node title
-        settings_as_xml: (str) XML string containing Parameters representation (see custom_Tree)
-        metadata: (dict) extra metadata to be saved with this new group node
-
-        Returns
-        -------
-        (node): newly created group node
-        """
-        if group_type not in group_types:
-            raise InvalidGroupType('Invalid group type')
-        nodes = [name for name in self.get_children(self.get_node(where))]
-        nodes_tmp = []
-        for node in nodes:
-            if utils.capitalize(group_type) in node:
-                nodes_tmp.append(node)
-        nodes_tmp.sort()
-        if len(nodes_tmp) == 0:
-            ind_group = -1
-        else:
-            ind_group = int(nodes_tmp[-1][-3:])
-        group = self.get_set_group(where, utils.capitalize(group_type) + '{:03d}'.format(ind_group + 1), title)
-        self.set_attr(group, 'settings', settings_as_xml)
-        if group_type.lower() != 'ch':
-            self.set_attr(group, 'type', group_type.lower())
-        else:
-            self.set_attr(group, 'type', '')
-        for metadat in metadata:
-            self.set_attr(group, metadat, metadata[metadat])
-        return group
-
-    def add_det_group(self, where, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type detector
-        See Also
-        -------
-        add_incremental_group
-        """
-        group = self.add_incremental_group('detector', where, title, settings_as_xml, metadata)
-        return group
-
-    def add_CH_group(self, where, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type channel
-        See Also
-        -------
-        add_incremental_group
-        """
-        group = self.add_incremental_group('ch', where, title, settings_as_xml, metadata)
-        return group
-
     def add_live_scan_group(self, where, dimensionality, title='', settings_as_xml='', metadata=dict([])):
         """
         Add a new group of type live scan
@@ -1158,16 +876,6 @@ class H5SaverBase(H5Backend, ParameterManager):
         metadata.update(settings=settings_as_xml)
         group = self.add_group(utils.capitalize('Live_scan_{:s}'.format(dimensionality)), '', where, title=title,
                                metadata=metadata)
-        return group
-
-    def add_move_group(self, where, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type move
-        See Also
-        -------
-        add_incremental_group
-        """
-        group = self.add_incremental_group('move', where, title, settings_as_xml, metadata)
         return group
 
     def value_changed(self, param):

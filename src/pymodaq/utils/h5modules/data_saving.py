@@ -196,7 +196,7 @@ class DataSaverLoader(DataSaver):
 
     Parameters
     ----------
-    hsaver: H5SaverLowLevel
+    h5saver: H5SaverLowLevel
 
     Attributes
     ----------
@@ -205,13 +205,13 @@ class DataSaverLoader(DataSaver):
     """
     data_type = DataType['data']
 
-    def __init__(self, hsaver: H5SaverLowLevel):
+    def __init__(self, h5saver: H5SaverLowLevel):
         self.data_type = enum_checker(DataType, self.data_type)
 
-        self._h5saver = hsaver
-        self._axis_saver = AxisSaverLoader(hsaver)
+        self._h5saver = h5saver
+        self._axis_saver = AxisSaverLoader(h5saver)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes):
+    def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
         """
 
         Parameters
@@ -219,6 +219,7 @@ class DataSaverLoader(DataSaver):
         where: Union[Node, str]
             the path of a given node or the node itself
         data
+        save_axes: bool
 
         Returns
         -------
@@ -230,8 +231,9 @@ class DataSaverLoader(DataSaver):
                                     metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                   source=data.source.name, distribution=data.distribution.name,
                                                   nav_indexes=data.nav_indexes))
-        for axis in data.axes:
-            self._axis_saver.add_axis(where, axis)
+        if save_axes:
+            for axis in data.axes:
+                self._axis_saver.add_axis(where, axis)
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
         """
@@ -288,11 +290,29 @@ class DataSaverLoader(DataSaver):
         return data
 
 
-class DataToExportSaver:
+class BkgSaverLoader(DataSaverLoader):
+    """Specialized Object to save and load DataWithAxes background object to and from a h5file
 
-    def __init__(self, hsaver: H5SaverLowLevel):
-        self._h5saver = hsaver
-        self._data_saver = DataSaverLoader(hsaver)
+    Parameters
+    ----------
+    hsaver: H5SaverLowLevel
+
+    Attributes
+    ----------
+    data_type: DataType
+        The enum for this type of data, here 'data'
+    """
+    data_type = DataType['bkg']
+
+    def __init__(self, h5saver: H5SaverLowLevel):
+        super().__init__(h5saver)
+
+
+class DataToExportSaver:
+    def __init__(self, h5saver: H5SaverLowLevel):
+        self._h5saver = h5saver
+        self._data_saver = DataSaverLoader(h5saver)
+        self._bkg_saver = BkgSaverLoader(h5saver)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
         """
@@ -311,8 +331,16 @@ class DataToExportSaver:
         """
         dims = data.get_dim_presents()
         for dim in dims:
-            dim_group = self._h5saver.get_set_group(where, dim)
+            dim_group = self._h5saver.add_data_group(where, dim)
             for dwa in data.get_data_from_dim(dim):  # dwa: DataWithAxes filtered by dim
                 dwa_group = self._h5saver.add_ch_group(dim_group, dwa.name, settings_as_xml, metadata)
                 self._data_saver.add_data(dwa_group, dwa)
 
+    def add_bkg(self, where: Union[Node, str], data: DataToExport):
+        dims = data.get_dim_presents()
+        for dim in dims:
+            dim_group = self._h5saver.get_set_group(where, dim)
+            for dwa in data.get_data_from_dim(dim):  # dwa: DataWithAxes filtered by dim
+                dwa_group = self._h5saver.get_node_from_title(dim_group, dwa.name)
+                if dwa_group is not None:
+                    self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)

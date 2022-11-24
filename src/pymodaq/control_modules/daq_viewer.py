@@ -645,7 +645,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                                                                   ext='h5')  # see daq_utils
         self.snapshot(pathname=self._save_file_pathname, dosave=True)
 
-    def _save_data(self, path=None, data=None):
+    def _save_data(self, path=None, data: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
 
         Parameters
@@ -663,65 +663,29 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
 
-        settings_str = b'<All_settings>' + ioxml.parameter_to_xml_string(self.settings)
-        if self.ui is not None:
-            if hasattr(self.viewers[0], 'roi_manager'):
-                settings_str += ioxml.parameter_to_xml_string(self.viewers[0].roi_manager.settings)
-        settings_str += ioxml.parameter_to_xml_string(h5saver.settings)
-        settings_str += b'</All_settings>'
+        self.module_and_data_saver.h5saver = h5saver
+        detector_node = self.module_and_data_saver.get_set_node()
+        self.module_and_data_saver.add_data(detector_node, data)
+        if self._do_bkg and self._bkg is not None:
+            self.module_and_data_saver.add_bkg(detector_node, self._bkg)
 
-        det_group = h5saver.add_det_group(h5saver.raw_group, "Data", settings_str)
-        if self._external_h5_data is not None:
-            try:
-                external_group = h5saver.add_group('external_data', 'external_h5', det_group)
-                if not self._external_h5_data.isopen:
-                    h5saver = H5Saver()
-                    h5saver.init_file(addhoc_file_path=self._external_h5_data.filename)
-                    h5_file = h5saver.h5_file
-                else:
-                    h5_file = self._external_h5_data
-                h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
-                h5_file.flush()
-                h5_file.close()
-
-            except Exception as e:
-                self.logger.exception(str(e))
-        try:
-            self._channel_arrays = OrderedDict([])
-            data_dims = ['data1D']  # we don't recrod 0D data in this mode (only in continuous)
-            if h5saver.settings.child(('save_2D')).value():
-                data_dims.extend(['data2D', 'dataND'])
-
-            if self._bkg is not None and self._do_bkg:
-                bkg_container = OrderedDict([])
-                self._process_data(self._bkg, bkg_container)
-
-            for data_dim in data_dims:
-                if data[data_dim] is not None:
-                    if data_dim in data.keys() and len(data[data_dim]) != 0:
-                        if not h5saver.is_node_in_group(det_group, data_dim):
-                            self._channel_arrays[data_dim] = OrderedDict([])
-
-                            data_group = h5saver.add_data_group(det_group, data_dim)
-                            for ind_channel, channel in enumerate(data[data_dim]):  # list of OrderedDict
-
-                                channel_group = h5saver.add_CH_group(data_group, title=channel)
-
-                                self._channel_arrays[data_dim]['parent'] = channel_group
-                                if self._bkg is not None and self._do_bkg:
-                                    if channel in bkg_container[data_dim]:
-                                        data[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
-                                self._channel_arrays[data_dim][channel] = h5saver.add_data(channel_group,
-                                                                                          data[data_dim][channel],
-                                                                                          scan_type='',
-                                                                                          enlargeable=False)
-
-                                if data_dim == 'data2D' and 'Data2D' in self._viewer_types.names():
-                                    ind_viewer = self._viewer_types.names().index('Data2D')
-                                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.viewers[ind_viewer].parent)
-                                    self._channel_arrays[data_dim][channel].attrs['pixmap2D'] = string
-        except Exception as e:
-            self.logger.exception(str(e))
+        #todo: deal with externalh5
+        #
+        # if self._external_h5_data is not None:
+        #     try:
+        #         external_group = h5saver.add_group('external_data', 'external_h5', det_group)
+        #         if not self._external_h5_data.isopen:
+        #             h5saver = H5Saver()
+        #             h5saver.init_file(addhoc_file_path=self._external_h5_data.filename)
+        #             h5_file = h5saver.h5_file
+        #         else:
+        #             h5_file = self._external_h5_data
+        #         h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
+        #         h5_file.flush()
+        #         h5_file.close()
+        #
+        #     except Exception as e:
+        #         self.logger.exception(str(e))
 
         try:
             if self.ui is not None:
@@ -851,12 +815,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=data)
 
             if self._take_bkg:
-                self._bkg = copy.deepcopy(data)
+                self._bkg = copy.deepcopy(self._data_to_save_export)
                 self._take_bkg = False
-
-            # process bkg if needed
-            if self.do_bkg and self._bkg is not None:
-                data -= self._bkg
 
             if self._grabing:  # if live
                 refresh_time = self.settings['main_settings', 'refresh_time']
@@ -867,7 +827,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 refresh = True  # if single
             if self.ui is not None and self.settings.child('main_settings', 'show_data').value() and refresh:
                 self._received_data = 0  # so that data send back from viewers can be properly counted
-                self.set_data_to_viewers(data)
+                data_to_plot = copy.deepcopy(self._data_to_save_export)
+                # process bkg if needed
+                if self.do_bkg and self._bkg is not None:
+                    data_to_plot -= self._bkg
+
+                self.set_data_to_viewers(data_to_plot.data)
             else:
                 if self._do_continuous_save:
                     self.do_save_continuous(self._data_to_save_export)

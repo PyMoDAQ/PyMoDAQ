@@ -7,7 +7,7 @@ from pathlib import Path
 from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.logger import get_module_name, set_logger
-from utils.daq_utils import logger, find_dict_in_list_from_key_val
+from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val
 
 logger = set_logger(get_module_name(__file__))
 
@@ -16,7 +16,6 @@ DAQ_0DViewer_Det_types = get_plugins('daq_0Dviewer')
 DAQ_1DViewer_Det_types = get_plugins('daq_1Dviewer')
 DAQ_2DViewer_Det_types = get_plugins('daq_2Dviewer')
 DAQ_NDViewer_Det_types = get_plugins('daq_NDviewer')
-
 
 
 class InputFromDetector:

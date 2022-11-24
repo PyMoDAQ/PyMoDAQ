@@ -12,7 +12,7 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
 from pymodaq.utils.daq_utils import capitalize, JsonConverter
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.enums import BaseEnum
+from pymodaq.utils.enums import BaseEnum, enum_checker
 
 
 config = Config()
@@ -65,7 +65,7 @@ class GroupType(BaseEnum):
     ch = 3
     scan = 4
     external_h5 = 5
-
+    data_dim = 6
 
 class InvalidExport(Exception):
     pass
@@ -403,12 +403,16 @@ class Attributes(object):
         self.backend = backend
 
     def __getitem__(self, item):
+        if item == 'title':
+            item = item.upper()
         attr = get_attr(self._node.node, item, backend=self.backend)
         # if isinstance(attr, bytes):
         #    attr = attr.decode()
         return attr
 
     def __setitem__(self, key, value):
+        if key == 'title':
+            key = key.upper()
         set_attr(self._node.node, key, value, backend=self.backend)
 
     def __iter__(self):
@@ -936,15 +940,14 @@ class H5Backend:
         if isinstance(where, Node):
             where = where.node
 
-        if group_type not in GroupType:
-            raise InvalidGroupType('Invalid group type')
+        group_type = enum_checker(GroupType, group_type)
 
         if group_name in self.get_children(self.get_node(where)):
             node = self.get_node(where, group_name)
 
         else:
             node = self.get_set_group(where, utils.capitalize(group_name), title)
-            node.attrs['type'] = group_type.lower()
+            node.attrs['type'] = group_type.name.lower()
             for metadat in metadata:
                 node.attrs[metadat] = metadata[metadat]
         node.attrs['backend'] = self.backend

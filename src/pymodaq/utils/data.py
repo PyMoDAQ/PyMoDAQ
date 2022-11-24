@@ -1377,6 +1377,7 @@ class DataToExport(DataLowLevel):
         for dim in DataDim.names():
             if len(self.get_data_from_dim(dim)) != 0:
                 dims.append(dim)
+
         return dims
 
     def get_data_from_dim(self, dim: DataDim) -> 'DataToExport':
@@ -1388,6 +1389,7 @@ class DataToExport(DataLowLevel):
         """
         dim = enum_checker(DataDim, dim)
         selection = find_objects_in_list_from_attr_name_val(self.data, 'dim', dim, return_first=False)
+        selection.sort(key=lambda elt: elt[0].name)
         return DataToExport(name=self.name, data=[sel[0] for sel in selection])
 
     def get_data_from_name(self, name: str) -> List[DataWithAxes]:

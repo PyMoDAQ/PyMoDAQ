@@ -37,7 +37,7 @@ class MockDAQViewer():
         self.ui = None
 
 
-class MockDAQMove():
+class MockDAQMove:
     params = [{'title': 'mytitle', 'name': 'title', 'type': 'str', 'value': 'myactuatorvalue'}]
 
     def __init__(self, h5saver):
@@ -53,6 +53,7 @@ class TestDetectorSaver:
         h5saver = get_h5saver
         mock_det = MockDAQViewer(h5saver)
         det_saver = DetectorSaver(module=mock_det)
+        det_saver.h5saver = h5saver
 
         assert det_saver.group_type.name == 'detector'
 

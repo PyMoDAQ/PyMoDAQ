@@ -10,7 +10,7 @@ import sys
 from collections import OrderedDict
 import datetime
 
-import utils.data
+
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.dock import Dock
