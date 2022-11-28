@@ -13,7 +13,7 @@ from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
 from .saving import H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, GroupType
-from .data_saving import DataToExportSaver, AxisSaverLoader, DataSaverLoader
+from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportEnlargeableSaver
 from pymodaq.utils.parameter import ioxml
 
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -26,6 +26,7 @@ class ModuleSaver(metaclass=ABCMeta):
     group_type: GroupType = abstract_attribute()
     _module = abstract_attribute()
     _h5saver: H5SaverLowLevel = abstract_attribute()
+    _module_group: GROUP = abstract_attribute()
 
     def get_set_node(self, where: Union[Node, str] = None) -> Node:
         """Get the node corresponding to this particular Module instance
@@ -43,8 +44,10 @@ class ModuleSaver(metaclass=ABCMeta):
             where = self._h5saver.raw_group
         for node in self._h5saver.walk_nodes(where):
             if 'type' in node.attrs and node.attrs['type'] == self.group_type.name and node.title == self._module.title:
+                self._module_group = node
                 return node
-        return self._add_module(where)
+        self._module_group = self._add_module(where)
+        return self._module_group
 
     @abstractmethod
     def _add_module(self, where: Union[Node, str] = None, metadata={}):
@@ -53,6 +56,10 @@ class ModuleSaver(metaclass=ABCMeta):
     @property
     def module(self):
         return self._module
+
+    @property
+    def module_group(self):
+        return self._module_group
 
     @property
     def h5saver(self):
@@ -73,15 +80,15 @@ class DetectorSaver(ModuleSaver):
 
     Parameters
     ----------
-    h5saver
     module
     """
     group_type = GroupType['detector']
 
     def __init__(self, module: DAQ_Viewer):
-        self._datatoexport_saver = None
+        self._datatoexport_saver: DataToExportSaver = None
 
         self._module: DAQ_Viewer = module
+        self._module_group: GROUP = None
         self._h5saver = None
 
     def update_after_h5changed(self, ):
@@ -122,6 +129,40 @@ class DetectorSaver(ModuleSaver):
     def add_bkg(self, where: Union[Node, str], data_bkg: DataToExport):
         self._datatoexport_saver.add_bkg(where, data_bkg)
 
+    def add_external_h5(self, other_h5data: H5SaverLowLevel):
+        if other_h5data is not None:
+            external_group = self._h5saver.add_group('external_data', 'external_h5', self.module_group)
+            try:
+                if not other_h5data.isopen:
+                    h5saver = H5SaverLowLevel()
+                    h5saver.init_file(addhoc_file_path=other_h5data.filename)
+                    h5_file = h5saver.h5_file
+                else:
+                    h5_file = other_h5data
+                h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
+                h5_file.flush()
+                h5_file.close()
+
+            except Exception as e:
+                self.logger.exception(str(e))
+
+
+class DetectorEnlargeableSaver(DetectorSaver):
+    """Implementation of the ModuleSaver class dedicated to DAQ_Viewer modules in order to save enlargeable data
+
+    Parameters
+    ----------
+    module
+    """
+    group_type = GroupType['detector']
+
+    def __init__(self, module: DAQ_Viewer):
+        super().__init__(module)
+        self._datatoexport_saver: DataToExportEnlargeableSaver = None
+
+    def update_after_h5changed(self, ):
+        self._datatoexport_saver = DataToExportEnlargeableSaver(self.h5saver)
+
 
 class ActuatorSaver(ModuleSaver):
     """Implementation of the ModuleSaver class dedicated to DAQ_Move modules
@@ -135,7 +176,7 @@ class ActuatorSaver(ModuleSaver):
 
     def __init__(self, module: DAQ_Move):
         self._axis_saver = None
-
+        self._module_group: GROUP = None
         self._module: DAQ_Move = module
 
     def update_after_h5changed(self):
@@ -163,7 +204,7 @@ class ScanSaver(ModuleSaver):
     group_type = GroupType['scan']
 
     def __init__(self, module: DAQ_Scan):
-
+        self._module_group: GROUP = None
         self._module: DAQ_Scan = module
 
     def update_after_h5changed(self):

@@ -227,15 +227,33 @@ class TestDataBase:
             data[len(data) + 1]
 
     def test_maths(self):
-        ax = init_data(data=DATA2D, Ndata=2)
-        ax1 = init_data(data=DATA2D, Ndata=2)
+        data = init_data(data=DATA2D, Ndata=2)
+        data1 = init_data(data=DATA2D, Ndata=2)
 
-        ax_sum = ax + ax1
-        for ind_data in range(len(ax)):
-            assert np.all(ax_sum[ind_data] == pytest.approx(2 * DATA2D))
-        ax_diff = ax - ax1
-        for ind_data in range(len(ax)):
-            assert np.all(ax_diff[ind_data] == pytest.approx(0 * DATA2D))
+        data_sum = data + data1
+        for ind_data in range(len(data)):
+            assert np.all(data_sum[ind_data] == pytest.approx(2 * DATA2D))
+        data_diff = data - data1
+        for ind_data in range(len(data)):
+            assert np.all(data_diff[ind_data] == pytest.approx(0 * DATA2D))
+
+        data_mult = data * 0.85
+        for ind_data in range(len(data)):
+            assert np.all(data_mult[ind_data] == pytest.approx(0.85 * DATA2D))
+
+        data_div = data / 0.85
+        for ind_data in range(len(data)):
+            assert np.all(data_div[ind_data] == pytest.approx(DATA2D/.85))
+
+    def test_average(self):
+        WEIGHT = 5
+        FRAC = 0.23
+        data = init_data(data=DATA2D, Ndata=2)
+        data1 = init_data(data=FRAC * DATA2D, Ndata=2)
+
+        data_averaged = data.average(data1, WEIGHT)
+        for ind_data in range(len(data_averaged)):
+            assert np.all(data_averaged[ind_data] == pytest.approx(DATA2D * ((WEIGHT-1) * FRAC + 1) / WEIGHT))
 
 
 class TestDataWithAxes:
@@ -406,6 +424,12 @@ class TestDataToExport:
         data_sum = data1 + data2
         data_diff = data1 - data2
 
+        MUL_COEFF = 0.24
+        DIV_COEFF = 12.7
+
+        data_mul = data1 * MUL_COEFF
+        data_div = data2 / DIV_COEFF
+
         assert data_sum[0] == dat1 + dat3
         assert data_sum[1] == dat2 + dat2
 
@@ -418,4 +442,24 @@ class TestDataToExport:
         with pytest.raises(TypeError):
             data1 + data4
 
+        assert data_mul[0] == dat1 * MUL_COEFF
+        assert data_mul[1] == dat2 * MUL_COEFF
+
+        assert data_div[0] == dat3 / DIV_COEFF
+        assert data_div[1] == dat2 / DIV_COEFF
+
+    def test_average(self):
+        dat1 = init_data(data=DATA2D, Ndata=2, name='data2D1')
+        dat2 = init_data(data=0.2 * DATA2D, Ndata=2, name='data2D2')
+        dat3 = init_data(data=-0.7 * DATA2D, Ndata=2, name='data2D3')
+
+        data1 = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
+        data2 = data_mod.DataToExport(name='toexport', data=[dat3, dat2])
+
+        WEIGHT = 6
+
+        data1 = data1.average(data2, WEIGHT)
+
+        assert data1[0] == dat1.average(dat3, WEIGHT)
+        assert data1[1] == dat2.average(dat2, WEIGHT)
 

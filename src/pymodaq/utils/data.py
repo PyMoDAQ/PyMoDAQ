@@ -156,11 +156,19 @@ class Axis:
         """
         if data is None and self._data is not None:
             data = self._data
+
+        if self.is_axis_linear(data):
+            self._scaling = np.mean(np.diff(data))
+            self._offset = data[0]
+            self._data = None
+
+    def is_axis_linear(self, data=None):
+        if data is None:
+            data = self._data
         if data is not None:
-            if np.allclose(np.diff(data), np.mean(np.diff(data))):
-                self._scaling = np.mean(np.diff(data))
-                self._offset = data[0]
-                self._data = None
+            return np.allclose(np.diff(data), np.mean(np.diff(data)))
+        else:
+            return False
 
     @property
     def scaling(self):
@@ -197,9 +205,7 @@ class Axis:
 
     @staticmethod
     def _check_data_valid(data):
-        if data is None:
-            raise ValueError(f'data for the Axis class should be a 1D numpy array')
-        elif not isinstance(data, np.ndarray):
+        if not isinstance(data, np.ndarray):
             raise TypeError(f'data for the Axis class should be a 1D numpy array')
         elif len(data.shape) != 1:
             raise ValueError(f'data for the Axis class should be a 1D numpy array')
@@ -417,6 +423,23 @@ class DataBase(DataLowLevel):
             raise TypeError(f'Could not substract a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')
 
+    def __mul__(self, other):
+        if isinstance(other, numbers.Number):
+            new_data = copy.deepcopy(self)
+            for ind_array in range(len(new_data)):
+                new_data[ind_array] = self[ind_array] * other
+            return new_data
+        else:
+            raise TypeError(f'Could not multiply a {other.__class__.__name__} and a {self.__class__.__name__} '
+                            f'of a different length')
+
+    def __truediv__(self, other):
+        if isinstance(other, numbers.Number):
+            return self * (1 / other)
+        else:
+            raise TypeError(f'Could not divide a {other.__class__.__name__} and a {self.__class__.__name__} '
+                            f'of a different length')
+
     def __eq__(self, other):
         if isinstance(other, DataBase):
             if not(self.name == other.name and len(self) == len(other)):
@@ -430,6 +453,23 @@ class DataBase(DataLowLevel):
             return eq
         else:
             raise TypeError()
+
+    def average(self, other: 'DataBase', weight: int) -> 'DataBase':
+        """ Compute the weighted average between self and other DataBase and attributes it to self
+
+        Parameters
+        ----------
+        other_data: DataBase
+        weight: int
+            The weight the 'other' holds with respect to self
+
+        """
+        if isinstance(other, DataBase) and len(other) == len(self) and isinstance(weight, numbers.Number):
+            new_data = copy.copy(self)
+            return (other * (weight - 1) + new_data) / weight
+        else:
+            raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
+                            f'of a different length')
 
     @property
     def shape(self):
@@ -1325,6 +1365,42 @@ class DataToExport(DataLowLevel):
             return new_data
         else:
             raise TypeError(f'Could not add a {other.__class__.__name__} or a {self.__class__.__name__} '
+                            f'of a different length')
+
+    def __mul__(self, other: object):
+        if isinstance(other, numbers.Number):
+            new_data = copy.deepcopy(self)
+            for ind_dfp in range(len(self)):
+                new_data[ind_dfp] = self[ind_dfp] * other
+            return new_data
+        else:
+            raise TypeError(f'Could not multiply a {other.__class__.__name__} with a {self.__class__.__name__} '
+                            f'of a different length')
+
+    def __truediv__(self, other: object):
+        if isinstance(other, numbers.Number):
+            return self * (1 / other)
+        else:
+            raise TypeError(f'Could not divide a {other.__class__.__name__} with a {self.__class__.__name__} '
+                            f'of a different length')
+
+    def average(self, other: 'DataToExport', weight: int) -> 'DataToExport':
+        """ Compute the weighted average between self and other DataToExport and attributes it to self
+
+        Parameters
+        ----------
+        other: DataToExport
+        weight: int
+            The weight the 'other_data' holds with respect to self
+
+        """
+        if isinstance(other, DataToExport) and len(other) == len(self):
+            new_data = copy.copy(self)
+            for ind_dfp in range(len(self)):
+                new_data[ind_dfp] = self[ind_dfp].average(other[ind_dfp], weight)
+            return new_data
+        else:
+            raise TypeError(f'Could not average a {other.__class__.__name__} with a {self.__class__.__name__} '
                             f'of a different length')
 
     def __repr__(self):

@@ -55,6 +55,7 @@ class DataType(BaseEnum):
     external_h5 = 3
     strings = 4
     bkg = 5
+    data_enlargeable = 6
 
 
 class H5SaverLowLevel(H5Backend):
@@ -254,6 +255,7 @@ class H5SaverLowLevel(H5Backend):
         for metadat in metadata:
             self.set_attr(array, metadat, metadata[metadat])
         return array
+
 
     def get_set_group(self, where, name, title=''):
         """Get the group located at where if it exists otherwise creates it
@@ -513,6 +515,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         self.current_scan_name = None
 
         self.settings.child('save_type').setValue(self.save_type.name)
+
+    def show_settings(self, show=True):
+        self.settings_tree.setVisible(show)
 
     def init_file(self, update_h5=False, custom_naming=False, addhoc_file_path=None, metadata=dict([])):
         """Initializes a new h5 file.
@@ -810,26 +815,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         if filename != '':
             super().save_file_as(filename)
 
-    def add_navigation_axis(self, data, parent_group, axis='x_axis', enlargeable=False, title='', metadata=dict([])):
-        """
-        Create carray or earray for navigation axis within a scan
-        Parameters
-        ----------
-        data: (ndarray) of dimension 1
-        parent_group: (str or node) parent node where to save new data
-        axis: (str) either x_axis, y_axis, z_axis or time_axis. 'x_axis', 'y_axis', 'z_axis', 'time_axis' are axes containing scalar values (floats or ints). 'time_axis' can be interpreted as the posix timestamp corresponding to a datetime object, see datetime.timestamp()
-        enlargeable: (bool) if True the created array is a earray type if False the created array is a carray type
-        """
-
-        if axis not in ['x_axis', 'y_axis', 'z_axis', 'time_axis']:
-            if 'axis' not in axis:  # this take care of the case of sequential scans where axes are labelled with indexes
-                raise NameError('Invalid navigation axis name')
-
-        array = self.add_array(parent_group, f"{self.settings['save_type']}_{axis}", 'navigation_axis',
-                               data_shape=data.shape,
-                               data_dimension='1D', array_to_save=data, enlargeable=enlargeable, title=title,
-                               metadata=metadata)
-        return array
 
     def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title='', scan_subtype=''):
         isadaptive = scan_subtype == 'Adaptive'
@@ -866,17 +851,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                            enlargeable=False, data_dimension='1D', metadata=tmp_dict)
         return data_array
 
-    def add_live_scan_group(self, where, dimensionality, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type live scan
-        See Also
-        -------
-        add_incremental_group
-        """
-        metadata.update(settings=settings_as_xml)
-        group = self.add_group(utils.capitalize('Live_scan_{:s}'.format(dimensionality)), '', where, title=title,
-                               metadata=metadata)
-        return group
 
     def value_changed(self, param):
         if param.name() == 'show_file':

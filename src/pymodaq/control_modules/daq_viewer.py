@@ -132,22 +132,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self._title = title
 
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-
-        self._h5saver_continuous = H5Saver(save_type='detector')
-        self._h5saver_continuous.settings_tree.setVisible(False)
-        self._h5saver_continuous.settings.sigTreeStateChanged.connect(
-            self.parameter_tree_changed)  # trigger action from "do_save"  boolean
-        if self.ui is not None:
-            self.ui.add_setting_tree(self._h5saver_continuous.settings_tree)
-
-        self._time_array = None
-        self._channel_arrays = []
-        self._ini_time_cs = 0  # used for the continuous saving
-        self._do_continuous_save = False
-        self._is_continuous_initialized = False
-        self._file_continuous_save = None
-        self._ind_continuous_grab: int = 0
+        self.module_and_data_saver: module_saving.DetectorSaver = None
+        self.setup_saving_objects()
 
         self._external_h5_data = None
 
@@ -171,7 +157,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._save_file_pathname: Path = None  # to store last active path, will be an Path object
         
         self._snapshot_pathname: Path = None
-        self._current_data: DataRaw = None
+        self._current_data: DataToExport = None
         self._data_to_save_export: DataToExport = None
 
         self._do_save_data: bool = False
@@ -179,6 +165,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._set_setting_tree()  # to activate parameters of default Mock detector
 
         self.grab_done_signal.connect(self._save_export_data)
+
+    def setup_saving_objects(self):
+        self.module_and_data_saver = module_saving.DetectorSaver(self)
+        self._h5saver_continuous = H5Saver(save_type='detector')
+        self._h5saver_continuous.show_settings(False)
+        self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
+        if self.ui is not None:
+                self.ui.add_setting_tree(self._h5saver_continuous.settings_tree)
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui
@@ -532,104 +526,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """
         browse_data()
 
-    def _set_continuous_save(self):
-        """Setup a new h5file for continuous saving
-        """
-        if self._h5saver_continuous.settings.child('do_save').value():
-            self._do_continuous_save = True
-            self._is_continuous_initialized = False
-            self._h5saver_continuous.settings.child('base_name').setValue('Data')
-            self._h5saver_continuous.settings.child('N_saved').show()
-            self._h5saver_continuous.settings.child('N_saved').setValue(0)
-            self._h5saver_continuous.init_file(update_h5=True)
-
-            settings_str = ioxml.parameter_to_xml_string(self.settings)
-            settings_str = b'<All_settings>' + settings_str
-            if hasattr(self.viewers[0], 'roi_manager'):
-                settings_str += ioxml.parameter_to_xml_string(self.viewers[0].roi_manager.settings)
-            settings_str += ioxml.parameter_to_xml_string(self._h5saver_continuous.settings) + b'</All_settings>'
-            self.scan_continuous_group = self._h5saver_continuous.add_scan_group("Continuous Saving")
-            self.continuous_group = self._h5saver_continuous.add_det_group(self.scan_continuous_group,
-                                                                          "Continuous saving", settings_str)
-            self._h5saver_continuous.h5_file.flush()
-        else:
-            self._do_continuous_save = False
-            self._h5saver_continuous.settings.child('N_saved').hide()
-
-            try:
-                self._h5saver_continuous.close()
-            except Exception as e:
-                self.logger.exception(str(e))
-
-    def do_save_continuous(self, datas):
-        """Add data to the continuous h5file
-
-        Parameters
-        ----------
-        datas: list of DataFromPlugin
-        """
-        try:
-            # init the enlargeable arrays
-            if not self._is_continuous_initialized:
-                self._channel_arrays = OrderedDict([])
-                self._ini_time_cs = time.perf_counter()
-                self._time_array = self._h5saver_continuous.add_navigation_axis(np.array([0.0, ]),
-                                                                              self.scan_continuous_group, 'x_axis',
-                                                                              enlargeable=True,
-                                                                              title='Time axis',
-                                                                              metadata=dict(nav_index=0,
-                                                                                            label='Time axis',
-                                                                                            units='second'))
-
-                data_dims = ['data0D', 'data1D']
-                if self._h5saver_continuous.settings.child('save_2D').value():
-                    data_dims.extend(['data2D', 'dataND'])
-
-                if self._bkg is not None and self._do_bkg:
-                    bkg_container = OrderedDict([])
-                    self._process_data(self._bkg, bkg_container)
-
-                for data_dim in data_dims:
-                    if data_dim in datas.keys() and len(datas[data_dim]) != 0:
-                        if not self._h5saver_continuous.is_node_in_group(self.continuous_group, data_dim):
-                            self._channel_arrays[data_dim] = OrderedDict([])
-
-                            data_group = self._h5saver_continuous.add_data_group(self.continuous_group, data_dim)
-                            for ind_channel, channel in enumerate(datas[data_dim]):  # list of OrderedDict
-
-                                channel_group = self._h5saver_continuous.add_CH_group(data_group, title=channel)
-                                self._channel_arrays[data_dim]['parent'] = channel_group
-                                if self._bkg is not None and self._do_bkg:
-                                    if channel in bkg_container[data_dim]:
-                                        datas[data_dim][channel]['bkg'] = bkg_container[data_dim][channel]['data']
-                                datas[data_dim][channel]['data'] =\
-                                    utils.ensure_ndarray(datas[data_dim][channel]['data'])
-                                self._channel_arrays[data_dim][channel] = \
-                                    self._h5saver_continuous.add_data(channel_group, datas[data_dim][channel],
-                                                                     scan_type='scan1D', enlargeable=True)
-                self._is_continuous_initialized = True
-
-            dt = np.array([time.perf_counter() - self._ini_time_cs])
-            self._time_array.append(dt)
-
-            data_dims = ['data0D', 'data1D']
-            if self._h5saver_continuous.settings.child('save_2D').value():
-                data_dims.extend(['data2D', 'dataND'])
-
-            for data_dim in data_dims:
-                if data_dim in datas.keys() and len(datas[data_dim]) != 0:
-                    for ind_channel, channel in enumerate(datas[data_dim]):
-                        if isinstance(datas[data_dim][channel]['data'], float) or isinstance(
-                                datas[data_dim][channel]['data'], int):
-                            datas[data_dim][channel]['data'] = np.array([datas[data_dim][channel]['data']])
-                        self._channel_arrays[data_dim][channel].append(datas[data_dim][channel]['data'])
-
-            self._h5saver_continuous.h5_file.flush()
-            self._h5saver_continuous.settings.child('N_saved').setValue(
-                self._h5saver_continuous.settings.child('N_saved').value() + 1)
-
-        except Exception as e:
-            self.logger.exception(str(e))
 
     def save_current(self):
         """Save current data into a h5file"""
@@ -644,6 +540,35 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._save_file_pathname = select_file(start_path=self._save_file_pathname, save=True,
                                                                                   ext='h5')  # see daq_utils
         self.snapshot(pathname=self._save_file_pathname, dosave=True)
+
+    def _init_continuous_save(self):
+        if self._h5saver_continuous.settings.child('do_save').value():
+
+            self._h5saver_continuous.settings.child('base_name').setValue('Data')
+            self._h5saver_continuous.settings.child('N_saved').show()
+            self._h5saver_continuous.settings.child('N_saved').setValue(0)
+            self.module_and_data_saver.h5saver = self._h5saver_continuous
+            self._h5saver_continuous.init_file(update_h5=True)
+
+            self.module_and_data_saver = module_saving.DetectorEnlargeableSaver(self)
+            self.module_and_data_saver.h5saver = self._h5saver_continuous
+            self.module_and_data_saver.get_set_node()
+
+            self.grab_done_signal.connect(self._append_data)
+        else:
+            self._do_continuous_save = False
+            self._h5saver_continuous.settings.child('N_saved').hide()
+            self.grab_done_signal.disconnect(self._append_data)
+
+            try:
+                self._h5saver_continuous.close()
+            except Exception as e:
+                self.logger.exception(str(e))
+
+    def _append_data(self, data: DataToExport):
+        detector_node = self.module_and_data_saver.get_set_node()
+        self.module_and_data_saver.add_data(detector_node, data)
+        self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] +1)
 
     def _save_data(self, path=None, data: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
@@ -662,30 +587,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             path = Path(path)
         h5saver = H5Saver(save_type='detector')
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
-
+        self.module_and_data_saver = module_saving.DetectorSaver(self)
         self.module_and_data_saver.h5saver = h5saver
         detector_node = self.module_and_data_saver.get_set_node()
         self.module_and_data_saver.add_data(detector_node, data)
         if self._do_bkg and self._bkg is not None:
             self.module_and_data_saver.add_bkg(detector_node, self._bkg)
 
-        #todo: deal with externalh5
-        #
-        # if self._external_h5_data is not None:
-        #     try:
-        #         external_group = h5saver.add_group('external_data', 'external_h5', det_group)
-        #         if not self._external_h5_data.isopen:
-        #             h5saver = H5Saver()
-        #             h5saver.init_file(addhoc_file_path=self._external_h5_data.filename)
-        #             h5_file = h5saver.h5_file
-        #         else:
-        #             h5_file = self._external_h5_data
-        #         h5_file.copy_children(h5_file.get_node('/'), external_group, recursive=True)
-        #         h5_file.flush()
-        #         h5_file.close()
-        #
-        #     except Exception as e:
-        #         self.logger.exception(str(e))
+        if self._external_h5_data is not None:
+            #todo test this functionnality
+            self.module_and_data_saver.add_external_h5(self._external_h5_data)
 
         try:
             if self.ui is not None:
@@ -700,12 +611,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.data_saved.emit()
 
     @Slot(OrderedDict)
-    def _save_export_data(self, data):
+    def _save_export_data(self, data: DataToExport):
         """Auxiliary method (Slot) to receive all data (raw and processed from rois) and save them
 
         Parameters
         ----------
-        data: OrderedDict
+        data: DataToExport
             contains a timestamp and data (raw and extracted from roi in dataviewers) on the dorm:
             `_data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
              control_module='DAQ_Viewer')`
@@ -720,36 +631,26 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self._save_data(self._save_file_pathname, data)
             self._do_save_data = False
 
-    @Slot(OrderedDict)
-    def _get_data_from_viewer(self, data):
+    def _get_data_from_viewer(self, data: DataToExport):
         """Get all data emitted by the current viewers
 
-        Each viewer *data_to_export_signal* is connected to this slot. The collected data is stored in an OrderedDict
-        `self._data_to_save_export` for further processing. All raw data are also stored in this attribute.
+        Each viewer *data_to_export_signal* is connected to this slot. The collected data is stored in another
+        DataToExport `self._data_to_save_export` for further processing. All raw data are also stored in this attribute.
         When all viewers have emitted this signal, the collected data are emitted  with the
         `grab_done_signal` signal.
 
         Parameters
         ---------_
-        data: OrderedDict
-            All data collected from the viewers on the form:
-            `data=OrderedDict(name=self._title,data0D=None,data1D=None,data2D=None)`
+        data: DataToExport
+            All data collected from the viewers
 
-        Notes
-        -----
-        The data emitted by the viewers and the ones collected here should be put in a better object than an
-        OrderedDict...
         """
-        # data=OrderedDict(name=self._title,data0D=None,data1D=None,data2D=None)`
         if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
             self._received_data += 1
             if len(data) != 0:
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):
-                if self._do_continuous_save:
-                    self.do_save_continuous(self._data_to_save_export)
-
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)
 
@@ -780,7 +681,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             * check refresh time (if set in the settings) to send or not data to data viewers
             * either send to the data viewers (if refresh time is ok and/or show data option in settings is set)
             * either
-                * save in continuous h5 file if option set
                 * send grab_done_signal (to the slot _save_export_data ) to save the data
 
         Parameters
@@ -798,21 +698,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.ui.data_ready = True
             self._init_show_data(data)
 
-            if self.settings.child('main_settings', 'live_averaging').value():
+            # store raw data for further processing
+            self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=data)
+
+            if self.settings['main_settings', 'live_averaging']:
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self._ind_continuous_grab)
+                self._current_data = copy.deepcopy(self._data_to_save_export)
 
                 self._ind_continuous_grab += 1
                 if self._ind_continuous_grab > 1:
-                    try:
-                        for ind, dic in enumerate(data):
-                            dic['data'] = [((self._ind_continuous_grab - 1) * self._current_data[ind]['data'][
-                                ind_channel] + dic['data'][ind_channel]) / self._ind_continuous_grab for ind_channel in
-                                range(len(dic['data']))]
-                    except Exception as e:
-                        self.logger.exception(str(e))
-
-            # store raw data for further processing
-            self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=data)
+                    self._data_to_save_export = \
+                        self._data_to_save_export.average(self._current_data, self._ind_continuous_grab)
 
             if self._take_bkg:
                 self._bkg = copy.deepcopy(self._data_to_save_export)
@@ -831,16 +727,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
-
-                self.set_data_to_viewers(data_to_plot.data)
+                self.set_data_to_viewers(self._data_to_save_export.data)
             else:
-                if self._do_continuous_save:
-                    self.do_save_continuous(self._data_to_save_export)
-
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)
-
-            self._current_data = data
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -928,10 +818,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                         viewer.x_axis, viewer.y_axis = self.get_scaling_options()
 
         elif param.name() == 'continuous_saving_opt':
-            self._h5saver_continuous.settings_tree.setVisible(param.value())
-
-        elif param.name() == 'do_save':
-            self._set_continuous_save()
+            self._h5saver_continuous.show_settings(param.value())
 
         elif param.name() == 'wait_time':
             self.command_hardware.emit(ThreadCommand('update_wait_time', [param.value()]))

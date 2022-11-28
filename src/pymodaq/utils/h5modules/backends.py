@@ -476,17 +476,17 @@ class H5Backend:
         self.compression = None
         if backend == 'tables':
             if is_tables:
-                self.h5module = tables
+                self.h5_library = tables
             else:
                 raise ImportError('the pytables module is not present')
         elif backend == 'h5py':
             if is_h5py:
-                self.h5module = h5py
+                self.h5_library = h5py
             else:
                 raise ImportError('the h5py module is not present')
         elif backend == 'h5pyd':
             if is_h5pyd:
-                self.h5module = h5pyd
+                self.h5_library = h5pyd
             else:
                 raise ImportError('the h5pyd module is not present')
 
@@ -498,6 +498,10 @@ class H5Backend:
     def h5file(self, file):
         self.file_path = file.filename
         self._h5file = file
+
+    @property
+    def filename(self):
+        return self._h5file.filename
 
     def isopen(self):
         if self._h5file is None:
@@ -523,12 +527,12 @@ class H5Backend:
     def open_file(self, fullpathname, mode='r', title='PyMoDAQ file', **kwargs):
         self.file_path = fullpathname
         if self.backend == 'tables':
-            self._h5file = self.h5module.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
+            self._h5file = self.h5_library.open_file(str(fullpathname), mode=mode, title=title, **kwargs)
             if mode == 'w':
                 self.root().attrs['pymodaq_version'] = utils.get_version()
             return self._h5file
         else:
-            self._h5file = self.h5module.File(str(fullpathname), mode=mode, **kwargs)
+            self._h5file = self.h5_library.File(str(fullpathname), mode=mode, **kwargs)
 
             if mode == 'w':
                 self.root().attrs['TITLE'] = title
@@ -576,7 +580,7 @@ class H5Backend:
         if self.backend == 'tables':
             if compression == 'gzip':
                 compression = 'zlib'
-            self.compression = self.h5module.Filters(complevel=compression_opts, complib=compression)
+            self.compression = self.h5_library.Filters(complevel=compression_opts, complib=compression)
         else:
             if compression == 'zlib':
                 compression = 'gzip'
@@ -834,7 +838,7 @@ class H5Backend:
         shape = tuple(shape)
 
         if self.backend == 'tables':
-            atom = self.h5module.Atom.from_dtype(dtype)
+            atom = self.h5_library.Atom.from_dtype(dtype)
             array = EARRAY(self._h5file.create_earray(where, name, atom, shape=shape, title=title,
                                                       filters=self.compression), self.backend)
         else:
@@ -884,7 +888,7 @@ class H5Backend:
             dtype = np.dtype(dtype)
             subdtype = ''
         if self.backend == 'tables':
-            atom = self.h5module.Atom.from_dtype(dtype)
+            atom = self.h5_library.Atom.from_dtype(dtype)
             if subdtype == 'string':
                 array = StringARRAY(self._h5file.create_vlarray(where, name, atom, title=title,
                                                                 filters=self.compression), self.backend)
@@ -894,7 +898,7 @@ class H5Backend:
         else:
             maxshape = (None,)
             if self.backend == 'h5py':
-                dt = self.h5module.vlen_dtype(dtype)
+                dt = self.h5_library.vlen_dtype(dtype)
             else:
                 dt = h5pyd.special_dtype(dtype)
             if self.compression is not None:

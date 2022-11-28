@@ -427,6 +427,8 @@ class Viewer1D(ViewerBase):
     def _show_data(self, data: DataRaw):
         self.labels = data.labels
         self.view.display_data(data)
+        if len(self.view.roi_manager.ROIs) == 0:
+            self.data_to_export_signal.emit(self.data_to_export)
 
     def update_status(self, txt):
         logger.info(txt)

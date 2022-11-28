@@ -8,7 +8,8 @@ import numpy as np
 import pytest
 
 from pymodaq.utils.h5modules import saving
-from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader, DataSaverLoader, DataToExportSaver
+from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader, DataSaverLoader, DataToExportSaver, \
+    DataEnlargeableSaverLoader, DataToExportEnlargeableSaver
 from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
 
 
@@ -155,8 +156,42 @@ class TestDataSaverLoader:
         assert data_saver.load_data(h5saver.raw_group) == data
 
 
-class TestDataToExportSaver:
+class TestDataEnlargeableSaverLoader:
+    def test_init(self, get_h5saver):
+        h5saver = get_h5saver
+        data_saver = DataEnlargeableSaverLoader(h5saver)
 
+        assert data_saver.data_type.name == 'data_enlargeable'
+
+    def test_add_data(self, get_h5saver):
+        h5saver = get_h5saver
+        data_saver = DataEnlargeableSaverLoader(h5saver)
+        Ndata = 2
+
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                            source='raw',
+                            dim='Data2D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                                       index=0),
+                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                       index=1),])
+
+        data_saver.add_data(h5saver.raw_group, data)
+        assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata + 1
+        data_node = h5saver.get_node('/RawData/Data_enlargeable00')
+        time_axis_node = h5saver.get_node('/RawData/Axis00')
+
+        ESHAPE = [1]
+        ESHAPE += list(DATA2D.shape)
+        assert data_node.attrs['shape'] == tuple(ESHAPE)
+        data_saver.add_data(h5saver.raw_group, data)
+        ESHAPE = [2]
+        ESHAPE += list(DATA2D.shape)
+        assert data_node.attrs['shape'] == tuple(ESHAPE)
+        assert time_axis_node.attrs['shape'] == (2,)
+
+
+class TestDataToExportSaver:
     def test_save(self, get_h5saver):
         h5saver = get_h5saver
         Ndata = 2
