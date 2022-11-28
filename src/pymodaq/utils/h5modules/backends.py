@@ -67,6 +67,7 @@ class GroupType(BaseEnum):
     external_h5 = 5
     data_dim = 6
 
+
 class InvalidExport(Exception):
     pass
 
@@ -175,7 +176,7 @@ class Node(object):
         return self.node == other.node
 
     @property
-    def parent_node(self):
+    def parent_node(self) -> 'GROUP':
         if self.path == '/':
             return None
         mod = importlib.import_module('.backends', 'pymodaq.utils.h5modules')

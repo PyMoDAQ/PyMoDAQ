@@ -49,13 +49,13 @@ class FileType(BaseEnum):
     
 
 class DataType(BaseEnum):
-    data = 0
-    axis = 1
-    live_scan = 2
-    external_h5 = 3
-    strings = 4
-    bkg = 5
-    data_enlargeable = 6
+    data = 'Data'
+    axis = 'Axis'
+    live_scan = 'Live'
+    external_h5 = 'Data'
+    strings = 'Strings'
+    bkg = 'Bkg'
+    data_enlargeable = 'EnlData'
 
 
 class H5SaverLowLevel(H5Backend):
