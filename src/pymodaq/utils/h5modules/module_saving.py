@@ -13,7 +13,7 @@ from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
 from .saving import H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, GroupType
-from .data_saving import DataToExportSaverLoader, AxisSaverLoader, DataToExportEnlargeableLoaderSaver
+from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportEnlargeableSaver
 from pymodaq.utils.parameter import ioxml
 
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -85,14 +85,14 @@ class DetectorSaver(ModuleSaver):
     group_type = GroupType['detector']
 
     def __init__(self, module: DAQ_Viewer):
-        self._datatoexport_saver: DataToExportSaverLoader = None
+        self._datatoexport_saver: DataToExportSaver = None
 
         self._module: DAQ_Viewer = module
         self._module_group: GROUP = None
         self._h5saver = None
 
     def update_after_h5changed(self, ):
-        self._datatoexport_saver = DataToExportSaverLoader(self.h5saver)
+        self._datatoexport_saver = DataToExportSaver(self.h5saver)
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}) -> Node:
         """
@@ -158,10 +158,10 @@ class DetectorEnlargeableSaver(DetectorSaver):
 
     def __init__(self, module: DAQ_Viewer):
         super().__init__(module)
-        self._datatoexport_saver: DataToExportEnlargeableLoaderSaver = None
+        self._datatoexport_saver: DataToExportEnlargeableSaver = None
 
     def update_after_h5changed(self, ):
-        self._datatoexport_saver = DataToExportEnlargeableLoaderSaver(self.h5saver)
+        self._datatoexport_saver = DataToExportEnlargeableSaver(self.h5saver)
 
 
 class ActuatorSaver(ModuleSaver):

@@ -8,8 +8,8 @@ import numpy as np
 import pytest
 
 from pymodaq.utils.h5modules import saving
-from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader, DataSaverLoader, DataToExportSaverLoader, \
-    DataEnlargeableSaverLoader, DataToExportEnlargeableLoaderSaver
+from pymodaq.utils.h5modules.data_saving import DataLoader, AxisSaverLoader, DataSaverLoader, DataToExportSaver, \
+    DataEnlargeableSaver, DataToExportEnlargeableSaver, SPECIAL_GROUP_NAMES
 from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
 
 
@@ -52,6 +52,34 @@ def init_data(data=None, Ndata=1, axes=[], name='myData') -> DataWithAxes:
         data = DATA2D
     return DataWithAxes(name, DataSource(0), data=[data for ind in range(Ndata)],
                                  axes=axes)
+
+
+@pytest.fixture()
+def init_data_to_export():
+    Ndata = 2
+
+    data2D = DataWithAxes(name='mydata2D', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                          source='raw',
+                          dim='Data2D', distribution='uniform',
+                          axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                                     index=0),
+                                Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                     index=1), ])
+
+    data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                          source='raw',
+                          dim='Data1D', distribution='uniform',
+                          axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
+                                     index=0)])
+
+    data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                          source='raw', dim='Data0D', distribution='uniform')
+
+    data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)],
+                             labels=['mylabel1', 'mylabel2'], source='raw', dim='Data0D', distribution='uniform')
+
+    data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
+    return data_to_export
 
 
 class TestAxisSaverLoader:
@@ -156,16 +184,16 @@ class TestDataSaverLoader:
         assert data_saver.load_data(h5saver.raw_group) == data
 
 
-class TestDataEnlargeableSaverLoader:
+class TestDataEnlargeableSaver:
     def test_init(self, get_h5saver):
         h5saver = get_h5saver
-        data_saver = DataEnlargeableSaverLoader(h5saver)
+        data_saver = DataEnlargeableSaver(h5saver)
         assert data_saver.data_type.value == 'EnlData'
         assert data_saver.data_type.name == 'data_enlargeable'
 
     def test_add_data(self, get_h5saver):
         h5saver = get_h5saver
-        data_saver = DataEnlargeableSaverLoader(h5saver)
+        data_saver = DataEnlargeableSaver(h5saver)
         Ndata = 2
 
         data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
@@ -188,83 +216,90 @@ class TestDataEnlargeableSaverLoader:
         ESHAPE += list(DATA2D.shape)
         assert data_node.attrs['shape'] == tuple(ESHAPE)
 
-        data_loaded = data_saver.load_data(h5saver.get_node('/RawData/EnlData00'))
-        for ind in range(len(data_loaded)):
-            assert np.all(data_loaded[ind][0] == pytest.approx(DATA2D))
-            assert np.all(data_loaded[ind][1] == pytest.approx(DATA2D))
 
-
-class TestDataToExportSaverLoader:
-    def test_save(self, get_h5saver):
+class TestDataToExportSaver:
+    def test_save(self, get_h5saver, init_data_to_export):
         h5saver = get_h5saver
-        Ndata = 2
-        data_saver = DataToExportSaverLoader(h5saver)
-        data2D = DataWithAxes(name='mydata2D', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                              source='raw',
-                            dim='Data2D', distribution='uniform',
-                              axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
-                                         index=0),
-                                    Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                         index=1), ])
+        data_to_export = init_data_to_export
 
-        data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                              source='raw',
-                              dim='Data1D', distribution='uniform',
-                              axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
-                                         index=0)])
+        data_saver = DataToExportSaver(h5saver)
 
-        data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                              source='raw', dim='Data0D', distribution='uniform')
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+        data_saver.add_data(det_group, data_to_export)
 
-        data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)],
-                                 labels=['mylabel1', 'mylabel2'], source='raw', dim='Data0D', distribution='uniform')
 
-        data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
+class TestDataToExportEnlargeableSaver:
+    def test_save(self, get_h5saver, init_data_to_export):
+        h5saver = get_h5saver
+        data_to_export = init_data_to_export
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
+        data_saver = DataToExportEnlargeableSaver(h5saver)
+        Nadd_data = 2
+        for ind in range(Nadd_data):
+            data_saver.add_data(det_group, data_to_export)
+
+        for node in h5saver.walk_nodes('/'):
+            if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
+                assert node.attrs['shape'][0] == Nadd_data
+
+        data_saver.add_data(det_group, data_to_export)
+        for node in h5saver.walk_nodes('/'):
+            if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
+                assert node.attrs['shape'][0] == Nadd_data + 1
+
+
+class TestDataLoader:
+    def test_load_normal_data(self, get_h5saver, init_data_to_export):
+        h5saver = get_h5saver
+        data_to_export = init_data_to_export
+        data_loader = DataLoader(h5saver)
+
+        data_saver = DataToExportSaver(h5saver)
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
         data_saver.add_data(det_group, data_to_export)
-        data_loaded = data_saver.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
+
+        data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind] == pytest.approx(DATA2D))
 
-
-class TestDataToExportEnlargeableLoaderSaver:
-    def test_save_load(self, get_h5saver):
+    def test_load_normal_data_with_bkg(self, get_h5saver, init_data_to_export):
         h5saver = get_h5saver
-        Ndata = 2
-        data_saver = DataToExportEnlargeableLoaderSaver(h5saver)
-        data2D = DataWithAxes(name='mydata2D', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                              source='raw',
-                              dim='Data2D', distribution='uniform',
-                              axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
-                                         index=0),
-                                    Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
-                                         index=1), ])
+        data_to_export = init_data_to_export
+        data_loader = DataLoader(h5saver)
 
-        data1D = DataWithAxes(name='mydata1D', data=[DATA1D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                              source='raw',
-                              dim='Data1D', distribution='uniform',
-                              axes=[Axis(data=create_axis_array(DATA1D.shape[0]), label='myaxis0', units='myunits0',
-                                         index=0)])
-
-        data0D = DataWithAxes(name='mydata0D', data=[DATA0D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
-                              source='raw', dim='Data0D', distribution='uniform')
-
-        data0Dbis = DataWithAxes(name='mydata0Dbis', data=[DATA0D for _ in range(Ndata)],
-                                 labels=['mylabel1', 'mylabel2'], source='raw', dim='Data0D', distribution='uniform')
-
-        data_to_export = DataToExport(name='mybigdata', data=[data2D, data0D, data1D, data0Dbis])
-
+        data_saver = DataToExportSaver(h5saver)
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
         data_saver.add_data(det_group, data_to_export)
-        data_saver.add_data(det_group, data_to_export)
+        data_saver.add_bkg(det_group, data_to_export)
 
-        assert data_saver.get_nav_group('/RawData/MyDet/Data2D/CH00/EnlData00') == \
-               h5saver.get_node(f'/RawData/MyDet/{data_saver._nav_axes_name}')
+        data_loaded = data_loader.load_data(h5saver.get_node('/RawData/MyDet/Data2D/CH00/Data00'))
+        for ind in range(len(data_loaded)):
+            assert np.all(data_loaded[ind] == pytest.approx(0 * DATA2D))
 
-        data_loaded = data_saver.load_data('/RawData/MyDet/Data2D/CH00/EnlData00')
+    def test_load_enlargeable_data(self, get_h5saver, init_data_to_export):
+        h5saver = get_h5saver
+        data_to_export = init_data_to_export
+        data_loader = DataLoader(h5saver)
+
+        data_saver = DataToExportEnlargeableSaver(h5saver)
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+
+        Nadd_data = 3
+        for ind in range(Nadd_data):
+            data_saver.add_data(det_group, data_to_export)
+
+        assert data_loader.get_nav_group('/RawData/MyDet/Data2D/CH00/EnlData00') == \
+               h5saver.get_node(f'/RawData/MyDet/{SPECIAL_GROUP_NAMES["nav_axes"]}')
+        nav_axis_node = h5saver.get_node('/RawData/MyDet/NavAxes/Axis00')
+        assert nav_axis_node.attrs['shape'] == (Nadd_data,)
+        assert nav_axis_node.attrs['index'] == 0
+
+        data_loaded = data_loader.load_data('/RawData/MyDet/Data2D/CH00/EnlData00')
         for ind in range(len(data_loaded)):
             assert np.all(data_loaded[ind][0] == pytest.approx(DATA2D))
             assert np.all(data_loaded[ind][1] == pytest.approx(DATA2D))
+
+

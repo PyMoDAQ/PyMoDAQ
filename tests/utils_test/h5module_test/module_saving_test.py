@@ -10,7 +10,7 @@ import pytest
 
 from pymodaq.utils.h5modules import saving
 from pymodaq.utils.h5modules.module_saving import DetectorSaver, ActuatorSaver, ScanSaver
-from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader, DataSaverLoader, DataToExportSaverLoader
+from pymodaq.utils.h5modules.data_saving import DataManagement, AxisSaverLoader, DataSaverLoader, DataToExportSaver
 from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
 from pymodaq.utils.parameter import Parameter
 

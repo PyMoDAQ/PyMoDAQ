@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from pymodaq.utils.h5modules import saving
-from pymodaq.utils.h5modules.data_saving import DataSaver, AxisSaverLoader
+from pymodaq.utils.h5modules.data_saving import DataManagement, AxisSaverLoader
 from pymodaq.utils.daq_utils import capitalize
 
 
@@ -34,19 +34,19 @@ def generate_random_data(shape, dtype=float):
     return (100 * np.random.rand(*shape)).astype(dtype=dtype)
 
 
-class NoAttribute(DataSaver):
+class NoAttribute(DataManagement):
     pass
 
 
-class EnumAttribute(DataSaver):
+class EnumAttribute(DataManagement):
     data_type = saving.DataType(0)
 
 
-class StrAttribute(DataSaver):
+class StrAttribute(DataManagement):
     data_type = saving.DataType.names()[2]
 
 
-class UnknownStrAttribute(DataSaver):
+class UnknownStrAttribute(DataManagement):
     data_type = 'azertyuiop'
 
 
