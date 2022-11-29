@@ -180,7 +180,8 @@ class AxisSaverLoader(DataManagement):
                                         array_to_save=axis.data, data_dimension=DataDim['Data1D'],
                                         enlargeable=enlargeable,
                                         metadata=dict(size=axis.size, label=axis.label, units=axis.units,
-                                                      index=axis.index, offset=axis.offset, scaling=axis.scaling))
+                                                      index=axis.index, offset=axis.offset, scaling=axis.scaling,
+                                                      distribution='uniform' if axis.is_axis_linear() else 'spread'))
         return array
 
     def load_axis(self, where: Union[Node, str]) -> Axis:
@@ -331,14 +332,23 @@ class DataSaverLoader(DataManagement):
         data_node = self._get_nodes_from_data_type(parent_node)[0]
 
         if not self._is_node_of_data_type(data_node):
-            raise AxisError(f'Could not create an DataWithAxes object from this node: {data_node}')
+            raise TypeError(f'Could not create an DataWithAxes object from this node: {data_node}')
 
-        data = DataWithAxes(data_node.attrs['TITLE'], source=data_node.attrs['source'],
-                            dim=data_node.attrs['data_dimension'], distribution=data_node.attrs['distribution'],
-                            data=self.get_data_arrays(parent_node, with_bkg=with_bkg),
+        if 'axis' in self.data_type.name:
+            ndarrays = [data_node.read()]
+            axes = []
+        else:
+            ndarrays = self.get_data_arrays(parent_node, with_bkg=with_bkg)
+            axes = self.get_axes(parent_node)
+
+        data = DataWithAxes(data_node.attrs['TITLE'],
+                            source=data_node.attrs['source'] if 'source' in data_node.attrs else 'raw',
+                            dim=data_node.attrs['data_dimension'],
+                            distribution=data_node.attrs['distribution'],
+                            data=ndarrays,
                             labels=[data_node.attrs['label']],
-                            nav_indexes=data_node.attrs['nav_indexes'],
-                            axes=self.get_axes(parent_node))
+                            nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
+                            axes=axes)
         return data
 
 

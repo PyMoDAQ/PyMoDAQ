@@ -173,6 +173,7 @@ class H5SaverLowLevel(H5Backend):
     def add_string_array(self, where, name, title='', metadata=dict([])):
         array = self.create_vlarray(where, name, dtype='string', title=title)
         array.attrs['shape'] = (0,)
+        array.attrs['data_type'] = 'strings'
 
         for metadat in metadata:
             array.attrs[metadat] = metadata[metadat]

@@ -3,7 +3,7 @@
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, Slot
 
-from pymodaq.utils.data import DataToExport, DataRaw
+from pymodaq.utils.data import DataToExport, DataRaw, DataWithAxes
 from pymodaq.utils.exceptions import ViewerError
 from pymodaq.utils.enums import BaseEnum
 from pymodaq.utils.factory import ObjectFactory, BuilderBase
@@ -170,7 +170,7 @@ class ViewerBase(QObject):
     status_signal: Signal[str]
     """
     data_to_export_signal = Signal(DataToExport)
-    _data_to_show_signal = Signal(DataRaw)
+    _data_to_show_signal = Signal(DataWithAxes)
 
     ROI_changed = Signal()
     crosshair_dragged = Signal(float, float)  # Crosshair position in units of scaled top/right axes

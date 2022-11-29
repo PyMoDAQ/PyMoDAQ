@@ -685,7 +685,6 @@ class Viewer2D(ViewerBase):
             if self.view.is_action_checked('crosshair'):
                 self.crosshair_changed()
 
-
     def set_image_transform(self) -> DataRaw:
         """
         Deactivate some tool buttons if data type is "spread" then apply transform_image

@@ -361,17 +361,18 @@ class View(QObject):
     item_clicked_sig = Signal(object)
     item_double_clicked_sig = Signal(object)
     
-    def __init__(self, widget: QtWidgets.QWidget):
+    def __init__(self, widget: QtWidgets.QWidget, settings_tree, settings_attributes_tree):
         super().__init__()
         self.parent_widget = widget
         self.h5file_tree: TreeLayout = None
-        
-        self.settings_attributes = ParameterManager()
-        self.settings = ParameterManager()
-        
-        self.setup_ui()
 
-    def setup_ui(self):
+        self._viewer_widget: QtWidgets.QWidget = None
+        self._text_list: QtWidgets.QListWidget = None
+        self._pixmap_widget: QtWidgets.QWidget = None
+
+        self.setup_ui(settings_tree, settings_attributes_tree)
+
+    def setup_ui(self, settings_tree, settings_attributes_tree):
         layout = QtWidgets.QGridLayout()
 
         v_splitter = QtWidgets.QSplitter(Qt.Vertical)
@@ -387,17 +388,17 @@ class View(QObject):
         self.h5file_tree.item_double_clicked_sig.connect(self.item_double_clicked_sig.emit)
         
         v_splitter.addWidget(widget)
-        v_splitter.addWidget(self.settings_attributes.settings_tree)
+        v_splitter.addWidget(settings_attributes_tree)
 
         h_splitter.addWidget(v_splitter)
-        self.pixmap_widget = QtWidgets.QWidget()
-        self.pixmap_widget.setMaximumHeight(100)
-        v_splitter2.addWidget(self.pixmap_widget)
+        self._pixmap_widget = QtWidgets.QWidget()
+        self._pixmap_widget.setMaximumHeight(100)
+        v_splitter2.addWidget(self._pixmap_widget)
 
-        v_splitter2.addWidget(self.settings.settings_tree)
-        self.text_list = QtWidgets.QListWidget()
+        v_splitter2.addWidget(settings_tree)
+        self._text_list = QtWidgets.QListWidget()
 
-        v_splitter2.addWidget(self.text_list)
+        v_splitter2.addWidget(self._text_list)
         h_splitter.addWidget(v_splitter2)
         self._viewer_widget = QtWidgets.QWidget()
         h_splitter.addWidget(self._viewer_widget)
@@ -414,6 +415,14 @@ class View(QObject):
     @property  
     def viewer_widget(self):
         return self._viewer_widget
+
+    @property
+    def text_list(self):
+        return self._text_list
+
+    @property
+    def pixmap_widget(self):
+        return self._pixmap_widget
 
     def clear(self):
         self.h5file_tree.tree.clear()
@@ -468,8 +477,8 @@ class H5Browser(QObject, ActionManager):
 
     def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None, backend='tables'):
         QObject.__init__(self)
-        toolbar = QtWidgets.QToolBar()
-        ActionManager.__init__(self, toolbar=toolbar)
+        # toolbar = QtWidgets.QToolBar()
+        ActionManager.__init__(self)  # , toolbar=toolbar)
 
         if not isinstance(parent, QtWidgets.QMainWindow):
             raise Exception('no valid parent container, expected a QMainWindow')
@@ -477,15 +486,20 @@ class H5Browser(QObject, ActionManager):
         self.main_window = parent
         self.parent_widget = QtWidgets.QWidget()
         self.main_window.setCentralWidget(self.parent_widget)
+        #self.main_window.addToolBar(self.toolbar)
 
-        self.main_window.addToolBar(self.toolbar)
         self.current_node_path = None
 
+        self.settings_attributes = ParameterManager()
+        self.settings = ParameterManager()
+
         # construct the UI interface
-        self.view = View(self.parent_widget)
+        self.view = View(self.parent_widget, settings_tree=self.settings.settings_tree,
+                         settings_attributes_tree=self.settings_attributes.settings_tree)
         self.view.item_clicked_sig.connect(self.show_h5_attributes)
         self.view.item_double_clicked_sig.connect(self.show_h5_data)
         self.hyper_viewer = ViewerND(self.view.viewer_widget)
+
 
 
         self.setup_actions()
@@ -520,7 +534,13 @@ class H5Browser(QObject, ActionManager):
         self.connect_action('help', self.show_help)
         self.connect_action('log', self.show_log)
 
+        self.connect_action('plot_node', lambda: self.get_node_and_plot(False))
+        self.connect_action('plot_node_with_bkg', lambda: self.get_node_and_plot(True))
+
         self.status_signal.connect(self.add_log)
+
+    def get_node_and_plot(self, with_bkg):
+        self.show_h5_data(item=None, with_bkg=with_bkg)
 
     def load_file(self):
         #todo
@@ -544,8 +564,13 @@ class H5Browser(QObject, ActionManager):
                         toolbar=self.toolbar)
         self.add_action('comment', 'Add Comment', 'properties', tip='Add comments to the node',
                         toolbar=self.toolbar)
+        self.add_action('plot_node', 'Plot Node', 'color', tip='Plot the current node',
+                        toolbar=self.toolbar)
+        self.add_action('plot_node_with_bkg', 'Plot Node With Bkg', 'properties', tip='Plot the current node',
+                        toolbar=self.toolbar)
 
-        self.view.add_actions([self.get_action('export'), self.get_action('comment')])
+        self.view.add_actions([self.get_action('export'), self.get_action('comment'),
+                               self.get_action('plot_node'), self.get_action('plot_node_with_bkg')])
 
         self.add_action('load', 'Load File', 'Open', tip='Open a new file')
         self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
@@ -557,7 +582,7 @@ class H5Browser(QObject, ActionManager):
     def check_version(self):
         """Check version of PyMoDAQ to assert if file is compatible or not with the current version of the Browser"""
         if 'pymodaq_version' in self.h5utils.root().attrs.attrs_name:
-            if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('4.0'):
+            if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('4.0.0a0'):
                 msg_box = messagebox(severity='warning', title='Invalid version',
                                      text=f"Your file has been saved using PyMoDAQ "
                                           f"version {self.h5utils.root().attrs['pymodaq_version']} "
@@ -661,45 +686,44 @@ class H5Browser(QObject, ActionManager):
     def add_log(txt):
         logger.info(txt)
 
-    def show_h5_attributes(self, item):
+    def show_h5_attributes(self, item=None):
         try:
             self.current_node_path = self.get_tree_node_path()
 
             attr_dict, settings, scan_settings, pixmaps = self.h5utils.get_h5_attributes(self.current_node_path)
 
-            for child in self.settings_raw.children():
+            for child in self.settings_attributes.settings.children():
                 child.remove()
             params = []
             for attr in attr_dict:
                 params.append({'title': attr, 'name': attr, 'type': 'str', 'value': attr_dict[attr], 'readonly': True})
-            self.settings_raw.addChildren(params)
+            self.settings_attributes.settings.addChildren(params)
 
             if settings is not None:
-                for child in self.settings.children():
+                for child in self.settings.settings.children():
                     child.remove()
                 QtWidgets.QApplication.processEvents()  # so that the tree associated with settings updates
                 params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(settings)
-                self.settings.addChildren(params)
+                self.settings.settings.addChildren(params)
 
             if scan_settings is not None:
                 params = pymodaq.utils.parameter.ioxml.XML_string_to_parameter(scan_settings)
-                self.settings.addChildren(params)
+                self.settings.settings.addChildren(params)
 
             if pixmaps == []:
-                self.pixmap_widget.setVisible(False)
+                self.view.pixmap_widget.setVisible(False)
             else:
-                self.pixmap_widget.setVisible(True)
+                self.view.pixmap_widget.setVisible(True)
                 self.show_pixmaps(pixmaps)
 
         except Exception as e:
             logger.exception(str(e))
 
     def show_pixmaps(self, pixmaps=[]):
-        if self.pixmap_widget.layout() is None:
-            layout = QtWidgets.QHBoxLayout()
-            self.pixmap_widget.setLayout(layout)
+        if self.view.pixmap_widget.layout() is None:
+            self.view.pixmap_widget.setLayout(QtWidgets.QHBoxLayout())
         while 1:
-            child = self.pixmap_widget.layout().takeAt(0)
+            child = self.view.pixmap_widget.layout().takeAt(0)
             if not child:
                 break
             child.widget().deleteLater()
@@ -707,36 +731,26 @@ class H5Browser(QObject, ActionManager):
         labs = []
         for pix in pixmaps:
             labs.append(pngbinary2Qlabel(pix))
-            self.pixmap_widget.layout().addWidget(labs[-1])
+            self.view.pixmap_widget.layout().addWidget(labs[-1])
 
-    def show_h5_data(self, item):
+    def show_h5_data(self, item, with_bkg=False):
         """
         """
         try:
-            self.current_node_path = item.text(2)
-            self.show_h5_attributes(item)
+            if item is None:
+                self.current_node_path = self.get_tree_node_path()
+            self.show_h5_attributes()
             node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
-            if 'ARRAY' in node.attrs['CLASS']:
-                data, axes, nav_axes, is_spread = self.h5utils.get_h5_data(self.current_node_path)
 
-                data_to_plot = DataRaw('mydata', data=data, axes=list(axes.values()), nav_indexes=nav_axes)
+            if 'data_type' in node.attrs and node.attrs['data_type'] == 'strings':
+                self.view.text_list.clear()
+                for txt in node.read():
+                    self.view.text_list.addItem(txt)
+            else:
+                data_with_axes = self.data_loader.load_data(node, with_bkg=with_bkg)
+                self.hyper_viewer.show_data(data_with_axes)
 
-                if isinstance(data, np.ndarray):
-                    if 'scan_type' in node.attrs.attrs_name:
-                        scan_type = node.attrs['scan_type']
-                    else:
-                        scan_type = ''
-                    # self.hyper_viewer.show_data(deepcopy(data), nav_axes=nav_axes, is_spread=is_spread,
-                    #                            scan_type=scan_type, **deepcopy(axes))
-                    # self.hyper_viewer.init_ROI()
-                    self.hyper_viewer.show_data(data_to_plot)
-                elif isinstance(data, list):
-                    if not (not data):
-                        if isinstance(data[0], str):
-                            self.ui.text_list.clear()
-                            for txt in data:
-                                self.ui.text_list.addItem(txt)
         except Exception as e:
             logger.exception(str(e))
 

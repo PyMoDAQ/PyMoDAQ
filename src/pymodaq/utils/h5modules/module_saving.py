@@ -110,14 +110,15 @@ class DetectorSaver(ModuleSaver):
         if where is None:
             where = self._h5saver.raw_group
 
-        settings_xml = ET.Element('All_settings')
+        settings_xml = ET.Element('All_settings', type='group')
         settings_xml.append(ioxml.walk_parameters_to_xml(param=self._module.settings))
-        settings_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
+        saver_xml = ET.SubElement(settings_xml,'H5Saver', type='group')
+        saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
         if self._module.ui is not None:
             for ind, viewer in enumerate(self._module.viewers):
                 if hasattr(viewer, 'roi_manager'):
-                    roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}')
+                    roi_xml = ET.SubElement(settings_xml, f'ROI_Viewer_{ind:02d}', type='group')
                     roi_xml.append(ioxml.walk_parameters_to_xml(param=viewer.roi_manager.settings))
 
         return self._h5saver.add_det_group(where, title=self._module.title, settings_as_xml=ET.tostring(settings_xml),

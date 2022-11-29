@@ -12,7 +12,8 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.h5modules import H5Saver, browse_data, H5BrowserUtil
+from pymodaq.utils.h5modules.browsing import browse_data, H5BrowserUtil
+from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils import gui_utils as gutils
 
 from pymodaq.utils.config import get_set_local_dir, Config

@@ -214,6 +214,10 @@ class Axis:
         """replace the axis data with a linear version using scaling and offset if specified"""
         self.data = self._offset + self._scaling * np.linspace(0, nsteps-1, nsteps)
 
+    @staticmethod
+    def create_simple_linear_data(nsteps: int):
+        return np.linspace(0, nsteps-1, nsteps)
+
     def __len__(self):
         return self.size
 
@@ -607,9 +611,12 @@ class AxesManager:
         return tuple(indexes)
 
     def compute_shape_from_axes(self):
-        shape = []
-        for ind in range(len(self.axes)):
-            shape.append(len(self.get_axis_from_index(ind, create=True)))
+        if len(self.axes) != 0:
+            shape = []
+            for ind in range(len(self.axes)):
+                shape.append(len(self.get_axis_from_index(ind, create=True)))
+        else:
+            shape = self._data_shape
         return tuple(shape)
 
     @property

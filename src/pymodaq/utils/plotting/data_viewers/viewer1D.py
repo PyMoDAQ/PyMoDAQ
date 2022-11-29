@@ -104,8 +104,9 @@ class DataDisplayer(QObject):
         for ind_data, dat in enumerate(data.data):
             if data.size > 0:
                 if not do_xy:
-                    if self._axis is not None:
-                        self._plot_items[ind_data].setData(self._axis.data, dat)
+                    if self._axis is None:
+                        self.update_axis(Axis('index', data=Axis.create_simple_linear_data(dat.size)))
+                    self._plot_items[ind_data].setData(self._axis.data, dat)
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 

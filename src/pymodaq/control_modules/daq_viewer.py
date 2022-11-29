@@ -23,7 +23,7 @@ from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
-import pymodaq.utils.gui_utils.utils
+from pymodaq.utils.gui_utils.utils import widget_to_png_to_bytes
 import pymodaq.utils.scanner
 from pymodaq.utils.tcp_server_client import TCPClient
 from pymodaq.utils.gui_utils.widgets.lcd import LCD
@@ -604,6 +604,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 filename, ext = os.path.splitext(filename)
                 image_path = os.path.join(root, filename + '.png')
                 self.dockarea.parent().grab().save(image_path)
+                detector_node.attrs['pixmap'] = widget_to_png_to_bytes(self.dockarea.parent())
         except Exception as e:
             self.logger.exception(str(e))
 
@@ -727,7 +728,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 # process bkg if needed
                 if self.do_bkg and self._bkg is not None:
                     data_to_plot -= self._bkg
-                self.set_data_to_viewers(self._data_to_save_export.data)
+                self.set_data_to_viewers(data_to_plot.data)
             else:
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)

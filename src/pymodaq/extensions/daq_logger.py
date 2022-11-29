@@ -22,7 +22,7 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.gui_utils.widgets import QLED
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.h5modules import H5Logger
+from pymodaq.utils.h5modules.logging import H5Logger
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
