@@ -6,6 +6,7 @@ Created the 15/11/2022
 """
 import os
 from collections import OrderedDict
+from typing import List
 import warnings
 from copy import deepcopy
 import logging
@@ -20,9 +21,8 @@ from qtpy import QtGui, QtCore
 from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
 import pymodaq.utils.parameter.ioxml
-from pymodaq.utils.parameter import Parameter, ParameterTree
 
-from pymodaq.utils.tree_layout.tree_layout_main import Tree_layout
+from pymodaq.utils.tree_layout.tree_layout_main import TreeLayout
 from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.data import Axis, DataRaw
 from pymodaq.utils.gui_utils.utils import h5tree_to_QTree, pngbinary2Qlabel
@@ -30,8 +30,11 @@ from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.plotting.data_viewers.viewerND import ViewerND
 from qtpy import QtWidgets
 from pymodaq.utils import daq_utils as utils
-
+from pymodaq.utils.managers.action_manager import ActionManager
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq.utils.messenger import messagebox
 from .backends import H5Backend
+from . import data_saving
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -166,7 +169,7 @@ class H5BrowserUtil(H5Backend):
         scan_list = []
         where = self.get_node(where)
         for node in self.walk_nodes(where):
-            if 'pixmap2D' in node.attrs.attrs_name:
+            if 'pixmap2D' in node.attrs:
                 scan_list.append(
                     dict(scan_name='{:s}_{:s}'.format(node.parent_node.name, node.name), path=node.path,
                          data=node.attrs['pixmap2D']))
@@ -354,7 +357,94 @@ class H5BrowserUtil(H5Backend):
                 return data, [], [], is_spread
 
 
-class H5Browser(QObject):
+class View(QObject):
+    item_clicked_sig = Signal(object)
+    item_double_clicked_sig = Signal(object)
+    
+    def __init__(self, widget: QtWidgets.QWidget):
+        super().__init__()
+        self.parent_widget = widget
+        self.h5file_tree: TreeLayout = None
+        
+        self.settings_attributes = ParameterManager()
+        self.settings = ParameterManager()
+        
+        self.setup_ui()
+
+    def setup_ui(self):
+        layout = QtWidgets.QGridLayout()
+
+        v_splitter = QtWidgets.QSplitter(Qt.Vertical)
+        v_splitter2 = QtWidgets.QSplitter(Qt.Vertical)
+        h_splitter = QtWidgets.QSplitter(Qt.Horizontal)
+
+        widget = QtWidgets.QWidget()
+        # self.ui.h5file_tree = TreeLayout(Form,col_counts=2,labels=["Node",'Pixmap'])
+        self.h5file_tree = TreeLayout(widget, col_counts=1, labels=["Node"])
+        self.h5file_tree.tree.setMinimumWidth(300)
+
+        self.h5file_tree.item_clicked_sig.connect(self.item_clicked_sig.emit)
+        self.h5file_tree.item_double_clicked_sig.connect(self.item_double_clicked_sig.emit)
+        
+        v_splitter.addWidget(widget)
+        v_splitter.addWidget(self.settings_attributes.settings_tree)
+
+        h_splitter.addWidget(v_splitter)
+        self.pixmap_widget = QtWidgets.QWidget()
+        self.pixmap_widget.setMaximumHeight(100)
+        v_splitter2.addWidget(self.pixmap_widget)
+
+        v_splitter2.addWidget(self.settings.settings_tree)
+        self.text_list = QtWidgets.QListWidget()
+
+        v_splitter2.addWidget(self.text_list)
+        h_splitter.addWidget(v_splitter2)
+        self._viewer_widget = QtWidgets.QWidget()
+        h_splitter.addWidget(self._viewer_widget)
+        layout.addWidget(h_splitter)
+        self.parent_widget.setLayout(layout)
+
+    def current_node_path(self):
+        return self.h5file_tree.current_node_path()
+
+    def add_actions(self, actions: List[QtWidgets.QAction]):
+        for action in actions:
+            self.h5file_tree.tree.addAction(action)
+          
+    @property  
+    def viewer_widget(self):
+        return self._viewer_widget
+
+    def clear(self):
+        self.h5file_tree.tree.clear()
+
+    def add_base_item(self, base_tree_item):
+        self.h5file_tree.tree.addTopLevelItem(base_tree_item)
+
+    def add_widget_to_tree(self, pixmap_items):
+        for item in pixmap_items:
+            widget = QtWidgets.QWidget()
+
+            vLayout = QtWidgets.QVBoxLayout()
+            label1D = QtWidgets.QLabel()
+            bytes = QByteArray(item['node'].attrs['pixmap1D'])
+            im1 = QtGui.QImage.fromData(bytes)
+            a = QtGui.QPixmap.fromImage(im1)
+            label1D.setPixmap(a)
+
+            label2D = QtWidgets.QLabel()
+            bytes = QByteArray(item['node'].attrs['pixmap2D'])
+            im2 = QtGui.QImage.fromData(bytes)
+            b = QtGui.QPixmap.fromImage(im2)
+            label2D.setPixmap(b)
+
+            vLayout.addWidget(label1D)
+            vLayout.addwidget(label2D)
+            widget.setLayout(vLayout)
+            self.h5file_tree.tree.setItemWidget(item['item'], 1, widget)
+
+
+class H5Browser(QObject, ActionManager):
     """UI used to explore h5 files, plot and export subdatas
 
     Parameters
@@ -372,32 +462,38 @@ class H5Browser(QObject):
     --------
     H5Backend, H5Backend
     """
-    data_node_signal = Signal(
-        str)  # the path of a node where data should be monitored, displayed...whatever use from the caller
+    data_node_signal = Signal(str)  # the path of a node where data should be monitored, displayed...
+    # whatever use from the caller
     status_signal = Signal(str)
 
-    def __init__(self, parent, h5file=None, h5file_path=None, backend='tables'):
-        super().__init__()
-        if not (isinstance(parent, QtWidgets.QWidget) or isinstance(parent, QtWidgets.QMainWindow)):
-            raise Exception('no valid parent container, expected a QWidget or a QMainWindow')
+    def __init__(self, parent: QtWidgets.QMainWindow, h5file=None, h5file_path=None, backend='tables'):
+        QObject.__init__(self)
+        toolbar = QtWidgets.QToolBar()
+        ActionManager.__init__(self, toolbar=toolbar)
 
-        if isinstance(parent, QtWidgets.QMainWindow):
-            self.main_window = parent
-            self.parent = QtWidgets.QWidget()
-            self.main_window.setCentralWidget(self.parent)
-        else:
-            self.main_window = None
-            self.parent = parent
+        if not isinstance(parent, QtWidgets.QMainWindow):
+            raise Exception('no valid parent container, expected a QMainWindow')
 
-        self.backend = backend
+        self.main_window = parent
+        self.parent_widget = QtWidgets.QWidget()
+        self.main_window.setCentralWidget(self.parent_widget)
+
+        self.main_window.addToolBar(self.toolbar)
         self.current_node_path = None
 
         # construct the UI interface
-        self.ui = QObject()  # the user interface
-        self.set_GUI()
+        self.view = View(self.parent_widget)
+        self.view.item_clicked_sig.connect(self.show_h5_attributes)
+        self.view.item_double_clicked_sig.connect(self.show_h5_data)
+        self.hyper_viewer = ViewerND(self.view.viewer_widget)
+
+
+        self.setup_actions()
+        self.setup_menu()
+        self.connect_things()
 
         # construct the h5 interface and load the file (or open a select file message)
-        self.h5utils = H5BrowserUtil(backend=self.backend)
+        self.h5utils = H5BrowserUtil(backend=backend)
         if h5file is None:
             if h5file_path is None:
                 h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
@@ -407,28 +503,69 @@ class H5Browser(QObject):
                 return
         else:
             self.h5utils.h5file = h5file
+            
+        self.data_loader = data_saving.DataLoader(self.h5utils)
 
         self.check_version()
         self.populate_tree()
-        self.ui.h5file_tree.ui.Open_Tree.click()
+        self.view.h5file_tree.expand_all()
+
+    def connect_things(self):
+        self.connect_action('export', self.export_data)
+        self.connect_action('comment', self.add_comments)
+        self.connect_action('load', self.load_file)
+        self.connect_action('save', self.save_file)
+        self.connect_action('quit', self.quit_fun)
+        self.connect_action('about', self.show_about)
+        self.connect_action('help', self.show_help)
+        self.connect_action('log', self.show_log)
+
+        self.status_signal.connect(self.add_log)
+
+    def load_file(self):
+        #todo
+        pass
+
+    def setup_menu(self):
+        menubar = self.main_window.menuBar()
+        file_menu = menubar.addMenu('File')
+        self.affect_to('load', file_menu)
+        self.affect_to('save', file_menu)
+        file_menu.addSeparator()
+        self.affect_to('quit', file_menu)
+
+        help_menu = menubar.addMenu('?')
+        self.affect_to('about', help_menu)
+        self.affect_to('help', help_menu)
+        self.affect_to('log', help_menu)
+
+    def setup_actions(self):
+        self.add_action('export', 'Export as', 'SaveAs', tip='Export node content (and children) as ',
+                        toolbar=self.toolbar)
+        self.add_action('comment', 'Add Comment', 'properties', tip='Add comments to the node',
+                        toolbar=self.toolbar)
+
+        self.view.add_actions([self.get_action('export'), self.get_action('comment')])
+
+        self.add_action('load', 'Load File', 'Open', tip='Open a new file')
+        self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
+        self.add_action('quit', 'Quit the application', 'Exit', tip='Quit the application')
+        self.add_action('about', 'About', tip='About')
+        self.add_action('help', 'Help', 'Help', tip='Show documentation', shortcut=QtCore.Qt.Key_F1)
+        self.add_action('log', 'Show Log', 'information2', tip='Open Log')
 
     def check_version(self):
         """Check version of PyMoDAQ to assert if file is compatible or not with the current version of the Browser"""
         if 'pymodaq_version' in self.h5utils.root().attrs.attrs_name:
-            if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('2.0'):
-                msgBox = QtWidgets.QMessageBox(parent=None)
-                msgBox.setWindowTitle("Invalid version")
-                msgBox.setText(f"Your file has been saved using PyMoDAQ "
-                               f"version {self.h5utils.root().attrs['pymodaq_version']} "
-                               f"while you're using version: {utils.get_version()}\n"
-                               f"Please create and use an adapted environment to use this version (up to 1.6.4):\n"
-                               f"pip install pymodaq==1.6.4")
-                ret = msgBox.exec()
+            if version_mod.parse(self.h5utils.root().attrs['pymodaq_version']) < version_mod.parse('4.0'):
+                msg_box = messagebox(severity='warning', title='Invalid version',
+                                     text=f"Your file has been saved using PyMoDAQ "
+                                          f"version {self.h5utils.root().attrs['pymodaq_version']} "
+                                          f"while you're using version: {utils.get_version()}\n"
+                                          f"Please create and use an adapted environment to use this"
+                                          f" version (up to 3.x.y):\n"
+                                          f"pip install pymodaq==3.x.y")
                 self.quit_fun()
-                if self.main_window is not None:
-                    self.main_window.close()
-                else:
-                    self.parent.close()
 
     def add_comments(self, status: bool, comment=''):
         """Add comments to a node
@@ -465,7 +602,7 @@ class H5Browser(QObject):
 
     def get_tree_node_path(self):
         """Get the node path of the currently selected node in the UI"""
-        return self.ui.h5file_tree.ui.Tree.currentItem().text(2)
+        return self.view.current_node_path()
 
     def export_data(self):
         """Opens a dialog to export data
@@ -497,34 +634,11 @@ class H5Browser(QObject):
         try:
             self.h5utils.close_file()
             if self.main_window is None:
-                self.parent.close()
+                self.parent_widget.close()
             else:
                 self.main_window.close()
         except Exception as e:
             logger.exception(str(e))
-
-    def create_menu(self):
-        self.menubar = self.main_window.menuBar()
-
-        # %% create Settings menu
-        self.file_menu = self.menubar.addMenu('File')
-        load_action = self.file_menu.addAction('Load file')
-        load_action.triggered.connect(lambda: self.load_file(None))
-        save_action = self.file_menu.addAction('Save file')
-        save_action.triggered.connect(self.save_file)
-        self.file_menu.addSeparator()
-        quit_action = self.file_menu.addAction('Quit')
-        quit_action.triggered.connect(self.quit_fun)
-
-        # help menu
-        help_menu = self.menubar.addMenu('?')
-        action_about = help_menu.addAction('About')
-        action_about.triggered.connect(self.show_about)
-        action_help = help_menu.addAction('Help')
-        action_help.triggered.connect(self.show_help)
-        action_help.setShortcut(QtCore.Qt.Key_F1)
-        log_action = help_menu.addAction('Show log')
-        log_action.triggered.connect(self.show_log)
 
     def show_about(self):
         splash_path = os.path.join(os.path.split(os.path.split(__file__)[0])[0], 'splash.png')
@@ -535,72 +649,16 @@ class H5Browser(QObject):
                                    f"Modular Acquisition with Python\nWritten by Sébastien Weber",
                                    QtCore.Qt.AlignRight, QtCore.Qt.white)
 
-    def show_log(self):
+    @staticmethod
+    def show_log():
         webbrowser.open(logging.getLogger('pymodaq').handlers[0].baseFilename)
 
-    def show_help(self):
+    @staticmethod
+    def show_help():
         QtGui.QDesktopServices.openUrl(QtCore.QUrl("http://pymodaq.cnrs.fr"))
 
-    def set_GUI(self):
-
-        if self.main_window is not None:
-            self.create_menu()
-
-        layout = QtWidgets.QGridLayout()
-
-        V_splitter = QtWidgets.QSplitter(Qt.Vertical)
-        V_splitter2 = QtWidgets.QSplitter(Qt.Vertical)
-        H_splitter = QtWidgets.QSplitter(Qt.Horizontal)
-
-        Form = QtWidgets.QWidget()
-        # self.ui.h5file_tree = Tree_layout(Form,col_counts=2,labels=["Node",'Pixmap'])
-        self.ui.h5file_tree = Tree_layout(Form, col_counts=1, labels=["Node"])
-        self.ui.h5file_tree.ui.Tree.setMinimumWidth(300)
-        self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
-        self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
-
-        self.export_action = QtWidgets.QAction("Export data", None)
-        self.export_action.triggered.connect(self.export_data)
-
-        self.add_comments_action = QtWidgets.QAction("Add comments to this node", None)
-        self.add_comments_action.triggered.connect(self.add_comments)
-        self.ui.h5file_tree.ui.Tree.addAction(self.export_action)
-        self.ui.h5file_tree.ui.Tree.addAction(self.add_comments_action)
-
-        V_splitter.addWidget(Form)
-        self.ui.attributes_tree = ParameterTree()
-        self.ui.attributes_tree.setMinimumWidth(300)
-        V_splitter.addWidget(self.ui.attributes_tree)
-
-        self.settings_raw = Parameter.create(name='Param_raw', type='group')
-        self.ui.attributes_tree.setParameters(self.settings_raw, showTop=False)
-
-        H_splitter.addWidget(V_splitter)
-        self.pixmap_widget = QtWidgets.QWidget()
-        self.pixmap_widget.setMaximumHeight(100)
-        V_splitter2.addWidget(self.pixmap_widget)
-        self.ui.settings_tree = ParameterTree()
-        self.ui.settings_tree.setMinimumWidth(300)
-        V_splitter2.addWidget(self.ui.settings_tree)
-        self.ui.text_list = QtWidgets.QListWidget()
-
-        V_splitter2.addWidget(self.ui.text_list)
-
-        H_splitter.addWidget(V_splitter2)
-
-        widget_viewer = QtWidgets.QWidget()
-        self.hyperviewer = ViewerND(widget_viewer)
-        H_splitter.addWidget(widget_viewer)
-
-        layout.addWidget(H_splitter)
-        self.parent.setLayout(layout)
-
-        self.settings = Parameter.create(name='Param', type='group')
-        self.ui.settings_tree.setParameters(self.settings, showTop=False)
-
-        self.status_signal.connect(self.add_log)
-
-    def add_log(self, txt):
+    @staticmethod
+    def add_log(txt):
         logger.info(txt)
 
     def show_h5_attributes(self, item):
@@ -669,10 +727,10 @@ class H5Browser(QObject):
                         scan_type = node.attrs['scan_type']
                     else:
                         scan_type = ''
-                    # self.hyperviewer.show_data(deepcopy(data), nav_axes=nav_axes, is_spread=is_spread,
+                    # self.hyper_viewer.show_data(deepcopy(data), nav_axes=nav_axes, is_spread=is_spread,
                     #                            scan_type=scan_type, **deepcopy(axes))
-                    # self.hyperviewer.init_ROI()
-                    self.hyperviewer.show_data(data_to_plot)
+                    # self.hyper_viewer.init_ROI()
+                    self.hyper_viewer.show_data(data_to_plot)
                 elif isinstance(data, list):
                     if not (not data):
                         if isinstance(data[0], str):
@@ -692,37 +750,14 @@ class H5Browser(QObject):
         """
         try:
             if self.h5utils.h5file is not None:
-                self.ui.h5file_tree.ui.Tree.clear()
+                self.view.clear()
                 base_node = self.h5utils.root()
                 base_tree_item, pixmap_items = h5tree_to_QTree(base_node)
-                self.ui.h5file_tree.ui.Tree.addTopLevelItem(base_tree_item)
-                self.add_widget_totree(pixmap_items)
+                self.view.add_base_item(base_tree_item)
+                self.view.add_widget_to_tree(pixmap_items)
 
         except Exception as e:
             logger.exception(str(e))
-
-    def add_widget_totree(self, pixmap_items):
-
-        for item in pixmap_items:
-            widget = QtWidgets.QWidget()
-
-            vLayout = QtWidgets.QVBoxLayout()
-            label1D = QtWidgets.QLabel()
-            bytes = QByteArray(item['node'].attrs['pixmap1D'])
-            im1 = QtGui.QImage.fromData(bytes)
-            a = QtGui.QPixmap.fromImage(im1)
-            label1D.setPixmap(a)
-
-            label2D = QtWidgets.QLabel()
-            bytes = QByteArray(item['node'].attrs['pixmap2D'])
-            im2 = QtGui.QImage.fromData(bytes)
-            b = QtGui.QPixmap.fromImage(im2)
-            label2D.setPixmap(b)
-
-            vLayout.addWidget(label1D)
-            vLayout.addwidget(label2D)
-            widget.setLayout(vLayout)
-            self.ui.h5file_tree.ui.Tree.setItemWidget(item['item'], 1, widget)
 
 
 def browse_data(fname=None, ret_all=False, message=None):

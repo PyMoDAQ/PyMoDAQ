@@ -35,7 +35,7 @@ class QAction(QAction):
 
 
 def addaction(name='', icon_name='', tip='', checkable=False, slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
-              menu: QtWidgets.QMenu = None, visible=True):
+              menu: QtWidgets.QMenu = None, visible=True, shortcut=None):
     """Create a new action and add it eventually to a toolbar and a menu
 
     Parameters
@@ -77,6 +77,8 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot: Callable = N
         toolbar.addAction(action)
     if menu is not None:
         menu.addAction(action)
+    if shortcut is not None:
+        action.setShortcut(shortcut)
     action.setVisible(visible)
     return action
 
@@ -169,7 +171,7 @@ class ActionManager:
                                   f'{self.setup_actions.__doc__}')
 
     def add_action(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None,
-                   visible=True):
+                   visible=True, shortcut=None):
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -201,7 +203,7 @@ class ActionManager:
         if menu is None:
             menu = self._menu
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu,
-                                              visible=visible)
+                                              visible=visible, shortcut=shortcut)
 
     def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget], *args, tip='',
                    toolbar: QtWidgets.QToolBar = None, visible=True, signal_str=None, slot: Callable=None, **kwargs):
@@ -271,6 +273,10 @@ class ActionManager:
             The text to display
         """
         self.get_action(action_name).setText(text)
+
+    @property
+    def actions(self):
+        return list(self._actions.values())
 
     def get_action(self, name):
         """Getter of a given action

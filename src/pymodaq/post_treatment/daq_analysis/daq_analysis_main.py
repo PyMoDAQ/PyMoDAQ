@@ -13,7 +13,7 @@ import numpy as np
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
 import pymodaq.utils.parameter.pymodaq_ptypes as pymodaq_ptypes
-from pymodaq.utils.tree_layout.tree_layout_main import Tree_layout
+from pymodaq.utils.tree_layout.tree_layout_main import TreeLayout
 import pymodaq.utils.daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
 from easydict import EasyDict as edict
@@ -90,7 +90,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
     def set_GUI(self):
         """
             Create the graphic interface of the h5 file analyser, including:
-                * *h5 file dock* : QtreeWidget (custom instance of Tree_layout) showing the contents of the h5 file
+                * *h5 file dock* : QtreeWidget (custom instance of TreeLayout) showing the contents of the h5 file
                 * *status bar* : the top_down information bar
                 * *tree_dock* : The QTree viewer
                 * *1D viewer dock* : the preview window of 1D data
@@ -103,7 +103,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
         H_splitter = QtWidgets.QSplitter(Qt.Horizontal)
 
         Form = QtWidgets.QWidget()
-        self.ui.h5file_tree = Tree_layout(Form, col_counts=2, labels=["Node", 'Pixmap'])
+        self.ui.h5file_tree = TreeLayout(Form, col_counts=2, labels=["Node", 'Pixmap'])
         self.ui.h5file_tree.ui.Tree.setMinimumWidth(250)
         self.ui.h5file_tree.ui.Tree.itemClicked.connect(self.show_h5_attributes)
         self.ui.h5file_tree.ui.Tree.itemDoubleClicked.connect(self.show_h5_data)
