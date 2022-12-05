@@ -8,40 +8,563 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq.utils.parameter import ioxml
-
+from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase, SCANNER_SETTINGS_NAME
 from pymodaq.utils.plotting.scan_selector import ScanSelector
+from pymodaq.utils.managers.parameter_manager import ParameterManager
+
 import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.gui_utils as gutils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.utils.plot_utils import QVector
-from pyqtgraph.parametertree import Parameter, ParameterTree
-import pymodaq.utils.parameter.pymodaq_ptypes as pymodaq_types  # to be placed after importing Parameter
+
 
 from .utils import ScanParameters, ScanInfo, ScanType, SCAN_SUBTYPES, ScannerException
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
-
-#TODO add an objectfactory to add/register various type of scans and subscans and remove the enum
-
+scanner_factory = ScannerFactory()
 
 
-try:
-    import adaptive
-    from adaptive.learner import learner1D
-    from adaptive.learner import learner2D
-    adaptive_losses = dict(
-        loss1D=['default', 'curvature', 'uniform'],
-        loss2D=['default', 'resolution', 'uniform', 'triangle'])
+class MainScanner(ParameterManager):
+    """Main Object to define a PyMoDAQ scan and create a UI to set it
 
-except Exception:
-    SCAN_SUBTYPES['Scan1D']['limits'].pop(SCAN_SUBTYPES['Scan1D']['limits'].index('Adaptive'))
-    SCAN_SUBTYPES['Scan2D']['limits'].pop(SCAN_SUBTYPES['Scan2D']['limits'].index('Adaptive'))
-    SCAN_SUBTYPES['Tabular']['limits'].pop(SCAN_SUBTYPES['Tabular']['limits'].index('Adaptive'))
-    adaptive_losses = None
-    adaptive = None
-    logger.info('adaptive module is not present, no adaptive scan possible')
+    Parameters
+    ----------
+    scanner_items: (items used by ScanSelector for chosing scan area or linear traces)
+    actuators: list of actuators names
+
+    Attributes
+    ----------
+    table_model: TableModelSequential or TableModelTabular
+    table_view: pymodaq_types.TableViewCustom
+    scan_selector: ScanSelector
+
+    See Also
+    --------
+    ScanSelector, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
+    """
+    scan_params_signal = Signal(ScanParameters)
+
+    params = [
+        {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
+        {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
+        {'title': 'Settings', 'name': SCANNER_SETTINGS_NAME, 'type': 'group'},
+    ]
+
+    def __init__(self, scanner_items=OrderedDict([]), actuators=[]):
+        super().__init__()
+
+        self.connect_things()
+        self._scanner: ScannerBase = None
+
+        self.set_scanner()
+        self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+        # self.scan_selector = ScanSelector(scanner_items, scan_type)
+        # self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
+        # self.scan_selector.scan_select_signal.connect(lambda: self.update_tabular_positions())
+        # self.scan_selector.widget.setVisible(False)
+        # self.scan_selector.show_scan_selector(visible=False)
+
+        # self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
+        #     limits=self.scan_selector.sources_names)
+        # self.settings.child('scan2D_settings', 'scan2D_roi_module').setOpts(
+        #     limits=self.scan_selector.sources_names)
+        # self.table_model = None
+
+        self.actuators = actuators
+
+    def set_scanner(self):
+        try:
+            self._scanner: ScannerBase = scanner_factory.get(self.settings['scan_type'],
+                                                             self.settings['scan_sub_type'])
+
+            self._scanner.settings.sigTreeStateChanged.connect(self.update_local_settings)
+
+            while len(self.settings.child(SCANNER_SETTINGS_NAME).children()) > 0:
+                self.settings.child(SCANNER_SETTINGS_NAME).removeChild(
+                    self.settings.child(SCANNER_SETTINGS_NAME).children()[0])
+
+            self.settings.child(SCANNER_SETTINGS_NAME).restoreState(self._scanner.settings.saveState())
+        except ValueError:
+            pass
+
+    def update_local_settings(self, param, changes):
+        """Apply a change from the settings in the Scanner object to the local settings"""
+        for param, change, data in changes:
+            if change == 'value':
+                self.settings.child(*putils.get_param_path(param)).setValue(data)
+
+    def value_changed(self, param):
+        if param.name() == 'scan_type':
+            self.settings.child('scan_sub_type').setOpts(
+                limits=scanner_factory.scan_sub_types(param.value()))
+
+        if param.name() in ['scan_type', 'scan_sub_type']:
+            self.set_scanner()
+
+        if param.name() in putils.iter_children(self.settings.child(SCANNER_SETTINGS_NAME), []):
+            self._scanner.settings.child(*putils.get_param_path(param)[2:]).setValue(param.value())
+
+        self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+    @property
+    def actuators(self):
+        """list of str: Returns as a list the name of the selected actuators to describe the actual scan"""
+        return self._actuators
+
+    @actuators.setter
+    def actuators(self, act_list):
+        self._actuators = act_list
+        self.update_model()
+
+    def update_model(self, init_data=None):
+        """Update the model of the Sequential or Tabular view according to the selected actuators
+
+        Parameters
+        ----------
+        init_data: list of float (optional)
+            The initial values for the associated table
+        """
+        try:
+            scan_type = self.settings.child('scan_type').value()
+            if scan_type == 'Sequential':
+                if init_data is None:
+                    if self.table_model is not None:
+                        init_data = []
+                        names = [row[0] for row in self.table_model.get_data_all()]
+                        for name in self._actuators:
+                            if name in names:
+                                ind_row = names.index(name)
+                                init_data.append(self.table_model.get_data_all()[ind_row])
+                            else:
+                                init_data.append([name, 0., 1., 0.1])
+                    else:
+                        init_data = [[name, 0., 1., 0.1] for name in self._actuators]
+                self.table_model = TableModelSequential(init_data, )
+                self.table_view = putils.get_widget_from_tree(self.settings_tree, pymodaq_types.TableViewCustom)[0]
+                self.settings.child('seq_settings', 'seq_table').setValue(self.table_model)
+            elif scan_type == 'Tabular':
+                if init_data is None:
+                    init_data = [[0. for name in self._actuators]]
+
+                self.table_model = TableModelTabular(init_data, [name for name in self._actuators])
+                self.table_view = putils.get_widget_from_tree(self.settings_tree, pymodaq_types.TableViewCustom)[1]
+                self.settings.child('tabular_settings', 'tabular_table').setValue(self.table_model)
+        except Exception as e:
+            logger.exception(str(e))
+
+        if scan_type == 'Sequential' or scan_type == 'Tabular':
+            self.table_view.horizontalHeader().setResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+            self.table_view.horizontalHeader().setStretchLastSection(True)
+            self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+            self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+            styledItemDelegate = QtWidgets.QStyledItemDelegate()
+            styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
+            self.table_view.setItemDelegate(styledItemDelegate)
+
+            self.table_view.setDragEnabled(True)
+            self.table_view.setDropIndicatorShown(True)
+            self.table_view.setAcceptDrops(True)
+            self.table_view.viewport().setAcceptDrops(True)
+            self.table_view.setDefaultDropAction(QtCore.Qt.MoveAction)
+            self.table_view.setDragDropMode(QtWidgets.QTableView.InternalMove)
+            self.table_view.setDragDropOverwriteMode(False)
+
+        if scan_type == 'Tabular':
+            self.table_view.add_data_signal[int].connect(self.table_model.add_data)
+            self.table_view.remove_row_signal[int].connect(self.table_model.remove_data)
+            self.table_view.load_data_signal.connect(self.table_model.load_txt)
+            self.table_view.save_data_signal.connect(self.table_model.save_txt)
+
+    @property
+    def viewers_items(self):
+        return self.scan_selector.viewers_items
+
+    @viewers_items.setter
+    def viewers_items(self, items):
+        """Add 2D viewer objects where one can plot ROI or Polylines to define a Scan using the ScanSelector
+
+        Parameters
+        ----------
+        items: list of Viewer2D
+
+        See Also
+        --------
+        Viewer2D, ScanSelector
+        """
+        self.scan_selector.remove_scan_selector()
+        self.scan_selector.viewers_items = items
+        self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
+            limits=self.scan_selector.sources_names)
+        self.settings.child('scan2D_settings', 'scan2D_roi_module').setOpts(
+            limits=self.scan_selector.sources_names)
+
+    def set_scan_type_and_subtypes(self, scan_type: str, scan_subtype=None):
+        """Convenience function to set the main scan type
+
+        Parameters
+        ----------
+        scan_type: str
+            one of ScanType
+        scan_subtype: list of str or None
+            one list of SCAN_SUBTYPES
+        """
+        if scan_type in ScanType.names():
+            self.settings.child('scan_type').setValue(scan_type)
+
+            if scan_subtype is not None:
+                if scan_subtype in SCAN_SUBTYPES[scan_type]['limits']:
+                    self.settings.child(*SCAN_SUBTYPES[scan_type]['subpath']).setValue(scan_subtype)
+
+    def parameter_tree_changed(self, param, changes):
+        for param, change, data in changes:
+            path = self.settings.childPath(param)
+            if path is not None:
+                childName = '.'.join(path)
+            else:
+                childName = param.name()
+            if change == 'childAdded':
+                pass
+
+            elif change == 'value':
+                if param.name() == 'scan_type':
+
+                    if data == 'Scan1D':
+                        self.settings.child('scan1D_settings').show()
+                        self.settings.child('scan2D_settings').hide()
+                        self.settings.child('seq_settings').hide()
+                        self.settings.child('tabular_settings').hide()
+                        self.settings_tree.setMaximumHeight(500)
+
+                    elif data == 'Scan2D':
+                        self.settings.child('scan1D_settings').hide()
+                        self.settings.child('scan2D_settings').show()
+                        self.settings.child('seq_settings').hide()
+                        self.settings.child('tabular_settings').hide()
+                        self.settings_tree.setMaximumHeight(500)
+                        self.scan_selector.settings.child('scan_options', 'scan_type').setValue(data)
+                        if self.settings.child('scan2D_settings',
+                                               'scan2D_selection').value() == 'Manual':
+                            self.scan_selector.show_scan_selector(visible=False)
+                        else:
+                            self.scan_selector.show_scan_selector(visible=True)
+                            self.update_scan_2D_positions()
+                        self.update_scan2D_type(param)
+
+                    elif data == 'Sequential':
+                        self.settings.child('scan1D_settings').hide()
+                        self.settings.child('scan2D_settings').hide()
+                        self.settings.child('seq_settings').show()
+                        self.settings.child('tabular_settings').hide()
+                        self.update_model()
+                        self.settings_tree.setMaximumHeight(600)
+
+                    elif data == 'Tabular':
+                        self.settings.child('scan1D_settings').hide()
+                        self.settings.child('scan2D_settings').hide()
+                        self.settings.child('seq_settings').hide()
+                        self.settings.child('tabular_settings').show()
+                        self.settings.child('tabular_settings', 'tabular_step').hide()
+
+                        self.update_tabular_positions()
+                        self.settings_tree.setMaximumHeight(600)
+                        self.scan_selector.settings.child('scan_options', 'scan_type').setValue(data)
+                        if self.settings.child('tabular_settings',
+                                               'tabular_selection').value() == 'Manual':
+                            self.scan_selector.show_scan_selector(visible=False)
+                        else:
+                            self.scan_selector.show_scan_selector(visible=True)
+
+                elif param.name() == 'scan1D_type':
+                    status = 'adaptive' in param.value().lower()
+                    self.settings.child('scan1D_settings', 'scan1D_loss').show(status)
+
+                elif param.name() == 'tabular_subtype':
+                    isadaptive = 'adaptive' in self.settings.child('tabular_settings',
+                                                                   'tabular_subtype').value().lower()
+                    ismanual = self.settings.child('tabular_settings',
+                                                   'tabular_selection').value() == 'Manual'
+                    self.settings.child('tabular_settings', 'tabular_loss').show(isadaptive)
+                    self.settings.child('tabular_settings',
+                                        'tabular_step').show(not isadaptive and not ismanual)
+                    self.update_tabular_positions()
+
+                elif param.name() == 'tabular_roi_module' or param.name() == 'scan2D_roi_module':
+                    self.scan_selector.settings.child('scan_options', 'sources').setValue(param.value())
+
+                elif param.name() == 'tabular_selection':
+                    isadaptive = 'adaptive' in self.settings.child('tabular_settings',
+                                                                   'tabular_subtype').value().lower()
+                    ismanual = self.settings.child('tabular_settings',
+                                                   'tabular_selection').value() == 'Manual'
+                    self.settings.child('tabular_settings',
+                                        'tabular_step').show(not isadaptive and not ismanual)
+                    if data == 'Polylines':
+                        self.settings.child('tabular_settings', 'tabular_roi_module').show()
+                        self.scan_selector.show_scan_selector(visible=True)
+                    else:
+                        self.settings.child('tabular_settings', 'tabular_roi_module').hide()
+                        self.scan_selector.show_scan_selector(visible=False)
+                        self.update_tabular_positions()
+
+                elif param.name() == 'tabular_step':
+                    self.update_tabular_positions()
+                    self.set_scan()
+
+                elif param.name() == 'scan2D_selection':
+                    if param.value() == 'Manual':
+                        self.scan_selector.show_scan_selector(visible=False)
+                        self.settings.child('scan2D_settings', 'scan2D_roi_module').hide()
+                    else:
+                        self.scan_selector.show_scan_selector(visible=True)
+                        self.settings.child('scan2D_settings', 'scan2D_roi_module').show()
+
+                    self.update_scan2D_type(param)
+
+                elif param.name() in putils.iter_children(self.settings.child('scan2D_settings'), []):
+                    self.update_scan2D_type(param)
+                    self.set_scan()
+
+                elif param.name() == 'Nsteps':
+                    pass  # just do nothing (otherwise set_scan will be fired, see below)
+
+                else:
+                    try:
+                        self.set_scan()
+                    except Exception as e:
+                        logger.error(f'Invalid call to setScan ({str(e)})')
+
+            elif change == 'parent':
+                pass
+
+    def connect_things(self):
+        self.settings.child('calculate_positions').sigActivated.connect(self.set_scan)
+
+
+    def set_scan(self):
+        """Process the settings options to calculate the scan positions
+
+        Returns
+        -------
+        ScanParameters
+        """
+        scan_type = self.settings.child('scan_type').value()
+        if scan_type == "Scan1D":
+            start = self.settings.child('scan1D_settings', 'start_1D').value()
+            stop = self.settings.child('scan1D_settings', 'stop_1D').value()
+            step = self.settings.child('scan1D_settings', 'step_1D').value()
+            self.scan_parameters = ScanParameters(Naxes=1, scan_type="Scan1D",
+                                                  scan_subtype=self.settings.child('scan1D_settings',
+                                                                                   'scan1D_type').value(),
+                                                  starts=[start], stops=[stop], steps=[step],
+                                                  adaptive_loss=self.settings.child('scan1D_settings',
+                                                                                    'scan1D_loss').value())
+
+        elif scan_type == "Scan2D":
+            starts = [self.settings.child('scan2D_settings', 'start_2d_axis1').value(),
+                      self.settings.child('scan2D_settings', 'start_2d_axis2').value()]
+            stops = [self.settings.child('scan2D_settings', 'stop_2d_axis1').value(),
+                     self.settings.child('scan2D_settings', 'stop_2d_axis2').value()]
+            steps = [self.settings.child('scan2D_settings', 'step_2d_axis1').value(),
+                     self.settings.child('scan2D_settings', 'step_2d_axis2').value()]
+            self.scan_parameters = ScanParameters(Naxes=2, scan_type="Scan2D",
+                                                  scan_subtype=self.settings.child('scan2D_settings',
+                                                                                   'scan2D_type').value(),
+                                                  starts=starts, stops=stops, steps=steps,
+                                                  adaptive_loss=self.settings.child('scan2D_settings',
+                                                                                    'scan2D_loss').value())
+
+        elif scan_type == "Sequential":
+            starts = [self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))]
+            stops = [self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))]
+            steps = [self.table_model.get_data(ind, 3) for ind in range(self.table_model.rowCount(None))]
+            self.scan_parameters = ScanParameters(Naxes=len(starts), scan_type="Sequential",
+                                                  scan_subtype=self.settings.child('seq_settings',
+                                                                                   'scanseq_type').value(),
+                                                  starts=starts, stops=stops, steps=steps)
+
+        elif scan_type == 'Tabular':
+            positions = np.array(self.table_model.get_data_all())
+            Naxes = positions.shape[1]
+            if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Adaptive':
+                starts = positions[:-1]
+                stops = positions[1:]
+                steps = [self.settings.child('tabular_settings', 'tabular_step').value()]
+                positions = None
+            else:
+                starts = None
+                stops = None
+                steps = None
+
+            self.scan_parameters = ScanParameters(Naxes=Naxes, scan_type="Tabular",
+                                                  scan_subtype=self.settings.child('tabular_settings',
+                                                                                   'tabular_subtype').value(),
+                                                  starts=starts, stops=stops, steps=steps, positions=positions,
+                                                  adaptive_loss=self.settings.child('tabular_settings',
+                                                                                    'tabular_loss').value())
+
+        self.settings.child('Nsteps').setValue(self.scan_parameters.Nsteps)
+        self.scan_params_signal.emit(self.scan_parameters)
+        return self.scan_parameters
+
+    def update_tabular_positions(self, positions: np.ndarray = None):
+        """Convenience function to write positions directly into the tabular table
+
+        Parameters
+        ----------
+        positions: ndarray
+            a 2D ndarray with as many columns as selected actuators
+        """
+        try:
+            if self.settings.child('scan_type').value() == 'Tabular':
+                if positions is None:
+                    if self.settings.child('tabular_settings',
+                                           'tabular_selection').value() == 'Polylines':  # from ROI
+                        viewer = self.scan_selector.scan_selector_source
+
+                        if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
+                            positions = self.scan_selector.scan_selector.getArrayIndexes(
+                                spacing=self.settings.child('tabular_settings', 'tabular_step').value())
+                        elif self.settings.child('tabular_settings',
+                                                 'tabular_subtype').value() == 'Adaptive':
+                            positions = self.scan_selector.scan_selector.get_vertex()
+
+                        steps_x, steps_y = zip(*positions)
+                        steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
+                        positions = np.transpose(np.array([steps_x, steps_y]))
+                        self.update_model(init_data=positions)
+                    else:
+                        self.update_model()
+                elif isinstance(positions, np.ndarray):
+                    self.update_model(init_data=positions)
+                else:
+                    pass
+            else:
+                self.update_model()
+        except Exception as e:
+            logger.exception(str(e))
+
+    def update_scan_2D_positions(self):
+        """Compute scan positions from the ROI set with the scan_selector"""
+        try:
+            viewer = self.scan_selector.scan_selector_source
+            pos_dl = self.scan_selector.scan_selector.pos()
+            pos_ur = self.scan_selector.scan_selector.pos() + self.scan_selector.scan_selector.size()
+            pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
+            pos_ur_scaled = viewer.scale_axis(pos_ur[0], pos_ur[1])
+
+            if self.settings.child('scan2D_settings', 'scan2D_type').value() == 'Spiral':
+                self.settings.child('scan2D_settings', 'start_2d_axis1').setValue(
+                    np.mean((pos_dl_scaled[0], pos_ur_scaled[0])))
+                self.settings.child('scan2D_settings', 'start_2d_axis2').setValue(
+                    np.mean((pos_dl_scaled[1], pos_ur_scaled[1])))
+
+                nsteps = 2 * np.min((np.abs((pos_ur_scaled[0] - pos_dl_scaled[0]) / 2) / self.settings.child(
+                     'scan2D_settings', 'step_2d_axis1').value(), np.abs(
+                    (pos_ur_scaled[1] - pos_dl_scaled[1]) / 2) / self.settings.child(
+                     'scan2D_settings', 'step_2d_axis2').value()))
+
+                self.settings.child('scan2D_settings', 'npts_by_axis').setValue(nsteps)
+
+            else:
+                self.settings.child('scan2D_settings', 'start_2d_axis1').setValue(pos_dl_scaled[0])
+                self.settings.child('scan2D_settings', 'start_2d_axis2').setValue(pos_dl_scaled[1])
+                self.settings.child('scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
+                self.settings.child('scan2D_settings', 'stop_2d_axis2').setValue(pos_ur_scaled[1])
+
+        except Exception as e:
+            raise ScannerException(str(e))
+
+    def update_scan2D_type(self, param):
+        """Update the 2D scan type from the given parameter.
+        """
+        try:
+            self.settings.child('scan2D_settings', 'step_2d_axis1').show()
+            self.settings.child('scan2D_settings', 'step_2d_axis2').show()
+            scan_subtype = self.settings.child('scan2D_settings', 'scan2D_type').value()
+            self.settings.child('scan2D_settings', 'scan2D_loss').show(scan_subtype == 'Adaptive')
+            if scan_subtype == 'Adaptive':
+                if self.settings.child('scan2D_settings', 'scan2D_loss').value() == 'resolution':
+                    title = 'Minimal feature (%):'
+                    if self.settings.child('scan2D_settings', 'step_2d_axis1').opts['title'] != title:
+                        self.settings.child('scan2D_settings', 'step_2d_axis1').setValue(1)
+                        self.settings.child('scan2D_settings', 'step_2d_axis2').setValue(100)
+
+                    self.settings.child('scan2D_settings', 'step_2d_axis1').setOpts(
+                        limits=[0, 100], title=title, visible=True,
+                        tip='Features smaller than this will not be probed first. In percent of maximal scanned area'
+                            ' length',
+                        )
+                    self.settings.child('scan2D_settings', 'step_2d_axis2').setOpts(
+                        limits=[0, 100], title='Maximal feature (%):', visible=True,
+                        tip='Features bigger than this will be probed first. In percent of maximal scanned area length',
+                        )
+
+                else:
+                    self.settings.child('scan2D_settings', 'step_2d_axis1').hide()
+                    self.settings.child('scan2D_settings', 'step_2d_axis2').hide()
+            else:
+                self.settings.child('scan2D_settings',
+                                    'step_2d_axis1').setOpts(title='Step Ax1:',
+                                                             tip='Step size for ax1 in actuator units')
+                self.settings.child('scan2D_settings',
+                                    'step_2d_axis2').setOpts(title='Step Ax2:',
+                                                             tip='Step size for ax2 in actuator units')
+
+            if scan_subtype == 'Spiral':
+                self.settings.child('scan2D_settings',
+                                    'start_2d_axis1').setOpts(title='Center Ax1')
+                self.settings.child('scan2D_settings',
+                                    'start_2d_axis2').setOpts(title='Center Ax2')
+
+                self.settings.child('scan2D_settings',
+                                    'stop_2d_axis1').setOpts(title='Rmax Ax1', readonly=True,
+                                                             tip='Read only for Spiral scan type, set the step and Npts/axis')
+                self.settings.child('scan2D_settings',
+                                    'stop_2d_axis2').setOpts(title='Rmax Ax2', readonly=True,
+                                                             tip='Read only for Spiral scan type, set the step and Npts/axis')
+                self.settings.child('scan2D_settings',
+                                    'npts_by_axis').show()
+
+                # do some checks and set stops values
+                self.settings.sigTreeStateChanged.disconnect()
+                if param.name() == 'step_2d_axis1':
+                    if param.value() < 0:
+                        param.setValue(-param.value())
+
+                if param.name() == 'step_2d_axis2':
+                    if param.value() < 0:
+                        param.setValue(-param.value())
+
+                self.settings.child('scan2D_settings', 'stop_2d_axis1').setValue(
+                    np.rint(self.settings.child(
+                         'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
+                        self.settings.child('scan2D_settings', 'step_2d_axis1').value()))
+
+                self.settings.child('scan2D_settings', 'stop_2d_axis2').setValue(
+                    np.rint(self.settings.child(
+                         'scan2D_settings', 'npts_by_axis').value() / 2) * np.abs(
+                        self.settings.child('scan2D_settings', 'step_2d_axis2').value()))
+                QtWidgets.QApplication.processEvents()
+                self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+            else:
+                self.settings.child('scan2D_settings',
+                                    'start_2d_axis1').setOpts(title='Start Ax1')
+                self.settings.child('scan2D_settings',
+                                    'start_2d_axis2').setOpts(title='Start Ax2')
+
+                self.settings.child('scan2D_settings',
+                                    'stop_2d_axis1').setOpts(title='Stop Ax1', readonly=False,
+                                                             tip='Set the stop positions')
+                self.settings.child('scan2D_settings',
+                                    'stop_2d_axis2').setOpts(title='StopAx2', readonly=False,
+                                                             tip='Set the stop positions')
+                self.settings.child('scan2D_settings', 'npts_by_axis').hide()
+        except Exception as e:
+            raise ScannerException(str(e))
+
 
 
 class Scanner(QObject):
@@ -789,54 +1312,6 @@ class TableModelTabular(gutils.TableModel):
 
         return True
 
-
-class TableModelSequential(gutils.TableModel):
-    """Table Model for the Model/View Qt framework dedicated to the Sequential scan mode"""
-    def __init__(self, data, **kwargs):
-        header = ['Actuator', 'Start', 'Stop', 'Step']
-        if 'header' in kwargs:
-            header = kwargs.pop('header')
-        editable = [False, True, True, True]
-        if 'editable' in kwargs:
-            editable = kwargs.pop('editable')
-        super().__init__(data, header, editable=editable, **kwargs)
-
-    def __repr__(self):
-        return f'{self.__class__.__name__} from module {self.__class__.__module__}'
-
-    def validate_data(self, row, col, value):
-        """
-        make sure the values and signs of the start, stop and step values are "correct"
-        Parameters
-        ----------
-        row: (int) row within the table that is to be changed
-        col: (int) col within the table that is to be changed
-        value: (float) new value for the value defined by row and col
-
-        Returns
-        -------
-        bool: True is the new value is fine (change some other values if needed) otherwise False
-        """
-        start = self.data(self.index(row, 1), QtCore.Qt.DisplayRole)
-        stop = self.data(self.index(row, 2), QtCore.Qt.DisplayRole)
-        step = self.data(self.index(row, 3), QtCore.Qt.DisplayRole)
-        isstep = False
-        if col == 1:  # the start
-            start = value
-        elif col == 2:  # the stop
-            stop = value
-        elif col == 3:  # the step
-            isstep = True
-            step = value
-
-        if np.abs(step) < 1e-12 or start == stop:
-            return False
-        if np.sign(stop - start) != np.sign(step):
-            if isstep:
-                self._data[row][2] = -stop
-            else:
-                self._data[row][3] = -step
-        return True
 
 
 
