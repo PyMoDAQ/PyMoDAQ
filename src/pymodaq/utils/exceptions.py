@@ -3,9 +3,7 @@ class DAQ_ScanException(Exception):
     pass
 
 
-class ScannerException(Exception):
-    """Raised when there is an error related to the Scanner class (see pymodaq.da_utils.scanner)"""
-    pass
+
 
 
 class DetectorError(Exception):

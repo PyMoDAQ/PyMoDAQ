@@ -570,7 +570,7 @@ class DataBase(DataLowLevel):
         else:
             self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
-                warnings.warn(UserWarning('The specified dimensionality is not coherent with the data shape'))
+                logger.debug('The specified dimensionality is not coherent with the data shape, replacing it')
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):

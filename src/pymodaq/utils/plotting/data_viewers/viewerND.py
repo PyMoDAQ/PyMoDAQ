@@ -38,6 +38,7 @@ math_processors1D = Data1DProcessorFactory()
 
 DEBUG_VIEWER = False
 
+
 class DataDisplayer(QObject):
 
     data_dim_signal = Signal(str)

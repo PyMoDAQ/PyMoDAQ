@@ -13,6 +13,7 @@ from easydict import EasyDict as edict
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
 
+
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
         super().__init__(*elt)

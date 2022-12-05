@@ -375,12 +375,13 @@ class Viewer1D(ViewerBase):
             if not self._display_temporary:
                 self.data_to_export.append(
                     DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                                x_axis=Axis(data=lineout_data.hor_axis.data,
-                                            units=lineout_data.hor_axis.units,
-                                            label=lineout_data.hor_axis.label)))
+                                axes=[Axis(data=lineout_data.hor_axis.data,
+                                           units=lineout_data.hor_axis.units,
+                                           label=lineout_data.hor_axis.label,
+                                           index=0)]))
 
                 self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
-                                                       data=[np.array([lineout_data.int_data])]))
+                                                          data=[np.array([lineout_data.int_data])]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
 
