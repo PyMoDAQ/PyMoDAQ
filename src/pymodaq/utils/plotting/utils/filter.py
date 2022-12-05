@@ -67,11 +67,12 @@ class Filter1DFromCrosshair(Filter):
 
     def _filter_data(self, data: data_mod.DataFromPlugins):
         data_dict = dict([])
-        axis = data.get_axis_from_index(0, create=False)
-        if axis is not None:
-            self.update_axis(axis)
-
         if data is not None:
+            axis = data.get_axis_from_index(0, create=False)
+            if axis is not None:
+                self.update_axis(axis)
+
+
             self._x, self._y = self.crosshair.get_positions()
             ind_x, axis_val = mutils.find_index(self._axis.data, (self._x,))[0]
             for label, dat in zip(data.labels, data.data):

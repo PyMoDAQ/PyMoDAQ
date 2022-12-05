@@ -487,11 +487,13 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
         super().add_data(where, data, settings_as_xml, metadata)
         nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
-            axis = Axis(label='time_axis', units='s', data=np.array([0.]), index=0)
-            self._nav_axis_saver.add_axis(nav_group, axis, enlargeable=True)
+            axis = Axis(label='time_axis', units='s', data=np.array([0., 1.]), index=0)
+            time_array = self._nav_axis_saver.add_axis(nav_group, axis, enlargeable=True)
+            time_array.attrs['size'] = 0
 
         time_array = self._nav_axis_saver.get_node_from_index(nav_group, 0)
         time_array.append(np.array([time()]))
+        time_array.attrs['size'] += 1
 
 
 class DataLoader:

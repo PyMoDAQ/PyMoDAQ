@@ -1240,7 +1240,7 @@ class DataWithAxes(DataBase):
             axis.index -= lower_indexes[axis.index]
 
         axes.extend(axes_to_append)
-        data = self.__class__(self.name, data=new_arrays_data, nav_indexes=nav_indexes, axes=axes)
+        data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=nav_indexes, axes=axes, source='calculated')
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None, remove_axes_index: List[int] = None):
