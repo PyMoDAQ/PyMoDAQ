@@ -7,6 +7,10 @@ Created the 04/11/2022
 from typing import Callable, Union
 from abc import ABCMeta, abstractmethod
 
+from pymodaq.utils.logger import set_logger, get_module_name
+
+logger = set_logger(get_module_name(__file__))
+
 
 class BuilderBase(ABCMeta):
     """Abstract class defining an object/service builder with a callable interface accepting some arguments
@@ -45,9 +49,10 @@ class ObjectFactory(metaclass=ABCMeta):
         def inner_wrapper(wrapped_class: Union[BuilderBase, Callable]) -> Callable:
             if cls.__name__ not in cls._builders:
                 cls._builders[cls.__name__] = {}
-            if key in cls._builders[cls.__name__]:
-                pass
-            cls._builders[cls.__name__][key] = wrapped_class
+            if key not in cls._builders[cls.__name__]:
+                cls._builders[cls.__name__][key] = wrapped_class
+            else:
+                logger.warning(f'The {cls.__name__}/{key} builder is already registered. Replacing it')
             return wrapped_class
         return inner_wrapper
 

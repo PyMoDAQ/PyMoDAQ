@@ -38,60 +38,43 @@ class DataNDProcessorBase(metaclass=ABCMeta):
     def operate(self, sub_data: DataWithAxes):
         pass
 
+    def __call__(self, **kwargs):
+        return self(**kwargs)
 
+
+@DataNDProcessorFactory.register('mean')
 class MeanProcessor(DataNDProcessorBase):
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.mean(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@DataNDProcessorFactory.register('std')
 class StdProcessor(DataNDProcessorBase):
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.std(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@DataNDProcessorFactory.register('sum')
 class SumProcessor(DataNDProcessorBase):
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.sum(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@DataNDProcessorFactory.register('max')
 class MaxProcessor(DataNDProcessorBase):
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.max(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@DataNDProcessorFactory.register('min')
 class MinProcessor(DataNDProcessorBase):
     def operate(self, sub_data: DataWithAxes):
         data_arrays = [np.min(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
-
-
-@DataNDProcessorFactory.register('mean')
-def create_mean_processor(**_ignored):
-    return MeanProcessor()
-
-
-@DataNDProcessorFactory.register('std')
-def create_std_processor(**_ignored):
-    return StdProcessor()
-
-
-@DataNDProcessorFactory.register('max')
-def create_max_processor(**_ignored):
-    return MaxProcessor()
-
-
-@DataNDProcessorFactory.register('min')
-def create_min_processor(**_ignored):
-    return MinProcessor()
-
-
-@DataNDProcessorFactory.register('sum')
-def create_sum_processor(**_ignored):
-    return SumProcessor()
 
 
 if __name__ == '__main__':

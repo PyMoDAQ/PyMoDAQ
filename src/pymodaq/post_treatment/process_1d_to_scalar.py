@@ -39,37 +39,46 @@ class Data1DProcessorBase(metaclass=ABCMeta):
     def operate(self, sub_data: DataWithAxes):
         pass
 
+    def __call__(self, **kwargs):
+        return self(**kwargs)
 
+
+@Data1DProcessorFactory.register('mean')
 class MeanProcessor(Data1DProcessorBase):
     def operate(self, sub_data):
         data_arrays = [np.mean(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@Data1DProcessorFactory.register('std')
 class StdProcessor(Data1DProcessorBase):
     def operate(self, sub_data):
         data_arrays = [np.std(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@Data1DProcessorFactory.register('sum')
 class SumProcessor(Data1DProcessorBase):
     def operate(self, sub_data):
         data_arrays = [np.sum(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@Data1DProcessorFactory.register('max')
 class MaxProcessor(Data1DProcessorBase):
     def operate(self, sub_data):
         data_arrays = [np.max(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@Data1DProcessorFactory.register('min')
 class MinProcessor(Data1DProcessorBase):
     def operate(self, sub_data):
         data_arrays = [np.min(data, axis=sub_data.axes_manager.sig_indexes) for data in sub_data]
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@Data1DProcessorFactory.register('argmax')
 class ArgMaxProcessor(Data1DProcessorBase):
     def process(self, limits: Tuple[int], data: DataWithAxes):
         axis = data.axes_manager.get_signal_axes()[0]
@@ -84,6 +93,7 @@ class ArgMaxProcessor(Data1DProcessorBase):
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+@Data1DProcessorFactory.register('argmin')
 class ArgMinProcessor(Data1DProcessorBase):
     def process(self, limits: Tuple[int], data: DataWithAxes):
         axis = data.axes_manager.get_signal_axes()[0]
@@ -98,6 +108,7 @@ class ArgMinProcessor(Data1DProcessorBase):
         return sub_data.deepcopy_with_new_data(data_arrays, sub_data.axes_manager.sig_indexes)
 
 
+#@Data1DProcessorFactory.register('half-life')
 class HalfLifeProcessor(Data1DProcessorBase):
     #todo Write it properly
     def process(self, limits: Tuple[int], data: DataWithAxes):
@@ -116,6 +127,7 @@ class HalfLifeProcessor(Data1DProcessorBase):
         return sub_xaxis[mutils.find_index(sub_data - offset, 0.5 * N0)[0][0]] - x0
 
 
+#@Data1DProcessorFactory.register('expo-decay')
 class ExpoDecayProcessor(Data1DProcessorBase):
     #todo Write it properly
     def process(self, limits: Tuple[int], data: DataWithAxes):
@@ -132,6 +144,7 @@ class ExpoDecayProcessor(Data1DProcessorBase):
         return sub_xaxis[mutils.find_index(sub_data - offset, 0.37 * N0)[0][0]] - x0
 
 
+#@Data1DProcessorFactory.register('fwhm')
 class FWHMProcessor(Data1DProcessorBase):
     #todo Write it properly
     def process(self, limits: Tuple[int], data: DataWithAxes):
@@ -145,56 +158,6 @@ class FWHMProcessor(Data1DProcessorBase):
 
         fwhm = (sub_axis[ind_x0] - sub_axis[ind_x0m]) * 2
         return fwhm
-
-
-@Data1DProcessorFactory.register('mean')
-def create_mean_processor(**_ignored):
-    return MeanProcessor()
-
-
-@Data1DProcessorFactory.register('std')
-def create_std_processor(**_ignored):
-    return StdProcessor()
-
-
-@Data1DProcessorFactory.register('max')
-def create_max_processor(**_ignored):
-    return MaxProcessor()
-
-
-@Data1DProcessorFactory.register('min')
-def create_min_processor(**_ignored):
-    return MinProcessor()
-
-
-@Data1DProcessorFactory.register('argmax')
-def create_max_processor(**_ignored):
-    return ArgMaxProcessor()
-
-
-@Data1DProcessorFactory.register('argmin')
-def create_min_processor(**_ignored):
-    return ArgMinProcessor()
-
-
-@Data1DProcessorFactory.register('sum')
-def create_sum_processor(**_ignored):
-    return SumProcessor()
-
-
-#@Data1DProcessorFactory.register('half-life')
-def create_half_life_processor(**_ignored):
-    return HalfLifeProcessor()
-
-
-#@Data1DProcessorFactory.register('expo-decay')
-def create_expo_decay_processor(**_ignored):
-    return ExpoDecayProcessor()
-
-
-#@Data1DProcessorFactory.register('fwhm')
-def create_expo_decay_processor(**_ignored):
-    return FWHMProcessor()
 
 
 if __name__ == '__main__':
