@@ -116,13 +116,13 @@ class ScannerFactory(ObjectFactory):
             raise ValueError(key)
         return builder(**kwargs)
 
-    def get(self, scan_type, scan_subtype, **kwargs):
-        return self.create(scan_type, scan_subtype, **kwargs)
+    def get(self, scan_type, scan_sub_type, **kwargs):
+        return self.create(scan_type, scan_sub_type, **kwargs)
 
     def scan_types(self):
         return list(self.builders[self.__class__.__name__].keys())
 
-    def scan_subtypes(self, scan_type: str):
+    def scan_sub_types(self, scan_type: str):
         return list(self.builders[self.__class__.__name__][scan_type].keys())
 
 

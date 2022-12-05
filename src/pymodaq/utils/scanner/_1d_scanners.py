@@ -51,6 +51,7 @@ class Scan1DRandom(Scan1DLinear):
             np.random.shuffle(self.positions)
         self.get_info_from_positions(self.positions)
 
+
 try:
     import adaptive
 

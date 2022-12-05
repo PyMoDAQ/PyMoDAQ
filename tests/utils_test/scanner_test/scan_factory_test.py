@@ -18,7 +18,7 @@ class MainScanner(ParameterManager):
         {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list',
          'limits': scanner_factory.scan_types()},
         {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'list',
-         'limits': scanner_factory.scan_subtypes(scanner_factory.scan_types()[0])},
+         'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
         {'title': 'Settings', 'name': SCANNER_SETTINGS_NAME, 'type': 'group'}
     ]
 
@@ -31,21 +31,24 @@ class MainScanner(ParameterManager):
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
     def set_scanner(self):
-        self._scanner: ScannerBase = scanner_factory.get(self.settings['scan_type'],
-                                                         self.settings['scan_sub_type'])
+        try:
+            self._scanner: ScannerBase = scanner_factory.get(self.settings['scan_type'],
+                                                             self.settings['scan_sub_type'])
 
-        self._scanner.settings.sigTreeStateChanged.connect(self.update_local_settings)
+            self._scanner.settings.sigTreeStateChanged.connect(self.update_local_settings)
 
-        while len(self.settings.child(SCANNER_SETTINGS_NAME).children()) > 0:
-            self.settings.child(SCANNER_SETTINGS_NAME).removeChild(self.settings.child(SCANNER_SETTINGS_NAME).children()[0])
+            while len(self.settings.child(SCANNER_SETTINGS_NAME).children()) > 0:
+                self.settings.child(SCANNER_SETTINGS_NAME).removeChild(self.settings.child(SCANNER_SETTINGS_NAME).children()[0])
 
-        self.settings.child(SCANNER_SETTINGS_NAME).restoreState(self._scanner.settings.saveState())
+            self.settings.child(SCANNER_SETTINGS_NAME).restoreState(self._scanner.settings.saveState())
+        except ValueError:
+            pass
 
     def update_local_settings(self, param, changes):
         """Apply a change from the settings in the Scanner object to the local settings"""
         for param, change, data in changes:
             if change == 'value':
-                self.settings.child(SCANNER_SETTINGS_NAME).child(putils.get_param_path(param)).setValue(data)
+                self.settings.child(*putils.get_param_path(param)).setValue(data)
 
     def value_changed(self, param):
         if param.name() == 'scan_type':

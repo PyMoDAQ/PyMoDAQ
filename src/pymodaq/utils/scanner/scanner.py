@@ -44,7 +44,6 @@ except Exception:
     logger.info('adaptive module is not present, no adaptive scan possible')
 
 
-
 class Scanner(QObject):
     """Main Object to define a PyMoDAQ scan and create a UI to set it
 
