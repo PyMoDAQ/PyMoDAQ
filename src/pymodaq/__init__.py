@@ -29,16 +29,18 @@ try:
     with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
         __version__ = fvers.read().strip()
 
-    # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
-    from pymodaq.utils.plotting import data_viewers  # imported here as to avoid circular imports later on
-    from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
     from pymodaq.utils.logger import set_logger
-    from pymodaq.utils.config import Config
-
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
     except Exception:
         print("Couldn't create the local folder to store logs , presets...")
+    # in a try statement for compilation on readthedocs server but if this fail, you cannot use the code
+    from pymodaq.utils.plotting import data_viewers  # imported here as to avoid circular imports later on
+    from pymodaq.utils.daq_utils import copy_preset, setLocale, set_qt_backend
+
+    from pymodaq.utils.config import Config
+
+
 
     # issue on windows when using .NET code within multithreads, this below allows it but requires the
     # pywin32 (pythoncom) package
