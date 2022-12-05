@@ -432,6 +432,71 @@ class DataEnlargeableSaver(DataSaverLoader):
             array.append(data[ind_data])
 
 
+class DataScanSaver(DataSaverLoader):
+    """Specialized Object to save and load enlargeable DataWithAxes saved object to and from a h5file
+
+    Parameters
+    ----------
+    h5saver: H5SaverLowLevel
+
+    Attributes
+    ----------
+    data_type: DataType
+        The enum for this type of data, here 'data_enlargeable'
+    """
+    data_type = DataType['data_scan']
+
+    def __init__(self, h5saver: H5SaverLowLevel, scan_type, scan_subtype):
+        super().__init__(h5saver)
+        self.scan_type = scan_type
+        self.scan_subtype = scan_subtype
+
+    def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
+        """ Create array with extra dimensions (from scan) to store data
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data: DataWithAxes
+        save_axes: bool
+
+        Notes
+        -----
+        Because data will be saved at a given index in the "scan" array, related axes will have their index
+        increased by the length of the scan dim (1 for scan1D, 2 for scan2D, ...)
+        """
+
+        if self.get_last_node_name(where) is None:
+            for ind_data in range(len(data)):
+                nav_indexes = list(data.nav_indexes)
+                nav_indexes = [0] + list(np.array(nav_indexes, dtype=np.int) + 1)
+
+                self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
+                                        array_to_save=data[ind_data],
+                                        data_shape=data[ind_data].shape,
+                                        array_type=data[ind_data].dtype,
+                                        scan_type=ScanType['Scan1D'],
+                                        enlargeable=True,
+                                        data_dimension=data.dim.name,
+                                        metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
+                                                      source=data.source.name, distribution=data.distribution.name,
+                                                      nav_indexes=nav_indexes))
+            if save_axes:
+                for axis in data.axes:
+                    axis.index += 1  # because of enlargeable data will have an extra shape
+                    self._axis_saver.add_axis(where, axis)
+
+    def add_data(self, where: Union[Node, str], data: DataWithAxes):
+        if self.get_last_node_name(where) is None:
+            self._create_data_arrays(where, data, save_axes=True)
+
+        for ind_data in range(len(data)):
+            array: EARRAY = self.get_node_from_index(where, ind_data)
+            array.append(data[ind_data])
+
+
+
 class DataToExportSaver:
     def __init__(self, h5saver: H5SaverLowLevel):
         self._h5saver = h5saver

@@ -52,10 +52,11 @@ class DataType(BaseEnum):
     data = 'Data'
     axis = 'Axis'
     live_scan = 'Live'
-    external_h5 = 'Data'
+    external_h5 = 'ExtData'
     strings = 'Strings'
     bkg = 'Bkg'
     data_enlargeable = 'EnlData'
+    data_scan = 'ScanData'
 
 
 class H5SaverLowLevel(H5Backend):
