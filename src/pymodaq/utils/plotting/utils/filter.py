@@ -107,10 +107,10 @@ class Filter2DFromCrosshair(Filter):
         data_dict = dict([])
         if datas is not None:
             self._x, self._y = self.crosshair.get_positions()
-            data_type = datas['distribution']
+            data_type = datas.distribution
             for data_index in range(len(self._image_keys)):
-                if data_index < len(datas['data']):
-                    data = datas['data'][data_index]
+                if data_index < len(datas.data):
+                    data = datas.data[data_index]
                     image_type = self._image_keys[data_index]
                     if data_type == 'uniform':
                         data_dict[image_type] = self.get_data_from_uniform(image_type, data)
