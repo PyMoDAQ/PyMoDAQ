@@ -32,9 +32,9 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
               ]
     n_axes = 2
 
-    def __init__(self, positions: np.ndarray = None):
+    def __init__(self, **_ignored):
         ScanParameterManager.__init__(self)
-        ScannerBase.__init__(self, positions)
+        ScannerBase.__init__(self)
 
     def get_pos(self):
         starts = np.array([self.settings['start_axis1'], self.settings['start_axis2']])
@@ -71,8 +71,8 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
 
 @ScannerFactory.register('Scan2D', 'LinearBack&Force')
 class Scan2DLinearBF(Scan2DLinear):
-    def __init__(self, positions: np.ndarray = None):
-        super().__init__(positions)
+    def __init__(self, **_ignored):
+        super().__init__()
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
@@ -99,8 +99,8 @@ class Scan2DLinearBF(Scan2DLinear):
 
 @ScannerFactory.register('Scan2D', 'Random')
 class Scan2DRandom(Scan2DLinear):
-    def __init__(self, positions: np.ndarray = None):
-        super().__init__(positions)
+    def __init__(self, **_ignored):
+        super().__init__()
 
     def set_scan(self):
         super().set_scan()
@@ -129,8 +129,8 @@ try:
              'value': config('scan', 'scan2D', 'stop2')},
             ]
 
-        def __init__(self, positions: np.ndarray = None):
-            super().__init__(positions)
+        def __init__(self, **_ignored):
+            super().__init__()
 
         def set_scan(self):
 

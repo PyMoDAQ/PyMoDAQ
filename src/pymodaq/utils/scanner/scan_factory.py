@@ -50,8 +50,8 @@ class ScannerBase(metaclass=ABCMeta):
     n_steps = abstract_attribute()
     n_axes = abstract_attribute()
 
-    def __init__(self, positions: np.ndarray = None):
-        self.positions = positions
+    def __init__(self):
+        self.positions: np.ndarray = None
         self.n_steps = 1
 
         if self.check_steps():

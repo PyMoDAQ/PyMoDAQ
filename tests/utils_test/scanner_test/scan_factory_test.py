@@ -73,6 +73,18 @@ if __name__ == '__main__':
     sys.exit(app.exec_())
 
 
+config_scanner = dict(actuators=['act1', 'act2'])
+
+
 class TestSettings:
-    pass
+    def test_factory_interface(self, qtbot):
+        for scan_type in scanner_factory.scan_types():
+            for scan_sub_type in scanner_factory.scan_sub_types(scan_type):
+                scanner = scanner_factory.get(scan_type, scan_sub_type, **config_scanner)
+                scanner.evaluate_steps()
+                scanner.set_scan()
+                assert hasattr(scanner,  'axes_unique')
+                assert hasattr(scanner,  'axes_indexes')
+                assert hasattr(scanner,  'positions')
+                assert hasattr(scanner, 'n_steps')
 

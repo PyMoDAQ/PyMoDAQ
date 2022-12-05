@@ -7,12 +7,13 @@ Created the 05/12/2022
 
 
 import numpy as np
+from qtpy import QtCore
 
 from pymodaq.utils.plotting.utils.plot_utils import QVector
 import pymodaq.utils.math_utils as mutils
+from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
-from pymodaq.utils.enums import BaseEnum
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -21,98 +22,6 @@ config = Config()
 class ScannerException(Exception):
     """Raised when there is an error related to the Scanner class (see pymodaq.da_utils.scanner)"""
     pass
-
-
-class ScanType(BaseEnum):
-    NoScan = -1
-    Scan1D = 0
-    Scan2D = 1
-    ScanSequential = 2
-    ScanTabular = 3
-
-
-SCAN_SUBTYPES = dict(Scan1D=dict(subpath=('scan1D_settings', 'scan1D_type'),
-                                 limits=['Linear', 'Adaptive', 'Linear back to start', 'Random']),
-                     Scan2D=dict(subpath=('scan2D_settings', 'scan2D_type'),
-                                 limits=['Spiral', 'Linear', 'Adaptive', 'Back&Forth', 'Random']),
-                     Sequential=dict(subpath=('seq_settings', 'scanseq_type'),
-                                     limits=['Linear']),
-                     Tabular=dict(subpath=('tabular_settings', 'tabular_subtype'),
-                                  limits=['Linear', 'Adaptive']))
-
-
-def set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=10000):
-    """
-        Set a linear scan
-    Parameters
-    ----------
-    starts
-    stops
-    steps
-    back_and_force: (bool) if True insert between two steps a position back to start (to be used as a reference in the scan analysis)
-    oversteps: (int) maximum number of calculated steps (stops the steps calculation if over the first power of 2 greater than oversteps)
-
-    Returns
-    -------
-    positions (ndarray)
-
-    See Also
-    --------
-    ScanParameters
-    """
-    starts = np.array(starts)
-    stops = np.array(stops)
-    steps = np.array(steps)
-
-    if np.any(np.abs(steps) < 1e-12) or \
-            np.any(np.sign(stops - starts) != np.sign(steps)) or \
-            np.any(starts == stops):
-        return np.array([starts])
-
-    else:
-        axis_1_unique = mutils.linspace_step(starts[0], stops[0], steps[0])
-        len1 = len(axis_1_unique)
-
-        axis_2_unique = mutils.linspace_step(starts[1], stops[1], steps[1])
-        len2 = len(axis_2_unique)
-        # if number of steps is over oversteps, reduce both axis in the same ratio
-        if len1 * len2 > oversteps:
-            axis_1_unique = axis_1_unique[:int(np.ceil(np.sqrt(oversteps * len1 / len2)))]
-            axis_2_unique = axis_2_unique[:int(np.ceil(np.sqrt(oversteps * len2 / len1)))]
-
-        positions = []
-        for ind_x, pos1 in enumerate(axis_1_unique):
-            if back_and_force:
-                for ind_y, pos2 in enumerate(axis_2_unique):
-                    if not mutils.odd_even(ind_x):
-                        positions.append([pos1, pos2])
-                    else:
-                        positions.append([pos1, axis_2_unique[len(axis_2_unique) - ind_y - 1]])
-            else:
-                for ind_y, pos2 in enumerate(axis_2_unique):
-                    positions.append([pos1, pos2])
-
-        return np.array(positions)
-
-
-def set_scan_random(starts, stops, steps, oversteps=10000):
-    """
-
-    Parameters
-    ----------
-    starts
-    stops
-    steps
-    oversteps
-
-    Returns
-    -------
-
-    """
-
-    positions = set_scan_linear(starts, stops, steps, back_and_force=False, oversteps=oversteps)
-    np.random.shuffle(positions)
-    return positions
 
 
 def set_scan_spiral(starts, rmaxs, rsteps, nsteps=None, oversteps=10000):
@@ -193,51 +102,6 @@ def set_scan_spiral(starts, rmaxs, rsteps, nsteps=None, oversteps=10000):
                                    axis_2_indexes[ind] * rsteps[1] + starts[1]]))
 
     return np.array(positions)
-
-
-def pos_above_stops(positions, steps, stops):
-    state = []
-    for pos, step, stop in zip(positions, steps, stops):
-        if step >= 0:
-            state.append(pos > stop)
-        else:
-            state.append(pos < stop)
-    return state
-
-
-def set_scan_sequential(starts, stops, steps):
-    """
-    Create a list of positions (one for each actuator == one for each element in starts list) that are sequential
-    Parameters
-    ----------
-    starts: (sequence like)
-            list of starts of all selected actuators
-    stops: (sequence like)
-                list of stops of all selected actuators
-    steps: (sequence like)
-
-    Returns
-    -------
-    positions: (ndarray)
-    """
-
-    all_positions = [starts[:]]
-    positions = starts[:]
-    state = pos_above_stops(positions, steps, stops)
-    while not state[0]:
-        if not np.any(np.array(state)):
-            positions[-1] += steps[-1]
-
-        else:
-            indexes_true = np.where(np.array(state))
-            positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
-            positions[indexes_true[-1][0] - 1] += steps[indexes_true[-1][0] - 1]
-
-        state = pos_above_stops(positions, steps, stops)
-        if not np.any(np.array(state)):
-            all_positions.append(positions[:])
-
-    return np.array(all_positions)
 
 
 class ScanInfo:
@@ -510,4 +374,53 @@ class ScanParameters:
             return f'[{self.scan_type}/{self.scan_subtype}] scanner with {self.scan_info.Nsteps} positions and ' + bounds
         else:
             return f'[{self.scan_type}/{self.scan_subtype}] scanner with unknown (yet) positions to reach and ' + bounds
+
+
+class TableModelSequential(gutils.TableModel):
+    """Table Model for the Model/View Qt framework dedicated to the Sequential scan mode"""
+    def __init__(self, data, **kwargs):
+        header = ['Actuator', 'Start', 'Stop', 'Step']
+        if 'header' in kwargs:
+            header = kwargs.pop('header')
+        editable = [False, True, True, True]
+        if 'editable' in kwargs:
+            editable = kwargs.pop('editable')
+        super().__init__(data, header, editable=editable, **kwargs)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__} from module {self.__class__.__module__}'
+
+    def validate_data(self, row, col, value):
+        """
+        make sure the values and signs of the start, stop and step values are "correct"
+        Parameters
+        ----------
+        row: (int) row within the table that is to be changed
+        col: (int) col within the table that is to be changed
+        value: (float) new value for the value defined by row and col
+
+        Returns
+        -------
+        bool: True is the new value is fine (change some other values if needed) otherwise False
+        """
+        start = self.data(self.index(row, 1), QtCore.Qt.DisplayRole)
+        stop = self.data(self.index(row, 2), QtCore.Qt.DisplayRole)
+        step = self.data(self.index(row, 3), QtCore.Qt.DisplayRole)
+        isstep = False
+        if col == 1:  # the start
+            start = value
+        elif col == 2:  # the stop
+            stop = value
+        elif col == 3:  # the step
+            isstep = True
+            step = value
+
+        if np.abs(step) < 1e-12 or start == stop:
+            return False
+        if np.sign(stop - start) != np.sign(step):
+            if isstep:
+                self._data[row][2] = -stop
+            else:
+                self._data[row][3] = -step
+        return True
 

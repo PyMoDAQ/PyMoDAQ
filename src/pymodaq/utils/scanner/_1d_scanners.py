@@ -24,9 +24,9 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
         ]
     n_axes = 1
 
-    def __init__(self, positions: np.ndarray = None):
+    def __init__(self, **_ignored):
         ScanParameterManager.__init__(self)
-        ScannerBase.__init__(self, positions)
+        ScannerBase.__init__(self)
 
     def set_scan(self):
         if self.positions is None:
@@ -41,8 +41,8 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
 
 @ScannerFactory.register('Scan1D', 'Random')
 class Scan1DRandom(Scan1DLinear):
-    def __init__(self, positions: np.ndarray = None):
-        super().__init__(positions)
+    def __init__(self, **_ignored):
+        super().__init__()
 
     def set_scan(self):
         if self.positions is None:
@@ -65,8 +65,8 @@ try:
             {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
             ]
 
-        def __init__(self, positions: np.ndarray = None):
-            super().__init__(positions)
+        def __init__(self, **_ignored):
+            super().__init__()
 
         def set_scan(self):
 
