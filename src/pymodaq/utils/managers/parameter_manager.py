@@ -16,7 +16,7 @@ class ParameterManager:
     params = []
 
     def __init__(self):
-        self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
+        self.settings: Parameter = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
         # object containing the settings defined in the preamble
         # # create a settings tree to be shown eventually in a dock
         self.settings_tree = ParameterTree()
