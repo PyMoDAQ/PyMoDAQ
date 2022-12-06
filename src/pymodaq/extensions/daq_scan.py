@@ -23,7 +23,7 @@ from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.managers.action_manager import QAction
 import pymodaq.utils.parameter.ioxml
 
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 from pymodaq.utils import exceptions
@@ -31,7 +31,7 @@ from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.plotting.navigator import Navigator
-from pymodaq.utils.scanner import Scanner, adaptive, adaptive_losses
+from pymodaq.utils.scanner import Scanner  #, adaptive, adaptive_losses
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.gui_utils.widgets import QLED
@@ -41,12 +41,26 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
-
+from pymodaq.utils.gui_utils import CustomApp
 config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-class DAQ_Scan(QObject):
+class DAQScanUI(CustomApp):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def setup_actions(self):
+        ...
+
+    def setup_docks(self):
+        ...
+
+    def connect_things(self):
+        ...
+
+
+class DAQ_Scan(ParameterManager):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
@@ -84,6 +98,7 @@ class DAQ_Scan(QObject):
         self.dashboard = dashboard
         if dashboard is None:
             raise Exception('No valid dashboard initialized')
+
         self.mainwindow = self.dockarea.parent()
 
         self.show_popup = show_popup  # used to deactivate popups when testing with pytest
@@ -117,13 +132,12 @@ class DAQ_Scan(QObject):
         self.h5saver.new_file_sig.connect(self.create_new_file)
         self.h5arrays = OrderedDict([])
 
-        self.scanner = Scanner(actuators=self.modules_manager.actuators, adaptive_losses=adaptive_losses)
+        self.scanner = Scanner(actuators=self.modules_manager.actuators)  # , adaptive_losses=adaptive_losses)
         self.scan_parameters = None
 
         self.batcher = None
         self.batch_started = False
         self.ind_batch = 0
-
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.detectors_changed[list].connect(self.update_plot_det_items)
@@ -421,9 +435,6 @@ class DAQ_Scan(QObject):
         widget_settings.setLayout(settings_layout)
         self.ui.settings_layout.addWidget(widget_settings)
 
-        self.settings_tree = ParameterTree()
-        self.settings_tree.setMinimumWidth(300)
-
         settings_layout.addWidget(self.modules_manager.settings_tree, 0, 0, 1, 1)
         self.ui.toolbox = QtWidgets.QToolBox()
         settings_layout.addWidget(self.ui.toolbox, 0, 1, 1, 1)
@@ -434,10 +445,6 @@ class DAQ_Scan(QObject):
         self.ui.toolbox.setCurrentIndex(2)
 
         self.h5saver.settings_tree.setMinimumWidth(300)
-        self.settings = Parameter.create(name='Settings', type='group', children=self.params)
-
-        self.settings_tree.setParameters(self.settings, showTop=False)
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
 
         # params about dataset attributes and scan attibutes
         date = QDateTime(QDate.currentDate(), QTime.currentTime())
@@ -888,32 +895,13 @@ class DAQ_Scan(QObject):
     def move_at(self, posx_real, posy_real):
         self.command_DAQ_signal.emit(["move_stages", [posx_real, posy_real]])
 
-    def parameter_tree_changed(self, param, changes):
+    def value_changed(self, param):
         """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, update the DAQscan_settings tree consequently.
 
-            =============== ============================================ ==============================
-            **Parameters**    **Type**                                     **Description**
-            *param*           instance of pyqtgraph parameter              the parameter to be checked
-            *changes*         (parameter,change,information) tuple list    the current changes state
-            =============== ============================================ ==============================
         """
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
-            else:
-                childName = param.name()
-            if change == 'childAdded':
-                pass
+        if param.name() == 'scan_average':
+            self.show_average_dock(param.value() > 1)
 
-            elif change == 'value':
-                if param.name() == 'scan_average':
-                    self.show_average_dock(param.value() > 1)
-
-            elif change == 'parent':
-                pass
 
     def update_plot_det_items(self, dets):
         """

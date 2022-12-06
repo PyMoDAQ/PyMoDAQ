@@ -8,7 +8,7 @@ from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase, SCANNER_SETTINGS_NAME
+from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
 from pymodaq.utils.plotting.scan_selector import ScanSelector
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 
@@ -26,7 +26,7 @@ config = Config()
 scanner_factory = ScannerFactory()
 
 
-class MainScanner(ParameterManager):
+class Scanner(ParameterManager):
     """Main Object to define a PyMoDAQ scan and create a UI to set it
 
     Parameters
@@ -278,7 +278,7 @@ class MainScanner(ParameterManager):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
-    prog = MainScanner(widget)
+    prog = Scanner(widget)
     widget.show()
     sys.exit(app.exec_())
 
