@@ -171,7 +171,7 @@ class ActionManager:
                                   f'{self.setup_actions.__doc__}')
 
     def add_action(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None,
-                   visible=True, shortcut=None):
+                   visible=True, shortcut=None, auto_toolbar=True, auto_menu=True):
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -198,10 +198,12 @@ class ActionManager:
         affect_to, pymodaq.resources.QtDesigner_Ressources.Icon_Library,
         pymodaq.utils.managers.action_manager.add_action
         """
-        if toolbar is None:
-            toolbar = self._toolbar
-        if menu is None:
-            menu = self._menu
+        if auto_toolbar:
+            if toolbar is None:
+                toolbar = self._toolbar
+        if auto_menu:
+            if menu is None:
+                menu = self._menu
         self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu,
                                               visible=visible, shortcut=shortcut)
 
