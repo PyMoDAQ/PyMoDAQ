@@ -49,11 +49,11 @@ class CustomApp(QObject, ActionManager, ParameterManager):
 
         self.parent = parent
         if isinstance(parent, DockArea):
-            self.dockarea = parent
-            self.mainwindow = parent.parent()
+            self.dockarea: DockArea = parent
+            self.mainwindow: QtWidgets.QMainWindow = parent.parent()
         else:
-            self.dockarea = None
-            self.mainwindow = None
+            self.dockarea: DockArea = None
+            self.mainwindow: QtWidgets.QMainWindow = None
         self.dashboard = dashboard
 
         self.docks = dict([])

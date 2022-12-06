@@ -41,11 +41,11 @@ class Scanner(ParameterManager):
     --------
     ScanSelector, ScannerBase, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
     """
-    scan_params_signal = Signal(ScanParameters)
+    scanner_updated_signal = Signal()
 
     params = [
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
-        {'title': 'N steps:', 'name': 'Nsteps', 'type': 'int', 'value': 0, 'readonly': True},
+        {'title': 'N steps:', 'name': 'n_steps', 'type': 'int', 'value': 0, 'readonly': True},
         {'title': 'Scan type:', 'name': 'scan_type', 'type': 'list', 'limits': scanner_factory.scan_types()},
         {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'list',
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
@@ -62,10 +62,9 @@ class Scanner(ParameterManager):
         self._scanner: ScannerBase = None
 
         self.setup_ui()
-        self.set_scanner()
+        self.actuators = actuators
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
-        self.actuators = actuators
         # self.scan_selector = ScanSelector(scanner_items, scan_type)
         # self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
         # self.scan_selector.scan_select_signal.connect(lambda: self.update_tabular_positions())
@@ -102,7 +101,7 @@ class Scanner(ParameterManager):
                 QtWidgets.QApplication.processEvents()
 
             self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
-            self._scanner.settings.sigTreeStateChanged.connect(self.update_steps)
+            self._scanner.settings.sigTreeStateChanged.connect(self._update_steps)
 
         except ValueError:
             pass
@@ -111,7 +110,7 @@ class Scanner(ParameterManager):
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
-            self.scan_selector.settings.child('scan_options', 'scan_type').setValue(param.value())
+            # todo self.scan_selector.settings.child('scan_options', 'scan_type').setValue(param.value())
         if param.name() in ['scan_type', 'scan_sub_type']:
             self.set_scanner()
 
@@ -177,6 +176,10 @@ class Scanner(ParameterManager):
     def get_scan_info(self) -> ScanInfo:
         return ScanInfo(self._scanner.n_steps, positions=self._scanner.positions,
                         axes_indexes=self._scanner.axes_indexes, axes_unique=self._scanner.axes_unique)
+
+    def _update_steps(self):
+        self.settings.child('n_steps').setValue(self.n_steps)
+
     @property
     def n_steps(self):
         return self._scanner.n_steps
@@ -198,7 +201,7 @@ class Scanner(ParameterManager):
         """
         self._scanner.set_scan()
         self.settings.child('n_steps').setValue(self.n_steps)
-        self.scan_params_signal.emit(self.scan_parameters)
+        self.scanner_updated_signal.emit()
         return self.scan_parameters
 
     def update_tabular_positions(self, positions: np.ndarray = None):
@@ -278,7 +281,7 @@ class Scanner(ParameterManager):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
-    prog = Scanner(widget)
+    prog = Scanner(widget, actuators=['act1', 'act2'])
     widget.show()
     sys.exit(app.exec_())
 

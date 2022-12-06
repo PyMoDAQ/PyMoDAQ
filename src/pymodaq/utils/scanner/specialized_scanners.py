@@ -111,20 +111,21 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
         all_positions = [starts[:]]
         positions = starts[:]
         state = self.pos_above_stops(positions, steps, stops)
-        while not state[0]:
-            if not np.any(np.array(state)):
-                positions[-1] += steps[-1]
+        if len(state) != 0:
+            while not state[0]:
+                if not np.any(np.array(state)):
+                    positions[-1] += steps[-1]
 
-            else:
-                indexes_true = np.where(np.array(state))
-                positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
-                positions[indexes_true[-1][0] - 1] += steps[indexes_true[-1][0] - 1]
+                else:
+                    indexes_true = np.where(np.array(state))
+                    positions[indexes_true[-1][0]] = starts[indexes_true[-1][0]]
+                    positions[indexes_true[-1][0] - 1] += steps[indexes_true[-1][0] - 1]
 
-            state = self.pos_above_stops(positions, steps, stops)
-            if not np.any(np.array(state)):
-                all_positions.append(positions[:])
+                state = self.pos_above_stops(positions, steps, stops)
+                if not np.any(np.array(state)):
+                    all_positions.append(positions[:])
 
-        self.get_info_from_positions(np.array(all_positions))
+            self.get_info_from_positions(np.array(all_positions))
 
 
 @ScannerFactory.register('Tabular', 'Linear')

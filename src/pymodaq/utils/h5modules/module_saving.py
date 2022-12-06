@@ -18,7 +18,6 @@ from pymodaq.utils.parameter import ioxml
 
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move import DAQ_Move
-from pymodaq.extensions.daq_scan import DAQ_Scan
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -179,6 +178,7 @@ class ActuatorSaver(ModuleSaver):
         self._axis_saver = None
         self._module_group: GROUP = None
         self._module: DAQ_Move = module
+        self._h5saver = None
 
     def update_after_h5changed(self):
         self._axis_saver = AxisSaverLoader(self.h5saver)
@@ -204,9 +204,10 @@ class ScanSaver(ModuleSaver):
     """
     group_type = GroupType['scan']
 
-    def __init__(self, module: DAQ_Scan):
+    def __init__(self, module):
         self._module_group: GROUP = None
-        self._module: DAQ_Scan = module
+        self._module = module
+        self._h5saver = None
 
     def update_after_h5changed(self):
         for module in self._module.modules_manager.modules:
