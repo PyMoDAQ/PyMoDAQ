@@ -1,13 +1,14 @@
-
+from typing import List
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, Slot
 
 from pymodaq.utils.data import DataToExport, DataRaw, DataWithAxes
 from pymodaq.utils.exceptions import ViewerError
-from pymodaq.utils.enums import BaseEnum
+from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.factory import ObjectFactory, BuilderBase
 from pymodaq.utils.plotting import data_viewers
+from pymodaq.utils.gui_utils import DockArea, Dock
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
 config_viewers = {
@@ -76,77 +77,114 @@ def create_viewerND(parent: QtWidgets.QWidget, **_ignored):
 viewer_factory = ViewerFactory()
 
 
-class ViewerDispatcher(QObject):
+class ViewerDispatcher:
+    """MixIn class to add easy control for adding multuiple data viewers in docks depending on data to be plotted"""
 
-    data_to_export_signal = Signal(DataToExport)
-    viewer_changed = Signal(object)
-
-    def __init__(self, parent_widget: QtWidgets.QWidget):
+    def __init__(self, dockarea: DockArea, title: str = '', next_to_dock: Dock = None):
         super().__init__()
-        self._parent: QtWidgets.QWidget = parent_widget
+        self._title = title
+        self._next_to_dock = next_to_dock
 
-        self._parent.setLayout(QtWidgets.QHBoxLayout())
-        self._parent.layout().setContentsMargins(0, 0, 0, 0)
+        self.dockarea = dockarea
 
-        self._viewer: ViewerBase = None
-        self._data: DataRaw = None
+        self._viewer_docks = []
+        self._viewer_widgets = []
+        self._viewer_types = []
+        self._viewers = []
 
-        self.create_viewer('Viewer2D')
+    @property
+    def viewers(self):
+        return self._viewers
 
-    def __call__(self, *args, **kwargs):
-        return self._viewer
+    @property
+    def viewer_docks(self):
+        return self._viewer_docks
 
-    def show(self, show=True):
-        self._parent.setVisible(show)
+    @property
+    def viewer_widgets(self):
+        return self._viewer_widgets
 
-    def create_viewer(self, viewer_type: str):
-        self._clearall()
-        widget = QtWidgets.QWidget()
-        self._parent.layout().addWidget(widget)
-        self._viewer: ViewerBase = viewer_factory.get(viewer_type, parent=widget)
-        self._viewer.data_to_export_signal.connect(self.data_to_export_signal.emit)
-        self.viewer_changed.emit(self._viewer)
-        QtWidgets.QApplication.processEvents()
-        self._parent.show()
+    @property
+    def viewer_types(self):
+        return self._viewer_types
 
-    def _clearall(self):
-        children = []
-        for i in range(self._parent.layout().count()):
-            child = self._parent.layout().itemAt(i).widget()
-            if child:
-                children.append(child)
-                print(child)
-        for child in children:
-            child.deleteLater()
+    def remove_viewers(self, Nviewers_to_leave: int = 0):
+        """Remove viewers from the list after index Nviewers_to_leave
 
-    def show_data(self, data: DataRaw, **kwargs):
-        if self._viewer is None or self._data is None or data.dim != self._data.dim:
-            self.create_viewer(ViewersEnum(data.dim.name).name)
+        Parameters
+        ----------
+        Nviewers
 
-        self._data = data
-        self._viewer.show_data(data, **kwargs)
+        Returns
+        -------
 
+        """
+        while len(self.viewer_docks) > Nviewers_to_leave:
+            widget = self.viewer_widgets.pop()
+            widget.close()
+            dock = self.viewer_docks.pop()
+            dock.close()
+            self.viewers.pop()
+            self.viewer_types.pop()
+            QtWidgets.QApplication.processEvents()
 
-class ViewerDispatcherTest(ViewerDispatcher, ParameterManager):
+    def add_viewer(self, viewer_type: ViewersEnum, dock_viewer=None, dock_name=None):
+        viewer_type = enum_checker(ViewersEnum, viewer_type)
 
-    params = [{'title': 'Show Viewer0D', 'name': 'viewer0D', 'type': 'action', 'visible': True},
-              {'title': 'Show Viewer1D', 'name': 'viewer1D', 'type': 'action', 'visible': True},
-              {'title': 'Show Viewer2D', 'name': 'viewer2D', 'type': 'action', 'visible': True},
-              {'title': 'Show ViewerND', 'name': 'viewerND', 'type': 'action', 'visible': True},
-              {'title': 'Show ViewerSequential', 'name': 'viewer_sequential', 'type': 'action', 'visible': True},]
+        self._viewer_widgets.append(QtWidgets.QWidget())
+        self.viewers.append(viewer_factory.get(viewer_type.name, parent=self._viewer_widgets[-1]))
 
-    def __init__(self, parent_widget: QtWidgets.QWidget):
-        super().__init__(parent_widget)
+        self.viewer_types.append(viewer_type)
+        if dock_viewer is None:
+            if dock_name is None:
+                dock_name = f'{self._title}_Viewer_{len(self.viewer_docks) + 1}'
+            dock_viewer = Dock(dock_name, size=(350, 350), closable=False)
+        self.viewer_docks.append(dock_viewer)
+        self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
+        if len(self.viewer_docks) == 1:
+            if self._next_to_dock is not None:
+                self.dockarea.addDock(self.viewer_docks[-1], 'right', self._next_to_dock)
+            else:
+                self.dockarea.addDock(self.viewer_docks[-1])
+        else:
+            self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
 
-        self.settings_tree.show()
-        self.connect_things()
+    def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
+        """
 
-    def connect_things(self):
-        self.settings.child('viewer0D').sigActivated.connect(lambda: self.create_viewer('Viewer0D'))
-        self.settings.child('viewer1D').sigActivated.connect(lambda: self.create_viewer('Viewer1D'))
-        self.settings.child('viewer2D').sigActivated.connect(lambda: self.create_viewer('Viewer2D'))
-        self.settings.child('viewerND').sigActivated.connect(lambda: self.create_viewer('ViewerND'))
-        self.settings.child('viewer_sequential').sigActivated.connect(lambda: self.create_viewer('ViewerSequential'))
+        Parameters
+        ----------
+        viewers_type: List[ViewersEnum]
+        viewers_name: List[str] or None
+        force: bool
+            if True remove all viewers before update else check if new viewers type are compatible with old ones
+
+        Returns
+        -------
+
+        """
+
+        Nviewers_to_leave = 0
+        if not force:
+            # check if viewers are compatible with new data dim
+            for ind, viewer_type in enumerate(viewers_type):
+                if len(self.viewer_types) > ind:
+                    if viewer_type == self.viewer_types[ind]:
+                        Nviewers_to_leave += 1
+                    else:
+                        break
+                else:
+                    break
+        self.remove_viewers(Nviewers_to_leave)
+        ind_loop = 0
+        while len(self.viewers) < len(viewers_type):
+            self.add_viewer(viewers_type[Nviewers_to_leave + ind_loop],
+                            dock_name=viewers_name[Nviewers_to_leave + ind_loop] if viewers_name is not None else None)
+            ind_loop += 1
+
+    def close(self):
+        for dock in self.viewer_docks:
+            dock.close()
 
 
 class ViewerBase(QObject):
@@ -254,8 +292,12 @@ class ViewerBase(QObject):
 if __name__ == '__main__':
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    widget = QtWidgets.QWidget()
 
-    prog = ViewerDispatcherTest(widget)
+    dockarea = DockArea()
+    prog = ViewerDispatcher(dockarea=dockarea, title='Dispatcher')
+    dockarea.show()
+
+    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']],
+                        viewers_name=['myviewer', '1D Viewer', 'Average'])
 
     sys.exit(app.exec_())
