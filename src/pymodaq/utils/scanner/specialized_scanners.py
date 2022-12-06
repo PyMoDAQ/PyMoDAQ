@@ -38,6 +38,15 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
 
         ScannerBase.__init__(self)
 
+    @property
+    def actuators(self):
+        return self._actuators
+
+    @actuators.setter
+    def actuators(self, actuators_name):
+        self._actuators = actuators_name
+        self.update_model()
+
     def update_model(self, init_data=None):
         if init_data is None:
             if self.table_model is not None:
@@ -150,7 +159,7 @@ class TabularScanner(SequentialScanner):
 
     def set_scan(self):
         positions = np.array(self.table_model.get_data_all())
-        self.get_info_from_positions(self.positions)
+        self.get_info_from_positions(positions)
 
     def update_tabular_positions(self, positions: np.ndarray = None):
         """Convenience function to write positions directly into the tabular table

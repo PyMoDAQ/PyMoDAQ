@@ -32,25 +32,29 @@ class ScanParameterManager(ParameterManager):
 
 
 class ScannerBase(metaclass=ABCMeta):
-    """
-
-    Parameters
-    ----------
-    n_axes
-    starts
-    stops
-    steps
-    positions
+    """Abstract class for all Scanners
 
     Attributes
     ----------
     params: List[dict]
+        list specifying the scanner set of parameters to properly configure all the scan steps
+    positions: np.ndarray
+        ndarray of all positions. First dimension is number of actuators, second is positions of a given actuator at
+        each step
+    axes_unique: List[np.ndarray]
+        list of ndarrays representing unique values of steps for each actuator in the scan
+    axes_indexes: np.ndarray
+        ndarray of indexes from axes_unique for each value in positions
+    n_steps: int
+        Number of scan steps. Equal to the second dimension of positions
+    n_axes: int
+        Number of actuators/scan axes. Equal to the first dimension of positions
     """
     params: list = abstract_attribute()
     axes_unique: List[np.ndarray] = abstract_attribute()
     axes_indexes: np.ndarray = abstract_attribute()
-    n_steps = abstract_attribute()
-    n_axes = abstract_attribute()
+    n_steps: int = abstract_attribute()
+    n_axes: int = abstract_attribute()
 
     def __init__(self):
         self.positions: np.ndarray = None
@@ -69,10 +73,11 @@ class ScannerBase(metaclass=ABCMeta):
 
     @abstractmethod
     def set_scan(self):
+        """To be reimplemented. Calculations of all mandatory attributes from the settings"""
         ...
 
     def get_info_from_positions(self, positions: np.ndarray):
-        """Get a scan infos from a ndarray of positions"""
+        """Set mandatory attributes from a ndarray of positions"""
         if positions is not None:
             if len(positions.shape) == 1:
                 positions = np.expand_dims(positions, 1)
@@ -84,17 +89,31 @@ class ScannerBase(metaclass=ABCMeta):
                 for ind_pos, pos in enumerate(positions[ind]):
                     axes_indexes[ind, ind_pos] = mutils.find_index(axes_unique[ind_pos], pos)[0][0]
 
-            self.n_axes = positions.shape[0]
+            self.n_axes = len(axes_unique)
             self.axes_unique = axes_unique
             self.axes_indexes = axes_indexes
             self.positions = positions
+            self.n_steps = positions.shape[0]
 
     @abstractmethod
     def evaluate_steps(self):
+        """To be reimplemented. Quick evaluation of the current numbers of scan steps from the settings
+        """
+        ...
+
+    def update_model(self):
+        """Method to reimplement and use for scanners using table_view types Parameters to set and apply the underlying
+        model
+
+        See Also
+        --------
+        SequentialScanner, TabularScanner, pymodaq.utils.parameter.pymodaq_ptypes.tableview
+        """
         ...
 
 
 class ScannerFactory(ObjectFactory):
+    """Factory class registering and storing Scanners"""
 
     @classmethod
     def register(cls, key: str, sub_key: str = '') -> Callable:
@@ -121,10 +140,12 @@ class ScannerFactory(ObjectFactory):
     def get(self, scan_type, scan_sub_type, **kwargs):
         return self.create(scan_type, scan_sub_type, **kwargs)
 
-    def scan_types(self):
+    def scan_types(self) -> List[str]:
+        """Returns the list of scan types, main identifier of a given scanner"""
         return list(self.builders[self.__class__.__name__].keys())
 
-    def scan_sub_types(self, scan_type: str):
+    def scan_sub_types(self, scan_type: str) -> List[str]:
+        """Returns the list of scan subtypes, second identifier of a given scanner of type scan_type"""
         return list(self.builders[self.__class__.__name__][scan_type].keys())
 
 
