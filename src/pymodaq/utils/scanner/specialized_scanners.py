@@ -7,13 +7,14 @@ Created the 05/12/2022
 from typing import List
 
 import numpy as np
+from qtpy import QtCore, QtWidgets
 
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
 from pymodaq.utils import gui_utils as gutils
 from .scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
-from .utils import TableModelSequential
+from .utils import TableModelSequential, TableModelTabular
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 
@@ -54,6 +55,8 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('seq_table').setValue(self.table_model)
 
+        self.update_table_view()
+
     def get_pos(self):
         starts = np.array([self.table_model.get_data(ind, 1) for ind in range(self.table_model.rowCount(None))])
         stops = np.array([self.table_model.get_data(ind, 2) for ind in range(self.table_model.rowCount(None))])
@@ -77,6 +80,23 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
                 state.append(pos < stop)
         return state
 
+    def update_table_view(self):
+        self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        styledItemDelegate = QtWidgets.QStyledItemDelegate()
+        styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
+        self.table_view.setItemDelegate(styledItemDelegate)
+
+        self.table_view.setDragEnabled(True)
+        self.table_view.setDropIndicatorShown(True)
+        self.table_view.setAcceptDrops(True)
+        self.table_view.viewport().setAcceptDrops(True)
+        self.table_view.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.table_view.setDragDropMode(QtWidgets.QTableView.InternalMove)
+        self.table_view.setDragDropOverwriteMode(False)
+
     def set_scan(self):
         starts, stops, steps = self.get_pos()
         all_positions = [starts[:]]
@@ -96,3 +116,72 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
                 all_positions.append(positions[:])
 
         self.get_info_from_positions(np.array(all_positions))
+
+
+@ScannerFactory.register('Tabular', 'Linear')
+class TabularScanner(SequentialScanner):
+    params = [
+        {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
+         'menu': True},
+              ]
+
+    def __init__(self, actuators: List[str]):
+        super().__init__(actuators)
+
+    def update_model(self, init_data=None):
+        if init_data is None:
+            init_data = [[0. for name in self._actuators]]
+
+        self.table_model = TableModelTabular(init_data, [name for name in self._actuators])
+        self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
+        self.settings.child('tabular_table').setValue(self.table_model)
+
+        self.update_table_view()
+
+    def update_table_view(self):
+        super().update_table_view()
+        self.table_view.add_data_signal[int].connect(self.table_model.add_data)
+        self.table_view.remove_row_signal[int].connect(self.table_model.remove_data)
+        self.table_view.load_data_signal.connect(self.table_model.load_txt)
+        self.table_view.save_data_signal.connect(self.table_model.save_txt)
+
+    def evaluate_steps(self):
+        return len(self.table_model)
+
+    def set_scan(self):
+        positions = np.array(self.table_model.get_data_all())
+        self.get_info_from_positions(self.positions)
+
+    def update_tabular_positions(self, positions: np.ndarray = None):
+        """Convenience function to write positions directly into the tabular table
+
+        Parameters
+        ----------
+        positions: ndarray
+            a 2D ndarray with as many columns as selected actuators
+        """
+        try:
+            if positions is None:
+                if self.settings.child('tabular_settings',
+                                       'tabular_selection').value() == 'Polylines':  # from ROI
+                    viewer = self.scan_selector.scan_selector_source
+
+                    if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
+                        positions = self.scan_selector.scan_selector.getArrayIndexes(
+                            spacing=self.settings.child('tabular_settings', 'tabular_step').value())
+                    elif self.settings.child('tabular_settings',
+                                             'tabular_subtype').value() == 'Adaptive':
+                        positions = self.scan_selector.scan_selector.get_vertex()
+
+                    steps_x, steps_y = zip(*positions)
+                    steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
+                    positions = np.transpose(np.array([steps_x, steps_y]))
+                    self.update_model(init_data=positions)
+                else:
+                    self.update_model()
+            elif isinstance(positions, np.ndarray):
+                self.update_model(init_data=positions)
+            else:
+                pass
+        except Exception as e:
+            logger.exception(str(e))

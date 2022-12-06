@@ -27,6 +27,8 @@ class ScanParameterManager(ParameterManager):
     def __init__(self):
         super().__init__()
         self.settings.setName(SCANNER_SETTINGS_NAME)
+        self.settings_tree.header().setVisible(False)
+        self.settings_tree.setMinimumHeight(150)
 
 
 class ScannerBase(metaclass=ABCMeta):

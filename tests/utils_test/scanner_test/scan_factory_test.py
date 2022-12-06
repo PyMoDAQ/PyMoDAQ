@@ -5,11 +5,13 @@ Created the 05/12/2022
 @author: Sebastien Weber
 """
 import pytest
-from pymodaq.utils.managers.parameter_manager import ParameterManager
+from qtpy import QtWidgets, QtCore
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase, SCANNER_SETTINGS_NAME
 from pymodaq.utils.parameter import utils as putils
 
 scanner_factory = ScannerFactory()
+config_scanner = dict(actuators=['act1', 'act2'])
 
 
 class MainScanner(ParameterManager):
@@ -19,36 +21,44 @@ class MainScanner(ParameterManager):
          'limits': scanner_factory.scan_types()},
         {'title': 'Scan subtype:', 'name': 'scan_sub_type', 'type': 'list',
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
-        {'title': 'Settings', 'name': SCANNER_SETTINGS_NAME, 'type': 'group'}
     ]
 
-    def __init__(self):
+    def __init__(self, parent_widget: QtWidgets.QWidget):
         super().__init__()
 
+        self.parent_widget = parent_widget
         self._scanner: ScannerBase = None
-
+        self.setup_ui()
         self.set_scanner()
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
+
+    def setup_ui(self):
+        self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.parent_widget.layout().addWidget(self.settings_tree)
+        self._scanner_settings_widget = QtWidgets.QWidget()
+        self._scanner_settings_widget.setLayout(QtWidgets.QVBoxLayout())
+        self._scanner_settings_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.parent_widget.layout().addWidget(self._scanner_settings_widget)
+        self.settings_tree.setMinimumHeight(110)
+        self.settings_tree.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
     def set_scanner(self):
         try:
             self._scanner: ScannerBase = scanner_factory.get(self.settings['scan_type'],
-                                                             self.settings['scan_sub_type'])
+                                                             self.settings['scan_sub_type'],
+                                                             **config_scanner)
+            while 1:
+                child = self._scanner_settings_widget.layout().takeAt(0)
+                if not child:
+                    break
+                child.widget().deleteLater()
+                QtWidgets.QApplication.processEvents()
 
-            self._scanner.settings.sigTreeStateChanged.connect(self.update_local_settings)
+            self._scanner_settings_widget.layout().addWidget(self._scanner.settings_tree)
 
-            while len(self.settings.child(SCANNER_SETTINGS_NAME).children()) > 0:
-                self.settings.child(SCANNER_SETTINGS_NAME).removeChild(self.settings.child(SCANNER_SETTINGS_NAME).children()[0])
-
-            self.settings.child(SCANNER_SETTINGS_NAME).restoreState(self._scanner.settings.saveState())
         except ValueError:
             pass
-
-    def update_local_settings(self, param, changes):
-        """Apply a change from the settings in the Scanner object to the local settings"""
-        for param, change, data in changes:
-            if change == 'value':
-                self.settings.child(*putils.get_param_path(param)).setValue(data)
 
     def value_changed(self, param):
         if param.name() == 'scan_type':
@@ -58,9 +68,6 @@ class MainScanner(ParameterManager):
         if param.name() in ['scan_type', 'scan_sub_type']:
             self.set_scanner()
 
-        if param.name() in putils.iter_children(self.settings.child(SCANNER_SETTINGS_NAME), []):
-            self._scanner.settings.child(*putils.get_param_path(param)[2:]).setValue(param.value())
-
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
 
@@ -68,12 +75,10 @@ if __name__ == '__main__':
     import sys
     from qtpy import QtWidgets
     app = QtWidgets.QApplication(sys.argv)
-    prog = MainScanner()
-    prog.settings_tree.show()
+    widget = QtWidgets.QWidget()
+    prog = MainScanner(widget)
+    widget.show()
     sys.exit(app.exec_())
-
-
-config_scanner = dict(actuators=['act1', 'act2'])
 
 
 class TestSettings:

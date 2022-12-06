@@ -8,6 +8,7 @@ Created the 05/12/2022
 
 import numpy as np
 from qtpy import QtCore
+from qtpy.QtCore import Slot
 
 from pymodaq.utils.plotting.utils.plot_utils import QVector
 import pymodaq.utils.math_utils as mutils
@@ -422,5 +423,69 @@ class TableModelSequential(gutils.TableModel):
                 self._data[row][2] = -stop
             else:
                 self._data[row][3] = -step
+        return True
+
+
+class TableModelTabular(gutils.TableModel):
+    """Table Model for the Model/View Qt framework dedicated to the Tabular scan mode"""
+    def __init__(self, data, axes_name=None, **kwargs):
+        if axes_name is None:
+            if 'header' in kwargs:  # when saved as XML the header will be saved and restored here
+                axes_name = [h for h in kwargs['header']]
+                kwargs.pop('header')
+            else:
+                raise Exception('Invalid header')
+
+        header = [name for name in axes_name]
+        editable = [True for name in axes_name]
+        super().__init__(data, header, editable=editable, **kwargs)
+
+    def __len__(self):
+        return len(self._data)
+
+    @Slot(int)
+    def add_data(self, row, data=None):
+        if data is not None:
+            self.insert_data(row, [float(d) for d in data])
+        else:
+            self.insert_data(row, [0. for name in self.header])
+
+    @Slot(int)
+    def remove_data(self, row):
+        self.remove_row(row)
+
+    def load_txt(self):
+        fname = gutils.select_file(start_path=None, save=False, ext='*')
+        if fname is not None and fname != '':
+            while self.rowCount(self.index(-1, -1)) > 0:
+                self.remove_row(0)
+
+            data = np.loadtxt(fname)
+            if len(data.shape) == 1:
+                data = data.reshape((data.size, 1))
+            self.set_data_all(data)
+
+    def save_txt(self):
+        fname = gutils.select_file(start_path=None, save=True, ext='dat')
+        if fname is not None and fname != '':
+            np.savetxt(fname, self.get_data_all(), delimiter='\t')
+
+    def __repr__(self):
+        return f'{self.__class__.__name__} from module {self.__class__.__module__}'
+
+    def validate_data(self, row, col, value):
+        """
+        make sure the values and signs of the start, stop and step values are "correct"
+        Parameters
+        ----------
+        row: (int) row within the table that is to be changed
+        col: (int) col within the table that is to be changed
+        value: (float) new value for the value defined by row and col
+
+        Returns
+        -------
+        bool: True is the new value is fine (change some other values if needed) otherwise False
+        """
+
         return True
 
