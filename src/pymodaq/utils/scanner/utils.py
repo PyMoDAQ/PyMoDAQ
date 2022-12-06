@@ -15,9 +15,14 @@ import pymodaq.utils.math_utils as mutils
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
+from pymodaq.utils.scanner.scan_factory import ScannerFactory
+from pymodaq.utils.enums import BaseEnum
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
+
+scanner_factory = ScannerFactory()
+ScanType = BaseEnum('ScanType', ['NoScan'] + scanner_factory.scan_types())
 
 
 class ScannerException(Exception):

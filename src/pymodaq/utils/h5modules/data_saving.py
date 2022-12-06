@@ -15,8 +15,7 @@ from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
 from .saving import DataType, H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, EARRAY
 from pymodaq.utils.daq_utils import capitalize
-from pymodaq.utils.scanner import ScanType
-
+from pymodaq.utils.scanner.utils import ScanType
 
 SPECIAL_GROUP_NAMES = dict(nav_axes='NavAxes')
 

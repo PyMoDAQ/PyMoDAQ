@@ -28,7 +28,7 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
 from pymodaq.utils.data import DataDim, DataToExport, Axis, DataWithAxes
 from pymodaq.utils.enums import BaseEnum, enum_checker
-from pymodaq.utils.scanner import ScanType, SCAN_SUBTYPES
+from pymodaq.utils.scanner.utils import ScanType
 
 
 from .backends import (H5Backend, backends_available, SaveType, InvalidSave, InvalidExport, InvalidDataType,
