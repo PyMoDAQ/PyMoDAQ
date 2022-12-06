@@ -11,6 +11,7 @@ from collections import OrderedDict
 import numpy as np
 from pathlib import Path
 import os
+from typing import List
 
 import pymodaq.utils.gui_utils.dock
 import pymodaq.utils.gui_utils.file_io
@@ -36,6 +37,7 @@ from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.gui_utils.widgets import QLED
 from pymodaq.utils.messenger import messagebox
+from pymodaq.extensions.daq_scan_ui import DAQScanUI
 
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
@@ -46,21 +48,7 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 
-class DAQScanUI(CustomApp):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def setup_actions(self):
-        ...
-
-    def setup_docks(self):
-        ...
-
-    def connect_things(self):
-        ...
-
-
-class DAQ_Scan(ParameterManager):
+class DAQ_Scan(QObject, ParameterManager):
     """
     Main class initializing a DAQ_Scan module with its dashboard and scanning control panel
     """
@@ -93,17 +81,24 @@ class DAQ_Scan(ParameterManager):
         """
         
         logger.info('Initializing DAQ_Scan')
-        super().__init__()
+        QObject.__init__(self)
+        ParameterManager.__init__(self)
+
         self.dockarea = dockarea
         self.dashboard = dashboard
         if dashboard is None:
             raise Exception('No valid dashboard initialized')
 
         self.mainwindow = self.dockarea.parent()
+        self.ui: DAQScanUI = DAQScanUI(self.dockarea)
 
         self.show_popup = show_popup  # used to deactivate popups when testing with pytest
         self.wait_time = 1000
+
         self.navigator = None
+        self.ind_scan = 0
+        self.ind_average = 0
+
         self.scan_x_axis = None
         self.scan_y_axis = None
         self.scan_data_1D = np.array([])
@@ -111,13 +106,13 @@ class DAQ_Scan(ParameterManager):
         self.scan_data_2D = []
         self.scan_data_2D_average = []
         self.curvilinear_values = []
-        self.ind_scan = 0
-        self.ind_average = 0
         self.scan_positions = []
         self.scan_data_2D_to_save = []
         self.scan_data_1D_to_save = []
         self.plot_1D_ini = False
         self.plot_2D_ini = False
+
+        self.plot_colors = utils.plot_colors
 
         self.scan_thread = None
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
@@ -142,12 +137,23 @@ class DAQ_Scan(ParameterManager):
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.detectors_changed[list].connect(self.update_plot_det_items)
 
-        self.setupUI()
+        self.setup_ui()
+        self.ui.command_sig.connect(self.process_ui_cmds)
+        self.create_dataset_settings()
         self.setup_modules(self.dashboard.title)
         self.set_config()
-        self.scanner.set_config()
+        #self.scanner.set_config()
+
 
         logger.info('DAQ_Scan Initialized')
+
+    def setup_ui(self):
+        self.ui.populate_toolbox_widget([self.settings_tree, self.h5saver.settings_tree],
+                                        ['General Settings', 'Save Settings'])
+
+        self.ui.set_scanner_settings(self.scanner.parent_widget)
+
+        self.ui.set_modules_settings(self.modules_manager.settings_tree)
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -227,29 +233,58 @@ class DAQ_Scan(ParameterManager):
 
         self.ui.average_dock.setVisible(False)
 
-    def create_menu(self):
+    def process_ui_cmds(self, cmd: utils.ThreadCommand):
+        """Process commands sent by actions done in the ui
+
+        Parameters
+        ----------
+        cmd: ThreadCommand
+            Possible values are:
+                * quit
+                * set_scan
+                * ini_positions
+                * start
+                * stop
+                * move_at
+                * show_log
+                * load
+                * save
+                * show_file
+                * navigator
+                * batch
+                * viewers_changed
         """
-        """
-        # %% create Settings menu
+        if cmd.command == 'quit':
+            self.quit_fun()
+        elif cmd.command == 'set_scan':
+            self.set_scan()
+        elif cmd.command == 'ini_positions':
+            self.set_ini_positions()
+        elif cmd.command == 'start':
+            self.start_scan()
+        elif cmd.command == 'stop':
+            self.stop_scan()
+        elif cmd.command == 'move_at':
+            self.move_to_crosshair()
+        elif cmd.command == 'show_log':
+            self.show_log()
+        elif cmd.command == 'load':
+            self.load_file()
+        elif cmd.command == 'save':
+            self.save_file()
+        elif cmd.command == 'show_file':
+            self.show_file_content()
+        elif cmd.command == 'navigator':
+            self.show_navigator()
+        elif cmd.command == 'batch':
+            self.show_batcher(self.ui.menubar)
+        elif cmd.command == 'viewers_changed':
+            ...
 
-        menubar = QtWidgets.QMenuBar()
-        menubar.setMaximumHeight(30)
-        self.ui.verticalLayout.insertWidget(0, menubar)
-
-        self.file_menu = menubar.addMenu('File')
-        load_action = self.file_menu.addAction('Load file')
-        load_action.triggered.connect(self.load_file)
-        self.file_menu.addSeparator()
-        save_action = self.file_menu.addAction('Save file as')
-        save_action.triggered.connect(self.save_file)
-        show_action = self.file_menu.addAction('Show file content')
-        show_action.triggered.connect(self.show_file_content)
-
-        self.settings_menu = menubar.addMenu('Settings')
-        action_navigator = self.settings_menu.addAction('Show Navigator')
-        action_navigator.triggered.connect(self.show_navigator)
-        action_batcher = self.settings_menu.addAction('Show Batch Scanner')
-        action_batcher.triggered.connect(lambda: self.show_batcher(menubar))
+    def show_log(self):
+        """Open the log file in the default text editor"""
+        import webbrowser
+        webbrowser.open(self.logger.parent.handlers[0].baseFilename)
 
     def quit_fun(self):
         """
@@ -268,184 +303,7 @@ class DAQ_Scan(ParameterManager):
         except Exception as e:
             logger.exception(str(e))
 
-    def setupUI(self):
-        self.ui = QObject()
-        widgetsettings = QtWidgets.QWidget()
-        self.ui.verticalLayout = QtWidgets.QVBoxLayout()
-        widgetsettings.setLayout(self.ui.verticalLayout)
-        self.ui.StatusBarLayout = QtWidgets.QHBoxLayout()
-        self.ui.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-
-        self.ui.verticalLayout.addWidget(self.ui.splitter)
-        self.ui.verticalLayout.addLayout(self.ui.StatusBarLayout)
-
-        self.ui.horizontalLayout = QtWidgets.QHBoxLayout()
-        sett_widget = QtWidgets.QWidget()
-        self.ui.settings_layout = QtWidgets.QVBoxLayout()
-        sett_widget.setLayout(self.ui.settings_layout)
-        self.ui.horizontalLayout.addWidget(sett_widget)
-
-        # ###########################BUTTONS##################
-        widget_buttons = QtWidgets.QWidget()
-        self.ui.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        widget_buttons.setLayout(self.ui.horizontalLayout_2)
-
-        iconquit = QtGui.QIcon()
-        iconquit.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/close2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.quit_pb = QtWidgets.QPushButton(iconquit, 'Quit')
-
-        iconstart = QtGui.QIcon()
-        iconstart.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.start_scan_pb = QtWidgets.QPushButton(iconstart, '')
-        self.ui.start_scan_pb.setToolTip('Start Scan')
-
-        iconstop = QtGui.QIcon()
-        iconstop.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/stop.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.stop_scan_pb = QtWidgets.QPushButton(iconstop, '')
-        self.ui.stop_scan_pb.setToolTip('Stop Scan (or skip current one if Batch scan running)')
-
-        self.ui.set_scan_pb = QtWidgets.QPushButton('Set Scan')
-        self.ui.set_scan_pb.setToolTip('Process the scanner settings and prepare the modules for coming scan')
-        self.ui.set_ini_positions_pb = QtWidgets.QPushButton('Init Positions')
-        self.ui.set_ini_positions_pb.setToolTip(
-            'Set Move Modules to their initial position as defined in the current scan')
-
-        iconstartbatch = QtGui.QIcon()
-        iconstartbatch.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/run_all.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.ui.start_batch_pb = QtWidgets.QPushButton(iconstartbatch, '')
-        self.ui.start_batch_pb.setToolTip('Start the batch of scans defined in the batch manager')
-        self.ui.start_batch_pb.setVisible(False)
-
-        self.ui.horizontalLayout_2.addWidget(self.ui.quit_pb)
-        self.ui.horizontalLayout_2.addStretch()
-        self.ui.horizontalLayout_2.addWidget(self.ui.set_scan_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.set_ini_positions_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.start_batch_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.start_scan_pb)
-        self.ui.horizontalLayout_2.addWidget(self.ui.stop_scan_pb)
-
-        self.ui.settings_layout.addWidget(widget_buttons)
-        self.ui.splitter.addWidget(sett_widget)
-
-        # ##################TAB########################################
-        self.ui.tabWidget = QtWidgets.QTabWidget()
-
-        self.ui.tab_plot1D = QtWidgets.QWidget()
-        self.ui.scan1D_layout = QtWidgets.QVBoxLayout()
-        self.ui.tab_plot1D.setLayout(self.ui.scan1D_layout)
-
-        self.ui.tab_plot2D = QtWidgets.QWidget()
-        self.ui.scan2D_layout = QtWidgets.QVBoxLayout()
-        self.ui.tab_plot2D.setLayout(self.ui.scan2D_layout)
-
-        self.ui.tab_navigator = QtWidgets.QWidget()
-        self.ui.navigator_layout = QtWidgets.QVBoxLayout()
-        self.ui.tab_navigator.setLayout(self.ui.navigator_layout)
-
-        self.ui.tabWidget.addTab(self.ui.tab_plot1D, "")
-        self.ui.tabWidget.addTab(self.ui.tab_plot2D, "")
-        self.ui.tabWidget.addTab(self.ui.tab_navigator, "")
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot1D), '1D plot')
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_plot2D), '2D plot')
-        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.tab_navigator), 'Navigator')
-
-        self.ui.splitter.addWidget(self.ui.tabWidget)
-        ##################################################################
-
-        # %% create scan dock and make it a floating window
-        self.ui.scan_dock = pymodaq.utils.gui_utils.dock.Dock("Scan", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
-        self.ui.scan_dock.setOrientation('vertical')
-        self.ui.scan_dock.addWidget(widgetsettings)
-
-        self.dockarea.addDock(self.ui.scan_dock, 'left')
-        #self.ui.scan_dock.float()
-
-        # %% init the 1D viewer
-        self.ui.scan1D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
-        self.ui.scan1D_layout.addWidget(self.ui.scan1D_graph_widget)
-
-        scan1D_widget = QtWidgets.QWidget()
-        self.ui.scan1D_graph = Viewer1D(scan1D_widget)
-        self.ui.scan1D_graph_widget.addWidget(scan1D_widget)
-
-        # this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
-        # impossible to plot in usual 1D or 2D graphs
-        scan1D_subgraph_widget = QtWidgets.QWidget()
-        self.ui.scan1D_subgraph = Viewer1DBasic(scan1D_subgraph_widget)
-        self.ui.scan1D_graph_widget.addWidget(scan1D_subgraph_widget)
-        self.ui.scan1D_subgraph.show(False)
-
-        # %% init the 2D viewer
-        self.ui.scan2D_graph_widget = QtWidgets.QSplitter(orientation=QtCore.Qt.Vertical)
-        self.ui.scan2D_layout.addWidget(self.ui.scan2D_graph_widget)
-
-        scan2D_graph_widget = QtWidgets.QWidget()
-        self.ui.scan2D_graph = Viewer2D(scan2D_graph_widget)
-        self.ui.scan2D_graph_widget.addWidget(scan2D_graph_widget)
-
-        # this subgraph is used to display axes values when performing scans as a function of multiple axes, and so
-        # impossible to plot in usual 1D or 2D graphs
-        scan2D_subgraph_widget = QtWidgets.QWidget()
-        self.ui.scan2D_subgraph = Viewer1DBasic(scan2D_subgraph_widget)
-        self.ui.scan2D_graph_widget.addWidget(scan2D_subgraph_widget)
-        self.ui.scan2D_subgraph.show(False)
-
-        self.ui.scan2D_graph.set_action_checked('histo', False)
-        self.ui.scan2D_graph.set_action_visible(['flip_ud', 'flip_lr', 'rotate'], False)
-        #self.ui.scan2D_graph.histogrammer.show_hide_histogram(False, [False for ind in range(3)])
-
-
-        self.move_to_crosshair_action = QAction(
-            QtGui.QIcon(QtGui.QPixmap(':/icons/Icon_Library/move_contour.png')),"Move at doubleClicked")
-        self.move_to_crosshair_action.setCheckable(True)
-        self.ui.move_to_crosshair_cb = self.move_to_crosshair_action
-
-        self.ui.scan2D_graph.toolbar.addAction(self.move_to_crosshair_action)
-        self.ui.scan2D_graph.sig_double_clicked.connect(self.move_to_crosshair)
-
-        # %% init and set the status bar
-        self.ui.statusbar = QtWidgets.QStatusBar(self.dockarea)
-        self.ui.statusbar.setMaximumHeight(25)
-        self.ui.StatusBarLayout.addWidget(self.ui.statusbar)
-        self.ui.status_message = QtWidgets.QLabel('Initializing')
-        self.ui.statusbar.addPermanentWidget(self.ui.status_message)
-        self.ui.N_scan_steps_sb = pymodaq.utils.gui_utils.widgets.spinbox.QSpinBox_ro()
-        self.ui.N_scan_steps_sb.setToolTip('Total number of steps')
-        self.ui.indice_scan_sb = pymodaq.utils.gui_utils.widgets.spinbox.QSpinBox_ro()
-        self.ui.indice_scan_sb.setToolTip('Current step value')
-        self.ui.indice_average_sb = pymodaq.utils.gui_utils.widgets.spinbox.QSpinBox_ro()
-        self.ui.indice_average_sb.setToolTip('Current average value')
-        self.ui.scan_done_LED = QLED()
-        self.ui.scan_done_LED.setToolTip('Scan done state')
-        self.ui.statusbar.addPermanentWidget(self.ui.N_scan_steps_sb)
-        self.ui.statusbar.addPermanentWidget(self.ui.indice_scan_sb)
-        self.ui.statusbar.addPermanentWidget(self.ui.indice_average_sb)
-        self.ui.indice_average_sb.setVisible(False)
-        self.ui.statusbar.addPermanentWidget(self.ui.scan_done_LED)
-
-        self.plot_colors = utils.plot_colors
-        self.ui.splitter.setSizes([500, 1200])
-
-        self.ui.scan_done_LED.set_as_false()
-        self.ui.scan_done_LED.clickable = False
-
-        # displaying the settings
-        widget_settings = QtWidgets.QWidget()
-        settings_layout = QtWidgets.QGridLayout()
-        widget_settings.setLayout(settings_layout)
-        self.ui.settings_layout.addWidget(widget_settings)
-
-        settings_layout.addWidget(self.modules_manager.settings_tree, 0, 0, 1, 1)
-        self.ui.toolbox = QtWidgets.QToolBox()
-        settings_layout.addWidget(self.ui.toolbox, 0, 1, 1, 1)
-
-        self.ui.toolbox.addItem(self.settings_tree, 'General Settings')
-        self.ui.toolbox.addItem(self.h5saver.settings_tree, 'Save Settings')
-        self.ui.toolbox.addItem(self.scanner.settings_tree, 'Scanner Settings')
-        self.ui.toolbox.setCurrentIndex(2)
-
-        self.h5saver.settings_tree.setMinimumWidth(300)
-
+    def create_dataset_settings(self):
         # params about dataset attributes and scan attibutes
         date = QDateTime(QDate.currentDate(), QTime.currentTime())
         params_dataset = [{'title': 'Dataset information', 'name': 'dataset_info', 'type': 'group', 'children': [
@@ -466,24 +324,6 @@ class DAQ_Scan(ParameterManager):
 
         self.dataset_attributes = Parameter.create(name='Attributes', type='group', children=params_dataset)
         self.scan_attributes = Parameter.create(name='Attributes', type='group', children=params_scan)
-
-        # creating the Average dock plots
-        self.create_average_dock()
-
-        # creating the menubar
-        self.create_menu()
-
-        #        connecting
-        self.ui.set_scan_pb.clicked.connect(self.set_scan)
-        self.ui.quit_pb.clicked.connect(self.quit_fun)
-
-        self.ui.start_scan_pb.clicked.connect(self.start_scan)
-        self.ui.start_batch_pb.clicked.connect(self.start_scan_batch)
-        self.ui.stop_scan_pb.clicked.connect(self.stop_scan)
-        self.ui.set_ini_positions_pb.clicked.connect(self.set_ini_positions)
-
-        self.ui.tabWidget.removeTab(2)
-
     ###################
     # external modules
 
@@ -749,9 +589,9 @@ class DAQ_Scan(ParameterManager):
             logger.exception(str(e))
 
     def save_file(self):
-        if not os.path.isdir(self.h5saver.settings.child(('base_path')).value()):
-            os.mkdir(self.h5saver.settings.child(('base_path')).value())
-        filename = pymodaq.utils.gui_utils.file_io.select_file(self.h5saver.settings.child(('base_path')).value(), save=True, ext='h5')
+        if not os.path.isdir(self.h5saver.settings['base_path']):
+            os.mkdir(self.h5saver.settings['base_path'])
+        filename = pymodaq.utils.gui_utils.file_io.select_file(self.h5saver.settings['base_path'], save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
     def save_metadata(self, node, type_info='dataset_info'):
@@ -857,8 +697,7 @@ class DAQ_Scan(ParameterManager):
 
     #  PROCESS MODIFICATIONS
 
-    @Slot(list)
-    def update_actuators(self, actuators):
+    def update_actuators(self, actuators: List[str]):
         self.scanner.actuators = actuators
 
     def move_to_crosshair(self, posx=None, posy=None):
@@ -902,7 +741,6 @@ class DAQ_Scan(ParameterManager):
         if param.name() == 'scan_average':
             self.show_average_dock(param.value() > 1)
 
-
     def update_plot_det_items(self, dets):
         """
         """
@@ -919,7 +757,7 @@ class DAQ_Scan(ParameterManager):
             *log_type*        string      the type of the log
             =============== =========== =======================
         """
-        self.ui.statusbar.showMessage(txt, wait_time)
+        self.ui.display_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
 
@@ -945,19 +783,19 @@ class DAQ_Scan(ParameterManager):
         elif status[0] == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
             self.ind_scan = status[1][0]
-            self.ui.indice_scan_sb.setValue(status[1][0])
+            self.ui.set_scan_step(status[1][0])
             self.ind_average = status[1][1]
-            self.ui.indice_average_sb.setValue(status[1][1])
+            self.ui.set_scan_step_average(status[1][1])
 
         elif status[0] == "Scan_done":
-            self.ui.scan_done_LED.set_as_true()
+            self.ui.set_scan_done()
             self.save_scan()
             if not self.batch_started:
                 if not self.dashboard.overshoot:
                     self.set_ini_positions()
-                self.ui.set_scan_pb.setEnabled(True)
-                self.ui.set_ini_positions_pb.setEnabled(True)
-                self.ui.start_scan_pb.setEnabled(True)
+                self.ui.set_action_enabled('set_scan')
+                self.ui.set_action_enabled('ini_positions')
+                self.ui.set_action_enabled('start')
 
                 # reactivate module controls usiong remote_control
                 if hasattr(self.dashboard, 'remote_manager'):
@@ -968,7 +806,7 @@ class DAQ_Scan(ParameterManager):
                 self.loop_scan_batch()
 
         elif status[0] == "Timeout":
-            self.ui.status_message.setText('Timeout occurred')
+            self.ui.set_permanent_status('Timeout occurred')
 
     ############
     #  PLOTTING
@@ -2110,6 +1948,35 @@ class DAQ_Scan_Acquisition(QObject):
         self.status_sig.emit(["Timeout"])
 
 
+class DashBoardTest:
+    def __init__(self):
+        self.title = 'DashBoardTest'
+        self.detector_modules = [type('Viewer', (object,), dict(title='mydet'))()]
+        self.actuators_modules = [type('Actuator', (object,), dict(title='myact'))()]
+
+
+def main_test(init_qt=True):
+    if init_qt:  # used for the test suite
+        app = QtWidgets.QApplication(sys.argv)
+        if config['style']['darkstyle']:
+            import qdarkstyle
+            app.setStyleSheet(qdarkstyle.load_stylesheet())
+
+    win = QtWidgets.QMainWindow()
+    area = pymodaq.utils.gui_utils.dock.DockArea()
+    win.setCentralWidget(area)
+    win.resize(1000, 500)
+    win.setWindowTitle('PyMoDAQ Dashboard')
+
+    dashboard = DashBoardTest()
+    daq_scan = DAQ_Scan(dockarea=area, dashboard=dashboard)
+    win.show()
+
+    if init_qt:
+        sys.exit(app.exec_())
+    return dashboard, daq_scan, win
+
+
 def main(init_qt=True):
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
@@ -2145,4 +2012,5 @@ def main(init_qt=True):
 
 
 if __name__ == '__main__':
-    main()
+    #main()
+    main_test()
