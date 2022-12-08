@@ -169,6 +169,11 @@ class ModulesManager(QObject, ParameterManager):
     @property
     def modules(self):
         """Get the list of all detectors and actuators"""
+        return self.detectors + self.actuators
+
+    @property
+    def modules_all(self):
+        """Get the list of all detectors and actuators"""
         return self.detectors_all + self.actuators_all
 
     @property
