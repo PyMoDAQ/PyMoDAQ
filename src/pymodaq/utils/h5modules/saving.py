@@ -258,7 +258,6 @@ class H5SaverLowLevel(H5Backend):
             self.set_attr(array, metadat, metadata[metadat])
         return array
 
-
     def get_set_group(self, where, name, title=''):
         """Get the group located at where if it exists otherwise creates it
 
@@ -347,6 +346,16 @@ class H5SaverLowLevel(H5Backend):
             self.set_attr(group, metadat, metadata[metadat])
         return group
 
+    def add_act_group(self, where, title='', settings_as_xml='', metadata=dict([])):
+        """
+        Add a new group of type detector
+        See Also
+        -------
+        add_incremental_group
+        """
+        group = self.add_incremental_group('actuator', where, title, settings_as_xml, metadata)
+        return group
+
     def add_det_group(self, where, title='', settings_as_xml='', metadata=dict([])):
         """
         Add a new group of type detector
@@ -364,6 +373,7 @@ class H5SaverLowLevel(H5Backend):
         -------
         add_incremental_group
         """
+        metadata.update(dict(description=''))
         group = self.add_incremental_group('scan', where, title, settings_as_xml, metadata)
         return group
 
@@ -445,7 +455,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                   position within the epsilon precision (see comon_parameters variable)
     save_type: str
        an element of the enum module attribute SaveType
-       * 'scan' is used for DAQ_Scan module and should be used for similar application
+       * 'scan' is used for DAQScan module and should be used for similar application
        * 'detector' is used for DAQ_Viewer module and should be used for similar application
        * 'custom' should be used for customized applications
 
@@ -511,7 +521,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         https://github.com/HDFGroup/hsds
         """
         H5SaverLowLevel.__init__(self, save_type, backend)
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self, self.__class__.__name__)
 
         self.current_scan_group = None
         self.current_scan_name = None
@@ -583,21 +593,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         fullpathname = self.h5_file_path.joinpath(self.h5_file_name)
         self.settings.child('current_h5_file').setValue(str(fullpathname))
 
-        if update_h5:
-            self.current_scan_group = None
-
-        scan_group = None
-        if self.current_scan_group is not None:
-            scan_group = self.get_node_name(self.current_scan_group)
-
         super().init_file(fullpathname, new_file=update_h5)
 
         self.get_set_logger(self.raw_group)
-
-        if scan_group is not None:
-            self.current_scan_group = self.get_set_group(self.raw_group, scan_group)
-        else:
-            self.current_scan_group = self.get_last_scan()
 
         return update_h5
 
@@ -742,7 +740,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         return dataset_path, base_name + '{:03d}'.format(ind_scan), dataset_path
 
     def get_last_scan(self):
-        """Gets the last scan node within the h5_file and under the the **raw_group**
+        """Gets the last scan node within the h5_file and under the **raw_group**
 
         Returns
         -------
