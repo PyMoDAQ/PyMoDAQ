@@ -18,6 +18,7 @@ from pymodaq.utils.parameter import ioxml
 
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.daq_move import DAQ_Move
+# from pymodaq.extensions.daq_scan import DAQScan
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -26,6 +27,7 @@ class ModuleSaver(metaclass=ABCMeta):
     _module = abstract_attribute()
     _h5saver: H5SaverLowLevel = abstract_attribute()
     _module_group: GROUP = abstract_attribute()
+    main_module = True
 
     def get_set_node(self, where: Union[Node, str] = None) -> Node:
         """Get the node corresponding to this particular Module instance
@@ -111,8 +113,9 @@ class DetectorSaver(ModuleSaver):
 
         settings_xml = ET.Element('All_settings', type='group')
         settings_xml.append(ioxml.walk_parameters_to_xml(param=self._module.settings))
-        saver_xml = ET.SubElement(settings_xml,'H5Saver', type='group')
-        saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
+        if self.main_module:
+            saver_xml = ET.SubElement(settings_xml, 'H5Saver', type='group')
+            saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
         if self._module.ui is not None:
             for ind, viewer in enumerate(self._module.viewers):
@@ -195,7 +198,7 @@ class ActuatorSaver(ModuleSaver):
 
 
 class ScanSaver(ModuleSaver):
-    """Implementation of the ModuleSaver class dedicated to DAQ_Scan module
+    """Implementation of the ModuleSaver class dedicated to DAQScan module
 
     Parameters
     ----------
@@ -206,13 +209,31 @@ class ScanSaver(ModuleSaver):
 
     def __init__(self, module):
         self._module_group: GROUP = None
-        self._module = module
+        self._module: 'DAQScan' = module
         self._h5saver = None
 
     def update_after_h5changed(self):
         for module in self._module.modules_manager.modules:
             if hasattr(module, 'module_and_data_saver'):
                 module.module_and_data_saver.h5saver = self.h5saver
+
+    def get_set_node(self, where: Union[Node, str] = None) -> Node:
+        """Get the node corresponding to this particular Module instance
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+
+        Returns
+        -------
+        Node: the Node associated with this module
+        """
+        super().get_set_node(where)
+        for module in self._module.modules_manager.modules:
+            module.module_and_data_saver.main_module = False
+            module.module_and_data_saver.get_set_node(self._module_group)
+        return self._module_group
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}) -> Node:
         """
@@ -230,9 +251,11 @@ class ScanSaver(ModuleSaver):
         if where is None:
             where = self._h5saver.raw_group
 
-        settings_xml = ET.Element('All_settings')
+        settings_xml = ET.Element('All_settings', type='group')
         settings_xml.append(ioxml.walk_parameters_to_xml(param=self._module.settings))
-        settings_xml.append(ioxml.walk_parameters_to_xml(param=self._module.h5saver.settings))
+        if self.main_module:
+            saver_xml = ET.SubElement(settings_xml, 'H5Saver', type='group')
+            saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
         return self._h5saver.add_scan_group(where, title=self._module.title, settings_as_xml=ET.tostring(settings_xml),
                                            metadata=metadata)
