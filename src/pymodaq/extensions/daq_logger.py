@@ -3,7 +3,7 @@
 
 """Automated scanning module functionalities for PyMoDAQ
 
-Contains all objects related to the DAQ_Scan module, to do automated scans, saving data...
+Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 
 import sys

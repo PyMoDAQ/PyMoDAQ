@@ -47,7 +47,7 @@ class DAQ_PID(QObject):
         {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group', 'visible': False,
          'children': [
              {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
-        # here only to be compatible with DAQ_Scan, the model could update it
+        # here only to be compatible with DAQScan, the model could update it
 
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group', 'children': [
             {'title': 'Acquisition Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000},

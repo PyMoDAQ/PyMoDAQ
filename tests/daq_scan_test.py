@@ -21,7 +21,7 @@ def init_qt(qtbot):
 def main(qtbot):
     from qtpy import QtWidgets
     from pymodaq.dashboard import DashBoard
-    from extensions.daq_scan import DAQ_Scan
+    from extensions.daq_scan import DAQScan
     from pymodaq.utils import gui_utils as gutils
 
     win = QtWidgets.QMainWindow()
@@ -37,7 +37,7 @@ def main(qtbot):
     winscan = QtWidgets.QMainWindow()
     areascan = pymodaq.utils.gui_utils.dock.DockArea()
     win.setCentralWidget(area)
-    daq_scan = DAQ_Scan(dockarea=areascan, dashboard=dashboard, show_popup=False)
+    daq_scan = DAQScan(dockarea=areascan, dashboard=dashboard, show_popup=False)
     daq_scan.status_signal.connect(dashboard.add_status)
     winscan.show()
     qtbot.addWidget(win)

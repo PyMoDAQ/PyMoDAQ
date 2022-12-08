@@ -1,5 +1,5 @@
 class DAQ_ScanException(Exception):
-    """Raised when an error occur within the DAQ_Scan"""
+    """Raised when an error occur within the DAQScan"""
     pass
 
 

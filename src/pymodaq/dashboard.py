@@ -169,8 +169,8 @@ class DashBoard(QObject):
             win = QtWidgets.QMainWindow()
         area = DockArea()
         win.setCentralWidget(area)
-        self.scan_module = extmod.DAQ_Scan(dockarea=area, dashboard=self)
-        self.extensions['DAQ_Scan'] = self.scan_module
+        self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
+        self.extensions['DAQScan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()
         return self.scan_module

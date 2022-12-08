@@ -210,7 +210,7 @@ class DAQ_Analysis(QtWidgets.QWidget, QObject):
             do_load, close_h5, quit_fun
         """
         file_menu = menubar.addMenu('File')
-        open_action = file_menu.addAction("Open DAQ_Scan file")
+        open_action = file_menu.addAction("Open DAQScan file")
         open_action.triggered.connect(self.do_load)
         close_action = file_menu.addAction("close h5 file")
         close_action.triggered.connect(self.close_h5)
