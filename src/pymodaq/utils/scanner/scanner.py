@@ -26,7 +26,7 @@ config = Config()
 scanner_factory = ScannerFactory()
 
 
-class Scanner(ParameterManager):
+class Scanner(QObject, ParameterManager):
     """Main Object to define a PyMoDAQ scan and create a UI to set it
 
     Parameters
@@ -52,7 +52,8 @@ class Scanner(ParameterManager):
     ]
 
     def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]), actuators=[]):
-        super().__init__()
+        QObject.__init__(self)
+        ParameterManager.__init__(self, self.__class__.__name__)
         if parent_widget is None:
             parent_widget = QtWidgets.QWidget()
         self.parent_widget = parent_widget
@@ -170,10 +171,19 @@ class Scanner(ParameterManager):
                 if scan_subtype in scanner_factory.scan_sub_types(scan_type):
                     self.settings.child('scan_sub_type').setValue(scan_subtype)
 
+    @property
+    def scan_type(self) -> str:
+        return self.settings['scan_type']
+
+    @property
+    def scan_sub_type(self) -> str:
+        return self.settings['scan_sub_type']
+
     def connect_things(self):
         self.settings.child('calculate_positions').sigActivated.connect(self.set_scan)
 
     def get_scan_info(self) -> ScanInfo:
+        """Get a summary of the configured scan as a ScanInfo object"""
         return ScanInfo(self._scanner.n_steps, positions=self._scanner.positions,
                         axes_indexes=self._scanner.axes_indexes, axes_unique=self._scanner.axes_unique)
 
@@ -182,7 +192,14 @@ class Scanner(ParameterManager):
 
     @property
     def n_steps(self):
-        return self._scanner.n_steps
+        if self._scanner.n_steps is None:
+            return self._scanner.evaluate_steps()
+        else:
+            return self._scanner.n_steps
+
+    @property
+    def n_axes(self):
+        return self._scanner.n_axes
 
     @property
     def positions(self):
@@ -198,11 +215,18 @@ class Scanner(ParameterManager):
 
     def set_scan(self):
         """Process the settings options to calculate the scan positions
+
+        Returns
+        -------
+        bool: True if the processed number of steps if **higher** than the configured number of steps
         """
+        oversteps = config('scan', 'steps_limit')
+        if self._scanner.evaluate_steps() > oversteps:
+            return True
         self._scanner.set_scan()
         self.settings.child('n_steps').setValue(self.n_steps)
         self.scanner_updated_signal.emit()
-        return self.scan_parameters
+        return False
 
     def update_tabular_positions(self, positions: np.ndarray = None):
         """Convenience function to write positions directly into the tabular table
