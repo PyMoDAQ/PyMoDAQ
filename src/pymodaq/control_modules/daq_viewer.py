@@ -98,7 +98,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
         QObject.__init__(self)
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self, self.__class__.__name__)
         ControlModule.__init__(self)
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)
