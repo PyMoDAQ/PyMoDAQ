@@ -56,6 +56,11 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('navigator', 'Show Navigator', '', menu=self.settings_menu, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=self.settings_menu, auto_toolbar=False)
 
+    def enable_start_stop(self, enable=True):
+        """If True enable main buttons to launch/stop scan"""
+        self.set_action_enabled('start', enable)
+        self.set_action_enabled('stop', enable)
+
     def connect_things(self):
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
         self.connect_action('set_scan', lambda: self.command_sig.emit(ThreadCommand('set_scan')))
@@ -152,6 +157,14 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self._statusbar.addPermanentWidget(self._indice_average_sb)
         self._indice_average_sb.setVisible(False)
         self._statusbar.addPermanentWidget(self._scan_done_LED)
+
+    @property
+    def n_scan_steps(self):
+        return self._n_scan_steps_sb.value()
+
+    @n_scan_steps.setter
+    def n_scan_steps(self, nsteps: int):
+        self._n_scan_steps_sb.setValue(nsteps)
 
     def display_status(self, status: str, wait_time=1000):
         self._statusbar.showMessage(status, wait_time)
