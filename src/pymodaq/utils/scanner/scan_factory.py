@@ -12,6 +12,7 @@ import numpy as np
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.data import Axis
 from pymodaq.utils.abstract import abstract_attribute
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -74,6 +75,11 @@ class ScannerBase(metaclass=ABCMeta):
     @abstractmethod
     def set_scan(self):
         """To be reimplemented. Calculations of all mandatory attributes from the settings"""
+        ...
+
+    @abstractmethod
+    def get_nav_axes(self) -> List[Axis]:
+        """To be reimplemented. Calculations of all navigation axes from attributes"""
         ...
 
     def get_info_from_positions(self, positions: np.ndarray):

@@ -4,7 +4,10 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
+from typing import List
+
 import numpy as np
+from pymodaq.utils.data import Axis
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -47,7 +50,7 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
         n_steps = 1
         for ind in range(starts.size):
             n_steps *= np.abs((stops[ind] - starts[ind]) / steps[ind]) + 1
-        return n_steps
+        return int(n_steps)
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
@@ -67,6 +70,10 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
                     positions.append([pos1, pos2])
 
         self.get_info_from_positions(np.array(positions))
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{self.__class__.__name__} axis 1', units='', data=self.axes_unique[0], index=0),
+                Axis(label=f'{self.__class__.__name__} axis 2', units='', data=self.axes_unique[1], index=1)]
 
 
 @ScannerFactory.register('Scan2D', 'LinearBack&Force')
@@ -150,7 +157,7 @@ class Scan2DSpiral(Scan2DLinear):
         return centers, rmaxs, r_steps
 
     def evaluate_steps(self) -> int:
-        return (self.settings['npts_by_axis'] +1) ** 2
+        return int(self.settings['npts_by_axis'] + 1) ** 2
 
     def set_scan(self):
         starts, rmaxs, rsteps = self.get_pos()

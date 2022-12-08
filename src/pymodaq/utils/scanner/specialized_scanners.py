@@ -7,8 +7,9 @@ Created the 05/12/2022
 from typing import List
 
 import numpy as np
-from qtpy import QtCore, QtWidgets
 
+from qtpy import QtCore, QtWidgets
+from pymodaq.utils.data import Axis
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -77,7 +78,7 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
         n_steps = 1
         for ind in range(starts.size):
             n_steps *= np.abs((stops[ind] - starts[ind]) / steps[ind]) + 1
-        return n_steps
+        return int(n_steps)
 
     @staticmethod
     def pos_above_stops(positions, steps, stops):
@@ -126,6 +127,10 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
                     all_positions.append(positions[:])
 
             self.get_info_from_positions(np.array(all_positions))
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{self.__class__.__name__} axis {ind}', units='', data=self.axes_unique[ind], index=ind)
+                for ind in range(self.n_axes)]
 
 
 @ScannerFactory.register('Tabular', 'Linear')
@@ -195,3 +200,8 @@ class TabularScanner(SequentialScanner):
                 pass
         except Exception as e:
             logger.exception(str(e))
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{self.__class__.__name__} axis {ind}', units='', data=self.positions[ind, :], index=ind)
+                for ind in range(self.n_axes)]
+

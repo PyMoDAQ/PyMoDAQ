@@ -4,7 +4,10 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
+from typing import List
+
 import numpy as np
+from pymodaq.utils.data import Axis
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -35,8 +38,11 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
         self.get_info_from_positions(self.positions)
 
     def evaluate_steps(self) -> int:
-        n_steps = np.abs((self.settings['stop'] - self.settings['start']) / self.settings['step'])+1
+        n_steps = int(np.abs((self.settings['stop'] - self.settings['start']) / self.settings['step']) + 1)
         return n_steps
+
+    def get_nav_axes(self) -> List[Axis]:
+        return [Axis(label=f'{self.__class__.__name__} axis', units='', data=self.positions)]
 
 
 @ScannerFactory.register('Scan1D', 'Random')
@@ -76,6 +82,10 @@ try:
 
         def evaluate_steps(self) -> int:
             return 1
+
+        def get_nav_axes(self) -> List[Axis]:
+            return [Axis(label=f'{self.__class__.__name__} axis', units='', data=self.positions[0])]
+
 except ModuleNotFoundError:
     logger.info('adaptive module is not present, no adaptive scan possible')
 
