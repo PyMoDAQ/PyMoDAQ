@@ -47,7 +47,11 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         logger.addHandler(handler)
 
         logging.captureWarnings(True)
-        warnings.filterwarnings('default', category=DeprecationWarning)
+        # only catch DeprecationWarning in DEBUG level
+        if log_level == 'DEBUG':
+            warnings.filterwarnings('default', category=DeprecationWarning)
+        else:
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
         warnings_logger = logging.getLogger("py.warnings")
         warnings_logger.addHandler(handler)
 
