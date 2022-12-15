@@ -1666,10 +1666,11 @@ class DAQScanAcquisition(QObject):
             self.scan_read_positions = []
             self.scan_read_datas = []
             self.stop_scan_flag = False
+
             Naxes = self.scanner.n_axes
             scan_type = self.scanner.scan_type
-            self.navigation_axes = []
-
+            self.navigation_axes = self.scanner.get_nav_axes()
+            self.scan_shape = self.scanner.get_scan_shape()
             if scan_type == 'Scan1D' or scan_type == 'Scan2D':
                 """creates the X_axis and Y_axis valid only for 1D or 2D scans """
                 if self.isadaptive:

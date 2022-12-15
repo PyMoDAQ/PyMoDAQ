@@ -187,6 +187,12 @@ class Scanner(QObject, ParameterManager):
         return ScanInfo(self._scanner.n_steps, positions=self._scanner.positions,
                         axes_indexes=self._scanner.axes_indexes, axes_unique=self._scanner.axes_unique)
 
+    def get_nav_axes(self):
+        return self._scanner.get_nav_axes()
+
+    def get_scan_shape(self):
+        return self._scanner.get_scan_shape()
+
     def _update_steps(self):
         self.settings.child('n_steps').setValue(self.n_steps)
 

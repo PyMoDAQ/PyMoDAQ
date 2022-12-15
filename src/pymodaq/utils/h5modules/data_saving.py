@@ -5,14 +5,14 @@ Created the 21/11/2022
 @author: Sebastien Weber
 """
 from time import time
-from typing import Union, List
+from typing import Union, List, Tuple
 
 import numpy as np
 
 from pymodaq.utils.abstract import ABCMeta, abstract_attribute
 from pymodaq.utils.enums import enum_checker
 from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
-from .saving import DataType, H5SaverLowLevel
+from .saving import DataType, H5Saver
 from .backends import GROUP, CARRAY, Node, EARRAY
 from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.scanner.utils import ScanType
@@ -33,7 +33,7 @@ class DataManagement(metaclass=ABCMeta):
         The enum for this type of data, here abstract and should be redefined
     """
     data_type: DataType = abstract_attribute()
-    _h5saver: H5SaverLowLevel = abstract_attribute()
+    _h5saver: H5Saver = abstract_attribute()
 
     @classmethod
     def _format_node_name(cls, ind: int) -> str:
@@ -149,7 +149,7 @@ class AxisSaverLoader(DataManagement):
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5Saver
 
     Attributes
     ----------
@@ -158,7 +158,7 @@ class AxisSaverLoader(DataManagement):
     """
     data_type = DataType['axis']
 
-    def __init__(self, h5saver: H5SaverLowLevel):
+    def __init__(self, h5saver: H5Saver):
         self._h5saver = h5saver
         self.data_type = enum_checker(DataType, self.data_type)
 
@@ -221,7 +221,7 @@ class DataSaverLoader(DataManagement):
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5Saver
 
     Attributes
     ----------
@@ -230,7 +230,7 @@ class DataSaverLoader(DataManagement):
     """
     data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel):
+    def __init__(self, h5saver: H5Saver):
         self.data_type = enum_checker(DataType, self.data_type)
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(h5saver)
@@ -254,7 +254,8 @@ class DataSaverLoader(DataManagement):
                                     array_to_save=data[ind_data], data_dimension=data.dim.name,
                                     metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                   source=data.source.name, distribution=data.distribution.name,
-                                                  nav_indexes=data.nav_indexes))
+                                                  nav_indexes=tuple(data.nav_indexes)
+                                                  if data.nav_indexes is not None else None))
         if save_axes:
             for axis in data.axes:
                 self._axis_saver.add_axis(where, axis)
@@ -276,7 +277,7 @@ class DataSaverLoader(DataManagement):
     def get_bkg_nodes(self, where: Union[Node, str]):
         bkg_nodes = []
         for node in self._h5saver.walk_nodes(where):
-            if 'data_type' in node.attrs and node.attrs['data_type'] =='bkg':
+            if 'data_type' in node.attrs and node.attrs['data_type'] == 'bkg':
                 bkg_nodes.append(node)
         return bkg_nodes
 
@@ -324,18 +325,22 @@ class DataSaverLoader(DataManagement):
         """
 
         node = self._h5saver.get_node(where)
+
+        #todo sort this out, this was meant to get all nodes of a given type in a group but I added the 0
         if isinstance(node, GROUP):
             parent_node = node
+            data_nodes = self._get_nodes_from_data_type(parent_node)
         elif isinstance(node, CARRAY):
             parent_node = node.parent_node
-        data_node = self._get_nodes_from_data_type(parent_node)[0]
+            data_nodes = [node]
 
-        if not self._is_node_of_data_type(data_node):
-            raise TypeError(f'Could not create an DataWithAxes object from this node: {data_node}')
+        data_node = data_nodes[0]
+        # if not self._is_node_of_data_type(data_node):
+        #     raise TypeError(f'Could not create an DataWithAxes object from this node: {data_node}')
 
         if 'axis' in self.data_type.name:
-            ndarrays = [data_node.read()]
-            axes = []
+            ndarrays = [data_node.read() for data_node in data_nodes]
+            axes = [Axis('index', '', np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
         else:
             ndarrays = self.get_data_arrays(parent_node, with_bkg=with_bkg)
             axes = self.get_axes(parent_node)
@@ -356,7 +361,7 @@ class BkgSaver(DataSaverLoader):
 
     Parameters
     ----------
-    hsaver: H5SaverLowLevel
+    hsaver: H5Saver
 
     Attributes
     ----------
@@ -365,7 +370,7 @@ class BkgSaver(DataSaverLoader):
     """
     data_type = DataType['bkg']
 
-    def __init__(self, h5saver: H5SaverLowLevel):
+    def __init__(self, h5saver: H5Saver):
         super().__init__(h5saver)
 
 
@@ -374,16 +379,21 @@ class DataEnlargeableSaver(DataSaverLoader):
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5Saver
 
     Attributes
     ----------
     data_type: DataType
         The enum for this type of data, here 'data_enlargeable'
+
+    Notes
+    -----
+    To be used to save data from a timed logger (DAQViewer continuous saving or DAQLogger extension) or from an
+    adaptive scan where the final shape is unknown
     """
     data_type = DataType['data_enlargeable']
 
-    def __init__(self, h5saver: H5SaverLowLevel):
+    def __init__(self, h5saver: H5Saver):
         super().__init__(h5saver)
 
     def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
@@ -411,12 +421,11 @@ class DataEnlargeableSaver(DataSaverLoader):
                                         array_to_save=data[ind_data],
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
-                                        scan_type=ScanType['Scan1D'],
                                         enlargeable=True,
                                         data_dimension=data.dim.name,
                                         metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                       source=data.source.name, distribution=data.distribution.name,
-                                                      nav_indexes=nav_indexes))
+                                                      nav_indexes=tuple(nav_indexes)))
             if save_axes:
                 for axis in data.axes:
                     axis.index += 1  # because of enlargeable data will have an extra shape
@@ -431,24 +440,25 @@ class DataEnlargeableSaver(DataSaverLoader):
             array.append(data[ind_data])
 
 
-class DataScanSaver(DataSaverLoader):
-    """Specialized Object to save and load enlargeable DataWithAxes saved object to and from a h5file
+class DataExtendedSaver(DataSaverLoader):
+    """Specialized Object to save and load DataWithAxes saved object to and from a h5file in extended arrays
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5Saver
+    extended_shape: Tuple[int]
+        the extra shape compared to the data the h5array will have
 
     Attributes
     ----------
     data_type: DataType
-        The enum for this type of data, here 'data_enlargeable'
+        The enum for this type of data, here 'data'
     """
-    data_type = DataType['data_scan']
+    data_type = DataType['data']
 
-    def __init__(self, h5saver: H5SaverLowLevel, scan_type, scan_subtype):
+    def __init__(self, h5saver: H5Saver, extended_shape: Tuple[int]):
         super().__init__(h5saver)
-        self.scan_type = scan_type
-        self.scan_subtype = scan_subtype
+        self.extended_shape = extended_shape
 
     def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
         """ Create array with extra dimensions (from scan) to store data
@@ -465,45 +475,71 @@ class DataScanSaver(DataSaverLoader):
         Because data will be saved at a given index in the "scan" array, related axes will have their index
         increased by the length of the scan dim (1 for scan1D, 2 for scan2D, ...)
         """
-
         if self.get_last_node_name(where) is None:
             for ind_data in range(len(data)):
                 nav_indexes = list(data.nav_indexes)
-                nav_indexes = [0] + list(np.array(nav_indexes, dtype=np.int) + 1)
+                nav_indexes = [ind for ind in range(len(self.extended_shape))] +\
+                              list(np.array(nav_indexes, dtype=np.int) + len(self.extended_shape))
 
                 self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
-                                        array_to_save=data[ind_data],
                                         data_shape=data[ind_data].shape,
                                         array_type=data[ind_data].dtype,
-                                        scan_type=ScanType['Scan1D'],
-                                        enlargeable=True,
+                                        scan_shape=self.extended_shape,
+                                        add_scan_dim=True,
                                         data_dimension=data.dim.name,
                                         metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                       source=data.source.name, distribution=data.distribution.name,
-                                                      nav_indexes=nav_indexes))
+                                                      nav_indexes=tuple(nav_indexes)))
+
             if save_axes:
                 for axis in data.axes:
-                    axis.index += 1  # because of enlargeable data will have an extra shape
+                    axis.index += len(self.extended_shape)
+                    # because there will be len(self.extended_shape) extra navigation axes
                     self._axis_saver.add_axis(where, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes):
+    def add_data(self, where: Union[Node, str], data: DataWithAxes, indexes: List[int]):
+        """Adds given DataWithAxis at a location within the initialized h5 array
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data: DataWithAxes
+        indexes: List[int]
+            indexes where to save data in the init h5array (should have the same length as extended_shape and with values
+            coherent with this shape
+        """
+        if len(indexes) != len(self.extended_shape):
+            raise IndexError(f'Cannot put data into the h5array with extended indexes {indexes}')
+        for ind in range(len(indexes)):
+            if indexes[ind] > self.extended_shape[ind]:
+                raise IndexError(f'Indexes cannot be higher than the array shape')
+
         if self.get_last_node_name(where) is None:
             self._create_data_arrays(where, data, save_axes=True)
 
         for ind_data in range(len(data)):
-            array: EARRAY = self.get_node_from_index(where, ind_data)
-            array.append(data[ind_data])
-
+            array: CARRAY = self.get_node_from_index(where, ind_data)
+            array[tuple(indexes)] = data[ind_data]  # maybe use array.__setitem__(indexes, data[ind_data]) if it's not working
 
 
 class DataToExportSaver:
-    def __init__(self, h5saver: H5SaverLowLevel):
+    """Object used to save DataToExport object into a h5file following the PyMoDAQ convention
+
+    Parameters
+    ----------
+    h5saver: H5Saver
+
+    """
+    def __init__(self, h5saver: H5Saver):
         self._h5saver = h5saver
         self._data_saver = DataSaverLoader(h5saver)
         self._bkg_saver = BkgSaver(h5saver)
 
     @staticmethod
     def channel_formatter(ind: int):
+        """All DataWithAxes included in the DataToExport will be saved into a channel group indexed and
+        formatted as below"""
         return f'CH{ind:02d}'
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
@@ -513,12 +549,11 @@ class DataToExportSaver:
         ----------
         where: Union[Node, str]
             the path of a given node or the node itself
-        data
-        settings_as_xml
-        metadata
-
-        Returns
-        -------
+        data: DataToExport
+        settings_as_xml: str
+            The settings parameter as an XML string
+        metadata: dict
+            all extra metadata to be saved in the group node where data will be saved
 
         """
         dims = data.get_dim_presents()
@@ -541,23 +576,121 @@ class DataToExportSaver:
 
 
 class DataToExportEnlargeableSaver(DataToExportSaver):
+    """Generic object to save DataToExport objects in an enlargeable h5 array
 
-    def __init__(self, h5saver: H5SaverLowLevel):
+    The next enlarged value should be specified in the add_data method
+
+    Parameters
+    ----------
+    h5saver: H5Saver
+    axis_name: str
+        the name of the enlarged axis array
+    axis_units: str
+        the units of the enlarged axis array
+    """
+    def __init__(self, h5saver: H5Saver, axis_name: str = 'nav axis', axis_units: str = ''):
+
         super().__init__(h5saver)
         self._data_saver = DataEnlargeableSaver(h5saver)
         self._nav_axis_saver = AxisSaverLoader(h5saver)
+        self._axis_name = axis_name
+        self._axis_units = axis_units
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
+    def add_data(self, where: Union[Node, str], data: DataToExport, axis_value: float, settings_as_xml='', metadata={}):
+        """
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data: DataToExport
+            The data to be saved into an enlargeable array
+        axis_value: float
+            The next value of the enlarged axis
+        settings_as_xml: str
+            The settings parameter as an XML string
+        metadata: dict
+            all extra metadata to be saved in the group node where data will be saved
+        """
         super().add_data(where, data, settings_as_xml, metadata)
         nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
-            axis = Axis(label='time_axis', units='s', data=np.array([0., 1.]), index=0)
-            time_array = self._nav_axis_saver.add_axis(nav_group, axis, enlargeable=True)
-            time_array.attrs['size'] = 0
+            axis = Axis(label=self._axis_name, units=self._axis_units, data=np.array([0., 1.]), index=0)
+            axis_array = self._nav_axis_saver.add_axis(nav_group, axis, enlargeable=True)
+            axis_array.attrs['size'] = 0
 
-        time_array = self._nav_axis_saver.get_node_from_index(nav_group, 0)
-        time_array.append(np.array([time()]))
-        time_array.attrs['size'] += 1
+        axis_array = self._nav_axis_saver.get_node_from_index(nav_group, 0)
+        axis_array.append(np.array([axis_value]))
+        axis_array.attrs['size'] += 1
+
+
+class DataToExportTimedSaver(DataToExportEnlargeableSaver):
+    """Specialized DataToExportEnlargeableSaver to save data as a function of a time axis
+
+    Notes
+    -----
+    This object is made for continuous saving mode of DAQViewer and logging to h5file for DAQLogger
+    """
+    def __init__(self, h5saver: H5Saver):
+        super().__init__(h5saver, 'time', 's')
+
+    def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
+        super().add_data(where, data, axis_value=time(), settings_as_xml=settings_as_xml, metadata=metadata)
+
+
+class DataToExportExtendedSaver(DataToExportSaver):
+    """Object to save DataToExport at given indexes within arrays including extended shape
+
+    Mostly used for data generated from the DAQScan
+
+    Parameters
+    ----------
+    h5saver: H5Saver
+    extended_shape: Tuple[int]
+        the extra shape compared to the data the h5array will have
+    """
+
+    def __init__(self, h5saver: H5Saver, extended_shape: Tuple[int]):
+        super().__init__(h5saver)
+        self._data_saver = DataExtendedSaver(h5saver, extended_shape)
+        self._nav_axis_saver = AxisSaverLoader(h5saver)
+
+    def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
+        """Used to add navigation axes related to the extended array
+
+        Notes
+        -----
+        For instance the scan axes in the DAQScan
+        """
+        nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
+        if self._nav_axis_saver.get_last_node_name(nav_group) is None:
+            for axis in axes:
+                self._nav_axis_saver.add_axis(nav_group, axis)
+
+    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: List[int],
+                 settings_as_xml='', metadata={}):
+        """
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data: DataToExport
+        indexes: List[int]
+            indexes where to save data in the init h5array (should have the same length as extended_shape and with values
+            coherent with this shape
+        settings_as_xml: str
+            The settings parameter as an XML string
+        metadata: dict
+            all extra metadata to be saved in the group node where data will be saved
+
+        """
+        dims = data.get_dim_presents()
+        for dim in dims:
+            dim_group = self._h5saver.get_set_group(where, dim)
+            for ind, dwa in enumerate(data.get_data_from_dim(dim)):  # dwa: DataWithAxes filtered by dim
+                dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind), dwa.name)
+                self._data_saver.add_data(dwa_group, dwa, indexes=indexes)
 
 
 class DataLoader:
@@ -565,10 +698,10 @@ class DataLoader:
 
     Parameters
     ----------
-    h5saver: H5SaverLowLevel
+    h5saver: H5Saver
     """
 
-    def __init__(self, h5saver: H5SaverLowLevel):
+    def __init__(self, h5saver: H5Saver):
         self._h5saver = h5saver
         self._axis_loader = AxisSaverLoader(h5saver)
         self._data_loader = DataSaverLoader(h5saver)
@@ -613,8 +746,9 @@ class DataLoader:
         node_data_type = DataType[self._h5saver.get_node(where).attrs['data_type']]
         self._data_loader.data_type = node_data_type
         data = self._data_loader.load_data(where, with_bkg=with_bkg)
-        nav_group = self.get_nav_group(where)
-        if nav_group is not None:
-            nav_axes = self._axis_loader.get_axes(nav_group)
-            data.axes.extend(nav_axes)
+        if 'axis' not in node_data_type.name:
+            nav_group = self.get_nav_group(where)
+            if nav_group is not None:
+                nav_axes = self._axis_loader.get_axes(nav_group)
+                data.axes.extend(nav_axes)
         return data

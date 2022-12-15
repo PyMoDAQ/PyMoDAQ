@@ -172,7 +172,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._h5saver_continuous.show_settings(False)
         self._h5saver_continuous.settings.child('do_save').sigValueChanged.connect(self._init_continuous_save)
         if self.ui is not None:
-                self.ui.add_setting_tree(self._h5saver_continuous.settings_tree)
+            self.ui.add_setting_tree(self._h5saver_continuous.settings_tree)
 
     def process_ui_cmds(self, cmd: utils.ThreadCommand):
         """Process commands sent by actions done in the ui

@@ -9,7 +9,8 @@ import pytest
 
 from pymodaq.utils.h5modules import saving
 from pymodaq.utils.h5modules.data_saving import DataLoader, AxisSaverLoader, DataSaverLoader, DataToExportSaver, \
-    DataEnlargeableSaver, DataToExportEnlargeableSaver, SPECIAL_GROUP_NAMES
+    DataEnlargeableSaver, DataToExportTimedSaver, SPECIAL_GROUP_NAMES, DataToExportExtendedSaver, \
+    DataToExportEnlargeableSaver, DataExtendedSaver
 from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
 
 
@@ -142,7 +143,7 @@ class TestAxisSaverLoader:
             axes_ini.append(Axis(label=f'LABEL{ind}', units=f'UNITS{ind}',
                                  data=OFFSET + SCALING * np.linspace(0, SIZE-1, SIZE),
                                  index=ind))
-            axis_node = axis_saver.add_axis(h5saver.raw_group, axes_ini[-1])
+            axis_node = axis_saver.add_axis(h5saver.raw_group, axes_ini[ind])
             assert axis_node.name == axis_saver._format_node_name(ind)
             assert axis_node.attrs['label'] == f'LABEL{ind}'
             assert axis_node.attrs['index'] == ind
@@ -217,6 +218,43 @@ class TestDataEnlargeableSaver:
         assert data_node.attrs['shape'] == tuple(ESHAPE)
 
 
+class TestDataExtendedSaver:
+    def test_init(self, get_h5saver):
+        h5saver = get_h5saver
+        EXT_SHAPE = (5, 10)
+        data_saver = DataExtendedSaver(h5saver, EXT_SHAPE)
+        assert data_saver.data_type.value == 'Data'
+        assert data_saver.data_type.name == 'data'
+        assert data_saver.extended_shape == EXT_SHAPE
+
+    def test_add_data(self, get_h5saver):
+        h5saver = get_h5saver
+
+        EXT_SHAPE = (5, 10)
+        data_saver = DataExtendedSaver(h5saver, EXT_SHAPE)
+
+        Ndata = 2
+
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                            source='raw',
+                            dim='Data2D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                                       index=0),
+                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                       index=1),])
+        data_ext_shape = list(EXT_SHAPE)
+        data_ext_shape.extend(data.shape)
+
+        INDEXES = [4, 3]
+        data_saver.add_data(h5saver.raw_group, data, indexes=INDEXES)
+        assert len(data_saver.get_axes(h5saver.raw_group)) == Ndata
+        for ind in range(len(data)):
+            data_node = h5saver.get_node(f'/RawData/Data0{ind}')
+
+            assert data_node.attrs['shape'] == tuple(data_ext_shape)
+            assert np.all(data_node[tuple(INDEXES)] == pytest.approx(data[ind]))
+
+
 class TestDataToExportSaver:
     def test_save(self, get_h5saver, init_data_to_export):
         h5saver = get_h5saver
@@ -237,6 +275,27 @@ class TestDataToExportEnlargeableSaver:
         data_saver = DataToExportEnlargeableSaver(h5saver)
         Nadd_data = 2
         for ind in range(Nadd_data):
+            data_saver.add_data(det_group, data_to_export, axis_value=27.)
+
+        for node in h5saver.walk_nodes('/'):
+            if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
+                assert node.attrs['shape'][0] == Nadd_data
+
+        data_saver.add_data(det_group, data_to_export, axis_value=72.)
+        for node in h5saver.walk_nodes('/'):
+            if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
+                assert node.attrs['shape'][0] == Nadd_data + 1
+
+
+class TestDataToExportTimedSaver:
+    def test_save(self, get_h5saver, init_data_to_export):
+        h5saver = get_h5saver
+        data_to_export = init_data_to_export
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+
+        data_saver = DataToExportTimedSaver(h5saver)
+        Nadd_data = 2
+        for ind in range(Nadd_data):
             data_saver.add_data(det_group, data_to_export)
 
         for node in h5saver.walk_nodes('/'):
@@ -247,6 +306,24 @@ class TestDataToExportEnlargeableSaver:
         for node in h5saver.walk_nodes('/'):
             if 'shape' in node.attrs and node.name != 'Logger' and 'data' in node.attrs['data_type']:
                 assert node.attrs['shape'][0] == Nadd_data + 1
+
+
+class TestDataToExportExtendedSaver:
+    def test_save(self, get_h5saver, init_data_to_export):
+        h5saver = get_h5saver
+        data_to_export = init_data_to_export
+        det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
+
+        EXT_SHAPE = (5, 10)
+        nav_axes = []
+        nav_axes.append(Axis('navaxis0', '', data=np.linspace(0, EXT_SHAPE[0]-1, EXT_SHAPE[0]), index=0))
+        nav_axes.append(Axis('navaxis1', '', data=np.linspace(0, EXT_SHAPE[1] - 1, EXT_SHAPE[1]), index=1))
+
+        data_saver = DataToExportExtendedSaver(h5saver, extended_shape=EXT_SHAPE)
+
+        INDEXES = [4, 3]
+        data_saver.add_nav_axes(det_group, nav_axes)
+        data_saver.add_data(det_group, data_to_export, INDEXES)
 
 
 class TestDataLoader:
@@ -284,7 +361,7 @@ class TestDataLoader:
         data_to_export = init_data_to_export
         data_loader = DataLoader(h5saver)
 
-        data_saver = DataToExportEnlargeableSaver(h5saver)
+        data_saver = DataToExportTimedSaver(h5saver)
         det_group = h5saver.get_set_group(h5saver.raw_group, 'MyDet')
 
         Nadd_data = 3

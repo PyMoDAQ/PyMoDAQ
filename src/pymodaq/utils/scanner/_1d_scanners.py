@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from pymodaq.utils.data import Axis
@@ -43,6 +43,9 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{self.__class__.__name__} axis', units='', data=self.positions)]
+
+    def get_scan_shape(self) -> Tuple[int]:
+        return len(self.positions),
 
 
 @ScannerFactory.register('Scan1D', 'Random')
@@ -85,6 +88,9 @@ try:
 
         def get_nav_axes(self) -> List[Axis]:
             return [Axis(label=f'{self.__class__.__name__} axis', units='', data=self.positions[0])]
+
+        def get_scan_shape(self) -> Tuple[int]:
+            return len(self.positions),
 
 except ModuleNotFoundError:
     logger.info('adaptive module is not present, no adaptive scan possible')

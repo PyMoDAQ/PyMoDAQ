@@ -5,7 +5,7 @@ Created the 05/12/2022
 @author: Sebastien Weber
 """
 from abc import ABCMeta, abstractmethod
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Tuple
 
 import numpy as np
 
@@ -80,6 +80,11 @@ class ScannerBase(metaclass=ABCMeta):
     @abstractmethod
     def get_nav_axes(self) -> List[Axis]:
         """To be reimplemented. Calculations of all navigation axes from attributes"""
+        ...
+
+    @abstractmethod
+    def get_scan_shape(self) -> Tuple[int]:
+        """To be reimplemented. Calculations of all the final shape of the scan"""
         ...
 
     def get_info_from_positions(self, positions: np.ndarray):

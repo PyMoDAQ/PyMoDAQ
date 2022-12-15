@@ -56,7 +56,6 @@ class DataType(BaseEnum):
     strings = 'Strings'
     bkg = 'Bkg'
     data_enlargeable = 'EnlData'
-    data_scan = 'ScanData'
 
 
 class H5SaverLowLevel(H5Backend):
@@ -182,8 +181,7 @@ class H5SaverLowLevel(H5Backend):
     
     def add_array(self, where: Union[GROUP, str], name: str, data_type: DataType, array_to_save: np.ndarray = None,
                   data_shape: tuple = None, array_type: np.dtype = None, data_dimension: DataDim = None,
-                  scan_type: ScanType = ScanType['NoScan'], scan_subtype='', scan_shape: tuple = tuple([]),
-                  add_scan_dim=False, enlargeable: bool = False,
+                  scan_shape: tuple = tuple([]), add_scan_dim=False, enlargeable: bool = False,
                   title: str = '', metadata=dict([]), ):
 
         """save data arrays on the hdf5 file together with metadata
@@ -199,9 +197,6 @@ class H5SaverLowLevel(H5Backend):
             the shape of the array to save, mandatory if array_to_save is None
         data_dimension: DataDim
          The data's dimension
-        scan_type: ScanType
-            The type of scan to be saved (default NoScan)
-        scan_subtype: str
         scan_shape: Iterable
             the shape of the scan dimensions
         title: str
@@ -234,7 +229,6 @@ class H5SaverLowLevel(H5Backend):
 
         data_type = enum_checker(DataType, data_type)
         data_dimension = enum_checker(DataDim, data_dimension)
-        scan_type = enum_checker(ScanType, scan_type)
 
         if enlargeable:
             if data_shape == (1,):
@@ -251,8 +245,6 @@ class H5SaverLowLevel(H5Backend):
             array = self.create_carray(where, utils.capitalize(name), obj=array_to_save, title=title)
         self.set_attr(array, 'data_type', data_type.name)
         self.set_attr(array, 'data_dimension', data_dimension.name)
-        self.set_attr(array, 'scan_type', scan_type.name)
-        self.set_attr(array, 'scan_subtype', scan_subtype)
 
         for metadat in metadata:
             self.set_attr(array, metadat, metadata[metadat])
