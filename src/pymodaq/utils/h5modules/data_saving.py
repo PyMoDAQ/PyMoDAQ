@@ -307,7 +307,7 @@ class DataSaverLoader(DataManagement):
         else:
             return [array.read() for array in self._get_nodes_from_data_type(where)]
 
-    def load_data(self, where, with_bkg=True) -> DataWithAxes:
+    def load_data(self, where, with_bkg=True, plot_all=False) -> DataWithAxes:
         """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node
 
         Does not include navigation axes stored elsewhere in the h5file
@@ -318,25 +318,23 @@ class DataSaverLoader(DataManagement):
             the path of a given node or the node itself
         with_bkg: bool
             If True try to load background node and return the data with background subtraction
+        plot_all: bool
+            If True, will load all data hanging from the same parent node
 
         See Also
         --------
         load_data
         """
 
-        node = self._h5saver.get_node(where)
+        data_node = self._h5saver.get_node(where)
+        if not isinstance(data_node, CARRAY):
+            return
 
-        #todo sort this out, this was meant to get all nodes of a given type in a group but I added the 0
-        if isinstance(node, GROUP):
-            parent_node = node
+        parent_node = data_node.parent_node
+        if plot_all:
             data_nodes = self._get_nodes_from_data_type(parent_node)
-        elif isinstance(node, CARRAY):
-            parent_node = node.parent_node
-            data_nodes = [node]
-
-        data_node = data_nodes[0]
-        # if not self._is_node_of_data_type(data_node):
-        #     raise TypeError(f'Could not create an DataWithAxes object from this node: {data_node}')
+        else:
+            data_nodes = [data_node]
 
         if 'axis' in self.data_type.name:
             ndarrays = [data_node.read() for data_node in data_nodes]
@@ -729,15 +727,19 @@ class DataLoader:
                     return self._h5saver.get_node(node, SPECIAL_GROUP_NAMES['nav_axes'])
             node = node.parent_node
 
-    def load_data(self, where: Union[Node, str], with_bkg=True) -> DataWithAxes:
+    def load_data(self, where: Union[Node, str], with_bkg=True, plot_all=False) -> DataWithAxes:
         """Load data from a node (or channel node)
 
         Loaded data contains also nav_axes if any and with optional background subtraction
 
         Parameters
         ----------
-        where
-        with_bkg
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        with_bkg: bool
+            If True will attempt to substract a background data node before plotting
+        plot_all: bool
+            If True, will load all data hanging from the same parent node
 
         Returns
         -------
@@ -745,7 +747,7 @@ class DataLoader:
         """
         node_data_type = DataType[self._h5saver.get_node(where).attrs['data_type']]
         self._data_loader.data_type = node_data_type
-        data = self._data_loader.load_data(where, with_bkg=with_bkg)
+        data = self._data_loader.load_data(where, with_bkg=with_bkg, plot_all=plot_all)
         if 'axis' not in node_data_type.name:
             nav_group = self.get_nav_group(where)
             if nav_group is not None:

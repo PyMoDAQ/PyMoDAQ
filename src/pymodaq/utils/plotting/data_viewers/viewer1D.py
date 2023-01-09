@@ -146,7 +146,8 @@ class DataDisplayer(QObject):
     def update_display_items(self, data: DataRaw):
         while len(self._plot_items) > 0:
             self._plotitem.removeItem(self._plot_items.pop(0))
-            self.legend.removeItem(self.legend_items[0])
+
+            #self.legend.removeItem(self.legend_items()[0])
 
         for ind in range(len(data)):
             self._plot_items.append(pg.PlotDataItem(pen=PLOT_COLORS[ind]))

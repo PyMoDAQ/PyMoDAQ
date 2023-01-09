@@ -500,8 +500,6 @@ class H5Browser(QObject, ActionManager):
         self.view.item_double_clicked_sig.connect(self.show_h5_data)
         self.hyper_viewer = ViewerND(self.view.viewer_widget)
 
-
-
         self.setup_actions()
         self.setup_menu()
         self.connect_things()
@@ -535,12 +533,13 @@ class H5Browser(QObject, ActionManager):
         self.connect_action('log', self.show_log)
 
         self.connect_action('plot_node', lambda: self.get_node_and_plot(False))
+        self.connect_action('plot_nodes', lambda: self.get_node_and_plot(False, True))
         self.connect_action('plot_node_with_bkg', lambda: self.get_node_and_plot(True))
 
         self.status_signal.connect(self.add_log)
 
-    def get_node_and_plot(self, with_bkg):
-        self.show_h5_data(item=None, with_bkg=with_bkg)
+    def get_node_and_plot(self, with_bkg, plot_all=False):
+        self.show_h5_data(item=None, with_bkg=with_bkg, plot_all=plot_all)
 
     def load_file(self):
         #todo
@@ -566,11 +565,15 @@ class H5Browser(QObject, ActionManager):
                         toolbar=self.toolbar)
         self.add_action('plot_node', 'Plot Node', 'color', tip='Plot the current node',
                         toolbar=self.toolbar)
-        self.add_action('plot_node_with_bkg', 'Plot Node With Bkg', 'properties', tip='Plot the current node',
+        self.add_action('plot_nodes', 'Plot Nodes', 'color', tip='Plot all nodes hanging from the same parent',
+                        toolbar=self.toolbar)
+        self.add_action('plot_node_with_bkg', 'Plot Node With Bkg', 'color', tip='Plot the current node with background'
+                                                                                 ' substraction if possible',
                         toolbar=self.toolbar)
 
         self.view.add_actions([self.get_action('export'), self.get_action('comment'),
-                               self.get_action('plot_node'), self.get_action('plot_node_with_bkg')])
+                               self.get_action('plot_node'), self.get_action('plot_nodes'),
+                               self.get_action('plot_node_with_bkg')])
 
         self.add_action('load', 'Load File', 'Open', tip='Open a new file')
         self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
@@ -733,7 +736,7 @@ class H5Browser(QObject, ActionManager):
             labs.append(pngbinary2Qlabel(pix))
             self.view.pixmap_widget.layout().addWidget(labs[-1])
 
-    def show_h5_data(self, item, with_bkg=False):
+    def show_h5_data(self, item, with_bkg=False, plot_all=False):
         """
         """
         try:
@@ -748,8 +751,8 @@ class H5Browser(QObject, ActionManager):
                 for txt in node.read():
                     self.view.text_list.addItem(txt)
             else:
-                data_with_axes = self.data_loader.load_data(node, with_bkg=with_bkg)
-                self.hyper_viewer.show_data(data_with_axes)
+                data_with_axes = self.data_loader.load_data(node, with_bkg=with_bkg, plot_all=plot_all)
+                self.hyper_viewer.show_data(data_with_axes, force_update=True)
 
         except Exception as e:
             logger.exception(str(e))

@@ -260,7 +260,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
         self.prepare_ui()
 
-    def _show_data(self, data: DataRaw):
+    def _show_data(self, data: DataRaw, **kwargs):
         force_update = False
         self.settings.child('data_shape_settings', 'data_shape_init').setValue(str(data.shape))
         self.settings.child('data_shape_settings', 'navigator_axes').setValue(
@@ -269,6 +269,8 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
         if self._data is None or self._data.dim != data.dim or self._data.nav_indexes != data.nav_indexes:
             force_update = True
+        if 'force_update' in kwargs:
+            force_update = kwargs['force_update']
 
         self.data_displayer.update_data(data, force_update=force_update)
         self._data = data
