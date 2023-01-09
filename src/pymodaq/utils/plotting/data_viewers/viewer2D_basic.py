@@ -81,15 +81,30 @@ class Viewer2DBasic(QObject):
 
 if __name__ == '__main__':  # pragma: no cover
     from pymodaq.utils.plotting.items.image import SpreadImageItem
+    from qtpy import QtSvg, QtGui
 
     app = QtWidgets.QApplication(sys.argv)
     form = QtWidgets.QWidget()
     prog = Viewer2DBasic(form)
     img = SpreadImageItem()
     prog.image_widget.plotItem.addItem(img)
+
+    svg_item = QtSvg.QGraphicsSvgItem()
+    svg_renderer = QtSvg.QSvgRenderer(
+        r'C:\Users\weber\Labo\Projet-Dossier candidature\Technical project\GDSII\wafer.svg')
+    svg_item.setSharedRenderer(svg_renderer)
+
     form.show()
 
-    data = np.load('triangulation_data.npy')
+    data = np.load('../../../resources/triangulation_data.npy')
     img.setImage(data)
 
+    prog.image_widget.plotitem.addItem(svg_item)
+    curr_size = svg_renderer.defaultSize()
+    real_size = svg_item.boundingRect()
+    # tr = QtGui.QTransform()
+    # tr.translate(rect.left(), rect.top())
+    # tr.scale(300/rect.width(), 300/rect.height())
+    # svg_item.setTransform(tr)
+    pass
     sys.exit(app.exec_())
