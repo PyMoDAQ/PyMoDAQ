@@ -5,7 +5,7 @@ import sys
 from pymodaq.daq_move.daq_move_gui import Ui_Form
 
 from pymodaq.daq_move.utility_classes import params as daq_move_params
-from pymodaq.daq_move.utility_classes import MoveCommand
+from pymodaq.daq_move.utility_classes import MoveCommand, DAQ_Move_base
 from pathlib import Path
 
 from pyqtgraph.parametertree import Parameter, ParameterTree
@@ -27,7 +27,6 @@ sys.path.append(local_path)
 logger = utils.set_logger(utils.get_module_name(__file__))
 
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
-
 
 
 class DAQ_Move(Ui_Form, QObject):
@@ -762,7 +761,7 @@ class DAQ_Move_stage(QObject):
         super().__init__()
         self.logger = utils.set_logger(f'{logger.name}.{title}.actuator')
         self.title = title
-        self.hardware = None
+        self.hardware: DAQ_Move_base = None
         self.stage_name = stage_name
         self.current_position = position
         self.target_position = 0
@@ -850,6 +849,7 @@ class DAQ_Move_stage(QObject):
         # see https://github.com/pythonnet/pythonnet/issues/1833
         self.target_position = position
         self.hardware.move_is_done = False
+        self.hardware.target_position = position
         self.hardware.ispolling = polling
         pos = self.hardware.move_abs(position)
         self.hardware.poll_moving()
@@ -872,6 +872,7 @@ class DAQ_Move_stage(QObject):
         # see https://github.com/pythonnet/pythonnet/issues/1833
         self.hardware.move_is_done = False
         self.target_position = self.current_position + rel_position
+        self.hardware.target_position = self.target_position
         self.hardware.ispolling = polling
         pos = self.hardware.move_rel(rel_position)
         self.hardware.poll_moving()
