@@ -18,6 +18,9 @@ def __getattr__(name):
           f'Your version ({get_version()}) of pymodaq is deprecated  compared to your\n'\
           f'plugins, please move to the latest version (v4.x.y and older) which is\n'\
           f'compatible with new and older plugins\n'\
+          f'The issue is related to the calling of *pymodaq.utils.xxxx* modules meant to ' \
+          f'be created into the v4+ version of pymodaq. If you want to make your plugins work with' \
+          f'both please use pymodaq.daq_utils.xxxx instead '\
           f'************************************************************************\n'\
           f'************************************************************************\n'
     app = QApplication(sys.argv)
