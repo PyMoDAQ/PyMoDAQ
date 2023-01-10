@@ -9,10 +9,12 @@ from qtpy import QtWidgets, QtCore
 import pymodaq.daq_utils.parameter.ioxml
 from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
-from pymodaq.daq_utils import h5modules as h5
+from pymodaq.daq_utils import h5modules
+from pymodaq.daq_utils import h5backend
+from pymodaq.daq_utils import h5node_exporters as h5export
 
 #Unused import only needed to update the registry
-from pymodaq.daq_utils.h5node_exporters import H5h5Exporter, H5txtExporter, H5asciiExporter
+from pymodaq.daq_utils.h5node_exporters import H5h5Exporter, H5txtExporter, H5asciiExporter, H5npyExporter
 
 import csv
 
@@ -30,26 +32,26 @@ def generate_random_data(shape, dtype=float):
 
 @pytest.fixture(params=tested_backend)
 def get_backend(request, tmp_path):
-    bck = h5.H5Backend(request.param)
+    bck = h5backend.H5Backend(request.param)
     title = 'this is a test file'
     start_path = get_temp_path(tmp_path, request.param)
     bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
     return bck
 
 
-@pytest.fixture(params=h5.save_types)
+@pytest.fixture(params=h5modules.save_types)
 def get_save_type(request):
     return request.param
 
 
 @pytest.fixture(params=tested_backend)
 def get_h5saver(get_save_type, request, qtbot):
-    return h5.H5Saver(save_type=get_save_type, backend=request.param)
+    return h5modules.H5Saver(save_type=get_save_type, backend=request.param)
 
 
 @pytest.fixture(params=tested_backend)
 def get_h5saver_scan(request, qtbot):
-    return h5.H5Saver(save_type='scan', backend=request.param)
+    return h5modules.H5Saver(save_type='scan', backend=request.param)
 
 
 def get_temp_path(tmp_path, backend='h5pyd'):
@@ -62,32 +64,32 @@ def get_temp_path(tmp_path, backend='h5pyd'):
 def test_check_mandatory_attrs():
     attr_name = 'TITLE'
     attr = b'test'
-    result = h5.check_mandatory_attrs(attr_name, attr)
+    result = h5backend.check_mandatory_attrs(attr_name, attr)
     assert result == 'test'
     attr = f'test'
-    result = h5.check_mandatory_attrs(attr_name, attr)
+    result = h5backend.check_mandatory_attrs(attr_name, attr)
     assert result == f'test'
     attr_name = 'TEST'
-    result = h5.check_mandatory_attrs(attr_name, attr)
+    result = h5backend.check_mandatory_attrs(attr_name, attr)
     assert result == f'test'
 
 
 class TestNode:
     def test_init(self):
         node_dict = {'NAME': 'Node', 'TITLE': 'test'}
-        node_obj = h5.Node(node_dict, tested_backend)
-        assert isinstance(node_obj, h5.Node)
+        node_obj = h5modules.Node(node_dict, tested_backend)
+        assert isinstance(node_obj, h5modules.Node)
         assert node_obj.node == node_dict
         assert node_obj.backend == tested_backend
 
-        node_obj_2 = h5.Node(node_obj, tested_backend)
+        node_obj_2 = h5modules.Node(node_obj, tested_backend)
         assert node_obj_2.node == node_dict
 
 
 class TestH5Backend:
     @pytest.mark.parametrize('backend', tested_backend)
     def test_file_open_close(self, tmp_path, backend):
-        bck = h5.H5Backend(backend)
+        bck = h5modules.H5Backend(backend)
         title = 'this is a test file'
         start_path = get_temp_path(tmp_path, backend)
         h5_file = bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
@@ -101,7 +103,7 @@ class TestH5Backend:
         bck.close_file()
         assert bck.isopen() is False
 
-        bck = h5.H5Backend(backend)
+        bck = h5modules.H5Backend(backend)
         assert bck.isopen() is False
 
     def test_attrs(self, get_backend):
@@ -126,7 +128,7 @@ class TestH5Backend:
 
         bck.close_file()
 
-    @pytest.mark.parametrize('group_type', h5.group_types)
+    @pytest.mark.parametrize('group_type', h5modules.group_types)
     def test_add_group(self, get_backend, group_type):
         bck = get_backend
         title = 'this is a group'
@@ -137,7 +139,7 @@ class TestH5Backend:
         assert g3.attrs['attr1'] == 'attr1'
         assert g3.attrs['attr2'] == 21.4
         gtype = 'this is not a valid group type'
-        with pytest.raises(h5.InvalidGroupType):
+        with pytest.raises(h5modules.InvalidGroupType):
             g4 = bck.add_group('g4', gtype, bck.root())
         bck.close_file()
 
@@ -168,8 +170,8 @@ class TestH5Backend:
         assert g22.parent_node == g2
         assert g2.parent_node.parent_node is None
 
-        assert isinstance(g2, h5.Node)
-        assert isinstance(g22, h5.Node)
+        assert isinstance(g2, h5modules.Node)
+        assert isinstance(g22, h5modules.Node)
 
         # test node methods
         assert g2 != g1
@@ -184,7 +186,7 @@ class TestH5Backend:
         assert g22.attrs['test'] == 12.5
         g22.attrs['test1'] = 'attr'
         assert g22.attrs['test1'] == 'attr'
-        assert isinstance(g22.attrs, h5.Attributes)
+        assert isinstance(g22.attrs, h5backend.Attributes)
         assert g21.name == 'g21'
         assert bck.root().name == '/'
         assert g22.path == '/g2/g22'
@@ -231,7 +233,7 @@ class TestH5Backend:
         with pytest.raises(ValueError):
             bck.create_carray(g1, 'carray0', title='')
         carray1 = bck.create_carray(g1, 'carray1', obj=carray1_data, title=title)
-        assert isinstance(carray1, h5.CARRAY)
+        assert isinstance(carray1, h5backend.CARRAY)
         assert carray1.attrs['dtype'] == carray1_data.dtype.name
         assert carray1.attrs['TITLE'] == title
         assert carray1.attrs['CLASS'] == 'CARRAY'
@@ -267,7 +269,7 @@ class TestH5Backend:
         utils.check_vals_in_iterable(array.attrs['shape'], [0])
         array.append(np.array([10]))
         assert g1.children()['array'] == array
-        assert isinstance(g1.children()['array'], h5.EARRAY)
+        assert isinstance(g1.children()['array'], h5backend.EARRAY)
         utils.check_vals_in_iterable(array.attrs['shape'], [1])
 
         array_shape = (10, 3)
@@ -336,7 +338,7 @@ class TestH5Backend:
 
 @pytest.fixture(params=tested_backend)
 def create_test_file(request, qtbot):
-    bck = h5.H5Saver(backend=request.param)
+    bck = h5modules.H5Saver(backend=request.param)
     basepath = Path(__file__).parent
     filepath = basepath.joinpath(f'data/data_test_{request.param}.h5')
     bck.init_file(update_h5=True, addhoc_file_path=filepath)
@@ -406,7 +408,7 @@ def get_file(request):
 
 @pytest.fixture(params=tested_backend)
 def load_test_file(request, get_file):
-    bck = h5.H5BrowserUtil(backend=request.param)
+    bck = h5modules.H5BrowserUtil(backend=request.param)
     bck.open_file(get_file, 'r')
     return bck
 
@@ -463,7 +465,7 @@ class TestH5BrowserUtil:
         h5utils = load_test_file
         node_path = '/Raw_datas/Logger'
         node = h5utils.get_node(node_path)
-        assert isinstance(node, h5.StringARRAY)
+        assert isinstance(node, h5backend.StringARRAY)
         data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
         assert isinstance(data, list)
         assert len(data) == 2
@@ -557,16 +559,24 @@ class TestH5BrowserUtil:
         h5utils.close_file()
 
     def test_exporters_registry(self):
-        utilobject = h5.H5BrowserUtil()
+        factory = h5export.ExporterFactory()
 
-        assert tuple(utilobject.exporters_registry.keys()) == ('h5','txt', 'ascii')
+        assert tuple(factory.exporters_registry.keys()) == ('h5', 'txt', 'ascii', 'npy')
 
-        assert utilobject.get_file_filters() == "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
+        assert factory.get_file_filters() == \
+               "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii);;Binary NumPy format (*.npy)"
+
+    def test_exporter_creation(self):
+
+        assert isinstance(h5export.ExporterFactory.create_exporter('txt'), H5txtExporter)
+        assert isinstance(h5export.ExporterFactory.create_exporter('ascii'), H5asciiExporter)
+        assert isinstance(h5export.ExporterFactory.create_exporter('h5'), H5h5Exporter)
+        assert isinstance(h5export.ExporterFactory.create_exporter('npy'), H5npyExporter)
 
 @pytest.fixture(params=tested_backend)
 def load_test_file_h5browser(request, get_file, qtbot):
     win = QtWidgets.QMainWindow()
-    h5browser = h5.H5Browser(win, h5file_path=get_file, backend=request.param)
+    h5browser = h5modules.H5Browser(win, h5file_path=get_file, backend=request.param)
     win.show()
     qtbot.addWidget(win)
     return h5browser
