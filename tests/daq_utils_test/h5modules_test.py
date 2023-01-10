@@ -11,6 +11,9 @@ from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils import h5modules as h5
 
+#Unused import only needed to update the registry
+from pymodaq.daq_utils.h5node_exporters import H5h5Exporter, H5txtExporter, H5asciiExporter
+
 import csv
 
 tested_backend = ['tables', 'h5py']  # , 'h5pyd']
@@ -553,6 +556,12 @@ class TestH5BrowserUtil:
 
         h5utils.close_file()
 
+    def test_exporters_registry(self):
+        utilobject = h5.H5BrowserUtil()
+
+        assert tuple(utilobject.exporters_registry.keys()) == ('h5','txt', 'ascii')
+
+        assert utilobject.get_file_filters() == "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
 
 @pytest.fixture(params=tested_backend)
 def load_test_file_h5browser(request, get_file, qtbot):
