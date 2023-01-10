@@ -2027,63 +2027,12 @@ class H5BrowserUtil(H5Backend):
         #Format the node and file type
         filepath = Path(filesavename)
         node = self.get_node(node_path)
-
+        #Separate dot from extension
         extension = filepath.suffix[1:]
-
+        #Obtain the suitable exporter object
         exporter = H5BrowserUtil.create_exporter(extension)
-
+        #Export the data
         exporter._export_data(node, filepath)
-
-        # if filesavename != '':
-        #     file = Path(filesavename)
-        #     node = self.get_node(node_path)
-        #     if file.suffix == '.txt' or file.suffix == '.ascii':
-        #         if 'ARRAY' in node.attrs['CLASS']:
-        #             data = node.read()
-        #             if not isinstance(data, np.ndarray):
-        #                 # in case one has a list of same objects (array of strings for instance, logger or other)
-        #                 data = np.array(data)
-        #                 np.savetxt(filesavename,
-        #                            data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
-        #                            '%s', '\t')
-        #             else:
-        #                 np.savetxt(filesavename,
-        #                            data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
-        #                            '%.6e', '\t')
-        #
-        #         elif 'GROUP' in node.attrs['CLASS']:
-        #             data_tot = []
-        #             header = []
-        #             dtypes = []
-        #             fmts = []
-        #             for subnode_name, subnode in node.children().items():
-        #                 if 'ARRAY' in subnode.attrs['CLASS']:
-        #                     if len(subnode.attrs['shape']) == 1:
-        #                         data = subnode.read()
-        #                         if not isinstance(data, np.ndarray):
-        #                             # in case one has a list of same objects (array of strings for instance, logger or other)
-        #                             data = np.array(data)
-        #                         data_tot.append(data)
-        #                         dtypes.append((subnode_name, data.dtype))
-        #                         header.append(subnode_name)
-        #                         if data.dtype.char == 'U':
-        #                             fmt = '%s'  # for strings
-        #                         elif data.dtype.char == 'l':
-        #                             fmt = '%d'  # for integers
-        #                         else:
-        #                             fmt = '%.6f'  # for decimal numbers
-        #                         fmts.append(fmt)
-        #
-        #             data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
-        #             np.savetxt(filesavename, data_trans, fmts, '\t', header='#' + '\t'.join(header))
-        #     elif file.suffix == '.h5':
-        #         self.save_file_as(str(file))
-        #         copied_file = H5Backend()
-        #         copied_file.open_file(str(file), 'a')
-        #
-        #         copied_file.h5file.move_node(self.get_node_path(node), newparent=copied_file.h5file.get_node('/'))
-        #         copied_file.h5file.remove_node('/Raw_datas', recursive=True)
-        #         copied_file.close_file()
 
 
     def get_h5file_scans(self, where='/'):
@@ -2353,7 +2302,6 @@ class H5Browser(QObject):
 
     def export_data(self):
         try:
-            # file_filter = "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
             #get file filters automatically
             file_filter = self.h5utils.get_file_filters()
             file = select_file(save=True, filter=file_filter)
