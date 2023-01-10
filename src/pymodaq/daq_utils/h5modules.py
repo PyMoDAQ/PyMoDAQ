@@ -27,7 +27,7 @@ from pymodaq.daq_utils.gui_utils.utils import dashboard_submodules_params
 from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 from pymodaq.daq_utils.h5backend import H5Backend, backends_available, Node
-from pymodaq.daq_utils.h5node_exporters import ExporterFactory
+from pymodaq.daq_utils.h5exporters import ExporterFactory
 from pymodaq.daq_utils.exceptions import InvalidSave, InvalidGroupDataType, InvalidDataDimension, \
     InvalidDataType, InvalidScanType, InvalidGroupType
 

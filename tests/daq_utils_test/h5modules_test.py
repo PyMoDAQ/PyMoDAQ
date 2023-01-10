@@ -11,10 +11,10 @@ from pymodaq.daq_utils import daq_utils as utils
 from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils import h5modules
 from pymodaq.daq_utils import h5backend
-from pymodaq.daq_utils import h5node_exporters as h5export
+from pymodaq.daq_utils import h5exporters as h5export
 
 #Unused import only needed to update the registry
-from pymodaq.daq_utils.h5node_exporters import H5h5Exporter, H5txtExporter, H5asciiExporter, H5npyExporter
+from pymodaq.daq_utils.h5exporters import H5h5Exporter, H5txtExporter, H5asciiExporter, H5npyExporter
 
 import csv
 
