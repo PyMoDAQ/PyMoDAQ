@@ -12,6 +12,7 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq.daq_utils import h5modules
 from pymodaq.daq_utils import h5backend
 from pymodaq.daq_utils import h5exporters as h5export
+from pymodaq.daq_utils.h5utils import get_h5_data_from_node
 
 #Unused import only needed to update the registry
 from pymodaq.daq_utils.h5exporters import H5h5Exporter, H5txtExporter, H5asciiExporter, H5npyExporter
@@ -466,12 +467,13 @@ class TestH5BrowserUtil:
         node_path = '/Raw_datas/Logger'
         node = h5utils.get_node(node_path)
         assert isinstance(node, h5backend.StringARRAY)
-        data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
-        assert isinstance(data, list)
+        data, axes, nav_axes, is_spread = get_h5_data_from_node(node)
+        assert isinstance(data, np.ndarray)
+        # assert isinstance(data, list)
         assert len(data) == 2
         assert data[0] == 'log1 to check'
         assert data[1] == 'log2 to check'
-        assert axes == []
+        assert axes == {}
         assert nav_axes == []
 
         Nx = 12
@@ -488,12 +490,15 @@ class TestH5BrowserUtil:
         assert len(node.children()) == 2
         assert node.children_name() == ['Data', 'X_axis']
         node_path = '/Agroup/Data'
-        data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
+        node = h5utils.get_node(node_path)
+        data, axes, nav_axes, is_spread = get_h5_data_from_node(node)
+        # data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
         assert np.all(data == pytest.approx(np.arange(Nx) * 1.0 + 7))
 
         node_path = '/Raw_datas/Scan000/Detector000/Data1D/Ch000/Data'
         node = h5utils.get_node(node_path)
-        data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
+        data, axes, nav_axes, is_spread = get_h5_data_from_node(node)
+        # data, axes, nav_axes, is_spread = h5utils.get_h5_data(node_path)
         assert isinstance(data, np.ndarray)
         assert data.shape == (5, 10, 12)
         assert node.attrs['shape'] == (5, 10, 12)
@@ -553,7 +558,7 @@ class TestH5BrowserUtil:
 
         data_back = np.loadtxt(savepath)
         assert np.all(xaxis == pytest.approx(data_back[:, 1]))
-        assert np.all(data == pytest.approx(data_back[:, 0]))
+        assert np.all(data  == pytest.approx(data_back[:, 0]))
         os.remove(savepath)
 
         h5utils.close_file()
@@ -561,10 +566,14 @@ class TestH5BrowserUtil:
     def test_exporters_registry(self):
         factory = h5export.ExporterFactory()
 
-        assert tuple(factory.exporters_registry.keys()) == ('h5', 'txt', 'ascii', 'npy')
+        assert tuple(factory.exporters_registry.keys()) == ('h5', 'txt', 'ascii', 'npy', 'hspy')
 
         assert factory.get_file_filters() == \
-               "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii);;Binary NumPy format (*.npy)"
+               "Single node h5 file (*.h5);;" \
+               "Text files (*.txt);;" \
+               "Ascii file (*.ascii);;" \
+               "Binary NumPy format (*.npy);;" \
+               "Hyperspy file format (*.hspy)"
 
     def test_exporter_creation(self):
 

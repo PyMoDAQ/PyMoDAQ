@@ -45,7 +45,7 @@ except Exception as e:                              # pragma: no cover
 if not (is_tables or is_h5py or is_h5pyd):
     logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')
 
-
+#As I understand, the Node object should never be instanciated
 class Node(object):
     def __init__(self, node, backend):
         if isinstance(node, Node):  # to ovoid recursion if one call Node(Node()) or even more
@@ -74,7 +74,6 @@ class Node(object):
     def parent_node(self):
         if self.path == '/':
             return None
-        # mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
         mod = importlib.import_module('.h5backend', 'pymodaq.daq_utils')
 
         if self.backend == 'tables':
@@ -123,6 +122,78 @@ class Node(object):
             return self._node._v_pathname
         else:
             return self._node.name
+
+
+class GROUP(Node):
+    def __init__(self, node, backend):
+        super().__init__(node, backend)
+
+    def __str__(self):
+        """Return a short string representation of the group.
+        """
+
+        pathname = self.path
+        classname = self.__class__.__name__
+        title = self.attrs['TITLE']
+        return "%s (%s) %r" % (pathname, classname, title)
+
+    def __repr__(self):
+        """Return a detailed string representation of the group.
+        """
+
+        rep = [
+            '%r (%s)' % (childname, child.__class__.__name__)
+            for (childname, child) in self.children().items()
+        ]
+        childlist = '[%s]' % (', '.join(rep))
+
+        return "%s\n  children := %s" % (str(self), childlist)
+
+    def children(self):
+        """Get a dict containing all children node hanging from self with their name as keys
+
+        Returns
+        -------
+        dict: keys are children node names, values are the children nodes
+
+        See Also
+        --------
+        children_name
+        """
+        # mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
+        mod = importlib.import_module('.h5backend', 'pymodaq.daq_utils')
+        children = dict([])
+        if self.backend == 'tables':
+            for child_name, child in self.node._v_children.items():
+                klass = get_attr(child, 'CLASS', self.backend)
+                if 'ARRAY' in klass:
+                    _cls = getattr(mod, klass)
+                else:
+                    _cls = GROUP
+                children[child_name] = _cls(child, self.backend)
+        else:
+            for child_name, child in self.node.items():
+
+                klass = get_attr(child, 'CLASS', self.backend)
+                if 'ARRAY' in klass:
+                    _cls = getattr(mod, klass)
+                else:
+                    _cls = GROUP
+                children[child_name] = _cls(child, self.backend)
+        return children
+
+    def children_name(self):
+        """Gets the list of children name hanging from self
+
+        Returns
+        -------
+        list: list of name of the children
+        """
+        if self.backend == 'tables':
+            return list(self.node._v_children.keys())
+        else:
+            return list(self.node.keys())
+        pass
 
 
 class CARRAY(Node):
@@ -271,78 +342,6 @@ class Attributes(object):
             return str(self)
 
 
-class GROUP(Node):
-    def __init__(self, node, backend):
-        super().__init__(node, backend)
-
-    def __str__(self):
-        """Return a short string representation of the group.
-        """
-
-        pathname = self.path
-        classname = self.__class__.__name__
-        title = self.attrs['TITLE']
-        return "%s (%s) %r" % (pathname, classname, title)
-
-    def __repr__(self):
-        """Return a detailed string representation of the group.
-        """
-
-        rep = [
-            '%r (%s)' % (childname, child.__class__.__name__)
-            for (childname, child) in self.children().items()
-        ]
-        childlist = '[%s]' % (', '.join(rep))
-
-        return "%s\n  children := %s" % (str(self), childlist)
-
-    def children(self):
-        """Get a dict containing all children node hanging from self with their name as keys
-
-        Returns
-        -------
-        dict: keys are children node names, values are the children nodes
-
-        See Also
-        --------
-        children_name
-        """
-        # mod = importlib.import_module('.h5modules', 'pymodaq.daq_utils')
-        mod = importlib.import_module('.h5backend', 'pymodaq.daq_utils')
-        children = dict([])
-        if self.backend == 'tables':
-            for child_name, child in self.node._v_children.items():
-                klass = get_attr(child, 'CLASS', self.backend)
-                if 'ARRAY' in klass:
-                    _cls = getattr(mod, klass)
-                else:
-                    _cls = GROUP
-                children[child_name] = _cls(child, self.backend)
-        else:
-            for child_name, child in self.node.items():
-
-                klass = get_attr(child, 'CLASS', self.backend)
-                if 'ARRAY' in klass:
-                    _cls = getattr(mod, klass)
-                else:
-                    _cls = GROUP
-                children[child_name] = _cls(child, self.backend)
-        return children
-
-    def children_name(self):
-        """Gets the list of children name hanging from self
-
-        Returns
-        -------
-        list: list of name of the children
-        """
-        if self.backend == 'tables':
-            return list(self.node._v_children.keys())
-        else:
-            return list(self.node.keys())
-        pass
-
-
 def get_attr(node, attr_name, backend='tables'):
     if backend == 'tables':
         if attr_name is not None:
@@ -397,11 +396,10 @@ def check_mandatory_attrs(attr_name, attr):
 
 group_types = ['raw_datas', 'scan', 'detector', 'move', 'data', 'ch', '', 'external_h5']
 
-
 class H5Backend:
     def __init__(self, backend='tables'):
 
-        self._h5file = None
+        self._h5file = None # _h5file is the object created by one of the backends. Typically a  tables.File
         self.backend = backend
         self.file_path = None
         self.compression = None
@@ -574,10 +572,13 @@ class H5Backend:
 
         return name.lower() in [name.lower() for name in self.get_children(where)]
 
-    def get_node(self, where, name=None):
+    def get_node(self, where, name=None) -> Node:
+        """This method returns a node object (for sure?) that"""
+        #This casts where into a string object for the pytables backend but otherwise not.
         if isinstance(where, Node):
             where = where.node
 
+        #Then we get back to a node object but backend-dependent
         if self.backend == 'tables':
             node = self._h5file.get_node(where, name)
         else:

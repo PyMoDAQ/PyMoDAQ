@@ -28,6 +28,7 @@ from pymodaq.daq_utils.plotting.data_viewers.viewerND import ViewerND
 from pymodaq.daq_utils.abstract.logger import AbstractLogger
 from pymodaq.daq_utils.h5backend import H5Backend, backends_available, Node
 from pymodaq.daq_utils.h5exporters import ExporterFactory
+from pymodaq.daq_utils.h5utils import get_h5_data_from_node
 from pymodaq.daq_utils.exceptions import InvalidSave, InvalidGroupDataType, InvalidDataDimension, \
     InvalidDataType, InvalidScanType, InvalidGroupType
 
@@ -1122,131 +1123,131 @@ class H5BrowserUtil(H5Backend):
 
         return attr_dict, settings, scan_settings, pixmaps
 
-    def get_h5_data(self, node_path):
-        """
-        """
-        node = self.get_node(node_path)
-        is_spread = False
-        if 'ARRAY' in node.attrs['CLASS']:
-            data = node.read()
-            nav_axes = []
-            axes = dict([])
-            if isinstance(data, np.ndarray):
-                data = np.squeeze(data)
-                if 'Bkg' in node.parent_node.children_name() and node.name != 'Bkg':
-                    bkg = np.squeeze(self.get_node(node.parent_node.path, 'Bkg').read())
-                    try:
-                        data = data - bkg
-                    except:
-                        logger.warning(f'Could not substract bkg from data node {node_path} as their shape are '
-                                       f'incoherent {bkg.shape} and {data.shape}')
-                if 'type' in node.attrs.attrs_name:
-                    if 'data' in node.attrs['type'] or 'channel' in node.attrs['type'].lower():
-                        parent_path = node.parent_node.path
-                        children = node.parent_node.children_name()
-
-                        if 'data_dimension' not in node.attrs.attrs_name:  # for backcompatibility
-                            data_dim = node.attrs['data_type']
-                        else:
-                            data_dim = node.attrs['data_dimension']
-                        if 'scan_subtype' in node.attrs.attrs_name:
-                            if node.attrs['scan_subtype'].lower() == 'adaptive':
-                                is_spread = True
-                        tmp_axes = ['x_axis', 'y_axis']
-                        for ax in tmp_axes:
-                            if capitalize(ax) in children:
-                                axis_node = self.get_node(parent_path + '/{:s}'.format(capitalize(ax)))
-                                axes[ax] = Axis(data=axis_node.read())
-                                if 'units' in axis_node.attrs.attrs_name:
-                                    axes[ax]['units'] = axis_node.attrs['units']
-                                if 'label' in axis_node.attrs.attrs_name:
-                                    axes[ax]['label'] = axis_node.attrs['label']
-                            else:
-                                axes[ax] = Axis()
-
-                        if data_dim == 'ND':  # check for navigation axis
-                            tmp_nav_axes = ['y_axis', 'x_axis', ]
-                            nav_axes = []
-                            for ind_ax, ax in enumerate(tmp_nav_axes):
-                                if 'Nav_{:s}'.format(ax) in children:
-                                    nav_axes.append(ind_ax)
-                                    axis_node = self.get_node(parent_path + '/Nav_{:s}'.format(ax))
-                                    if is_spread:
-                                        axes['nav_{:s}'.format(ax)] = Axis(data=axis_node.read())
-                                    else:
-                                        axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
-                                        if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:
-                                            # could happen in case of linear back to start type of scan
-                                            tmp_ax = []
-                                            for ix in axes['nav_{:s}'.format(ax)]['data']:
-                                                tmp_ax.extend([ix, ix])
-                                                axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
-
-                                    if 'units' in axis_node.attrs.attrs_name:
-                                        axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs['units']
-                                    if 'label' in axis_node.attrs.attrs_name:
-                                        axes['nav_{:s}'.format(ax)]['label'] = axis_node.attrs['label']
-
-                        if 'scan_type' in node.attrs.attrs_name:
-                            scan_type = node.attrs['scan_type'].lower()
-                            # if scan_type == 'scan1d' or scan_type == 'scan2d':
-                            scan_node, nav_children = find_scan_node(node)
-                            nav_axes = []
-                            if scan_type == 'tabular' or is_spread:
-                                datas = []
-                                labels = []
-                                all_units = []
-                                for axis_node in nav_children:
-                                    npts = axis_node.attrs['shape'][0]
-                                    datas.append(axis_node.read())
-                                    labels.append(axis_node.attrs['label'])
-                                    all_units.append(axis_node.attrs['units'])
-
-                                nav_axes.append(0)
-                                axes['nav_x_axis'] = NavAxis(
-                                    data=np.linspace(0, npts - 1, npts),
-                                    nav_index=nav_axes[-1], units='', label='Scan index', labels=labels,
-                                    datas=datas, all_units=all_units)
-                            else:
-                                for axis_node in nav_children:
-                                    nav_axes.append(axis_node.attrs['nav_index'])
-                                    if is_spread:
-                                        axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=axis_node.read(),
-                                                                                  nav_index=nav_axes[-1])
-                                    else:
-                                        axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=np.unique(axis_node.read()),
-                                                                                  nav_index=nav_axes[-1])
-                                        if nav_axes[-1] < len(data.shape):
-                                            if axes[f'nav_{nav_axes[-1]:02d}'][
-                                                    'data'].shape[0] != data.shape[nav_axes[-1]]:
-                                                # could happen in case of linear back to start type of scan
-                                                tmp_ax = []
-                                                for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
-                                                    tmp_ax.extend([ix, ix])
-                                                    axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=np.array(tmp_ax),
-                                                                                              nav_index=nav_axes[-1])
-
-                                    if 'units' in axis_node.attrs.attrs_name:
-                                        axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
-                                            'units']
-                                    if 'label' in axis_node.attrs.attrs_name:
-                                        axes[f'nav_{nav_axes[-1]:02d}']['label'] = axis_node.attrs[
-                                            'label']
-                    elif 'axis' in node.attrs['type']:
-                        axis_node = node
-                        axes['y_axis'] = Axis(data=axis_node.read())
-                        if 'units' in axis_node.attrs.attrs_name:
-                            axes['y_axis']['units'] = axis_node.attrs['units']
-                        if 'label' in axis_node.attrs.attrs_name:
-                            axes['y_axis']['label'] = axis_node.attrs['label']
-                        axes['x_axis'] = Axis(
-                            data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
-                            units='pxls',
-                            label='')
-                return data, axes, nav_axes, is_spread
-
-            elif isinstance(data, list):
-                return data, [], [], is_spread
+    # def get_h5_data(self, node_path):
+    #     """
+    #     """
+    #     node = self.get_node(node_path)
+    #     is_spread = False
+    #     if 'ARRAY' in node.attrs['CLASS']:
+    #         data = node.read()
+    #         nav_axes = []
+    #         axes = dict([])
+    #         if isinstance(data, np.ndarray):
+    #             data = np.squeeze(data)
+    #             if 'Bkg' in node.parent_node.children_name() and node.name != 'Bkg':
+    #                 bkg = np.squeeze(self.get_node(node.parent_node.path, 'Bkg').read())
+    #                 try:
+    #                     data = data - bkg
+    #                 except:
+    #                     logger.warning(f'Could not substract bkg from data node {node_path} as their shape are '
+    #                                    f'incoherent {bkg.shape} and {data.shape}')
+    #             if 'type' in node.attrs.attrs_name:
+    #                 if 'data' in node.attrs['type'] or 'channel' in node.attrs['type'].lower():
+    #                     parent_path = node.parent_node.path
+    #                     children = node.parent_node.children_name()
+    #
+    #                     if 'data_dimension' not in node.attrs.attrs_name:  # for backcompatibility
+    #                         data_dim = node.attrs['data_type']
+    #                     else:
+    #                         data_dim = node.attrs['data_dimension']
+    #                     if 'scan_subtype' in node.attrs.attrs_name:
+    #                         if node.attrs['scan_subtype'].lower() == 'adaptive':
+    #                             is_spread = True
+    #                     tmp_axes = ['x_axis', 'y_axis']
+    #                     for ax in tmp_axes:
+    #                         if capitalize(ax) in children:
+    #                             axis_node = self.get_node(parent_path + '/{:s}'.format(capitalize(ax)))
+    #                             axes[ax] = Axis(data=axis_node.read())
+    #                             if 'units' in axis_node.attrs.attrs_name:
+    #                                 axes[ax]['units'] = axis_node.attrs['units']
+    #                             if 'label' in axis_node.attrs.attrs_name:
+    #                                 axes[ax]['label'] = axis_node.attrs['label']
+    #                         else:
+    #                             axes[ax] = Axis()
+    #
+    #                     if data_dim == 'ND':  # check for navigation axis
+    #                         tmp_nav_axes = ['y_axis', 'x_axis', ]
+    #                         nav_axes = []
+    #                         for ind_ax, ax in enumerate(tmp_nav_axes):
+    #                             if 'Nav_{:s}'.format(ax) in children:
+    #                                 nav_axes.append(ind_ax)
+    #                                 axis_node = self.get_node(parent_path + '/Nav_{:s}'.format(ax))
+    #                                 if is_spread:
+    #                                     axes['nav_{:s}'.format(ax)] = Axis(data=axis_node.read())
+    #                                 else:
+    #                                     axes['nav_{:s}'.format(ax)] = Axis(data=np.unique(axis_node.read()))
+    #                                     if axes['nav_{:s}'.format(ax)]['data'].shape[0] != data.shape[ind_ax]:
+    #                                         # could happen in case of linear back to start type of scan
+    #                                         tmp_ax = []
+    #                                         for ix in axes['nav_{:s}'.format(ax)]['data']:
+    #                                             tmp_ax.extend([ix, ix])
+    #                                             axes['nav_{:s}'.format(ax)] = Axis(data=np.array(tmp_ax))
+    #
+    #                                 if 'units' in axis_node.attrs.attrs_name:
+    #                                     axes['nav_{:s}'.format(ax)]['units'] = axis_node.attrs['units']
+    #                                 if 'label' in axis_node.attrs.attrs_name:
+    #                                     axes['nav_{:s}'.format(ax)]['label'] = axis_node.attrs['label']
+    #
+    #                     if 'scan_type' in node.attrs.attrs_name:
+    #                         scan_type = node.attrs['scan_type'].lower()
+    #                         # if scan_type == 'scan1d' or scan_type == 'scan2d':
+    #                         scan_node, nav_children = find_scan_node(node)
+    #                         nav_axes = []
+    #                         if scan_type == 'tabular' or is_spread:
+    #                             datas = []
+    #                             labels = []
+    #                             all_units = []
+    #                             for axis_node in nav_children:
+    #                                 npts = axis_node.attrs['shape'][0]
+    #                                 datas.append(axis_node.read())
+    #                                 labels.append(axis_node.attrs['label'])
+    #                                 all_units.append(axis_node.attrs['units'])
+    #
+    #                             nav_axes.append(0)
+    #                             axes['nav_x_axis'] = NavAxis(
+    #                                 data=np.linspace(0, npts - 1, npts),
+    #                                 nav_index=nav_axes[-1], units='', label='Scan index', labels=labels,
+    #                                 datas=datas, all_units=all_units)
+    #                         else:
+    #                             for axis_node in nav_children:
+    #                                 nav_axes.append(axis_node.attrs['nav_index'])
+    #                                 if is_spread:
+    #                                     axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=axis_node.read(),
+    #                                                                               nav_index=nav_axes[-1])
+    #                                 else:
+    #                                     axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=np.unique(axis_node.read()),
+    #                                                                               nav_index=nav_axes[-1])
+    #                                     if nav_axes[-1] < len(data.shape):
+    #                                         if axes[f'nav_{nav_axes[-1]:02d}'][
+    #                                                 'data'].shape[0] != data.shape[nav_axes[-1]]:
+    #                                             # could happen in case of linear back to start type of scan
+    #                                             tmp_ax = []
+    #                                             for ix in axes[f'nav_{nav_axes[-1]:02d}']['data']:
+    #                                                 tmp_ax.extend([ix, ix])
+    #                                                 axes[f'nav_{nav_axes[-1]:02d}'] = NavAxis(data=np.array(tmp_ax),
+    #                                                                                           nav_index=nav_axes[-1])
+    #
+    #                                 if 'units' in axis_node.attrs.attrs_name:
+    #                                     axes[f'nav_{nav_axes[-1]:02d}']['units'] = axis_node.attrs[
+    #                                         'units']
+    #                                 if 'label' in axis_node.attrs.attrs_name:
+    #                                     axes[f'nav_{nav_axes[-1]:02d}']['label'] = axis_node.attrs[
+    #                                         'label']
+    #                 elif 'axis' in node.attrs['type']:
+    #                     axis_node = node
+    #                     axes['y_axis'] = Axis(data=axis_node.read())
+    #                     if 'units' in axis_node.attrs.attrs_name:
+    #                         axes['y_axis']['units'] = axis_node.attrs['units']
+    #                     if 'label' in axis_node.attrs.attrs_name:
+    #                         axes['y_axis']['label'] = axis_node.attrs['label']
+    #                     axes['x_axis'] = Axis(
+    #                         data=np.linspace(0, axis_node.attrs['shape'][0] - 1, axis_node.attrs['shape'][0]),
+    #                         units='pxls',
+    #                         label='')
+    #             return data, axes, nav_axes, is_spread
+    #
+    #         elif isinstance(data, list):
+    #             return data, [], [], is_spread
 
 class H5Browser(QObject):
     """UI used to explore h5 files, plot and export subdatas"""
@@ -1542,7 +1543,8 @@ class H5Browser(QObject):
             node = self.h5utils.get_node(self.current_node_path)
             self.data_node_signal.emit(self.current_node_path)
             if 'ARRAY' in node.attrs['CLASS']:
-                data, axes, nav_axes, is_spread = self.h5utils.get_h5_data(self.current_node_path)
+                data, axes, nav_axes, is_spread = get_h5_data_from_node(node)
+                # data, axes, nav_axes, is_spread = self.h5utils.get_h5_data(self.current_node_path)
                 if isinstance(data, np.ndarray):
                     if 'scan_type' in node.attrs.attrs_name:
                         scan_type = node.attrs['scan_type']
