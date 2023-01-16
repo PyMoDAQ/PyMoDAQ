@@ -178,6 +178,8 @@ class DAQ_Move_base(QObject):
 
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.controller_units = self._controller_units
+        self.controller = None
+
         self.settings.child('epsilon').setValue(self._epsilon)
 
 
