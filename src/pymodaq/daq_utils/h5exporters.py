@@ -114,8 +114,15 @@ class H5h5Exporter(H5Exporter):
     def _export_data(self, node: Node, filename: str) -> None:
         """Export an h5 node"""
         # This should allow to get the base file object
-        basefile = node._v_file
-        basefile.copy_file(dstfilename=str(filename), overwrite=False)
+        if node.backend == 'tables':
+            basefile = node.node._v_file
+            basefile.copy_file(dstfilename=str(filename), overwrite=False)
+        else:
+            with h5py.File(filename, 'w') as f_dest:
+                node.node.h5file.copy(self.h5file, f_dest)
+
+        # basefile = node.get_file()
+        # basefile.copy_file(dstfilename=str(filename), overwrite=False)
 
         new_file = H5Backend(backend="tables")
         new_file.open_file(str(filename), 'a')
@@ -315,7 +322,6 @@ else:
                 sig = hs.signals.BaseSignal(data=data, original_metadata={}, axes=ordered_axes)
 
             #Finally save
-            # sig.axes_manager.create_axes(hyperspy_axes)
             sig.save(filename)
 
 

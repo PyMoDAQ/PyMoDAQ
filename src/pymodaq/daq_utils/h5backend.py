@@ -123,6 +123,15 @@ class Node(object):
         else:
             return self._node.name
 
+    def get_file(self):
+        """ Return node file. If this is a
+
+        """
+        if self.backend == 'tables':
+            return self.node._v_file
+        else:
+            return self.node.file
+
 
 class GROUP(Node):
     def __init__(self, node, backend):
@@ -464,11 +473,14 @@ class H5Backend:
                 self.root().attrs['pymodaq_version'] = utils.get_version()
             return self._h5file
 
-    def save_file_as(self, filenamepath='h5copy.txt'):
+    def save_file_as(self, filenamepath='h5copy.h5'):
+        """"""
         if self.backend == 'tables':
             self.h5file.copy_file(str(filenamepath))
         else:
-            raise Warning(f'Not possible to copy the file with the "{self.backend}" backend')
+            with h5py.File(filenamepath, 'w') as f_dest:
+                self.h5file.copy(self.h5file, f_dest)
+            # raise Warning(f'Not possible to copy the file with the "{self.backend}" backend')
 
     def root(self):
         if self.backend == 'tables':
