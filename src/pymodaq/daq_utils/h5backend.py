@@ -124,7 +124,7 @@ class Node(object):
             return self._node.name
 
     def get_file(self):
-        """ Return node file. If this is a
+        """ Return node file. Depending on the backend, will return either a h5py or a pytables object.
 
         """
         if self.backend == 'tables':

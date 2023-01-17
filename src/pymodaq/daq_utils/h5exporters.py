@@ -118,6 +118,7 @@ class H5h5Exporter(H5Exporter):
             basefile = node.node._v_file
             basefile.copy_file(dstfilename=str(filename), overwrite=False)
         else:
+            import h5py
             with h5py.File(filename, 'w') as f_dest:
                 node.node.h5file.copy(self.h5file, f_dest)
 
@@ -244,7 +245,7 @@ class H5npyExporter(H5Exporter):
 
 
 # This Exporter depends on the availability of the hyperspy package.
-# In the future, adding a
+# In the future, adding an optional dependency
 found = importlib.util.find_spec("hyperspy")
 if not found:
     logger.warning('Hyperspy module not found. To save data in the .hspy format, install hyperspy 1.7 or more recent.')
@@ -362,11 +363,7 @@ else:
                              'size': len(ax_data),
                              'scale': scale,
                              'offset': offset}
-                # axis = UniformDataAxis(index_in_array=data_idx, name=label, units=unit, navigate=navigate,
-                #                        size=len(ax_data), scale=scale, offset=offset)
             else:
-                # axis = DataAxis(index_in_array=data_idx, name=label, units=unit, navigate=navigate,
-                #                 axis=ax_data)
                 axis_dict = {'_type': 'DataAxis',
                              'index_in_array': data_idx,
                              'name': label,

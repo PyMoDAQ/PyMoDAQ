@@ -51,9 +51,6 @@ data_dimensions = ['0D', '1D', '2D', 'ND']
 scan_types = ['']
 scan_types.extend(stypes)
 
-# A priori no use for this so better delete it
-# EXPORT_TYPES = ['ascii', 'single node', 'ascii line']
-
 class H5LogHandler(logging.StreamHandler):
     def __init__(self, h5saver):
         super().__init__()
