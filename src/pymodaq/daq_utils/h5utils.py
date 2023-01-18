@@ -216,3 +216,26 @@ def get_h5_data_from_node(node: Node) -> (np.ndarray, Dict[str, Axis], List[Axis
     elif isinstance(data, list):
         data = np.array(data)
         return data, dict([]), [], is_spread
+
+def extract_axis(ax: Axis) -> np.ndarray:
+    """Extract the unique values in a PyMoDAQ axis object in an order-preserving way"""
+    axis_data = ax.data
+    _, idx = np.unique(axis_data, return_index=True)
+
+    unique_ax = axis_data[np.sort(idx)]
+
+    return unique_ax
+
+def verify_axis_data_uniformity(axis_data: np.ndarray, tol: float = 1e-6) -> (float, float):
+    """Try fitting the axis data with an affine function. Return offset,slope if the
+     result is within tolerances, otherwise return None, None"""
+    slope = None
+    offset = None
+
+    index = np.arange(len(axis_data))
+    res, residuals, rank, singular_values, rcond = np.polyfit(x=index, y=axis_data, deg=1, full=True)  # noqa
+    if residuals[0] < tol:
+        slope = res[0]
+        offset = res[1]
+
+    return offset, slope
