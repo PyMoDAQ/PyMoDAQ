@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -129,8 +129,12 @@ class SequentialScanner(ScannerBase, ScanParameterManager):
             self.get_info_from_positions(np.array(all_positions))
 
     def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{self.__class__.__name__} axis {ind}', units='', data=self.axes_unique[ind], index=ind)
-                for ind in range(self.n_axes)]
+        return [Axis(label=f'{act.title}', units=act.units, data=self.axes_unique[ind], index=ind)
+                for ind, act in enumerate(self.actuators)]
+
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return tuple(self.axes_indexes[scan_index])
 
 
 @ScannerFactory.register('Tabular', 'Linear')
@@ -202,6 +206,9 @@ class TabularScanner(SequentialScanner):
             logger.exception(str(e))
 
     def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{self.__class__.__name__} axis {ind}', units='', data=self.positions[ind, :], index=ind)
-                for ind in range(self.n_axes)]
+        return [Axis(label=f'{act.title}', units=act.units, data=self.positions[ind, :], index=ind)
+                for ind, act in enumerate(self.actuators)]
 
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return self.ind_scan,
