@@ -11,7 +11,7 @@ import datetime
 import os
 from pathlib import Path
 import sys
-from typing import List
+from typing import List, Tuple
 import time
 
 from easydict import EasyDict as edict
@@ -554,21 +554,73 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.module_and_data_saver.h5saver = self._h5saver_continuous
             self.module_and_data_saver.get_set_node()
 
-            self.grab_done_signal.connect(self._append_data)
+            self.grab_done_signal.connect(self.append_data)
         else:
             self._do_continuous_save = False
             self._h5saver_continuous.settings.child('N_saved').hide()
-            self.grab_done_signal.disconnect(self._append_data)
+            self.grab_done_signal.disconnect(self.append_data)
 
             try:
                 self._h5saver_continuous.close()
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def _append_data(self, data: DataToExport):
+    def append_data(self):
+        """Appends DataToExport to a DetectorEnlargeableSaver
+
+        Parameters
+        ----------
+        data: DataToExport
+            The data to be added to an enlargeable h5 array
+
+        See Also
+        --------
+        DetectorEnlargeableSaver
+        """
+        self._add_data_to_saver(self._data_to_save_export, init_step=self._h5saver_continuous.settings['N_saved'] == 0)
+        self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
+
+    def insert_data(self, indexes: Tuple[int]):
+        """Insert DataToExport to a DetectorExtendedSaver at specified indexes
+
+        Parameters
+        ----------
+        indexes: tuple(int)
+            The indexes within the extended array where to place these data
+
+        See Also
+        --------
+        DAQ_Scan, DetectorExtendedSaver
+        """
+        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), indexes=indexes)
+
+    def _add_data_to_saver(self, data: DataToExport, init_step=False, **kwargs):
+        """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Parameters
+        ----------
+        data: DataToExport
+            The data to be saved
+        init_step: bool
+            If True, means this is the first step of saving (if multisaving), then save background if any and a png image
+        kwargs: dict
+            Other named parameters to be passed as is to the module_and_data_saver
+
+        See Also
+        --------
+        DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
+
+        """
         detector_node = self.module_and_data_saver.get_set_node()
-        self.module_and_data_saver.add_data(detector_node, data)
-        self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] +1)
+        self.module_and_data_saver.add_data(detector_node, data, **kwargs)
+
+        if init_step:
+            if self._do_bkg and self._bkg is not None:
+                self.module_and_data_saver.add_bkg(detector_node, self._bkg)
+
+            if self._external_h5_data is not None:
+                # todo test this functionnality
+                self.module_and_data_saver.add_external_h5(self._external_h5_data)
 
     def _save_data(self, path=None, data: DataToExport = None):
         """Private. Practical implementation to save data into a h5file altogether with metadata, axes, background...
@@ -589,24 +641,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
         self.module_and_data_saver = module_saving.DetectorSaver(self)
         self.module_and_data_saver.h5saver = h5saver
-        detector_node = self.module_and_data_saver.get_set_node()
-        self.module_and_data_saver.add_data(detector_node, data)
-        if self._do_bkg and self._bkg is not None:
-            self.module_and_data_saver.add_bkg(detector_node, self._bkg)
 
-        if self._external_h5_data is not None:
-            #todo test this functionnality
-            self.module_and_data_saver.add_external_h5(self._external_h5_data)
+        self._add_data_to_saver(data)
 
-        try:
-            if self.ui is not None:
-                (root, filename) = os.path.split(str(path))
-                filename, ext = os.path.splitext(filename)
-                image_path = os.path.join(root, filename + '.png')
-                self.dockarea.parent().grab().save(image_path)
-                detector_node.attrs['pixmap'] = widget_to_png_to_bytes(self.dockarea.parent())
-        except Exception as e:
-            self.logger.exception(str(e))
+        if self.ui is not None:
+            (root, filename) = os.path.split(str(path))
+            filename, ext = os.path.splitext(filename)
+            image_path = os.path.join(root, filename + '.png')
+            self.dockarea.parent().grab().save(image_path)
 
         h5saver.close_file()
         self.data_saved.emit()
@@ -654,6 +696,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             if self._received_data == len(self.viewers):
                 self._grab_done = True
                 self.grab_done_signal.emit(self._data_to_save_export)
+
+    @property
+    def current_data(self) -> DataToExport:
+        return self._data_to_save_export
 
     @Slot(list)
     def show_temp_data(self, data: List[DataFromPlugins]):
