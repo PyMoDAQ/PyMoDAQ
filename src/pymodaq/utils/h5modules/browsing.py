@@ -8,7 +8,6 @@ import os
 from collections import OrderedDict
 from typing import List
 import warnings
-from copy import deepcopy
 import logging
 import webbrowser
 import numpy as np
@@ -24,54 +23,21 @@ import pymodaq.utils.parameter.ioxml
 
 from pymodaq.utils.tree_layout.tree_layout_main import TreeLayout
 from pymodaq.utils.daq_utils import capitalize
-from pymodaq.utils.data import Axis, DataRaw
+from pymodaq.utils.data import Axis
 from pymodaq.utils.gui_utils.utils import h5tree_to_QTree, pngbinary2Qlabel
 from pymodaq.utils.gui_utils.file_io import select_file
 from pymodaq.utils.plotting.data_viewers.viewerND import ViewerND
 from qtpy import QtWidgets
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.managers.action_manager import ActionManager
-from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
+from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.messenger import messagebox
 from .backends import H5Backend
 from . import data_saving
+from .utils import find_scan_node
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
-
-
-def find_scan_node(scan_node):
-    """
-    utility function to find the parent node of "scan" type, meaning some of its children (DAQ_scan case)
-    or co-nodes (daq_logger case) are navigation axes
-    Parameters
-    ----------
-    scan_node: (pytables node)
-        data node from where this function look for its navigation axes if any
-    Returns
-    -------
-    node: the parent node of 'scan' type
-    list: the data nodes of type 'navigation_axis' corresponding to the initial data node
-
-
-    """
-    try:
-        while True:
-            if scan_node.attrs['type'] == 'scan':
-                break
-            else:
-                scan_node = scan_node.parent_node
-        children = list(scan_node.children().values())  # for data saved using daq_scan
-        children.extend([scan_node.parent_node.children()[child] for child in
-                         scan_node.parent_node.children_name()])  # for data saved using the daq_logger
-        nav_children = []
-        for child in children:
-            if 'type' in child.attrs.attrs_name:
-                if child.attrs['type'] == 'navigation_axis':
-                    nav_children.append(child)
-        return scan_node, nav_children
-    except Exception:
-        return None, []
 
 
 class H5BrowserUtil(H5Backend):
@@ -510,7 +476,7 @@ class H5Browser(QObject, ActionManager):
             if h5file_path is None:
                 h5file_path = select_file(save=False, ext=['h5', 'hdf5'])
             if h5file_path != '':
-                self.h5utils.open_file(h5file_path, 'r')
+                self.h5utils.open_file(h5file_path, 'r+')
             else:
                 return
         else:
