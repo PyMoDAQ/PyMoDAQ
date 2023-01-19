@@ -13,16 +13,11 @@ from pathlib import Path
 import os
 from typing import List
 
-import pymodaq.utils.gui_utils.dock
-import pymodaq.utils.gui_utils.file_io
-import pymodaq.utils.gui_utils.utils
-import pymodaq.utils.gui_utils.widgets.spinbox
-import pymodaq.utils.messenger
+
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config, get_set_preset_path
-from pymodaq.utils.managers.action_manager import QAction
-import pymodaq.utils.parameter.ioxml
+from pymodaq.utils.parameter import ioxml
 
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore, QtGui
@@ -30,12 +25,11 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 from pymodaq.utils import exceptions
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.plotting.navigator import Navigator
 from pymodaq.utils.scanner.scanner import Scanner, scanner_factory  #, adaptive, adaptive_losses
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pymodaq.utils.gui_utils.widgets import QLED
+
 from pymodaq.utils.messenger import messagebox
 from pymodaq.extensions.daq_scan_ui import DAQScanUI
 
@@ -43,7 +37,7 @@ from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils.gui_utils import CustomApp
+
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -220,7 +214,7 @@ class DAQScan(QObject, ParameterManager):
             # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
     def create_average_dock(self):
-        self.ui.average_dock = pymodaq.utils.gui_utils.dock.Dock("Averaging")
+        self.ui.average_dock = gutils.dock.Dock("Averaging")
         average_tab = QtWidgets.QTabWidget()
         average1D_widget = QtWidgets.QWidget()
         average2D_widget = QtWidgets.QWidget()
@@ -519,9 +513,9 @@ class DAQScan(QObject, ParameterManager):
                                                         scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
+                    string = gutils.utils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
                 else:
-                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
+                    string = gutils.utils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
                 live_group.attrs['pixmap1D'] = string
 
             elif self.scan_data_2D != []:  #if live data is saved as 1D not needed to save as 2D
@@ -583,9 +577,9 @@ class DAQScan(QObject, ParameterManager):
                                                     scan_subtype=self.scanner.scan_parameters.scan_subtype)
 
                 if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
+                    string = gutils.utils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
                 else:
-                    string = pymodaq.utils.gui_utils.utils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
+                    string = gutils.utils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
                 live_group.attrs['pixmap2D'] = string
 
             if self.navigator is not None:
@@ -597,7 +591,7 @@ class DAQScan(QObject, ParameterManager):
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings['base_path']):
             os.mkdir(self.h5saver.settings['base_path'])
-        filename = pymodaq.utils.gui_utils.file_io.select_file(self.h5saver.settings['base_path'], save=True, ext='h5')
+        filename = gutils.file_io.select_file(self.h5saver.settings['base_path'], save=True, ext='h5')
         self.h5saver.h5_file.copy_file(str(filename))
 
     def save_metadata(self, node, type_info='dataset_info'):
@@ -638,18 +632,18 @@ class DAQScan(QObject, ParameterManager):
         if type_info == 'dataset_info':
             # save contents of given parameter object into an xml string under the attribute settings
             settings_str = b'<All_settings title="All Settings" type="group">' + \
-                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(params) + \
-                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.settings)
-                           # pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
+                           ioxml.parameter_to_xml_string(params) + \
+                           ioxml.parameter_to_xml_string(self.settings)
+                           # ioxml.parameter_to_xml_string(
                            #     self.dashboard.preset_manager.preset_params) +\
             settings_str += b'</All_settings>'
             attr['settings'] = settings_str
 
         elif type_info == 'scan_info':
-            settings_all = [pymodaq.utils.parameter.ioxml.parameter_to_xml_string(params),
-                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.settings),
-                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.h5saver.settings),
-                           pymodaq.utils.parameter.ioxml.parameter_to_xml_string(self.scanner.settings)]
+            settings_all = [ioxml.parameter_to_xml_string(params),
+                           ioxml.parameter_to_xml_string(self.settings),
+                           ioxml.parameter_to_xml_string(self.h5saver.settings),
+                           ioxml.parameter_to_xml_string(self.scanner.settings)]
 
             settings_str = b'<All_settings title="All Settings" type="group">'
             for set in settings_all:
@@ -705,7 +699,8 @@ class DAQScan(QObject, ParameterManager):
     #  PROCESS MODIFICATIONS
 
     def update_actuators(self, actuators: List[str]):
-        self.scanner.actuators = actuators
+        self.scanner.actuators = self.modules_manager.actuators
+        # self.scanner.actuators = actuators
 
     def move_to_crosshair(self, posx=None, posy=None):
         """
@@ -1385,7 +1380,7 @@ class DAQScan(QObject, ParameterManager):
             #     move_group_name = 'Move{:03d}'.format(ind_move)
             #     if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), move_group_name):
             #         self.h5saver.add_move_group(self.h5saver.get_last_scan(), title='',
-            #                                     settings_as_xml=pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
+            #                                     settings_as_xml=ioxml.parameter_to_xml_string(
             #                                         self.modules_manager.actuators[ind_move].settings),
             #                                     metadata=dict(name=move_name))
 
@@ -1394,7 +1389,7 @@ class DAQScan(QObject, ParameterManager):
             # for ind_det, det_name in enumerate(detector_modules_names):
             #     det_group_name = 'Detector{:03d}'.format(ind_det)
             #     if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), det_group_name):
-            #         settings_str = pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
+            #         settings_str = ioxml.parameter_to_xml_string(
             #             self.modules_manager.detectors[ind_det].settings)
             #         try:
             #             if 'Data0D' not in [viewer.viewer_type for viewer in
@@ -1405,7 +1400,7 @@ class DAQScan(QObject, ParameterManager):
             #                     if hasattr(viewer, 'roi_manager'):
             #                         settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
             #                             ind_viewer).encode()
-            #                         settings_str += pymodaq.utils.parameter.ioxml.parameter_to_xml_string(
+            #                         settings_str += ioxml.parameter_to_xml_string(
             #                             viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(
             #                             ind_viewer).encode()
             #                 settings_str += b'</All_settings>'
@@ -1427,7 +1422,8 @@ class DAQScan(QObject, ParameterManager):
             self.scan_thread = QThread()
 
             scan_acquisition = DAQScanAcquisition(self.settings, self.scanner, self.h5saver.settings,
-                                                  self.modules_manager)
+                                                  self.modules_manager,
+                                                  module_saver=self.module_and_data_saver)
             if config['scan']['scan_in_thread']:
                 scan_acquisition.moveToThread(self.scan_thread)
             self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
@@ -1498,7 +1494,8 @@ class DAQScanAcquisition(QObject):
     status_sig = Signal(list)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
-                 h5saver: H5Saver = None, modules_manager: ModulesManager = None):
+                 h5saver_settings: Parameter = None, modules_manager: ModulesManager = None,
+                 module_saver: module_saving.ScanSaver = None):
 
         """
             DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
@@ -1542,8 +1539,23 @@ class DAQScanAcquisition(QObject):
         self.det_done_datas = data_mod.DataToExport('ScanData')
 
         self.h5saver = H5Saver()
-        self.h5saver.settings.restoreState(h5saver.saveState())
+        self.h5saver.settings.restoreState(h5saver_settings.saveState())
         self.h5saver.init_file(addhoc_file_path=self.h5saver.settings['current_h5_file'])
+
+        self.module_and_data_saver: module_saving.ScanSaver = module_saver
+
+        # update the DAQ_Viewer's detector saver to DetectorExtendedSaver to take into account extended
+        # arrays due to scan shape and eventual averaging
+        scan_shape = self.scanner.get_scan_shape()
+        if self.Naverage > 1:
+            self.scan_shape = [self.Naverage]
+            self.scan_shape.extend(scan_shape)
+        else:
+            self.scan_shape = scan_shape
+
+        for det in self.modules_manager.detectors:
+            det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
+        self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
 
         self.h5_det_groups = []
         self.h5_move_groups = []
@@ -1608,54 +1620,58 @@ class DAQScanAcquisition(QObject):
             logger.exception(str(e))
 
     def init_data(self):
-        self.channel_arrays = OrderedDict([])
-        for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
-            datas = self.modules_manager.det_done_datas[det_name]
-            det_group = self.h5_det_groups[ind_det]
-            self.channel_arrays[det_name] = OrderedDict([])
-            data_types = ['data0D', 'data1D']
-            if self.h5saver.settings.child(('save_2D')).value():
-                data_types.extend(['data2D', 'dataND'])
 
-            det_mod = self.modules_manager.get_mod_from_name(det_name)
-            if det_mod.bkg is not None and det_mod.do_bkg:
-                bkg_container = OrderedDict([])
-                det_mod.process_data(det_mod.bkg, bkg_container)
+        self.module_and_data_saver.add_data(self.module_and_data_saver.get_set_node(),
+                                            self.modules_manager.det_done_datas)
 
-            for data_type in data_types:
-                if data_type in datas.keys():
-                    if datas[data_type] is not None:
-                        if len(datas[data_type]) != 0:
-                            data_raw_roi = [datas[data_type][key]['source'] for key in datas[data_type]]
-                            if not (self.h5saver.settings.child(
-                                    ('save_raw_only')).value() and 'raw' not in data_raw_roi):
-                                if not self.h5saver.is_node_in_group(det_group, data_type):
-                                    self.channel_arrays[det_name][data_type] = OrderedDict([])
-                                    data_group = self.h5saver.add_data_group(det_group, data_type)
-                                    for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
-                                        if not (
-                                            self.h5saver.settings.child(
-                                                'save_raw_only').value() and datas[
-                                                data_type][channel]['source'] != 'raw'):
-                                            channel_group = self.h5saver.add_CH_group(data_group, title=channel)
-                                            self.channel_arrays[det_name][data_type]['parent'] = channel_group
-                                            data_tmp = datas[data_type][channel]
-
-                                            if det_mod.bkg is not None and det_mod.do_bkg:
-                                                if channel in bkg_container[data_type]:
-                                                    data_tmp['bkg'] = bkg_container[data_type][channel]['data']
-                                                    if data_tmp['bkg'].shape == ():  # in case one get a numpy.float64 object
-                                                        data_tmp['bkg'] = np.array([data_tmp['bkg']])
-
-                                            self.channel_arrays[det_name][data_type][channel] = \
-                                                self.h5saver.add_data(channel_group,
-                                                                      data_tmp,
-                                                                      scan_type=self.scanner.scan_type,
-                                                                      scan_subtype=self.scanner.scan_sub_type,
-                                                                      scan_shape=self.scan_shape, init=True,
-                                                                      add_scan_dim=True,
-                                                                      enlargeable=self.isadaptive)
-            pass
+        # self.channel_arrays = OrderedDict([])
+        # for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
+        #     datas = self.modules_manager.det_done_datas[det_name]
+        #     det_group = self.h5_det_groups[ind_det]
+        #     self.channel_arrays[det_name] = OrderedDict([])
+        #     data_types = ['data0D', 'data1D']
+        #     if self.h5saver.settings.child(('save_2D')).value():
+        #         data_types.extend(['data2D', 'dataND'])
+        #
+        #     det_mod = self.modules_manager.get_mod_from_name(det_name)
+        #     if det_mod.bkg is not None and det_mod.do_bkg:
+        #         bkg_container = OrderedDict([])
+        #         det_mod.process_data(det_mod.bkg, bkg_container)
+        #
+        #     for data_type in data_types:
+        #         if data_type in datas.keys():
+        #             if datas[data_type] is not None:
+        #                 if len(datas[data_type]) != 0:
+        #                     data_raw_roi = [datas[data_type][key]['source'] for key in datas[data_type]]
+        #                     if not (self.h5saver.settings.child(
+        #                             ('save_raw_only')).value() and 'raw' not in data_raw_roi):
+        #                         if not self.h5saver.is_node_in_group(det_group, data_type):
+        #                             self.channel_arrays[det_name][data_type] = OrderedDict([])
+        #                             data_group = self.h5saver.add_data_group(det_group, data_type)
+        #                             for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
+        #                                 if not (
+        #                                     self.h5saver.settings.child(
+        #                                         'save_raw_only').value() and datas[
+        #                                         data_type][channel]['source'] != 'raw'):
+        #                                     channel_group = self.h5saver.add_CH_group(data_group, title=channel)
+        #                                     self.channel_arrays[det_name][data_type]['parent'] = channel_group
+        #                                     data_tmp = datas[data_type][channel]
+        #
+        #                                     if det_mod.bkg is not None and det_mod.do_bkg:
+        #                                         if channel in bkg_container[data_type]:
+        #                                             data_tmp['bkg'] = bkg_container[data_type][channel]['data']
+        #                                             if data_tmp['bkg'].shape == ():  # in case one get a numpy.float64 object
+        #                                                 data_tmp['bkg'] = np.array([data_tmp['bkg']])
+        #
+        #                                     self.channel_arrays[det_name][data_type][channel] = \
+        #                                         self.h5saver.add_data(channel_group,
+        #                                                               data_tmp,
+        #                                                               scan_type=self.scanner.scan_type,
+        #                                                               scan_subtype=self.scanner.scan_sub_type,
+        #                                                               scan_shape=self.scan_shape, init=True,
+        #                                                               add_scan_dim=True,
+        #                                                               enlargeable=self.isadaptive)
+        #    pass
 
     def start_acquisition(self):
         try:
@@ -1670,154 +1686,152 @@ class DAQScanAcquisition(QObject):
             Naxes = self.scanner.n_axes
             scan_type = self.scanner.scan_type
             self.navigation_axes = self.scanner.get_nav_axes()
-            self.scan_shape = self.scanner.get_scan_shape()
-            if scan_type == 'Scan1D' or scan_type == 'Scan2D':
-                """creates the X_axis and Y_axis valid only for 1D or 2D scans """
-                if self.isadaptive:
-                    self.scan_x_axis = np.array([0.0, ])
-                    self.scan_x_axis_unique = np.array([0.0, ])
-                else:
-                    self.scan_x_axis = self.scanner.positions[:, 0]
-                    self.scan_x_axis_unique = self.scanner.axes_unique[0]
 
-                if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'scan_x_axis'):
-                    x_axis_meta = dict(
-                        units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
-                        label=self.modules_manager.get_names(self.modules_manager.actuators)[0],
-                        nav_index=0)
 
-                    self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_x_axis,
-                                                                                 self.h5saver.get_last_scan(),
-                                                                                 axis='x_axis',
-                                                                                 metadata=x_axis_meta,
-                                                                                 enlargeable=self.isadaptive))
-
-                if not self.isadaptive:
-                    if self.scanner.scan_sub_type == 'Linear back to start':
-                        self.scan_shape = [len(self.scan_x_axis)]
-                    else:
-                        self.scan_shape = [len(self.scan_x_axis_unique)]
-                else:
-                    self.scan_shape = [0]
-
-                if scan_type == 'Scan2D':  # "means scan 2D"
-                    if self.isadaptive:
-                        self.scan_y_axis = np.array([0.0, ])
-                        self.scan_y_axis_unique = np.array([0.0, ])
-                    else:
-                        self.scan_y_axis = self.scanner.positions[:, 1]
-                        self.scan_y_axis_unique = self.scanner.axes_unique[1]
-
-                    if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'scan_y_axis'):
-                        y_axis_meta = dict(
-                            units=self.modules_manager.actuators[1].settings.child('move_settings', 'units').value(),
-                            label=self.modules_manager.get_names(self.modules_manager.actuators)[1],
-                            nav_index=1)
-                        self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_y_axis,
-                                                                                     self.h5saver.get_last_scan(),
-                                                                                     axis='y_axis',
-                                                                                     metadata=y_axis_meta,
-                                                                                     enlargeable=self.isadaptive))
-                    if not self.isadaptive:
-                        self.scan_shape.append(len(self.scan_y_axis_unique))
-                    else:
-                        self.scan_shape.append(0)
-
-            elif scan_type == 'Sequential':
-                """Creates axes labelled by the index within the sequence"""
-                self.scan_shape = [len(ax) for ax in self.scanner.axes_unique]
-                for ind in range(Naxes):
-                    if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(),
-                                                         'scan_{:02d}_axis'.format(ind)):
-                        axis_meta = dict(
-                            units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
-                            label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
-                            nav_index=ind)
-                        self.navigation_axes.append(
-                            self.h5saver.add_navigation_axis(self.scanner.axes_unique[ind],
-                                                             self.h5saver.get_last_scan(),
-                                                             axis=f'{ind:02d}_axis', metadata=axis_meta))
-
-            elif scan_type == 'Tabular':
-                """Creates axes labelled by the index within the sequence"""
-                if not self.isadaptive:
-                    self.scan_shape = [self.scanner.n_steps, ]
-                    nav_axes = [self.scanner.positions[:, ind] for ind in range(Naxes)]
-                else:
-                    self.scan_shape = [0, Naxes]
-                    nav_axes = [np.array([0.0, ]) for ind in range(Naxes)]
-
-                for ind in range(Naxes):
-                    if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(),
-                                                         'scan_{:02d}_axis'.format(ind)):
-                        axis_meta = dict(
-                            units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
-                            label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
-                            nav_index=ind)
-                        self.navigation_axes.append(self.h5saver.add_navigation_axis(nav_axes[ind],
-                                                                                     self.h5saver.get_last_scan(),
-                                                                                     axis=f'{ind:02d}_axis',
-                                                                                     metadata=axis_meta,
-                                                                                     enlargeable=self.isadaptive))
-
-                if self.isadaptive:
-                    if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'Curvilinear_axis'):
-                        axis_meta = dict(units='',
-                                         label='Curvilinear coordinate',
-                                         nav_index=-1)
-                        self.curvilinear_array = self.h5saver.add_navigation_axis(np.array([0.0, ]),
-                                                                                  self.h5saver.get_last_scan(),
-                                                                                  axis='curvilinear_axis',
-                                                                                  metadata=axis_meta,
-                                                                                  enlargeable=self.isadaptive)
-
-            if self.Naverage > 1:
-                self.scan_shape.append(self.Naverage)
-
-            if self.isadaptive:
-                """
-                adaptive_losses = dict(
-                loss1D=['default', 'curvature', 'uniform'],
-                loss2D=['default', 'resolution', 'uniform', 'triangle'])
-                """
-                if self.scanner.scan_type == 'Scan1D' or self.scanner.scan_type == 'Tabular':
-                    if self.scanner.adaptive_loss == 'curvature':
-                        loss = adaptive.learner.learner1D.curvature_loss_function()
-                    elif self.scanner.adaptive_loss == 'uniform':
-                        loss = adaptive.learner.learner1D.uniform_loss
-                    else:
-                        loss = adaptive.learner.learner1D.default_loss
-                    if self.scanner.scan_type == 'Scan1D':
-                        bounds = [self.scanner.starts[0], self.scanner.stops[0]]
-                    else:
-                        length = 0.
-                        for vec in self.scanner.vectors:
-                            length += vec.norm()
-                        bounds = [0., length]
-
-                    learner = adaptive.learner.learner1D.Learner1D(None, bounds=bounds,
-                                                                   loss_per_interval=loss)
-
-                elif self.scanner.scan_type == 'Scan2D':
-                    if self.scanner.adaptive_loss == 'resolution':
-                        loss = adaptive.learner.learner2D.resolution_loss_function(
-                            min_distance=self.scanner.steps[0] / 100,
-                            max_distance=self.scanner.steps[1] / 100)
-                    elif self.scanner.adaptive_loss == 'uniform':
-                        loss = adaptive.learner.learner2D.uniform_loss
-                    elif self.scanner.adaptive_loss == 'triangle':
-                        loss = adaptive.learner.learner2D.triangle_loss
-                    else:
-                        loss = adaptive.learner.learner2D.default_loss
-
-                    learner = adaptive.learner.learner2D.Learner2D(None,
-                                                                   bounds=[b for b in zip(self.scanner.starts,
-                                                                                          self.scanner.stops)],
-                                                                   loss_per_triangle=loss)
-
-                else:
-                    logger.warning('Adaptive for more than 2 axis is not currently done (sequential adaptive)')
-                    return
+            # if scan_type == 'Scan1D' or scan_type == 'Scan2D':
+            #     """creates the X_axis and Y_axis valid only for 1D or 2D scans """
+            #     if self.isadaptive:
+            #         self.scan_x_axis = np.array([0.0, ])
+            #         self.scan_x_axis_unique = np.array([0.0, ])
+            #     else:
+            #         self.scan_x_axis = self.scanner.positions[:, 0]
+            #         self.scan_x_axis_unique = self.scanner.axes_unique[0]
+            #
+            #     if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'scan_x_axis'):
+            #         x_axis_meta = dict(
+            #             units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
+            #             label=self.modules_manager.get_names(self.modules_manager.actuators)[0],
+            #             nav_index=0)
+            #
+            #         self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_x_axis,
+            #                                                                      self.h5saver.get_last_scan(),
+            #                                                                      axis='x_axis',
+            #                                                                      metadata=x_axis_meta,
+            #                                                                      enlargeable=self.isadaptive))
+            #
+            #     if not self.isadaptive:
+            #         if self.scanner.scan_sub_type == 'Linear back to start':
+            #             self.scan_shape = [len(self.scan_x_axis)]
+            #         else:
+            #             self.scan_shape = [len(self.scan_x_axis_unique)]
+            #     else:
+            #         self.scan_shape = [0]
+            #
+            #     if scan_type == 'Scan2D':  # "means scan 2D"
+            #         if self.isadaptive:
+            #             self.scan_y_axis = np.array([0.0, ])
+            #             self.scan_y_axis_unique = np.array([0.0, ])
+            #         else:
+            #             self.scan_y_axis = self.scanner.positions[:, 1]
+            #             self.scan_y_axis_unique = self.scanner.axes_unique[1]
+            #
+            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'scan_y_axis'):
+            #             y_axis_meta = dict(
+            #                 units=self.modules_manager.actuators[1].settings.child('move_settings', 'units').value(),
+            #                 label=self.modules_manager.get_names(self.modules_manager.actuators)[1],
+            #                 nav_index=1)
+            #             self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_y_axis,
+            #                                                                          self.h5saver.get_last_scan(),
+            #                                                                          axis='y_axis',
+            #                                                                          metadata=y_axis_meta,
+            #                                                                          enlargeable=self.isadaptive))
+            #         if not self.isadaptive:
+            #             self.scan_shape.append(len(self.scan_y_axis_unique))
+            #         else:
+            #             self.scan_shape.append(0)
+            #
+            # elif scan_type == 'Sequential':
+            #     """Creates axes labelled by the index within the sequence"""
+            #     self.scan_shape = [len(ax) for ax in self.scanner.axes_unique]
+            #     for ind in range(Naxes):
+            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(),
+            #                                              'scan_{:02d}_axis'.format(ind)):
+            #             axis_meta = dict(
+            #                 units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
+            #                 label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
+            #                 nav_index=ind)
+            #             self.navigation_axes.append(
+            #                 self.h5saver.add_navigation_axis(self.scanner.axes_unique[ind],
+            #                                                  self.h5saver.get_last_scan(),
+            #                                                  axis=f'{ind:02d}_axis', metadata=axis_meta))
+            #
+            # elif scan_type == 'Tabular':
+            #     """Creates axes labelled by the index within the sequence"""
+            #     if not self.isadaptive:
+            #         self.scan_shape = [self.scanner.n_steps, ]
+            #         nav_axes = [self.scanner.positions[:, ind] for ind in range(Naxes)]
+            #     else:
+            #         self.scan_shape = [0, Naxes]
+            #         nav_axes = [np.array([0.0, ]) for ind in range(Naxes)]
+            #
+            #     for ind in range(Naxes):
+            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(),
+            #                                              'scan_{:02d}_axis'.format(ind)):
+            #             axis_meta = dict(
+            #                 units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
+            #                 label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
+            #                 nav_index=ind)
+            #             self.navigation_axes.append(self.h5saver.add_navigation_axis(nav_axes[ind],
+            #                                                                          self.h5saver.get_last_scan(),
+            #                                                                          axis=f'{ind:02d}_axis',
+            #                                                                          metadata=axis_meta,
+            #                                                                          enlargeable=self.isadaptive))
+            #
+            #     if self.isadaptive:
+            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'Curvilinear_axis'):
+            #             axis_meta = dict(units='',
+            #                              label='Curvilinear coordinate',
+            #                              nav_index=-1)
+            #             self.curvilinear_array = self.h5saver.add_navigation_axis(np.array([0.0, ]),
+            #                                                                       self.h5saver.get_last_scan(),
+            #                                                                       axis='curvilinear_axis',
+            #                                                                       metadata=axis_meta,
+            #                                                                       enlargeable=self.isadaptive)
+            #
+            # if self.isadaptive:
+            #     """
+            #     adaptive_losses = dict(
+            #     loss1D=['default', 'curvature', 'uniform'],
+            #     loss2D=['default', 'resolution', 'uniform', 'triangle'])
+            #     """
+            #     if self.scanner.scan_type == 'Scan1D' or self.scanner.scan_type == 'Tabular':
+            #         if self.scanner.adaptive_loss == 'curvature':
+            #             loss = adaptive.learner.learner1D.curvature_loss_function()
+            #         elif self.scanner.adaptive_loss == 'uniform':
+            #             loss = adaptive.learner.learner1D.uniform_loss
+            #         else:
+            #             loss = adaptive.learner.learner1D.default_loss
+            #         if self.scanner.scan_type == 'Scan1D':
+            #             bounds = [self.scanner.starts[0], self.scanner.stops[0]]
+            #         else:
+            #             length = 0.
+            #             for vec in self.scanner.vectors:
+            #                 length += vec.norm()
+            #             bounds = [0., length]
+            #
+            #         learner = adaptive.learner.learner1D.Learner1D(None, bounds=bounds,
+            #                                                        loss_per_interval=loss)
+            #
+            #     elif self.scanner.scan_type == 'Scan2D':
+            #         if self.scanner.adaptive_loss == 'resolution':
+            #             loss = adaptive.learner.learner2D.resolution_loss_function(
+            #                 min_distance=self.scanner.steps[0] / 100,
+            #                 max_distance=self.scanner.steps[1] / 100)
+            #         elif self.scanner.adaptive_loss == 'uniform':
+            #             loss = adaptive.learner.learner2D.uniform_loss
+            #         elif self.scanner.adaptive_loss == 'triangle':
+            #             loss = adaptive.learner.learner2D.triangle_loss
+            #         else:
+            #             loss = adaptive.learner.learner2D.default_loss
+            #
+            #         learner = adaptive.learner.learner2D.Learner2D(None,
+            #                                                        bounds=[b for b in zip(self.scanner.starts,
+            #                                                                               self.scanner.stops)],
+            #                                                        loss_per_triangle=loss)
+            #
+            #     else:
+            #         logger.warning('Adaptive for more than 2 axis is not currently done (sequential adaptive)')
+            #         return
 
             self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
 
@@ -1898,57 +1912,55 @@ class DAQScanAcquisition(QObject):
                      det1=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),...)
         """
         try:
-            self.scan_read_datas = det_done_datas[
-                self.scan_settings.child('scan_options', 'plot_from').value()].copy()
+            #todo select data to be ploted as live probably from a ModulesManager get_det_data_list
+            # self.scan_read_datas = det_done_datas[
+            #     self.scan_settings.child('scan_options', 'plot_from').value()].copy()
+            indexes = self.scanner.get_indexes_from_scan_index(self.ind_scan)
+            if self.Naverage > 1:
+                indexes = list(indexes)
+                indexes.append(self.ind_average)
+            indexes = tuple(indexes)
+            if self.ind_scan == 0:
+                nav_axes = self.scanner.get_nav_axes()
+                self.module_and_data_saver.add_nav_axes(nav_axes)
 
-            if self.ind_scan == 0 and self.ind_average == 0:  # first occurence=> initialize the channels
-                self.init_data()
-
-            if not self.isadaptive:
-                if self.scanner.scan_type == 'Tabular':
-                    indexes = np.array([self.ind_scan])
-                else:
-                    indexes = self.scanner.axes_indexes[self.ind_scan]
-
-                if self.Naverage > 1:
-                    indexes = list(indexes)
-                    indexes.append(self.ind_average)
-
-                indexes = tuple(indexes)
+            self.module_and_data_saver.add_data(indexes=indexes)
+            # for detector in self.modules_manager.detectors:
+            #     detector.insert_data(indexes=indexes)
 
             if self.isadaptive:
                 for ind_ax, nav_axis in enumerate(self.navigation_axes):
                     nav_axis.append(np.array(positions[ind_ax]))
 
-            for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
-                datas = det_done_datas[det_name]
-
-                data_types = ['data0D', 'data1D']
-                if self.h5saver.settings.child(('save_2D')).value():
-                    data_types.extend(['data2D', 'dataND'])
-
-                for data_type in data_types:
-                    if data_type in datas.keys():
-                        if datas[data_type] is not None:
-                            if len(datas[data_type]) != 0:
-                                for ind_channel, channel in enumerate(datas[data_type]):
-                                    if not (self.h5saver.settings.child(
-                                            'save_raw_only').value() and datas[data_type][channel]['source'] != 'raw'):
-                                        if not self.isadaptive:
-                                            self.channel_arrays[
-                                                det_name][data_type][channel].__setitem__(
-                                                indexes, value=det_done_datas[det_name][data_type][channel]['data'])
-                                        else:
-                                            data = det_done_datas[det_name][data_type][channel]['data']
-                                            if isinstance(data, float) or isinstance(data, int):
-                                                data = np.array([data])
-                                            self.channel_arrays[det_name][data_type][channel].append(data)
+            # for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
+            #     datas = det_done_datas[det_name]
+            #
+            #     data_types = ['data0D', 'data1D']
+            #     if self.h5saver.settings.child(('save_2D')).value():
+            #         data_types.extend(['data2D', 'dataND'])
+            #
+            #     for data_type in data_types:
+            #         if data_type in datas.keys():
+            #             if datas[data_type] is not None:
+            #                 if len(datas[data_type]) != 0:
+            #                     for ind_channel, channel in enumerate(datas[data_type]):
+            #                         if not (self.h5saver.settings.child(
+            #                                 'save_raw_only').value() and datas[data_type][channel]['source'] != 'raw'):
+            #                             if not self.isadaptive:
+            #                                 self.channel_arrays[
+            #                                     det_name][data_type][channel].__setitem__(
+            #                                     indexes, value=det_done_datas[det_name][data_type][channel]['data'])
+            #                             else:
+            #                                 data = det_done_datas[det_name][data_type][channel]['data']
+            #                                 if isinstance(data, float) or isinstance(data, int):
+            #                                     data = np.array([data])
+            #                                 self.channel_arrays[det_name][data_type][channel].append(data)
 
             self.det_done_flag = True
 
-            self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
-                                                datas=self.scan_read_datas,
-                                                curvilinear=self.curvilinear))
+            # self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
+            #                                     datas=self.scan_read_datas,
+            #                                     curvilinear=self.curvilinear))
         except Exception as e:
             logger.exception(str(e))
             # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
@@ -1962,36 +1974,78 @@ class DAQScanAcquisition(QObject):
         self.status_sig.emit(["Timeout"])
 
 
-class ActuatorMock:
-    mod_name = 'act'
-
-    def __init__(self, ind):
-        self.title = f'{self.mod_name}_{ind:02d}'
-        self.initialized_state = True
-        self.module_and_data_saver = module_saving.ActuatorSaver(self)
-        self.settings = Parameter.create(name='settings', type='str', value='mysettings')
-        self.ui = None
-
-
-class DetectorMock:
-    mod_name = 'det'
-
-    def __init__(self, ind):
-        self.title = f'{self.mod_name}_{ind:02d}'
-        self.initialized_state = True
-        self.module_and_data_saver = module_saving.DetectorSaver(self)
-        self.settings = Parameter.create(name='settings', type='str', value='mysettings')
-        self.ui = None
-
-
-class DashBoardTest:
-    def __init__(self):
-        self.title = 'DashBoardTest'
-        self.detector_modules = [DetectorMock(ind) for ind in range(2)]
-        self.actuators_modules = [ActuatorMock(ind) for ind in range(3)]
-
 
 def main_test(init_qt=True):
+    from pymodaq.utils.data import DataToExport
+
+    LABEL = 'A Label'
+    UNITS = 'units'
+    OFFSET = -20.4
+    SCALING = 0.22
+    SIZE = 20
+    DATA = OFFSET + SCALING * np.linspace(0, SIZE - 1, SIZE)
+
+    DATA0D = np.array([2.7])
+    DATA1D = np.arange(0, 10)
+    DATA2D = np.arange(0, 5 * 6).reshape((5, 6))
+    DATAND = np.arange(0, 5 * 6 * 3).reshape((5, 6, 3))
+
+    def init_axis(data=None, index=0):
+        if data is None:
+            data = DATA
+        return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
+
+    def init_data(data=None, Ndata=1, axes=[], name='myData') -> data_mod.DataWithAxes:
+        if data is None:
+            data = DATA2D
+        return data_mod.DataWithAxes(name, data_mod.DataSource(0), data=[data for ind in range(Ndata)],
+                                     axes=axes)
+
+    class ActuatorMock(QtCore.QObject):
+        mod_name = 'act'
+        move_done_signal = Signal(str, float)
+        command_hardware = Signal(utils.ThreadCommand)
+
+        def __init__(self, ind):
+            super().__init__()
+            self.title = f'{self.mod_name}_{ind:02d}'
+            self.units = f'unit_{ind:02d}'
+            self.initialized_state = True
+            self.module_and_data_saver = module_saving.ActuatorSaver(self)
+            self.settings = Parameter.create(name='settings', type='str', value='mysettings')
+            self.ui = None
+            self.command_hardware.connect(self.move_done)
+
+
+        def move_done(self, command: utils.ThreadCommand):
+            self.move_done_signal.emit(self.title, command.attribute[0])
+
+    class DetectorMock(QtCore.QObject):
+        mod_name = 'det'
+        grab_done_signal = Signal(DataToExport)
+        command_hardware = Signal(utils.ThreadCommand)
+
+        def __init__(self, ind):
+            super().__init__()
+            self.title = f'{self.mod_name}_{ind:02d}'
+            self.initialized_state = True
+            self.module_and_data_saver = module_saving.DetectorSaver(self)
+            self.settings = Parameter.create(name='settings', type='str', value='mysettings')
+            self.ui = None
+            self.command_hardware.connect(self.grab_done)
+
+        def grab_done(self):
+            dat1 = init_data(data=DATA2D, Ndata=2, name=f'{self.title}/data2D')
+            dat2 = init_data(data=DATA1D, Ndata=3, name=f'{self.title}/data1D')
+            data = data_mod.DataToExport(name=f'{self.title}', data=[dat1, dat2])
+            self.grab_done_signal.emit(data)
+
+    class DashBoardTest:
+        def __init__(self):
+            self.title = 'DashBoardTest'
+            self.detector_modules = [DetectorMock(ind) for ind in range(2)]
+            self.actuators_modules = [ActuatorMock(ind) for ind in range(3)]
+
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
         if config['style']['darkstyle']:
@@ -1999,7 +2053,7 @@ def main_test(init_qt=True):
             app.setStyleSheet(qdarkstyle.load_stylesheet())
 
     win = QtWidgets.QMainWindow()
-    area = pymodaq.utils.gui_utils.dock.DockArea()
+    area = gutils.dock.DockArea()
     win.setCentralWidget(area)
     #win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
@@ -2023,7 +2077,7 @@ def main(init_qt=True):
     from pymodaq.dashboard import DashBoard
 
     win = QtWidgets.QMainWindow()
-    area = pymodaq.utils.gui_utils.dock.DockArea()
+    area = gutils.dock.DockArea()
     win.setCentralWidget(area)
     win.resize(1000, 500)
     win.setWindowTitle('PyMoDAQ Dashboard')
@@ -2048,5 +2102,5 @@ def main(init_qt=True):
 
 
 if __name__ == '__main__':
-    #main()
-    main_test()
+    main()
+    #main_test()

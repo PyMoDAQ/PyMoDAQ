@@ -4,16 +4,17 @@ Created the 23/11/2022
 
 @author: Sebastien Weber
 """
-from typing import Union, List
+from typing import Union, List, Dict, Tuple
 import xml.etree.ElementTree as ET
 
+import numpy as np
 
 from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 
 from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
 from .saving import H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, GroupType
-from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportTimedSaver
+from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportTimedSaver, DataToExportExtendedSaver
 from pymodaq.utils.parameter import ioxml
 
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
@@ -167,6 +168,30 @@ class DetectorEnlargeableSaver(DetectorSaver):
         self._datatoexport_saver = DataToExportTimedSaver(self.h5saver)
 
 
+class DetectorExtendedSaver(DetectorSaver):
+    """Implementation of the ModuleSaver class dedicated to DAQ_Viewer modules in order to save enlargeable data
+
+    Parameters
+    ----------
+    module
+    """
+    group_type = GroupType['detector']
+
+    def __init__(self, module: DAQ_Viewer, extended_shape: Tuple[int]):
+        super().__init__(module)
+        self._extended_shape = extended_shape
+        self._datatoexport_saver: DataToExportExtendedSaver = None
+
+    def update_after_h5changed(self, ):
+        self._datatoexport_saver = DataToExportExtendedSaver(self.h5saver, self._extended_shape)
+
+    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Tuple[int]):
+        self._datatoexport_saver.add_data(where, data, indexes=indexes)
+
+    def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
+        self._datatoexport_saver.add_nav_axes(where, axes)
+
+
 class ActuatorSaver(ModuleSaver):
     """Implementation of the ModuleSaver class dedicated to DAQ_Move modules
 
@@ -257,8 +282,17 @@ class ScanSaver(ModuleSaver):
             saver_xml = ET.SubElement(settings_xml, 'H5Saver', type='group')
             saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
-        return self._h5saver.add_scan_group(where, title=self._module.title, settings_as_xml=ET.tostring(settings_xml),
-                                           metadata=metadata)
+        return self._h5saver.add_scan_group(where, title=self._module.title,
+                                            settings_as_xml=ET.tostring(settings_xml),
+                                            metadata=metadata)
+
+    def add_nav_axes(self, axes: List[Axis]):
+        for detector in self._module.modules_manager.detectors:
+            detector.module_and_data_saver.add_nav_axes(detector.module_and_data_saver.get_set_node(), axes)
+
+    def add_data(self, indexes: Tuple[int] = None):
+        for detector in self._module.modules_manager.detectors:
+            detector.insert_data(indexes)
 
 
 
