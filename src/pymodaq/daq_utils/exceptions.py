@@ -24,6 +24,34 @@ class DataSourceError(Exception):
     pass
 
 
+class InvalidExport(Exception):
+    pass
+
+
+class InvalidGroupType(Exception):
+    pass
+
+
+class InvalidSave(Exception):
+    pass
+
+
+class InvalidGroupDataType(Exception):
+    pass
+
+
+class InvalidDataType(Exception):
+    pass
+
+
+class InvalidDataDimension(Exception):
+    pass
+
+
+class InvalidScanType(Exception):
+    pass
+
+
 class ExpectedError(Exception):
     """Raised in the tests made for pymodaq plugins"""
     pass
