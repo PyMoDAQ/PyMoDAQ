@@ -12,6 +12,7 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
 
+
 from .scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 
 logger = set_logger(get_module_name(__file__))
@@ -27,9 +28,9 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
         ]
     n_axes = 1
 
-    def __init__(self, **_ignored):
+    def __init__(self, actuators: List = None, **_ignored):
         ScanParameterManager.__init__(self)
-        ScannerBase.__init__(self)
+        ScannerBase.__init__(self, actuators=actuators)
 
     def set_scan(self):
         if self.positions is None:
@@ -42,16 +43,22 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
         return n_steps
 
     def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{self.__class__.__name__} axis', units='', data=self.positions)]
+        return [Axis(label=f'{self.actuators[0].title}',
+                     units=f'{self.actuators[0].units}',
+                     data=np.squeeze(self.positions))]
 
     def get_scan_shape(self) -> Tuple[int]:
         return len(self.positions),
 
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return tuple(self.axes_indexes[scan_index])
+
 
 @ScannerFactory.register('Scan1D', 'Random')
 class Scan1DRandom(Scan1DLinear):
-    def __init__(self, **_ignored):
-        super().__init__()
+    def __init__(self, actuators: List = None, **_ignored):
+        super().__init__(actuators=actuators)
 
     def set_scan(self):
         if self.positions is None:
@@ -74,8 +81,8 @@ try:
             {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
             ]
 
-        def __init__(self, **_ignored):
-            super().__init__()
+        def __init__(self, actuators: List = None, **_ignored):
+            super().__init__(actuators=actuators)
 
         def set_scan(self):
 
@@ -87,7 +94,9 @@ try:
             return 1
 
         def get_nav_axes(self) -> List[Axis]:
-            return [Axis(label=f'{self.__class__.__name__} axis', units='', data=self.positions[0])]
+            return [Axis(label=f'{self.actuators[0].mod_name} axis',
+                         units=f'{self.actuators[0].units}',
+                         data=self.positions[0])]
 
         def get_scan_shape(self) -> Tuple[int]:
             return len(self.positions),

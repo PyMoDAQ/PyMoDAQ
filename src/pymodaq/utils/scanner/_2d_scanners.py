@@ -4,7 +4,7 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from pymodaq.utils.data import Axis
@@ -35,9 +35,9 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
               ]
     n_axes = 2
 
-    def __init__(self, **_ignored):
+    def __init__(self, actuators: List = None, **_ignored):
         ScanParameterManager.__init__(self)
-        ScannerBase.__init__(self)
+        ScannerBase.__init__(self, actuators=actuators)
 
     def get_pos(self):
         starts = np.array([self.settings['start_axis1'], self.settings['start_axis2']])
@@ -72,14 +72,23 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
         self.get_info_from_positions(np.array(positions))
 
     def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{self.__class__.__name__} axis 1', units='', data=self.axes_unique[0], index=0),
-                Axis(label=f'{self.__class__.__name__} axis 2', units='', data=self.axes_unique[1], index=1)]
+        return [Axis(label=f'{act.title}',
+                     units=f'{act.units}',
+                     data=self.axes_unique[ind],
+                     index=ind) for ind, act in enumerate(self.actuators)]
+
+    def get_scan_shape(self) -> Tuple[int]:
+        return tuple([len(axis) for axis in self.axes_unique])
+
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return tuple(self.axes_indexes[scan_index])
 
 
 @ScannerFactory.register('Scan2D', 'LinearBack&Force')
 class Scan2DLinearBF(Scan2DLinear):
-    def __init__(self, **_ignored):
-        super().__init__()
+    def __init__(self, actuators: List = None, **_ignored):
+        super().__init__(actuators=actuators)
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
@@ -106,8 +115,8 @@ class Scan2DLinearBF(Scan2DLinear):
 
 @ScannerFactory.register('Scan2D', 'Random')
 class Scan2DRandom(Scan2DLinear):
-    def __init__(self, **_ignored):
-        super().__init__()
+    def __init__(self, actuators: List = None, **_ignored):
+        super().__init__(actuators=actuators)
 
     def set_scan(self):
         super().set_scan()
@@ -131,8 +140,8 @@ class Scan2DSpiral(Scan2DLinear):
               {'title': 'Step Ax2:', 'name': 'step_axis2', 'type': 'float', 'value': 0., 'readonly': True},
               ]
 
-    def __init__(self, **_ignored):
-        super().__init__()
+    def __init__(self, actuators: List = None, **_ignored):
+        super().__init__(actuators=actuators)
 
     def value_changed(self, param):
         starts, rmaxs, rsteps = self.get_pos()
@@ -223,8 +232,8 @@ try:
              'value': config('scan', 'scan2D', 'linear', 'stop2')},
             ]
 
-        def __init__(self, **_ignored):
-            super().__init__()
+        def __init__(self, actuators: List = None, **_ignored):
+            super().__init__(actuators=actuators)
 
         def set_scan(self):
 
@@ -234,6 +243,15 @@ try:
 
         def evaluate_steps(self) -> int:
             return 1
+
+        def get_nav_axes(self) -> List[Axis]:
+            return [Axis(label=f'{act.mod_name} axis',
+                         units=f'{act.units}',
+                         data=self.positions[:, ind],
+                         index=ind) for ind, act in enumerate(self.actuators)]
+
+        def get_scan_shape(self) -> Tuple[int]:
+            return ()  # unknown shape
 
 except ModuleNotFoundError:
     logger.info('adaptive module is not present, no adaptive scan possible')

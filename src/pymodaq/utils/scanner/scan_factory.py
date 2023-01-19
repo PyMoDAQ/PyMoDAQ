@@ -57,9 +57,10 @@ class ScannerBase(metaclass=ABCMeta):
     n_steps: int = abstract_attribute()
     n_axes: int = abstract_attribute()
 
-    def __init__(self):
+    def __init__(self, actuators: List['DAQ_Move'] = None):
         self.positions: np.ndarray = None
         self.n_steps = 1
+        self.actuators = actuators
 
         if self.check_steps():
             self.set_scan()
@@ -85,6 +86,11 @@ class ScannerBase(metaclass=ABCMeta):
     @abstractmethod
     def get_scan_shape(self) -> Tuple[int]:
         """To be reimplemented. Calculations of all the final shape of the scan"""
+        ...
+
+    @abstractmethod
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
         ...
 
     def get_info_from_positions(self, positions: np.ndarray):
