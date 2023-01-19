@@ -1,4 +1,6 @@
 import sys
+from typing import Tuple
+
 from collections import OrderedDict
 import numpy as np
 
@@ -192,6 +194,10 @@ class Scanner(QObject, ParameterManager):
 
     def get_scan_shape(self):
         return self._scanner.get_scan_shape()
+
+    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
+        """To be reimplemented. Calculations of indexes within the scan"""
+        return self._scanner.get_indexes_from_scan_index(scan_index)
 
     def _update_steps(self):
         self.settings.child('n_steps').setValue(self.n_steps)
