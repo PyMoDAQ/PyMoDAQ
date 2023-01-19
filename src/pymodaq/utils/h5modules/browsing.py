@@ -774,7 +774,7 @@ def browse_data(fname=None, ret_all=False, message=None):
         if not ('h5' in ext or 'hdf5' in ext):
             warnings.warn('This is not a PyMODAQ h5 file, there could be issues', Warning)
 
-        form = QtWidgets.QWidget()
+        form = QtWidgets.QMainWindow()
         browser = H5Browser(form, h5file_path=fname)
 
         dialog = QtWidgets.QDialog()
