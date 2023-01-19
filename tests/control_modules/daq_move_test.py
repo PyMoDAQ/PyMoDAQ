@@ -39,6 +39,13 @@ def ini_daq_move_ui(init_qt):
     return prog, qtbot, widget
 
 
+class TestMantatoryAttributes:
+    def test_methods(self, ini_daq_move_without_ui):
+        actuator, qtbot = ini_daq_move_without_ui
+        assert hasattr(actuator, 'units')
+        assert hasattr(actuator, 'title')
+
+
 class TestMethods:
     def test_overriden(self):
         assert ControlModule.stop_grab != DAQ_Move.stop_grab

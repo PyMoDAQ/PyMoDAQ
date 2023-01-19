@@ -606,6 +606,10 @@ class DAQ_Move(ParameterManager, ControlModule):
         else:
             raise ActuatorError(f'{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}')
 
+    @property
+    def units(self):
+        return self.settings['move_settings', 'units']
+
     def update_settings(self):
 
         self.settings.child('main_settings', 'move_type').setValue(self._actuator_type)
