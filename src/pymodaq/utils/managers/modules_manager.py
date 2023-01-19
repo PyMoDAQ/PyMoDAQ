@@ -1,3 +1,5 @@
+from typing import List
+
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
@@ -6,11 +8,13 @@ import time
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
+from pymodaq.utils.data import DataToExport
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
+
 
 class ModulesManager(QObject, ParameterManager):
     """Class to manage DAQ_Viewers and DAQ_Moves with UI to select some
@@ -28,7 +32,7 @@ class ModulesManager(QObject, ParameterManager):
     """
     detectors_changed = Signal(list)
     actuators_changed = Signal(list)
-    det_done_signal = Signal(OrderedDict)
+    det_done_signal = Signal(DataToExport)
     move_done_signal = Signal(OrderedDict)
     timeout_signal = Signal(bool)
 
@@ -66,7 +70,7 @@ class ModulesManager(QObject, ParameterManager):
         self.actuator_timeout = config('actuator', 'timeout')
         self.detector_timeout = config('viewer', 'timeout')
 
-        self.det_done_datas = OrderedDict()
+        self.det_done_datas: DataToExport = None
         self.det_done_flag = False
         self.move_done_positions = OrderedDict()
         self.move_done_flag = False
@@ -147,7 +151,7 @@ class ModulesManager(QObject, ParameterManager):
                                                                   selected=self.get_names(selected_detectors)))
 
     @property
-    def detectors(self):
+    def detectors(self) -> List['DAQ_Viewer']:
         """Get the list of selected detectors"""
         return self.get_mods_from_names(self.selected_detectors_name)
 
@@ -157,7 +161,7 @@ class ModulesManager(QObject, ParameterManager):
         return self._detectors
 
     @property
-    def actuators(self):
+    def actuators(self) -> List['DAQ_Move']:
         """Get the list of selected actuators"""
         return self.get_mods_from_names(self.selected_actuators_name, mod='act')
 
@@ -229,22 +233,12 @@ class ModulesManager(QObject, ParameterManager):
         """Do a snap of selected detectors, to get the list of all the data and processed data"""
 
         self.connect_detectors()
-        datas = self.grab_datas()
+        datas: DataToExport = self.grab_datas()
 
-        data_list0D = []
-        data_list1D = []
-        data_list2D = []
-        data_listND = []
-
-        for k in datas.keys():
-            if 'data0D' in datas[k].keys():
-                data_list0D.extend([f'{k}/{name}' for name in datas[k]['data0D'].keys()])
-            if 'data1D' in datas[k].keys():
-                data_list1D.extend([f'{k}/{name}' for name in datas[k]['data1D'].keys()])
-            if 'data2D' in datas[k].keys():
-                data_list2D.extend([f'{k}/{name}' for name in datas[k]['data2D'].keys()])
-            if 'dataND' in datas[k].keys():
-                data_listND.extend([f'{k}/{name}' for name in datas[k]['dataND'].keys()])
+        data_list0D = datas.get_data_from_dim('data0D').get_names()
+        data_list1D = datas.get_data_from_dim('data1D').get_names()
+        data_list2D = datas.get_data_from_dim('data2D').get_names()
+        data_listND = datas.get_data_from_dim('dataND').get_names()
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
@@ -269,7 +263,8 @@ class ModulesManager(QObject, ParameterManager):
 
     def grab_datas(self, **kwargs):
         """Do a single grab of connected and selected detectors"""
-        self.det_done_datas = OrderedDict()
+        self.det_done_datas = DataToExport(name=__class__.__name__, control_module='DAQ_Viewer')
+        self._received_data = 0
         self.det_done_flag = False
         self.settings.child('det_done').setValue(self.det_done_flag)
         tzero = time.perf_counter()
@@ -397,7 +392,7 @@ class ModulesManager(QObject, ParameterManager):
         """
         self.move_done_positions = OrderedDict()
         self.move_done_flag = False
-        self.settings.child(('move_done')).setValue(self.move_done_flag)
+        self.settings.child('move_done').setValue(self.move_done_flag)
 
         if mode == 'abs':
             command = 'move_abs'
@@ -430,7 +425,7 @@ class ModulesManager(QObject, ParameterManager):
             while not self.move_done_flag:  # polling move done
 
                 QtWidgets.QApplication.processEvents()
-                if time.perf_counter() - tzero > self.actuator_timeout:
+                if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
                     self.timeout_signal.emit(True)
                     logger.error('Timeout Fired during waiting for data to be acquired')
                     break
@@ -460,14 +455,19 @@ class ModulesManager(QObject, ParameterManager):
 
     @Slot(OrderedDict)
     def det_done(self, data):
-        try:
-            if data['name'] not in list(self.det_done_datas.keys()):
-                self.det_done_datas[data['name']] = data
-            if len(self.det_done_datas.items()) == len(self.detectors):
+        if self.det_done_datas is not None:  # means that somehow data are not initialized so no further processing
+            self._received_data += 1
+            if len(data) != 0:
+                self.det_done_datas.append(data)
+
+            if self._received_data == len(self.detectors):
                 self.det_done_flag = True
                 self.settings.child('det_done').setValue(self.det_done_flag)
-        except Exception as e:
-            logger.exception(str(e))
+
+        # if data.name not in list(self.det_done_datas.keys()):
+        #     self.det_done_datas[data['name']] = data
+        # if len(self.det_done_datas.items()) == len(self.detectors):
+        #     self.det_done_flag = True
 
 
 if __name__ == '__main__':
