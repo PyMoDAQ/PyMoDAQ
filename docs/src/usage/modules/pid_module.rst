@@ -1,4 +1,4 @@
-.. _pid_module:
+.. _PID_module:
 
 PID Module
 ==========
@@ -6,7 +6,9 @@ PID Module
 Introduction
 ------------
 
-This documentation is complementary to the video on the module : https://www.youtube.com/watch?v=u8ifY4WqQEA
+This documentation is complementary to the video on the module :
+
+https://www.youtube.com/watch?v=u8ifY4WqQEA
 
 The PID module is useful if you would like to control a parameter of a physical system (a temperature, the length of an interferometer, the beam pointing of a laser…). In order to achieve this, you need a set of detectors to read the current state of the system, an interpretation of this reading, and a set of actuators to perform the correction.
 
@@ -18,8 +20,13 @@ First example: a boiler
 
 Let consider this physical system. Some water is put in a jar, let say we want to keep the temperature of the water to 40°C, this is our **setpoint**. The system is composed of a heating element (an actuator), and a thermometer (a detector).
 
-.. image:: image/PID_Module/PIDModelMock.png
-    :width: 300
+    .. _fig_boiler:
+
+.. figure:: /image/PID_Module/PIDModelMock.png
+    :alt: boiler scheme
+    :width: 400
+
+    The boiler system.
 
 The control of the heater and the thermometer is a prerequisite to achieve the control of the temperature, but we also need a logic. For example:
 
@@ -35,13 +42,22 @@ The PID Model
 
 Depending on the system you want to control, there will be a different number of actuators or detectors, and a different logic. For example, if you want to control the pointing of a laser on a camera, you will need a motorized optical mount to hold a mirror with two actuators that control the tip and tilt axes, what we call a **beam steering system**. The way you calculate your error signal will be different: you will need a way to define the center of the laser beam on the camera, like the barycenter of the illuminated pixels, and the error signal will be a 2D vector, one for the vertical and one for the horizontal direction.
 
-.. image:: image/PID_Module/beam_steering_scheme.svg
-    :width: 250
+    .. _fig_beam_steering:
+
+.. figure:: /image/PID_Module/beam_steering_scheme.svg
+    :alt: beam steering scheme
+    :width: 400
+
+    The beam steering scheme.
 
 Another exemple consists it propagating a continuous laser in the two arms of an interferometer to produce an interference pattern. The phase of the fringes depending on the difference in the arms' lengths, it is possible to retrieve an error signal from this interference pattern to lock the interferometer, or even to sweep its length while it is locked.
 
-.. image:: image/PID_Module/interferometer_scheme.png
-    :width: 300
+    .. _fig_interferometer:
+
+.. figure:: /image/PID_Module/interferometer_scheme.png
+    :width: 500
+
+    The interferometer scheme.
 
 The PID Model is a configuration of the PID module which depends on the physical system we want to control. It contains:
 
@@ -80,7 +96,7 @@ We also need to install (from source) another package that contains all the mock
 ``pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_pid.git``
 
 Preset configuration
---------------------
+^^^^^^^^^^^^^^^^^^^^
 
 Launch a dashboard
 
@@ -98,13 +114,21 @@ Let us choose a name, for example **preset_mock_beam_steering**.
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
 
-.. image:: image/PID_Module/preset_actuators_config.png
-    :width: 250
+    .. _fig_actuators_config
+
+.. figure:: /image/PID_Module/preset_actuators_config.png
+    :width: 350
+
+    The mock actuators configuration.
 
 Now, add a 2D detector by selecting **DAQ2D/BeamSteering** in the menu, and configure it as follow
 
-.. image:: image/PID_Module/preset_camera.png
-    :width: 250
+    .. _fig_camera_config
+
+.. figure:: /image/PID_Module/preset_camera.png
+    :width: 350
+
+    The mock camera configuration.
 
 and click **SAVE**.
 
@@ -114,15 +138,19 @@ Back to the dashboard menu
 
 Your dashboard should look like this once you have grabbed the camera and unwrapped the option menus of the actuators.
 
-.. image:: image/PID_Module/dashboard_preset_loaded.png
-    :width: 500
+    .. _fig_dashboard_preset_loaded
+
+.. figure:: /image/PID_Module/dashboard_preset_loaded.png
+    :width: 700
+
+    The dashboard after loading the preset.
 
 If you now try a relative move with Xpiezo or Ypiezo, you will see that the position of the laser spot on your virtual camera is moving horizontally or vertically, as if you were playing with a motorized optical mount.
 
 Our mock system is now fully configured, we are ready for the PID module!
 
 PID module
-----------
+^^^^^^^^^^
 
 The loading of the PID module is done through the dashboard menu
 
@@ -139,8 +167,12 @@ Configure it as follow:
 
 Then **(2) intialize the PID** and **(3) start the PID** loop with the **PLAY** button. Notice that at this stage the corrections are calculated, but the piezo motors are not moving. It is only when you will **(4) untick the PAUSE button** that the corrections will be applied.
 
-.. image:: image/PID_Module/pid_kp_change_v2.png
-    :width: 500
+    .. _fig_pid_module_interface
+
+.. figure:: /image/PID_Module/pid_kp_change_v2.png
+    :width: 700
+
+    The PID module interface.
 
 PID configuration
 ^^^^^^^^^^^^^^^^^
@@ -186,15 +218,23 @@ Start with a fresh dashboard, we have to change a bit the configuration of our p
 
 and select the one that we defined previously. You just need to tick **Use PID as actuator** and save it.
 
-.. image:: image/PID_Module/preset_pid_as_actuator.png
-    :width: 300
+    .. _fig_preset_pid_as_actuator
+
+.. figure:: /image/PID_Module/preset_pid_as_actuator.png
+    :width: 400
+
+    Configuration of the preset for automatic control of the setpoints.
 
 **Moving the setpoints from the dashboard**
 
 Load this new preset. Notice that it now automatically loaded the PID module, and that our dashboard got two more actuators of type PID named **Xaxis** and **Yaxis**. If you change manually the position of those actuators, you should see that they control the setpoints of the PID module.
 
-.. image:: image/PID_Module/setpoints_as_actuators_v2.png
-    :width: 500
+    .. _fig_setpoints_as_actuators
+
+.. figure:: /image/PID_Module/setpoints_as_actuators_v2.png
+    :width: 700
+
+    Virtual actuators on the dashboard control the setpoints of the PID module.
 
 **Moving the setpoints with the DAQ Scan module**
 
@@ -202,8 +242,12 @@ Those virtual actuators can be manipulated as normal actuators, and you can ask 
 
 **Extensions > Do scans**
 
-.. image:: image/PID_Module/scan_configuration_v8.png
-    :width: 500
+    .. _fig_scan_configuration
+
+.. figure:: /image/PID_Module/scan_configuration_v8.png
+    :width: 600
+
+    Configuration of a scan with the DAQ_Scan module.
 
 Some popup windows will ask you to name your scan. This is not important here. Configure the scan as follow
 
@@ -221,8 +265,12 @@ Some popup windows will ask you to name your scan. This is not important here. C
 
 The beam should follow automatically the scan that we have defined. Of course in this demonstration with a virtual system, this sounds quite artificial, but if you need to perform stabilized scans with long acquisition times, this feature can be very useful!
 
-.. image:: image/PID_Module/scan_on_camera.png
-    :width: 300
+    .. _fig_scan_on_camera
+
+.. figure:: /image/PID_Module/scan_on_camera.png
+    :width: 500
+
+    Movement of the beam on the camera with a scan of the setpoints.
 
 PID module internals
 --------------------
@@ -247,8 +295,12 @@ Packages
 General structure of the module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. image:: image/PID_Module/PID_StructureOverview.svg
-    :width: 400
+    .. _fig_pid_structure_overview
+
+.. figure:: /image/PID_Module/PID_StructureOverview.svg
+    :width: 600
+
+    The structure of the PID module.
 
 The **DAQ_PID** class is the main central class of the module.  It manages the initialization of the program: settings of the user interface, loading of the PID model, instanciation of the **PIDRunner** class… It also makes a bridge between the user, who acts through the UI, and the PIDRunner class, which is the one that is in direct relation with the detectors and the actuators.
 
@@ -263,8 +315,12 @@ The PID loop
 
 The conductor of the PID loop is the **PIDRunner**, in particular the **start_PID** method. The workflow for each iteration of the loop can be mapped as in the following figure.
 
-.. image:: image/PID_Module/PIDLoop.svg
-    :width: 500
+    .. _fig_pid_loop
+
+.. figure:: /image/PID_Module/PIDLoop.svg
+    :width: 600
+
+    An iteration of the PID loop.
 
 The starting of the PID loop is triggered by the user through the **PLAY button**.
 
