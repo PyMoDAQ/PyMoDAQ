@@ -547,9 +547,12 @@ class DataBase(DataLowLevel):
             raise TypeError(f'Data should be an non-empty list of non-empty numpy arrays')
         return data
 
+    def check_shape_from_data(self, data: List[np.ndarray]):
+        self._shape = data[0].shape
+
     def get_dim_from_data(self, data: List[np.ndarray]):
         """Get the dimensionality DataDim from data"""
-        self._shape = data[0].shape
+        self.check_shape_from_data(data)
         self._size = data[0].size
         self._length = len(data)
         if len(self._shape) == 1 and self._size == 1:
@@ -1268,6 +1271,8 @@ class DataWithAxes(DataBase):
                         sig_indexes = list(new_data._am.sig_indexes)
                         sig_indexes.pop(sig_indexes.index(index))
                         new_data._am.sig_indexes = tuple(sig_indexes)
+            new_data._shape = data[0].shape
+            new_data._dim = self.get_dim_from_data(data)
             return new_data
         except Exception as e:
             pass
