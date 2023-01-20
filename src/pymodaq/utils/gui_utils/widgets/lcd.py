@@ -1,13 +1,18 @@
+from typing import List
+
+import numpy as np
+
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
+from pymodaq.utils.data import DataRaw
 import sys
 
 
 class LCD(QObject):
 
     def __init__(self, parent, **kwargs):
-        super(LCD, self).__init__()
+        super().__init__()
         self.Nvals = None
         self.labels = None
         self.parent = parent
@@ -15,26 +20,26 @@ class LCD(QObject):
         self.digits = 3
         self.setupui(**kwargs)
 
-    def setvalues(self, values):
+    def setvalues(self, values: List[np.ndarray]):
         """
         display values on lcds
         Parameters
         ----------
-        values: list of list of numerical values (int or float)
+        values: list of 0D ndarray
 
         Returns
         -------
 
         """
         while len(values) < self.Nvals:
-            values.append(0.)
+            values.append(np.array([0.]))
         if len(values) > self.Nvals:
             values = values[:self.Nvals]
         vals = []
         for ind, val in enumerate(values):
             self.lcds[ind].display(val[0])
             vals.append(val)
-        self.viewer0D.show_data(vals)
+        self.viewer0D.show_data(DataRaw(name='LCD', data=values))
 
     def setupui(self, **kwargs):
         if 'digits' in kwargs:
