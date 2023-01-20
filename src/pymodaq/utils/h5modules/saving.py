@@ -238,7 +238,8 @@ class H5SaverLowLevel(H5Backend):
         else:
             if add_scan_dim:  # means it is an array initialization to zero
                 shape = list(scan_shape[:])
-                shape.extend(data_shape)
+                if not(len(data_shape) == 1 and data_shape[0] == 1):  # means data are not ndarrays of scalars
+                    shape.extend(data_shape)
                 if array_to_save is None:
                     array_to_save = np.zeros(shape, dtype=np.dtype(array_type))
 
