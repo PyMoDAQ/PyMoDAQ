@@ -434,6 +434,10 @@ class ModulesManager(QObject, ParameterManager):
         self.move_done_signal.emit(self.move_done_positions)
         return self.move_done_positions
 
+    def reset_signals(self):
+        self.move_done_flag = True
+        self.det_done_flag = True
+
     def order_positions(self, positions_as_dict):
         actuators = self.selected_actuators_name
         pos = []
