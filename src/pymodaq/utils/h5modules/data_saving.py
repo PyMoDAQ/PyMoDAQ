@@ -611,6 +611,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             all extra metadata to be saved in the group node where data will be saved
         """
         super().add_data(where, data, settings_as_xml, metadata)
+        where = self._h5saver.get_node(where)
         nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
             axis = Axis(label=self._axis_name, units=self._axis_units, data=np.array([0., 1.]), index=0)
@@ -660,7 +661,8 @@ class DataToExportExtendedSaver(DataToExportSaver):
         -----
         For instance the scan axes in the DAQScan
         """
-        nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
+        where = self._h5saver.get_node(where)
+        nav_group = self._h5saver.get_set_group(where.parent_node, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
             for axis in axes:
                 self._nav_axis_saver.add_axis(nav_group, axis)
@@ -721,7 +723,7 @@ class DataLoader:
         SPECIAL_GROUP_NAMES
         """
         node = self._h5saver.get_node(where)
-        while node is not None:  # means where reached the root level
+        while node is not None:  # means we reached the root level
             if isinstance(node, GROUP):
                 if self._h5saver.is_node_in_group(node, SPECIAL_GROUP_NAMES['nav_axes']):
                     return self._h5saver.get_node(node, SPECIAL_GROUP_NAMES['nav_axes'])
