@@ -176,6 +176,7 @@ class Viewer0D(ViewerBase):
     def _show_data(self, data: data_mod.DataRaw):
         self.labels = data.labels
         self.view.display_data(data)
+        self.data_to_export_signal.emit(self.data_to_export)
 
 
 def main_view():
