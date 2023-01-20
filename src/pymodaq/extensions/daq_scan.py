@@ -284,7 +284,7 @@ class DAQScan(QObject, ParameterManager):
     def show_log(self):
         """Open the log file in the default text editor"""
         import webbrowser
-        webbrowser.open(self.logger.parent.handlers[0].baseFilename)
+        webbrowser.open(logger.parent.handlers[0].baseFilename)
 
     def quit_fun(self):
         """
@@ -790,14 +790,15 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_scan_step_average(status[1][1])
 
         elif status[0] == "Scan_done":
+            self.modules_manager.reset_signals()
             self.ui.set_scan_done()
             self.save_scan()
             if not self.batch_started:
                 if not self.dashboard.overshoot:
                     self.set_ini_positions()
-                self.ui.set_action_enabled('set_scan')
-                self.ui.set_action_enabled('ini_positions')
-                self.ui.set_action_enabled('start')
+                self.ui.set_action_enabled('set_scan', True)
+                self.ui.set_action_enabled('ini_positions', True)
+                self.ui.set_action_enabled('start', True)
 
                 # reactivate module controls usiong remote_control
                 if hasattr(self.dashboard, 'remote_manager'):
