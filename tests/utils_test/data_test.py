@@ -387,18 +387,27 @@ class TestDataToExport:
         data.append(dat4)
         assert data.get_data_from_dim(data_mod.DataDim['Data2D']).data == [dat1, dat4]
 
-    def test_get_data_by_name(self, ini_data_to_export):
+    def test_get_data_from_name(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
-
-        assert data.get_data_from_name('data2D') == dat1
-        assert data.get_data_from_name('data1D') == dat2
+        # without origin first
+        assert data.get_data_from_name_origin('data2D') == dat1
+        assert data.get_data_from_name_origin('data1D') == dat2
         dat3 = init_data(data=DATA2D, Ndata=1, name='data2Dbis')
         data.append(dat3)
-        assert data.get_data_from_name('data2Dbis') == dat3
+        assert data.get_data_from_name_origin('data2Dbis') == dat3
         dat4 = init_data(data=DATA2D, Ndata=1, name='data2D')
         data.append(dat4)
-        assert data.get_data_from_name('data2D') == dat4
+        assert data.get_data_from_name_origin('data2D') == dat4
         assert dat1 not in data.data
+
+    def test_get_data_from_name_origin(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        # with origin
+        assert data.get_data_from_name_origin('dataxxD', 'toexport') is None
+
+        assert data.get_data_from_name_origin('data2D', 'toexport') == dat1
+        assert data.get_data_from_name_origin('data2D', 'toexport2') is None
+        assert data.get_data_from_name_origin('data1D', 'toexport') == dat2
 
     def test_get_names(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
