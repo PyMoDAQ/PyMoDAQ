@@ -65,8 +65,14 @@ class DAQScan(QObject, ParameterManager):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},
             {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
+        {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
+            {'title': 'Plot All:', 'name': 'plot_all', 'type': 'bool', 'value': True},
+            {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},
+            {'title': 'Get Probe signals', 'name': 'plot_probe', 'type': 'action'},
+            {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect'},
+            {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect'},
+            ]},
     ]
 
     def __init__(self, dockarea=None, dashboard=None):
@@ -137,6 +143,8 @@ class DAQScan(QObject, ParameterManager):
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.detectors_changed[list].connect(self.update_plot_det_items)
 
+        self.settings.child('plot_options', 'plot_probe').sigActivated.connect(self.plot_from)
+
         self.setup_ui()
         self.ui.command_sig.connect(self.process_ui_cmds)
         self.create_dataset_settings()
@@ -144,8 +152,23 @@ class DAQScan(QObject, ParameterManager):
         self.set_config()
         #self.scanner.set_config()
 
+        self.update_plot_timer = QtCore.QTimer()
+        self.update_plot_timer.timeout.connect(self.update_plots)
+
         self.ui.enable_start_stop(False)
         logger.info('DAQScan Initialized')
+
+    def update_plots(self):
+        print(self.module_and_data_saver.get_set_node())
+
+    def plot_from(self):
+        self.modules_manager.get_det_data_list()
+        data0D = self.modules_manager.settings['data_dimensions', 'det_data_list0D']
+        data1D = self.modules_manager.settings['data_dimensions', 'det_data_list1D']
+        data0D['selected'] = data0D['all_items']
+        data1D['selected'] = data1D['all_items']
+        self.settings.child('plot_options', 'plot_0d').setValue(data0D)
+        self.settings.child('plot_options', 'plot_1d').setValue(data1D)
 
     def setup_ui(self):
         self.ui.populate_toolbox_widget([self.settings_tree, self.h5saver.settings_tree],
@@ -198,9 +221,9 @@ class DAQScan(QObject, ParameterManager):
 
             # setting moves and det in tree
             preset_items_det = [mod for ind, mod in enumerate(self.modules_manager.detectors_all) if ind == 0]
-            self.settings.child('scan_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
+            self.settings.child('plot_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
             if preset_items_det != []:
-                self.settings.child('scan_options', 'plot_from').setValue(preset_items_det[0].title)
+                self.settings.child('plot_options', 'plot_from').setValue(preset_items_det[0].title)
 
             self.show_average_dock(False)
 
@@ -746,7 +769,13 @@ class DAQScan(QObject, ParameterManager):
     def update_plot_det_items(self, dets):
         """
         """
-        self.settings.child('scan_options', 'plot_from').setOpts(limits=dets)
+        self.settings.child('plot_options', 'plot_from').setOpts(limits=dets)
+
+    def update_plot0D_list(self, item_selects):
+        self.settings.child('plot_options', 'plot_0d').setValue(item_selects.value())
+
+    def update_plot1D_list(self, item_selects):
+        self.settings.child('plot_options', 'plot_1d').setValue(item_selects.value())
 
     def update_status(self, txt, wait_time=0, log_type=None):
         """
@@ -791,6 +820,7 @@ class DAQScan(QObject, ParameterManager):
 
         elif status[0] == "Scan_done":
             self.modules_manager.reset_signals()
+            self.update_plot_timer.stop()
             self.ui.set_scan_done()
             self.save_scan()
             if not self.batch_started:
@@ -847,7 +877,7 @@ class DAQScan(QObject, ParameterManager):
             self.curvilinear_values.append(datas['curvilinear'])
 
         if self.bkg_container is None:
-            det_name = self.settings.child('scan_options', 'plot_from').value()
+            det_name = self.settings.child('plot_options', 'plot_from').value()
             det_mod = self.modules_manager.get_mod_from_name(det_name)
             if det_mod.bkg is not None and det_mod.do_bkg:
                 self.bkg_container = OrderedDict([])
@@ -951,7 +981,7 @@ class DAQScan(QObject, ParameterManager):
                         self.scan_data_1D_average = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
 
                 self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left',
-                                                                       label=self.settings.child('scan_options',
+                                                                       label=self.settings.child('plot_options',
                                                                                                  'plot_from').value(),
                                                                        units=''))
 
@@ -1189,7 +1219,7 @@ class DAQScan(QObject, ParameterManager):
                     self.ui.scan2D_subgraph.x_axis = x_axis
 
                     det_names = [det.title for det in self.modules_manager.detectors_all]
-                    ind_plot_det = det_names.index(self.settings.child('scan_options', 'plot_from').value())
+                    ind_plot_det = det_names.index(self.settings.child('plot_options', 'plot_from').value())
                     if 'x_axis' in data.keys():
                         self.scan_y_axis = data['x_axis']['data']
                         label = data['x_axis']['label']
@@ -1440,6 +1470,7 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_scan_done(False)
 
             self.command_DAQ_signal.emit(['start_acquisition'])
+            self.update_plot_timer.start(1000)
             self.ui.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
 
@@ -1915,7 +1946,7 @@ class DAQScanAcquisition(QObject):
         try:
             #todo select data to be ploted as live probably from a ModulesManager get_det_data_list
             # self.scan_read_datas = det_done_datas[
-            #     self.scan_settings.child('scan_options', 'plot_from').value()].copy()
+            #     self.scan_settings.child('plot_options', 'plot_from').value()].copy()
             indexes = self.scanner.get_indexes_from_scan_index(self.ind_scan)
             if self.Naverage > 1:
                 indexes = list(indexes)
@@ -1926,36 +1957,11 @@ class DAQScanAcquisition(QObject):
                 self.module_and_data_saver.add_nav_axes(nav_axes)
 
             self.module_and_data_saver.add_data(indexes=indexes)
-            # for detector in self.modules_manager.detectors:
-            #     detector.insert_data(indexes=indexes)
 
+            #todo related to adaptive (solution lies along the Enlargeable data saver)
             if self.isadaptive:
                 for ind_ax, nav_axis in enumerate(self.navigation_axes):
                     nav_axis.append(np.array(positions[ind_ax]))
-
-            # for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
-            #     datas = det_done_datas[det_name]
-            #
-            #     data_types = ['data0D', 'data1D']
-            #     if self.h5saver.settings.child(('save_2D')).value():
-            #         data_types.extend(['data2D', 'dataND'])
-            #
-            #     for data_type in data_types:
-            #         if data_type in datas.keys():
-            #             if datas[data_type] is not None:
-            #                 if len(datas[data_type]) != 0:
-            #                     for ind_channel, channel in enumerate(datas[data_type]):
-            #                         if not (self.h5saver.settings.child(
-            #                                 'save_raw_only').value() and datas[data_type][channel]['source'] != 'raw'):
-            #                             if not self.isadaptive:
-            #                                 self.channel_arrays[
-            #                                     det_name][data_type][channel].__setitem__(
-            #                                     indexes, value=det_done_datas[det_name][data_type][channel]['data'])
-            #                             else:
-            #                                 data = det_done_datas[det_name][data_type][channel]['data']
-            #                                 if isinstance(data, float) or isinstance(data, int):
-            #                                     data = np.array([data])
-            #                                 self.channel_arrays[det_name][data_type][channel].append(data)
 
             self.det_done_flag = True
 
