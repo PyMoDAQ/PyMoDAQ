@@ -349,11 +349,18 @@ class DataBase(DataLowLevel):
         The data the object is storing
     labels: list of str
         The labels of the data nd-arrays
+    origin: str
+        An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
+        DataToExport in DAQ_Scan to desintricate from wich origin data comes from when scanning multiple detectors.
+
+    See Also
+    --------
+    DataWithAxes, DataFromPlugins, DataRaw
     """
 
     def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
                  distribution: DataDistribution = DataDistribution['uniform'], data: List[np.ndarray] = None,
-                 labels: List[str] = [], **kwargs):
+                 labels: List[str] = [], origin: str = None, **kwargs):
 
         super().__init__(name=name)
         self._iter_index = 0
@@ -363,6 +370,7 @@ class DataBase(DataLowLevel):
         self._length = None
         self._labels = None
         self._dim = dim
+        self.origin = origin
 
         source = enum_checker(DataSource, source)
         self._source = source
@@ -1319,11 +1327,11 @@ class DataFromRoi(DataCalculated):
 
 
 class DataToExport(DataLowLevel):
-    """Object to store all raw and calculated data in for later exporting, saving, sending signal...
+    """Object to store all raw and calculated DataWithAxes data for later exporting, saving, sending signal...
 
     Includes methods to retrieve data from dim, source...
     Stored data have a unique identifier their name. If some data is appended with an existing name, it will replace
-    the existing data
+    the existing data. So if you want to append data that has the same name
 
     Parameters
     ----------
@@ -1353,11 +1361,19 @@ class DataToExport(DataLowLevel):
                             ' inherited from DataWithAxis')
         for dat in data:
             self._check_data_type(dat)
-        self._data: List[DataWithAxes] = [dat for dat in data]  # to make sure that if the original list is changed,
-        # the change will not be applied in here
+        self._data: List[DataWithAxes] = [dat for dat in data]  # shallow copyto make sure that if the original list
+        # is changed, the change will not be applied in here
+
+        self.affect_name_to_origin_if_none()
 
         for key in kwargs:
             setattr(self, key, kwargs[key])
+
+    def affect_name_to_origin_if_none(self):
+        """Affect self.name to all DataWithAxes children's attribute origin if this origin is not defined"""
+        for dat in self.data:
+            if dat.origin is None:
+                dat.origin = self.name
 
     def __sub__(self, other: object):
         if isinstance(other, DataToExport) and len(other) == len(self):
@@ -1445,7 +1461,7 @@ class DataToExport(DataLowLevel):
             raise IndexError(f'The index should be a positive integer lower than the data length')
 
     def get_names(self, dim: DataDim = None):
-        """Get the names of the name eventually filtered by dim
+        """Get the names of the stored DataWithAxes,  eventually filtered by dim
 
         Parameters
         ----------
@@ -1453,12 +1469,32 @@ class DataToExport(DataLowLevel):
 
         Returns
         -------
-        list of str: the names of the (filtered) data
+        list of str: the names of the (filtered) DataWithAxes data
         """
         if dim is None:
             return [data.name for data in self.data]
         else:
             return [data.name for data in self.get_data_from_dim(dim).data]
+
+    def get_full_names(self, dim: DataDim = None):
+        """Get the ful names including the origin attribute into the returned value,  eventually filtered by dim
+
+        Parameters
+        ----------
+        dim: DataDim or str
+
+        Returns
+        -------
+        list of str: the names of the (filtered) DataWithAxes data constructed as : origin/name
+
+        Examples
+        --------
+        d0 = DataWithAxes(name='datafromdet0', origin='det0')
+        """
+        if dim is None:
+            return [f'{data.origin}/{data.name}' for data in self.data]
+        else:
+            return [f'{data.origin}/{data.name}' for data in self.get_data_from_dim(dim).data]
 
     def get_dim_presents(self) -> List[str]:
         dims = []
@@ -1482,7 +1518,17 @@ class DataToExport(DataLowLevel):
 
     def get_data_from_name(self, name: str) -> List[DataWithAxes]:
         """Get the data matching the given name"""
-        data, index = find_objects_in_list_from_attr_name_val(self.data, 'name', name)
+        data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
+        return data
+
+    def get_data_from_name_origin(self, name: str, origin: str = None) -> List[DataWithAxes]:
+        """Get the data matching the given name and the given origin"""
+        if origin is None:
+            data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
+        else:
+            selection = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=False)
+            selection = [sel[0] for sel in selection]
+            data, _ = find_objects_in_list_from_attr_name_val(selection, 'origin', origin)
         return data
 
     @property
@@ -1496,7 +1542,6 @@ class DataToExport(DataLowLevel):
         if not isinstance(data, DataWithAxes):
             raise TypeError('Data stored in a DataToExport object should be objects inherited from DataWithAxis')
 
-
     @dispatch(list)
     def append(self, data: List[DataWithAxes]):
         for dat in data:
@@ -1506,24 +1551,23 @@ class DataToExport(DataLowLevel):
     def append(self, data: DataWithAxes):
         """Append/replace DataWithAxes object to the data attribute
 
-        Make sure only one DataWithAxes object with a given name is in the list
+        Make sure only one DataWithAxes object with a given name is in the list except if they don't have the same
+        origin identifier
         """
         data = copy.deepcopy(data)
         self._check_data_type(data)
-        obj = self.get_data_from_name(data.name)
+        obj = self.get_data_from_name_origin(data.name, data.origin)
         if obj is not None:
             self._data.pop(self.data.index(obj))
         self._data.append(data)
 
     @dispatch(object)
     def append(self, data: 'DataToExport'):
-        """Append/replace DataWithAxes object to the data attribute
-
-        Make sure only one DataWithAxes object with a given name is in the list
-        """
         if isinstance(data, DataToExport):
             for dat in data:
                 self.append(dat)
+
+
 
 
 class DataScan(DataToExport):
