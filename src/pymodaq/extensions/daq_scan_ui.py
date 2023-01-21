@@ -99,7 +99,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.module_widget = QtWidgets.QWidget()
         self.module_widget.setLayout(QtWidgets.QVBoxLayout())
         self.module_widget.setMinimumWidth(220)
-        self.module_widget.setMaximumWidth(220)
+        self.module_widget.setMaximumWidth(400)
 
         settings_widget = QtWidgets.QWidget()
         settings_widget.setLayout(QtWidgets.QVBoxLayout())
