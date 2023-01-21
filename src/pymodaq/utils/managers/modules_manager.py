@@ -8,7 +8,7 @@ import time
 from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.config import Config
-from pymodaq.utils.data import DataToExport
+from pymodaq.utils.data import DataToExport, DataFromPlugins
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
@@ -235,10 +235,10 @@ class ModulesManager(QObject, ParameterManager):
         self.connect_detectors()
         datas: DataToExport = self.grab_datas()
 
-        data_list0D = datas.get_data_from_dim('data0D').get_names()
-        data_list1D = datas.get_data_from_dim('data1D').get_names()
-        data_list2D = datas.get_data_from_dim('data2D').get_names()
-        data_listND = datas.get_data_from_dim('dataND').get_names()
+        data_list0D = datas.get_full_names('data0D')
+        data_list1D = datas.get_full_names('data1D')
+        data_list2D = datas.get_full_names('data2D')
+        data_listND = datas.get_full_names('dataND')
 
         self.settings.child('data_dimensions', 'det_data_list0D').setValue(
             dict(all_items=data_list0D, selected=[]))
@@ -457,8 +457,7 @@ class ModulesManager(QObject, ParameterManager):
         except Exception as e:
             logger.exception(str(e))
 
-    @Slot(OrderedDict)
-    def det_done(self, data):
+    def det_done(self, data: DataToExport):
         if self.det_done_datas is not None:  # means that somehow data are not initialized so no further processing
             self._received_data += 1
             if len(data) != 0:
@@ -490,9 +489,9 @@ if __name__ == '__main__':
     win.resize(1000, 500)
     win.setWindowTitle('pymodaq main')
 
-    prog = DAQ_Viewer(area, title="Testing2D", DAQ_type='DAQ2D')
-    prog2 = DAQ_Viewer(area, title="Testing1D", DAQ_type='DAQ1D')
-    prog3 = DAQ_Viewer(area, title="Testing0D", DAQ_type='DAQ0D')
+    prog = DAQ_Viewer(area, title="Testing2D", daq_type='DAQ2D')
+    prog2 = DAQ_Viewer(area, title="Testing1D", daq_type='DAQ1D')
+    prog3 = DAQ_Viewer(area, title="Testing0D", daq_type='DAQ0D')
 
     act1_widget = QtWidgets.QWidget()
     act2_widget = QtWidgets.QWidget()
@@ -500,9 +499,9 @@ if __name__ == '__main__':
     act2 = DAQ_Move(act2_widget, title='Y_axis')
 
     QThread.msleep(1000)
-    prog.ui.IniDet_pb.click()
-    prog2.ui.IniDet_pb.click()
-    prog3.ui.IniDet_pb.click()
+    prog.init_hardware_ui()
+    prog2.init_hardware_ui()
+    prog3.init_hardware_ui()
 
     dock1 = Dock('actuator 1')
     dock1.addWidget(act1_widget)
@@ -512,8 +511,8 @@ if __name__ == '__main__':
     dock2.addWidget(act2_widget)
     area.addDock(dock2)
 
-    act1.ui.IniStage_pb.click()
-    act2.ui.IniStage_pb.click()
+    act1.init_hardware_ui()
+    act2.init_hardware_ui()
 
     QtWidgets.QApplication.processEvents()
     win.show()
