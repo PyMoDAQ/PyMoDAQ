@@ -28,13 +28,16 @@ class ModuleSaver(metaclass=ABCMeta):
     _module_group: GROUP = abstract_attribute()
     main_module = True
 
-    def get_set_node(self, where: Union[Node, str] = None) -> Node:
+    def get_set_node(self, where: Union[Node, str] = None, new=False) -> Node:
         """Get the node corresponding to this particular Module instance
 
         Parameters
         ----------
         where: Union[Node, str]
             the path of a given node or the node itself
+        new: bool
+            if True force the creation of a new indexed node of this class type
+            if False return the last node (or create one if None)
 
         Returns
         -------
@@ -42,10 +45,11 @@ class ModuleSaver(metaclass=ABCMeta):
         """
         if where is None:
             where = self._h5saver.raw_group
-        for node in self._h5saver.walk_nodes(where):
-            if 'type' in node.attrs and node.attrs['type'] == self.group_type.name and node.title == self._module.title:
-                self._module_group = node
-                return node
+        if not new:
+            for node in self._h5saver.walk_nodes(where):
+                if 'type' in node.attrs and node.attrs['type'] == self.group_type.name and node.title == self._module.title:
+                    self._module_group = node
+                    return node
         self._module_group = self._add_module(where)
         return self._module_group
 
@@ -240,7 +244,7 @@ class ScanSaver(ModuleSaver):
             if hasattr(module, 'module_and_data_saver'):
                 module.module_and_data_saver.h5saver = self.h5saver
 
-    def get_set_node(self, where: Union[Node, str] = None) -> Node:
+    def get_set_node(self, where: Union[Node, str] = None, new=False) -> Node:
         """Get the node corresponding to this particular Module instance
 
         Parameters
@@ -252,7 +256,7 @@ class ScanSaver(ModuleSaver):
         -------
         Node: the Node associated with this module
         """
-        super().get_set_node(where)
+        super().get_set_node(where, new=new)
         for module in self._module.modules_manager.modules:
             module.module_and_data_saver.main_module = False
             module.module_and_data_saver.get_set_node(self._module_group)
@@ -290,7 +294,7 @@ class ScanSaver(ModuleSaver):
 
     def add_data(self, indexes: Tuple[int] = None):
         for detector in self._module.modules_manager.detectors:
-            detector.insert_data(indexes)
+            detector.insert_data(indexes, where=self._module_group)
 
 
 

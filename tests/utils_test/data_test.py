@@ -409,6 +409,14 @@ class TestDataToExport:
         assert data.get_data_from_name_origin('data2D', 'toexport2') is None
         assert data.get_data_from_name_origin('data1D', 'toexport') == dat2
 
+    def test_get_data_from_full_names(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+
+        assert data.get_data_from_full_names(['toexport/data2D'])[0] == dat1
+        assert data.get_data_from_full_names(['toexport/data1D'])[0] == dat2
+        assert data.get_data_from_full_names(['toexport/data2D', 'toexport/data1D'])[0] == dat1
+        assert data.get_data_from_full_names(['toexport/data2D', 'toexport/data1D'])[1] == dat2
+
     def test_index(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
         assert data.index(dat1) == 0

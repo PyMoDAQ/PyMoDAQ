@@ -677,7 +677,7 @@ class Viewer2D(ViewerBase):
             self._datas = self.set_image_transform()
             self.x_axis = self._datas.axes_manager.get_axis_from_index(1)
             self.y_axis = self._datas.axes_manager.get_axis_from_index(0)
-            self._data_to_show_signal.emit(self._datas)
+            self.view.display_images(self._datas)
 
             if self.view.is_action_checked('roi'):
                 self.roi_changed()
@@ -751,7 +751,6 @@ class Viewer2D(ViewerBase):
         self.view.connect_action('isocurve', slot=self.update_data)
         self.view.histogrammer.gradient_changed.connect(lambda: setattr(self, '_is_gradient_manually_set', True))
 
-        self._data_to_show_signal.connect(self.view.display_images)
         self.view.lineout_plotter.roi_changed.connect(self.roi_changed)
         self.view.get_crosshair_signal().connect(self.crosshair_changed)
 
@@ -813,17 +812,20 @@ class Viewer2D(ViewerBase):
             if not self._display_temporary:
                 self.data_to_export.append(
                     DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
+                                origin=self.title,
                                 axes=[Axis(data=lineout_data.hor_axis,
                                             units=self.x_axis.axis_units,
                                             label=self.x_axis.axis_label)]))
 
                 self.data_to_export.append(
                     DataFromRoi(name=f'Vlineout_{roi_key}', data=[lineout_data.ver_data],
+                                origin=self.title,
                                 axes=[Axis(data=lineout_data.ver_axis,
                                             units=self.y_axis.axis_units,
                                             label=self.y_axis.axis_label)]))
 
-                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data]))
+                self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data],
+                                                       origin=self.title))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
 

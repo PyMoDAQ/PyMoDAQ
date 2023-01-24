@@ -141,13 +141,14 @@ class ViewerDispatcher:
             dock_viewer = Dock(dock_name, size=(350, 350), closable=False)
         self.viewer_docks.append(dock_viewer)
         self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
-        if len(self.viewer_docks) == 1:
-            if self._next_to_dock is not None:
-                self.dockarea.addDock(self.viewer_docks[-1], 'right', self._next_to_dock)
-            else:
-                self.dockarea.addDock(self.viewer_docks[-1])
-        else:
-            self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
+        # if len(self.viewer_docks) == 1:
+        #     if self._next_to_dock is not None:
+        #         self.dockarea.addDock(self.viewer_docks[-1], 'right', self._next_to_dock)
+        #     else:
+        #         self.dockarea.addDock(self.viewer_docks[-1])
+        # else:
+        #     self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
+        self.dockarea.addDock(self.viewer_docks[-1], 'right')
 
     def update_viewers(self, viewers_type: List[ViewersEnum], viewers_name: List[str] = None, force=False):
         """
@@ -301,6 +302,7 @@ if __name__ == '__main__':
     N = 2
     viewers = ['Viewer0D', 'Viewer1D', 'Viewer2D']
     viewers = [ViewersEnum[random.choice(viewers)] for ind in range(N)]
+    viewers = ['Viewer2D', 'Viewer2D', ]
     print(viewers)
     prog.update_viewers(viewers)
 

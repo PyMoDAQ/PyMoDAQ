@@ -1524,6 +1524,15 @@ class DataToExport(DataLowLevel):
         else:
             return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
 
+    def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> 'DataToExport':
+        if deepcopy:
+            data = [self.get_data_from_name_origin(full_name.split('/')[1],
+                                                   full_name.split('/')[0]).deepcopy() for full_name in full_names]
+        else:
+            data = [self.get_data_from_name_origin(full_name.split('/')[1],
+                                                   full_name.split('/')[0]) for full_name in full_names]
+        return DataToExport(name=self.name, data=data)
+
     def get_dim_presents(self) -> List[str]:
         dims = []
         for dim in DataDim.names():
@@ -1532,7 +1541,7 @@ class DataToExport(DataLowLevel):
 
         return dims
 
-    def get_data_from_dim(self, dim: DataDim) -> 'DataToExport':
+    def get_data_from_dim(self, dim: DataDim, deepcopy=False) -> 'DataToExport':
         """Get the data matching the given DataDim
 
         Returns
@@ -1542,14 +1551,30 @@ class DataToExport(DataLowLevel):
         dim = enum_checker(DataDim, dim)
         selection = find_objects_in_list_from_attr_name_val(self.data, 'dim', dim, return_first=False)
         selection.sort(key=lambda elt: elt[0].name)
-        return DataToExport(name=self.name, data=[sel[0] for sel in selection])
+        if deepcopy:
+            data = [sel[0].deepcopy() for sel in selection]
+        else:
+            data = [sel[0] for sel in selection]
+        return DataToExport(name=self.name, data=data)
+
+    def get_data_from_dims(self, dims: List[DataDim], deepcopy=False) -> 'DataToExport':
+        """Get the data matching the given DataDim
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the dimensionality
+        """
+        data = DataToExport(name=self.name)
+        for dim in dims:
+            data.append(self.get_data_from_dim(dim, deepcopy=deepcopy))
+        return data
 
     def get_data_from_name(self, name: str) -> List[DataWithAxes]:
         """Get the data matching the given name"""
         data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
         return data
 
-    def get_data_from_name_origin(self, name: str, origin: str = None) -> List[DataWithAxes]:
+    def get_data_from_name_origin(self, name: str, origin: str = None) -> DataWithAxes:
         """Get the data matching the given name and the given origin"""
         if origin is None:
             data, _ = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)

@@ -18,7 +18,7 @@ from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.parameter import ioxml
-
+from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore, QtGui
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
@@ -29,7 +29,7 @@ from pymodaq.utils.plotting.navigator import Navigator
 from pymodaq.utils.scanner.scanner import Scanner, scanner_factory  #, adaptive, adaptive_losses
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
-
+from pymodaq.post_treatment.load_and_plot import LoaderPlotter
 from pymodaq.utils.messenger import messagebox
 from pymodaq.extensions.daq_scan_ui import DAQScanUI
 
@@ -163,6 +163,8 @@ class DAQScan(QObject, ParameterManager):
         self.setup_modules(self.dashboard.title)
         self.set_config()
         #self.scanner.set_config()
+
+        self.live_plotter = LoaderPlotter(self.dockarea)
 
         self.ui.enable_start_stop(False)
         logger.info('DAQScan Initialized')
@@ -854,6 +856,9 @@ class DAQScan(QObject, ParameterManager):
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, self.scanner.get_nav_axes())
         self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes)
 
+        self.live_plotter.load_plot_data()
+
+
     @Slot(OrderedDict)
     def update_scan_GUI(self, datas):
         """
@@ -1406,11 +1411,11 @@ class DAQScan(QObject, ParameterManager):
                 remote_manager.activate_all(False)
 
             self.module_and_data_saver.h5saver = self.h5saver
-            scan_node = self.module_and_data_saver.get_set_node()
+            scan_node = self.module_and_data_saver.get_set_node(new=True)
             scan_node.attrs['scan_done'] = False
             self.save_metadata(self.h5saver.get_last_scan(), 'scan_info')
 
-            self.init_temp_file()
+            self._init_live()
 
             # # save settings from move modules
             # move_modules_names = [mod.title for mod in self.modules_manager.actuators]
@@ -1480,7 +1485,7 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
 
-    def init_temp_file(self):
+    def _init_live(self):
         Naverage = self.settings.child('scan_options', 'scan_average').value()
         if Naverage > 1:
             scan_shape = [Naverage]
@@ -1493,12 +1498,19 @@ class DAQScan(QObject, ParameterManager):
                 self.temp_path.cleanup()
             except Exception as e:
                 logger.exception(str(e))
+
         self.h5temp = H5Saver()
         self.temp_path = tempfile.TemporaryDirectory(prefix='pymo')
         addhoc_file_path = Path(self.temp_path.name).joinpath('temp_data.h5')
         self.h5temp.init_file(custom_naming=True, addhoc_file_path=addhoc_file_path)
         self.extended_saver: data_saving.DataToExportExtendedSaver =\
             data_saving.DataToExportExtendedSaver(self.h5temp, extended_shape=scan_shape)
+        self.live_plotter.h5saver = self.h5temp
+        #self.live_plotter.clear_viewers()
+        viewers_enum = [ViewersEnum('Data1D') for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
+        viewers_enum.extend([ViewersEnum('Data2D') for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
+        self.live_plotter.prepare_viewers(viewers_enum)
+        QtWidgets.QApplication.processEvents()
 
     def set_ini_positions(self):
         """
@@ -1958,16 +1970,9 @@ class DAQScanAcquisition(QObject):
             logger.exception(str(e))
             # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])
 
-    def det_done(self, det_done_datas, positions=[]):
+    def det_done(self, det_done_datas: data_mod.DataToExport, positions=[]):
         """
-            | Initialize 0D/1D/2D datas from given data parameter.
-            | Update h5_file group and array.
-            | Save 0D/1D/2D... datas.
-        Parameters
-        ----------
-        det_done_datas: (OrderedDict) on the form OrderedDict
-                    (det0=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),
-                     det1=OrderedDict(data0D=None, data1D=None, data2D=None, dataND=None),...)
+
         """
         try:
             #todo select data to be ploted as live probably from a ModulesManager get_det_data_list
@@ -1990,10 +1995,16 @@ class DAQScanAcquisition(QObject):
                     nav_axis.append(np.array(positions[ind_ax]))
 
             self.det_done_flag = True
-            self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, det_done_datas))
-            # self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
-            #                                     datas=self.scan_read_datas,
-            #                                     curvilinear=self.curvilinear))
+
+            if self.scan_settings['plot_options', 'plot_all']:
+                data_temp = det_done_datas.get_data_from_dims(['Data0D', 'Data1D'], deepcopy=False)
+            else:
+                full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
+                full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
+                data_temp = det_done_datas.get_data_from_full_names(full_names, deepcopy=False)
+
+            self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
+
         except Exception as e:
             logger.exception(str(e))
             # self.status_sig.emit(["Update_Status", getLineInfo() + str(e), 'log'])

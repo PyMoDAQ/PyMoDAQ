@@ -19,12 +19,24 @@ from pymodaq.utils.gui_utils import Dock, DockArea
 
 class LoaderPlotter:
 
-    def __init__(self, dockarea, h5saver: H5Saver):
+    def __init__(self, dockarea):
         self.dockarea = dockarea
-        self.ui = ViewerDispatcher(dockarea, title='mydispatchertest')
+        self.ui = ViewerDispatcher(dockarea, title='ViewerDispatcher')
         self._viewers: List[ViewerBase] = []
-        self.h5saver = h5saver
+        self._h5saver: H5Saver = None
         self._data: DataToExport = None
+        self.dataloader: DataLoader = None
+
+    def clear_viewers(self):
+        self.ui.remove_viewers(0)
+
+    @property
+    def h5saver(self):
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver: H5Saver):
+        self._h5saver = h5saver
         self.dataloader = DataLoader(h5saver)
 
     @property
@@ -54,25 +66,26 @@ class LoaderPlotter:
 
         if filter_full_names is not None:
             self._data.data[:] = [data for data in self._data if data.get_full_name() in filter_full_names]
-
-
-
         return self._data
 
     def load_plot_data(self):
         self.load_data()
-        self.show_data(self._data)
+        self.show_data()
 
     def show_data(self):
         """Send data to their dedicated viewers
         """
-        self._init_show_data(self._data)
-        #self.set_data_to_viewers(self._data)
+        #self._init_show_data(self._data)
+        self.set_data_to_viewers(self._data)
 
     def _init_show_data(self, data: DataToExport):
         """Processing before showing data
         """
         self._viewer_types = [ViewersEnum(data.dim.name) for data in data]
+        self.prepare_viewers(self._viewer_types)
+
+    def prepare_viewers(self, viewers_enum: List[ViewersEnum]):
+        self._viewer_types = [enum_checker(ViewersEnum, viewer_enum) for viewer_enum in viewers_enum]
         if self.ui.viewer_types != self._viewer_types:
             self.ui.update_viewers(self._viewer_types)
 
@@ -89,14 +102,14 @@ class LoaderPlotter:
         --------
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
-        for ind, data in enumerate(data.data):
-            self.ui.viewers[ind].title = data.name
-            self.ui.viewer_docks[ind].setTitle(data.name)
+        for ind, _data in enumerate(data.data):
+            self.ui.viewers[ind].title = _data.name
+            self.ui.viewer_docks[ind].setTitle(_data.name)
 
             if temp:
-                self.ui.viewers[ind].show_data_temp(data)
+                self.ui.viewers[ind].show_data_temp(_data)
             else:
-                self.ui.viewers[ind].show_data(data)
+                self.ui.viewers[ind].show_data(_data)
 
 
 def main(init_qt=True):

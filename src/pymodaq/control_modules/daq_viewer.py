@@ -565,7 +565,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def append_data(self):
+    def append_data(self, where=None):
         """Appends DataToExport to a DetectorEnlargeableSaver
 
         Parameters
@@ -577,10 +577,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         --------
         DetectorEnlargeableSaver
         """
-        self._add_data_to_saver(self._data_to_save_export, init_step=self._h5saver_continuous.settings['N_saved'] == 0)
+        self._add_data_to_saver(self._data_to_save_export, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
+                                where=None)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int]):
+    def insert_data(self, indexes: Tuple[int], where=None):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
         Parameters
@@ -592,9 +593,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         --------
         DAQ_Scan, DetectorExtendedSaver
         """
-        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), indexes=indexes)
+        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
+                                indexes=indexes)
 
-    def _add_data_to_saver(self, data: DataToExport, init_step=False, **kwargs):
+    def _add_data_to_saver(self, data: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
 
         Parameters
@@ -611,7 +613,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
 
         """
-        detector_node = self.module_and_data_saver.get_set_node()
+        detector_node = self.module_and_data_saver.get_set_node(where)
         self.module_and_data_saver.add_data(detector_node, data, **kwargs)
 
         if init_step:
