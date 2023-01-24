@@ -7,6 +7,7 @@ Created the 15/11/2022
 import numpy as np
 import importlib
 import pickle
+from typing import Dict
 
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.config import Config
@@ -258,7 +259,7 @@ class GROUP(Node):
 
         return "%s\n  children := %s" % (str(self), childlist)
 
-    def children(self):
+    def children(self) -> Dict[str, Node]:
         """Get a dict containing all children node hanging from self whith their name as keys
 
         Returns
