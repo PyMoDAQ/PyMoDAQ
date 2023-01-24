@@ -254,6 +254,7 @@ class DataSaverLoader(DataManagement):
                                     array_to_save=data[ind_data], data_dimension=data.dim.name,
                                     metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                   source=data.source.name, distribution=data.distribution.name,
+                                                  origin=data.origin,
                                                   nav_indexes=tuple(data.nav_indexes)
                                                   if data.nav_indexes is not None else None))
         if save_axes:
@@ -349,6 +350,7 @@ class DataSaverLoader(DataManagement):
                             distribution=data_node.attrs['distribution'],
                             data=ndarrays,
                             labels=[data_node.attrs['label']],
+                            origin=data_node.attrs['origin'],
                             nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
                             axes=axes)
         return data
@@ -423,6 +425,7 @@ class DataEnlargeableSaver(DataSaverLoader):
                                         data_dimension=data.dim.name,
                                         metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                       source=data.source.name, distribution=data.distribution.name,
+                                                      origin=data.origin,
                                                       nav_indexes=tuple(nav_indexes)))
             if save_axes:
                 for axis in data.axes:
@@ -487,6 +490,7 @@ class DataExtendedSaver(DataSaverLoader):
                                         data_dimension=data.dim.name,
                                         metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
                                                       source=data.source.name, distribution=data.distribution.name,
+                                                      origin=data.origin,
                                                       nav_indexes=tuple(nav_indexes)))
 
             if save_axes:
@@ -756,3 +760,17 @@ class DataLoader:
                 nav_axes = self._axis_loader.get_axes(nav_group)
                 data.axes.extend(nav_axes)
         return data
+
+    def load_all(self, where: GROUP, data: DataToExport) -> DataToExport:
+
+        where = self._h5saver.get_node(where)
+        children_dict = where.children()
+        data_list = []
+        for child in children_dict:
+            if isinstance(children_dict[child], GROUP):
+                self.load_all(children_dict[child], data)
+            elif 'data_type' in children_dict[child].attrs and 'data' in children_dict[child].attrs['data_type']:
+                data_list.append(self.load_data(children_dict[child].path))
+        data_tmp = DataToExport(name=where.name, data=data_list)
+        data.append(data_tmp)
+
