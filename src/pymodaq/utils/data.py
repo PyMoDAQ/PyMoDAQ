@@ -7,7 +7,7 @@ Created the 28/10/2022
 
 import numbers
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from typing import Iterable as IterableType
 from collections.abc import Iterable
 
@@ -384,6 +384,19 @@ class DataBase(DataLowLevel):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
+    def get_full_name(self) -> str:
+        """Get the data ful name including the origin attribute into the returned value
+
+        Returns
+        -------
+        str: the name of the ataWithAxes data constructed as : origin/name
+
+        Examples
+        --------
+        d0 = DataBase(name='datafromdet0', origin='det0')
+        """
+        return f'{self.origin}/{self.name}'
+
     def __repr__(self):
         return f'{self.__class__.__name__} <{self.name}> <{self.dim}> <{self.source}> <{self.shape}>'
 
@@ -498,6 +511,10 @@ class DataBase(DataLowLevel):
         """DataDim: the enum representing the dimensionality of the stored data"""
         return self._dim
 
+    def set_dim(self, dim: Union[DataDim, str]):
+        """Addhoc modification of dim independantly of the real data shape, should be used with extra care"""
+        self._dim = enum_checker(DataDim, dim)
+
     @property
     def source(self):
         """DataSource: the enum representing the source of the data"""
@@ -581,7 +598,8 @@ class DataBase(DataLowLevel):
         else:
             self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
-                logger.debug('The specified dimensionality is not coherent with the data shape, replacing it')
+                warnings.warn(
+                    UserWarning('The specified dimensionality is not coherent with the data shape, replacing it'))
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):
@@ -1155,8 +1173,22 @@ class DataWithAxes(DataBase):
         self.inav = SpecialSlicersData(self, True)
         self.isig = SpecialSlicersData(self, False)
 
+        self.get_dim_from_data_axes()
+
     def __repr__(self):
         return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
+
+    def transpose(self):
+        if self.dim == 'Data2D':
+            self.data[:] = [data.T for data in self.data]
+            for axis in self.axes:
+                axis.index = 0 if axis.index == 1 else 1
+
+    def get_dim_from_data_axes(self):
+        """Get the dimensionality DataDim from data taking into account nav indexes
+        """
+        if len(self.nav_indexes) > 0:
+            self._dim = DataDim['DataND']
 
     @property
     def axes(self):
@@ -1359,13 +1391,9 @@ class DataToExport(DataLowLevel):
         if not isinstance(data, list):
             raise TypeError('Data stored in a DataToExport object should be as a list of objects'
                             ' inherited from DataWithAxis')
-        for dat in data:
-            self._check_data_type(dat)
-        self._data: List[DataWithAxes] = [dat for dat in data]  # shallow copyto make sure that if the original list
-        # is changed, the change will not be applied in here
+        self._data = []
 
-        self.affect_name_to_origin_if_none()
-
+        self.data = data
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -1432,7 +1460,7 @@ class DataToExport(DataLowLevel):
                             f'of a different length')
 
     def __repr__(self):
-        return f'{self.__class__.__name__} <len:{len(self)}>'
+        return f'{self.__class__.__name__}: {self.name} <len:{len(self)}>'
 
     def __len__(self):
         return len(self.data)
@@ -1492,9 +1520,9 @@ class DataToExport(DataLowLevel):
         d0 = DataWithAxes(name='datafromdet0', origin='det0')
         """
         if dim is None:
-            return [f'{data.origin}/{data.name}' for data in self.data]
+            return [data.get_full_name() for data in self.data]
         else:
-            return [f'{data.origin}/{data.name}' for data in self.get_data_from_dim(dim).data]
+            return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
 
     def get_dim_presents(self) -> List[str]:
         dims = []
@@ -1531,10 +1559,49 @@ class DataToExport(DataLowLevel):
             data, _ = find_objects_in_list_from_attr_name_val(selection, 'origin', origin)
         return data
 
+    def index(self, data: DataWithAxes):
+        return self.data.index(data)
+
+    def index_from_name_origin(self, name: str, origin: str = None) -> List[DataWithAxes]:
+        """Get the index of a given DataWithAxes within the list of data"""
+        """Get the data matching the given name and the given origin"""
+        if origin is None:
+            _, index = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=True)
+        else:
+            selection = find_objects_in_list_from_attr_name_val(self.data, 'name', name, return_first=False)
+            data_selection = [sel[0] for sel in selection]
+            index_selection = [sel[1] for sel in selection]
+            _, index = find_objects_in_list_from_attr_name_val(data_selection, 'origin', origin)
+            index = index_selection[index]
+        return index
+
+    def pop(self, index: int) -> DataWithAxes:
+        """return and remove the DataWithAxes referred by its index
+
+        Parameters
+        ----------
+        index: int
+            index as returned by self.index_from_name_origin
+
+        See Also
+        --------
+        index_from_name_origin
+        """
+        return self.data.pop(index)
+
     @property
-    def data(self):
+    def data(self) -> List[DataWithAxes]:
         """List[DataWithAxes]: get the data contained in the object"""
         return self._data
+
+    @data.setter
+    def data(self, new_data: List[DataWithAxes]):
+        for dat in new_data:
+            self._check_data_type(dat)
+        self._data[:] = [dat for dat in new_data]  # shallow copyto make sure that if the original list
+        # is changed, the change will not be applied in here
+
+        self.affect_name_to_origin_if_none()
 
     @staticmethod
     def _check_data_type(data: DataWithAxes):
@@ -1566,8 +1633,6 @@ class DataToExport(DataLowLevel):
         if isinstance(data, DataToExport):
             for dat in data:
                 self.append(dat)
-
-
 
 
 class DataScan(DataToExport):
