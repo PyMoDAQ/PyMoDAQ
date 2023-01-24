@@ -272,6 +272,127 @@ The beam should follow automatically the scan that we have defined. Of course in
 
     Movement of the beam on the camera with a scan of the setpoints.
 
+How to write my own PID application?
+------------------------------------
+
+Package structure for a PID application
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To write your own PID application, you should create a package with a similar structure as a standard *pymodaq_plugins_xxx* package. There are few modifications. Let us have a look at the *pymodaq_plugins_pid*.
+
+Notice there is a *models* folder next to the *hardware* folder, at the root of the package. This folder will contains the PID models.
+
+    .. _fig_beam_steering:
+
+.. figure:: /image/PID_Module/pid_package_structure.png
+    :width: 300
+
+    Structure of a package containing PID models.
+
+Then python will be able to probe into those as they have been configured as entry points during installation of the package. You should check that those lines are present in the *setup.py* file of your package.
+
+    .. _fig_pid_package_setup:
+
+.. figure:: /image/PID_Module/pid_package_setup.svg
+    :width: 800
+
+    Declaration of entry points in the setup.py file.
+
+This declaration allows PyMoDAQ to find the installed models when executing the PID module. Internally, it will call the *get_models* method that is defined in the *daq_utils*.
+
+    .. _fig_get_models_method:
+
+.. figure:: /image/PID_Module/pid_get_models_method.png
+    :width: 800
+
+    The *get_models* method in the *daq_utils*.
+
+In order to use the PID module for our specific physical system, we need:
+
+* A **set of detector and actuator plugins** that is needed to stabilize our system.
+* A **PID model** to implement the logic that is needed to translate the detectors' signals into a correction.
+
+Detector/actuator plugins
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In the beam steering example, this corresponds to one actuator plugin (if you use the same motor model for horizontal and vertical axis), and a camera plugin.
+
+The first thing to do is to check the `list of readily available plugins`__.
+
+The easy scenario is that you found that the plugins for your hardware are already developped. You then just have to test if they properly move or make an acquisition with the `DAQ Move`__ and `DAQ Viewer`__ modules. That's it!
+
+If there is no plugin developped for the hardware you want to use, you will have to develop your own. Don't panic, that's quite simple! Everything is explained in the `Plugins`__ section of the documentation, and in `this video`__. Moreover, you can find a lot of examples for any kind of plugins in the list given above and in the `GitHub repository of PyMoDAQ`__. If at some point, you stick on a problem, do not hesite to raise an issue in the GitHub repository or address your question to the mailing list pymodaq@services.cnrs.fr.
+
+.. note::
+    It is not necessary that the plugins you use are declared in the same package as your model. Actually a model is in principle independent of the hardware. If you use plugins that are declared in other packages, you just need them to be installed in your python environment.
+
+__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
+
+__ https://pymodaq.cnrs.fr/en/latest/usage/modules/DAQ_Move.html
+
+__ https://pymodaq.cnrs.fr/en/latest/usage/modules/DAQ_Viewer.html
+
+__ https://pymodaq.cnrs.fr/en/latest/usage/modules/Plugins.html
+
+__ https://www.youtube.com/watch?v=9O6pqz89UT8
+
+__ https://github.com/orgs/PyMoDAQ/repositories?type=all
+
+
+How to write a PID model?
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Naming convention**
+
+Similarly to `plugins`__, there exist naming conventions that you should follow, so that PyMoDAQ will be able to parse correctly and find the classes and the files that are involved.
+
+* The name of the file declaring the PID model should be named **PIDModelXxxx.py**
+* The class declared in the file should be named **PIDModelXxxx**
+
+__ https://pymodaq.cnrs.fr/en/latest/usage/modules/Plugins.html#naming-convention
+
+**Number of setpoints and naming of the control modules**
+
+The number of setpoints, their names, and the naming of the control modules are declared at the begining of the class declaration. It is important that **those names are reported in the preset file associated to the model**. We understand now that those names are actually set in the PID model class.
+
+    .. _fig_pid_model_configuration:
+
+.. figure:: /image/PID_Module/pid_model_configuration.png
+    :width: 900
+
+    Configuration of a PID model.
+
+**The required methods of a PID model class**
+
+There are two required methods in a PID model class:
+
+* **convert_input** that will translate the acquisitions of the detectors into an understandable input for the PID filter (which is defined in an external package).
+* **convert_output** that will translate the output of the PID filter(s) into an understandable order for the actuators.
+
+    .. _fig_pid_model_methods:
+
+.. figure:: /image/PID_Module/pid_model_methods.png
+    :width: 800
+
+    The important methods of a PID model class.
+
+In this example of the PIDModelBeamSteering, the *convert_input* method get the acquisition of the camera, remove the *threshold* value defined by the user through the UI (this is to remove the background noise), calculate the center of mass of the image, and send the coordinates as input to the PID filter.
+
+.. note::
+    The PID filter is aware of the setpoints values, thus you just have to send him *absolute* values for the positioning of the system. He will calculate the difference himself.
+
+As for the *convert_output* method, it only transferts the output of the PID filter directly as *relative* orders to the actuators.
+
+.. note::
+    The output of the PID filter is a correction that is *relative* to the current values of the actuators.
+
+That's it!
+
+.. note::
+    In this example, there is actually no other methods defined in the model, but you can imagine more complex systems where, for example, the translation from the detectors acquisitions to the input to the filter would need a calibration scan. Then you will probably need to define other methods. But, whatever it is, all the logic that is specific to your system should be defined in this class.
+
+If you want to go deeper, the next section is for you!
+
 PID module internals
 --------------------
 
