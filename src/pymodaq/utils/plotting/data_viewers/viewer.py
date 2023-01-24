@@ -181,6 +181,7 @@ class ViewerDispatcher:
             self.add_viewer(viewers_type[Nviewers_to_leave + ind_loop],
                             dock_name=viewers_name[Nviewers_to_leave + ind_loop] if viewers_name is not None else None)
             ind_loop += 1
+        QtWidgets.QApplication.processEvents()
 
     def close(self):
         for dock in self.viewer_docks:
@@ -291,13 +292,16 @@ class ViewerBase(QObject):
 
 if __name__ == '__main__':
     import sys
+    import random
     app = QtWidgets.QApplication(sys.argv)
 
     dockarea = DockArea()
     prog = ViewerDispatcher(dockarea=dockarea, title='Dispatcher')
     dockarea.show()
-
-    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']],
-                        viewers_name=['myviewer', '1D Viewer', 'Average'])
+    N = 2
+    viewers = ['Viewer0D', 'Viewer1D', 'Viewer2D']
+    viewers = [ViewersEnum[random.choice(viewers)] for ind in range(N)]
+    print(viewers)
+    prog.update_viewers(viewers)
 
     sys.exit(app.exec_())
