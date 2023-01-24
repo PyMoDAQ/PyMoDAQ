@@ -9,7 +9,7 @@ from typing import Callable, Union, List, Tuple
 
 import numpy as np
 
-from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import Axis
@@ -32,7 +32,7 @@ class ScanParameterManager(ParameterManager):
         self.settings_tree.setMinimumHeight(150)
 
 
-class ScannerBase(metaclass=ABCMeta):
+class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     """Abstract class for all Scanners
 
     Attributes
@@ -51,13 +51,14 @@ class ScannerBase(metaclass=ABCMeta):
     n_axes: int
         Number of actuators/scan axes. Equal to the first dimension of positions
     """
-    params: list = abstract_attribute()
+    params: List[dict] = abstract_attribute()
     axes_unique: List[np.ndarray] = abstract_attribute()
     axes_indexes: np.ndarray = abstract_attribute()
     n_steps: int = abstract_attribute()
     n_axes: int = abstract_attribute()
 
     def __init__(self, actuators: List['DAQ_Move'] = None):
+        super().__init__()
         self.positions: np.ndarray = None
         self.n_steps = 1
         self.actuators = actuators
@@ -128,6 +129,8 @@ class ScannerBase(metaclass=ABCMeta):
         """
         ...
 
+    def value_changed(self, param):
+        self.evaluate_steps()
 
 class ScannerFactory(ObjectFactory):
     """Factory class registering and storing Scanners"""

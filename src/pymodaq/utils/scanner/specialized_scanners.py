@@ -24,20 +24,19 @@ config = configmod.Config()
 
 
 @ScannerFactory.register('Sequential', 'Linear')
-class SequentialScanner(ScannerBase, ScanParameterManager):
+class SequentialScanner(ScannerBase):
     params = [
         {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate},
               ]
 
     def __init__(self, actuators: List[str]):
-        ScanParameterManager.__init__(self)
         self._actuators = actuators
 
         self.table_model: TableModelSequential = None
         self.table_view: TableViewCustom = None
         self.update_model()
 
-        ScannerBase.__init__(self)
+        super().__init__(self)
 
     @property
     def actuators(self):

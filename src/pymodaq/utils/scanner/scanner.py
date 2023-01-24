@@ -204,10 +204,7 @@ class Scanner(QObject, ParameterManager):
 
     @property
     def n_steps(self):
-        if self._scanner.n_steps is None:
-            return self._scanner.evaluate_steps()
-        else:
-            return self._scanner.n_steps
+        return self._scanner.evaluate_steps()
 
     @property
     def n_axes(self):

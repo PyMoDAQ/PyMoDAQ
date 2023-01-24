@@ -19,7 +19,7 @@ config = configmod.Config()
 
 
 @ScannerFactory.register('Scan2D', 'Linear')
-class Scan2DLinear(ScannerBase, ScanParameterManager):
+class Scan2DLinear(ScannerBase):
     params = [{'title': 'Start Ax1:', 'name': 'start_axis1', 'type': 'float',
                'value': config('scan', 'scan2D', 'linear', 'start1')},
               {'title': 'Start Ax2:', 'name': 'start_axis2', 'type': 'float',
@@ -36,8 +36,7 @@ class Scan2DLinear(ScannerBase, ScanParameterManager):
     n_axes = 2
 
     def __init__(self, actuators: List = None, **_ignored):
-        ScanParameterManager.__init__(self)
-        ScannerBase.__init__(self, actuators=actuators)
+        super().__init__(self, actuators=actuators)
 
     def get_pos(self):
         starts = np.array([self.settings['start_axis1'], self.settings['start_axis2']])

@@ -20,7 +20,7 @@ config = configmod.Config()
 
 
 @ScannerFactory.register('Scan1D', 'Linear')
-class Scan1DLinear(ScannerBase, ScanParameterManager):
+class Scan1DLinear(ScannerBase):
     params = [
         {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': config('scan', 'scan1D', 'start')},
         {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
@@ -29,13 +29,11 @@ class Scan1DLinear(ScannerBase, ScanParameterManager):
     n_axes = 1
 
     def __init__(self, actuators: List = None, **_ignored):
-        ScanParameterManager.__init__(self)
         ScannerBase.__init__(self, actuators=actuators)
 
     def set_scan(self):
-        if self.positions is None:
-            self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
-                                                  self.settings['step'])
+        self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
+                                              self.settings['step'])
         self.get_info_from_positions(self.positions)
 
     def evaluate_steps(self) -> int:
@@ -61,10 +59,9 @@ class Scan1DRandom(Scan1DLinear):
         super().__init__(actuators=actuators)
 
     def set_scan(self):
-        if self.positions is None:
-            self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
-                                                  self.settings['step'])
-            np.random.shuffle(self.positions)
+        self.positions = mutils.linspace_step(self.settings['start'], self.settings['stop'],
+                                              self.settings['step'])
+        np.random.shuffle(self.positions)
         self.get_info_from_positions(self.positions)
 
 
@@ -85,7 +82,6 @@ try:
             super().__init__(actuators=actuators)
 
         def set_scan(self):
-
             self.axes_unique = [np.array([])]
             self.axes_indexes = np.array([], dtype=np.int)
             self.positions = np.array([self.settings['start'], self.settings['stop']])
