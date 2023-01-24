@@ -11,8 +11,8 @@ from collections import OrderedDict
 import numpy as np
 from pathlib import Path
 import os
-from typing import List
-
+from typing import List, Tuple
+import tempfile
 
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name
@@ -36,7 +36,7 @@ from pymodaq.extensions.daq_scan_ui import DAQScanUI
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.h5modules.saving import H5Saver
-from pymodaq.utils.h5modules import module_saving
+from pymodaq.utils.h5modules import module_saving, data_saving
 
 
 config = Config()
@@ -44,6 +44,14 @@ logger = set_logger(get_module_name(__file__))
 
 SHOW_POPUPS = config('scan', 'show_popups')
 SHOW_POPUPS = False
+
+
+class ScanDataTemp:
+    """Convenience class to hold temporary data to be plotted in the live plots"""
+    def __init__(self, scan_index: int, indexes: Tuple[int], data: data_mod.DataToExport):
+        self.scan_index = scan_index
+        self.indexes = indexes
+        self.data = data
 
 
 class DAQScan(QObject, ParameterManager):
@@ -127,6 +135,10 @@ class DAQScan(QObject, ParameterManager):
         self.module_and_data_saver = module_saving.ScanSaver(self)
         self.module_and_data_saver.h5saver = self.h5saver
 
+        self.extended_saver: data_saving.DataToExportExtendedSaver = None
+        self.h5temp: H5Saver = None
+        self.temp_path: tempfile.TemporaryDirectory = None
+
         self.h5saver.settings.child('do_save').hide()
         self.h5saver.settings.child('custom_name').hide()
 
@@ -152,14 +164,8 @@ class DAQScan(QObject, ParameterManager):
         self.set_config()
         #self.scanner.set_config()
 
-        self.update_plot_timer = QtCore.QTimer()
-        self.update_plot_timer.timeout.connect(self.update_plots)
-
         self.ui.enable_start_stop(False)
         logger.info('DAQScan Initialized')
-
-    def update_plots(self):
-        print(self.module_and_data_saver.get_set_node())
 
     def plot_from(self):
         self.modules_manager.get_det_data_list()
@@ -771,12 +777,6 @@ class DAQScan(QObject, ParameterManager):
         """
         self.settings.child('plot_options', 'plot_from').setOpts(limits=dets)
 
-    def update_plot0D_list(self, item_selects):
-        self.settings.child('plot_options', 'plot_0d').setValue(item_selects.value())
-
-    def update_plot1D_list(self, item_selects):
-        self.settings.child('plot_options', 'plot_1d').setValue(item_selects.value())
-
     def update_status(self, txt, wait_time=0, log_type=None):
         """
             Show the txt message in the status bar with a delay of wait_time ms.
@@ -820,7 +820,6 @@ class DAQScan(QObject, ParameterManager):
 
         elif status[0] == "Scan_done":
             self.modules_manager.reset_signals()
-            self.update_plot_timer.stop()
             self.ui.set_scan_done()
             self.save_scan()
             if not self.batch_started:
@@ -849,6 +848,11 @@ class DAQScan(QObject, ParameterManager):
         self.ui.indice_average_sb.setVisible(show)
         if show:
             self.ui.average_dock.setStretch(100, 100)
+
+    def update_plots(self, scan_data: ScanDataTemp):
+        if scan_data.scan_index == 0:
+            self.extended_saver.add_nav_axes(self.h5temp.raw_group, self.scanner.get_nav_axes())
+        self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes)
 
     @Slot(OrderedDict)
     def update_scan_GUI(self, datas):
@@ -1405,6 +1409,9 @@ class DAQScan(QObject, ParameterManager):
             scan_node = self.module_and_data_saver.get_set_node()
             scan_node.attrs['scan_done'] = False
             self.save_metadata(self.h5saver.get_last_scan(), 'scan_info')
+
+            self.init_temp_file()
+
             # # save settings from move modules
             # move_modules_names = [mod.title for mod in self.modules_manager.actuators]
             # for ind_move, move_name in enumerate(move_modules_names):
@@ -1458,7 +1465,7 @@ class DAQScan(QObject, ParameterManager):
             if config['scan']['scan_in_thread']:
                 scan_acquisition.moveToThread(self.scan_thread)
             self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
-            scan_acquisition.scan_data_tmp[OrderedDict].connect(self.update_scan_GUI)
+            scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.update_plots)
             scan_acquisition.status_sig[list].connect(self.thread_status)
 
             self.scan_thread.scan_acquisition = scan_acquisition
@@ -1470,9 +1477,28 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_scan_done(False)
 
             self.command_DAQ_signal.emit(['start_acquisition'])
-            self.update_plot_timer.start(1000)
             self.ui.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
+
+    def init_temp_file(self):
+        Naverage = self.settings.child('scan_options', 'scan_average').value()
+        if Naverage > 1:
+            scan_shape = [Naverage]
+            scan_shape.extend(self.scanner.get_scan_shape())
+        else:
+            scan_shape = self.scanner.get_scan_shape()
+        if self.temp_path is not None:
+            try:
+                self.h5temp.close()
+                self.temp_path.cleanup()
+            except Exception as e:
+                logger.exception(str(e))
+        self.h5temp = H5Saver()
+        self.temp_path = tempfile.TemporaryDirectory(prefix='pymo')
+        addhoc_file_path = Path(self.temp_path.name).joinpath('temp_data.h5')
+        self.h5temp.init_file(custom_naming=True, addhoc_file_path=addhoc_file_path)
+        self.extended_saver: data_saving.DataToExportExtendedSaver =\
+            data_saving.DataToExportExtendedSaver(self.h5temp, extended_shape=scan_shape)
 
     def set_ini_positions(self):
         """
@@ -1522,7 +1548,7 @@ class DAQScanAcquisition(QObject):
         =========================== ========================================
 
     """
-    scan_data_tmp = Signal(OrderedDict)
+    scan_data_tmp = Signal(ScanDataTemp)
     status_sig = Signal(list)
 
     def __init__(self, scan_settings: Parameter = None, scanner: Scanner = None,
@@ -1530,8 +1556,8 @@ class DAQScanAcquisition(QObject):
                  module_saver: module_saving.ScanSaver = None):
 
         """
-            DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
-            getting back data, saviong and letting know th UI about the scan status
+        DAQScanAcquisition deal with the acquisition part of daq_scan, that is transferring commands to modules,
+        getting back data, saviong and letting know th UI about the scan status
 
         """
         
@@ -1964,7 +1990,7 @@ class DAQScanAcquisition(QObject):
                     nav_axis.append(np.array(positions[ind_ax]))
 
             self.det_done_flag = True
-
+            self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, det_done_datas))
             # self.scan_data_tmp.emit(OrderedDict(positions=self.modules_manager.move_done_positions,
             #                                     datas=self.scan_read_datas,
             #                                     curvilinear=self.curvilinear))
