@@ -409,6 +409,26 @@ class TestDataToExport:
         assert data.get_data_from_name_origin('data2D', 'toexport2') is None
         assert data.get_data_from_name_origin('data1D', 'toexport') == dat2
 
+    def test_index(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        assert data.index(dat1) == 0
+        assert data.index(dat1) == data.data.index(dat1)
+        assert data.index(dat2) == data.data.index(dat2)
+
+    def test_index_from_name_origin(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        assert data.index_from_name_origin(dat1.name, dat1.origin) == data.index(dat1)
+        assert data.index_from_name_origin(dat2.name, dat2.origin) == data.index(dat2)
+
+    def test_pop(self, ini_data_to_export):
+        dat1, dat2, data = ini_data_to_export
+        assert len(data) == 2
+        dat = data.pop(1)
+        assert dat is dat2
+        assert len(data) == 1
+        with pytest.raises(ValueError):
+            data.index(dat2)
+
     def test_get_names(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
         assert data.get_names() == ['data2D', 'data1D']
