@@ -75,11 +75,12 @@ class DAQScan(QObject, ParameterManager):
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
             {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
-            {'title': 'Plot All:', 'name': 'plot_all', 'type': 'bool', 'value': True},
-            {'title': 'Plot from:', 'name': 'plot_from', 'type': 'list'},
-            {'title': 'Get Probe signals', 'name': 'plot_probe', 'type': 'action'},
+            {'title': 'Get Probe signals', 'name': 'plot_probe', 'type': 'bool_push'},
             {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect'},
             {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect'},
+            {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'bool_push'},
+            {'title': 'Plot_each?', 'name': 'plot_each', 'type': 'bool', 'value': True},
+            {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int', 'value': 1000, 'visible': False},
             ]},
     ]
 
@@ -130,6 +131,8 @@ class DAQScan(QObject, ParameterManager):
 
         self.scan_thread = None
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
+        self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
+        self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
 
         self.h5saver = H5Saver()
         self.module_and_data_saver = module_saving.ScanSaver(self)
@@ -153,9 +156,6 @@ class DAQScan(QObject, ParameterManager):
         self.ind_batch = 0
 
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
-        self.modules_manager.detectors_changed[list].connect(self.update_plot_det_items)
-
-        self.settings.child('plot_options', 'plot_probe').sigActivated.connect(self.plot_from)
 
         self.setup_ui()
         self.ui.command_sig.connect(self.process_ui_cmds)
@@ -165,6 +165,8 @@ class DAQScan(QObject, ParameterManager):
         #self.scanner.set_config()
 
         self.live_plotter = LoaderPlotter(self.dockarea)
+        self.live_timer = QtCore.QTimer()
+        self.live_timer.timeout.connect(self.update_live_plots)
 
         self.ui.enable_start_stop(False)
         logger.info('DAQScan Initialized')
@@ -185,6 +187,10 @@ class DAQScan(QObject, ParameterManager):
         self.ui.set_scanner_settings(self.scanner.parent_widget)
 
         self.ui.set_modules_settings(self.modules_manager.settings_tree)
+
+        self.plotting_settings_tree = ParameterTree()
+        self.plotting_settings_tree.setParameters(self.settings.child('plot_options'))
+        self.ui.set_plotting_settings(self.plotting_settings_tree)
 
     ################
     #  CONFIG/SETUP UI / EXIT
@@ -226,12 +232,6 @@ class DAQScan(QObject, ParameterManager):
 
             self.scanner.scan_selector.widget.setVisible(False)
             self.scanner.scan_selector.show_scan_selector(visible=False)
-
-            # setting moves and det in tree
-            preset_items_det = [mod for ind, mod in enumerate(self.modules_manager.detectors_all) if ind == 0]
-            self.settings.child('plot_options', 'plot_from').setLimits([mod.title for mod in preset_items_det])
-            if preset_items_det != []:
-                self.settings.child('plot_options', 'plot_from').setValue(preset_items_det[0].title)
 
             self.show_average_dock(False)
 
@@ -773,11 +773,19 @@ class DAQScan(QObject, ParameterManager):
         """
         if param.name() == 'scan_average':
             self.show_average_dock(param.value() > 1)
+        elif param.name() == 'prepare_viewers':
+            self.prepare_viewers()
+        elif param.name() == 'plot_probe':
+            self.plot_from()
+        elif param.name() == 'plot_each':
+            self.settings.child('plot_options', 'refresh_live').show(not param.value())
 
-    def update_plot_det_items(self, dets):
-        """
-        """
-        self.settings.child('plot_options', 'plot_from').setOpts(limits=dets)
+    def prepare_viewers(self):
+        viewers_enum = [ViewersEnum('Data1D') for _ in
+                        range(len(self.settings['plot_options', 'plot_0d']['selected']))]
+        viewers_enum.extend(
+            [ViewersEnum('Data2D') for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
+        self.live_plotter.prepare_viewers(viewers_enum)
 
     def update_status(self, txt, wait_time=0, log_type=None):
         """
@@ -822,6 +830,7 @@ class DAQScan(QObject, ParameterManager):
 
         elif status[0] == "Scan_done":
             self.modules_manager.reset_signals()
+            self.live_timer.stop()
             self.ui.set_scan_done()
             self.save_scan()
             if not self.batch_started:
@@ -851,13 +860,15 @@ class DAQScan(QObject, ParameterManager):
         if show:
             self.ui.average_dock.setStretch(100, 100)
 
-    def update_plots(self, scan_data: ScanDataTemp):
+    def save_temp_live_data(self, scan_data: ScanDataTemp):
         if scan_data.scan_index == 0:
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, self.scanner.get_nav_axes())
         self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes)
+        if self.settings['plot_options', 'plot_each']:
+            self.update_live_plots()
 
+    def update_live_plots(self):
         self.live_plotter.load_plot_data()
-
 
     @Slot(OrderedDict)
     def update_scan_GUI(self, datas):
@@ -1470,7 +1481,7 @@ class DAQScan(QObject, ParameterManager):
             if config['scan']['scan_in_thread']:
                 scan_acquisition.moveToThread(self.scan_thread)
             self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
-            scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.update_plots)
+            scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
             scan_acquisition.status_sig[list].connect(self.thread_status)
 
             self.scan_thread.scan_acquisition = scan_acquisition
@@ -1480,7 +1491,8 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_action_enabled('ini_positions', False)
             self.ui.set_action_enabled('start', False)
             self.ui.set_scan_done(False)
-
+            if not self.settings['plot_options', 'plot_each']:
+                self.live_timer.start(self.settings['plot_options', 'refresh_live'])
             self.command_DAQ_signal.emit(['start_acquisition'])
             self.ui.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
@@ -1506,7 +1518,7 @@ class DAQScan(QObject, ParameterManager):
         self.extended_saver: data_saving.DataToExportExtendedSaver =\
             data_saving.DataToExportExtendedSaver(self.h5temp, extended_shape=scan_shape)
         self.live_plotter.h5saver = self.h5temp
-        #self.live_plotter.clear_viewers()
+
         viewers_enum = [ViewersEnum('Data1D') for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
         viewers_enum.extend([ViewersEnum('Data2D') for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
         self.live_plotter.prepare_viewers(viewers_enum)
@@ -1975,9 +1987,6 @@ class DAQScanAcquisition(QObject):
 
         """
         try:
-            #todo select data to be ploted as live probably from a ModulesManager get_det_data_list
-            # self.scan_read_datas = det_done_datas[
-            #     self.scan_settings.child('plot_options', 'plot_from').value()].copy()
             indexes = self.scanner.get_indexes_from_scan_index(self.ind_scan)
             if self.Naverage > 1:
                 indexes = list(indexes)
@@ -1996,12 +2005,9 @@ class DAQScanAcquisition(QObject):
 
             self.det_done_flag = True
 
-            if self.scan_settings['plot_options', 'plot_all']:
-                data_temp = det_done_datas.get_data_from_dims(['Data0D', 'Data1D'], deepcopy=False)
-            else:
-                full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
-                full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
-                data_temp = det_done_datas.get_data_from_full_names(full_names, deepcopy=False)
+            full_names: list = self.scan_settings['plot_options', 'plot_0d']['selected'][:]
+            full_names.extend(self.scan_settings['plot_options', 'plot_1d']['selected'][:])
+            data_temp = det_done_datas.get_data_from_full_names(full_names, deepcopy=False)
 
             self.scan_data_tmp.emit(ScanDataTemp(self.ind_scan, indexes, data_temp))
 
@@ -2146,5 +2152,5 @@ def main(init_qt=True):
 
 
 if __name__ == '__main__':
-    main()
-    #main_test()
+    #main()
+    main_test()

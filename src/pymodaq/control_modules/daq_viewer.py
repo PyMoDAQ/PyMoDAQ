@@ -246,7 +246,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.detector = self.detectors[0]
 
     @property
-    def daq_type(self):
+    def daq_type(self) -> DAQTypesEnum:
         """:obj:`DAQTypesEnum`: Get/Set the daq_type
 
         Update the detector property with the list of available detectors of a given daq_type

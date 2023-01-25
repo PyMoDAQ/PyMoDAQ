@@ -94,19 +94,27 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         widget_command.layout().addWidget(self._toolbar)
 
         splitter_widget = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        splitter_v_widget = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         widget_command.layout().addWidget(splitter_widget)
-
+        splitter_widget.addWidget(splitter_v_widget)
         self.module_widget = QtWidgets.QWidget()
         self.module_widget.setLayout(QtWidgets.QVBoxLayout())
         self.module_widget.setMinimumWidth(220)
         self.module_widget.setMaximumWidth(400)
 
+        self.plotting_widget = QtWidgets.QWidget()
+        self.plotting_widget.setLayout(QtWidgets.QVBoxLayout())
+        self.plotting_widget.setMinimumWidth(220)
+        self.plotting_widget.setMaximumWidth(400)
+
         settings_widget = QtWidgets.QWidget()
         settings_widget.setLayout(QtWidgets.QVBoxLayout())
         settings_widget.setMinimumWidth(220)
-        #settings_widget.setMaximumWidth(350)
 
-        splitter_widget.addWidget(self.module_widget)
+        splitter_v_widget.addWidget(self.module_widget)
+        splitter_v_widget.addWidget(self.plotting_widget)
+
+        splitter_v_widget.setSizes([400, 400])
         splitter_widget.addWidget(settings_widget)
 
 
@@ -136,6 +144,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def set_modules_settings(self, settings_widget):
         self.module_widget.layout().addWidget(settings_widget)
+
+    def set_plotting_settings(self, settings_plotting):
+        self.plotting_widget.layout().addWidget(settings_plotting)
 
     def populate_status_bar(self):
         self._status_message_label = QtWidgets.QLabel('Initializing')
