@@ -277,7 +277,7 @@ class Data0DWithHistory:
     def __len__(self):
         return self.length
 
-    @dispatch(data_mod.DataRaw)
+    @dispatch(data_mod.DataWithAxes)
     def add_datas(self, data: data_mod.DataRaw):
         datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
         self.add_datas(datas)
