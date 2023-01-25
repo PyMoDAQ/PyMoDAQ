@@ -111,25 +111,17 @@ class DAQScan(QObject, ParameterManager):
         self.wait_time = 1000
 
         self.navigator = None
+
         self.ind_scan = 0
         self.ind_average = 0
-        self._metada_dataset_set = False
-        self.scan_x_axis = None
-        self.scan_y_axis = None
-        self.scan_data_1D = np.array([])
-        self.scan_data_1D_average = np.array([])
-        self.scan_data_2D = []
-        self.scan_data_2D_average = []
-        self.curvilinear_values = []
-        self.scan_positions = []
-        self.scan_data_2D_to_save = []
-        self.scan_data_1D_to_save = []
-        self.plot_1D_ini = False
-        self.plot_2D_ini = False
 
+        self._metada_dataset_set = False
+
+        self.curvilinear_values = []
         self.plot_colors = utils.plot_colors
 
-        self.scan_thread = None
+        self.scan_thread: QThread = None
+
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
@@ -144,9 +136,7 @@ class DAQScan(QObject, ParameterManager):
 
         self.h5saver.settings.child('do_save').hide()
         self.h5saver.settings.child('custom_name').hide()
-
         self.h5saver.new_file_sig.connect(self.create_new_file)
-        self.h5arrays = OrderedDict([])
 
         self.scanner = Scanner(actuators=self.modules_manager.actuators)  # , adaptive_losses=adaptive_losses)
         self.scan_parameters = None
@@ -159,10 +149,10 @@ class DAQScan(QObject, ParameterManager):
 
         self.setup_ui()
         self.ui.command_sig.connect(self.process_ui_cmds)
+
         self.create_dataset_settings()
         self.setup_modules(self.dashboard.title)
         self.set_config()
-        #self.scanner.set_config()
 
         self.live_plotter = LoaderPlotter(self.dockarea)
         self.live_timer = QtCore.QTimer()
@@ -185,7 +175,6 @@ class DAQScan(QObject, ParameterManager):
                                         ['General Settings', 'Save Settings'])
 
         self.ui.set_scanner_settings(self.scanner.parent_widget)
-
         self.ui.set_modules_settings(self.modules_manager.settings_tree)
 
         self.plotting_settings_tree = ParameterTree()
@@ -245,6 +234,7 @@ class DAQScan(QObject, ParameterManager):
             # self.update_status(getLineInfo()+str(e), self.wait_time, log_type='log')
 
     def create_average_dock(self):
+        #todo update with v4 layout
         self.ui.average_dock = gutils.dock.Dock("Averaging")
         average_tab = QtWidgets.QTabWidget()
         average1D_widget = QtWidgets.QWidget()
@@ -359,6 +349,7 @@ class DAQScan(QObject, ParameterManager):
     # external modules
 
     def show_batcher(self, menubar):
+        #todo update with v4 layout
         self.batcher = BatchScanner(self.dockarea, self.modules_manager.actuators_name,
                                     self.modules_manager.detectors_name)
         self.batcher.create_menu(menubar)
@@ -442,6 +433,7 @@ class DAQScan(QObject, ParameterManager):
             logger.exception(str(e))
 
     def show_navigator(self):
+        #todo update with v4 layout
         if self.navigator is None:
             # loading navigator
 
@@ -468,156 +460,6 @@ class DAQScan(QObject, ParameterManager):
 
     def load_file(self):
         self.h5saver.load_file(self.h5saver.h5_file_path)
-
-    def save_scan(self):
-        """
-        save live data and adds metadata to write that the scan is done
-        """
-        try:
-            scan_type = self.scanner.scan_parameters.scan_type
-            isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
-            self.ui.scan2D_graph.show_roi_target(False)
-
-            self.h5saver.current_scan_group.attrs['scan_done'] = True
-            self.h5saver.init_file(addhoc_file_path=self.h5saver.settings.child(('current_h5_file')).value())
-            # create Live scan node (may be empty if no possible live data could be plotted) but mandatory for
-            # incrementing scan index, otherwise current scan is overwritten
-            if scan_type == 'Scan1D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
-                    scan_type == 'Tabular':
-                live_group = self.h5saver.add_live_scan_group(self.h5saver.current_scan_group, '1D', title='',
-                                                              settings_as_xml='', metadata=dict([]))
-            else:  # scan_type == 'Scan2D' or\
-                #  (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2):
-                live_group = self.h5saver.add_live_scan_group(self.h5saver.current_scan_group, '2D', title='',
-                                                              settings_as_xml='', metadata=dict([]))
-
-            # save scan1D
-            if len(self.scan_data_1D) != 0:
-
-                if self.settings.child('scan_options', 'scan_average').value() <= 1:
-                    datas = OrderedDict([])
-                    for ind in range(self.scan_data_1D.shape[1]):
-                        datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
-                        datas['Scan_Data_{:03d}'.format(ind)]['data'] = self.scan_data_1D[:, ind]
-                        if len(self.scan_data_1D[:, 0]) > 1:  # means data are 1D (so save corresponding axis)
-                            if scan_type == 'Scan1D' or \
-                                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1):
-                                datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(
-                                    data=self.scan_x_axis,
-                                    units=self.modules_manager.actuators[0].settings.child(
-                                        'move_settings', 'units').value(),
-                                    label=self.modules_manager.actuators[0].title)
-                            else:
-                                datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(data=self.scan_x_axis,
-                                                                                                  units='',
-                                                                                                  label='Scan indexes')
-
-                    for ind_channel, channel in enumerate(datas):  # list of OrderedDict
-                        channel_group = self.h5saver.add_CH_group(live_group, title=channel)
-                        self.h5saver.add_data_live_scan(channel_group, datas['Scan_Data_{:03d}'.format(ind_channel)],
-                                                        scan_type='scan1D',
-                                                        scan_subtype=self.scanner.scan_parameters.scan_subtype)
-
-                else:
-                    averaged_datas = OrderedDict([])
-                    for ind in range(self.scan_data_1D.shape[1]):
-                        averaged_datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
-                        averaged_datas['Scan_Data_{:03d}'.format(ind)]['data'] = self.scan_data_1D_average[:, ind]
-                        if scan_type == 'Scan1D' or \
-                                (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1):
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(
-                                data=self.scan_x_axis,
-                                units=self.modules_manager.actuators[0].settings.child(
-                                    'move_settings', 'units').value(),
-                                label=self.modules_manager.actuators[0].title)
-                        else:
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = data_mod.Axis(
-                                data=self.scan_x_axis, units='', label='Scan indexes')
-
-                    for ind_channel, channel in enumerate(averaged_datas):  # list of OrderedDict
-                        channel_group = self.h5saver.add_CH_group(live_group, title=channel)
-                        self.h5saver.add_data_live_scan(channel_group,
-                                                        averaged_datas['Scan_Data_{:03d}'.format(ind_channel)],
-                                                        scan_type='scan1D',
-                                                        scan_subtype=self.scanner.scan_parameters.scan_subtype)
-
-                if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = gutils.utils.widget_to_png_to_bytes(self.ui.average1D_graph.parent)
-                else:
-                    string = gutils.utils.widget_to_png_to_bytes(self.ui.scan1D_graph.parent)
-                live_group.attrs['pixmap1D'] = string
-
-            elif self.scan_data_2D != []:  #if live data is saved as 1D not needed to save as 2D
-
-                if len(self.modules_manager.actuators) == 1:
-                    scan_type = 'scan1D'
-                elif len(self.modules_manager.actuators) == 2:
-                    scan_type = 'scan2D'
-                if not isadaptive:
-                    if self.settings.child('scan_options', 'scan_average').value() <= 1:
-                        datas = OrderedDict([])
-                        for ind, data2D in enumerate(self.scan_data_2D):
-                            datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
-                            datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D.T
-                            datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(
-                                data=self.ui.scan2D_graph.x_axis.axis_data(data2D.shape[1]),
-                                units=self.ui.scan2D_graph.x_axis.axis_units,
-                                label=self.ui.scan2D_graph.x_axis.axis_label)
-                            if scan_type == 'scan2D':
-                                datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(
-                                    data=self.ui.scan2D_graph.y_axis.axis_data(data2D.shape[0]),
-                                    units=self.ui.scan2D_graph.y_axis.axis_units,
-                                    label=self.ui.scan2D_graph.y_axis.axis_label)
-
-                        for ind_channel, channel in enumerate(datas):  # list of OrderedDict
-                            channel_group = self.h5saver.add_CH_group(live_group, title=channel)
-                            self.h5saver.add_data_live_scan(channel_group,
-                                                            datas['Scan_Data_{:03d}'.format(ind_channel)],
-                                                            scan_type=scan_type,
-                                                            scan_subtype=self.scanner.scan_parameters.scan_subtype)
-
-                    else:
-                        averaged_datas = OrderedDict([])
-                        for ind, data2D in enumerate(self.scan_data_2D_average):
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)] = OrderedDict([])
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['data'] = data2D.T
-                            averaged_datas['Scan_Data_{:03d}'.format(ind)]['x_axis'] = dict(
-                                data=self.ui.scan2D_graph.x_axis.axis_data(data2D.shape[1]),
-                                units=self.ui.scan2D_graph.x_axis.axis_units,
-                                label=self.ui.scan2D_graph.x_axis.axis_label)
-                            if scan_type == 'scan2D':
-                                averaged_datas['Scan_Data_{:03d}'.format(ind)]['y_axis'] = dict(
-                                    data=self.ui.scan2D_graph.y_axis.axis_data(data2D.shape[0]),
-                                    units=self.ui.scan2D_graph.y_axis.axis_units,
-                                    label=self.ui.scan2D_graph.y_axis.axis_label)
-
-                        for ind_channel, channel in enumerate(averaged_datas):  # dict of OrderedDict
-                            channel_group = self.h5saver.add_CH_group(live_group, title=channel)
-                            self.h5saver.add_data_live_scan(channel_group, averaged_datas[
-                                'Scan_Data_{:03d}'.format(ind_channel)],
-                                scan_type=scan_type, scan_subtype=self.scanner.scan_parameters.scan_subtype)
-
-                else:
-                    channel_group = self.h5saver.add_CH_group(live_group, title='Scan_Data_000')
-                    self.h5saver.add_data_live_scan(channel_group, dict(data=self.scan_data_2D[:, 2],
-                                                                        x_axis=self.scan_data_2D[:, 0],
-                                                                        y_axis=self.scan_data_2D[:, 1]),
-                                                    scan_type=scan_type,
-                                                    scan_subtype=self.scanner.scan_parameters.scan_subtype)
-
-                if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    string = gutils.utils.widget_to_png_to_bytes(self.ui.average2D_graph.parent)
-                else:
-                    string = gutils.utils.widget_to_png_to_bytes(self.ui.scan2D_graph.parent)
-                live_group.attrs['pixmap2D'] = string
-
-            if self.navigator is not None:
-                self.navigator.update_2Dscans()
-
-        except Exception as e:
-            logger.exception(str(e))
 
     def save_file(self):
         if not os.path.isdir(self.h5saver.settings['base_path']):
@@ -728,28 +570,13 @@ class DAQScan(QObject, ParameterManager):
             logger.exception(str(e))
 
     #  PROCESS MODIFICATIONS
-
     def update_actuators(self, actuators: List[str]):
         self.scanner.actuators = self.modules_manager.actuators
-        # self.scanner.actuators = actuators
 
     def move_to_crosshair(self, posx=None, posy=None):
-        """
-            Compute the scaled position from the given x/y position and send the command_DAQ signal with computed values as attributes.
-
-
-            =============== =========== ==============================
-            **Parameters**    **Type**   **Description**
-            *posx*           float       the original x position
-            *posy*           float       the original y position
-            =============== =========== ==============================
-
-            See Also
-            --------
-            update_status
-        """
+        #todo update with new v4 layout
         try:
-            if self.ui.move_to_crosshair_cb.isChecked():
+            if self.ui.is_action_checked('move_at'):
                 if "2D" in self.scanner.settings.child('scan_type').value():
                     if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
                         posx_real = posx * self.ui.scan2D_graph.x_axis.axis_scaling +\
@@ -801,6 +628,10 @@ class DAQScan(QObject, ParameterManager):
         self.ui.display_status(txt, wait_time)
         self.status_signal.emit(txt)
         logger.info(txt)
+
+    def save_scan(self):
+        #todo update with v4 layout
+        pass
 
     @Slot(list)
     def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
@@ -870,440 +701,6 @@ class DAQScan(QObject, ParameterManager):
     def update_live_plots(self):
         self.live_plotter.load_plot_data()
 
-    @Slot(OrderedDict)
-    def update_scan_GUI(self, datas):
-        """
-            Update the graph in the Graphic Interface from the given datas switching 0D/1D/2D consequently.
-
-            =============== =============================== ===========================
-            **Parameters**    **Type**                       **Description**
-            *datas*           double precision float array   the data values to update
-            =============== =============================== ===========================
-
-            See Also
-            --------
-            update_2D_graph, update_1D_graph, update_status
-        """
-
-        self.scan_positions.append(self.modules_manager.order_positions(datas['positions']))
-        scan_type = utils.capitalize(self.scanner.scan_parameters.scan_type)
-
-        display_as_sequence = (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
-                              (scan_type == 'Tabular' and not self.scanner.scan_parameters.Naxes == 1)
-
-        tabular2D = scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2
-        isadaptive = self.scanner.scan_parameters.scan_subtype == 'Adaptive'
-        if 'curvilinear' in datas:
-            self.curvilinear_values.append(datas['curvilinear'])
-
-        if self.bkg_container is None:
-            det_name = self.settings.child('plot_options', 'plot_from').value()
-            det_mod = self.modules_manager.get_mod_from_name(det_name)
-            if det_mod.bkg is not None and det_mod.do_bkg:
-                self.bkg_container = OrderedDict([])
-                det_mod.process_data(det_mod.bkg, self.bkg_container)
-
-        try:
-            if scan_type == 'Scan1D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 1) or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes > 2) or \
-                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 1) or \
-                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes > 2):
-
-                if 'data0D' in datas['datas'].keys():
-                    if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
-                        if self.bkg_container is None:
-                            bkg = None
-                        else:
-                            bkg = self.bkg_container['data0D']
-                        self.update_1D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive, bkg=bkg)
-                    else:
-                        self.scan_data_1D = []
-                if 'data1D' in datas['datas'].keys():
-                    if not (datas['datas']['data1D'] is None or datas['datas']['data1D'] == OrderedDict()):
-                        if self.bkg_container is None:
-                            bkg = None
-                        else:
-                            bkg = self.bkg_container['data1D']
-                        self.update_2D_graph(datas['datas']['data1D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive, bkg=bkg)
-                    # else:
-                    #     self.scan_data_2D = []
-
-            if scan_type == 'Scan2D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2) or \
-                    tabular2D:
-                # means 2D cartography type scan
-
-                if 'data0D' in datas['datas'].keys():
-                    if not (datas['datas']['data0D'] is None or datas['datas']['data0D'] == OrderedDict()):
-                        if self.bkg_container is None:
-                            bkg = None
-                        else:
-                            bkg = self.bkg_container['data0D']
-                        self.update_2D_graph(datas['datas']['data0D'], display_as_sequence=display_as_sequence,
-                                             isadaptive=isadaptive or tabular2D, bkg=bkg)
-                    else:
-                        self.scan_data_2D = []
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def update_1D_graph(self, datas, display_as_sequence=False, isadaptive=False, bkg=None):
-        """
-            Update the 1D graphic window in the Graphic Interface with the given datas.
-
-            Depending of scan type :
-                * *'Linear back to start'* scan :
-                    * Calibrate axis positions between graph and scan
-                    * Update scan datas from the given datas values
-                    * Set data on item attribute
-                * *'linear'* or else scan :
-                    * Calibrate axis positions between graph and scan
-                    * Update scan datas from the given datas values
-
-            =============== ============================== =====================================
-            **Parameters**    **Type**                      **Description**
-            *datas*          Double precision float array   The datas to be showed in the graph
-            =============== ============================== =====================================
-
-            See Also
-            --------
-            update_status
-        """
-        try:
-            scan_type = self.scanner.scan_parameters.scan_type
-            # self.scan_y_axis = np.array([])
-            if not self.plot_1D_ini:  # init the datas
-                self.plot_1D_ini = True
-                self.ui.scan1D_subgraph.show(display_as_sequence)
-                if isadaptive:
-                    self.scan_data_1D = np.expand_dims(np.array([datas[key]['data'] for key in datas]), 0)
-                else:
-                    if not display_as_sequence:
-                        if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[0::2, 0])
-                        else:
-                            self.scan_x_axis = np.array(self.scanner.scan_parameters.positions[:, 0])
-
-                    else:
-                        self.scan_x_axis = np.linspace(0, len(self.scanner.scan_parameters.positions) - 1,
-                                                       len(self.scanner.scan_parameters.positions))
-                        self.ui.scan1D_subgraph.show_data(
-                            [positions for positions in self.scanner.scan_parameters.positions.T])
-                        self.ui.scan1D_subgraph.update_labels(self.scanner.actuators)
-                        self.ui.scan1D_subgraph.set_axis_label(axis_settings=dict(orientation='bottom',
-                                                                                  label='Scan index', units=''))
-
-                    self.scan_data_1D = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas))) * np.nan
-                    if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.scan_data_1D_average = np.zeros((self.scanner.scan_parameters.Nsteps, len(datas)))
-
-                self.ui.scan1D_graph.set_axis_label(axis_settings=dict(orientation='left',
-                                                                       label=self.settings.child('plot_options',
-                                                                                                 'plot_from').value(),
-                                                                       units=''))
-
-            if display_as_sequence:
-                self.ui.scan1D_subgraph.show_data(
-                    [positions for positions in np.array(self.scan_positions).T])
-                self.ui.scan1D_subgraph.update_labels(self.scanner.actuators)
-                self.ui.scan1D_subgraph.set_axis_label(axis_settings=dict(orientation='bottom',
-                                                                          label='Scan index', units=''))
-
-            # to test random mode:
-            # self.scan_data_1D[self.ind_scan, :] =np.random.rand((1))* np.array([np.exp(-(self.scan_x_axis[self.ind_scan]-50)**2/20**2),np.exp(-(self.scan_x_axis[self.ind_scan]-50)**6/10**6)]) # np.array(list(datas.values()))
-            # self.scan_data_1D[self.ind_scan, :] =  np.array(list(datas.values()))
-
-            if isadaptive:
-                if self.ind_scan != 0:
-
-                    self.scan_data_1D = np.vstack((self.scan_data_1D, np.array([
-                        self.get_data_live_bkg(datas, key, bkg) for key in datas])))
-
-                if not display_as_sequence:
-                    self.scan_x_axis = np.array(self.scan_positions)
-                else:
-                    if isadaptive:
-                        self.scan_x_axis = np.array(self.curvilinear_values)
-                    else:
-                        self.scan_x_axis = np.linspace(0, len(self.scan_positions) - 1,
-                                                       len(self.scan_positions))
-            else:
-                if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                    if not utils.odd_even(self.ind_scan):
-
-                        self.scan_data_1D[int(self.ind_scan / 2), :] = \
-                            np.array([self.get_data_live_bkg(datas, key, bkg) for key in datas])
-
-                        if self.settings.child('scan_options', 'scan_average').value() > 1:
-                            self.scan_data_1D_average[self.ind_scan, :] = \
-                                (self.ind_average * self.scan_data_1D_average[
-                                    int(self.ind_scan / 2), :] + self.scan_data_1D[
-                                    int(self.ind_scan / 2), :]) / (self.ind_average + 1)
-
-                else:
-                    self.scan_data_1D[self.ind_scan, :] = \
-                        np.squeeze(np.array([self.get_data_live_bkg(datas, key, bkg) for key in datas]))
-
-                    if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.scan_data_1D_average[self.ind_scan, :] = \
-                            (self.ind_average * self.scan_data_1D_average[self.ind_scan, :] + self.scan_data_1D[
-                                self.ind_scan, :]) / (self.ind_average + 1)
-
-            data_to_plot = list(self.scan_data_1D.T)
-            if self.settings.child('scan_options', 'sort_scan1D').value():
-                x_axis_to_plot, indices = np.unique(self.scan_x_axis, return_index=True)
-                data_to_plot = [data[indices] for data in data_to_plot]
-            else:
-                x_axis_to_plot = np.squeeze(self.scan_x_axis)
-
-            if not display_as_sequence:
-                x_axis = data_mod.Axis(data=x_axis_to_plot,
-                                         label=self.modules_manager.actuators[0].title,
-                                         units=self.modules_manager.actuators[0].settings.child('move_settings',
-                                                                                           'units').value())
-            else:
-                if isadaptive:
-                    x_axis = data_mod.Axis(data=x_axis_to_plot, label='Curvilinear value', units='')
-                else:
-                    x_axis = data_mod.Axis(data=x_axis_to_plot, label='Scan index', units='')
-
-            #self.ui.scan1D_graph.x_axis = x_axis
-            self.ui.scan1D_graph.show_data(data_to_plot, x_axis=x_axis)
-            self.live_data_1D_signal.emit([x_axis, data_to_plot])
-
-            if self.settings.child('scan_options', 'scan_average').value() > 1:
-                data_averaged_sorted = list(self.scan_data_1D_average.T)
-                if self.settings.child('scan_options', 'sort_scan1D').value():
-                    data_averaged_sorted = [data[indices] for data in data_averaged_sorted]
-                self.ui.average1D_graph.show_data(data_averaged_sorted, x_axis=x_axis)
-
-        except Exception as e:
-            logger.exception(str(e))
-
-    def get_data_live_bkg(self, datas, key, bkg):
-        bkg_flag = False
-        if bkg is not None:
-            if key in bkg:
-                bkg_flag = True
-        if bkg_flag:
-            data = datas[key]['data'] - bkg[key]['data']
-        else:
-            data = datas[key]['data']
-        return data
-
-    def update_2D_graph(self, datas, display_as_sequence=False, isadaptive=False, bkg=None):
-        """
-            Update the 2D graphic window in the Graphic Interface with the given datas (if not none).
-
-            Depending on scan type :
-                * *2D scan* :
-                    * Calibrate the axis positions between graphic and scan
-                    * Update scan datas with the given datas values.
-                    * Set an image with the updated scan data
-                * *1D scan* :
-                    * Calibrate the axis positions between graphic and scan
-                    * Update scan datas with the given datas values.
-                    * Concatenate 1D vectors to make a 2D image
-                    * Set an image with the updated scan data
-
-            =============== =============================== ===========================
-            **Parameters**    **Type**                       **Description**
-            *datas*           double precision float array   the data values to update
-            =============== =============================== ===========================
-
-            See Also
-            --------
-            update_status
-        """
-        try:
-            scan_type = self.scanner.scan_parameters.scan_type
-            if scan_type == 'Scan2D' or \
-                    (scan_type == 'Sequential' and self.scanner.scan_parameters.Naxes == 2) or \
-                    (scan_type == 'Tabular' and self.scanner.scan_parameters.Naxes == 2):
-
-                if not self.plot_2D_ini:  # init the data
-                    # self.ui.scan1D_subgraph.show(False)
-                    self.plot_2D_ini = True
-                    self.ui.scan2D_graph.show_roi_target(not isadaptive)
-                    if isadaptive:
-                        self.scan_x_axis2D = np.array(self.scan_positions)[:, 0]
-                        self.scan_y_axis = np.array(self.scan_positions)[:, 1]
-                        key = list(datas.keys())[0]
-                        if bkg is not None:
-                            self.scan_data_2D = \
-                                np.hstack((self.scan_positions[-1], datas[key]['data'] - bkg[key]['data']))
-                        else:
-                            self.scan_data_2D = \
-                                np.hstack((self.scan_positions[-1], datas[key]['data']))
-                    else:
-
-                        self.scan_x_axis2D = self.scanner.scan_parameters.axes_unique[0]
-                        self.scan_y_axis = self.scanner.scan_parameters.axes_unique[1]
-                        self.scan_data_2D = [np.zeros((len(self.scan_y_axis),
-                                                       len(self.scan_x_axis2D)))
-                                             for ind in range(min((3, len(datas))))]
-                    self.ui.scan2D_graph.x_axis = data_mod.Axis(data=self.scan_x_axis2D,
-                                                                  units=self.modules_manager.actuators[0].settings.child(
-                                                           'move_settings', 'units').value(),
-                                                                  label=self.modules_manager.actuators[0].title)
-                    self.ui.scan2D_graph.y_axis = data_mod.Axis(data=self.scan_y_axis,
-                                                                  units=self.modules_manager.actuators[1].settings.child(
-                                                           'move_settings', 'units').value(),
-
-                                                                  label=self.modules_manager.actuators[1].title)
-                    size = (self.scanner.scan_parameters.steps[0] / self.ui.scan2D_graph.x_axis.axis_scaling,
-                            self.scanner.scan_parameters.steps[1] / self.ui.scan2D_graph.y_axis.axis_scaling)
-                    self.ui.scan2D_graph.move_scale_roi_target(size=size)
-
-                    if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.ui.average2D_graph.x_axis = data_mod.Axis(data=self.scan_x_axis2D,
-                                                                         units=self.modules_manager.actuators[0].settings.child(
-                                                                  'move_settings', 'units').value(),
-                                                                         label=self.modules_manager.actuators[0].title)
-                        self.ui.average2D_graph.y_axis = data_mod.Axis(data=self.scan_y_axis,
-                                                                         units=self.modules_manager.actuators[1].settings.child(
-                                                                  'move_settings', 'units').value(),
-                                                                         label=self.modules_manager.actuators[1].title)
-                        self.scan_data_2D_average = [np.zeros((len(self.scanner.scan_parameters.axis_2D_2),
-                                                               len(self.scanner.scan_parameters.axis_2D_1)))
-                                                     for ind in range(min((3, len(datas))))]
-
-                if not isadaptive:
-                    ind_pos_axis_1 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 0]
-                    ind_pos_axis_2 = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 1]
-                    self.ui.scan2D_graph.move_scale_roi_target(pos=(ind_pos_axis_1, ind_pos_axis_2))
-                    for ind_plot in range(min((3, len(datas)))):
-                        keys = list(datas.keys())
-
-                        self.scan_data_2D[ind_plot][ind_pos_axis_2, ind_pos_axis_1] = \
-                            self.get_data_live_bkg(datas, keys[ind_plot], bkg)
-
-                        if self.settings.child('scan_options', 'scan_average').value() > 1:
-                            self.scan_data_2D_average[ind_plot][ind_pos_axis_2, ind_pos_axis_1] = \
-                                (self.ind_average * self.scan_data_2D_average[ind_plot][
-                                    ind_pos_axis_2, ind_pos_axis_1] + datas[
-                                    keys[ind_plot]]['data']) / (self.ind_average + 1)
-                    self.ui.scan2D_graph.show_data(data_mod.DataFromPlugins(dim='Data2D', data=self.scan_data_2D))
-
-                    if self.settings.child('scan_options', 'scan_average').value() > 1:
-                        self.ui.average2D_graph.setImage(*self.scan_data_2D_average)
-
-                else:
-                    if self.ind_scan != 0:
-                        key = list(datas.keys())[0]
-
-                        self.scan_data_2D = np.vstack((self.scan_data_2D,
-                                                       np.hstack((self.scan_positions[-1],
-                                                                  self.get_data_live_bkg(datas, key, bkg)))))
-
-                    if len(self.scan_data_2D) > 3:  # at least 3 point to make a triangulation image
-                        self.ui.scan2D_graph.setImage(data_spread=self.scan_data_2D)
-
-            else:  # scan 1D with concatenation of vectors making a 2D image
-                if not self.plot_2D_ini:  # init the data
-                    self.plot_2D_ini = True
-                    if display_as_sequence:
-                        self.ui.scan2D_subgraph.show(True)
-                        self.ui.scan2D_subgraph.show_data(
-                            [positions for positions in self.scanner.scan_parameters.positions.T])
-                        self.ui.scan2D_subgraph.update_labels(self.scanner.actuators)
-
-                    data = datas[list(datas.keys())[0]]
-                    Ny = len(data[list(data.keys())[0]])
-
-                    self.scan_y_axis = np.array([])
-
-                    Nx = len(self.scanner.scan_parameters.positions)
-                    if not display_as_sequence:
-
-                        if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                            self.scan_x_axis2D = np.array(self.scanner.scan_parameters.positions[0::2, 0])
-                        else:
-                            self.scan_x_axis2D = np.array(self.scanner.scan_parameters.positions[:, 0])
-
-                        x_axis = data_mod.Axis(data=self.scan_x_axis2D,
-                                                 label=self.modules_manager.actuators[0].title,
-                                                 units=self.modules_manager.actuators[0].settings.child('move_settings',
-                                                                                                   'units').value())
-
-                    else:
-                        x_axis = data_mod.Axis(data=self.scan_x_axis2D,
-                                                 label='Scan index',
-                                                 units='')
-                        self.scan_x_axis2D = np.linspace(0, Nx - 1, Nx)
-
-                    self.ui.scan2D_graph.x_axis = x_axis
-                    self.ui.scan2D_subgraph.x_axis = x_axis
-
-                    det_names = [det.title for det in self.modules_manager.detectors_all]
-                    ind_plot_det = det_names.index(self.settings.child('plot_options', 'plot_from').value())
-                    if 'x_axis' in data.keys():
-                        self.scan_y_axis = data['x_axis']['data']
-                        label = data['x_axis']['label']
-                        units = data['x_axis']['units']
-                    else:
-                        self.scan_y_axis = np.linspace(0, Ny - 1, Ny)
-                        label = 'pixels'
-                        units = 'index'
-
-                    if self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].viewer_type == 'Data1D':
-                        if label == '':
-                            label = self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].axis_settings['label']
-                        if units == '':
-                            units = self.modules_manager.detectors_all[ind_plot_det].ui.viewers[0].axis_settings['units']
-
-                    self.ui.scan2D_graph.y_axis =\
-                        data_mod.Axis(data=self.scan_y_axis,
-                                        units=units,
-                                        label=f'{self.modules_manager.detectors_all[ind_plot_det].title} {label}')
-                    self.scan_data_2D = []
-                    self.scan_data_2D_average = []
-                    for ind, key in enumerate(datas):
-                        if ind >= 3:
-                            break
-                        self.scan_data_2D.append(np.zeros([datas[key]['data'].shape[0]] + [Nx]))
-                        if self.settings.child('scan_options', 'scan_average').value() > 1:
-                            self.scan_data_2D_average.append(np.zeros([datas[key]['data'].shape[0]] + [Nx]))
-
-                if self.scanner.scan_parameters.scan_subtype == 'Linear back to start':
-                    if not utils.odd_even(self.ind_scan):
-                        for ind_plot, key in enumerate(datas.keys()):
-
-                            self.scan_data_2D[ind_plot][:, int(self.ind_scan / 2)] = \
-                                self.get_data_live_bkg(datas, key, bkg)
-
-                            if self.settings.child('scan_options', 'scan_average').value() > 1:
-                                self.scan_data_2D_average[ind_plot][:, int(self.ind_scan / 2)] = \
-                                    (self.ind_average * self.scan_data_2D_average[ind_plot][
-                                        :, int(self.ind_scan / 2)] + datas[key]['data']) / (self.ind_average + 1)
-
-                else:
-                    if not display_as_sequence:
-                        ind_pos_axis = self.scanner.scan_parameters.axes_indexes[self.ind_scan, 0]
-                    else:
-                        ind_pos_axis = self.ind_scan
-
-                    for ind_plot, key in enumerate(datas.keys()):
-                        if ind_plot >= 3:
-                            break
-                        self.scan_data_2D[ind_plot][:, ind_pos_axis] = self.get_data_live_bkg(datas, key, bkg)
-
-                        if self.settings.child('scan_options', 'scan_average').value() > 1:
-                            self.scan_data_2D_average[ind_plot][:, self.ind_scan] = \
-                                (self.ind_average * self.scan_data_2D_average[ind_plot][:, ind_pos_axis] + datas[key][
-                                    'data']) \
-                                / (self.ind_average + 1)
-
-                self.ui.scan2D_graph.setImage(*self.scan_data_2D)
-                if self.settings.child('scan_options', 'scan_average').value() > 1:
-                    self.ui.average2D_graph.setImage(*self.scan_data_2D_average)
-
-        except Exception as e:
-            logger.exception(str(e))
-
     #################
     #  SCAN FLOW
 
@@ -1317,12 +714,6 @@ class DAQScan(QObject, ParameterManager):
             res = self.create_new_file(False)
             if not res:
                 return False
-
-            # reinit these objects
-            self.scan_data_1D = []
-            self.scan_data_1D_average = []
-            self.scan_data_2D = []
-            self.scan_data_2D_average = []
 
             is_oversteps = self.scanner.set_scan()
             if is_oversteps:
@@ -1408,12 +799,6 @@ class DAQScan(QObject, ParameterManager):
         self.ui.display_status('Starting acquisition')
         self.dashboard.overshoot = False
 
-        self.plot_2D_ini = False
-        self.plot_1D_ini = False
-        self.bkg_container = None
-        self.scan_positions = []
-        self.curvilinear_values = []
-
         res = self.set_scan()
         if res:
             # deactivate module controls usiong remote_control
@@ -1427,42 +812,6 @@ class DAQScan(QObject, ParameterManager):
             self.save_metadata(self.h5saver.get_last_scan(), 'scan_info')
 
             self._init_live()
-
-            # # save settings from move modules
-            # move_modules_names = [mod.title for mod in self.modules_manager.actuators]
-            # for ind_move, move_name in enumerate(move_modules_names):
-            #     move_group_name = 'Move{:03d}'.format(ind_move)
-            #     if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), move_group_name):
-            #         self.h5saver.add_move_group(self.h5saver.get_last_scan(), title='',
-            #                                     settings_as_xml=ioxml.parameter_to_xml_string(
-            #                                         self.modules_manager.actuators[ind_move].settings),
-            #                                     metadata=dict(name=move_name))
-
-            # # save settings from detector modules
-            # detector_modules_names = [mod.title for mod in self.modules_manager.detectors]
-            # for ind_det, det_name in enumerate(detector_modules_names):
-            #     det_group_name = 'Detector{:03d}'.format(ind_det)
-            #     if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), det_group_name):
-            #         settings_str = ioxml.parameter_to_xml_string(
-            #             self.modules_manager.detectors[ind_det].settings)
-            #         try:
-            #             if 'Data0D' not in [viewer.viewer_type for viewer in
-            #                                 self.modules_manager.detectors[
-            #                                     ind_det].ui.viewers]:  # no roi_settings in viewer0D
-            #                 settings_str = b'<All_settings title="All Settings" type="group">' + settings_str
-            #                 for ind_viewer, viewer in enumerate(self.modules_manager.detectors[ind_det].ui.viewers):
-            #                     if hasattr(viewer, 'roi_manager'):
-            #                         settings_str += '<Viewer{:0d}_ROI_settings title="ROI Settings" type="group">'.format(
-            #                             ind_viewer).encode()
-            #                         settings_str += ioxml.parameter_to_xml_string(
-            #                             viewer.roi_manager.settings) + '</Viewer{:0d}_ROI_settings>'.format(
-            #                             ind_viewer).encode()
-            #                 settings_str += b'</All_settings>'
-            #         except Exception as e:
-            #             logger.exception(str(e))
-            #
-            #         self.h5saver.add_det_group(self.h5saver.get_last_scan(),
-            #                                    settings_as_xml=settings_str, metadata=dict(name=det_name))
 
             # mandatory to deal with multithreads
             if self.scan_thread is not None:
@@ -1498,7 +847,7 @@ class DAQScan(QObject, ParameterManager):
             logger.info('Running acquisition')
 
     def _init_live(self):
-        Naverage = self.settings.child('scan_options', 'scan_average').value()
+        Naverage = self.settings['scan_options', 'scan_average']
         if Naverage > 1:
             scan_shape = [Naverage]
             scan_shape.extend(self.scanner.get_scan_shape())
@@ -1532,7 +881,7 @@ class DAQScan(QObject, ParameterManager):
 
     def stop_scan(self):
         """
-            Emit the command_DAQ signal "stop_acquisiion".
+            Emit the command_DAQ signal "stop_acquisition".
 
             See Also
             --------
@@ -1592,7 +941,7 @@ class DAQScanAcquisition(QObject):
         self.scanner = scanner
 
         self.stop_scan_flag = False
-        self.Naverage = self.scan_settings.child('scan_options', 'scan_average').value()
+        self.Naverage = self.scan_settings['scan_options', 'scan_average']
         self.ind_average = 0
         self.ind_scan = 0
 
@@ -1601,20 +950,7 @@ class DAQScanAcquisition(QObject):
         self.modules_manager.timeout_signal.connect(self.timeout)
         self.timeout_scan_flag = False
 
-        self.curvilinear_array = None
-        self.curvilinear = None  # used for adaptive/Tabular scan mode
 
-        self.scan_x_axis = None
-        self.scan_x_axis2D = None
-        self.scan_y_axis = None
-        self.scan_z_axis = None
-        self.scan_x_axis_unique = None
-        self.scan_y_axis_unique = None
-        self.scan_z_axis_unique = None
-        self.scan_shape = None
-
-        self.scan_read_positions = []
-        self.scan_read_datas = []
         self.move_done_flag = False
         self.det_done_flag = False
 
@@ -1638,20 +974,6 @@ class DAQScanAcquisition(QObject):
         for det in self.modules_manager.detectors:
             det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
         self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
-
-        self.h5_det_groups = []
-        self.h5_move_groups = []
-        self.channel_arrays = OrderedDict([])
-
-        # # save settings from move modules
-        # for ind_move in range(self.modules_manager.Nactuators):
-        #     move_group_name = 'Move{:03d}'.format(ind_move)
-        #     self.h5_move_groups.append(self.h5saver.get_node(self.h5saver.get_last_scan(), move_group_name))
-        #
-        # # save settings from detector modules
-        # for ind_det in range(self.modules_manager.Ndetectors):
-        #     det_group_name = 'Detector{:03d}'.format(ind_det)
-        #     self.h5_det_groups.append(self.h5saver.get_node(self.h5saver.get_last_scan(), det_group_name))
 
     @Slot(list)
     def queue_command(self, command):
@@ -1701,220 +1023,18 @@ class DAQScanAcquisition(QObject):
         except Exception as e:
             logger.exception(str(e))
 
-    def init_data(self):
-
-        self.module_and_data_saver.add_data(self.module_and_data_saver.get_set_node(),
-                                            self.modules_manager.det_done_datas)
-
-        # self.channel_arrays = OrderedDict([])
-        # for ind_det, det_name in enumerate(self.modules_manager.get_names(self.modules_manager.detectors)):
-        #     datas = self.modules_manager.det_done_datas[det_name]
-        #     det_group = self.h5_det_groups[ind_det]
-        #     self.channel_arrays[det_name] = OrderedDict([])
-        #     data_types = ['data0D', 'data1D']
-        #     if self.h5saver.settings.child(('save_2D')).value():
-        #         data_types.extend(['data2D', 'dataND'])
-        #
-        #     det_mod = self.modules_manager.get_mod_from_name(det_name)
-        #     if det_mod.bkg is not None and det_mod.do_bkg:
-        #         bkg_container = OrderedDict([])
-        #         det_mod.process_data(det_mod.bkg, bkg_container)
-        #
-        #     for data_type in data_types:
-        #         if data_type in datas.keys():
-        #             if datas[data_type] is not None:
-        #                 if len(datas[data_type]) != 0:
-        #                     data_raw_roi = [datas[data_type][key]['source'] for key in datas[data_type]]
-        #                     if not (self.h5saver.settings.child(
-        #                             ('save_raw_only')).value() and 'raw' not in data_raw_roi):
-        #                         if not self.h5saver.is_node_in_group(det_group, data_type):
-        #                             self.channel_arrays[det_name][data_type] = OrderedDict([])
-        #                             data_group = self.h5saver.add_data_group(det_group, data_type)
-        #                             for ind_channel, channel in enumerate(datas[data_type]):  # list of OrderedDict
-        #                                 if not (
-        #                                     self.h5saver.settings.child(
-        #                                         'save_raw_only').value() and datas[
-        #                                         data_type][channel]['source'] != 'raw'):
-        #                                     channel_group = self.h5saver.add_CH_group(data_group, title=channel)
-        #                                     self.channel_arrays[det_name][data_type]['parent'] = channel_group
-        #                                     data_tmp = datas[data_type][channel]
-        #
-        #                                     if det_mod.bkg is not None and det_mod.do_bkg:
-        #                                         if channel in bkg_container[data_type]:
-        #                                             data_tmp['bkg'] = bkg_container[data_type][channel]['data']
-        #                                             if data_tmp['bkg'].shape == ():  # in case one get a numpy.float64 object
-        #                                                 data_tmp['bkg'] = np.array([data_tmp['bkg']])
-        #
-        #                                     self.channel_arrays[det_name][data_type][channel] = \
-        #                                         self.h5saver.add_data(channel_group,
-        #                                                               data_tmp,
-        #                                                               scan_type=self.scanner.scan_type,
-        #                                                               scan_subtype=self.scanner.scan_sub_type,
-        #                                                               scan_shape=self.scan_shape, init=True,
-        #                                                               add_scan_dim=True,
-        #                                                               enlargeable=self.isadaptive)
-        #    pass
-
     def start_acquisition(self):
         try:
+            #todo hoaw to apply newlayout to adaptive mode?
 
             self.modules_manager.connect_actuators()
             self.modules_manager.connect_detectors()
 
-            self.scan_read_positions = []
-            self.scan_read_datas = []
             self.stop_scan_flag = False
 
             Naxes = self.scanner.n_axes
             scan_type = self.scanner.scan_type
             self.navigation_axes = self.scanner.get_nav_axes()
-
-
-            # if scan_type == 'Scan1D' or scan_type == 'Scan2D':
-            #     """creates the X_axis and Y_axis valid only for 1D or 2D scans """
-            #     if self.isadaptive:
-            #         self.scan_x_axis = np.array([0.0, ])
-            #         self.scan_x_axis_unique = np.array([0.0, ])
-            #     else:
-            #         self.scan_x_axis = self.scanner.positions[:, 0]
-            #         self.scan_x_axis_unique = self.scanner.axes_unique[0]
-            #
-            #     if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'scan_x_axis'):
-            #         x_axis_meta = dict(
-            #             units=self.modules_manager.actuators[0].settings.child('move_settings', 'units').value(),
-            #             label=self.modules_manager.get_names(self.modules_manager.actuators)[0],
-            #             nav_index=0)
-            #
-            #         self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_x_axis,
-            #                                                                      self.h5saver.get_last_scan(),
-            #                                                                      axis='x_axis',
-            #                                                                      metadata=x_axis_meta,
-            #                                                                      enlargeable=self.isadaptive))
-            #
-            #     if not self.isadaptive:
-            #         if self.scanner.scan_sub_type == 'Linear back to start':
-            #             self.scan_shape = [len(self.scan_x_axis)]
-            #         else:
-            #             self.scan_shape = [len(self.scan_x_axis_unique)]
-            #     else:
-            #         self.scan_shape = [0]
-            #
-            #     if scan_type == 'Scan2D':  # "means scan 2D"
-            #         if self.isadaptive:
-            #             self.scan_y_axis = np.array([0.0, ])
-            #             self.scan_y_axis_unique = np.array([0.0, ])
-            #         else:
-            #             self.scan_y_axis = self.scanner.positions[:, 1]
-            #             self.scan_y_axis_unique = self.scanner.axes_unique[1]
-            #
-            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'scan_y_axis'):
-            #             y_axis_meta = dict(
-            #                 units=self.modules_manager.actuators[1].settings.child('move_settings', 'units').value(),
-            #                 label=self.modules_manager.get_names(self.modules_manager.actuators)[1],
-            #                 nav_index=1)
-            #             self.navigation_axes.append(self.h5saver.add_navigation_axis(self.scan_y_axis,
-            #                                                                          self.h5saver.get_last_scan(),
-            #                                                                          axis='y_axis',
-            #                                                                          metadata=y_axis_meta,
-            #                                                                          enlargeable=self.isadaptive))
-            #         if not self.isadaptive:
-            #             self.scan_shape.append(len(self.scan_y_axis_unique))
-            #         else:
-            #             self.scan_shape.append(0)
-            #
-            # elif scan_type == 'Sequential':
-            #     """Creates axes labelled by the index within the sequence"""
-            #     self.scan_shape = [len(ax) for ax in self.scanner.axes_unique]
-            #     for ind in range(Naxes):
-            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(),
-            #                                              'scan_{:02d}_axis'.format(ind)):
-            #             axis_meta = dict(
-            #                 units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
-            #                 label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
-            #                 nav_index=ind)
-            #             self.navigation_axes.append(
-            #                 self.h5saver.add_navigation_axis(self.scanner.axes_unique[ind],
-            #                                                  self.h5saver.get_last_scan(),
-            #                                                  axis=f'{ind:02d}_axis', metadata=axis_meta))
-            #
-            # elif scan_type == 'Tabular':
-            #     """Creates axes labelled by the index within the sequence"""
-            #     if not self.isadaptive:
-            #         self.scan_shape = [self.scanner.n_steps, ]
-            #         nav_axes = [self.scanner.positions[:, ind] for ind in range(Naxes)]
-            #     else:
-            #         self.scan_shape = [0, Naxes]
-            #         nav_axes = [np.array([0.0, ]) for ind in range(Naxes)]
-            #
-            #     for ind in range(Naxes):
-            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(),
-            #                                              'scan_{:02d}_axis'.format(ind)):
-            #             axis_meta = dict(
-            #                 units=self.modules_manager.actuators[ind].settings.child('move_settings', 'units').value(),
-            #                 label=self.modules_manager.get_names(self.modules_manager.actuators)[ind],
-            #                 nav_index=ind)
-            #             self.navigation_axes.append(self.h5saver.add_navigation_axis(nav_axes[ind],
-            #                                                                          self.h5saver.get_last_scan(),
-            #                                                                          axis=f'{ind:02d}_axis',
-            #                                                                          metadata=axis_meta,
-            #                                                                          enlargeable=self.isadaptive))
-            #
-            #     if self.isadaptive:
-            #         if not self.h5saver.is_node_in_group(self.h5saver.get_last_scan(), 'Curvilinear_axis'):
-            #             axis_meta = dict(units='',
-            #                              label='Curvilinear coordinate',
-            #                              nav_index=-1)
-            #             self.curvilinear_array = self.h5saver.add_navigation_axis(np.array([0.0, ]),
-            #                                                                       self.h5saver.get_last_scan(),
-            #                                                                       axis='curvilinear_axis',
-            #                                                                       metadata=axis_meta,
-            #                                                                       enlargeable=self.isadaptive)
-            #
-            # if self.isadaptive:
-            #     """
-            #     adaptive_losses = dict(
-            #     loss1D=['default', 'curvature', 'uniform'],
-            #     loss2D=['default', 'resolution', 'uniform', 'triangle'])
-            #     """
-            #     if self.scanner.scan_type == 'Scan1D' or self.scanner.scan_type == 'Tabular':
-            #         if self.scanner.adaptive_loss == 'curvature':
-            #             loss = adaptive.learner.learner1D.curvature_loss_function()
-            #         elif self.scanner.adaptive_loss == 'uniform':
-            #             loss = adaptive.learner.learner1D.uniform_loss
-            #         else:
-            #             loss = adaptive.learner.learner1D.default_loss
-            #         if self.scanner.scan_type == 'Scan1D':
-            #             bounds = [self.scanner.starts[0], self.scanner.stops[0]]
-            #         else:
-            #             length = 0.
-            #             for vec in self.scanner.vectors:
-            #                 length += vec.norm()
-            #             bounds = [0., length]
-            #
-            #         learner = adaptive.learner.learner1D.Learner1D(None, bounds=bounds,
-            #                                                        loss_per_interval=loss)
-            #
-            #     elif self.scanner.scan_type == 'Scan2D':
-            #         if self.scanner.adaptive_loss == 'resolution':
-            #             loss = adaptive.learner.learner2D.resolution_loss_function(
-            #                 min_distance=self.scanner.steps[0] / 100,
-            #                 max_distance=self.scanner.steps[1] / 100)
-            #         elif self.scanner.adaptive_loss == 'uniform':
-            #             loss = adaptive.learner.learner2D.uniform_loss
-            #         elif self.scanner.adaptive_loss == 'triangle':
-            #             loss = adaptive.learner.learner2D.triangle_loss
-            #         else:
-            #             loss = adaptive.learner.learner2D.default_loss
-            #
-            #         learner = adaptive.learner.learner2D.Learner2D(None,
-            #                                                        bounds=[b for b in zip(self.scanner.starts,
-            #                                                                               self.scanner.stops)],
-            #                                                        loss_per_triangle=loss)
-            #
-            #     else:
-            #         logger.warning('Adaptive for more than 2 axis is not currently done (sequential adaptive)')
-            #         return
-
             self.status_sig.emit(["Update_Status", "Acquisition has started", 'log'])
 
             self.timeout_scan_flag = False
@@ -2152,5 +1272,5 @@ def main(init_qt=True):
 
 
 if __name__ == '__main__':
-    #main()
-    main_test()
+    main()
+    #main_test()
