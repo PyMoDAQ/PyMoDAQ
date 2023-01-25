@@ -23,6 +23,21 @@ class ViewersEnum(BaseEnum):
     ViewerND = 'DataND'
     ViewerSequential = 'DataSequential'
 
+    def get_dim(self):
+        return self.value.split('Data')[1].split('D')[0]
+
+    def increase_dim(self, ndim: int):
+        dim = self.get_dim()
+        if dim != 'N':
+            dim_as_int = int(dim) + ndim
+            if dim_as_int > 2:
+                dim = 'N'
+            else:
+                dim = str(dim_as_int)
+        else:
+            dim = 'N'
+        return ViewersEnum[f'Viewer{dim}D']
+
 
 def get_viewer_enum_from_axes(Naxes: int):
     if Naxes < 0:
