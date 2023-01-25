@@ -290,7 +290,7 @@ class ScanSaver(ModuleSaver):
 
     def add_nav_axes(self, axes: List[Axis]):
         for detector in self._module.modules_manager.detectors:
-            detector.module_and_data_saver.add_nav_axes(detector.module_and_data_saver.get_set_node(), axes)
+            detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
     def add_data(self, indexes: Tuple[int] = None):
         for detector in self._module.modules_manager.detectors:

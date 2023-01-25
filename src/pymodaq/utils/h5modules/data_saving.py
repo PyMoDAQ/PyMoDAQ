@@ -666,7 +666,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
         For instance the scan axes in the DAQScan
         """
         where = self._h5saver.get_node(where)
-        nav_group = self._h5saver.get_set_group(where.parent_node, SPECIAL_GROUP_NAMES['nav_axes'])
+        nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
             for axis in axes:
                 self._nav_axis_saver.add_axis(nav_group, axis)
