@@ -598,8 +598,8 @@ class DataBase(DataLowLevel):
         else:
             self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
-                warnings.warn(
-                    UserWarning('The specified dimensionality is not coherent with the data shape, replacing it'))
+                # warnings.warn(
+                #     UserWarning('The specified dimensionality is not coherent with the data shape, replacing it'))
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):
@@ -1215,8 +1215,16 @@ class DataWithAxes(DataBase):
         """convenience property to fetch attribute from axis_manager"""
         self._am.nav_indexes = indexes
 
-    def get_nav_axes(self):
+    def get_nav_axes(self) -> List['Axis']:
         return self._am.get_nav_axes()
+
+    def get_nav_axes_with_data(self) -> List['Axis']:
+        """Get the data's navigation axes making sure there is data in the data field"""
+        axes = self.get_nav_axes()
+        for axis in axes:
+            if axis.data is None:
+                axis.create_linear_data(self.shape[axis.index])
+        return axes
 
     def get_axis_from_index(self, index, create=False):
         return self._am.get_axis_from_index(index, create)

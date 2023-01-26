@@ -1,7 +1,7 @@
 import numpy
 import numpy as np
 from numbers import Number
-from typing import List
+from typing import List, Union
 from pymodaq.utils.logger import get_module_name, set_logger
 
 
@@ -120,7 +120,7 @@ def linspace_step_N(start, step, Npts):
     return linspace_step(start, stop, step)
 
 
-def find_index(x, threshold: List[Number]) -> List[tuple]:
+def find_index(x, threshold: Union[Number, List[Number]]) -> List[tuple]:
     """find_index finds the index ix such that x(ix) is the closest from threshold
 
     Parameters

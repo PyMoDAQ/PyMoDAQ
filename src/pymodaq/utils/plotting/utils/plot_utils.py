@@ -1,15 +1,18 @@
-from PyQt5.QtCore import pyqtSignal
-from multipledispatch import dispatch
+
+import copy
 from numbers import Real
+from typing import List
+
+from easydict import EasyDict as edict
+from multipledispatch import dispatch
+import numpy as np
+import pyqtgraph as pg
+from qtpy import QtGui, QtCore, QtWidgets
+from scipy.spatial import Delaunay as Triangulation
+
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.plotting.items.axis_scaled import AxisItem_Scaled
-from qtpy import QtGui, QtCore
-import pyqtgraph as pg
-import numpy as np
-from scipy.spatial import Delaunay as Triangulation
-import copy
-from easydict import EasyDict as edict
-
+from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
 

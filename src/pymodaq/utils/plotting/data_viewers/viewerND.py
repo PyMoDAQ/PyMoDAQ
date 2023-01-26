@@ -1,26 +1,20 @@
 import sys
-from collections import OrderedDict
-import copy
-import datetime
 from typing import List, Tuple, Union
 
 import numpy as np
-from pyqtgraph import LinearRegionItem
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QRectF, QPointF
 
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
-from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.managers.action_manager import addaction
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
-from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
+from pymodaq.utils.plotting.utils.axes_viewer import AxesViewer
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.math_utils as mutils
 from pymodaq.utils.data import DataRaw, Axis
-from pymodaq.utils.plotting.utils.signalND import Signal as SignalND
+
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.managers.parameter_manager import ParameterManager
@@ -45,13 +39,15 @@ class DataDisplayer(QObject):
     processor_changed = Signal(object)
 
     def __init__(self, viewer0D: Viewer0D, viewer1D: Viewer1D, viewer2D: Viewer2D, navigator1D: Viewer1D,
-                 navigator2D: Viewer2D):
+                 navigator2D: Viewer2D, axes_viewer: AxesViewer):
         super().__init__()
         self._viewer0D = viewer0D
         self._viewer1D = viewer1D
         self._viewer2D = viewer2D
         self._navigator1D = navigator1D
         self._navigator2D = navigator2D
+        self._axes_viewer = axes_viewer
+
         if DEBUG_VIEWER:
             self._debug_widget = QtWidgets.QWidget()
             self._debug_viewer_2D = Viewer2D(self._debug_widget)
@@ -60,7 +56,6 @@ class DataDisplayer(QObject):
         self._data: DataRaw = None
         self._nav_limits: tuple = (0, 10, None, None)
         self._signal_at: tuple = (0, 0)
-
 
         self._filter_type: str = None
         self._processor = None
@@ -86,10 +81,13 @@ class DataDisplayer(QObject):
             self._data.data = data.data[0]
 
         self.data_dim_signal.emit(self._data.get_data_dimension())
+
         self.update_viewer_data(*self._signal_at)
         self.update_nav_data(*self._nav_limits)
 
     def init(self, data: DataRaw):
+        if len(self._data.nav_indexes) > 2:
+            self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
         processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
 
@@ -130,16 +128,17 @@ class DataDisplayer(QObject):
                     logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
                     data = self._data.inav[ind_y, ind_x]
                 else:
-                    return
-                    #todo check this and update code
-                    pos = []
-                    for ind_view, view in enumerate(self.nav_axes_viewers):
-                        p = view.roi_line.getPos()[0]
-                        if p < 0 or p > len(self._nav_axes[ind_view]['data']):
-                            return
-                        ind = int(np.rint(p))
-                        pos.append(ind)
-                    data = self._data.inav.__getitem__(pos).data
+                    #self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
+                    data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
+                    # #todo check this and update code
+                    # pos = []
+                    # for ind_view, view in enumerate(self.nav_axes_viewers):
+                    #     p = view.roi_line.getPos()[0]
+                    #     if p < 0 or p > len(self._nav_axes[ind_view]['data']):
+                    #         return
+                    #     ind = int(np.rint(p))
+                    #     pos.append(ind)
+                    # data = self._data.inav.__getitem__(pos).data
 
                 if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 0D viewer
                     self._viewer0D.show_data(data)
@@ -173,8 +172,10 @@ class DataDisplayer(QObject):
             if nav_data is not None:
                 if len(nav_data.shape) < 2:
                     self._navigator1D.show_data(nav_data)
-                else:
+                elif len(nav_data.shape) == 2:
                     self._navigator2D.show_data(nav_data)
+                else:
+                    self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
 
     def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
         try:
@@ -249,10 +250,12 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.viewer2D: Viewer2D = None
         self.navigator1D: Viewer1D = None
         self.navigator2D: Viewer2D = None
+        self.axes_viewer: AxesViewer = None
+
         self.setup_widgets()
 
         self.data_displayer = DataDisplayer(self.viewer0D, self.viewer1D, self.viewer2D,
-                                            self.navigator1D, self.navigator2D)
+                                            self.navigator1D, self.navigator2D, self.axes_viewer)
 
         self.setup_actions()
 
@@ -341,7 +344,6 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self._show_data(dataraw)
 
     def update_widget_visibility(self, data: DataRaw = None):
-        #todo use a factory to create navigator and viewer as needed, shoudl be fine as they have the same interface
         if data is None:
             data = self._data
         self.viewer0D.setVisible(len(data.shape) - len(data.nav_indexes) == 0)
@@ -353,6 +355,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
         self.navigator1D.setVisible(len(data.nav_indexes) == 1)
         self.navigator2D.setVisible(len(data.nav_indexes) == 2)
+        self.axes_viewer.setVisible(len(data.nav_indexes) > 2)
 
     def update_filters(self, processor):
         self.get_action('filters').clear()
@@ -390,6 +393,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.navigator1D.crosshair.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
         self.navigator1D.get_action('crosshair').trigger()
         self.navigator2D.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
+        self.axes_viewer.navigation_changed.connect(self.data_displayer.update_viewer_data)
         self.connect_action('setaxes', self.show_settings)
         self.data_displayer.data_dim_signal.connect(self.update_data_dim)
 
@@ -436,14 +440,14 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.navigator2D.get_action('autolevels').trigger()
         self.navigator2D.get_action('crosshair').trigger()
 
-        self.navigation_widget = QtWidgets.QWidget()
-        self.nav_axes_widget = QtWidgets.QWidget()
-        self.nav_axes_widget.setLayout(QtWidgets.QVBoxLayout())
-        self.nav_axes_widget.setVisible(False)
+        nav_axes_widget = QtWidgets.QWidget()
+        nav_axes_widget.setVisible(False)
+        self.axes_viewer = AxesViewer(nav_axes_widget)
 
         self._dock_navigation = Dock('Navigation')
         self._dock_navigation.addWidget(navigator1D_widget)
         self._dock_navigation.addWidget(navigator2D_widget)
+        self._dock_navigation.addWidget(nav_axes_widget)
 
         self._area.addDock(self._dock_navigation)
         self._area.addDock(self._dock_signal, 'right', self._dock_navigation)
