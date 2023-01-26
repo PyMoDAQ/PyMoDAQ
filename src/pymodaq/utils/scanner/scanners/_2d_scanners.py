@@ -12,7 +12,7 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
 
-from .scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
+from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -36,7 +36,7 @@ class Scan2DLinear(ScannerBase):
     n_axes = 2
 
     def __init__(self, actuators: List = None, **_ignored):
-        super().__init__(self, actuators=actuators)
+        super().__init__(actuators=actuators)
 
     def get_pos(self):
         starts = np.array([self.settings['start_axis1'], self.settings['start_axis2']])

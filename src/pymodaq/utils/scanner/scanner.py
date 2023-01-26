@@ -21,7 +21,7 @@ from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.utils.plot_utils import QVector
 
 
-from pymodaq.utils.scanner.utils import ScanParameters, ScanInfo, ScannerException
+from pymodaq.utils.scanner.utils import ScanInfo
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -237,85 +237,37 @@ class Scanner(QObject, ParameterManager):
         self.scanner_updated_signal.emit()
         return False
 
-    def update_tabular_positions(self, positions: np.ndarray = None):
-        """Convenience function to write positions directly into the tabular table
-
-        Parameters
-        ----------
-        positions: ndarray
-            a 2D ndarray with as many columns as selected actuators
-        """
-        #todo modifiy this method
-
-        # try:
-        #     if self.settings.child('scan_type').value() == 'Tabular':
-        #         if positions is None:
-        #             if self.settings.child('tabular_settings',
-        #                                    'tabular_selection').value() == 'Polylines':  # from ROI
-        #                 viewer = self.scan_selector.scan_selector_source
-        #
-        #                 if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
-        #                     positions = self.scan_selector.scan_selector.getArrayIndexes(
-        #                         spacing=self.settings.child('tabular_settings', 'tabular_step').value())
-        #                 elif self.settings.child('tabular_settings',
-        #                                          'tabular_subtype').value() == 'Adaptive':
-        #                     positions = self.scan_selector.scan_selector.get_vertex()
-        #
-        #                 steps_x, steps_y = zip(*positions)
-        #                 steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
-        #                 positions = np.transpose(np.array([steps_x, steps_y]))
-        #                 self.update_model(init_data=positions)
-        #             else:
-        #                 self.update_model()
-        #         elif isinstance(positions, np.ndarray):
-        #             self.update_model(init_data=positions)
-        #         else:
-        #             pass
-        #     else:
-        #         self.update_model()
-        # except Exception as e:
-        #     logger.exception(str(e))
-
-    def update_scan_2D_positions(self):
-        """Compute scan positions from the ROI set with the scan_selector"""
-
-        #todo modify this method
-
-        # try:
-        #     viewer = self.scan_selector.scan_selector_source
-        #     pos_dl = self.scan_selector.scan_selector.pos()
-        #     pos_ur = self.scan_selector.scan_selector.pos() + self.scan_selector.scan_selector.size()
-        #     pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
-        #     pos_ur_scaled = viewer.scale_axis(pos_ur[0], pos_ur[1])
-        #
-        #     if self.settings.child('scan2D_settings', 'scan2D_type').value() == 'Spiral':
-        #         self.settings.child('scan2D_settings', 'start_2d_axis1').setValue(
-        #             np.mean((pos_dl_scaled[0], pos_ur_scaled[0])))
-        #         self.settings.child('scan2D_settings', 'start_2d_axis2').setValue(
-        #             np.mean((pos_dl_scaled[1], pos_ur_scaled[1])))
-        #
-        #         nsteps = 2 * np.min((np.abs((pos_ur_scaled[0] - pos_dl_scaled[0]) / 2) / self.settings.child(
-        #              'scan2D_settings', 'step_2d_axis1').value(), np.abs(
-        #             (pos_ur_scaled[1] - pos_dl_scaled[1]) / 2) / self.settings.child(
-        #              'scan2D_settings', 'step_2d_axis2').value()))
-        #
-        #         self.settings.child('scan2D_settings', 'npts_by_axis').setValue(nsteps)
-        #
-        #     else:
-        #         self.settings.child('scan2D_settings', 'start_2d_axis1').setValue(pos_dl_scaled[0])
-        #         self.settings.child('scan2D_settings', 'start_2d_axis2').setValue(pos_dl_scaled[1])
-        #         self.settings.child('scan2D_settings', 'stop_2d_axis1').setValue(pos_ur_scaled[0])
-        #         self.settings.child('scan2D_settings', 'stop_2d_axis2').setValue(pos_ur_scaled[1])
-        #
-        # except Exception as e:
-        #     raise ScannerException(str(e))
-
 
 def main():
+    from pymodaq.utils.parameter import ParameterTree
     app = QtWidgets.QApplication(sys.argv)
-    widget = QtWidgets.QWidget()
-    prog = Scanner(widget, actuators=['act1', 'act2'])
-    widget.show()
+
+    params = [{'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect',
+               'value': dict(all_items=['act1', 'act2'], selected=[])},
+              {'title': 'Set Scan', 'name': 'set_scan', 'type': 'action'},
+              ]
+    settings = Parameter.create(name='settings', type='group', children=params)
+    settings_tree = ParameterTree()
+    settings_tree.setParameters(settings)
+
+    widget_main = QtWidgets.QWidget()
+    widget_main.setLayout(QtWidgets.QVBoxLayout())
+    widget_scanner = QtWidgets.QWidget()
+    widget_main.layout().addWidget(settings_tree)
+    widget_main.layout().addWidget(widget_scanner)
+    scanner = Scanner(widget_scanner, actuators=['act1', 'act2'])
+
+    def update_actuators(param):
+        scanner.actuators = param.value()['selected']
+
+    def print_info():
+        print(scanner.get_scan_info())
+        print(scanner.positions)
+
+    settings.child('actuators').sigValueChanged.connect(update_actuators)
+    settings.child('set_scan').sigActivated.connect(scanner.set_scan)
+    scanner.scanner_updated_signal.connect(print_info)
+    widget_main.show()
     sys.exit(app.exec_())
 
 

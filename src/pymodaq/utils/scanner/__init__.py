@@ -1,6 +1,10 @@
-from . import _1d_scanners
-from . import _2d_scanners
-from . import specialized_scanners
+from importlib import import_module
+from pathlib import Path
 
-from .scanner import Scanner
+here = Path(__file__).parent.joinpath('scanners')
+for path in here.iterdir():
+    if path.is_file():
+        import_module(f'.{path.stem}', 'pymodaq.utils.scanner.scanners')
 
+
+from .scanner import Scanner  # import this one after the scanners because they have to first be registered

@@ -14,13 +14,61 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
 from pymodaq.utils import gui_utils as gutils
-from .scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
-from .utils import TableModelSequential, TableModelTabular
+from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
+
+
+class TableModelSequential(gutils.TableModel):
+    """Table Model for the Model/View Qt framework dedicated to the Sequential scan mode"""
+    def __init__(self, data, **kwargs):
+        header = ['Actuator', 'Start', 'Stop', 'Step']
+        if 'header' in kwargs:
+            header = kwargs.pop('header')
+        editable = [False, True, True, True]
+        if 'editable' in kwargs:
+            editable = kwargs.pop('editable')
+        super().__init__(data, header, editable=editable, **kwargs)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__} from module {self.__class__.__module__}'
+
+    def validate_data(self, row, col, value):
+        """
+        make sure the values and signs of the start, stop and step values are "correct"
+        Parameters
+        ----------
+        row: (int) row within the table that is to be changed
+        col: (int) col within the table that is to be changed
+        value: (float) new value for the value defined by row and col
+
+        Returns
+        -------
+        bool: True is the new value is fine (change some other values if needed) otherwise False
+        """
+        start = self.data(self.index(row, 1), QtCore.Qt.DisplayRole)
+        stop = self.data(self.index(row, 2), QtCore.Qt.DisplayRole)
+        step = self.data(self.index(row, 3), QtCore.Qt.DisplayRole)
+        isstep = False
+        if col == 1:  # the start
+            start = value
+        elif col == 2:  # the stop
+            stop = value
+        elif col == 3:  # the step
+            isstep = True
+            step = value
+
+        if np.abs(step) < 1e-12 or start == stop:
+            return False
+        if np.sign(stop - start) != np.sign(step):
+            if isstep:
+                self._data[row][2] = -stop
+            else:
+                self._data[row][3] = -step
+        return True
 
 
 @ScannerFactory.register('Sequential', 'Linear')
@@ -30,13 +78,11 @@ class SequentialScanner(ScannerBase):
               ]
 
     def __init__(self, actuators: List[str]):
-        self._actuators = actuators
 
         self.table_model: TableModelSequential = None
         self.table_view: TableViewCustom = None
+        super().__init__(actuators)
         self.update_model()
-
-        super().__init__(self)
 
     @property
     def actuators(self):
@@ -108,8 +154,8 @@ class SequentialScanner(ScannerBase):
 
     def set_scan(self):
         starts, stops, steps = self.get_pos()
-        all_positions = [starts[:]]
-        positions = starts[:]
+        all_positions = [starts.copy()]
+        positions = starts.copy()
         state = self.pos_above_stops(positions, steps, stops)
         if len(state) != 0:
             while not state[0]:
@@ -123,9 +169,9 @@ class SequentialScanner(ScannerBase):
 
                 state = self.pos_above_stops(positions, steps, stops)
                 if not np.any(np.array(state)):
-                    all_positions.append(positions[:])
+                    all_positions.append(positions.copy())
 
-            self.get_info_from_positions(np.array(all_positions))
+        self.get_info_from_positions(np.array(all_positions))
 
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}', units=act.units, data=self.axes_unique[ind], index=ind)
@@ -135,79 +181,6 @@ class SequentialScanner(ScannerBase):
         """To be reimplemented. Calculations of indexes within the scan"""
         return tuple(self.axes_indexes[scan_index])
 
+    def get_scan_shape(self) -> Tuple[int]:
+        return tuple([len(axis) for axis in self.axes_unique])
 
-@ScannerFactory.register('Tabular', 'Linear')
-class TabularScanner(SequentialScanner):
-    params = [
-        {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
-         'menu': True},
-              ]
-
-    def __init__(self, actuators: List[str]):
-        super().__init__(actuators)
-
-    def update_model(self, init_data=None):
-        if init_data is None:
-            init_data = [[0. for name in self._actuators]]
-
-        self.table_model = TableModelTabular(init_data, [name for name in self._actuators])
-        self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
-        self.settings.child('tabular_table').setValue(self.table_model)
-
-        self.update_table_view()
-
-    def update_table_view(self):
-        super().update_table_view()
-        self.table_view.add_data_signal[int].connect(self.table_model.add_data)
-        self.table_view.remove_row_signal[int].connect(self.table_model.remove_data)
-        self.table_view.load_data_signal.connect(self.table_model.load_txt)
-        self.table_view.save_data_signal.connect(self.table_model.save_txt)
-
-    def evaluate_steps(self):
-        return len(self.table_model)
-
-    def set_scan(self):
-        positions = np.array(self.table_model.get_data_all())
-        self.get_info_from_positions(positions)
-
-    def update_tabular_positions(self, positions: np.ndarray = None):
-        """Convenience function to write positions directly into the tabular table
-
-        Parameters
-        ----------
-        positions: ndarray
-            a 2D ndarray with as many columns as selected actuators
-        """
-        try:
-            if positions is None:
-                if self.settings.child('tabular_settings',
-                                       'tabular_selection').value() == 'Polylines':  # from ROI
-                    viewer = self.scan_selector.scan_selector_source
-
-                    if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
-                        positions = self.scan_selector.scan_selector.getArrayIndexes(
-                            spacing=self.settings.child('tabular_settings', 'tabular_step').value())
-                    elif self.settings.child('tabular_settings',
-                                             'tabular_subtype').value() == 'Adaptive':
-                        positions = self.scan_selector.scan_selector.get_vertex()
-
-                    steps_x, steps_y = zip(*positions)
-                    steps_x, steps_y = viewer.scale_axis(np.array(steps_x), np.array(steps_y))
-                    positions = np.transpose(np.array([steps_x, steps_y]))
-                    self.update_model(init_data=positions)
-                else:
-                    self.update_model()
-            elif isinstance(positions, np.ndarray):
-                self.update_model(init_data=positions)
-            else:
-                pass
-        except Exception as e:
-            logger.exception(str(e))
-
-    def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{act.title}', units=act.units, data=self.positions[ind, :], index=ind)
-                for ind, act in enumerate(self.actuators)]
-
-    def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
-        """To be reimplemented. Calculations of indexes within the scan"""
-        return self.ind_scan,

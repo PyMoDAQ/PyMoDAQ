@@ -13,7 +13,7 @@ from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
 
 
-from .scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
+from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()

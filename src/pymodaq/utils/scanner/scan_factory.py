@@ -61,10 +61,20 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
         super().__init__()
         self.positions: np.ndarray = None
         self.n_steps = 1
+        self._actuators: List['DAQ_Move'] = None
+
         self.actuators = actuators
 
         if self.check_steps():
             self.set_scan()
+
+    @property
+    def actuators(self):
+        return self._actuators
+
+    @actuators.setter
+    def actuators(self, actuators_name: List['DAQ_Move']):
+        self._actuators = actuators_name
 
     def check_steps(self):
         steps_limit = config('scan', 'steps_limit')
@@ -132,6 +142,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     def value_changed(self, param):
         self.evaluate_steps()
 
+
 class ScannerFactory(ObjectFactory):
     """Factory class registering and storing Scanners"""
 
@@ -167,6 +178,4 @@ class ScannerFactory(ObjectFactory):
     def scan_sub_types(self, scan_type: str) -> List[str]:
         """Returns the list of scan subtypes, second identifier of a given scanner of type scan_type"""
         return list(self.builders[self.__class__.__name__][scan_type].keys())
-
-
 
