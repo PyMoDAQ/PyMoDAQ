@@ -608,10 +608,11 @@ class DAQScan(QObject, ParameterManager):
             self.settings.child('plot_options', 'refresh_live').show(not param.value())
 
     def prepare_viewers(self):
-        viewers_enum = [ViewersEnum('Data1D') for _ in
-                        range(len(self.settings['plot_options', 'plot_0d']['selected']))]
-        viewers_enum.extend(
-            [ViewersEnum('Data2D') for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
+
+        viewers_enum = [ViewersEnum('Data0D').increase_dim(self.scanner.n_axes)
+                        for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
+        viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
+                             for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
         self.live_plotter.prepare_viewers(viewers_enum)
 
     def update_status(self, txt, wait_time=0, log_type=None):
@@ -868,9 +869,7 @@ class DAQScan(QObject, ParameterManager):
             data_saving.DataToExportExtendedSaver(self.h5temp, extended_shape=scan_shape)
         self.live_plotter.h5saver = self.h5temp
 
-        viewers_enum = [ViewersEnum('Data1D') for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
-        viewers_enum.extend([ViewersEnum('Data2D') for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
-        self.live_plotter.prepare_viewers(viewers_enum)
+        self.prepare_viewers()
         QtWidgets.QApplication.processEvents()
 
     def set_ini_positions(self):
