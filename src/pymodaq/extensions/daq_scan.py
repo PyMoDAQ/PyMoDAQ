@@ -5,14 +5,17 @@
 
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
-
-import sys
 from collections import OrderedDict
-import numpy as np
-from pathlib import Path
+import logging
 import os
-from typing import List, Tuple
+from pathlib import Path
+import sys
 import tempfile
+from typing import List, Tuple
+
+import numpy as np
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
 
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.logger import set_logger, get_module_name
@@ -20,8 +23,7 @@ from pymodaq.utils.config import Config, get_set_preset_path
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter, ParameterTree
-from qtpy import QtWidgets, QtCore, QtGui
-from qtpy.QtCore import QObject, Slot, QThread, Signal, QDateTime, QDate, QTime
+
 from pymodaq.utils import exceptions
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
@@ -58,7 +60,7 @@ class DAQScan(QObject, ParameterManager):
     """
     Main class initializing a DAQScan module with its dashboard and scanning control panel
     """
-    command_DAQ_signal = Signal(list)
+    command_daq_signal = Signal(utils.ThreadCommand)
     status_signal = Signal(str)
     live_data_1D_signal = Signal(list)
 
@@ -573,26 +575,20 @@ class DAQScan(QObject, ParameterManager):
     def update_actuators(self, actuators: List[str]):
         self.scanner.actuators = self.modules_manager.actuators
 
-    def move_to_crosshair(self, posx=None, posy=None):
-        #todo update with new v4 layout
-        try:
-            if self.ui.is_action_checked('move_at'):
-                if "2D" in self.scanner.settings.child('scan_type').value():
-                    if len(self.modules_manager.actuators) == 2 and posx is not None and posy is not None:
-                        posx_real = posx * self.ui.scan2D_graph.x_axis.axis_scaling +\
-                                    self.ui.scan2D_graph.x_axis.axis_offset
-                        posy_real = posy * self.ui.scan2D_graph.y_axis.axis_scaling +\
-                                    self.ui.scan2D_graph.y_axis.axis_offset
-                        self.move_at(posx_real, posy_real)
-                    else:
-                        self.update_status("not valid configuration, check number of stages and scan2D option",
-                                           log_type='log')
-        except Exception as e:
-            logger.exception(str(e))
-            # self.update_status(getLineInfo()+ str(e),log_type='log')
+    def move_to_crosshair(self, *args, **kwargs):
+        if self.ui.is_action_checked('move_at'):
+            self.modules_manager.connect_actuators()
+            self.live_plotter.connect_double_clicked(self.move_at)
+        else:
+            self.live_plotter.disconnect(self.move_at)
+            self.modules_manager.connect_actuators(False)
 
-    def move_at(self, posx_real, posy_real):
-        self.command_DAQ_signal.emit(["move_stages", [posx_real, posy_real]])
+    def move_at(self, posx: float, posy: float = None):
+        if logging.getLevelName(logger.level) == 'DEBUG':
+            print(f'clicked at: {posx}, {posy}')
+        positions = [posx, posy]
+        positions = positions[:self.scanner.n_axes]
+        self.modules_manager.move_actuators(positions)
 
     def value_changed(self, param):
         """
@@ -799,6 +795,9 @@ class DAQScan(QObject, ParameterManager):
         """
         self.ui.display_status('Starting acquisition')
         self.dashboard.overshoot = False
+        #deactivate double_clicked
+        if self.ui.is_action_checked('move_at'):
+            self.ui.get_action('move_at').trigger()
 
         res = self.set_scan()
         if res:
@@ -816,7 +815,7 @@ class DAQScan(QObject, ParameterManager):
 
             # mandatory to deal with multithreads
             if self.scan_thread is not None:
-                self.command_DAQ_signal.disconnect()
+                self.command_daq_signal.disconnect()
                 if self.scan_thread.isRunning():
                     self.scan_thread.terminate()
                     while not self.scan_thread.isFinished():
@@ -830,7 +829,7 @@ class DAQScan(QObject, ParameterManager):
                                                   module_saver=self.module_and_data_saver)
             if config['scan']['scan_in_thread']:
                 scan_acquisition.moveToThread(self.scan_thread)
-            self.command_DAQ_signal[list].connect(scan_acquisition.queue_command)
+            self.command_daq_signal[utils.ThreadCommand].connect(scan_acquisition.queue_command)
             scan_acquisition.scan_data_tmp[ScanDataTemp].connect(self.save_temp_live_data)
             scan_acquisition.status_sig[list].connect(self.thread_status)
 
@@ -843,7 +842,7 @@ class DAQScan(QObject, ParameterManager):
             self.ui.set_scan_done(False)
             if not self.settings['plot_options', 'plot_each']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
-            self.command_DAQ_signal.emit(['start_acquisition'])
+            self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
             self.ui.set_permanent_status('Running acquisition')
             logger.info('Running acquisition')
 
@@ -876,7 +875,7 @@ class DAQScan(QObject, ParameterManager):
         """
             Send the command_DAQ signal with "set_ini_positions" list item as an attribute.
         """
-        self.command_DAQ_signal.emit(["set_ini_positions"])
+        self.command_daq_signal.emit(utils.ThreadCommand("set_ini_positions"))
 
     def stop_scan(self):
         """
@@ -887,7 +886,7 @@ class DAQScan(QObject, ParameterManager):
             set_ini_positions
         """
         self.ui.set_permanent_status('Stoping acquisition')
-        self.command_DAQ_signal.emit(["stop_acquisition"])
+        self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
 
         if not self.dashboard.overshoot:
             self.set_ini_positions()  # do not set ini position again in case overshoot fired
@@ -974,35 +973,25 @@ class DAQScanAcquisition(QObject):
             det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
         self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
 
-    @Slot(list)
+    @Slot(utils.ThreadCommand)
     def queue_command(self, command):
-        """
-            Treat the queue of commands from the current command to act, between :
-                * *start_acquisition*
-                * *stop_acquisition*
-                * *set_ini_position*
-                * *move_stages*
+        """Process the commands sent by the main ui
 
-            =============== ============== =========================
-            **Parameters**    **Type**      **Description**
-            command           string list   the command string list
-            =============== ============== =========================
-
-            See Also
-            --------
-            start_acquisition, set_ini_positions, move_stages
+        Parameters
+        ----------
+        command: utils.ThreadCommand
         """
-        if command[0] == "start_acquisition":
+        if command.command == "start_acquisition":
             self.start_acquisition()
 
-        elif command[0] == "stop_acquisition":
+        elif command.command == "stop_acquisition":
             self.stop_scan_flag = True
 
-        elif command[0] == "set_ini_positions":
+        elif command.command == "set_ini_positions":
             self.set_ini_positions()
 
-        elif command[0] == "move_stages":
-            self.modules_manager.move_actuators(command[1])
+        elif command.command == "move_stages":
+            self.modules_manager.move_actuators(command.attribute)
 
     def set_ini_positions(self):
         """
@@ -1115,7 +1104,7 @@ class DAQScanAcquisition(QObject):
                 nav_axes = self.scanner.get_nav_axes()
                 self.module_and_data_saver.add_nav_axes(nav_axes)
 
-            self.module_and_data_saver.add_data(indexes=indexes)
+            self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution)
 
             #todo related to adaptive (solution lies along the Enlargeable data saver)
             if self.isadaptive:
