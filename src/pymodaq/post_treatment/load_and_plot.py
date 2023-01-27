@@ -6,7 +6,7 @@ Created the 22/01/2023
 """
 import os
 import sys
-from typing import List, Union
+from typing import List, Union, Callable
 
 from qtpy import QtWidgets, QtCore
 
@@ -21,14 +21,26 @@ class LoaderPlotter:
 
     def __init__(self, dockarea):
         self.dockarea = dockarea
-        self.ui = ViewerDispatcher(dockarea, title='ViewerDispatcher')
+        self.dispatcher = ViewerDispatcher(dockarea, title='ViewerDispatcher')
         self._viewers: List[ViewerBase] = []
         self._h5saver: H5Saver = None
         self._data: DataToExport = None
         self.dataloader: DataLoader = None
 
+    @property
+    def viewers(self) -> List[ViewerBase]:
+        return self.dispatcher.viewers
+
+    def connect_double_clicked(self, slot: Callable):
+        for viewer in self.viewers:
+            viewer.sig_double_clicked.connect(slot)
+
+    def disconnect(self, slot: Callable):
+        for viewer in self.viewers:
+            viewer.sig_double_clicked.disconnect(slot)
+
     def clear_viewers(self):
-        self.ui.remove_viewers(0)
+        self.dispatcher.remove_viewers(0)
 
     @property
     def h5saver(self):
@@ -86,8 +98,8 @@ class LoaderPlotter:
 
     def prepare_viewers(self, viewers_enum: List[ViewersEnum]):
         self._viewer_types = [enum_checker(ViewersEnum, viewer_enum) for viewer_enum in viewers_enum]
-        if self.ui.viewer_types != self._viewer_types:
-            self.ui.update_viewers(self._viewer_types)
+        if self.dispatcher.viewer_types != self._viewer_types:
+            self.dispatcher.update_viewers(self._viewer_types)
 
     def set_data_to_viewers(self, data: DataToExport, temp=False):
         """Process data dimensionality and send appropriate data to their data viewers
@@ -103,13 +115,13 @@ class LoaderPlotter:
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
         for ind, _data in enumerate(data.data):
-            self.ui.viewers[ind].title = _data.name
-            self.ui.viewer_docks[ind].setTitle(_data.name)
+            self.dispatcher.viewers[ind].title = _data.name
+            self.dispatcher.viewer_docks[ind].setTitle(_data.name)
 
             if temp:
-                self.ui.viewers[ind].show_data_temp(_data)
+                self.dispatcher.viewers[ind].show_data_temp(_data)
             else:
-                self.ui.viewers[ind].show_data(_data)
+                self.dispatcher.viewers[ind].show_data(_data)
 
 
 def main(init_qt=True):

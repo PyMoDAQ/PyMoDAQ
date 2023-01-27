@@ -767,6 +767,8 @@ class Viewer2D(ViewerBase):
         if self.view.is_action_checked('crosshair'):
             self.view.crosshair.set_crosshair_position(posx, posy)
             self.crosshair_changed()
+        #scale positions of double_click with respect to real axes
+        posx, posy = self.view.scale_axis(posx, posy)
         self.sig_double_clicked.emit(posx, posy)
 
 

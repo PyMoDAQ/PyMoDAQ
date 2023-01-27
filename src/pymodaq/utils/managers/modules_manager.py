@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
@@ -118,7 +118,7 @@ class ModulesManager(QObject, ParameterManager):
                 mods.append(d)
         return mods
 
-    def get_mod_from_name(self, name, mod='det'):
+    def get_mod_from_name(self, name, mod='det') -> Union['DAQ_Move', 'DAQ_Viewer']:
         """Getter of a given module from its name (title)
 
         Parameters
@@ -212,7 +212,7 @@ class ModulesManager(QObject, ParameterManager):
         return self.settings.child('modules', 'actuators').value()['all_items']
 
     @property
-    def selected_actuators_name(self):
+    def selected_actuators_name(self) -> List[str]:
         """Get/Set the names of the selected actuators"""
         return self.settings.child('modules', 'actuators').value()['selected']
 
@@ -410,10 +410,12 @@ class ModulesManager(QObject, ParameterManager):
                 for k in positions:
                     act = self.get_mod_from_name(k, 'act')
                     if act is not None:
+                        #getattr(act, command)(positions[k])
                         act.command_hardware.emit(
                             utils.ThreadCommand(command=command, attribute=[positions[k], polling]))
             else:
                 for ind, act in enumerate(self.actuators):
+                    #getattr(act, command)(positions[ind])
                     act.command_hardware.emit(utils.ThreadCommand(command=command, attribute=[positions[ind], polling]))
 
         else:
@@ -427,7 +429,7 @@ class ModulesManager(QObject, ParameterManager):
                 QtWidgets.QApplication.processEvents()
                 if time.perf_counter() - tzero > self.actuator_timeout / 1000:  # timeout in seconds
                     self.timeout_signal.emit(True)
-                    logger.error('Timeout Fired during waiting for data to be acquired')
+                    logger.error('Timeout Fired during waiting for actuators to be moved')
                     break
                 QThread.msleep(20)
 
