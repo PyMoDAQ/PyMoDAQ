@@ -1,4 +1,3 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
 import sys
 from typing import List, Tuple, Union
 
@@ -14,7 +13,7 @@ from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.math_utils as mutils
-from pymodaq.utils.data import DataRaw, Axis, DataDistribution, DataWithAxes, DataDim
+from pymodaq.utils.data import DataRaw, Axis
 
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -34,10 +33,10 @@ math_processors1D = Data1DProcessorFactory()
 DEBUG_VIEWER = False
 
 
-class BaseDataDisplayer(QObject):
+class DataDisplayer(QObject):
+
     data_dim_signal = Signal(str)
     processor_changed = Signal(object)
-    distribution: DataDistribution = abstractproperty()
 
     def __init__(self, viewer0D: Viewer0D, viewer1D: Viewer1D, viewer2D: Viewer2D, navigator1D: Viewer1D,
                  navigator2D: Viewer2D, axes_viewer: AxesViewer):
@@ -49,7 +48,12 @@ class BaseDataDisplayer(QObject):
         self._navigator2D = navigator2D
         self._axes_viewer = axes_viewer
 
-        self._data: DataWithAxes = None
+        if DEBUG_VIEWER:
+            self._debug_widget = QtWidgets.QWidget()
+            self._debug_viewer_2D = Viewer2D(self._debug_widget)
+            self._debug_widget.show()
+
+        self._data: DataRaw = None
         self._nav_limits: tuple = (0, 10, None, None)
         self._signal_at: tuple = (0, 0)
 
@@ -81,32 +85,66 @@ class BaseDataDisplayer(QObject):
         self.update_viewer_data(*self._signal_at)
         self.update_nav_data(*self._nav_limits)
 
-    @abstractmethod
-    def init_rois(self, data: DataRaw):
-        """Init crosshairs and ROIs in viewers if needed"""
-        ...
+    def init(self, data: DataRaw):
+        if len(data.nav_indexes) > 2 or data.distribution == 'spread':
+            self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
+        processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
+        self.update_processor(processor)
 
-    @abstractmethod
-    def init(self):
-        """init viewers or postprocessing once new data are loaded"""
-        ...
-
-    @abstractmethod
-    def update_viewer_data(self, **kwargs):
+    def update_viewer_data(self, posx=0, posy=0):
         """ Update the signal display depending on the position of the crosshair in the navigation panels
 
+        Parameters
+        ----------
+        posx: float
+            from the 1D or 2D Navigator crosshair or from one of the navigation axis viewer (in that case
+            nav_axis tells from which navigation axis the position comes from)
+        posy: float
+            from the 2D Navigator crosshair
         """
-        ...
+        self._signal_at = posx, posy
+        if self._data is not None:
+            try:
+                if len(self._data.nav_indexes) == 0 and self._data.distribution == 'uniform':
+                    data = self._data
 
-    @abstractmethod
-    def update_nav_data(self, x, y, width=None, height=None):
-        """Display navigator data potentially postprocessed from filters in the signal viewers"""
-        ...
+                elif len(self._data.nav_indexes) == 1 and self._data.distribution == 'uniform':
+                    nav_axis = self._data.axes_manager.get_nav_axes()[0]
+                    if posx < nav_axis.min() or posx > nav_axis.max():
+                        return
+                    ind_x = nav_axis.find_index(posx)
+                    logger.debug(f'Getting the data at nav index {ind_x}')
+                    data = self._data.inav[ind_x]
 
-    @abstractmethod
-    def get_nav_data(self, data: DataWithAxes, x, y, width=None, height=None) -> DataWithAxes:
-        """Get filtered data"""
-        ...
+                elif len(self._data.nav_indexes) == 2 and self._data.distribution == 'uniform':
+                    nav_x = self._data.axes_manager.get_nav_axes()[1]
+                    nav_y = self._data.axes_manager.get_nav_axes()[0]
+                    if posx < nav_x.min() or posx > nav_x.max():
+                        return
+                    if posy < nav_y.min() or posy > nav_y.max():
+                        return
+                    ind_x = nav_x.find_index(posx)
+                    ind_y = nav_y.find_index(posy)
+                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
+                    data = self._data.inav[ind_y, ind_x]
+                else:
+                    data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
+
+                if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 0D viewer
+                    self._viewer0D.show_data(data)
+
+                elif len(self._data.axes_manager.sig_shape) == 1:  # means 1D data, plot on 1D viewer
+                    self._viewer1D.show_data(data)
+
+                elif len(self._data.axes_manager.sig_shape) == 2:  # means 2D data, plot on 2D viewer
+                    self._viewer2D.show_data(data)
+                    if DEBUG_VIEWER:
+                        x, y, width, height = self.get_out_of_range_limits(*self._nav_limits)
+                        _data_sig = data.isig[y: y + height, x: x + width]
+                        self._debug_viewer_2D.show_data(_data_sig)
+
+            except Exception as e:
+                logger.exception(str(e))
 
     def update_nav_data_from_roi(self, roi: Union[SimpleRectROI, LinearROI]):
         if isinstance(roi, LinearROI):
@@ -117,6 +155,42 @@ class BaseDataDisplayer(QObject):
             width, height = roi.size().x(), roi.size().y()
             self._nav_limits = (int(x), int(y), int(width), int(height))
         self.update_nav_data(*self._nav_limits)
+
+    def update_nav_data(self, x, y, width=None, height=None):
+        if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
+            nav_data = self.get_nav_data(self._data, x, y, width, height)
+            if nav_data is not None:
+                if len(nav_data.shape) < 2 and self._data.distribution == 'uniform':
+                    self._navigator1D.show_data(nav_data)
+                elif len(nav_data.shape) == 2 and self._data.distribution == 'uniform':
+                    self._navigator2D.show_data(nav_data)
+                else:
+                    self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
+
+    def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
+        try:
+            navigator_data = None
+            if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
+                navigator_data = data
+
+            elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
+                _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
+
+            elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
+                x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
+                if not (width is None or height is None or width < 2 or height < 2):
+                    navigator_data = self._processor.get(self._filter_type).process(data.isig[y: y + height, x: x + width])
+                else:
+                    navigator_data = None
+            else:
+                navigator_data = None
+
+            return navigator_data
+
+        except Exception as e:
+            logger.warning('Could not compute the mathematical function')
+        finally:
+            return navigator_data
 
     @staticmethod
     def get_out_of_range_limits(x, y, width, height):
@@ -136,277 +210,8 @@ class BaseDataDisplayer(QObject):
         self._nav_limits = x, y, width, height
 
 
-class UniformDataDisplayer(BaseDataDisplayer):
-    """Specialized object to filter and plot linearly spaced data in dedicated viewers
-
-    Meant for any navigation axes and up to signal data dimensionality of 2 (images)
-    """
-    distribution = DataDistribution['uniform']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def init(self, data: DataRaw):
-        if len(data.nav_indexes) > 2:
-            self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
-        processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
-        self.update_processor(processor)
-
-    def init_rois(self, data: DataRaw):
-        means = []
-        for axis in data.axes_manager.get_nav_axes():
-            means.append(axis.mean())
-        if len(data.nav_indexes) == 1:
-            self._navigator1D.set_crosshair_position(*means)
-        elif len(data.nav_indexes) == 2:
-            self._navigator2D.set_crosshair_position(*means)
-
-        mins = []
-        maxs = []
-        for axis in data.axes_manager.get_signal_axes():
-            mins.append(axis.min())
-            maxs.append(axis.max())
-        if len(data.axes_manager.sig_indexes) == 1:
-            self._viewer1D.roi.setPos((mins[0], maxs[0]))
-        elif len(data.axes_manager.sig_indexes) > 1:
-            self._viewer2D.roi.setPos((0, 0))
-            self._viewer2D.roi.setSize((len(data.get_axis_from_index(data.axes_manager.sig_indexes[1])),
-                                      len(data.get_axis_from_index(data.axes_manager.sig_indexes[0]))))
-
-    def update_viewer_data(self, posx=0, posy=0):
-        """ Update the signal display depending on the position of the crosshair in the navigation panels
-
-        Parameters
-        ----------
-        posx: float
-            from the 1D or 2D Navigator crosshair or from one of the navigation axis viewer (in that case
-            nav_axis tells from which navigation axis the position comes from)
-        posy: float
-            from the 2D Navigator crosshair
-        """
-        self._signal_at = posx, posy
-        if self._data is not None:
-            try:
-                if len(self._data.nav_indexes) == 0 and self._data.distribution == 'uniform':
-                    data = self._data
-
-                elif len(self._data.nav_indexes) == 1 and self._data.distribution == 'uniform':
-                    nav_axis = self._data.axes_manager.get_nav_axes()[0]
-                    if posx < nav_axis.min() or posx > nav_axis.max():
-                        return
-                    ind_x = nav_axis.find_index(posx)
-                    logger.debug(f'Getting the data at nav index {ind_x}')
-                    data = self._data.inav[ind_x]
-
-                elif len(self._data.nav_indexes) == 2 and self._data.distribution == 'uniform':
-                    nav_x = self._data.axes_manager.get_nav_axes()[1]
-                    nav_y = self._data.axes_manager.get_nav_axes()[0]
-                    if posx < nav_x.min() or posx > nav_x.max():
-                        return
-                    if posy < nav_y.min() or posy > nav_y.max():
-                        return
-                    ind_x = nav_x.find_index(posx)
-                    ind_y = nav_y.find_index(posy)
-                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
-                    data = self._data.inav[ind_y, ind_x]
-                else:
-                    data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
-
-                if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 0D viewer
-                    self._viewer0D.show_data(data)
-
-                elif len(self._data.axes_manager.sig_shape) == 1:  # means 1D data, plot on 1D viewer
-                    self._viewer1D.show_data(data)
-
-                elif len(self._data.axes_manager.sig_shape) == 2:  # means 2D data, plot on 2D viewer
-                    self._viewer2D.show_data(data)
-                    if DEBUG_VIEWER:
-                        x, y, width, height = self.get_out_of_range_limits(*self._nav_limits)
-                        _data_sig = data.isig[y: y + height, x: x + width]
-                        self._debug_viewer_2D.show_data(_data_sig)
-
-            except Exception as e:
-                logger.exception(str(e))
-
-    def update_nav_data(self, x, y, width=None, height=None):
-        if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
-            nav_data = self.get_nav_data(self._data, x, y, width, height)
-            if nav_data is not None:
-                if len(nav_data.shape) < 2 and self._data.distribution == 'uniform':
-                    self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2 and self._data.distribution == 'uniform':
-                    self._navigator2D.show_data(nav_data)
-                else:
-                    self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
-
-    def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
-        try:
-            navigator_data = None
-            if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
-                navigator_data = data
-
-            elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-                _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
-
-            elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
-                x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
-                if not (width is None or height is None or width < 2 or height < 2):
-                    navigator_data = self._processor.get(self._filter_type).process(data.isig[y: y + height, x: x + width])
-                else:
-                    navigator_data = None
-            else:
-                navigator_data = None
-
-            return navigator_data
-
-        except Exception as e:
-            logger.warning('Could not compute the mathematical function')
-        finally:
-            return navigator_data
-
-
-class SpreadDataDisplayer(BaseDataDisplayer):
-    """Specialized object to filter and plot non uniformly spaced data in dedicated viewers
-
-    Meant for any navigation axes and up to signal data dimensionality of 2 (images)
-    """
-    distribution = DataDistribution['spread']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def init(self, data: DataWithAxes):
-        if len(data.nav_indexes) > 2:
-            self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
-        processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
-        self.update_processor(processor)
-
-    def init_rois(self, data: DataRaw):
-        pass
-
-    def update_viewer_data(self, posx=0, posy=0):
-        """ Update the signal display depending on the position of the crosshair in the navigation panels
-
-        Parameters
-        ----------
-        posx: float
-            from the 1D or 2D Navigator crosshair or from one of the navigation axis viewer (in that case
-            nav_axis tells from which navigation axis the position comes from)
-        posy: float
-            from the 2D Navigator crosshair
-        """
-        self._signal_at = posx, posy
-        if self._data is not None:
-            try:
-                if len(self._data.nav_indexes) == 0 and self._data.distribution == 'uniform':
-                    data = self._data
-
-                elif len(self._data.nav_indexes) == 1 and self._data.distribution == 'uniform':
-                    nav_axis = self._data.axes_manager.get_nav_axes()[0]
-                    if posx < nav_axis.min() or posx > nav_axis.max():
-                        return
-                    ind_x = nav_axis.find_index(posx)
-                    logger.debug(f'Getting the data at nav index {ind_x}')
-                    data = self._data.inav[ind_x]
-
-                elif len(self._data.nav_indexes) == 2 and self._data.distribution == 'uniform':
-                    nav_x = self._data.axes_manager.get_nav_axes()[1]
-                    nav_y = self._data.axes_manager.get_nav_axes()[0]
-                    if posx < nav_x.min() or posx > nav_x.max():
-                        return
-                    if posy < nav_y.min() or posy > nav_y.max():
-                        return
-                    ind_x = nav_x.find_index(posx)
-                    ind_y = nav_y.find_index(posy)
-                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
-                    data = self._data.inav[ind_y, ind_x]
-                else:
-                    data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
-
-                if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 0D viewer
-                    self._viewer0D.show_data(data)
-
-                elif len(self._data.axes_manager.sig_shape) == 1:  # means 1D data, plot on 1D viewer
-                    self._viewer1D.show_data(data)
-
-                elif len(self._data.axes_manager.sig_shape) == 2:  # means 2D data, plot on 2D viewer
-                    self._viewer2D.show_data(data)
-                    if DEBUG_VIEWER:
-                        x, y, width, height = self.get_out_of_range_limits(*self._nav_limits)
-                        _data_sig = data.isig[y: y + height, x: x + width]
-                        self._debug_viewer_2D.show_data(_data_sig)
-
-            except Exception as e:
-                logger.exception(str(e))
-
-    def update_nav_data(self, x, y, width=None, height=None):
-        if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
-            nav_data = self.get_nav_data(self._data, x, y, width, height)
-            if nav_data is not None:
-                if len(nav_data.shape) < 2 and self._data.distribution == 'uniform':
-                    self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2 and self._data.distribution == 'uniform':
-                    self._navigator2D.show_data(nav_data)
-                else:
-                    self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
-
-    def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
-        try:
-            navigator_data = None
-            if len(data.axes_manager.sig_shape) == 0:  # signal data is 0D
-                navigator_data = data
-
-            elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-                _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
-
-            elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
-                x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
-                if not (width is None or height is None or width < 2 or height < 2):
-                    navigator_data = self._processor.get(self._filter_type).process(data.isig[y: y + height, x: x + width])
-                else:
-                    navigator_data = None
-            else:
-                navigator_data = None
-
-            return navigator_data
-
-        except Exception as e:
-            logger.warning('Could not compute the mathematical function')
-        finally:
-            return navigator_data
-
-    def get_nav_position(self, posx=0, posy=None):
-        """
-        crosshair position from the "spread" data viewer. Should return scan index where the scan was closest to posx,
-        posy coordinates
-        Parameters
-        ----------
-        posx
-        posy
-
-        See Also
-        --------
-        update_viewer_data
-        """
-        # todo adapt to new layout
-
-        nav_axes = self.get_selected_axes()
-        if len(nav_axes) != 0:
-            if 'datas' in nav_axes[0]:
-                datas = nav_axes[0]['datas']
-                xaxis = datas[0]
-                if len(datas) > 1:
-                    yaxis = datas[1]
-                    ind_scan = utils.find_common_index(xaxis, yaxis, posx, posy)
-                else:
-                    ind_scan = mutils.find_index(xaxis, posx)[0]
-
-                self.navigator1D.ui.crosshair.set_crosshair_position(ind_scan[0])
-
-
 class ViewerND(ParameterManager, ActionManager, ViewerBase):
     params = [
-        {'title': 'Set data spread', 'name': 'set_data_spread', 'type': 'action', 'visible': False},
         {'title': 'Set data 4D', 'name': 'set_data_4D', 'type': 'action', 'visible': False},
         {'title': 'Set data 3D', 'name': 'set_data_3D', 'type': 'action', 'visible': False},
         {'title': 'Set data 2D', 'name': 'set_data_2D', 'type': 'action', 'visible': False},
@@ -439,34 +244,14 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
         self.setup_widgets()
 
-        self.data_displayer: BaseDataDisplayer = None
+        self.data_displayer = DataDisplayer(self.viewer0D, self.viewer1D, self.viewer2D,
+                                            self.navigator1D, self.navigator2D, self.axes_viewer)
 
         self.setup_actions()
 
         self.connect_things()
 
         self.prepare_ui()
-
-    def update_data_displayer(self, distribution: DataDistribution):
-        if distribution.name == 'uniform':
-            self.data_displayer = UniformDataDisplayer(self.viewer0D, self.viewer1D, self.viewer2D,
-                                                       self.navigator1D, self.navigator2D,
-                                                       self.axes_viewer)
-        else:
-            self.data_displayer = SpreadDataDisplayer(self.viewer0D, self.viewer1D, self.viewer2D,
-                                                       self.navigator1D, self.navigator2D,
-                                                       self.axes_viewer)
-
-        self.navigator1D.crosshair.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
-        self.navigator2D.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
-        self.axes_viewer.navigation_changed.connect(self.data_displayer.update_viewer_data)
-        self.data_displayer.data_dim_signal.connect(self.update_data_dim)
-
-        self.viewer1D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
-        self.viewer2D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
-
-        self.get_action('filters').currentTextChanged.connect(self.data_displayer.update_filter)
-        self.data_displayer.processor_changed.connect(self.update_filters)
 
     def _show_data(self, data: DataRaw, **kwargs):
         force_update = False
@@ -480,16 +265,34 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         if 'force_update' in kwargs:
             force_update = kwargs['force_update']
 
-        if self.data_displayer is None or data.distribution != self.data_displayer.distribution:
-            self.update_data_displayer(data.distribution)
-
         self.data_displayer.update_data(data, force_update=force_update)
         self._data = data
 
         if force_update:
             self.update_widget_visibility(data)
-            self.data_displayer.init_rois(data)
+            self.init_rois(data)
         self.data_to_export_signal.emit(self.data_to_export)
+
+    def init_rois(self, data: DataRaw):
+        means = []
+        for axis in data.axes_manager.get_nav_axes():
+            means.append(axis.mean())
+        if len(data.nav_indexes) == 1:
+            self.navigator1D.set_crosshair_position(*means)
+        elif len(data.nav_indexes) == 2:
+            self.navigator2D.set_crosshair_position(*means)
+
+        mins = []
+        maxs = []
+        for axis in data.axes_manager.get_signal_axes():
+            mins.append(axis.min())
+            maxs.append(axis.max())
+        if len(data.axes_manager.sig_indexes) == 1:
+            self.viewer1D.roi.setPos((mins[0], maxs[0]))
+        elif len(data.axes_manager.sig_indexes) > 1:
+            self.viewer2D.roi.setPos((0, 0))
+            self.viewer2D.roi.setSize((len(data.get_axis_from_index(data.axes_manager.sig_indexes[1])),
+                                      len(data.get_axis_from_index(data.axes_manager.sig_indexes[0]))))
 
     def set_data_test(self, data_shape='3D'):
 
@@ -507,26 +310,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                                    t, 0 + 2 * indy, 30)
                     + np.random.rand(len(t), len(z)) / 10)
 
-        if data_shape == 'spread':
-            zspread = np.random.choice(z, int(len(z) / 3))
-            zspread += np.random.rand(len(zspread))
-            np.random.shuffle(zspread)
-
-            tspread = np.random.choice(t, len(zspread))
-            tspread += np.random.rand(len(zspread))
-            np.random.shuffle(tspread)
-
-            data_spread = []
-            for ind in range(len(zspread)):
-                data_spread.append((mutils.gauss2D(zspread[ind], 0, 20, tspread[ind], 0, 30) +
-                                    np.random.rand() / 10)[0][0])
-
-            dataraw = DataRaw('NDdata', distribution='spread', dim='DataND',
-                              data=[np.array(data_spread)], nav_indexes=(0, 1),
-                              axes=[Axis(data=tspread, index=0, label='t_axis', units='tunits'),
-                                    Axis(data=zspread, index=1, label='z_axis', units='zunits')])
-
-        elif data_shape == '4D':
+        if data_shape == '4D':
             dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
                               axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
                                     Axis(data=x, index=1, label='x_axis', units='xunits'),
@@ -594,11 +378,20 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.settings.child('set_data_2D').sigActivated.connect(lambda: self.set_data_test('2D'))
         self.settings.child('set_data_3D').sigActivated.connect(lambda: self.set_data_test('3D'))
         self.settings.child('set_data_4D').sigActivated.connect(lambda: self.set_data_test('4D'))
-        self.settings.child('set_data_spread').sigActivated.connect(lambda: self.set_data_test('spread'))
         self.settings.child('data_shape_settings', 'set_nav_axes').sigActivated.connect(self.reshape_data)
 
+        self.navigator1D.crosshair.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
         self.navigator1D.get_action('crosshair').trigger()
+        self.navigator2D.crosshair_dragged.connect(self.data_displayer.update_viewer_data)
+        self.axes_viewer.navigation_changed.connect(self.data_displayer.update_viewer_data)
         self.connect_action('setaxes', self.show_settings)
+        self.data_displayer.data_dim_signal.connect(self.update_data_dim)
+
+        self.viewer1D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
+        self.viewer2D.roi.sigRegionChanged.connect(self.data_displayer.update_nav_data_from_roi)
+
+        self.get_action('filters').currentTextChanged.connect(self.data_displayer.update_filter)
+        self.data_displayer.processor_changed.connect(self.update_filters)
 
     def setup_widgets(self):
         self.parent.setLayout(QtWidgets.QVBoxLayout())
@@ -673,14 +466,39 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.ui.spread_widget.show()
         self.ui.spread_widget.setVisible(False)
 
+    def get_nav_position(self, posx=0, posy=None):
+        """
+        crosshair position from the "spread" data viewer. Should return scan index where the scan was closest to posx,
+        posy coordinates
+        Parameters
+        ----------
+        posx
+        posy
 
+        See Also
+        --------
+        update_viewer_data
+        """
+        # todo adapt to new layout
+
+        nav_axes = self.get_selected_axes()
+        if len(nav_axes) != 0:
+            if 'datas' in nav_axes[0]:
+                datas = nav_axes[0]['datas']
+                xaxis = datas[0]
+                if len(datas) > 1:
+                    yaxis = datas[1]
+                    ind_scan = utils.find_common_index(xaxis, yaxis, posx, posy)
+                else:
+                    ind_scan = mutils.find_index(xaxis, posx)[0]
+
+                self.navigator1D.ui.crosshair.set_crosshair_position(ind_scan[0])
 
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
     prog = ViewerND(widget)
-    prog.settings.child('set_data_spread').show(True)
     prog.settings.child('set_data_4D').show(True)
     prog.settings.child('set_data_3D').show(True)
     prog.settings.child('set_data_2D').show(True)

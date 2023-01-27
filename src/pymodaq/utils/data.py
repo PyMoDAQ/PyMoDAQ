@@ -4,7 +4,7 @@ Created the 28/10/2022
 
 @author: Sebastien Weber
 """
-
+from abc import ABCMeta, abstractmethod, abstractproperty
 import numbers
 import numpy as np
 from typing import List, Tuple, Union
@@ -621,25 +621,15 @@ class DataBase(DataLowLevel):
         self._data = data
 
 
-class AxesManager:
-    def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None,
-                 distribution=DataDistribution['uniform'], **kwargs):
+class AxesManagerBase:
+    def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
         self._data_shape = data_shape[:]  # initial shape needed for self._check_axis
         self._axes = axes[:]
         self._nav_indexes = nav_indexes
         self._sig_indexes = sig_indexes if sig_indexes is not None else self.compute_sig_indexes()
-        self.distribution = distribution
 
         self._check_axis(self._axes)
         self._manage_named_axes(self._axes, **kwargs)
-
-    def compute_sig_indexes(self):
-        _shape = list(self._data_shape)
-        indexes = list(np.arange(len(self._data_shape)))
-        for index in self.nav_indexes:
-            if index in indexes:
-                indexes.pop(indexes.index(index))
-        return tuple(indexes)
 
     @property
     def axes(self):
@@ -649,6 +639,18 @@ class AxesManager:
     def axes(self, axes: List[Axis]):
         self._axes = axes[:]
         self._check_axis(self._axes)
+
+    @abstractmethod
+    def _check_axis(self, axes):
+        ...
+
+    def compute_sig_indexes(self):
+        _shape = list(self._data_shape)
+        indexes = list(np.arange(len(self._data_shape)))
+        for index in self.nav_indexes:
+            if index in indexes:
+                indexes.pop(indexes.index(index))
+        return tuple(indexes)
 
     def _has_get_axis_from_index(self, index: int):
         """Check if the axis referred by a given data dimensionality index is present
@@ -703,18 +705,12 @@ class AxesManager:
 
     @property
     def shape(self) -> Tuple[int]:
-        if self.distribution.name == 'uniform':
-            self._data_shape = self.compute_shape_from_axes()
+        self._data_shape = self.compute_shape_from_axes()
         return self._data_shape
 
+    @abstractmethod
     def compute_shape_from_axes(self):
-        if len(self.axes) != 0:
-            shape = []
-            for ind in range(len(self.axes)):
-                shape.append(len(self.get_axis_from_index(ind, create=True)))
-        else:
-            shape = self._data_shape
-        return tuple(shape)
+        ...
 
     @property
     def sig_shape(self) -> tuple:
@@ -792,6 +788,55 @@ class AxesManager:
         """Check if an axis  is considered signal or navigation"""
         return axis.index not in self._nav_indexes
 
+    @abstractmethod
+    def get_shape_from_index(self, index: int) -> int:
+        """Get the data shape at the given index"""
+        ...
+
+    def get_axes_index(self) -> List[int]:
+        """Get the index list from the axis objects"""
+        return [axis.index for axis in self._axes]
+
+    @abstractmethod
+    def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
+        ...
+
+    def get_nav_axes(self):
+        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]
+
+    def get_signal_axes(self):
+        if self.sig_indexes is None:
+            self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
+        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]
+
+    def is_axis_signal(self, axis: Axis) -> bool:
+        """Check if an axis is considered signal or navigation"""
+        return axis.index in self._nav_indexes
+
+    def is_axis_navigation(self, axis: Axis) -> bool:
+        """Check if an axis  is considered signal or navigation"""
+        return axis.index not in self._nav_indexes
+
+    def __repr__(self):
+        return self._get_dimension_str()
+
+    @abstractmethod
+    def _get_dimension_str(self):
+        ...
+
+class AxesManagerUniform(AxesManagerBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def compute_shape_from_axes(self):
+        if len(self.axes) != 0:
+            shape = []
+            for ind in range(len(self.axes)):
+                shape.append(len(self.get_axis_from_index(ind, create=True)))
+        else:
+            shape = self._data_shape
+        return tuple(shape)
+
     def get_shape_from_index(self, index: int) -> int:
         """Get the data shape at the given index"""
         if index > len(self._data_shape) or index < 0:
@@ -816,10 +861,6 @@ class AxesManager:
                 axis.offset = 0
                 axes[ind] = axis
         self._axes = axes
-
-    def get_axes_index(self) -> List[int]:
-        """Get the index list from the axis objects"""
-        return [axis.index for axis in self._axes]
 
     def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
         """Get the axis referred by a given data dimensionality index
@@ -853,25 +894,6 @@ class AxesManager:
                     UserWarning(f'The axis requested with index {index} is not present, returning None'))
         return axis
 
-    def get_nav_axes(self):
-        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]
-
-    def get_signal_axes(self):
-        if self.sig_indexes is None:
-            self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
-        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]
-
-    def is_axis_signal(self, axis: Axis) -> bool:
-        """Check if an axis is considered signal or navigation"""
-        return axis.index in self._nav_indexes
-
-    def is_axis_navigation(self, axis: Axis) -> bool:
-        """Check if an axis  is considered signal or navigation"""
-        return axis.index not in self._nav_indexes
-
-    def __repr__(self):
-        return self._get_dimension_str()
-
     def _get_dimension_str(self):
         string = "("
         for nav_index in self.nav_indexes:
@@ -885,256 +907,87 @@ class AxesManager:
         return string
 
 
-class AxesManagerSpread:
-        def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
-            self._data_shape = data_shape[:]  # initial shape needed for self._check_axis
-            self._axes = axes[:]
-            self._nav_indexes = nav_indexes
-            self._sig_indexes = sig_indexes if sig_indexes is not None else self.compute_sig_indexes()
+class AxesManagerSpread(AxesManagerBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-            self._check_axis(axes)
-            self._manage_named_axes(axes, **kwargs)
-
-        def compute_sig_indexes(self):
-            _shape = list(self._data_shape)
-            indexes = list(np.arange(len(self._data_shape)))
-            for index in self.nav_indexes:
-                if index in indexes:
-                    indexes.pop(indexes.index(index))
-            return tuple(indexes)
-
-        def compute_shape_from_axes(self):
+    def compute_shape_from_axes(self):
+        if len(self.axes) != 0:
             shape = []
             for ind in range(len(self.axes)):
                 shape.append(len(self.get_axis_from_index(ind, create=True)))
-            return tuple(shape)
+        else:
+            shape = self._data_shape
+        return tuple(shape)
 
-        @property
-        def axes(self):
-            return self._axes
+    def get_shape_from_index(self, index: int) -> int:
+        """Get the data shape at the given index"""
+        if index > len(self._data_shape) or index < 0:
+            raise IndexError('The specified index does not correspond to any data dimension')
+        return self._data_shape[index]
 
-        def _has_get_axis_from_index(self, index: int):
-            """Check if the axis referred by a given data dimensionality index is present
+    def _check_axis(self, axes: List[Axis]):
+        """Check all axis to make sure of their type and make sure their data are properly referring to the data index
 
-            Returns
-            -------
-            bool: True if the axis has been found else False
-            Axis or None: return the axis instance if has the axis else None
-            """
-            if index > len(self._data_shape) or index < 0:
-                raise IndexError('The specified index does not correspond to any data dimension')
-            for axis in self.axes:
-                if axis.index == index:
-                    return True, axis
-            return False, None
+        See Also
+        --------
+        :py:meth:`Axis.create_linear_data`
+        """
+        for ind, axis in enumerate(axes):
+            if not isinstance(axis, Axis):
+                raise TypeError(f'An axis of {self.__class__.__name__} should be an Axis object')
+            if self.distribution.name == 'uniform' and self.get_shape_from_index(axis.index) != axis.size:
+                warnings.warn(UserWarning('The size of the axis is not coherent with the shape of the data. '
+                                          'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
+                axis.size = self.get_shape_from_index(axis.index)
+                axis.scaling = 1
+                axis.offset = 0
+                axes[ind] = axis
+        self._axes = axes
 
-        def _manage_named_axes(self, axes, x_axis=None, y_axis=None, nav_x_axis=None, nav_y_axis=None):
-            """This method make sur old style Data is still compatible, especially when using x_axis or y_axis parameters"""
-            modified = False
-            if x_axis is not None:
-                modified = True
-                index = 0
-                if len(self._data_shape) == 1 and not self._has_get_axis_from_index(0)[0]:
-                    # in case of Data1D the x_axis corresponds to the first data dim
-                    index = 0
-                elif len(self._data_shape) == 2 and not self._has_get_axis_from_index(1)[0]:
-                    # in case of Data2D the x_axis corresponds to the second data dim (columns)
-                    index = 1
-                axes.append(Axis(x_axis.label, x_axis.units, x_axis.data, index=index))
+    def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
+        """Get the axis referred by a given data dimensionality index
 
-            if y_axis is not None:
+        If the axis is absent, create a linear one to fit the data shape if parameter create is True
 
-                if len(self._data_shape) == 2 and not self._has_get_axis_from_index(0)[0]:
-                    modified = True
-                    # in case of Data2D the y_axis corresponds to the first data dim (lines)
-                    axes.append(Axis(y_axis.label, y_axis.units, y_axis.data, index=0))
+        Parameters
+        ----------
+        index: int
+            The index referring to the data ndarray shape
+        create: bool
+            If True and the axis referred by index has not been found in axes, create one
 
-            if nav_x_axis is not None:
-                if len(self.nav_indexes) > 0:
-                    modified = True
-                    # in case of DataND the y_axis corresponds to the first data dim (lines)
-                    axes.append(Axis(nav_x_axis.label, nav_x_axis.units, nav_x_axis.data, index=self._nav_indexes[0]))
+        Returns
+        -------
+        Axis or None: return the axis instance if Data has the axis (or it has been created) else None
 
-            if nav_y_axis is not None:
-                if len(self.nav_indexes) > 1:
-                    modified = True
-                    # in case of Data2D the y_axis corresponds to the first data dim (lines)
-                    axes.append(Axis(nav_y_axis.label, nav_y_axis.units, nav_y_axis.data, index=self._nav_indexes[1]))
-
-            if modified:
-                self._check_axis(axes)
-
-        @property
-        def shape(self) -> Tuple[int]:
-            self._data_shape = self.compute_shape_from_axes()
-            return self._data_shape
-
-        @property
-        def sig_shape(self) -> tuple:
-            return tuple([self.shape[ind] for ind in self.sig_indexes])
-
-        @property
-        def nav_shape(self) -> tuple:
-            return tuple([self.shape[ind] for ind in self.nav_indexes])
-
-        def append_axis(self, axis: Axis):
-            self._axes.append(axis)
-            self._check_axis([axis])
-
-        @property
-        def nav_indexes(self) -> IterableType[int]:
-            return self._nav_indexes
-
-        @nav_indexes.setter
-        def nav_indexes(self, nav_indexes: IterableType[int]):
-            if isinstance(nav_indexes, Iterable):
-                nav_indexes = tuple(nav_indexes)
-                valid = True
-                for index in nav_indexes:
-                    if index not in self.get_axes_index():
-                        logger.warning('Could not set the corresponding nav_index into the data object, not enough'
-                                       ' Axis declared')
-                        valid = False
-                        break
-                if valid:
-                    self._nav_indexes = nav_indexes
+        See Also
+        --------
+        :py:meth:`Axis.create_linear_data`
+        """
+        has_axis, axis = self._has_get_axis_from_index(index)
+        if not has_axis:
+            if create:
+                warnings.warn(
+                    UserWarning(f'The axis requested with index {index} is not present, creating a linear one...'))
+                axis = Axis(data=np.zeros((1,)), index=index)
+                axis.create_linear_data(self.get_shape_from_index(index))
             else:
-                logger.warning(
-                    'Could not set the corresponding sig_indexes into the data object, should be an iterable')
-            self.sig_indexes = self.compute_sig_indexes()
+                warnings.warn(
+                    UserWarning(f'The axis requested with index {index} is not present, returning None'))
+        return axis
 
-        @property
-        def sig_indexes(self) -> IterableType[int]:
-            return self._sig_indexes
-
-        @sig_indexes.setter
-        def sig_indexes(self, sig_indexes: IterableType[int]):
-            if isinstance(sig_indexes, Iterable):
-                sig_indexes = tuple(sig_indexes)
-                valid = True
-                for index in sig_indexes:
-                    if index in self._nav_indexes:
-                        logger.warning('Could not set the corresponding sig_index into the axis manager object, '
-                                       'the axis is already affected to the navigation axis')
-                        valid = False
-                        break
-                    if index not in self.get_axes_index():
-                        logger.warning('Could not set the corresponding nav_index into the data object, not enough'
-                                       ' Axis declared')
-                        valid = False
-                        break
-                if valid:
-                    self._sig_indexes = sig_indexes
-            else:
-                logger.warning(
-                    'Could not set the corresponding sig_indexes into the data object, should be an iterable')
-
-        @property
-        def nav_axes(self) -> List[int]:
-            deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
-            return self._nav_indexes
-
-        @nav_axes.setter
-        def nav_axes(self, nav_indexes: List[int]):
-            deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
-            self.nav_indexes = nav_indexes
-
-        def is_axis_signal(self, axis: Axis) -> bool:
-            """Check if an axis is considered signal or navigation"""
-            return axis.index in self._nav_indexes
-
-        def is_axis_navigation(self, axis: Axis) -> bool:
-            """Check if an axis  is considered signal or navigation"""
-            return axis.index not in self._nav_indexes
-
-        def get_shape_from_index(self, index: int) -> int:
-            """Get the data shape at the given index"""
-            if index > len(self._data_shape) or index < 0:
-                raise IndexError('The specified index does not correspond to any data dimension')
-            return self._data_shape[index]
-
-        def _check_axis(self, axes: List[Axis]):
-            """Check all axis to make sure of their type and make sure their data are properly referring to the data index
-
-            See Also
-            --------
-            :py:meth:`Axis.create_linear_data`
-            """
-            for ind, axis in enumerate(axes):
-                if not isinstance(axis, Axis):
-                    raise TypeError(f'An axis of {self.__class__.name} should be an Axis object')
-                if self.get_shape_from_index(axis.index) != axis.size:
-                    warnings.warn(UserWarning('The size of the axis is not coherent with the shape of the data. '
-                                              'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
-                    axes[ind].create_linear_data(self.get_shape_from_index(axis.index))
-            self._axes = axes
-
-        def get_axes_index(self) -> List[int]:
-            """Get the index list from the axis objects"""
-            return [axis.index for axis in self._axes]
-
-        def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
-            """Get the axis referred by a given data dimensionality index
-
-            If the axis is absent, create a linear one to fit the data shape if parameter create is True
-
-            Parameters
-            ----------
-            index: int
-                The index referring to the data ndarray shape
-            create: bool
-                If True and the axis referred by index has not been found in axes, create one
-
-            Returns
-            -------
-            Axis or None: return the axis instance if Data has the axis (or it has been created) else None
-
-            See Also
-            --------
-            :py:meth:`Axis.create_linear_data`
-            """
-            has_axis, axis = self._has_get_axis_from_index(index)
-            if not has_axis:
-                if create:
-                    warnings.warn(
-                        UserWarning(f'The axis requested with index {index} is not present, creating a linear one...'))
-                    axis = Axis(data=np.zeros((1,)), index=index)
-                    axis.create_linear_data(self.get_shape_from_index(index))
-                else:
-                    warnings.warn(
-                        UserWarning(f'The axis requested with index {index} is not present, returning None'))
-            return axis
-
-        def get_nav_axes(self):
-            return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]
-
-        def get_signal_axes(self):
-            if self.sig_indexes is None:
-                self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
-            return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]
-
-        def is_axis_signal(self, axis: Axis) -> bool:
-            """Check if an axis is considered signal or navigation"""
-            return axis.index in self._nav_indexes
-
-        def is_axis_navigation(self, axis: Axis) -> bool:
-            """Check if an axis  is considered signal or navigation"""
-            return axis.index not in self._nav_indexes
-
-        def __repr__(self):
-            return self._get_dimension_str()
-
-        def _get_dimension_str(self):
-            string = "("
-            for nav_index in self.nav_indexes:
-                string += str(self._data_shape[nav_index]) + ", "
-            string = string.rstrip(", ")
-            string += "|"
-            for sig_index in self.sig_indexes:
-                string += str(self._data_shape[sig_index]) + ", "
-            string = string.rstrip(", ")
-            string += ")"
-            return string
+    def _get_dimension_str(self):
+        string = "("
+        for nav_index in self.nav_indexes:
+            string += str(self._data_shape[nav_index]) + ", "
+        string = string.rstrip(", ")
+        string += "|"
+        for sig_index in self.sig_indexes:
+            string += str(self._data_shape[sig_index]) + ", "
+        string = string.rstrip(", ")
+        string += ")"
+        return string
 
 
 class DataWithAxes(DataBase):
@@ -1171,8 +1024,14 @@ class DataWithAxes(DataBase):
 
         other_kwargs = dict(x_axis=x_axis, y_axis=y_axis, nav_x_axis=nav_x_axis, nav_y_axis=nav_y_axis)
 
-        self.axes_manager = AxesManager(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
-                                        distribution=self.distribution, **other_kwargs)
+        if self.distribution.name == 'uniform':
+            self.axes_manager = AxesManagerUniform(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
+                                                   **other_kwargs)
+        elif self.distribution.name == 'spread':
+            self.axes_manager = AxesManagerSpread(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
+                                                   **other_kwargs)
+        else:
+            raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 
         self.inav = SpecialSlicersData(self, True)
         self.isig = SpecialSlicersData(self, False)
@@ -1335,7 +1194,7 @@ class DataWithAxes(DataBase):
         return copy.deepcopy(self)
 
     @property
-    def _am(self) -> AxesManager:
+    def _am(self) -> AxesManagerBase:
         return self.axes_manager
 
     def get_data_dimension(self) -> str:
