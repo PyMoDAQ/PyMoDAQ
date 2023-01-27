@@ -86,7 +86,7 @@ class DataDisplayer(QObject):
         self.update_nav_data(*self._nav_limits)
 
     def init(self, data: DataRaw):
-        if len(self._data.nav_indexes) > 2:
+        if len(data.nav_indexes) > 2 or data.distribution == 'spread':
             self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
         processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
@@ -98,17 +98,17 @@ class DataDisplayer(QObject):
         ----------
         posx: float
             from the 1D or 2D Navigator crosshair or from one of the navigation axis viewer (in that case
-            nav_axis tells from wich navigation axis the position comes from)
+            nav_axis tells from which navigation axis the position comes from)
         posy: float
             from the 2D Navigator crosshair
         """
         self._signal_at = posx, posy
         if self._data is not None:
             try:
-                if len(self._data.nav_indexes) == 0:
+                if len(self._data.nav_indexes) == 0 and self._data.distribution == 'uniform':
                     data = self._data
 
-                elif len(self._data.nav_indexes) == 1:
+                elif len(self._data.nav_indexes) == 1 and self._data.distribution == 'uniform':
                     nav_axis = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_axis.min() or posx > nav_axis.max():
                         return
@@ -116,7 +116,7 @@ class DataDisplayer(QObject):
                     logger.debug(f'Getting the data at nav index {ind_x}')
                     data = self._data.inav[ind_x]
 
-                elif len(self._data.nav_indexes) == 2:
+                elif len(self._data.nav_indexes) == 2 and self._data.distribution == 'uniform':
                     nav_x = self._data.axes_manager.get_nav_axes()[1]
                     nav_y = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_x.min() or posx > nav_x.max():
@@ -128,17 +128,7 @@ class DataDisplayer(QObject):
                     logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
                     data = self._data.inav[ind_y, ind_x]
                 else:
-                    #self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
                     data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
-                    # #todo check this and update code
-                    # pos = []
-                    # for ind_view, view in enumerate(self.nav_axes_viewers):
-                    #     p = view.roi_line.getPos()[0]
-                    #     if p < 0 or p > len(self._nav_axes[ind_view]['data']):
-                    #         return
-                    #     ind = int(np.rint(p))
-                    #     pos.append(ind)
-                    # data = self._data.inav.__getitem__(pos).data
 
                 if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 0D viewer
                     self._viewer0D.show_data(data)
@@ -170,9 +160,9 @@ class DataDisplayer(QObject):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
             if nav_data is not None:
-                if len(nav_data.shape) < 2:
+                if len(nav_data.shape) < 2 and self._data.distribution == 'uniform':
                     self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2:
+                elif len(nav_data.shape) == 2 and self._data.distribution == 'uniform':
                     self._navigator2D.show_data(nav_data)
                 else:
                     self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
@@ -353,9 +343,9 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.viewer2D.roi.setVisible(len(data.nav_indexes) != 0)
         self._dock_navigation.setVisible(len(data.nav_indexes) != 0)
 
-        self.navigator1D.setVisible(len(data.nav_indexes) == 1)
-        self.navigator2D.setVisible(len(data.nav_indexes) == 2)
-        self.axes_viewer.setVisible(len(data.nav_indexes) > 2)
+        self.navigator1D.setVisible(len(data.nav_indexes) == 1 and data.distribution.name == 'uniform')
+        self.navigator2D.setVisible(len(data.nav_indexes) == 2 and data.distribution.name == 'uniform')
+        self.axes_viewer.setVisible(len(data.nav_indexes) > 2 or data.distribution.name == 'spread')
 
     def update_filters(self, processor):
         self.get_action('filters').clear()
