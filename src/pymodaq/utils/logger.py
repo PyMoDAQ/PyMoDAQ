@@ -15,7 +15,7 @@ config = Config()
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None,
-               logger_base_name='pymodaq', local_dir=None):
+               logger_base_name='pymodaq', local_dir=None) -> logging.Logger:
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -27,7 +27,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
 
     Returns
     -------
-    logger: (logging.logger) logger instance
+    logger: (logging.Logger) logger instance
     See Also
     --------
     get_module_name, logging.handlers.TimedRotatingFileHandler

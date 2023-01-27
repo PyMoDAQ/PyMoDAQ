@@ -46,6 +46,9 @@ class AxesViewer(QtCore.QObject):
             self.nav_axes_viewers[ind].roi_line_signal.connect(self._emit_nav_signal)
             self.nav_axes_viewers[ind].show_data([axes[ind].data])
             self.nav_axes_viewers[ind].set_axis_label(dict(orientation='bottom',
+                                                           label='Scan index',
+                                                           units=''))
+            self.nav_axes_viewers[ind].set_axis_label(dict(orientation='left',
                                                            label=axes[ind].label,
                                                            units=axes[ind].units))
 
