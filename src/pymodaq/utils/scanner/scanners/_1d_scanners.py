@@ -7,7 +7,7 @@ Created the 05/12/2022
 from typing import List, Tuple
 
 import numpy as np
-from pymodaq.utils.data import Axis
+from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -27,6 +27,7 @@ class Scan1DLinear(ScannerBase):
         {'title': 'Step:', 'name': 'step', 'type': 'float', 'value': config('scan', 'scan1D', 'step')}
         ]
     n_axes = 1
+    distribution = DataDistribution['uniform']
 
     def __init__(self, actuators: List = None, **_ignored):
         ScannerBase.__init__(self, actuators=actuators)
@@ -77,6 +78,7 @@ try:
             {'title': 'Start:', 'name': 'start', 'type': 'float', 'value': config('scan', 'scan1D', 'start')},
             {'title': 'Stop:', 'name': 'stop', 'type': 'float', 'value': config('scan', 'scan1D', 'stop')},
             ]
+        distribution = DataDistribution['spread']
 
         def __init__(self, actuators: List = None, **_ignored):
             super().__init__(actuators=actuators)

@@ -9,7 +9,7 @@ from typing import List, Tuple
 import numpy as np
 
 from qtpy import QtCore, QtWidgets
-from pymodaq.utils.data import Axis
+from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -76,6 +76,7 @@ class SequentialScanner(ScannerBase):
     params = [
         {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate},
               ]
+    distribution = DataDistribution['uniform']
 
     def __init__(self, actuators: List[str]):
 

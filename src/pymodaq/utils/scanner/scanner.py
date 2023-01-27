@@ -1,5 +1,5 @@
 import sys
-from typing import Tuple
+from typing import Tuple, List
 
 from collections import OrderedDict
 import numpy as np
@@ -36,7 +36,7 @@ class Scanner(QObject, ParameterManager):
     parent_widget: QtWidgets.QWidget
     scanner_items: list of GraphicItems
         used by ScanSelector for chosing scan area or linear traces
-    actuators: List[str]
+    actuators: List['DAQ_MOVE']
         list actuators names
 
     See Also
@@ -53,7 +53,8 @@ class Scanner(QObject, ParameterManager):
          'limits': scanner_factory.scan_sub_types(scanner_factory.scan_types()[0])},
     ]
 
-    def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]), actuators=[]):
+    def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]),
+                 actuators: List['DAQ_Move'] = []):
         QObject.__init__(self)
         ParameterManager.__init__(self, self.__class__.__name__)
         if parent_widget is None:
@@ -222,6 +223,10 @@ class Scanner(QObject, ParameterManager):
     def axes_unique(self):
         return self._scanner.axes_unique
 
+    @property
+    def distribution(self):
+        return self._scanner.distribution
+
     def set_scan(self):
         """Process the settings options to calculate the scan positions
 
@@ -242,8 +247,15 @@ def main():
     from pymodaq.utils.parameter import ParameterTree
     app = QtWidgets.QApplication(sys.argv)
 
+    class MoveMock:
+        def __init__(self, ind: int = 0):
+            self.title = f'act_{ind}'
+            self.units = f'units_{ind}'
+
+    actuators = [MoveMock(ind) for ind in range(3)]
+
     params = [{'title': 'Actuators', 'name': 'actuators', 'type': 'itemselect',
-               'value': dict(all_items=['act1', 'act2'], selected=[])},
+               'value': dict(all_items=[act.title for act in actuators], selected=[])},
               {'title': 'Set Scan', 'name': 'set_scan', 'type': 'action'},
               ]
     settings = Parameter.create(name='settings', type='group', children=params)
@@ -255,14 +267,20 @@ def main():
     widget_scanner = QtWidgets.QWidget()
     widget_main.layout().addWidget(settings_tree)
     widget_main.layout().addWidget(widget_scanner)
-    scanner = Scanner(widget_scanner, actuators=['act1', 'act2'])
+    scanner = Scanner(widget_scanner, actuators=actuators)
 
     def update_actuators(param):
-        scanner.actuators = param.value()['selected']
+        scanner.actuators = [utils.find_objects_in_list_from_attr_name_val(actuators, 'title', act_str,
+                                                                           return_first=True)[0]
+                             for act_str in param.value()['selected']]
 
     def print_info():
+        print('info:')
         print(scanner.get_scan_info())
+        print('positions:')
         print(scanner.positions)
+        print('nav:')
+        print(scanner.get_nav_axes())
 
     settings.child('actuators').sigValueChanged.connect(update_actuators)
     settings.child('set_scan').sigActivated.connect(scanner.set_scan)

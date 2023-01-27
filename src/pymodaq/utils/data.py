@@ -622,11 +622,13 @@ class DataBase(DataLowLevel):
 
 
 class AxesManager:
-    def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None, **kwargs):
+    def __init__(self, data_shape: Tuple[int], axes: List[Axis], nav_indexes=None, sig_indexes=None,
+                 distribution=DataDistribution['uniform'], **kwargs):
         self._data_shape = data_shape[:]  # initial shape needed for self._check_axis
         self._axes = axes[:]
         self._nav_indexes = nav_indexes
         self._sig_indexes = sig_indexes if sig_indexes is not None else self.compute_sig_indexes()
+        self.distribution = distribution
 
         self._check_axis(self._axes)
         self._manage_named_axes(self._axes, **kwargs)
@@ -638,15 +640,6 @@ class AxesManager:
             if index in indexes:
                 indexes.pop(indexes.index(index))
         return tuple(indexes)
-
-    def compute_shape_from_axes(self):
-        if len(self.axes) != 0:
-            shape = []
-            for ind in range(len(self.axes)):
-                shape.append(len(self.get_axis_from_index(ind, create=True)))
-        else:
-            shape = self._data_shape
-        return tuple(shape)
 
     @property
     def axes(self):
@@ -710,8 +703,18 @@ class AxesManager:
 
     @property
     def shape(self) -> Tuple[int]:
-        self._data_shape = self.compute_shape_from_axes()
+        if self.distribution.name == 'uniform':
+            self._data_shape = self.compute_shape_from_axes()
         return self._data_shape
+
+    def compute_shape_from_axes(self):
+        if len(self.axes) != 0:
+            shape = []
+            for ind in range(len(self.axes)):
+                shape.append(len(self.get_axis_from_index(ind, create=True)))
+        else:
+            shape = self._data_shape
+        return tuple(shape)
 
     @property
     def sig_shape(self) -> tuple:
@@ -1168,7 +1171,8 @@ class DataWithAxes(DataBase):
 
         other_kwargs = dict(x_axis=x_axis, y_axis=y_axis, nav_x_axis=nav_x_axis, nav_y_axis=nav_y_axis)
 
-        self.axes_manager = AxesManager(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes, **other_kwargs)
+        self.axes_manager = AxesManager(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
+                                        distribution=self.distribution, **other_kwargs)
 
         self.inav = SpecialSlicersData(self, True)
         self.isig = SpecialSlicersData(self, False)

@@ -9,7 +9,7 @@ from typing import List, Tuple
 import numpy as np
 
 from qtpy import QtCore, QtWidgets
-from pymodaq.utils.data import Axis
+from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -90,6 +90,7 @@ class TabularScanner(ScannerBase):
         {'title': 'Positions', 'name': 'tabular_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
          'menu': True},
               ]
+    distribution = DataDistribution['spread']
 
     def __init__(self, actuators: List[str]):
         super().__init__(actuators=actuators)
@@ -180,12 +181,12 @@ class TabularScanner(ScannerBase):
             logger.exception(str(e))
 
     def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{act.title}', units=act.units, data=self.positions[ind, :], index=ind)
+        return [Axis(label=f'{act.title}', units=act.units, data=self.positions[:, ind], index=ind)
                 for ind, act in enumerate(self.actuators)]
 
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
-        return self.ind_scan,
+        return scan_index,
 
     def get_scan_shape(self) -> Tuple[int]:
         return len(self.table_model),

@@ -11,7 +11,7 @@ import numpy as np
 
 from pymodaq.utils.abstract import ABCMeta, abstract_attribute
 from pymodaq.utils.enums import enum_checker
-from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
+from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
 from .saving import DataType, H5Saver
 from .backends import GROUP, CARRAY, Node, EARRAY
 from pymodaq.utils.daq_utils import capitalize
@@ -235,7 +235,7 @@ class DataSaverLoader(DataManagement):
         self._h5saver = h5saver
         self._axis_saver = AxisSaverLoader(h5saver)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
+    def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True, **kwargs):
         """
 
         Parameters
@@ -461,7 +461,8 @@ class DataExtendedSaver(DataSaverLoader):
         super().__init__(h5saver)
         self.extended_shape = extended_shape
 
-    def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True):
+    def _create_data_arrays(self, where: Union[Node, str], data: DataWithAxes, save_axes=True,
+                            distribution=DataDistribution['uniform']):
         """ Create array with extra dimensions (from scan) to store data
 
         Parameters
@@ -489,7 +490,7 @@ class DataExtendedSaver(DataSaverLoader):
                                         add_scan_dim=True,
                                         data_dimension=data.dim.name,
                                         metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                                                      source=data.source.name, distribution=data.distribution.name,
+                                                      source=data.source.name, distribution=distribution.name,
                                                       origin=data.origin,
                                                       nav_indexes=tuple(nav_indexes)))
 
@@ -499,8 +500,9 @@ class DataExtendedSaver(DataSaverLoader):
                     # because there will be len(self.extended_shape) extra navigation axes
                     self._axis_saver.add_axis(where, axis)
 
-    def add_data(self, where: Union[Node, str], data: DataWithAxes, indexes: List[int]):
-        """Adds given DataWithAxis at a location within the initialized h5 array
+    def add_data(self, where: Union[Node, str], data: DataWithAxes, indexes: List[int],
+                 distribution=DataDistribution['uniform']):
+        """Adds given DataWithAxes at a location within the initialized h5 array
 
         Parameters
         ----------
@@ -518,7 +520,7 @@ class DataExtendedSaver(DataSaverLoader):
                 raise IndexError(f'Indexes cannot be higher than the array shape')
 
         if self.get_last_node_name(where) is None:
-            self._create_data_arrays(where, data, save_axes=True)
+            self._create_data_arrays(where, data, save_axes=True, distribution=distribution)
 
         for ind_data in range(len(data)):
             array: CARRAY = self.get_node_from_index(where, ind_data)
@@ -672,6 +674,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
                 self._nav_axis_saver.add_axis(nav_group, axis)
 
     def add_data(self, where: Union[Node, str], data: DataToExport, indexes: List[int],
+                 distribution=DataDistribution['uniform'],
                  settings_as_xml='', metadata={}):
         """
 
@@ -694,7 +697,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
             dim_group = self._h5saver.get_set_group(where, dim)
             for ind, dwa in enumerate(data.get_data_from_dim(dim)):  # dwa: DataWithAxes filtered by dim
                 dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind), dwa.name)
-                self._data_saver.add_data(dwa_group, dwa, indexes=indexes)
+                self._data_saver.add_data(dwa_group, dwa, indexes=indexes, distribution=distribution)
 
 
 class DataLoader:

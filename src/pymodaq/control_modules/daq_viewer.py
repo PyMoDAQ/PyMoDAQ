@@ -19,7 +19,7 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis
+from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
@@ -581,20 +581,22 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                 where=None)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where=None):
+    def insert_data(self, indexes: Tuple[int], where=None, distribution=DataDistribution['uniform']):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
         Parameters
         ----------
         indexes: tuple(int)
             The indexes within the extended array where to place these data
+        where: Node or str
+        distribution: DataDistribution enum
 
         See Also
         --------
         DAQ_Scan, DetectorExtendedSaver
         """
         self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
-                                indexes=indexes)
+                                indexes=indexes, distribution=distribution)
 
     def _add_data_to_saver(self, data: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver

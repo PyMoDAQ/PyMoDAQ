@@ -12,7 +12,7 @@ import numpy as np
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.utils.factory import ObjectFactory
 from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.data import Axis
+from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.abstract import abstract_attribute
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
@@ -56,6 +56,7 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
     axes_indexes: np.ndarray = abstract_attribute()
     n_steps: int = abstract_attribute()
     n_axes: int = abstract_attribute()
+    distribution: DataDistribution = abstract_attribute()
 
     def __init__(self, actuators: List['DAQ_Move'] = None):
         super().__init__()
@@ -173,7 +174,7 @@ class ScannerFactory(ObjectFactory):
 
     def scan_types(self) -> List[str]:
         """Returns the list of scan types, main identifier of a given scanner"""
-        return list(self.builders[self.__class__.__name__].keys())
+        return sorted(list(self.builders[self.__class__.__name__].keys()))
 
     def scan_sub_types(self, scan_type: str) -> List[str]:
         """Returns the list of scan subtypes, second identifier of a given scanner of type scan_type"""

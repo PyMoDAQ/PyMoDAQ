@@ -11,7 +11,7 @@ import numpy as np
 
 from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
 
-from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport
+from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
 from .saving import H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, GroupType
 from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportTimedSaver, DataToExportExtendedSaver
@@ -187,8 +187,9 @@ class DetectorExtendedSaver(DetectorSaver):
     def update_after_h5changed(self, ):
         self._datatoexport_saver = DataToExportExtendedSaver(self.h5saver, self._extended_shape)
 
-    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Tuple[int]):
-        self._datatoexport_saver.add_data(where, data, indexes=indexes)
+    def add_data(self, where: Union[Node, str], data: DataToExport, indexes: Tuple[int],
+                 distribution=DataDistribution['uniform']):
+        self._datatoexport_saver.add_data(where, data, indexes=indexes, distribution=distribution)
 
     def add_nav_axes(self, where: Union[Node, str], axes: List[Axis]):
         self._datatoexport_saver.add_nav_axes(where, axes)
@@ -292,9 +293,9 @@ class ScanSaver(ModuleSaver):
         for detector in self._module.modules_manager.detectors:
             detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
-    def add_data(self, indexes: Tuple[int] = None):
+    def add_data(self, indexes: Tuple[int] = None, distribution=DataDistribution['uniform']):
         for detector in self._module.modules_manager.detectors:
-            detector.insert_data(indexes, where=self._module_group)
+            detector.insert_data(indexes, where=self._module_group, distribution=distribution)
 
 
 
