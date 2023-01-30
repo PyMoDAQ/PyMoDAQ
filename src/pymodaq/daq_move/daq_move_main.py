@@ -1,4 +1,4 @@
-from pymodaq.daq_utils import config
+
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal, QLocale, Qt
 import sys
@@ -20,12 +20,12 @@ from easydict import EasyDict as edict
 from pymodaq.daq_utils.tcp_server_client import TCPClient
 from pymodaq.daq_utils import daq_utils as utils
 from pymodaq.daq_utils.exceptions import ActuatorError
-from pymodaq.daq_utils import config
-local_path = config.get_set_local_dir()
+from pymodaq.daq_utils import config as config_mod
+local_path = config_mod.get_set_local_dir()
 sys.path.append(local_path)
 
 logger = utils.set_logger(utils.get_module_name(__file__))
-
+config = config_mod.Config()
 DAQ_Move_Stage_type = utils.get_plugins('daq_move')
 
 
@@ -70,8 +70,12 @@ class DAQ_Move(Ui_Form, QObject):
     init_signal = Signal(bool)
     command_stage = Signal(ThreadCommand)
     command_tcpip = Signal(ThreadCommand)
-    move_done_signal = Signal(str,
-                                  float)  # to be used in external program to make sure the move has been done, export the current position. str refer to the unique title given to the module
+    move_done_signal = Signal(str, float)
+    # to be used in external program to make sure the move has been done, export the current position. str refer
+    # to the unique title given to the module
+    move_moving_signal = Signal(str, float)
+    # to be used in external program to make sure the move has been done, export the current position. str refer
+    # to the unique title given to the module
     update_settings_signal = Signal(edict)
     status_signal = Signal(str)
     bounds_signal = Signal(bool)
@@ -634,6 +638,7 @@ class DAQ_Move(Ui_Form, QObject):
 
         elif status.command == "check_position":
             self.ui.Current_position_sb.setValue(status.attributes[0])
+            self.move_moving_signal.emit(self.title, status.attributes[0])
             self.current_position = status.attributes[0]
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self.send_to_tcpip:
                 self.command_tcpip.emit(ThreadCommand('position_is', status.attributes))
@@ -1021,6 +1026,9 @@ class DAQ_Move_stage(QObject):
 def main(init_qt=True):
     if init_qt: # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
+        if config('style', 'darkstyle'):
+            import qdarkstyle
+            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
 
     form = QtWidgets.QWidget()
     prog = DAQ_Move(form, title="test", init=False)

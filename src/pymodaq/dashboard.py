@@ -102,7 +102,7 @@ class DashBoard(QObject):
         self.joysticks = dict([])
         self.ispygame_init = False
 
-        self.modules_manager = None
+        self.modules_manager: ModulesManager = None
 
         self.overshoot = False
         self.preset_file = None
@@ -177,7 +177,7 @@ class DashBoard(QObject):
         win.show()
         return self.scan_module
 
-    def load_log_module(self, win=None):
+    def load_log_module(self, win=None) -> DAQ_Logger:
         if win is None:
             win = QtWidgets.QMainWindow()
         area = DockArea()

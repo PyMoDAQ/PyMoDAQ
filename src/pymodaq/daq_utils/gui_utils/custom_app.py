@@ -2,6 +2,7 @@ from qtpy.QtCore import QObject, QLocale
 from pymodaq.daq_utils.gui_utils.dock import DockArea
 from pymodaq.daq_utils.managers.action_manager import ActionManager
 from pymodaq.daq_utils.managers.parameter_manager import ParameterManager
+from pymodaq.daq_utils.managers.modules_manager import ModulesManager
 from pyqtgraph.dockarea import DockArea
 from qtpy import QtCore, QtWidgets
 
@@ -97,6 +98,6 @@ class CustomApp(QObject, ActionManager, ParameterManager):
         raise NotImplementedError
 
     @property
-    def modules_manager(self):
+    def modules_manager(self) -> ModulesManager:
         if self.dashboard is not None:
             return self.dashboard.modules_manager

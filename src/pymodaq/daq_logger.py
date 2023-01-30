@@ -58,8 +58,6 @@ class DAQ_Logger(CustomApp):
         """
 
         super().__init__(dockarea, dashboard)
-
-
         self.wait_time = 1000
 
         self.logger_thread = None
@@ -431,7 +429,7 @@ class DAQ_Logging(QObject):
 
     def stop_logging(self):
         try:
-            self.connect_detectors(connect=False)
+            self.connect_detectors(False)
         except Exception as e:
             logger.exception(str(e))
 

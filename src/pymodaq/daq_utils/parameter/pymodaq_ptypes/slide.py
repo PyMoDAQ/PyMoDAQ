@@ -4,6 +4,7 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 from pymodaq.daq_utils.daq_utils import scroll_log, scroll_linear
 import numpy as np
 
+
 class SliderSpinBox(QtWidgets.QWidget):
 
     def __init__(self, *args, subtype='lin', **kwargs):

@@ -1,3 +1,4 @@
+from typing import List
 from collections import OrderedDict
 from qtpy.QtCore import QObject, Signal, Slot, QThread
 from qtpy import QtWidgets
@@ -120,7 +121,7 @@ class ModulesManager(QObject):
         return self._detectors
 
     @property
-    def actuators(self):
+    def actuators(self) -> List['DAQ_Move']:
         return self.get_mods_from_names(self.selected_actuators_name, mod='act')
 
     @property
