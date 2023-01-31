@@ -73,10 +73,13 @@ class Axis:
         The scaling to apply to a linspace version in order to obtain the proper scaling
     offset: float
         The offset to apply to a linspace/scaled version in order to obtain the proper axis
+    spread_order: int
+        An integer needed in the case where data has a spread DataDistribution. It refers to the index along the data's
+        spread_index dimension
     """
 
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
-                 offset=None):
+                 offset=None, spread_order: int = None):
         super().__init__()
 
         self.iaxis = SpecialSlicersData(self, False)
@@ -93,6 +96,7 @@ class Axis:
         self.label = label
         self.data = data
         self.index = index
+        self.spread_order = spread_order
 
         self.get_scale_offset_from_data(data)
 
@@ -908,14 +912,65 @@ class AxesManagerUniform(AxesManagerBase):
 
 
 class AxesManagerSpread(AxesManagerBase):
+    """For this particular data category, some explanation is needed, see example below:
+
+    Examples
+    --------
+    One take images data (20x30) as a function of 2 parameters, say xaxis and yaxis non-linearly spaced on a regular
+    grid.
+
+    data.shape = (150, 20, 30)
+    data.nav_indexes = (0,)
+
+    The first dimension (150) corresponds to the navigation (there are 150 non uniform data points taken)
+    The  second and third could correspond to signal data, here an image of size (20x30)
+    so:
+    * nav_indexes is (0, )
+    * sig_indexes are (1, 2)
+
+    xaxis = Axis(name=xaxis, index=0, data...) length 150
+    yaxis = Axis(name=yaxis, index=0, data...) length 150
+
+    In fact from such a data shape the number of navigation axes in unknown . In our example, they are 2. To somehow
+    keep track of some ordering in these navigation axes, one adds an attribute to the Axis object: the spread_order 
+    xaxis = Axis(name=xaxis, index=0, spread_order=0, data...) length 150
+    yaxis = Axis(name=yaxis, index=0, spread_order=1, data...) length 150
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _check_axis(self, axes: List[Axis]):
+        """Check all axis to make sure of their type and make sure their data are properly referring to the data index
+
+        """
+        for axis in axes:
+            if not isinstance(axis, Axis):
+                raise TypeError(f'An axis of {self.__class__.__name__} should be an Axis object')
+            elif len(self.nav_indexes) != 1:
+                raise ValueError('Spread data should have only one specified index in self.nav_indexes')
+            elif axis.index in self.nav_indexes:
+                if axis.size != self._data_shape[self.nav_indexes[0]]:
+                    raise DataLengthError('all navigation axes should have the same size')
+
     def compute_shape_from_axes(self):
+        """Get data shape from axes
+
+        First get the nav length from one of the navigation axes
+        Then check for signal axes
+        """
         if len(self.axes) != 0:
+
+            axes = sorted(self.axes, key=lambda axis: axis.index)
+
             shape = []
-            for ind in range(len(self.axes)):
-                shape.append(len(self.get_axis_from_index(ind, create=True)))
+            for axis in axes:
+                if axis.index in self.nav_indexes:
+                    shape.append(axis.size)
+                    break
+            for axis in axes:
+                if axis.index not in self.nav_indexes:
+                    shape.append(axis.size)
         else:
             shape = self._data_shape
         return tuple(shape)
@@ -926,61 +981,22 @@ class AxesManagerSpread(AxesManagerBase):
             raise IndexError('The specified index does not correspond to any data dimension')
         return self._data_shape[index]
 
-    def _check_axis(self, axes: List[Axis]):
-        """Check all axis to make sure of their type and make sure their data are properly referring to the data index
+    def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
+        """in spread mode, different nav axes have the same index (but not
+        the same spread_order integer value) so may return multiple axis
 
-        See Also
-        --------
-        :py:meth:`Axis.create_linear_data`
         """
-        for ind, axis in enumerate(axes):
-            if not isinstance(axis, Axis):
-                raise TypeError(f'An axis of {self.__class__.__name__} should be an Axis object')
-            if self.distribution.name == 'uniform' and self.get_shape_from_index(axis.index) != axis.size:
-                warnings.warn(UserWarning('The size of the axis is not coherent with the shape of the data. '
-                                          'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
-                axis.size = self.get_shape_from_index(axis.index)
-                axis.scaling = 1
-                axis.offset = 0
-                axes[ind] = axis
-        self._axes = axes
-
-    def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
-        """Get the axis referred by a given data dimensionality index
-
-        If the axis is absent, create a linear one to fit the data shape if parameter create is True
-
-        Parameters
-        ----------
-        index: int
-            The index referring to the data ndarray shape
-        create: bool
-            If True and the axis referred by index has not been found in axes, create one
-
-        Returns
-        -------
-        Axis or None: return the axis instance if Data has the axis (or it has been created) else None
-
-        See Also
-        --------
-        :py:meth:`Axis.create_linear_data`
-        """
-        has_axis, axis = self._has_get_axis_from_index(index)
-        if not has_axis:
-            if create:
-                warnings.warn(
-                    UserWarning(f'The axis requested with index {index} is not present, creating a linear one...'))
-                axis = Axis(data=np.zeros((1,)), index=index)
-                axis.create_linear_data(self.get_shape_from_index(index))
-            else:
-                warnings.warn(
-                    UserWarning(f'The axis requested with index {index} is not present, returning None'))
-        return axis
+        axes = []
+        for axis in self.axes:
+            if axis.index == index:
+                axes.append(axis)
+        return axes
 
     def _get_dimension_str(self):
         string = "("
         for nav_index in self.nav_indexes:
             string += str(self._data_shape[nav_index]) + ", "
+            break
         string = string.rstrip(", ")
         string += "|"
         for sig_index in self.sig_indexes:
@@ -1006,7 +1022,7 @@ class DataWithAxes(DataBase):
         axes of 2D ndarray data
     """
 
-    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), **kwargs):
+    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), spread_index: int = None, **kwargs):
 
         if 'nav_axes' in kwargs:
             deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
@@ -1029,7 +1045,7 @@ class DataWithAxes(DataBase):
                                                    **other_kwargs)
         elif self.distribution.name == 'spread':
             self.axes_manager = AxesManagerSpread(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
-                                                   **other_kwargs)
+                                                  **other_kwargs)
         else:
             raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 

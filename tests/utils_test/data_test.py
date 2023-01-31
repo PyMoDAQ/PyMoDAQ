@@ -38,6 +38,17 @@ def init_data(data=None, Ndata=1, axes=[], name='myData') -> data_mod.DataWithAx
     return data_mod.DataWithAxes(name, data_mod.DataSource(0), data=[data for ind in range(Ndata)],
                                  axes=axes)
 
+@pytest.fixture()
+def init_data_spread():
+    Nspread = 21
+    sig_axis = data_mod.Axis(label='signal', index=1, data = np.linspace(0, DATA1D.size - 1, DATA1D.size))
+    nav_axis_0 = data_mod.Axis(label='nav0', index=0, data = np.random.rand(Nspread), spread_order=0)
+    nav_axis_1 = data_mod.Axis(label='nav1', index=0, data = np.random.rand(Nspread), spread_order=1)
+
+    data_array = np.array([ind / Nspread * DATA1D for ind in range(Nspread)])
+
+    return data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread
+
 
 @pytest.fixture()
 def init_axis_fixt():
@@ -256,7 +267,7 @@ class TestDataBase:
             assert np.all(data_averaged[ind_data] == pytest.approx(DATA2D * ((WEIGHT-1) * FRAC + 1) / WEIGHT))
 
 
-class TestDataWithAxes:
+class TestDataWithAxesUniform:
     def test_init(self):
         Ndata = 2
         data = data_mod.DataWithAxes('myData', data_mod.DataSource(0), data=[DATA2D for ind in range(Ndata)])
@@ -305,6 +316,56 @@ class TestDataWithAxes:
         assert axis is None
         axis = data.get_axis_from_index(index0, create=True)
         assert len(axis) == data.axes_manager.get_shape_from_index(index0)
+
+
+class TestDataWithAxesSpread:
+    def test_init(self):
+        Ndata = 2
+        data = data_mod.DataWithAxes('myData', data_mod.DataSource(0), distribution=data_mod.DataDistribution['spread'],
+                                     data=[DATA2D for ind in range(Ndata)])
+        assert data.axes == []
+
+    def test_init_data(self, init_data_spread):
+        data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+        data = data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
+                                     distribution=data_mod.DataDistribution['spread'], data=[data_array],
+                                     nav_indexes=(0,),
+                                     axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+    def test_nav_indexe(self, init_data_spread):
+        data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+        with pytest.raises(ValueError):
+            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
+                                  distribution=data_mod.DataDistribution['spread'], data=[data_array],
+                                  nav_indexes=(0, 1),
+                                  axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+    def test_nav_axis_length(self, init_data_spread):
+        data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+        nav_axis_1.data = np.concatenate((nav_axis_1.data, np.array([0.1,])))
+        with pytest.raises(data_mod.DataLengthError):
+            data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
+                                  distribution=data_mod.DataDistribution['spread'], data=[data_array],
+                                  nav_indexes=(0,),
+                                  axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+    def test_compute_shape(self, init_data_spread):
+        data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+        data = data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
+                              distribution=data_mod.DataDistribution['spread'], data=[data_array],
+                              nav_indexes=(0,),
+                              axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+        assert data.axes_manager.compute_shape_from_axes() == data_array.shape
+
+    def test_repr(self, init_data_spread):
+        data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+        data = data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
+                              distribution=data_mod.DataDistribution['spread'], data=[data_array],
+                              nav_indexes=(0,),
+                              axes=[sig_axis, nav_axis_0, nav_axis_1])
+
+        assert data.axes_manager._get_dimension_str() == f'({nav_axis_1.size}|{sig_axis.size})'
 
 
 def test_data_from_plugins():
