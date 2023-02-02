@@ -3,7 +3,7 @@ import numpy as np
 from numbers import Number
 from typing import List, Union
 from pymodaq.utils.logger import get_module_name, set_logger
-
+from collections.abc import Iterable
 
 logger = set_logger(get_module_name(__file__))
 
@@ -393,7 +393,13 @@ def ift2(x, dim=(-2, -1)):
     return out
 
 
-
+def flatten(xs):
+    """Flatten nested list"""
+    for x in xs:
+        if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+            yield from flatten(x)
+        else:
+            yield x
 
 class LSqEllipse:
 
