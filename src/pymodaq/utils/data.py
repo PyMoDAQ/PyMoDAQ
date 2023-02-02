@@ -21,6 +21,7 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
+from pymodaq.utils.math_utils import flatten
 from pymodaq.utils import math_utils as mutils
 
 logger = set_logger(get_module_name(__file__))
@@ -82,7 +83,7 @@ class Axis:
                  offset=None, spread_order: int = None):
         super().__init__()
 
-        self.iaxis = SpecialSlicersData(self, False)
+        self.iaxis: Axis = SpecialSlicersData(self, False)
 
         self._size = None
         self._data = None
@@ -234,8 +235,11 @@ class Axis:
                 ax.data = ax._data.__getitem__(_slice)
                 return ax
             else:
-                ax._offset = ax.offset + _slice.start * ax.scaling
-                ax._size = _slice.stop - _slice.start
+                start = _slice.start if _slice.start is not None else 0
+                stop = _slice.stop if _slice.stop is not None else self.size
+
+                ax._offset = ax.offset + start * ax.scaling
+                ax._size = stop - start
                 return ax
 
     def __getitem__(self, item):
@@ -805,13 +809,20 @@ class AxesManagerBase:
     def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
         ...
 
-    def get_nav_axes(self):
-        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]
+    def get_nav_axes(self) -> List[Axis]:
+        """Get the navigation axes corresponding to the data
+
+        Use get_axis_from_index for all index in self.nav_indexes, but in spread distribution, one index may
+        correspond to multiple nav axes, see Spread data distribution
+
+
+        """
+        return list(flatten([copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]))
 
     def get_signal_axes(self):
         if self.sig_indexes is None:
             self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
-        return [copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]
+        return list(flatten([copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]))
 
     def is_axis_signal(self, axis: Axis) -> bool:
         """Check if an axis is considered signal or navigation"""
@@ -1049,8 +1060,8 @@ class DataWithAxes(DataBase):
         else:
             raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 
-        self.inav = SpecialSlicersData(self, True)
-        self.isig = SpecialSlicersData(self, False)
+        self.inav: DataWithAxes = SpecialSlicersData(self, True)
+        self.isig: DataWithAxes = SpecialSlicersData(self, False)
 
         self.get_dim_from_data_axes()
 
@@ -1153,24 +1164,36 @@ class DataWithAxes(DataBase):
 
         lower_indexes = dict(zip([ind for ind in range(len(self.axes))], [0 for _ in range(len(self.axes))]))
         axes = []
-        nav_indexes = [] if is_navigation else self._am.nav_indexes
+        nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            ax = ax.iaxis[_slice]
-            if ax is not None:  # means the slice keep part of the axis
+            if isinstance(ax, list):
+                """This is meant for the spread data case where index navigation 0 can point to multiple navigation 
+                axes"""
+                for ind in range(len(ax)):
+                    ax[ind] = ax[ind].iaxis[_slice]
+            else:
+                ax = ax.iaxis[_slice]
+                ax = [ax]
+            if ax[0] is not None:  # means the slice kept part of the axis
                 if is_navigation:
                     nav_indexes.append(self._am.nav_indexes[ind_slice])
-                axes.append(ax)
+                axes.extend(ax)
             else:
                 for axis in axes_to_append:  # means we removed one of the nav axes (and data dim),
                     # hence axis index above current nav_index should be lowered by 1
                     if axis.index > indexes_to_get[ind_slice]:
                         lower_indexes[axis.index] += 1
-        for axis in axes_to_append:
-            axis.index -= lower_indexes[axis.index]
+                for index in indexes_to_get[ind_slice+1:]:
+                    lower_indexes[index] += 1
 
         axes.extend(axes_to_append)
-        data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=nav_indexes, axes=axes, source='calculated')
+        for axis in axes:
+            axis.index -= lower_indexes[axis.index]
+        for ind in range(len(nav_indexes)):
+            nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
+        data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes), axes=axes,
+                            source='calculated')
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None, remove_axes_index: List[int] = None):
