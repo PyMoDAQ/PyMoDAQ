@@ -180,7 +180,8 @@ class AxisSaverLoader(DataManagement):
                                         enlargeable=enlargeable,
                                         metadata=dict(size=axis.size, label=axis.label, units=axis.units,
                                                       index=axis.index, offset=axis.offset, scaling=axis.scaling,
-                                                      distribution='uniform' if axis.is_axis_linear() else 'spread'))
+                                                      distribution='uniform' if axis.is_axis_linear() else 'spread',
+                                                      spread_order=axis.spread_order))
         return array
 
     def load_axis(self, where: Union[Node, str]) -> Axis:
@@ -199,7 +200,7 @@ class AxisSaverLoader(DataManagement):
         if not self._is_node_of_data_type(axis_node):
             raise AxisError(f'Could not create an Axis object from this node: {axis_node}')
         return Axis(label=axis_node.attrs['label'], units=axis_node.attrs['units'],
-                    data=axis_node.read(), index=axis_node.attrs['index'])
+                    data=axis_node.read(), index=axis_node.attrs['index'], spread_order=axis_node.attrs['spread_order'])
 
     def get_axes(self, where: Union[Node, str]) -> List[Axis]:
         """Return a list of Axis objects from the Axis Nodes hanging from (or among) a given Node

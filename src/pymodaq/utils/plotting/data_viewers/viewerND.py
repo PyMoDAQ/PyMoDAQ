@@ -187,10 +187,10 @@ class UniformDataDisplayer(BaseDataDisplayer):
         self._signal_at = posx, posy
         if self._data is not None:
             try:
-                if len(self._data.nav_indexes) == 0 and self._data.distribution == 'uniform':
+                if len(self._data.nav_indexes) == 0:
                     data = self._data
 
-                elif len(self._data.nav_indexes) == 1 and self._data.distribution == 'uniform':
+                elif len(self._data.nav_indexes) == 1:
                     nav_axis = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_axis.min() or posx > nav_axis.max():
                         return
@@ -198,7 +198,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
                     logger.debug(f'Getting the data at nav index {ind_x}')
                     data = self._data.inav[ind_x]
 
-                elif len(self._data.nav_indexes) == 2 and self._data.distribution == 'uniform':
+                elif len(self._data.nav_indexes) == 2:
                     nav_x = self._data.axes_manager.get_nav_axes()[1]
                     nav_y = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_x.min() or posx > nav_x.max():
@@ -232,9 +232,9 @@ class UniformDataDisplayer(BaseDataDisplayer):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
             if nav_data is not None:
-                if len(nav_data.shape) < 2 and self._data.distribution == 'uniform':
+                if len(nav_data.shape) < 2:
                     self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2 and self._data.distribution == 'uniform':
+                elif len(nav_data.shape) == 2:
                     self._navigator2D.show_data(nav_data)
                 else:
                     self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
@@ -276,8 +276,6 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         super().__init__(*args, **kwargs)
 
     def init(self, data: DataWithAxes):
-        if len(data.nav_indexes) > 2:
-            self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
         processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
 
@@ -286,6 +284,15 @@ class SpreadDataDisplayer(BaseDataDisplayer):
 
     def update_viewer_data(self, posx=0, posy=0):
         """ Update the signal display depending on the position of the crosshair in the navigation panels
+
+        Spread data can be customly represented using:
+        if signal data is 0D:
+            * A viewer 1D with non-linearly spaced data points (for 1 navigation axis)
+            * A viewer 2D with its SpreadImage item (for 2 navigation axis)
+            * A double panel: viewer for signal data and viewer 1D for all nav axes as a function of index in the data
+        otherwise:
+            * A double panel: viewer for signal data and viewer 1D for all nav axes as a function of index in the data
+            series
 
         Parameters
         ----------
@@ -296,20 +303,16 @@ class SpreadDataDisplayer(BaseDataDisplayer):
             from the 2D Navigator crosshair
         """
         self._signal_at = posx, posy
+
         if self._data is not None:
+            nav_axes = sorted(self._data.get_nav_axes_with_data(), key=lambda axis: axis.spread_order)
             try:
-                if len(self._data.nav_indexes) == 0 and self._data.distribution == 'uniform':
-                    data = self._data
+                if len(self.nav_axes) == 1 and len(self._data.axes_manager.sig_shape) == 0:
+                    # display on 1D viewer
+                    self._data.inav[int(posx)]
 
-                elif len(self._data.nav_indexes) == 1 and self._data.distribution == 'uniform':
-                    nav_axis = self._data.axes_manager.get_nav_axes()[0]
-                    if posx < nav_axis.min() or posx > nav_axis.max():
-                        return
-                    ind_x = nav_axis.find_index(posx)
-                    logger.debug(f'Getting the data at nav index {ind_x}')
-                    data = self._data.inav[ind_x]
 
-                elif len(self._data.nav_indexes) == 2 and self._data.distribution == 'uniform':
+                elif len(self._data.nav_indexes) == 2:
                     nav_x = self._data.axes_manager.get_nav_axes()[1]
                     nav_y = self._data.axes_manager.get_nav_axes()[0]
                     if posx < nav_x.min() or posx > nav_x.max():
@@ -343,9 +346,9 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
             if nav_data is not None:
-                if len(nav_data.shape) < 2 and self._data.distribution == 'uniform':
+                if len(nav_data.shape) < 2:
                     self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2 and self._data.distribution == 'uniform':
+                elif len(nav_data.shape) == 2:
                     self._navigator2D.show_data(nav_data)
                 else:
                     self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())

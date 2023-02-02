@@ -11,7 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw
+from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -81,10 +81,10 @@ class ImageDisplayer(QObject):
 
     updated_item = Signal(dict)
 
-    def __init__(self, plotitem):
+    def __init__(self, plotitem, data_distribution: DataDistribution):
         super().__init__()
         self._plotitem = plotitem
-        self.display_type = 'uniform'
+        self.display_type = data_distribution
         self._image_items = dict([])
         self._autolevels = False
 
@@ -111,9 +111,14 @@ class ImageDisplayer(QObject):
         if data.distribution != self.display_type:
             self.display_type = data.distribution
             self.update_display_items()
-        for ind_data, data in enumerate(data.data):
-            if data.size > 0:
-                self._image_items[IMAGE_TYPES[ind_data]].setImage(data, self.autolevels)
+        for ind_data, data_array in enumerate(data.data):
+            if data_array.size > 0:
+                if self.display_type == 'uniform':
+                    self._image_items[IMAGE_TYPES[ind_data]].setImage(data_array, self.autolevels)
+                else:
+                    nav_axes = data.get_nav_axes()
+                    data_array = np.stack((nav_axes[0].data, nav_axes[1].data, data_array), axis=0).T
+                    self._image_items[IMAGE_TYPES[ind_data]].setImage(data_array, self.autolevels)
 
     def update_display_items(self):
         while len(self._image_items) > 0:
@@ -316,8 +321,8 @@ class View2D(ActionManager, QtCore.QObject):
         self.setup_widgets()
 
         self.histogrammer = Histogrammer(self.widget_histo)
-        self.data_displayer = ImageDisplayer(self.plotitem)
-        self.isocurver = IsoCurver(self.data_displayer.get_image('red'), self.histogrammer.get_histogram('red'))
+        self.data_displayer: ImageDisplayer = None
+        self.isocurver: IsoCurver = None
 
         self.crosshair = Crosshair(self.image_widget)
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
@@ -327,6 +332,18 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.set_axis_label('bottom', label='', units='Pxls')
         self.set_axis_label('left', label='', units='Pxls')
+
+        self.set_image_displayer(DataDistribution['uniform'])
+
+    def set_image_displayer(self, data_distribution: DataDistribution):
+        self.data_displayer = ImageDisplayer(self.plotitem, data_distribution)
+        self.isocurver = IsoCurver(self.data_displayer.get_image('red'), self.histogrammer.get_histogram('red'))
+        self.data_displayer.updated_item.connect(self.histogrammer.affect_histo_to_imageitems)
+        self.connect_action('autolevels', self.data_displayer.set_autolevels)
+        for key in IMAGE_TYPES:
+            self.connect_action(key, self.notify_visibility_data_displayer)
+        self.connect_action('isocurve', self.isocurver.show_hide_iso)
+        self.histogrammer.affect_histo_to_imageitems(self.data_displayer.get_images())
 
     def show_roi_target(self, show=True):
         self.roi_target.setVisible(show)
@@ -422,14 +439,14 @@ class View2D(ActionManager, QtCore.QObject):
                         tip='Rotate the image', checkable=True)
 
     def connect_things(self):
-        self.data_displayer.updated_item.connect(self.histogrammer.affect_histo_to_imageitems)
-        self.connect_action('autolevels', self.data_displayer.set_autolevels)
+
+
+
         self.connect_action('histo', self.histogrammer.activated)
         self.connect_action('autolevels', self.histogrammer.set_autolevels)
-        self.connect_action('isocurve', self.isocurver.show_hide_iso)
+
         self.connect_action('isocurve', self.get_action('histo').trigger)
-        for key in IMAGE_TYPES:
-            self.connect_action(key, self.notify_visibility_data_displayer)
+
         self.connect_action('aspect_ratio', self.lock_aspect_ratio)
         self.connect_action('histo', self.show_hide_histogram)
         self.connect_action('roi', self.lineout_plotter.roi_clicked)
@@ -438,7 +455,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.connect_action('crosshair', self.show_hide_crosshair)
         self.connect_action('crosshair', self.show_lineout_widgets)
         self.connect_action('crosshair', self.lineout_plotter.crosshair_clicked)
-        self.histogrammer.affect_histo_to_imageitems(self.data_displayer.get_images())
+
 
     def prepare_ui(self):
         self.ROIselect.setVisible(False)
@@ -576,6 +593,10 @@ class View2D(ActionManager, QtCore.QObject):
         label: (str) text of the axis label
         units: (str) units of the axis label
         """
+        if scaling is None:
+            scaling = 1
+        if offset is None:
+            offset = 0
         self.get_axis(position).axis_scaling = scaling
         self.get_axis(position).axis_offset = offset
         self.set_axis_label(position, label=label, units=units)
@@ -662,6 +683,8 @@ class Viewer2D(ViewerBase):
 
         if len(data) == 1 and not self._is_gradient_manually_set:
             self.set_gradient('red', 'grey')
+        if data.distribution != self.view.data_displayer.display_type:
+            self.view.set_image_displayer(data.distribution)
 
         self.isdata['red'] = len(data) > 0
         self.isdata['green'] = len(data) > 1
@@ -675,8 +698,12 @@ class Viewer2D(ViewerBase):
     def update_data(self):
         if self._raw_data is not None:
             self._datas = self.set_image_transform()
-            self.x_axis = self._datas.axes_manager.get_axis_from_index(1)
-            self.y_axis = self._datas.axes_manager.get_axis_from_index(0)
+            if self._datas.distribution.name == 'uniform':
+                self.x_axis = self._datas.axes_manager.get_axis_from_index(1)
+                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)
+            else:
+                self.x_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
+                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[1]
             self.view.display_images(self._datas)
 
             if self.view.is_action_checked('roi'):
@@ -868,30 +895,38 @@ def main_spread():
     sys.exit(app.exec_())
 
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
-    widget = QtWidgets.QWidget()
-
-    Nx = 100
-    Ny = 200
-    data_random = np.random.normal(size=(Ny, Nx))
-    x = np.linspace(-Nx/2, Nx/2 - 1, Nx)
-    y = 0.2 * np.linspace(-Ny/2, Ny/2 - 1, Ny)
-
+def main(data_distribution='uniform'):
+    """either 'uniform' or 'spread'"""
     from pymodaq.utils.math_utils import gauss2D
 
-    data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10,
-                                            y, -1, Ny / 10, 1, 90) \
-               + 0.1 * data_random
-    data_green = 10 * gauss2D(x, -20, Nx / 10,
-                              y, -10, Ny / 20, 1, 0)
-    data_green[70:80, 7:12] = np.nan
-
+    app = QtWidgets.QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
 
     def print_data(data: DataToExport):
         print(data)
         print('******')
         print(data.get_data_from_dim('Data1D'))
+
+    if data_distribution == 'uniform':
+        Nx = 100
+        Ny = 2 * Nx
+        data_random = np.random.normal(size=(Ny, Nx))
+        x = np.linspace(-Nx / 2, Nx / 2 - 1, Nx)
+        y = 0.2 * np.linspace(-Ny / 2, Ny / 2 - 1, Ny)
+        data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10, y, -1, Ny / 10, 1, 90) + 0.1 * data_random
+        data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
+        data_green[70:80, 7:12] = np.nan
+
+        data_to_plot = DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
+                                       axes=[Axis('xaxis', units='xpxl', data=x, index=1),
+                                             Axis('yaxis', units='ypxl', data=y, index=0), ])
+
+    elif data_distribution == 'spread':
+        data_spread = np.load('../../../resources/triangulation_data.npy')
+        data_to_plot = DataFromPlugins(name='mydata', distribution='spread', data=[data_spread[:,2]],
+                                       nav_indexes=(0,),
+                                       axes=[Axis('xaxis', units='xpxl', data=data_spread[:,0], index=0, spread_order=0),
+                                             Axis('yaxis', units='ypxl', data=data_spread[:,1], index=0, spread_order=1),])
 
     prog = Viewer2D(widget)
     widget.show()
@@ -900,9 +935,7 @@ def main():
     prog.view.get_action('histo').trigger()
     prog.view.get_action('autolevels').trigger()
 
-    prog.show_data(DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green],
-                                   axes=[Axis('xaxis', units='xpxl', data=x, index=1),
-                                         Axis('yaxis', units='ypxl', data=y, index=0),]))
+    prog.show_data(data_to_plot)
 
     prog.show_roi_target(True)
     prog.move_scale_roi_target((50, 40), (20, 20))
@@ -926,5 +959,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    main()
-    #main_spread()
+    # main('uniform')
+    main('spread')
