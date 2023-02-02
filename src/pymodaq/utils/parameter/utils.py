@@ -5,7 +5,7 @@ def get_widget_from_tree(parameter_tree, widget_instance):
     widgets = []
     for item in parameter_tree.listAllItems():
         if hasattr(item, 'widget'):
-            if isinstance(item.widget, widget_instance):
+            if item.widget.__class__.__name__ == widget_instance.__name__:
                 widgets.append(item.widget)
     return widgets
 

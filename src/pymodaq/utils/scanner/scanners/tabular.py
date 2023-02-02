@@ -93,9 +93,9 @@ class TabularScanner(ScannerBase):
     distribution = DataDistribution['spread']
 
     def __init__(self, actuators: List[str]):
-        super().__init__(actuators=actuators)
         self.table_model: TableModelTabular = None
         self.table_view: TableViewCustom = None
+        super().__init__(actuators=actuators)
         self.update_model()
 
     @property
@@ -111,11 +111,12 @@ class TabularScanner(ScannerBase):
         if init_data is None:
             init_data = [[0. for name in self._actuators]]
 
-        self.table_model = TableModelTabular(init_data, [name for name in self._actuators])
+        self.table_model = TableModelTabular(init_data, [act.title for act in self._actuators])
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('tabular_table').setValue(self.table_model)
 
         self.update_table_view()
+
 
     def update_table_view(self):
         self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -181,7 +182,8 @@ class TabularScanner(ScannerBase):
             logger.exception(str(e))
 
     def get_nav_axes(self) -> List[Axis]:
-        return [Axis(label=f'{act.title}', units=act.units, data=self.positions[:, ind], index=ind)
+        return [Axis(label=f'{act.title}', units=act.units, data=self.positions[:, ind], index=0,
+                     spread_order=ind)
                 for ind, act in enumerate(self.actuators)]
 
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:

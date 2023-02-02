@@ -99,14 +99,14 @@ class SequentialScanner(ScannerBase):
             if self.table_model is not None:
                 init_data = []
                 names = [row[0] for row in self.table_model.get_data_all()]
-                for name in self._actuators:
-                    if name in names:
-                        ind_row = names.index(name)
+                for act in self._actuators:
+                    if act.title in names:
+                        ind_row = names.index(act.title)
                         init_data.append(self.table_model.get_data_all()[ind_row])
                     else:
-                        init_data.append([name, 0., 1., 0.1])
+                        init_data.append([act.title, 0., 1., 0.1])
             else:
-                init_data = [[name, 0., 1., 0.1] for name in self._actuators]
+                init_data = [[act.title, 0., 1., 0.1] for act in self._actuators]
         self.table_model = TableModelSequential(init_data, )
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('seq_table').setValue(self.table_model)
