@@ -545,7 +545,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
     socket_types = ["ACTUATOR"]
-    params = comon_parameters + tcp_parameters
+    params = comon_parameters() + tcp_parameters
 
     def __init__(self, parent=None, params_state=None):
         """
