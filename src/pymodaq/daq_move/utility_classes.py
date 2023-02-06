@@ -16,23 +16,23 @@ from time import perf_counter
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = Config()
 
-comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
-                    {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
-                     'value': config('actuator', 'epsilon_default'),
-                     'tip': 'Differential Value at which the controller considers it reached the target position'},
-                    {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
-                     'value': config('actuator', 'polling_timeout_s')},
 
-                    {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
-                        {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
-                        {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
-                        {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
-
-                    {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
-                        {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
-                         'default': False},
-                        {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
-                        {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
+    return [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
+             'value': epsilon,
+             'tip': 'Differential Value at which the controller considers it reached the target position'},
+            {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
+             'value': config('actuator', 'polling_timeout_s')},
+            {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
+                {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
+                {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
+                {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
+            {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
+                {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
+                 'default': False},
+                {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
+                {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
 
 MOVE_COMMANDS = ['abs', 'rel', 'home']
@@ -46,7 +46,7 @@ class MoveCommand:
         self.value = value
 
 
-def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True):
+def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon=config('actuator', 'epsilon_default')):
     """Function returning the common and mandatory parameters that should be on the actuator plugin level
 
     Parameters
@@ -65,7 +65,7 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True):
          'limits': ['Master', 'Slave']},
         {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
 
-    ]}] + comon_parameters
+    ]}] + comon_parameters(epsilon)
     return params
 
 
@@ -179,10 +179,9 @@ class DAQ_Move_base(QObject):
         self.settings.sigTreeStateChanged.connect(self.send_param_status)
         self.controller_units = self._controller_units
         self.controller = None
-
-        self.settings.child('epsilon').setValue(self._epsilon)
-
-
+        #
+        # if self.settings['epsilon'] == config('actuator', 'epsilon_default'):
+        #     self.settings.child('epsilon').setValue(self._epsilon)
 
         self.poll_timer = QTimer()
         self.poll_timer.setInterval(config('actuator', 'polling_interval_ms'))
@@ -509,7 +508,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
     socket_types = ["ACTUATOR"]
-    params = comon_parameters + tcp_parameters
+    params = comon_parameters() + tcp_parameters
 
     def __init__(self, parent=None, params_state=None):
         """
