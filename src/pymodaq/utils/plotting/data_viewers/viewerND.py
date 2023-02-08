@@ -307,24 +307,21 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         if self._data is not None:
             nav_axes = sorted(self._data.get_nav_axes_with_data(), key=lambda axis: axis.spread_order)
             try:
-                if len(self.nav_axes) == 1 and len(self._data.axes_manager.sig_shape) == 0:
-                    # display on 1D viewer
-                    self._data.inav[int(posx)]
+                if len(nav_axes) == 1:
+                    # signal data plotted as a function of nav_axes[0] so get the index corresponding to
+                    # the position posx
+                    ind_nav = nav_axes[0].find_index(posx)
+                    data = self._data.inav[ind_nav]
 
-
-                elif len(self._data.nav_indexes) == 2:
-                    nav_x = self._data.axes_manager.get_nav_axes()[1]
-                    nav_y = self._data.axes_manager.get_nav_axes()[0]
-                    if posx < nav_x.min() or posx > nav_x.max():
-                        return
-                    if posy < nav_y.min() or posy > nav_y.max():
-                        return
-                    ind_x = nav_x.find_index(posx)
-                    ind_y = nav_y.find_index(posy)
-                    logger.debug(f'Getting the data at nav indexes {ind_y} and {ind_x}')
-                    data = self._data.inav[ind_y, ind_x]
+                elif len(nav_axes) == 2:
+                    # signal data plotted as a function of nav_axes[0] and nav_axes[1] so get the common
+                    # index corresponding to the position posx and posy
+                    ind_nav, x0, y0 = mutils.find_common_index(nav_axes[0].data, nav_axes[1].data, posx, posy)
+                    data = self._data.inav[ind_nav]
                 else:
-                    data = self._data.inav.__getitem__(self._axes_viewer.get_indexes())
+                    # navigation plotted as a function of index all nav_axes so get the index corresponding to
+                    # the position posx
+                    data = self._data.inav[int(posx)]
 
                 if len(self._data.axes_manager.sig_shape) == 0:  # means 0D data, plot on 0D viewer
                     self._viewer0D.show_data(data)
@@ -345,10 +342,11 @@ class SpreadDataDisplayer(BaseDataDisplayer):
     def update_nav_data(self, x, y, width=None, height=None):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
+            nav_axes = nav_data.get_nav_axes()
             if nav_data is not None:
-                if len(nav_data.shape) < 2:
+                if len(nav_axes) < 2:
                     self._navigator1D.show_data(nav_data)
-                elif len(nav_data.shape) == 2:
+                elif len(nav_axes) == 2:
                     self._navigator2D.show_data(nav_data)
                 else:
                     self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
@@ -409,7 +407,9 @@ class SpreadDataDisplayer(BaseDataDisplayer):
 
 class ViewerND(ParameterManager, ActionManager, ViewerBase):
     params = [
-        {'title': 'Set data spread', 'name': 'set_data_spread', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 0D', 'name': 'set_data_spread0D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 1D', 'name': 'set_data_spread1D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 2D', 'name': 'set_data_spread2D', 'type': 'action', 'visible': False},
         {'title': 'Set data 4D', 'name': 'set_data_4D', 'type': 'action', 'visible': False},
         {'title': 'Set data 3D', 'name': 'set_data_3D', 'type': 'action', 'visible': False},
         {'title': 'Set data 2D', 'name': 'set_data_2D', 'type': 'action', 'visible': False},
@@ -495,61 +495,67 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.data_to_export_signal.emit(self.data_to_export)
 
     def set_data_test(self, data_shape='3D'):
+        if 'spread' in data_shape:
+            data_tri = np.load('../../../resources/triangulation_data.npy')
+            axes = [Axis(data=data_tri[:, 0], index=0, label='x_axis', units='xunits', spread_order=0),
+                    Axis(data=data_tri[:, 1], index=0, label='y_axis', units='yunits', spread_order=1)]
 
-        x = mutils.linspace_step(-10, 10, 0.2)
-        y = mutils.linspace_step(-30, 30, 2)
-        t = mutils.linspace_step(-200, 200, 2)
-        z = mutils.linspace_step(-50, 50, 0.5)
-        data = np.zeros((len(y), len(x), len(t), len(z)))
-        amp = mutils.gauss2D(x, 0, 5, y, 0, 4) + 0.1 * np.random.rand(len(y), len(x))
-        amp = np.ones((len(y), len(x), len(t), len(z)))
-        for indx in range(len(x)):
-            for indy in range(len(y)):
-                data[indy, indx, :, :] = amp[indy, indx] * (
-                    mutils.gauss2D(z, -50 + indx * 1, 20,
-                                   t, 0 + 2 * indy, 30)
-                    + np.random.rand(len(t), len(z)) / 10)
-
-        if data_shape == 'spread':
-            zspread = np.random.choice(z, int(len(z) / 3))
-            zspread += np.random.rand(len(zspread))
-            np.random.shuffle(zspread)
-
-            tspread = np.random.choice(t, len(zspread))
-            tspread += np.random.rand(len(zspread))
-            np.random.shuffle(tspread)
-
-            data_spread = []
-            for ind in range(len(zspread)):
-                data_spread.append((mutils.gauss2D(zspread[ind], 0, 20, tspread[ind], 0, 30) +
-                                    np.random.rand() / 10)[0][0])
-
+            if data_shape == 'spread0D':
+                data = data_tri[:, 2]
+            elif data_shape == 'spread1D':
+                x = np.linspace(-50, 50, 100)
+                data = np.zeros((data_tri.shape[0], len(x)))
+                for ind in range(data_tri.shape[0]):
+                    data[ind, :] = data_tri[ind, 2] * mutils.gauss1D(x, ind - 50, 20)
+                axes.append(Axis(data=x, index=1, label='sig_axis'))
+            elif data_shape == 'spread2D':
+                x = np.linspace(-50, 50, 100)
+                y = np.linspace(-50, 50, 75)
+                data = np.zeros((data_tri.shape[0], len(x), len(y)))
+                for ind in range(data_tri.shape[0]):
+                    data[ind, :] = data_tri[ind, 2] * mutils.gauss2D(x, ind - 50, 20,
+                                                                     y, ind-50, 10)
+                axes.append(Axis(data=x, index=1, label='sig_axis0'))
+                axes.append(Axis(data=y, index=2, label='sig_axis1'))
             dataraw = DataRaw('NDdata', distribution='spread', dim='DataND',
-                              data=[np.array(data_spread)], nav_indexes=(0, 1),
-                              axes=[Axis(data=tspread, index=0, label='t_axis', units='tunits'),
-                                    Axis(data=zspread, index=1, label='z_axis', units='zunits')])
+                              data=[data], nav_indexes=(0, ),
+                              axes=axes)
+        else:
+            x = mutils.linspace_step(-10, 10, 0.2)
+            y = mutils.linspace_step(-30, 30, 2)
+            t = mutils.linspace_step(-200, 200, 2)
+            z = mutils.linspace_step(-50, 50, 0.5)
+            data = np.zeros((len(y), len(x), len(t), len(z)))
+            amp = mutils.gauss2D(x, 0, 5, y, 0, 4) + 0.1 * np.random.rand(len(y), len(x))
+            amp = np.ones((len(y), len(x), len(t), len(z)))
+            for indx in range(len(x)):
+                for indy in range(len(y)):
+                    data[indy, indx, :, :] = amp[indy, indx] * (
+                        mutils.gauss2D(z, -50 + indx * 1, 20,
+                                       t, 0 + 2 * indy, 30)
+                        + np.random.rand(len(t), len(z)) / 10)
 
-        elif data_shape == '4D':
-            dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
-                              axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
-                                    Axis(data=x, index=1, label='x_axis', units='xunits'),
-                                    Axis(data=t, index=2, label='t_axis', units='tunits'),
-                                    Axis(data=z, index=3, label='z_axis', units='zunits')])
-        elif data_shape == '3D':
-            data = [np.sum(data, axis=2)]
-            dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
-                              axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
-                                    Axis(data=x, index=1, label='x_axis', units='xunits'),
-                                    Axis(data=t, index=2, label='t_axis', units='tunits')])
-        elif data_shape == '2D':
-            data = [np.sum(data, axis=(2, 3))]
-            dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
-                              axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
-                                    Axis(data=x, index=1, label='x_axis', units='xunits')])
-        elif data_shape == '1D':
-            data = [np.sum(data, axis=(0, 1, 2))]
-            dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[],
-                              axes=[Axis(data=z, index=0, label='z_axis', units='zunits')])
+            if data_shape == '4D':
+                dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
+                                  axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
+                                        Axis(data=x, index=1, label='x_axis', units='xunits'),
+                                        Axis(data=t, index=2, label='t_axis', units='tunits'),
+                                        Axis(data=z, index=3, label='z_axis', units='zunits')])
+            elif data_shape == '3D':
+                data = [np.sum(data, axis=2)]
+                dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
+                                  axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
+                                        Axis(data=x, index=1, label='x_axis', units='xunits'),
+                                        Axis(data=t, index=2, label='t_axis', units='tunits')])
+            elif data_shape == '2D':
+                data = [np.sum(data, axis=(2, 3))]
+                dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[0, 1],
+                                  axes=[Axis(data=y, index=0, label='y_axis', units='yunits'),
+                                        Axis(data=x, index=1, label='x_axis', units='xunits')])
+            elif data_shape == '1D':
+                data = [np.sum(data, axis=(0, 1, 2))]
+                dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[],
+                                  axes=[Axis(data=z, index=0, label='z_axis', units='zunits')])
         self._show_data(dataraw)
 
     def update_widget_visibility(self, data: DataRaw = None):
@@ -561,10 +567,10 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.viewer1D.roi.setVisible(len(data.nav_indexes) != 0)
         self.viewer2D.roi.setVisible(len(data.nav_indexes) != 0)
         self._dock_navigation.setVisible(len(data.nav_indexes) != 0)
-
-        self.navigator1D.setVisible(len(data.nav_indexes) == 1 and data.distribution.name == 'uniform')
-        self.navigator2D.setVisible(len(data.nav_indexes) == 2 and data.distribution.name == 'uniform')
-        self.axes_viewer.setVisible(len(data.nav_indexes) > 2 or data.distribution.name == 'spread')
+        nav_axes = data.get_nav_axes()
+        self.navigator1D.setVisible(len(nav_axes) == 1 or (len(nav_axes) > 2 and data.distribution.name == 'spread'))
+        self.navigator2D.setVisible(len(nav_axes) == 2)
+        self.axes_viewer.setVisible(len(data.nav_indexes) > 2 and data.distribution.name == 'uniform')
 
     def update_filters(self, processor):
         self.get_action('filters').clear()
@@ -597,7 +603,9 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.settings.child('set_data_2D').sigActivated.connect(lambda: self.set_data_test('2D'))
         self.settings.child('set_data_3D').sigActivated.connect(lambda: self.set_data_test('3D'))
         self.settings.child('set_data_4D').sigActivated.connect(lambda: self.set_data_test('4D'))
-        self.settings.child('set_data_spread').sigActivated.connect(lambda: self.set_data_test('spread'))
+        self.settings.child('set_data_spread0D').sigActivated.connect(lambda: self.set_data_test('spread0D'))
+        self.settings.child('set_data_spread1D').sigActivated.connect(lambda: self.set_data_test('spread1D'))
+        self.settings.child('set_data_spread2D').sigActivated.connect(lambda: self.set_data_test('spread2D'))
         self.settings.child('data_shape_settings', 'set_nav_axes').sigActivated.connect(self.reshape_data)
 
         self.navigator1D.get_action('crosshair').trigger()
@@ -683,11 +691,9 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = QtWidgets.QWidget()
     prog = ViewerND(widget)
-    prog.settings.child('set_data_spread').show(True)
-    prog.settings.child('set_data_4D').show(True)
-    prog.settings.child('set_data_3D').show(True)
-    prog.settings.child('set_data_2D').show(True)
-    prog.settings.child('set_data_1D').show(True)
+    for child in prog.settings.children():
+        if 'set_data_' in child.name():
+            child.show(True)
     prog.show_settings()
 
     widget.show()

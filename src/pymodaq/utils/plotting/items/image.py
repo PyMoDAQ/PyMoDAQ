@@ -269,6 +269,8 @@ class SpreadImageItem(PymodaqImage):
         -------
         ndarray: barycenter coordinates and triangles data values
         """
+        if self.triangulation is None:
+            self.render()
         centroids = self.compute_centroids()
         points_to_test = centroids.copy()
         if axis == 'x':

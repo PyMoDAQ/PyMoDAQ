@@ -685,6 +685,8 @@ class Viewer2D(ViewerBase):
             self.set_gradient('red', 'grey')
         if data.distribution != self.view.data_displayer.display_type:
             self.view.set_image_displayer(data.distribution)
+            self.filter_from_crosshair.set_graph_items(self.view.data_displayer.get_images())
+
 
         self.isdata['red'] = len(data) > 0
         self.isdata['green'] = len(data) > 1

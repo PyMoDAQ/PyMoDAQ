@@ -7,7 +7,7 @@ Created the 08/03/2022
 import pytest
 import numpy as np
 
-import utils.units
+from pymodaq.utils import units
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import daq_utils as utils
 
@@ -79,12 +79,14 @@ class TestMath:
         assert mutils.find_index(x, 10) == [(0, 1.)]
 
     def test_find_common_index(self):
-        x = mutils.linspace_step(0, 100, 1)
-        y = mutils.linspace_step(0, 1, 0.01)
-        x0 = 28.4
-        y0 = 0.275
+        IND_TEST = np.random.randint(0, 99, 1)[0]
+        x = np.random.random(100)
+        y = np.random.rand(100)
+        x0 = x[IND_TEST]
+        y0 = y[IND_TEST]
         ind, x_val, y_val = mutils.find_common_index(x, y, x0, y0)
-        assert ind == 28 and x_val == x[28] and y_val == y[28]
+        assert ind == IND_TEST and x_val == pytest.approx(x[IND_TEST])\
+               and y_val == pytest.approx(y[IND_TEST])
 
     def test_gauss1D(self):
         x = mutils.linspace_step(1.0, -1, -0.13)
@@ -118,7 +120,7 @@ class TestMath:
             mutils.gauss2D(x, x0, dx, y, y0, dy, n) == pytest.approx(mutils.gauss2D(x, x0, dy, y, y0, dx, n, 90)))
 
     def test_ftAxis(self):
-        omega_max = utils.units.l2w(800)
+        omega_max = units.l2w(800)
         Npts = 1024
         omega_grid, time_grid = mutils.ftAxis(Npts, omega_max)
         assert len(omega_grid) == Npts
@@ -144,8 +146,8 @@ class TestMath:
             assert utils.ftAxis_time(0, time_max)
 
     def test_ft(self):
-        omega_max = utils.units.l2w(300)
-        omega0 = utils.units.l2w(800)
+        omega_max = units.l2w(300)
+        omega0 = units.l2w(800)
         Npts = 2 ** 10
         omega_grid, time_grid = mutils.ftAxis(Npts, omega_max)
         signal_temp = np.sin(omega0 * time_grid) * mutils.gauss1D(time_grid, 0, 100, 1)
@@ -161,8 +163,8 @@ class TestMath:
             mutils.ft(signal_temp, "40")
 
     def test_ift(self):
-        omega_max = utils.units.l2w(300)
-        omega0 = utils.units.l2w(800)
+        omega_max = units.l2w(300)
+        omega0 = units.l2w(800)
         Npts = 2 ** 10
         omega_grid, time_grid = mutils.ftAxis(Npts, omega_max)
         signal_temp = np.sin(omega0 * time_grid) * mutils.gauss1D(time_grid, 0, 100, 1)

@@ -301,7 +301,7 @@ class Axis:
             return self.offset + (self.size * self.scaling if self.scaling > 0 else 0)
 
     def find_index(self, threshold: float):
-        """find the index of hte threshold value within the axis"""
+        """find the index of the threshold value within the axis"""
         if self._data is not None:
             return mutils.find_index(self._data, threshold)[0][0]
         else:
@@ -1193,7 +1193,7 @@ class DataWithAxes(DataBase):
         for ind in range(len(nav_indexes)):
             nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes), axes=axes,
-                            source='calculated')
+                            source='calculated', distribution=self.distribution)
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None, remove_axes_index: List[int] = None):
@@ -1212,7 +1212,8 @@ class DataWithAxes(DataBase):
 
             if remove_axes_index is not None:
                 for index in remove_axes_index:
-                    new_data._am.axes.pop(new_data._am.axes.index(new_data._am.get_axis_from_index(index)))
+                    # todo check the return type of get_axis_from_index that now returns a list
+                    new_data._am.axes.pop(new_data._am.axes.index(new_data._am.get_axis_from_index(index)[0]))
                     if index in new_data._am.nav_indexes:
                         nav_indexes = list(new_data._am.nav_indexes)
                         nav_indexes.pop(nav_indexes.index(index))

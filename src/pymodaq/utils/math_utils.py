@@ -1,7 +1,7 @@
 import numpy
 import numpy as np
 from numbers import Number
-from typing import List, Union
+from typing import List, Union, Tuple
 from pymodaq.utils.logger import get_module_name, set_logger
 from collections.abc import Iterable
 
@@ -143,7 +143,8 @@ def find_index(x, threshold: Union[Number, List[Number]]) -> List[tuple]:
     return out
 
 
-def find_common_index(x, y, x0, y0):
+def find_common_index(x: Iterable, y: Iterable, x0: Number, y0: Number) -> Tuple:
+    """find the index in two vectors corresponding to x0 and y0"""
     vals = x + 1j * y
     val = x0 + 1j * y0
     ind = int(np.argmin(np.abs(vals - val)))

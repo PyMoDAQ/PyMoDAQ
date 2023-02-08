@@ -96,6 +96,9 @@ class Filter2DFromCrosshair(Filter):
         self.crosshair = crosshair
         self._x, self._y = 0., 0.
 
+    def set_graph_items(self, graph_items):
+        self._graph_items = graph_items
+
     @Slot(bool)
     def set_active(self, activate=True):
         self._is_active = activate
@@ -166,8 +169,6 @@ class Filter2DFromCrosshair(Filter):
 
         return LineoutData(hor_axis=hor_axis, ver_axis=ver_axis, hor_data=hor_data, ver_data=ver_data,
                            int_data=self._graph_items[data_key].get_val_at((posx, posy)))
-
-
 
     def mapfromview(self, x, y, item_key='red'):
         """
