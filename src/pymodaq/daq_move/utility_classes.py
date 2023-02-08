@@ -16,23 +16,22 @@ from time import perf_counter
 logger = utils.set_logger(utils.get_module_name(__file__))
 config = Config()
 
-
-def comon_parameters(epsilon=config('actuator', 'epsilon_default')):
-    return [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
-            {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
-             'value': epsilon,
-             'tip': 'Differential Value at which the controller considers it reached the target position'},
-            {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
-             'value': config('actuator', 'polling_timeout_s')},
-            {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
-                {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
-                {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
-                {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
-            {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
-                {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
-                 'default': False},
-                {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
-                {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
+# comon_parameters will be deprecated in version 4 and following new template. Should use comon_parameters_fun
+comon_parameters = [{'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
+                    {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float',
+                     'value': config('actuator', 'epsilon_default'),
+                     'tip': 'Differential Value at which the controller considers it reached the target position'},
+                    {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
+                     'value': config('actuator', 'polling_timeout_s')},
+                    {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
+                        {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
+                        {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
+                        {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
+                    {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
+                        {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
+                         'default': False},
+                        {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
+                        {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
 
 
 MOVE_COMMANDS = ['abs', 'rel', 'home']
@@ -57,15 +56,31 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon
         The string identifier of every axis the controller can drive
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
+    epsilon: float
+        The default or preset value of epsilon, the resolution with which a DAQ_Move should end its move
     """
-    params = [{'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
-        {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
-         'default': False},
-        {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
-         'limits': ['Master', 'Slave']},
-        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
-
-    ]}] + comon_parameters(epsilon)
+    params = \
+        [{'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
+            {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
+             'default': False},
+            {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
+             'limits': ['Master', 'Slave']},
+            {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
+        ]},
+         {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': '', 'readonly': True},
+         {'title': 'Epsilon:', 'name': 'epsilon', 'type': 'float', 'value': epsilon,
+          'tip': 'Differential Value at which the controller considers it reached the target position'},
+         {'title': 'Timeout (s):', 'name': 'timeout', 'type': 'int',
+          'value': config('actuator', 'polling_timeout_s')},
+         {'title': 'Bounds:', 'name': 'bounds', 'type': 'group', 'children': [
+             {'title': 'Set Bounds:', 'name': 'is_bounds', 'type': 'bool', 'value': False},
+             {'title': 'Min:', 'name': 'min_bound', 'type': 'float', 'value': 0, 'default': 0},
+             {'title': 'Max:', 'name': 'max_bound', 'type': 'float', 'value': 1, 'default': 1}, ]},
+         {'title': 'Scaling:', 'name': 'scaling', 'type': 'group', 'children': [
+             {'title': 'Use scaling:', 'name': 'use_scaling', 'type': 'bool', 'value': False,
+              'default': False},
+             {'title': 'Scaling factor:', 'name': 'scaling', 'type': 'float', 'value': 1., 'default': 1.},
+             {'title': 'Offset factor:', 'name': 'offset', 'type': 'float', 'value': 0., 'default': 0.}]}]
     return params
 
 
@@ -508,7 +523,7 @@ class DAQ_Move_TCP_server(DAQ_Move_base, TCPServer):
     message_list = ["Quit", "Status", "Done", "Server Closed", "Info", "Infos", "Info_xml", "move_abs",
                     'move_home', 'move_rel', 'get_actuator_value', 'stop_motion', 'position_is', 'move_done']
     socket_types = ["ACTUATOR"]
-    params = comon_parameters() + tcp_parameters
+    params = comon_parameters_fun() + tcp_parameters
 
     def __init__(self, parent=None, params_state=None):
         """
