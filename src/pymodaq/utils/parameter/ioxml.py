@@ -90,7 +90,7 @@ def add_text_to_elt(elt, param):
         elif isinstance(param.value(), float):
             text = 'float({})'.format(param.value())
         else:
-            str(param.value())
+            text = str(param.value())
     elif param_type == 'int':
         if param.value() is True:  # known bug is True should be clearly specified here
             val = 1
@@ -274,13 +274,19 @@ def elt_to_dict(el):
         param.update(dict(addText=addText))
 
     if 'limits' in el.attrib.keys():
-        values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another
-        # iterator type has been used)
-        param.update(dict(values=values))
+        try:
+            values = list(eval(el.get('limits')))  # make sure the evaluated values are returned as list (in case another
+        # iterator type has been used
+            param.update(dict(values=values))
+        except:
+            pass
 
     if 'limits' in el.attrib.keys():
-        limits = eval(el.get('limits'))
-        param.update(dict(limits=limits))
+        try:
+            limits = eval(el.get('limits'))
+            param.update(dict(limits=limits))
+        except:
+            pass
 
     return param
 
