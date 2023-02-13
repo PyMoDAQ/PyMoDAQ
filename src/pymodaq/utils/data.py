@@ -1004,17 +1004,21 @@ class AxesManagerSpread(AxesManagerBase):
         return axes
 
     def _get_dimension_str(self):
-        string = "("
-        for nav_index in self.nav_indexes:
-            string += str(self._data_shape[nav_index]) + ", "
-            break
-        string = string.rstrip(", ")
-        string += "|"
-        for sig_index in self.sig_indexes:
-            string += str(self._data_shape[sig_index]) + ", "
-        string = string.rstrip(", ")
-        string += ")"
-        return string
+        try:
+            string = "("
+            for nav_index in self.nav_indexes:
+                string += str(self._data_shape[nav_index]) + ", "
+                break
+            string = string.rstrip(", ")
+            string += "|"
+            for sig_index in self.sig_indexes:
+                string += str(self._data_shape[sig_index]) + ", "
+            string = string.rstrip(", ")
+            string += ")"
+        except Exception as e:
+            string = f'({self._data_shape})'
+        finally:
+            return string
 
 
 class DataWithAxes(DataBase):
@@ -1060,8 +1064,8 @@ class DataWithAxes(DataBase):
         else:
             raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 
-        self.inav: DataWithAxes = SpecialSlicersData(self, True)
-        self.isig: DataWithAxes = SpecialSlicersData(self, False)
+        self.inav: Iterable[DataWithAxes] = SpecialSlicersData(self, True)
+        self.isig: Iterable[DataWithAxes] = SpecialSlicersData(self, False)
 
         self.get_dim_from_data_axes()
 
@@ -1159,10 +1163,20 @@ class DataWithAxes(DataBase):
             slices = [slices]
         total_slices = self._compute_slices(slices, is_navigation)
         new_arrays_data = [np.atleast_1d(np.squeeze(dat[total_slices])) for dat in self.data]
-        axes_to_append = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
-        indexes_to_get = self._am.nav_indexes if is_navigation else self._am.sig_indexes
+        tmp_axes = self._am.get_signal_axes() if is_navigation else self._am.get_nav_axes()
+        axes_to_append = [copy.deepcopy(axis) for axis in tmp_axes]
 
-        lower_indexes = dict(zip([ind for ind in range(len(self.axes))], [0 for _ in range(len(self.axes))]))
+        # axes_to_append are the axes to append to the new produced data (basically the ones to keep)
+
+        indexes_to_get = self.nav_indexes if is_navigation else self.sig_indexes
+        # indexes_to_get are the indexes of the axes where the slice should be applied
+
+        _indexes = list(self.nav_indexes)
+        _indexes.extend(self.sig_indexes)
+        lower_indexes = dict(zip(_indexes, [0 for _ in range(len(_indexes))]))
+        # lower_indexes will store for each *axis index* how much the index should be reduced because one axis has
+        # been removed
+
         axes = []
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
@@ -1180,8 +1194,8 @@ class DataWithAxes(DataBase):
                     nav_indexes.append(self._am.nav_indexes[ind_slice])
                 axes.extend(ax)
             else:
-                for axis in axes_to_append:  # means we removed one of the nav axes (and data dim),
-                    # hence axis index above current nav_index should be lowered by 1
+                for axis in axes_to_append:  # means we removed one of the axes (and data dim),
+                    # hence axis index above current index should be lowered by 1
                     if axis.index > indexes_to_get[ind_slice]:
                         lower_indexes[axis.index] += 1
                 for index in indexes_to_get[ind_slice+1:]:
@@ -1193,7 +1207,8 @@ class DataWithAxes(DataBase):
         for ind in range(len(nav_indexes)):
             nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes), axes=axes,
-                            source='calculated', distribution=self.distribution)
+                            source='calculated',
+                            distribution=self.distribution if len(nav_indexes) != 0 else DataDistribution['uniform'])
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None, remove_axes_index: List[int] = None):
@@ -1212,14 +1227,14 @@ class DataWithAxes(DataBase):
 
             if remove_axes_index is not None:
                 for index in remove_axes_index:
-                    # todo check the return type of get_axis_from_index that now returns a list
-                    new_data._am.axes.pop(new_data._am.axes.index(new_data._am.get_axis_from_index(index)[0]))
-                    if index in new_data._am.nav_indexes:
-                        nav_indexes = list(new_data._am.nav_indexes)
+                    for axis in new_data.get_axis_from_index(index):
+                        new_data.axes.remove(axis)
+                    if index in new_data.nav_indexes:
+                        nav_indexes = list(new_data.nav_indexes)
                         nav_indexes.pop(nav_indexes.index(index))
-                        new_data._am.nav_indexes = tuple(nav_indexes)
-                    if index in new_data._am.sig_indexes:
-                        sig_indexes = list(new_data._am.sig_indexes)
+                        new_data.nav_indexes = tuple(nav_indexes)
+                    if index in new_data.sig_indexes:
+                        sig_indexes = list(new_data.sig_indexes)
                         sig_indexes.pop(sig_indexes.index(index))
                         new_data._am.sig_indexes = tuple(sig_indexes)
             new_data._shape = data[0].shape

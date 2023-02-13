@@ -305,8 +305,9 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         self._signal_at = posx, posy
 
         if self._data is not None:
-            nav_axes = sorted(self._data.get_nav_axes_with_data(), key=lambda axis: axis.spread_order)
             try:
+                nav_axes = sorted(self._data.get_nav_axes_with_data(), key=lambda axis: axis.spread_order)
+
                 if len(nav_axes) == 1:
                     # signal data plotted as a function of nav_axes[0] so get the index corresponding to
                     # the position posx
@@ -342,8 +343,8 @@ class SpreadDataDisplayer(BaseDataDisplayer):
     def update_nav_data(self, x, y, width=None, height=None):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
-            nav_axes = nav_data.get_nav_axes()
             if nav_data is not None:
+                nav_axes = nav_data.get_nav_axes()
                 if len(nav_axes) < 2:
                     self._navigator1D.show_data(nav_data)
                 elif len(nav_axes) == 2:
@@ -506,15 +507,15 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                 x = np.linspace(-50, 50, 100)
                 data = np.zeros((data_tri.shape[0], len(x)))
                 for ind in range(data_tri.shape[0]):
-                    data[ind, :] = data_tri[ind, 2] * mutils.gauss1D(x, ind - 50, 20)
+                    data[ind, :] = data_tri[ind, 2] * mutils.gauss1D(x, 0.01*ind - 10, 20)
                 axes.append(Axis(data=x, index=1, label='sig_axis'))
             elif data_shape == 'spread2D':
                 x = np.linspace(-50, 50, 100)
-                y = np.linspace(-50, 50, 75)
-                data = np.zeros((data_tri.shape[0], len(x), len(y)))
+                y = np.linspace(-200, 200, 75)
+                data = np.zeros((data_tri.shape[0], len(y), len(x)))
                 for ind in range(data_tri.shape[0]):
-                    data[ind, :] = data_tri[ind, 2] * mutils.gauss2D(x, ind - 50, 20,
-                                                                     y, ind-50, 10)
+                    #data[ind, :] = data_tri[ind, 2] * mutils.gauss2D(0.01*x, 0.1*ind - 20, 20, y, 0.1*ind-20, 10)
+                    data[ind, :] = mutils.gauss2D(x, 10*data_tri[ind, 0], 20, y, 20*data_tri[ind, 1], 30)
                 axes.append(Axis(data=x, index=1, label='sig_axis0'))
                 axes.append(Axis(data=y, index=2, label='sig_axis1'))
             dataraw = DataRaw('NDdata', distribution='spread', dim='DataND',
@@ -556,7 +557,7 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
                 data = [np.sum(data, axis=(0, 1, 2))]
                 dataraw = DataRaw('NDdata', data=data, dim='DataND', nav_indexes=[],
                                   axes=[Axis(data=z, index=0, label='z_axis', units='zunits')])
-        self._show_data(dataraw)
+        self._show_data(dataraw, force_update=True)
 
     def update_widget_visibility(self, data: DataRaw = None):
         if data is None:
@@ -662,29 +663,6 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
 
     def update_data_dim(self, dim: str):
         self.settings.child('data_shape_settings', 'data_shape').setValue(dim)
-
-    def setup_spread_UI(self):
-        #todo adapt to new layout
-        self.ui.spread_widget = QtWidgets.QWidget()
-        self.ui.spread_widget.setLayout(QtWidgets.QVBoxLayout())
-        widget1D = QtWidgets.QWidget()
-        widget2D = QtWidgets.QWidget()
-        self.ui.spread_viewer_1D = Viewer1D(widget1D)
-        self.ui.spread_viewer_2D = Viewer2D(widget2D)
-        self.ui.spread_widget.layout().addWidget(widget1D)
-        self.ui.spread_widget.layout().addWidget(widget2D)
-
-        self.ui.spread_viewer_1D.ui.crosshair.crosshair_dragged.connect(self.get_nav_position)
-        self.ui.spread_viewer_1D.ui.crosshair_pb.trigger()
-        self.ui.spread_viewer_2D.get_action('autolevels').trigger()
-
-        self.ui.spread_viewer_2D.crosshair_dragged.connect(self.get_nav_position)
-        self.ui.spread_viewer_2D.get_action('crosshair').trigger()
-
-        self.ui.spread_widget.show()
-        self.ui.spread_widget.setVisible(False)
-
-
 
 
 def main():
