@@ -2,6 +2,7 @@ import numpy as np
 from pyqtgraph.parametertree import Parameter
 from qtpy import QtCore, QtWidgets, QtGui
 from qtpy.QtCore import QPointF, Slot, Signal, QObject
+from typing import List, Tuple
 
 from pyqtgraph import LinearRegionItem
 
@@ -15,16 +16,17 @@ from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils.logger import set_logger, get_module_name
 
 
-from pymodaq.post_treatment.process_1d_to_scalar import Data1DProcessorFactory
+from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
 
 
 logger = set_logger(get_module_name(__file__))
 
 
-processors1D = Data1DProcessorFactory()
+data_processors = DataProcessorFactory()
 
 
 class Filter:
+
     def __init__(self):
         self._is_active = False
         self._slot_to_send_data = None
@@ -223,8 +225,9 @@ class Filter1DFromRois(Filter):
 
     def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes, data_index=0):
         if data is not None:
-            limits = roi.pos()
-            sub_data, processed_data = processors1D.get(roi_param['math_function']).process(limits, data)
+            indexes = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes(roi.getRegion())
+            sub_data = data.isig[indexes[0]: indexes[1]]
+            processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
             return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
                                int_data=processed_data.data[data_index])
 
@@ -253,18 +256,30 @@ class Filter2DFromRois(Filter):
         data_dict = dict([])
         if data is not None:
             for roi_key, roi in self._ROIs.items():
-                image_key = self._roi_settings.child('ROIs', roi_key, 'use_channel').value()
+                image_key = self._roi_settings['ROIs', roi_key, 'use_channel']
                 image_index = self._image_keys.index(image_key)
 
-                data_type = data.distribution
-                data_dict[roi_key] = self.get_xydata_from_roi(data_type, roi, data.data[image_index])
+                sub_data = data.deepcopy()
+                sub_data.data = data[image_index]
+                data_dict[roi_key] = self.get_xydata_from_roi(roi, sub_data,
+                                                              self._roi_settings['ROIs', roi_key, 'math_function'])
         return data_dict
 
-    def get_xydata_from_roi(self, data_type, roi, data):
+    def get_slices_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> Tuple[slice]:
+        x, y = roi.pos().x(), roi.pos().y()
+        width, height = roi.size().x(), roi.size().y()
+        ind_x_min = int(max(x, 0))
+        ind_y_min = int(max(y, 0))
+        ind_x_max = int(min(x+width, data.get_axis_from_index(1)[0].size))
+        ind_y_max = int(min(y+height, data.get_axis_from_index(0)[0].size))
+
+        return slice(ind_y_min,ind_y_max), slice(ind_x_min, ind_x_max)
+
+    def get_xydata_from_roi(self, roi, data: data_mod.DataWithAxes, math_function: str):
 
         if data is not None:
-            if data_type == 'spread':
-                xvals, yvals, data = self.get_xydata_spread(data, roi)
+            if data.dim.name == 'spread':
+                xvals, yvals, data = self.get_xydata_spread(data.data[0], roi)
                 ind_xaxis = np.argsort(xvals)
                 ind_yaxis = np.argsort(yvals)
                 xvals = xvals[ind_xaxis]
@@ -273,14 +288,18 @@ class Filter2DFromRois(Filter):
                 data_V = data[ind_yaxis]
                 int_data = np.array([np.mean(data)])
             else:
-                xvals, yvals, data = self.get_xydata(data, roi)
-                data_H = np.mean(data, axis=0)
-                data_V = np.mean(data, axis=1)
-                int_data = np.array([np.mean(data)])
+                xvals, yvals, data_array = self.get_xydata(data.data[0], roi)
+                slices = self.get_slices_from_roi(roi, data)
+                sub_data = data.isig[slices[0], slices[1]]
+                data_H = np.mean(data_array, axis=0)
+                data_V = np.mean(data_array, axis=1)
+                int_data = np.array([np.mean(data_array)])
+                math_data = data_processors.get(math_function).process(sub_data).data
 
-            return LineoutData(hor_axis=xvals, ver_axis=yvals, hor_data=data_H, ver_data=data_V, int_data=int_data)
+            return LineoutData(hor_axis=xvals, ver_axis=yvals, hor_data=data_H, ver_data=data_V, int_data=int_data,
+                               math_data=math_data)
 
-    def get_xydata(self, data, roi):
+    def get_xydata(self, data: np.ndarray, roi: RectROI):
         data, coords = self.data_from_roi(data, roi)
 
         if data is not None:
@@ -315,7 +334,7 @@ class Filter2DFromRois(Filter):
 
 class LineoutData:
     def __init__(self, hor_axis=np.array([]), ver_axis=np.array([]), hor_data=np.array([]), ver_data=np.array([]),
-                 int_data=None):
+                 int_data: np.ndarray = None, math_data: List[np.ndarray] = None):
         super().__init__()
         if len(hor_axis) != len(hor_data):
             raise ValueError(f'Horizontal lineout data and axis must have the same size')
@@ -330,6 +349,9 @@ class LineoutData:
             self.int_data = np.array([np.sum(self.ver_data)])
         else:
             self.int_data = int_data
+        if math_data is None:
+            math_data = self.int_data
+        self.math_data = math_data
 
 
 class FourierFilterer(QObject):

@@ -60,6 +60,12 @@ class ObjectFactory(metaclass=ABCMeta):
     def builders(self):
         return self._builders
 
+    def keys_function(self, do_sort=True):
+        if do_sort:
+            return self.keys
+        else:
+            return list(self.builders[self.__class__.__name__].keys())
+
     @property
     def keys(self):
         return sorted(list(self.builders[self.__class__.__name__].keys()))

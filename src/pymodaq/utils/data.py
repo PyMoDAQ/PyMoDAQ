@@ -42,6 +42,23 @@ class DataDim(BaseEnum):
     Data2D = 2
     DataND = 3
 
+    def __le__(self, other_dim: 'DataDim'):
+        return self.value.__le__(other_dim.value)
+
+    def __lt__(self, other_dim: 'DataDim'):
+        return self.value.__lt__(other_dim.value)
+
+    def __ge__(self, other_dim: 'DataDim'):
+        other_dim = enum_checker(DataDim, other_dim)
+        return self.value.__ge__(other_dim.value)
+
+    def __gt__(self, other_dim: 'DataDim'):
+        return self.value.__gt__(other_dim.value)
+
+    @property
+    def dim_index(self):
+       return self.value
+
 
 class DataSource(BaseEnum):
     """Enum for source of data"""
@@ -142,13 +159,15 @@ class Axis:
     def data(self, data: np.ndarray):
         if data is not None:
             self._check_data_valid(data)
+            self.get_scale_offset_from_data(data)
             self._size = data.size
         else:
             self._size = 0
         self._data = data
 
     def get_data(self):
-        return self._data if self._data is not None else self.create_linear_data(self.size)
+        """Convenience method to obtain the axis data (usually None because scaling and offset are used)"""
+        return self._data if self._data is not None else self._linear_data(self.size)
 
     def get_scale_offset_from_data(self, data: np.ndarray = None):
         """Get the scaling and offset from the axis's data
@@ -215,9 +234,13 @@ class Axis:
         elif len(data.shape) != 1:
             raise ValueError(f'data for the Axis class should be a 1D numpy array')
 
+    def _linear_data(self, nsteps: int):
+        """create axis data with a linear version using scaling and offset"""
+        return self._offset + self._scaling * np.linspace(0, nsteps-1, nsteps)
+
     def create_linear_data(self, nsteps:int):
-        """replace the axis data with a linear version using scaling and offset if specified"""
-        self.data = self._offset + self._scaling * np.linspace(0, nsteps-1, nsteps)
+        """replace the axis data with a linear version using scaling and offset"""
+        self.data = self._linear_data(nsteps)
 
     @staticmethod
     def create_simple_linear_data(nsteps: int):
@@ -300,12 +323,15 @@ class Axis:
         else:
             return self.offset + (self.size * self.scaling if self.scaling > 0 else 0)
 
-    def find_index(self, threshold: float):
+    def find_index(self, threshold: float) -> int:
         """find the index of the threshold value within the axis"""
         if self._data is not None:
             return mutils.find_index(self._data, threshold)[0][0]
         else:
             return int((threshold - self.offset) / self.scaling)
+
+    def find_indexes(self, thresholds: IterableType[float]) -> IterableType[int]:
+        return [self.find_index(threshold) for threshold in thresholds]
 
 
 class NavAxis(Axis):
@@ -422,7 +448,7 @@ class DataBase(DataLowLevel):
         else:
             raise StopIteration
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> np.ndarray:
         if isinstance(item, int) and 0 <= item < len(self):
             return self.data[item]
         else:
@@ -806,7 +832,7 @@ class AxesManagerBase:
         return [axis.index for axis in self._axes]
 
     @abstractmethod
-    def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
+    def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
         ...
 
     def get_nav_axes(self) -> List[Axis]:
@@ -838,6 +864,7 @@ class AxesManagerBase:
     @abstractmethod
     def _get_dimension_str(self):
         ...
+
 
 class AxesManagerUniform(AxesManagerBase):
     def __init__(self, *args, **kwargs):
@@ -877,7 +904,7 @@ class AxesManagerUniform(AxesManagerBase):
                 axes[ind] = axis
         self._axes = axes
 
-    def get_axis_from_index(self, index: int, create: bool = False) -> Axis:
+    def get_axis_from_index(self, index: int, create: bool = False) -> List[Axis]:
         """Get the axis referred by a given data dimensionality index
 
         If the axis is absent, create a linear one to fit the data shape if parameter create is True
@@ -891,7 +918,7 @@ class AxesManagerUniform(AxesManagerBase):
 
         Returns
         -------
-        Axis or None: return the axis instance if Data has the axis (or it has been created) else None
+        Axis or None: return the list of axis instance if Data has the axis (or it has been created) else None
 
         See Also
         --------
@@ -907,7 +934,7 @@ class AxesManagerUniform(AxesManagerBase):
             else:
                 warnings.warn(
                     UserWarning(f'The axis requested with index {index} is not present, returning None'))
-        return axis
+        return [axis]
 
     def _get_dimension_str(self):
         string = "("
@@ -1211,7 +1238,9 @@ class DataWithAxes(DataBase):
                             distribution=self.distribution if len(nav_indexes) != 0 else DataDistribution['uniform'])
         return data
 
-    def deepcopy_with_new_data(self, data: List[np.ndarray] = None, remove_axes_index: List[int] = None):
+    def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
+                               remove_axes_index: List[int] = None,
+                               source: DataSource = 'calculated') -> 'DataWithAxes':
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
@@ -1221,6 +1250,10 @@ class DataWithAxes(DataBase):
             self._data = None
             new_data = self.deepcopy()
             new_data._data = data
+            new_data.get_dim_from_data(data)
+            if source is not None:
+                source = enum_checker(DataSource, source)
+                new_data._source = source
 
             if not isinstance(remove_axes_index, Iterable):
                 remove_axes_index = [remove_axes_index]

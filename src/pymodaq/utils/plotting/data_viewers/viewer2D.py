@@ -637,7 +637,6 @@ class Viewer2D(ViewerBase):
         self._is_gradient_manually_set = False
 
         self.view = View2D(parent)
-
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
                                                  IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
@@ -701,8 +700,8 @@ class Viewer2D(ViewerBase):
         if self._raw_data is not None:
             self._datas = self.set_image_transform()
             if self._datas.distribution.name == 'uniform':
-                self.x_axis = self._datas.axes_manager.get_axis_from_index(1)
-                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)
+                self.x_axis = self._datas.axes_manager.get_axis_from_index(1)[0]
+                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
             else:
                 self.x_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
                 self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[1]
@@ -858,7 +857,11 @@ class Viewer2D(ViewerBase):
                 self.data_to_export.append(DataFromRoi(name=f'Integrated_{roi_key}', data=[lineout_data.int_data],
                                                        origin=self.title))
 
-            self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
+            if not isinstance(lineout_data.math_data, list):
+                self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
+            else:
+                for ind, dat in enumerate(lineout_data.math_data):
+                    self.measure_data_dict[f'{roi_key}/{ind:02d}:'] = dat
 
             QtWidgets.QApplication.processEvents()
 
@@ -961,5 +964,5 @@ def main_view():
 if __name__ == '__main__':  # pragma: no cover
 
     #main_view()
-    # main('uniform')
-    main('spread')
+    main('uniform')
+    #main('spread')

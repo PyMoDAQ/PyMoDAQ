@@ -91,7 +91,7 @@ class DataDisplayer(QObject):
         if len(data) != len(self._plot_items):
             self.update_display_items(data)
 
-        axis = data.get_axis_from_index(0, create=False)
+        axis = data.get_axis_from_index(0, create=False)[0]
         if axis is not None:
             self.update_axis(axis)
 
@@ -472,7 +472,7 @@ def main():
         print(data.get_data_from_dim('Data0D'))
         print('***********************************')
 
-    prog.data_to_export_signal.connect(print_data)
+    #prog.data_to_export_signal.connect(print_data)
 
 
     QtWidgets.QApplication.processEvents()

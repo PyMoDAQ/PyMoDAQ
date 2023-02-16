@@ -12,6 +12,7 @@ import time
 
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import data as data_mod
+from pymodaq.utils.data import DataDim
 
 LABEL = 'A Label'
 UNITS = 'units'
@@ -85,6 +86,25 @@ def ini_data_to_export():
     data = data_mod.DataToExport(name='toexport', data=[dat1, dat2])
     return dat1, dat2, data
 
+
+class TestDataDim:
+    def test_index(self):
+        dim = DataDim['Data0D']
+        assert dim.dim_index == 0
+        dim = DataDim['Data1D']
+        assert dim.dim_index == 1
+        dim = DataDim['Data2D']
+        assert dim.dim_index == 2
+        dim = DataDim['DataND']
+        assert dim.dim_index == 3
+
+    @pytest.mark.parametrize('dim1', ['Data0D', 'Data1D', 'Data2D', 'DataND'])
+    @pytest.mark.parametrize('dim2', ['Data0D', 'Data1D', 'Data2D', 'DataND'])
+    def test_comparison(self, dim1: str, dim2: str):
+        assert (DataDim[dim1] < DataDim[dim2]) == (DataDim[dim1].dim_index < DataDim[dim2].dim_index)
+        assert (DataDim[dim1] <= DataDim[dim2]) == (DataDim[dim1].dim_index <= DataDim[dim2].dim_index)
+        assert (DataDim[dim1] > DataDim[dim2]) == (DataDim[dim1].dim_index > DataDim[dim2].dim_index)
+        assert (DataDim[dim1] >= DataDim[dim2]) == (DataDim[dim1].dim_index >= DataDim[dim2].dim_index)
 
 class TestAxis:
 

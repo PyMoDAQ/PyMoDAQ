@@ -23,9 +23,9 @@ from pymodaq.utils.config import get_set_roi_path
 from pymodaq.utils.gui_utils import select_file
 import numpy as np
 from pathlib import Path
-from pymodaq.post_treatment.process_1d_to_scalar import Data1DProcessorFactory
+from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
 
-processors1D = Data1DProcessorFactory()
+data_processors = DataProcessorFactory()
 
 roi_path = get_set_roi_path()
 logger = set_logger(get_module_name(__file__))
@@ -290,11 +290,13 @@ class ROIScalableGroup(GroupParameter):
             children.extend([{'title': 'ROI Type', 'name': 'roi_type', 'type': 'str', 'value': typ, 'readonly': True},
                              {'title': 'Use channel', 'name': 'use_channel', 'type': 'list',
                               'limits': ['red', 'green', 'blue', 'spread']}, ])
+            children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list',
+                             'limits': data_processors.functions_filtered('Data2D')})
         else:
             children.append({'title': 'Use channel', 'name': 'use_channel', 'type': 'list'})
+            children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list',
+                             'limits': data_processors.functions_filtered('Data1D')})
 
-        children.append({'title': 'Math type:', 'name': 'math_function', 'type': 'list',
-                         'limits': processors1D.functions, 'visible': self.roi_type == '1D'})
         children.extend([
             {'name': 'Color', 'type': 'color', 'value': list(np.roll(self.color_list, newindex)[0])}, ])
         if self.roi_type == '2D':

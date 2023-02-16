@@ -19,17 +19,12 @@ from pymodaq.utils.data import DataRaw, Axis, DataDistribution, DataWithAxes, Da
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.managers.parameter_manager import ParameterManager
-from pymodaq.post_treatment.process_Nd_to_scalar import DataNDProcessorFactory
-from pymodaq.post_treatment.process_1d_to_scalar import Data1DProcessorFactory
-
-
+from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
 from pymodaq.utils.managers.roi_manager import SimpleRectROI, LinearROI
 
 
 logger = set_logger(get_module_name(__file__))
-math_processorsND = DataNDProcessorFactory()
-math_processors1D = Data1DProcessorFactory()
-
+data_processors = DataProcessorFactory()
 
 DEBUG_VIEWER = False
 
@@ -65,7 +60,7 @@ class BaseDataDisplayer(QObject):
             self._filter_type = filter_type
             self.update_nav_data(*self._nav_limits)
 
-    def update_processor(self, math_processor):
+    def update_processor(self, math_processor: DataProcessorFactory):
         self._processor = math_processor
         self.processor_changed.emit(math_processor)
 
@@ -149,7 +144,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
     def init(self, data: DataRaw):
         if len(data.nav_indexes) > 2:
             self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
-        processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
+        processor: DataProcessorFactory = data_processors
         self.update_processor(processor)
 
     def init_rois(self, data: DataRaw):
@@ -246,7 +241,8 @@ class UniformDataDisplayer(BaseDataDisplayer):
                 navigator_data = data
 
             elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-                _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
+                indx, indy = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes((x, y))
+                navigator_data = self._processor.get(self._filter_type).process(data.isig[indx:indy])
 
             elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
                 x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
@@ -276,7 +272,7 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         super().__init__(*args, **kwargs)
 
     def init(self, data: DataWithAxes):
-        processor = math_processorsND if len(data.axes_manager.sig_shape) > 1 else math_processors1D
+        processor = data_processors# if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
 
     def init_rois(self, data: DataRaw):
@@ -359,7 +355,9 @@ class SpreadDataDisplayer(BaseDataDisplayer):
                 navigator_data = data
 
             elif len(data.axes_manager.sig_shape) == 1:  # signal data is 1D
-                _, navigator_data = self._processor.get(self._filter_type).process((x, y), data)
+                ind_x = data.get_axis_from_index(data.sig_indexes[0])[0].find_index(x)
+                ind_y = data.get_axis_from_index(data.sig_indexes[0])[0].find_index(y)
+                navigator_data = self._processor.get(self._filter_type).process(data.isig[ind_x:ind_y])
 
             elif len(data.axes_manager.sig_shape) == 2:  # signal data is 2D
                 x, y, width, height = self.get_out_of_range_limits(x, y, width, height)
@@ -573,9 +571,9 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.navigator2D.setVisible(len(nav_axes) == 2)
         self.axes_viewer.setVisible(len(data.nav_indexes) > 2 and data.distribution.name == 'uniform')
 
-    def update_filters(self, processor):
+    def update_filters(self, processor: DataProcessorFactory):
         self.get_action('filters').clear()
-        self.get_action('filters').addItems(processor.functions)
+        self.get_action('filters').addItems(processor.functions_filtered('DataND'))
 
     def show_settings(self, show: bool = True):
         if show:
