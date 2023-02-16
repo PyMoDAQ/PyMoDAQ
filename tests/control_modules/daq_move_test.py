@@ -42,7 +42,7 @@ def ini_daq_move_ui(init_qt):
 class TestMantatoryAttributes:
     def test_methods(self, ini_daq_move_without_ui):
         actuator, qtbot = ini_daq_move_without_ui
-        assert hasattr(actuator, 'units')
+        assert 'units' in actuator.__dir__()
         assert hasattr(actuator, 'title')
 
 

@@ -13,6 +13,7 @@ import numpy as np
 from pymodaq.utils.parameter import ioxml
 from  pymodaq.utils.parameter import utils as putils
 import pymodaq.utils.parameter.pymodaq_ptypes
+from pymodaq.utils.parameter.ioxml import parameter_to_xml_string
 from pymodaq.utils.daq_utils import getLineInfo, ThreadCommand
 from pymodaq.utils.data import DataFromPlugins
 from pymodaq.utils import math_utils as mutils
@@ -488,42 +489,42 @@ class TCPClient(TCPClientTemplate, QObject):
                 self.cmd_signal.emit(ThreadCommand('disconnected'))
 
         elif command.command == 'update_connection':
-            self.ipaddress = command.attributes['ipaddress']
-            self.port = command.attributes['port']
+            self.ipaddress = command.attribute['ipaddress']
+            self.port = command.attribute['port']
 
         elif command.command == 'data_ready':
-            self.data_ready(command.attributes)
+            self.data_ready(command.attribute)
 
         elif command.command == 'send_info':
             if self.socket is not None:
-                path = command.attributes['path']
-                param = command.attributes['param']
+                path = command.attribute['path']
+                param = command.attribute['param']
 
                 self.socket.send_string('Info_xml')
                 self.socket.send_list(path)
 
                 # send value
-                data = pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(param)
+                data = parameter_to_xml_string(param)
                 self.socket.send_string(data)
 
         elif command.command == 'position_is':
             if self.socket is not None:
                 self.socket.send_string('position_is')
-                self.socket.send_scalar(command.attributes[0])
+                self.socket.send_scalar(command.attribute[0])
 
         elif command.command == 'move_done':
             if self.socket is not None:
                 self.socket.send_string('move_done')
-                self.socket.send_scalar(command.attributes[0])
+                self.socket.send_scalar(command.attribute[0])
 
         elif command.command == 'x_axis':
             if self.socket is not None:
                 self.socket.send_string('x_axis')
                 x_axis = dict(label='', units='')
-                if isinstance(command.attributes[0], np.ndarray):
-                    x_axis['data'] = command.attributes[0]
-                elif isinstance(command.attributes[0], dict):
-                    x_axis.update(command.attributes[0].copy())
+                if isinstance(command.attribute[0], np.ndarray):
+                    x_axis['data'] = command.attribute[0]
+                elif isinstance(command.attribute[0], dict):
+                    x_axis.update(command.attribute[0].copy())
 
                 self.socket.send_array(x_axis['data'])
                 self.socket.send_string(x_axis['label'])
@@ -533,10 +534,10 @@ class TCPClient(TCPClientTemplate, QObject):
             if self.socket is not None:
                 self.socket.send_string('y_axis')
                 y_axis = dict(label='', units='')
-                if isinstance(command.attributes[0], np.ndarray):
-                    y_axis['data'] = command.attributes[0]
-                elif isinstance(command.attributes[0], dict):
-                    y_axis.update(command.attributes[0].copy())
+                if isinstance(command.attribute[0], np.ndarray):
+                    y_axis['data'] = command.attribute[0]
+                elif isinstance(command.attribute[0], dict):
+                    y_axis.update(command.attribute[0].copy())
 
                 self.socket.send_array(y_axis['data'])
                 self.socket.send_string(y_axis['label'])
@@ -574,7 +575,7 @@ class TCPClient(TCPClientTemplate, QObject):
         self.cmd_signal.emit(ThreadCommand('connected'))
         self.socket.send_string(self.client_type)
 
-        self.send_infos_xml(pymodaq.daq_utils.parameter.ioxml.parameter_to_xml_string(self.settings))
+        self.send_infos_xml(parameter_to_xml_string(self.settings))
         for command in extra_commands:
             if isinstance(command, ThreadCommand):
                 self.cmd_signal.emit(command)
@@ -596,15 +597,15 @@ class TCPClient(TCPClientTemplate, QObject):
             if message == 'set_info':
                 path = self.socket.get_list()
                 param_xml = self.socket.get_string()
-                messg.attributes = [path, param_xml]
+                messg.attribute = [path, param_xml]
 
             elif message == 'move_abs':
                 position = self.socket.get_scalar()
-                messg.attributes = [position]
+                messg.attribute = [position]
 
             elif message == 'move_rel':
                 position = self.socket.get_scalar()
-                messg.attributes = [position]
+                messg.attribute = [position]
 
             self.cmd_signal.emit(messg)
 

@@ -329,13 +329,15 @@ class DataSaverLoader(DataManagement):
         """
 
         data_node = self._h5saver.get_node(where)
-        if not isinstance(data_node, CARRAY):
-            return
 
-        parent_node = data_node.parent_node
         if plot_all:
+            parent_node = data_node.parent_node.parent_node
             data_nodes = self._get_nodes_from_data_type(parent_node)
+            data_node = data_nodes[0]
         else:
+            parent_node = data_node.parent_node
+            if not isinstance(data_node, CARRAY):
+                return
             data_nodes = [data_node]
 
         if 'axis' in self.data_type.name:

@@ -322,11 +322,11 @@ class TestDataWithAxesUniform:
         with pytest.warns(UserWarning):
             index = 0
             data = init_data(DATA2D, 2, axes=[init_axis(np.zeros((10,)), index)])
-            assert len(data.get_axis_from_index(0)) == DATA2D.shape[index]
+            assert len(data.get_axis_from_index(0)[0]) == DATA2D.shape[index]
 
         index = 1
         data = init_data(DATA2D, 2, axes=[init_axis(np.zeros((DATA2D.shape[index],)), index)])
-        assert len(data.get_axis_from_index(index)) == DATA2D.shape[index]
+        assert len(data.get_axis_from_index(index)[0]) == DATA2D.shape[index]
 
         with pytest.raises(IndexError):
             init_data(DATA2D, 2, axes=[init_axis(np.zeros((DATA2D.shape[1],)), 2)])
@@ -348,11 +348,11 @@ class TestDataWithAxesUniform:
         axis = init_axis(np.zeros((DATA2D.shape[index1],)), index1)
         data = init_data(DATA2D, 2, axes=[axis])
 
-        assert data.get_axis_from_index(index1) == axis
+        assert data.get_axis_from_index(index1)[0] == axis
         index0 = 0
-        axis = data.get_axis_from_index(index0)
+        axis = data.get_axis_from_index(index0)[0]
         assert axis is None
-        axis = data.get_axis_from_index(index0, create=True)
+        axis = data.get_axis_from_index(index0, create=True)[0]
         assert len(axis) == data.axes_manager.get_shape_from_index(index0)
 
 
@@ -405,13 +405,13 @@ class TestSlicingUniform:
         assert data_00.shape == (Nn1, DATA2D.shape[0], DATA2D.shape[1])
         assert len(data_00.axes) == 3
         assert data_00.nav_indexes == (0, )
-        assert data_00.get_axis_from_index(0).label == 'nav1'
+        assert data_00.get_axis_from_index(0)[0].label == 'nav1'
 
         data_01 = data_raw.inav[:, 2]
         assert data_01.shape == (Nn0, DATA2D.shape[0], DATA2D.shape[1])
         assert len(data_01.axes) == 3
         assert data_01.nav_indexes == (0, )
-        assert data_01.get_axis_from_index(0).label == 'nav0'
+        assert data_01.get_axis_from_index(0)[0].label == 'nav0'
 
         data_1 = data_raw.inav[0, 2]
         assert data_1.shape == (DATA2D.shape[0], DATA2D.shape[1])
@@ -420,8 +420,8 @@ class TestSlicingUniform:
 
         data_2: data_mod.DataWithAxes = data_raw.inav[0:3, 2:4]
         assert data_2.shape == (3, 2, DATA2D.shape[0], DATA2D.shape[1])
-        assert data_2.get_axis_from_index(0).size == 3
-        assert data_2.get_axis_from_index(1).size == 2
+        assert data_2.get_axis_from_index(0)[0].size == 3
+        assert data_2.get_axis_from_index(1)[0].size == 2
 
     def test_slice_signal(self, init_data_uniform):
         data_raw = init_data_uniform
@@ -431,13 +431,13 @@ class TestSlicingUniform:
         assert data_00.shape == (Nn0, Nn1, DATA2D.shape[1])
         assert len(data_00.axes) == 3
         assert data_00.nav_indexes == (0, 1)
-        assert data_00.get_axis_from_index(2).label == 'signal1'
+        assert data_00.get_axis_from_index(2)[0].label == 'signal1'
 
         data_01 = data_raw.isig[:, 2]
         assert data_01.shape == (Nn0, Nn1, DATA2D.shape[0])
         assert len(data_01.axes) == 3
         assert data_01.nav_indexes == (0, 1)
-        assert data_01.get_axis_from_index(2).label == 'signal0'
+        assert data_01.get_axis_from_index(2)[0].label == 'signal0'
 
         data_1 = data_raw.isig[0, 2]
         assert data_1.shape == (Nn0, Nn1)
@@ -446,8 +446,8 @@ class TestSlicingUniform:
 
         data_2: data_mod.DataWithAxes = data_raw.isig[0:3, 2:4]
         assert data_2.shape == (Nn0, Nn1, 3, 2)
-        assert data_2.get_axis_from_index(2).size == 3
-        assert data_2.get_axis_from_index(3).size == 2
+        assert data_2.get_axis_from_index(2)[0].size == 3
+        assert data_2.get_axis_from_index(3)[0].size == 2
 
 
 class TestSlicingSpread:

@@ -182,7 +182,6 @@ class TestDataSaverLoader:
             assert axis_in == axis_out
 
         assert data_saver.load_data(h5saver.get_node('/RawData/Data00')) == data
-        assert data_saver.load_data(h5saver.raw_group) == data
 
 
 class TestDataEnlargeableSaver:

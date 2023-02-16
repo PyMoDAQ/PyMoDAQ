@@ -24,7 +24,7 @@ class TestViewer0D:
         prog, qtbot = init_prog
         assert isinstance(prog, Viewer0D)
         assert isinstance(prog.parent, QtWidgets.QWidget)
-        assert prog.title == 'viewer0D'
+        assert prog.title == 'Viewer0D'
         
         prog = Viewer0D(None)
         assert isinstance(prog.parent, QtWidgets.QWidget)

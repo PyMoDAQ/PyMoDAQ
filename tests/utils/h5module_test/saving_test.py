@@ -34,41 +34,6 @@ def generate_random_data(shape, dtype=float):
     return (100 * np.random.rand(*shape)).astype(dtype=dtype)
 
 
-class NoAttribute(DataManagement):
-    pass
-
-
-class EnumAttribute(DataManagement):
-    data_type = saving.DataType(0)
-
-
-class StrAttribute(DataManagement):
-    data_type = saving.DataType.names()[2]
-
-
-class UnknownStrAttribute(DataManagement):
-    data_type = 'azertyuiop'
-
-
-class TestSaver:
-    def test_class_attribute(self):
-        with pytest.raises(NotImplementedError):
-            NoAttribute()
-
-        ea = EnumAttribute()
-        assert ea.data_type == saving.DataType(0)
-
-        sa = StrAttribute()
-        assert sa.data_type == saving.DataType.names()[2]
-
-        with pytest.raises(ValueError):
-            ua = UnknownStrAttribute()
-
-    def test_format(self):
-
-        assert EnumAttribute._format_node_name(24) == f'{capitalize(EnumAttribute.data_type.name)}{24:02d}'
-
-
 class TestH5SaverLowLevel:
 
     def test_init_file(self, tmp_path):

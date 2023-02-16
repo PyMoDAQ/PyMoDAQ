@@ -337,7 +337,7 @@ class TestTCPClient:
     @mock.patch('pymodaq.utils.tcp_server_client.TCPClient.init_connection')
     def test_queue_command(self, mock_connection):
         mock_connection.side_effect = [Expected_1]
-        command = ThreadCommand()
+        command = ThreadCommand('')
         command.attribute = {'ipaddress': '0.0.0.0', 'port': 5544, 'path': [1, 2, 3],
                               'param': Parameter(name='test_param')}
 

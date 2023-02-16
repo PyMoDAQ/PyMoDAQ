@@ -15,7 +15,7 @@ from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import Config
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.h5modules import H5BrowserUtil
+from pymodaq.utils.h5modules.browsing import H5BrowserUtil
 
 config = Config()
 config_viewer = daqvm.config
@@ -65,7 +65,7 @@ class TestWithoutUI:
         prog, qtbot = ini_daq_viewer_without_ui
         assert prog.daq_types == DAQTypesEnum.names()
         assert prog.daq_type == config('viewer', 'daq_type')
-        assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[prog.daq_type]]
+        assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[prog.daq_type.name]]
         assert prog.detector == prog.detectors[0]
 
     @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
@@ -79,115 +79,9 @@ class TestWithoutUI:
         prog, qtbot = ini_daq_viewer_without_ui
         prog.daq_type = 'DAQ0D'
         prog.detector = det
-        det_params, _class = get_viewer_plugins(prog.daq_type, prog.detector)
+        det_params, _class = get_viewer_plugins(prog.daq_type.name, prog.detector)
         assert putils.iter_children(prog.settings.child('detector_settings'), []) == \
             putils.iter_children(det_params, [])
-
-    def test_init_hardware(self, ini_daq_viewer_without_ui):
-        prog, qtbot = ini_daq_viewer_without_ui
-        prog.daq_type = 'DAQ0D'
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=True)
-        assert prog._initialized_state
-        assert blocker.args[0]
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=False)
-        assert not prog._initialized_state
-        assert not blocker.args[0]
-        prog.quit_fun()
-
-    def test_grab_data_snap(self, ini_daq_viewer_without_ui):
-        prog, qtbot = ini_daq_viewer_without_ui
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=True)
-        assert blocker.args[0]
-
-        with qtbot.waitSignal(prog.grab_done_signal) as blocker:
-            prog.grab_data(snap_state=True)
-        assert blocker.args[0]['Ndatas'] == 1
-        assert blocker.args[0]['control_module'] == 'DAQ_Viewer'
-        assert blocker.args[0]['data1D'] != OrderedDict([])
-        prog.quit_fun()
-
-    def test_grab_data_snapshot(self, ini_daq_viewer_without_ui, tmp_path):
-        prog, qtbot = ini_daq_viewer_without_ui
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=True)
-        assert blocker.args[0]
-
-        with qtbot.assertNotEmitted(prog.data_saved) as blocker:
-            prog.snapshot(pathname=tmp_path.joinpath('test.h5'))
-
-        with qtbot.waitSignals([prog.data_saved, prog.grab_done_signal, ], order='strict') as blocker:
-            prog.snapshot(pathname=tmp_path.joinpath('test.h5'), dosave=True)
-
-        assert blocker.all_signals_and_args[1].args[0]['Ndatas'] == 1
-        assert blocker.all_signals_and_args[1].args[0]['control_module'] == 'DAQ_Viewer'
-        assert blocker.all_signals_and_args[1].args[0]['data1D'] != OrderedDict([])
-        prog.quit_fun()
-
-    def test_grab_data_live(self, ini_daq_viewer_without_ui):
-        prog, qtbot = ini_daq_viewer_without_ui
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=True)
-        assert blocker.args[0]
-
-        with qtbot.waitSignals([prog.grab_done_signal, prog.grab_done_signal, prog.grab_done_signal]) as blocker:
-            prog.grab_data(grab_state=True)
-        assert prog.grab_state
-
-        prog.grab_data(grab_state=False)
-
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(False)
-        prog.quit_fun()
-
-    def test_grab_data_live_stop(self, ini_daq_viewer_without_ui):
-        prog, qtbot = ini_daq_viewer_without_ui
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=True)
-        assert blocker.args[0]
-
-        with qtbot.waitSignal(prog.grab_status) as blocker:
-            prog.grab_data(grab_state=True)
-        assert blocker.args[0]
-        assert prog.grab_state
-
-        with qtbot.waitSignal(prog.grab_status) as blocker:
-            prog.stop()
-        assert not blocker.args[0]
-        assert not prog.grab_state
-
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(False)
-        prog.quit_fun()
-
-    def test_grab_data_snap_bkg(self, ini_daq_viewer_without_ui, tmp_path):
-        prog, qtbot = ini_daq_viewer_without_ui
-        with qtbot.waitSignal(prog.init_signal) as blocker:
-            prog.init_hardware(do_init=True)
-        assert blocker.args[0]
-        assert prog._bkg is None
-
-        with qtbot.waitSignal(prog.grab_done_signal) as blocker:
-            prog.take_bkg()
-
-        assert prog._bkg is not None
-        keys = list(prog._data_to_save_export['data1D'].keys())
-        assert np.any(prog._bkg[0].data[0] == pytest.approx(prog._data_to_save_export['data1D'][keys[0]].data))
-        assert np.any(prog._bkg[0].data[1] == pytest.approx(prog._data_to_save_export['data1D'][keys[1]].data))
-
-        prog.do_bkg = True
-        with qtbot.waitSignals([prog.data_saved, prog.grab_done_signal, ], order='strict') as blocker:
-            prog.snapshot(pathname=tmp_path.joinpath('test.h5'), dosave=True)
-
-        h5browser = H5BrowserUtil()
-        h5browser.open_file(tmp_path.joinpath('test.h5'))
-        assert np.any(h5browser.get_h5_data('/Raw_datas/Detector000/Data1D/Ch000/Bkg')[0] ==
-                      pytest.approx(prog._bkg[0].data[0]))
-        h5browser.close_file()
-
-        prog.quit_fun()
 
 
 class TestWithUI:

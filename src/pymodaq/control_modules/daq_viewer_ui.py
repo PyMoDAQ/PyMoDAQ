@@ -119,6 +119,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
     @daq_type.setter
     def daq_type(self, dtype: DAQTypesEnum):
+        dtype = enum_checker(DAQTypesEnum, dtype)
         self._daq_types_combo.setCurrentText(dtype.name)
 
     @property
@@ -255,11 +256,14 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
         self._data_ready_led.set_as(status)
 
     def _daq_type_changed(self, daq_type: DAQTypesEnum):
-        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        try:
+            daq_type = enum_checker(DAQTypesEnum, daq_type)
 
-        self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
-        if self.viewer_types != [daq_type.to_viewer_type()]:
-            self.update_viewers([daq_type.to_viewer_type()])
+            self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
+            if self.viewer_types != [daq_type.to_viewer_type()]:
+                self.update_viewers([daq_type.to_viewer_type()])
+        except ValueError as e:
+            pass
 
     def show_settings(self, show=True):
         if (self.is_action_checked('show_settings') and not show) or \

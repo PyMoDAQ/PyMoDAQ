@@ -92,7 +92,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     params = daq_viewer_params
 
-    def __init__(self, parent=None, title="Testing", daq_type='DAQ2D', dock_settings=None, dock_viewer=None):
+    def __init__(self, parent=None, title="Testing",
+                 daq_type=config('viewer', 'daq_type'),
+                 dock_settings=None, dock_viewer=None):
 
         self.logger = set_logger(f'{logger.name}.{title}')
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
@@ -242,7 +244,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         daq_type = enum_checker(DAQTypesEnum, daq_type)
         self._daq_type = daq_type
         self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
-        self.detectors_changed_from_ui([det_dict['name'] for det_dict in DET_TYPES[daq_type.name]])
+        self.detectors = [det_dict['name'] for det_dict in DET_TYPES[daq_type.name]]
         self.detector = self.detectors[0]
 
     @property
