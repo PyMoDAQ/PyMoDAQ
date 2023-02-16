@@ -254,15 +254,18 @@ class Filter2DFromRois(Filter):
 
     def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
         data_dict = dict([])
-        if data is not None:
-            for roi_key, roi in self._ROIs.items():
-                image_key = self._roi_settings['ROIs', roi_key, 'use_channel']
-                image_index = self._image_keys.index(image_key)
+        try:
+            if data is not None:
+                for roi_key, roi in self._ROIs.items():
+                    image_key = self._roi_settings['ROIs', roi_key, 'use_channel']
+                    image_index = self._image_keys.index(image_key)
 
-                sub_data = data.deepcopy()
-                sub_data.data = data[image_index]
-                data_dict[roi_key] = self.get_xydata_from_roi(roi, sub_data,
-                                                              self._roi_settings['ROIs', roi_key, 'math_function'])
+                    sub_data = data.deepcopy()
+                    sub_data.data = [data[image_index]]
+                    data_dict[roi_key] = self.get_xydata_from_roi(roi, sub_data,
+                                                                  self._roi_settings['ROIs', roi_key, 'math_function'])
+        except Exception as e:
+            pass
         return data_dict
 
     def get_slices_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> Tuple[slice]:

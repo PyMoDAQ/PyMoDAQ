@@ -75,7 +75,9 @@ class DAQScan(QObject, ParameterManager):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
+            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
             {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
+
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
             {'title': 'Get Probe signals', 'name': 'plot_probe', 'type': 'bool_push'},
             {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect'},
@@ -199,37 +201,38 @@ class DAQScan(QObject, ParameterManager):
 
         """
         try:
-
+            # todo update with v4 layout
+            pass
             ######################################################################
             # set scan selector
-            items = OrderedDict()
-            if self.navigator is not None:
-                items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
-            for det in self.modules_manager.detectors_all:
-                if len([view for view in det.ui.viewers if view.viewer_type == 'Data2D']) != 0:
-                    items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
-                                            names=[view.title for view in det.ui.viewers if
-                                                   view.viewer_type == 'Data2D'], )
-            items["DAQScan"] = dict(viewers=[self.ui.scan2D_graph], names=["DAQScan"])
-
-            if self.navigator is not None:
-                items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
-                items.update(self.scanner.scan_selector.viewers_items)
-
-            self.scanner.viewers_items = items
-
-            self.scanner.scan_selector.widget.setVisible(False)
-            self.scanner.scan_selector.settings.child('scan_options', 'scan_type').hide()
-
-            self.scanner.scan_selector.widget.setVisible(False)
-            self.scanner.scan_selector.show_scan_selector(visible=False)
-
-            self.show_average_dock(False)
-
-            self.ui.scan_dock.setEnabled(True)
-            self.file_menu.setEnabled(True)
-            self.settings_menu.setEnabled(True)
-            self.create_new_file(True)
+            # items = OrderedDict()
+            # if self.navigator is not None:
+            #     items["Navigator"] = dict(viewers=[self.navigator.viewer], names=["Navigator"])
+            # for det in self.modules_manager.detectors_all:
+            #     if len([view for view in det.ui.viewers if view.viewer_type == 'Data2D']) != 0:
+            #         items[det.title] = dict(viewers=[view for view in det.ui.viewers if view.viewer_type == 'Data2D'],
+            #                                 names=[view.title for view in det.ui.viewers if
+            #                                        view.viewer_type == 'Data2D'], )
+            # items["DAQScan"] = dict(viewers=[self.ui.scan2D_graph], names=["DAQScan"])
+            #
+            # if self.navigator is not None:
+            #     items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
+            #     items.update(self.scanner.scan_selector.viewers_items)
+            #
+            # self.scanner.viewers_items = items
+            #
+            # self.scanner.scan_selector.widget.setVisible(False)
+            # self.scanner.scan_selector.settings.child('scan_options', 'scan_type').hide()
+            #
+            # self.scanner.scan_selector.widget.setVisible(False)
+            # self.scanner.scan_selector.show_scan_selector(visible=False)
+            #
+            # self.show_average_dock(False)
+            #
+            # self.ui.scan_dock.setEnabled(True)
+            # self.file_menu.setEnabled(True)
+            # self.settings_menu.setEnabled(True)
+            # self.create_new_file(True)
 
         except Exception as e:
             logger.exception(str(e))
@@ -607,6 +610,9 @@ class DAQScan(QObject, ParameterManager):
 
         viewers_enum = [ViewersEnum('Data0D').increase_dim(self.scanner.n_axes)
                         for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
+
+        if self.settings['scan_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data1D') in viewers_enum:
+            viewers_enum = [ViewersEnum('Data1D')]
         viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
                              for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
         self.live_plotter.prepare_viewers(viewers_enum)
@@ -691,12 +697,13 @@ class DAQScan(QObject, ParameterManager):
     def save_temp_live_data(self, scan_data: ScanDataTemp):
         if scan_data.scan_index == 0:
             self.extended_saver.add_nav_axes(self.h5temp.raw_group, self.scanner.get_nav_axes())
-        self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes)
+        self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes,
+                                     distribution=self.scanner.distribution)
         if self.settings['plot_options', 'plot_each']:
             self.update_live_plots()
 
     def update_live_plots(self):
-        self.live_plotter.load_plot_data()
+        self.live_plotter.load_plot_data(group_1D=self.settings['scan_options', 'group0D'])
 
     #################
     #  SCAN FLOW

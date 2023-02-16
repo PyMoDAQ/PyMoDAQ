@@ -335,7 +335,13 @@ class View2D(ActionManager, QtCore.QObject):
 
         self.set_image_displayer(DataDistribution['uniform'])
 
+    def clear_plot_item(self):
+        for item in self.plotitem.items[:]:
+            if isinstance(item, SpreadImageItem) or isinstance(item, UniformImageItem):
+                self.plotitem.removeItem(item)
+
     def set_image_displayer(self, data_distribution: DataDistribution):
+        self.clear_plot_item()
         self.data_displayer = ImageDisplayer(self.plotitem, data_distribution)
         self.isocurver = IsoCurver(self.data_displayer.get_image('red'), self.histogrammer.get_histogram('red'))
         self.data_displayer.updated_item.connect(self.histogrammer.affect_histo_to_imageitems)

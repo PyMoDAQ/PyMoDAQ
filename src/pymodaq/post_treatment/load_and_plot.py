@@ -56,7 +56,7 @@ class LoaderPlotter:
         return self._data
 
     def load_data(self, filter_dims: List[Union[DataDim, str]] = None, filter_full_names: List[str] = None,
-                  remove_navigation: bool = True):
+                  remove_navigation: bool = True, group_1D=False):
         self._data = DataToExport('All')
         self.dataloader.load_all('/', self._data)
 
@@ -78,10 +78,30 @@ class LoaderPlotter:
 
         if filter_full_names is not None:
             self._data.data[:] = [data for data in self._data if data.get_full_name() in filter_full_names]
+
+        if group_1D:
+            data = self._data.get_data_from_dim('Data1D')
+            if len(data) > 0:
+                data1D_arrays = []
+                labels = []
+                for dwa in data:
+                    data1D_arrays.extend(dwa.data)
+                    labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                    self._data.remove(dwa)
+
+                data1D = DataFromPlugins('data1D', data=data1D_arrays, labels=labels)
+                self._data.append(data1D)
+
         return self._data
 
-    def load_plot_data(self):
-        self.load_data()
+    def load_plot_data(self, **kwargs):
+        """Load and plot all data from the current H5Saver
+
+        See Also
+        -----
+        load_data
+        """
+        self.load_data(**kwargs)
         self.show_data()
 
     def show_data(self):
@@ -140,8 +160,10 @@ def main(init_qt=True):
     win.setWindowTitle('PyMoDAQ Viewer')
     win.show()
 
-    loader = LoaderPlotter(area, h5saver)
-    loader.load_data(filter_dims=['Data2D', 'Data1D'])
+    loader = LoaderPlotter(area)
+    loader.h5saver = h5saver
+    data = loader.load_data(filter_dims=['Data2D', 'Data1D'], group_1D=True)
+    loader._init_show_data(data)
     loader.show_data()
 
     if init_qt:

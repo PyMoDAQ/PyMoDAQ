@@ -429,7 +429,7 @@ class Viewer1D(ViewerBase):
     @Slot(list)
     def _show_data(self, data: DataRaw):
         self.labels = data.labels
-        self.view.display_data(data)
+        self.view.display_data(data.sort_data())
         if len(self.view.roi_manager.ROIs) == 0:
             self.data_to_export_signal.emit(self.data_to_export)
 

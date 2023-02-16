@@ -109,14 +109,13 @@ class TabularScanner(ScannerBase):
 
     def update_model(self, init_data=None):
         if init_data is None:
-            init_data = [[0. for name in self._actuators]]
+            init_data = [[0. for _ in self._actuators]]
 
         self.table_model = TableModelTabular(init_data, [act.title for act in self._actuators])
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('tabular_table').setValue(self.table_model)
-
+        self.n_axes = len(self._actuators)
         self.update_table_view()
-
 
     def update_table_view(self):
         self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)

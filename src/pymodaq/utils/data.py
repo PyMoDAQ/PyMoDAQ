@@ -778,6 +778,7 @@ class AxesManagerBase:
         else:
             logger.warning('Could not set the corresponding sig_indexes into the data object, should be an iterable')
         self.sig_indexes = self.compute_sig_indexes()
+        self.shape
 
     @property
     def sig_indexes(self) -> IterableType[int]:
@@ -874,7 +875,7 @@ class AxesManagerUniform(AxesManagerBase):
         if len(self.axes) != 0:
             shape = []
             for ind in range(len(self.axes)):
-                shape.append(len(self.get_axis_from_index(ind, create=True)))
+                shape.append(len(self.get_axis_from_index(ind, create=True)[0]))
         else:
             shape = self._data_shape
         return tuple(shape)
@@ -1098,6 +1099,20 @@ class DataWithAxes(DataBase):
 
     def __repr__(self):
         return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
+
+    def sort_data(self, nav_axis: int = 0):
+        """Sort spread data along a given navigation axis, default is 0"""
+        if self.distribution == 'spread':
+            axis = self.get_nav_axes()[nav_axis]
+            sorted_index = np.argsort(axis.get_data())
+            data = self.deepcopy()
+            for ind in range(len(data)):
+                data.data[ind] = data.data[ind][sorted_index]
+            for ind in range(len(data.axes)):
+                data.axes[ind].data = data.axes[ind].data[sorted_index]
+            return data
+        else:
+            return self
 
     def transpose(self):
         if self.dim == 'Data2D':
@@ -1572,6 +1587,9 @@ class DataToExport(DataLowLevel):
         index_from_name_origin
         """
         return self.data.pop(index)
+
+    def remove(self, dwa: DataWithAxes):
+        self.pop(self.data.index(dwa))
 
     @property
     def data(self) -> List[DataWithAxes]:

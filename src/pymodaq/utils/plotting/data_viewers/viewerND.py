@@ -14,7 +14,7 @@ from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 import pymodaq.utils.daq_utils as utils
 import pymodaq.utils.math_utils as mutils
-from pymodaq.utils.data import DataRaw, Axis, DataDistribution, DataWithAxes, DataDim
+from pymodaq.utils.data import DataRaw, Axis, DataDistribution, DataWithAxes, DataDim, DataCalculated
 
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -340,13 +340,16 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
             if nav_data is not None:
-                nav_axes = nav_data.get_nav_axes()
+                nav_axes = nav_data.get_nav_axes_with_data()
                 if len(nav_axes) < 2:
                     self._navigator1D.show_data(nav_data)
                 elif len(nav_axes) == 2:
                     self._navigator2D.show_data(nav_data)
                 else:
-                    self._axes_viewer.set_nav_viewers(self._data.get_nav_axes_with_data())
+                    data_arrays = [axis.data for axis in nav_axes]
+                    labels = [axis.label for axis in nav_axes]
+                    nav_data = DataCalculated('nav', data=data_arrays, labels=labels)
+                    self._navigator1D.show_data(nav_data)
 
     def get_nav_data(self, data: DataRaw, x, y, width=None, height=None):
         try:
@@ -406,9 +409,13 @@ class SpreadDataDisplayer(BaseDataDisplayer):
 
 class ViewerND(ParameterManager, ActionManager, ViewerBase):
     params = [
-        {'title': 'Set data spread 0D', 'name': 'set_data_spread0D', 'type': 'action', 'visible': False},
-        {'title': 'Set data spread 1D', 'name': 'set_data_spread1D', 'type': 'action', 'visible': False},
-        {'title': 'Set data spread 2D', 'name': 'set_data_spread2D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 1D-0D', 'name': 'set_data_spread1D0D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 1D-1D', 'name': 'set_data_spread1D1D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 1D-2D', 'name': 'set_data_spread1D2D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 2D-0D', 'name': 'set_data_spread2D0D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 2D-1D', 'name': 'set_data_spread2D1D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 2D-2D', 'name': 'set_data_spread2D2D', 'type': 'action', 'visible': False},
+        {'title': 'Set data spread 3D-0D', 'name': 'set_data_spread3D0D', 'type': 'action', 'visible': False},
         {'title': 'Set data 4D', 'name': 'set_data_4D', 'type': 'action', 'visible': False},
         {'title': 'Set data 3D', 'name': 'set_data_3D', 'type': 'action', 'visible': False},
         {'title': 'Set data 2D', 'name': 'set_data_2D', 'type': 'action', 'visible': False},
@@ -496,26 +503,51 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
     def set_data_test(self, data_shape='3D'):
         if 'spread' in data_shape:
             data_tri = np.load('../../../resources/triangulation_data.npy')
-            axes = [Axis(data=data_tri[:, 0], index=0, label='x_axis', units='xunits', spread_order=0),
-                    Axis(data=data_tri[:, 1], index=0, label='y_axis', units='yunits', spread_order=1)]
+            axes = [Axis(data=data_tri[:, 0], index=0, label='x_axis', units='xunits', spread_order=0)]
 
-            if data_shape == 'spread0D':
-                data = data_tri[:, 2]
-            elif data_shape == 'spread1D':
-                x = np.linspace(-50, 50, 100)
-                data = np.zeros((data_tri.shape[0], len(x)))
-                for ind in range(data_tri.shape[0]):
-                    data[ind, :] = data_tri[ind, 2] * mutils.gauss1D(x, 0.01*ind - 10, 20)
-                axes.append(Axis(data=x, index=1, label='sig_axis'))
-            elif data_shape == 'spread2D':
-                x = np.linspace(-50, 50, 100)
-                y = np.linspace(-200, 200, 75)
-                data = np.zeros((data_tri.shape[0], len(y), len(x)))
-                for ind in range(data_tri.shape[0]):
-                    #data[ind, :] = data_tri[ind, 2] * mutils.gauss2D(0.01*x, 0.1*ind - 20, 20, y, 0.1*ind-20, 10)
-                    data[ind, :] = mutils.gauss2D(x, 10*data_tri[ind, 0], 20, y, 20*data_tri[ind, 1], 30)
-                axes.append(Axis(data=x, index=1, label='sig_axis0'))
-                axes.append(Axis(data=y, index=2, label='sig_axis1'))
+            if 'spread2D' in data_shape or 'spread3D' in data_shape:
+                axes.append(Axis(data=data_tri[:, 1], index=0, label='y_axis', units='yunits', spread_order=1))
+                if data_shape == 'spread2D0D':
+                    data = data_tri[:, 2]
+                elif data_shape == 'spread2D1D':
+                    x = np.linspace(-50, 50, 100)
+                    data = np.zeros((data_tri.shape[0], len(x)))
+                    for ind in range(data_tri.shape[0]):
+                        data[ind, :] = data_tri[ind, 2] * mutils.gauss1D(x, 0.01*ind - 10, 20)
+                    axes.append(Axis(data=x, index=1, label='sig_axis'))
+                elif data_shape == 'spread2D2D':
+                    x = np.linspace(-50, 50, 100)
+                    y = np.linspace(-200, 200, 75)
+                    data = np.zeros((data_tri.shape[0], len(y), len(x)))
+                    for ind in range(data_tri.shape[0]):
+                        #data[ind, :] = data_tri[ind, 2] * mutils.gauss2D(0.01*x, 0.1*ind - 20, 20, y, 0.1*ind-20, 10)
+                        data[ind, :] = mutils.gauss2D(x, 10*data_tri[ind, 0], 20, y, 20*data_tri[ind, 1], 30)
+                    axes.append(Axis(data=x, index=1, label='sig_axis0'))
+                    axes.append(Axis(data=y, index=2, label='sig_axis1'))
+                elif data_shape == 'spread3D0D':
+                    if 'spread2D' in data_shape or 'spread3D' in data_shape:
+                        axes.append(Axis(data=data_tri[:, 1], index=0, label='z_axis', units='zunits', spread_order=2))
+                        data = data_tri[:, 2]
+            
+            else:
+                if data_shape == 'spread1D0D':
+                    data = data_tri[:, 2]
+                elif data_shape == 'spread1D1D':
+                    x = np.linspace(-50, 50, 100)
+                    data = np.zeros((data_tri.shape[0], len(x)))
+                    for ind in range(data_tri.shape[0]):
+                        data[ind, :] = data_tri[ind, 2] * mutils.gauss1D(x, 0.01 * ind - 10, 20)
+                    axes.append(Axis(data=x, index=1, label='sig_axis'))
+                elif data_shape == 'spread1D2D':
+                    x = np.linspace(-50, 50, 100)
+                    y = np.linspace(-200, 200, 75)
+                    data = np.zeros((data_tri.shape[0], len(y), len(x)))
+                    for ind in range(data_tri.shape[0]):
+                        # data[ind, :] = data_tri[ind, 2] * mutils.gauss2D(0.01*x, 0.1*ind - 20, 20, y, 0.1*ind-20, 10)
+                        data[ind, :] = mutils.gauss2D(x, 10 * data_tri[ind, 0], 20, y, 20 * data_tri[ind, 1], 30)
+                    axes.append(Axis(data=x, index=1, label='sig_axis0'))
+                    axes.append(Axis(data=y, index=2, label='sig_axis1'))
+            
             dataraw = DataRaw('NDdata', distribution='spread', dim='DataND',
                               data=[data], nav_indexes=(0, ),
                               axes=axes)
@@ -602,9 +634,13 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.settings.child('set_data_2D').sigActivated.connect(lambda: self.set_data_test('2D'))
         self.settings.child('set_data_3D').sigActivated.connect(lambda: self.set_data_test('3D'))
         self.settings.child('set_data_4D').sigActivated.connect(lambda: self.set_data_test('4D'))
-        self.settings.child('set_data_spread0D').sigActivated.connect(lambda: self.set_data_test('spread0D'))
-        self.settings.child('set_data_spread1D').sigActivated.connect(lambda: self.set_data_test('spread1D'))
-        self.settings.child('set_data_spread2D').sigActivated.connect(lambda: self.set_data_test('spread2D'))
+        self.settings.child('set_data_spread2D0D').sigActivated.connect(lambda: self.set_data_test('spread2D0D'))
+        self.settings.child('set_data_spread2D1D').sigActivated.connect(lambda: self.set_data_test('spread2D1D'))
+        self.settings.child('set_data_spread2D2D').sigActivated.connect(lambda: self.set_data_test('spread2D2D'))
+        self.settings.child('set_data_spread1D0D').sigActivated.connect(lambda: self.set_data_test('spread1D0D'))
+        self.settings.child('set_data_spread1D1D').sigActivated.connect(lambda: self.set_data_test('spread1D1D'))
+        self.settings.child('set_data_spread1D2D').sigActivated.connect(lambda: self.set_data_test('spread1D2D'))
+        self.settings.child('set_data_spread3D0D').sigActivated.connect(lambda: self.set_data_test('spread3D0D'))
         self.settings.child('data_shape_settings', 'set_nav_axes').sigActivated.connect(self.reshape_data)
 
         self.navigator1D.get_action('crosshair').trigger()

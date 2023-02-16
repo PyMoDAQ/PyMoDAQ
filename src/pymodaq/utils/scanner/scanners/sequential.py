@@ -77,6 +77,7 @@ class SequentialScanner(ScannerBase):
         {'title': 'Sequences', 'name': 'seq_table', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate},
               ]
     distribution = DataDistribution['uniform']
+    n_axes = 1
 
     def __init__(self, actuators: List[str]):
 
@@ -110,7 +111,7 @@ class SequentialScanner(ScannerBase):
         self.table_model = TableModelSequential(init_data, )
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
         self.settings.child('seq_table').setValue(self.table_model)
-
+        self.n_axes = len(self._actuators)
         self.update_table_view()
 
     def get_pos(self):
