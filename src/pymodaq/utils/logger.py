@@ -15,7 +15,7 @@ config = Config()
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None,
-               logger_base_name='pymodaq', local_dir=None):
+               logger_base_name='pymodaq', local_dir=None) -> logging.Logger:
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -27,7 +27,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
 
     Returns
     -------
-    logger: (logging.logger) logger instance
+    logger: (logging.Logger) logger instance
     See Also
     --------
     get_module_name, logging.handlers.TimedRotatingFileHandler
@@ -37,17 +37,21 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
 
     logger = logging.getLogger(logger_name)
     log_path = get_set_config_path('log', local_dir=local_dir)
+    if log_level is None:
+        log_level = config('general', 'debug_level')
+    logger.setLevel(log_level)
     if add_handler:
-        if log_level is None:
-            log_level = config('general', 'debug_level')
-        logger.setLevel(log_level)
         handler = TimedRotatingFileHandler(log_path.joinpath(f'{logger_base_name}.log'), when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
         logging.captureWarnings(True)
-        warnings.filterwarnings('default', category=DeprecationWarning)
+        # only catch DeprecationWarning in DEBUG level
+        if log_level == 'DEBUG':
+            warnings.filterwarnings('default', category=DeprecationWarning)
+        else:
+            warnings.filterwarnings('ignore', category=DeprecationWarning)
         warnings_logger = logging.getLogger("py.warnings")
         warnings_logger.addHandler(handler)
 

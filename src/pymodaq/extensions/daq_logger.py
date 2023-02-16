@@ -3,14 +3,14 @@
 
 """Automated scanning module functionalities for PyMoDAQ
 
-Contains all objects related to the DAQ_Scan module, to do automated scans, saving data...
+Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
 
 import sys
 from collections import OrderedDict
 import datetime
 
-import utils.data
+
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.gui_utils.custom_app import CustomApp
 from pymodaq.utils.gui_utils.dock import Dock
@@ -22,7 +22,7 @@ from qtpy.QtCore import QObject, Slot, QThread, Signal, Qt
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.gui_utils.widgets import QLED
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.h5modules import H5Logger
+from pymodaq.utils.h5modules.h5logging import H5Logger
 
 config = Config()
 logger = set_logger(get_module_name(__file__))

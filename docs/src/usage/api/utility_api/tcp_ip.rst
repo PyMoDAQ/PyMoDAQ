@@ -3,6 +3,6 @@
 TCP/IP related methods
 **********************
 
-.. automodule:: pymodaq.daq_utils.tcp_server_client
+.. automodule:: pymodaq.utils.tcp_server_client
    :members:
 

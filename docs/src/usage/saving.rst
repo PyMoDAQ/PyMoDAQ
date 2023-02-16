@@ -102,7 +102,7 @@ and metadata is used by the H5Browser to display the info to the user.
    h5 browser and arrows to explain how each data or metadata is being displayed
 
 
-In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.daq_utils.h5saver,
+In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.utils.h5saver,
 it will save scans and datas following the rules displayed on :numref:`figure_dataset_layout` below:
 
    .. _figure_dataset_layout:

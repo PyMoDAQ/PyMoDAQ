@@ -4,13 +4,13 @@ from qtpy.QtCore import Qt, QObject, Slot, Signal
 import sys
 from post_treatment.daq_measurement.daq_measurement_GUI import Ui_Form
 from pymodaq.utils import daq_utils as utils
-from pymodaq.utils.math_utils import FourierFilterer
+from pymodaq.utils.plotting.utils.filter import FourierFilterer
 from scipy.optimize import curve_fit
 import numpy as np
-from enum import Enum
+from pymodaq.utils.enums import BaseEnum
 
 
-class Measurement_type(Enum):
+class Measurement_type(BaseEnum):
     Cursor_Integration = 0
     Max = 1
     Min = 2
@@ -18,10 +18,6 @@ class Measurement_type(Enum):
     Lorentzian_Fit = 4
     Exponential_Decay_Fit = 5
     Sinus = 6
-
-    @classmethod
-    def names(cls):
-        return [name for name, member in cls.__members__.items()]
 
     @classmethod
     def update_measurement_subtype(cls, mtype):

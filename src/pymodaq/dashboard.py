@@ -123,7 +123,6 @@ class DashBoard(QObject):
         self.extra_params = params
         self.preset_manager = PresetManager(path=self.preset_path, extra_params=params, param_options=param_options)
 
-    @Slot(str)
     def add_status(self, txt):
         """
             Add the QListWisgetItem initialized with txt informations to the User Interface logger_list and to the save_parameters.logger array.
@@ -170,8 +169,8 @@ class DashBoard(QObject):
             win = QtWidgets.QMainWindow()
         area = DockArea()
         win.setCentralWidget(area)
-        self.scan_module = extmod.DAQ_Scan(dockarea=area, dashboard=self)
-        self.extensions['DAQ_Scan'] = self.scan_module
+        self.scan_module = extmod.DAQScan(dockarea=area, dashboard=self)
+        self.extensions['DAQScan'] = self.scan_module
         self.scan_module.status_signal.connect(self.add_status)
         win.show()
         return self.scan_module

@@ -74,6 +74,9 @@ class Viewer1DBasic(QObject):
         self.roi_region.sigRegionChanged.connect(self.update_region)
         self.roi_line.sigPositionChanged.connect(self.update_line)
 
+    def get_line_position(self):
+        return self.roi_line.getXPos()
+
     def show_roi_region(self, show=True):
         self.roi_region.setVisible(show)
 

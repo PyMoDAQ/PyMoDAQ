@@ -1,16 +1,21 @@
+
+import copy
+from numbers import Real
+from typing import List
+
+from easydict import EasyDict as edict
 from multipledispatch import dispatch
+import numpy as np
+import pyqtgraph as pg
+from qtpy import QtGui, QtCore, QtWidgets
+from scipy.spatial import Delaunay as Triangulation
 
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.plotting.items.axis_scaled import AxisItem_Scaled
-from qtpy import QtGui, QtCore
-import pyqtgraph as pg
-import numpy as np
-from scipy.spatial import Delaunay as Triangulation
-import copy
-from easydict import EasyDict as edict
-
+from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
+
 
 class QVector(QtCore.QLineF):
     def __init__(self, *elt):
@@ -255,12 +260,30 @@ def makePolygons(tri):
 
 
 class Data0DWithHistory:
+    """Object to store scalar values and keep a history of a given length to them"""
     def __init__(self, Nsamples=200):
         super().__init__()
         self._datas = dict([])
-        self.Nsamples = Nsamples
+        self._Nsamples = Nsamples
         self._xaxis = None
         self._data_length = 0
+
+    @property
+    def length(self):
+        return self._Nsamples
+
+    @length.setter
+    def length(self, history_length: int):
+        if history_length > 0:
+            self._Nsamples = history_length
+
+    def __len__(self):
+        return self.length
+
+    @dispatch(data_mod.DataWithAxes)
+    def add_datas(self, data: data_mod.DataRaw):
+        datas = {data.labels[ind]: data.data[ind] for ind in range(len(data))}
+        self.add_datas(datas)
 
     @dispatch(list)
     def add_datas(self, datas: list):
@@ -286,7 +309,7 @@ class Data0DWithHistory:
 
         self._data_length += 1
 
-        if self._data_length > self.Nsamples:
+        if self._data_length > self._Nsamples:
             self._xaxis += 1
         else:
             self._xaxis = np.linspace(0, self._data_length, self._data_length, endpoint=False)
@@ -300,7 +323,7 @@ class Data0DWithHistory:
             else:
                 self._datas[data_key] = np.concatenate((self._datas[data_key], data))
 
-            if self._data_length > self.Nsamples:
+            if self._data_length > self._Nsamples:
                 self._datas[data_key] = self._datas[data_key][1:]
 
     @property
@@ -317,8 +340,67 @@ class Data0DWithHistory:
         self._xaxis = np.array([])
 
 
-class AxisInfosExtractor:
+class AxisInfos:
+    def __init__(self, scaling=1, offset=0, label='', units=''):
+        self._label = label
+        self._units = units
+        self._scaling = scaling
+        self._offset = offset
 
+        self.label = label
+        self.units = units
+        self.scaling = scaling
+        self.offset = offset
+
+    @property
+    def label(self):
+        return self._label
+
+    @label.setter
+    def label(self, label: str):
+        if not isinstance(label, str):
+            raise TypeError(f'The label should be a string')
+        self._label = label
+
+    @property
+    def units(self):
+        return self._units
+
+    @units.setter
+    def units(self, units: str):
+        if not isinstance(units, str):
+            raise TypeError(f'The units should be a string')
+        self._units = units
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, scaling: Real):
+        if not isinstance(scaling, Real):
+            raise TypeError(f'The scaling should be a real number')
+        self._scaling = scaling
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, offset: Real):
+        if not isinstance(offset, Real):
+            raise TypeError(f'The offset should be a real number')
+        self._offset = offset
+
+    def __eq__(self, other):
+        if isinstance(other, AxisInfos):
+            return self.label == other.label and self.units == other.units and self.scaling == other.scaling \
+                   and self.offset == other.offset
+        else:
+            super().__eq__(other)
+
+
+class AxisInfosExtractor:
     @staticmethod
     @dispatch(np.ndarray)
     def extract_axis_info(axis: np.ndarray):
@@ -336,16 +418,14 @@ class AxisInfosExtractor:
                 else:
                     offset = np.max(data)
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
 
     @staticmethod
     @dispatch(data_mod.Axis)
     def extract_axis_info(axis: data_mod.Axis):
-        data = None
-        if 'data' in axis:
-            data = axis['data']
-        label = axis['label']
-        units = axis['units']
+        data = axis.data
+        label = axis.label
+        units = axis.units
 
         scaling = 1
         offset = 0
@@ -357,7 +437,7 @@ class AxisInfosExtractor:
                 else:
                     offset = np.max(data)
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
 
     @staticmethod
     @dispatch(edict)
@@ -379,7 +459,7 @@ class AxisInfosExtractor:
                 else:
                     offset = np.max(data)
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
 
     @staticmethod
     @dispatch(AxisItem_Scaled)
@@ -389,4 +469,23 @@ class AxisInfosExtractor:
         scaling = axis.axis_scaling
         offset = axis.axis_offset
 
-        return scaling, offset, label, units
+        return AxisInfos(scaling, offset, label, units)
+
+
+class View_cust(pg.ViewBox):
+    """Custom ViewBox used to enable other properties compared to parent class: pg.ViewBox
+
+    """
+    sig_double_clicked = QtCore.Signal(float, float)
+
+    def __init__(self, parent=None, border=None, lockAspect=False, enableMouse=True, invertY=False,
+                 enableMenu=True, name=None, invertX=False):
+        super().__init__(parent, border, lockAspect, enableMouse, invertY, enableMenu, name, invertX)
+
+    def mouseClickEvent(self, ev):
+        if ev.button() == QtCore.Qt.RightButton and self.menuEnabled():
+            ev.accept()
+            self.raiseContextMenu(ev)
+        if ev.double():
+            pos = self.mapToView(ev.pos())
+            self.sig_double_clicked.emit(pos.x(), pos.y())

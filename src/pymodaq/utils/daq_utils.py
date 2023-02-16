@@ -143,7 +143,8 @@ class JsonConverter:
 
     @classmethod
     def trusted_types(cls):
-        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes']
+        return ['float', 'int', 'str', 'datetime', 'date', 'time', 'tuple', 'list', 'bool', 'bytes',
+                'float64']
 
     @classmethod
     def istrusted(cls, type_name):
@@ -451,6 +452,70 @@ def elt_as_first_element_dicts(elt_list, match_word='Mock', key='name'):
     return plugins
 
 
+def find_object_if_matched_attr_name_val(obj, attr_name, attr_value):
+    """check if an attribute  key/value pair match in a given object
+
+    Parameters
+    ----------
+    obj: object
+        list of objects
+    attr_name: str
+        attribute name to look for in the object
+    attr_value: object
+        value to match
+
+    Returns
+    -------
+    bool: True if the key/value pair has been found in dict_tmp
+
+    """
+    if hasattr(obj, attr_name):
+        if getattr(obj, attr_name) == attr_value:
+            return True
+    return False
+
+
+def find_objects_in_list_from_attr_name_val(objects, attr_name, attr_value, return_first=True):
+    """ lookup within a list of objects. Look for the objects within the list which has the correct attribute name,
+    value pair
+
+    Parameters
+    ----------
+    objects: list
+        list of objects
+    attr_name: str
+        attribute name to look for in the object
+    attr_value: object
+        value to match
+    return_first: bool
+        if True return the first objects found in the list else all the objects matching
+
+    Returns
+    -------
+    list of tuple(object, int): object and index or list of object and indexes
+    """
+    selection = []
+    obj = None
+    for ind, obj_tmp in enumerate(objects):
+        if find_object_if_matched_attr_name_val(obj_tmp, attr_name, attr_value):
+            obj = obj_tmp
+            if return_first:
+                break
+            else:
+                selection.append((obj_tmp, ind))
+
+    if obj is None:
+        if return_first:
+            return None, -1
+        else:
+            return []
+    else:
+        if return_first:
+            return obj, ind
+        else:
+            return selection
+
+
 def find_dict_if_matched_key_val(dict_tmp, key, value):
     """
     check if a key/value pair match in a given dictionnary
@@ -469,6 +534,8 @@ def find_dict_if_matched_key_val(dict_tmp, key, value):
         if dict_tmp[key] == value:
             return True
     return False
+
+
 
 
 def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
@@ -741,13 +808,13 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\',
-                                         exp="import pymodaq.daq_utils",
+    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
+                                         exp="dispatch",
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py', '.rst'],
-                                         replace=True,
-                                         replace_str="import pymodaq.utils")
+                                                  '.tox', 'daq_utils.py',],
+                                         replace=False,
+                                         replace_str="pymodaq.utils")
     get_version()
     pass
     # paths = recursive_find_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git',

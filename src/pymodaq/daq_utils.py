@@ -11,7 +11,7 @@ from pymodaq.utils.messenger import deprecation_msg
 
 deprecation_msg('Importing from pymodaq.daq_utils is deprecated, use pymodaq.utils.'
                 'It will cause an error in version 4.1.0', 3)
-
+import_module('.utils', 'pymodaq')
 sys.modules['pymodaq.daq_utils'] = import_module('.utils', 'pymodaq')
 sys.modules['pymodaq.daq_utils.abstract.logger'] = import_module('.abstract.logger', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.array_manipulation'] = import_module('.array_manipulation', 'pymodaq.utils')
@@ -19,7 +19,7 @@ sys.modules['pymodaq.daq_utils.calibration_camera'] = import_module('.calibratio
 sys.modules['pymodaq.daq_utils.chrono_timer'] = import_module('.chrono_timer', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.config'] = import_module('.config', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.conftests'] = import_module('.conftests', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.daq_enums'] = import_module('.daq_enums', 'pymodaq.utils')
+sys.modules['pymodaq.daq_utils.daq_enums'] = import_module('.enums', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.daq_utils'] = import_module('.daq_utils', 'pymodaq.utils')
 try:
     import sqlalchemy
@@ -63,16 +63,16 @@ sys.modules['pymodaq.daq_utils.parameter.pymodaq_ptypes.numeric'] = import_modul
 sys.modules['pymodaq.daq_utils.parameter.pymodaq_ptypes.pixmap'] = import_module('.parameter.pymodaq_ptypes.pixmap', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.parameter.pymodaq_ptypes.slide'] = import_module('.parameter.pymodaq_ptypes.slide', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.parameter.pymodaq_ptypes.table'] = import_module('.parameter.pymodaq_ptypes.table', 'pymodaq.utils')
+import_module('.parameter.pymodaq_ptypes.tableview', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.parameter.pymodaq_ptypes.tableview'] = import_module('.parameter.pymodaq_ptypes.tableview', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.parameter.pymodaq_ptypes.text'] = import_module('.parameter.pymodaq_ptypes.text', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.parameter.utils'] = import_module('.parameter.utils', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewer0D'] = import_module('.plotting.data_viewers.viewer0D', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewer0D_GUI'] = import_module('.plotting.data_viewers.viewer0D_GUI', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewer1D'] = import_module('.plotting.data_viewers.viewer1D', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewer1Dbasic'] = import_module('.plotting.data_viewers.viewer1Dbasic', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewer2D'] = import_module('.plotting.data_viewers.viewer2D', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewer2D_basic'] = import_module('.plotting.data_viewers.viewer2D_basic', 'pymodaq.utils')
-sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewerbase'] = import_module('.plotting.data_viewers.viewerbase', 'pymodaq.utils')
+sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewerbase'] = import_module('.plotting.data_viewers.viewer', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.data_viewers.viewerND'] = import_module('.plotting.data_viewers.viewerND', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.image_viewer'] = import_module('.plotting.image_viewer', 'pymodaq.utils')
 sys.modules['pymodaq.daq_utils.plotting.items.axis_scaled'] = import_module('.plotting.items.axis_scaled', 'pymodaq.utils')

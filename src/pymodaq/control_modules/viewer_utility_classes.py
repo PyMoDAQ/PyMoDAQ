@@ -7,10 +7,10 @@ from pyqtgraph.parametertree import Parameter
 from easydict import EasyDict as edict
 
 import numpy as np
-from pymodaq.utils.daq_utils import gauss1D, gauss2D
+from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.config import Config, get_set_local_dir
-from pymodaq.utils.scanner import ScanParameters
+#from pymodaq.utils.scanner import ScanParameters
 from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
@@ -265,11 +265,9 @@ class DAQ_Viewer_base(QObject):
         else:
             print(*status)
 
-    @Slot(ScanParameters)
     def update_scanner(self, scan_parameters):
+        #todo check this because ScanParameters has been removed
         self.scan_parameters = scan_parameters
-
-
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):

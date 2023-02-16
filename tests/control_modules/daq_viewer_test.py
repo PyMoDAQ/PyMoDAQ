@@ -10,7 +10,7 @@ from pymodaq.control_modules import daq_viewer as daqvm
 from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.dock import DockArea
-from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
+from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import Config
 from pymodaq.utils.parameter import utils as putils
@@ -63,12 +63,12 @@ class TestWithoutUI:
 
     def test_daq_type_detector(self, ini_daq_viewer_without_ui):
         prog, qtbot = ini_daq_viewer_without_ui
-        assert prog.daq_types == DAQ_TYPES
+        assert prog.daq_types == DAQTypesEnum.names()
         assert prog.daq_type == config('viewer', 'daq_type')
         assert prog.detectors == [det_dict['name'] for det_dict in DET_TYPES[prog.daq_type]]
         assert prog.detector == prog.detectors[0]
 
-    @pytest.mark.parametrize("daq_type", DAQ_TYPES)
+    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
     def test_daq_type_changed(self, ini_daq_viewer_without_ui, daq_type):
         prog, qtbot = ini_daq_viewer_without_ui
         prog.daq_type = daq_type
@@ -194,7 +194,7 @@ class TestWithUI:
     def test_init_ui(self, ini_daq_viewer_ui):
         prog, qtbot, dockarea = ini_daq_viewer_ui
 
-    @pytest.mark.parametrize("daq_type", DAQ_TYPES)
+    @pytest.mark.parametrize("daq_type", DAQTypesEnum.names())
     def test_daq_type_changed(self, ini_daq_viewer_ui, daq_type):
         prog, qtbot, dockarea = ini_daq_viewer_ui
         prog.daq_type = daq_type

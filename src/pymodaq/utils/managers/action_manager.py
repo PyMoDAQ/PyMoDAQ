@@ -1,6 +1,8 @@
+import warnings
+
 import pymodaq.utils.messenger
 from multipledispatch import dispatch
-from typing import Union
+from typing import Union, Callable
 
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtWidgets import QAction
@@ -32,7 +34,8 @@ class QAction(QAction):
         self.triggered.connect(slot)
 
 
-def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar=None, menu=None):
+def addaction(name='', icon_name='', tip='', checkable=False, slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
+              menu: QtWidgets.QMenu = None, visible=True, shortcut=None):
     """Create a new action and add it eventually to a toolbar and a menu
 
     Parameters
@@ -51,6 +54,8 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
         a toolbar where action should be added.
     menu: QMenu
         a menu where action should be added.
+    visible: bool
+        display or not the action in the toolbar/menu
     """
     if icon_name != '':
         icon = QtGui.QIcon()
@@ -72,7 +77,63 @@ def addaction(name='', icon_name='', tip='', checkable=False, slot=None, toolbar
         toolbar.addAction(action)
     if menu is not None:
         menu.addAction(action)
+    if shortcut is not None:
+        action.setShortcut(shortcut)
+    action.setVisible(visible)
     return action
+
+
+def addwidget(klass: Union[str, QtWidgets.QWidget], *args, tip='', toolbar: QtWidgets.QToolBar = None, visible=True,
+              signal_str=None, slot: Callable=None, setters = {}, **kwargs):
+    """Create and eventually add a widget to a toolbar
+
+    Parameters
+    ----------
+    klass: str or QWidget
+        should be a custom widget class or the name of a standard widget of QWidgets
+    args: list
+     variable arguments passed as is to the widget constructor
+    tip: str
+        a tooltip to be displayed when hovering above the widget
+    toolbar: QToolBar
+        a toolbar where the widget should be added.
+    visible: bool
+        display or not the action in the toolbar/menu
+    signal_str: str
+        an attribute of type Signal of the widget
+    slot: Callable
+        a callable connected to the signal
+    kwargs: dict
+        variable named arguments used as is in the widget constructor
+    setters: dict
+        method/value pair of the widget (for instance setMaximumWidth)
+    Returns
+    -------
+    QtWidgets.QWidget
+    """
+    if isinstance(klass, str):
+        if hasattr(QtWidgets, klass):
+            widget: QtWidgets.QWidget = getattr(QtWidgets, klass)(*args)
+        else:
+            return None
+    else:
+        try:
+            widget = klass(*args, **kwargs)
+        except:
+            return None
+    widget.setVisible(visible)
+    widget.setToolTip(tip)
+    if toolbar is not None:
+        toolbar.addWidget(widget)
+    if isinstance(signal_str, str) and slot is not None:
+        if hasattr(widget, signal_str):
+            getattr(widget, signal_str).connect(slot)
+
+    for setter in setters:
+        if hasattr(widget, setter):
+            getattr(widget, setter)(setters[setter])
+
+    return widget
 
 
 class ActionManager:
@@ -109,7 +170,8 @@ class ActionManager:
         raise NotImplementedError(f'You have to define actions here in the following form:'
                                   f'{self.setup_actions.__doc__}')
 
-    def add_action(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None):
+    def add_action(self, short_name='', name='', icon_name='', tip='', checkable=False, toolbar=None, menu=None,
+                   visible=True, shortcut=None, auto_toolbar=True, auto_menu=True):
         """Create a new action and add it to toolbar and menu
 
         Parameters
@@ -128,17 +190,59 @@ class ActionManager:
             a toolbar where action should be added. Actions can also be added later see *affect_to*
         menu: QMenu
             a menu where action should be added. Actions can also be added later see *affect_to*
+        visible: bool
+            display or not the action in the toolbar/menu
 
         See Also
         --------
         affect_to, pymodaq.resources.QtDesigner_Ressources.Icon_Library,
         pymodaq.utils.managers.action_manager.add_action
         """
+        if auto_toolbar:
+            if toolbar is None:
+                toolbar = self._toolbar
+        if auto_menu:
+            if menu is None:
+                menu = self._menu
+        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu,
+                                              visible=visible, shortcut=shortcut)
+
+    def add_widget(self, short_name, klass: Union[str, QtWidgets.QWidget], *args, tip='',
+                   toolbar: QtWidgets.QToolBar = None, visible=True, signal_str=None, slot: Callable=None, **kwargs):
+        """Create and add a widget to a toolbar
+
+        Parameters
+        ----------
+        short_name: str
+            the name as referenced in the dict self.actions
+        klass: str or QWidget
+            should be a custom widget class or the name of a standard widget of QWidgets
+        args: list
+         variable arguments passed as is to the widget constructor
+        tip: str
+            a tooltip to be displayed when hovering above the widget
+        toolbar: QToolBar
+            a toolbar where the widget should be added.
+        visible: bool
+            display or not the action in the toolbar/menu
+        signal_str: str
+            an attribute of type Signal of the widget
+        slot: Callable
+            a callable connected to the signal
+        kwargs: dict
+            variable named arguments passed as is to the widget constructor
+        Returns
+        -------
+        QtWidgets.QWidget
+        """
         if toolbar is None:
             toolbar = self._toolbar
-        if menu is None:
-            menu = self._menu
-        self._actions[short_name] = addaction(name, icon_name, tip, checkable=checkable, toolbar=toolbar, menu=menu)
+        widget = addwidget(klass, *args, tip=tip, toolbar=toolbar, visible=visible, signal_str=signal_str,
+                           slot=slot, **kwargs)
+        if widget is not None:
+            self._actions[short_name] = widget
+        else:
+            warnings.warn(UserWarning(f'Impossible to add the widget {short_name} and type {klass} to the toolbar'))
 
     def set_toolbar(self, toolbar):
         """affect a toolbar to self
@@ -171,6 +275,10 @@ class ActionManager:
             The text to display
         """
         self.get_action(action_name).setText(text)
+
+    @property
+    def actions(self):
+        return list(self._actions.values())
 
     def get_action(self, name):
         """Getter of a given action
@@ -226,7 +334,7 @@ class ActionManager:
         if isinstance(obj, QtWidgets.QToolBar) or isinstance(obj, QtWidgets.QMenu):
             obj.addAction(self._actions[action_name])
 
-    def connect_action(self, name, slot, connect=True):
+    def connect_action(self, name, slot, connect=True, signal_name=''):
         """Connect (or disconnect) the action referenced by name to the given slot
 
         Parameters
@@ -237,13 +345,18 @@ class ActionManager:
             a method/function
         connect: bool
             if True connect the trigger signal of the action to the defined slot else disconnect it
+        signal_name: str
+            try to use it as a signal (for widgets added...) otherwise use the *triggered* signal
         """
+        signal = 'triggered'
         if name in self._actions:
+            if hasattr(self._actions[name], signal_name):
+                signal = signal_name
             if connect:
-                self._actions[name].triggered.connect(slot)
+                getattr(self._actions[name], signal).connect(slot)
             else:
                 try:
-                    self._actions[name].triggered.disconnect()
+                    getattr(self._actions[name], signal).disconnect()
                 except (TypeError,) as e:
                     pass  # the action was not connected
         else:

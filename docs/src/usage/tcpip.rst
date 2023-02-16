@@ -114,7 +114,7 @@ of the message (number of bytes)
 
     message = get_string(self.socket)
 
-For the detail of the python utility functions used to convert, send and receive data see the ``pymodaq.daq_utils.tcpip_utils``
+For the detail of the python utility functions used to convert, send and receive data see the ``pymodaq.utils.tcpip_utils``
 module and its API (:ref:`tcpip_API`).
 
    .. _tcpip_fig:
@@ -147,7 +147,7 @@ Custom client: how to?
 #. The TCP/Client should first try to connect to the server (using TCP server PyMoDAQ plugin), once the connection is
    accepted, it should send an identification, the ``client type`` (*GRABBER* or *ACTUATOR* command)
 #. (optional) Then it can send some information about its configuration as an xml string following the
-   ``pymodaq.daq_utils.custom_parameter_tree.parameter_to_xml_string`` method.
+   ``pymodaq.utils.custom_parameter_tree.parameter_to_xml_string`` method.
 #. Then the client enters a loop waiting for input from the server and is ready to read commands on the socket
 #. Receiving commands
     * For a detector:  ``Send Data 0D``, ``Send Data 1D``, ``Send Data 2D``

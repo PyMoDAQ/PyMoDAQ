@@ -25,6 +25,7 @@ from pymodaq.utils.gui_utils import get_splash_sc
 from pymodaq.utils import config
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
+from pymodaq.utils.h5modules import module_saving
 
 
 local_path = config.get_set_local_dir()
@@ -70,6 +71,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         Parameters
         ----------
         parent: QWidget or None
+        parent: QWidget or None
             if it is a valid QWidget, it will hold the user interface to drive it
         title: str
             The unique (should be unique) string identifier for the underlying actuator
@@ -79,7 +81,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         self.logger.info(f'Initializing DAQ_Move: {title}')
 
         QObject.__init__(self)
-        ParameterManager.__init__(self)
+        ParameterManager.__init__(self, self.__class__.__name__)
         ControlModule.__init__(self)
 
         self.parent = parent
@@ -97,6 +99,9 @@ class DAQ_Move(ParameterManager, ControlModule):
         self._title = title
 
         self.actuator = ACTUATOR_TYPES[0]
+
+        self.module_and_data_saver = module_saving.ActuatorSaver(self)
+
         self._move_done_bool = True
 
         self._current_value = 0.
@@ -600,6 +605,10 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self.update_settings()
         else:
             raise ActuatorError(f'{act_type} is an invalid actuator, should be within {ACTUATOR_TYPES}')
+
+    @property
+    def units(self):
+        return self.settings['move_settings', 'units']
 
     def update_settings(self):
 

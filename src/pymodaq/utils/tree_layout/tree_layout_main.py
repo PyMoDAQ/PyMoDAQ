@@ -3,17 +3,19 @@ from qtpy.QtCore import QObject, Signal, QLocale
 import sys
 
 
-class Tree_layout(QObject):
+class TreeLayout(QObject):
     """
     qtpy class object based on QtreeWidget
-    The function populate_Tree has to be used in order to populate the tree with structure as nested lists of dicts
+    The function populate_tree has to be used in order to populate the tree with structure as nested lists of dicts
 
     """
     status_sig = Signal(str)
-
+    item_clicked_sig = Signal(object)
+    item_double_clicked_sig = Signal(object)
+    
     def __init__(self, parent=None, col_counts=1, labels=None):
         
-        super(Tree_layout, self).__init__()
+        super().__init__()
 
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -21,66 +23,79 @@ class Tree_layout(QObject):
 
         self.setupUi()
 
-        self.ui.Tree.setColumnCount(col_counts)
+        self.tree.setColumnCount(col_counts)
         if labels is not None:
-            self.ui.Tree.setHeaderLabels(labels)
+            self.tree.setHeaderLabels(labels)
 
-        self.ui.Open_Tree.clicked.connect(self.ui.Tree.expandAll)
-        self.ui.Close_Tree.clicked.connect(self.ui.Tree.collapseAll)
-        self.ui.Open_Tree_Selected.clicked.connect(self.open_Tree_selection)
+        self.open_tree_pb.clicked.connect(self.expand_all)
+        self.close_tree_pb.clicked.connect(self.collapse_all)
+        self.open_tree_selected_pb.clicked.connect(self.open_tree_selection)
+        
+        self.tree.itemClicked.connect(self.item_clicked_sig.emit)
+        self.tree.itemDoubleClicked.connect(self.item_double_clicked_sig.emit)
+
+    def _current_text(self, col_index: int = 2):
+        return self.tree.currentItem().text(col_index)
+
+    def current_node_path(self):
+        return self._current_text(2)
+
+    def expand_all(self):
+        self.tree.expandAll()
+
+    def collapse_all(self):
+        self.tree.collapseAll()
 
     @property
     def treewidget(self):
-        return self.ui.Tree
+        return self.tree
 
     def setupUi(self):
-        self.ui = QObject()
-
         vlayout = QtWidgets.QVBoxLayout()
         hlayout = QtWidgets.QHBoxLayout()
 
-        self.ui.Tree = CustomTree()
-        vlayout.addWidget(self.ui.Tree)
+        self.tree = CustomTree()
+        vlayout.addWidget(self.tree)
 
         iconopen = QtGui.QIcon()
         iconopen.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/tree.png"), QtGui.QIcon.Normal,
                            QtGui.QIcon.Off)
-        self.ui.Open_Tree = QtWidgets.QPushButton('Open Tree')
-        self.ui.Open_Tree.setIcon(iconopen)
+        self.open_tree_pb = QtWidgets.QPushButton('Open Tree')
+        self.open_tree_pb.setIcon(iconopen)
 
         iconopensel = QtGui.QIcon()
         iconopensel.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/tree.png"), QtGui.QIcon.Normal,
                               QtGui.QIcon.Off)
-        self.ui.Open_Tree_Selected = QtWidgets.QPushButton('Open Selected')
-        self.ui.Open_Tree_Selected.setIcon(iconopensel)
+        self.open_tree_selected_pb = QtWidgets.QPushButton('Open Selected')
+        self.open_tree_selected_pb.setIcon(iconopensel)
 
         iconclose = QtGui.QIcon()
         iconclose.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/CollapseAll.png"), QtGui.QIcon.Normal,
                             QtGui.QIcon.Off)
-        self.ui.Close_Tree = QtWidgets.QPushButton('Close Tree')
-        self.ui.Close_Tree.setIcon(iconclose)
+        self.close_tree_pb = QtWidgets.QPushButton('Close Tree')
+        self.close_tree_pb.setIcon(iconclose)
 
-        hlayout.addWidget(self.ui.Open_Tree)
-        hlayout.addWidget(self.ui.Open_Tree_Selected)
-        hlayout.addWidget(self.ui.Close_Tree)
+        hlayout.addWidget(self.open_tree_pb)
+        hlayout.addWidget(self.open_tree_selected_pb)
+        hlayout.addWidget(self.close_tree_pb)
 
         vlayout.addLayout(hlayout)
 
         self.parent.setLayout(vlayout)
 
-    def open_Tree_selection(self):
-        self.Tree_open_children(self.ui.Tree.selectedIndexes()[0])
+    def open_tree_selection(self):
+        self.tree_open_children(self.tree.selectedIndexes()[0])
 
-    def Tree_open_children(self, item_index):
+    def tree_open_children(self, item_index):
         try:
             if not (item_index.isValid()):
                 return
 
-            self.ui.Tree.expand(item_index)
+            self.tree.expand(item_index)
         except Exception as e:
             self.status_sig.emit(str(e))
 
-    def Tree_open_parents(self, item_index):
+    def tree_open_parents(self, item_index):
         try:
             if not (item_index.isValid()):
                 return
@@ -90,14 +105,14 @@ class Tree_layout(QObject):
             while flag:
                 parent = parent.parent()
                 if parent != empty:
-                    self.ui.Tree.expand(parent)
+                    self.tree.expand(parent)
                 else:
                     flag = False
                     break
         except Exception as e:
             self.status_sig.emit(str(e))
 
-    def populate_Tree(self, data_dict):
+    def populate_tree(self, data_dict):
         try:
             parents = []
             for data in data_dict:
@@ -111,7 +126,7 @@ class Tree_layout(QObject):
                 parent.addChildren(Items)
                 parents.append(parent)
 
-            self.ui.Tree.addTopLevelItems(parents)
+            self.tree.addTopLevelItems(parents)
         except Exception as e:
             self.status_sig.emit(str(e))
 
@@ -139,7 +154,7 @@ class Tree_layout(QObject):
 class CustomTree(QtWidgets.QTreeWidget):
 
     def __init__(self, parent=None):
-        super(CustomTree, self).__init__(parent)
+        super().__init__(parent)
         self.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 
 
@@ -148,11 +163,11 @@ if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
-    prog = Tree_layout(Form, col_counts=2, labels=["Material", "File"])
+    prog = TreeLayout(Form, col_counts=2, labels=["Material", "File"])
 
     # example of actions to add to the tree widget in order to show a context menu
     detector_action = QtWidgets.QAction("Grab from camera", None)
-    prog.ui.Tree.addAction(detector_action)
+    prog.tree.addAction(detector_action)
     ########################
 
     Form.show()
@@ -161,7 +176,7 @@ if __name__ == '__main__':
         dict(name='fiston1', contents=[dict(name='subfiston', contents='baby', filename='Cest pas malin')]),
         dict(name='fiston2', contents=[dict(name='subfiston', contents='baby', filename='Cest pas normal')])]),
         dict(name='maman', contents=[dict(name='fistone', contents=[dict(name='subfistone', contents='baby')])])]
-    prog.populate_Tree(data)
+    prog.populate_tree(data)
     # filename='C:\\Data\\2019\\20190220\\Dataset_20190220_004\\Dataset_20190220_004.h5'
     # import tables
     # h5_file = tables.open_file(filename, mode = "a")

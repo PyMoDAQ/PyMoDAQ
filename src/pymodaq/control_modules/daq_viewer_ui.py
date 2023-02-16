@@ -16,14 +16,18 @@ from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.control_modules.utils import ControlModuleUI, ViewerError
 from pymodaq.utils.plotting.data_viewers import DATA_TYPES, Viewer0D, Viewer1D, Viewer2D, ViewerND
 from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
-from pymodaq.utils.gui_utils import Dock
+from pymodaq.utils.gui_utils import Dock, DockArea
 from pymodaq.utils.config import Config
-from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
+from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, DAQTypesEnum
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerFactory, ViewersEnum, ViewerDispatcher
+from pymodaq.utils.enums import enum_checker
+
+
+viewer_factory = ViewerFactory()
 config = Config()
 
 
-
-class DAQ_Viewer_UI(ControlModuleUI):
+class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
     """DAQ_Viewer user interface.
 
     This class manages the UI and emit dedicated signals depending on actions from the user
@@ -59,7 +63,9 @@ class DAQ_Viewer_UI(ControlModuleUI):
     command_sig = Signal(ThreadCommand)
 
     def __init__(self, parent, title="DAQ_Viewer", daq_type='DAQ2D', dock_settings=None, dock_viewer=None):
-        super().__init__(parent)
+        ControlModuleUI.__init__(self, parent)
+        ViewerDispatcher.__init__(self, self.dockarea, title=title, next_to_dock=dock_settings)
+
         self.title = title
 
         self._detector_widget = None
@@ -72,19 +78,16 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._do_bkg_cb = None
         self._take_bkg_pb = None
         self._settings_dock = dock_settings
-        self._viewer_docks = []
-        self._viewer_widgets = []
-        self._viewer_types = []
-        self._viewers = []
-
         self.setup_docks()
-        self.daq_types = DAQ_TYPES
-        self.daq_type = daq_type
-        self.detectors = [det['name'] for det in DET_TYPES[daq_type]]
-        self.setup_actions()  # see ActionManager MixIn class
-        self.add_viewer(f'Data{daq_type[3:]}', dock_viewer=dock_viewer)
-        self.connect_things()
 
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+        self.daq_types = daq_type.names()  # init the combobox through the daq_types attribute
+        self.daq_type = daq_type
+
+        self.detectors = [det['name'] for det in DET_TYPES[self.daq_type.name]]
+        self.setup_actions()  # see ActionManager MixIn class
+        self.add_viewer(self.daq_type.to_viewer_type(), dock_viewer=dock_viewer)
+        self.connect_things()
 
         self._enable_grab_buttons(False)
         self._detector_widget.setVisible(False)
@@ -112,107 +115,21 @@ class DAQ_Viewer_UI(ControlModuleUI):
 
     @property
     def daq_type(self):
-        return self._daq_types_combo.currentText()
+        return DAQTypesEnum[self._daq_types_combo.currentText()]
 
     @daq_type.setter
-    def daq_type(self, dtype: str):
-        self._daq_types_combo.setCurrentText(dtype)
+    def daq_type(self, dtype: DAQTypesEnum):
+        self._daq_types_combo.setCurrentText(dtype.name)
 
     @property
     def daq_types(self):
-        return [self._daq_types_combo.itemText(ind) for ind in range(self._daq_types_combo.count())]
+        return self.daq_type.names()
 
     @daq_types.setter
     def daq_types(self, dtypes: List[str]):
-        #self._daq_types_combo.currentTextChanged.disconnect()
         self._daq_types_combo.clear()
         self._daq_types_combo.addItems(dtypes)
-        self.daq_type = dtypes[0]
-        #self._daq_types_combo.currentTextChanged.connect(self._daq_type_changed)
-
-    @property
-    def viewers(self):
-        return self._viewers
-
-    @property
-    def viewer_docks(self):
-        return self._viewer_docks
-
-    @property
-    def viewer_widgets(self):
-        return self._viewer_widgets
-
-    @property
-    def viewer_types(self):
-        return self._viewer_types
-
-    def remove_viewers(self, Nviewers_to_leave: int = 0):
-        """Remove viewers from the list after index Nviewers_to_leave
-
-        Parameters
-        ----------
-        Nviewers
-
-        Returns
-        -------
-
-        """
-        while len(self.viewer_docks) > Nviewers_to_leave:
-            widget = self.viewer_widgets.pop()
-            widget.close()
-            dock = self.viewer_docks.pop()
-            dock.close()
-            self.viewers.pop()
-            self.viewer_types.pop()
-            QtWidgets.QApplication.processEvents()
-
-    def add_viewer(self, datadim: str, dock_viewer=None):
-        self._viewer_widgets.append(QtWidgets.QWidget())
-        if datadim == "Data0D":
-            self.viewers.append(Viewer0D(self._viewer_widgets[-1]))
-
-        elif datadim == "Data1D":
-            self.viewers.append(Viewer1D(self._viewer_widgets[-1]))
-
-        elif datadim == "Data2D":
-            self.viewers.append(Viewer2D(self._viewer_widgets[-1]))
-
-        else:  # for multideimensional data 0 up to dimension 4
-            self.viewers.append(ViewerND(self._viewer_widgets[-1]))
-
-        self.viewer_types.append(datadim)
-        if dock_viewer is None:
-            dock_viewer = Dock(f'{self.title}_Viewer_{len(self.viewer_docks) + 1}', size=(350, 350), closable=False)
-        self.viewer_docks.append(dock_viewer)
-        self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
-        if len(self.viewer_docks) == 1:
-            self.dockarea.addDock(self.viewer_docks[-1], 'right', self._settings_dock)
-        else:
-            self.dockarea.addDock(self.viewer_docks[-1], 'right', self.viewer_docks[-2])
-
-    def update_viewers(self, datadims: List[str]):
-        for datadim in datadims:
-            if datadim not in DATA_TYPES:
-                raise ViewerError(f'{datadims} is not a valid data dimensionality')
-
-        # check if viewers are compatible with new data dim
-        Nviewers_to_leave = 0
-        for ind, datadim in enumerate(datadims):
-            if len(self.viewer_types) > ind:
-                if datadim == self.viewer_types[ind]:
-                    Nviewers_to_leave += 1
-                else:
-                    break
-            else:
-                break
-        self.remove_viewers(Nviewers_to_leave)
-        ind_loop = 0
-        while len(self.viewers) < len(datadims):
-            datadim = datadims[Nviewers_to_leave + ind_loop]
-            ind_loop += 1
-            self.add_viewer(datadim)
-        self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
-                                                                              viewers=self.viewers)))
+        self.daq_type = DAQTypesEnum[dtypes[0]]
 
     def close(self):
         for dock in self.viewer_docks:
@@ -324,6 +241,11 @@ class DAQ_Viewer_UI(ControlModuleUI):
         self._do_bkg_cb.clicked.connect(lambda checked: self.command_sig.emit(ThreadCommand('do_bkg', checked)))
         self._take_bkg_pb.clicked.connect(lambda: self.command_sig.emit(ThreadCommand('take_bkg')))
 
+    def update_viewers(self, viewers_type: List[ViewersEnum]):
+        super().update_viewers(viewers_type)
+        self.command_sig.emit(ThreadCommand('viewers_changed', attribute=dict(viewer_types=self.viewer_types,
+                                                                              viewers=self.viewers)))
+
     @property
     def data_ready(self):
         return self._data_ready_led.get_state()
@@ -332,11 +254,12 @@ class DAQ_Viewer_UI(ControlModuleUI):
     def data_ready(self, status):
         self._data_ready_led.set_as(status)
 
-    def _daq_type_changed(self, daq_type):
-        if daq_type in self.daq_types:
-            self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
-            if self.viewer_types != [f'Data{daq_type[3:]}']:
-                self.update_viewers([f'Data{daq_type[3:]}'])
+    def _daq_type_changed(self, daq_type: DAQTypesEnum):
+        daq_type = enum_checker(DAQTypesEnum, daq_type)
+
+        self.command_sig.emit(ThreadCommand('daq_type_changed', daq_type))
+        if self.viewer_types != [daq_type.to_viewer_type()]:
+            self.update_viewers([daq_type.to_viewer_type()])
 
     def show_settings(self, show=True):
         if (self.is_action_checked('show_settings') and not show) or \
@@ -409,7 +332,7 @@ class DAQ_Viewer_UI(ControlModuleUI):
     @detector_init.setter
     def detector_init(self, status):
         if status:
-            self._info_detector.setText(f'{self.daq_type} : {self.detector}')
+            self._info_detector.setText(f'{self.daq_type.name} : {self.detector}')
         else:
             self._info_detector.setText('')
         self._ini_state_led.set_as(status)
@@ -435,9 +358,6 @@ def main(init_qt=True):
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
 
-    daq_types = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
-    detectors = [f'Detector Detector {ind}' for ind in range(5)]
-
     param = Parameter.create(name='settings', type='group', children=daq_viewer_params)
     tree = ParameterTree()
     tree.setParameters(param, showTop=False)
@@ -454,10 +374,11 @@ def main(init_qt=True):
             prog.detector_init = cmd_sig.attribute[0]
 
     # prog.detectors = detectors
-    # prog.daq_types = daq_types
     prog.command_sig.connect(print_command_sig)
 
     prog.add_setting_tree(tree)
+
+    prog.update_viewers([ViewersEnum['Viewer0D'], ViewersEnum['Viewer1D'], ViewersEnum['Viewer2D']])
 
     if init_qt:
         sys.exit(app.exec_())

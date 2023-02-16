@@ -126,13 +126,15 @@ def widget_to_png_to_bytes(widget, keep_aspect=True, width=200, height=100):
     return buffer.data().data()
 
 
-def pngbinary2Qlabel(databinary):
+def pngbinary2Qlabel(databinary, scale_height: int = None):
     buff = QBuffer()
     buff.open(QIODevice.WriteOnly)
     buff.write(databinary)
     dat = buff.data()
     pixmap = QtGui.QPixmap()
     pixmap.loadFromData(dat, 'PNG')
+    if scale_height is not None and isinstance(scale_height, int):
+        pixmap = pixmap.scaledToHeight(scale_height)
     label = QtWidgets.QLabel()
     label.setPixmap(pixmap)
     return label

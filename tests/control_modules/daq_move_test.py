@@ -9,13 +9,10 @@ from pytest import fixture, approx
 from pymodaq.control_modules import daq_move as daqmv
 from pymodaq.control_modules.daq_move import DAQ_Move
 from pymodaq.control_modules.utils import ControlModule
-from pymodaq.utils.gui_utils.dock import DockArea
-from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, get_viewer_plugins
+
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.utils.config import Config
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.parameter import Parameter
-from pymodaq.utils.h5modules import H5BrowserUtil
+
 
 config = Config()
 config_viewer = daqmv.config
@@ -40,6 +37,13 @@ def ini_daq_move_ui(init_qt):
     qtbot.addWidget(widget)
     prog = DAQ_Move(widget)
     return prog, qtbot, widget
+
+
+class TestMantatoryAttributes:
+    def test_methods(self, ini_daq_move_without_ui):
+        actuator, qtbot = ini_daq_move_without_ui
+        assert hasattr(actuator, 'units')
+        assert hasattr(actuator, 'title')
 
 
 class TestMethods:
