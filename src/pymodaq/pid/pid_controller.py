@@ -2,6 +2,7 @@
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 from pyqtgraph.widgets.SpinBox import SpinBox
+from functools import partial       #needed for the button to sync setpoint with currpoint
 
 from pymodaq.daq_utils.parameter import utils as putils
 from pymodaq.daq_utils.daq_utils import ThreadCommand, set_logger, get_module_name, \
@@ -232,6 +233,8 @@ class DAQ_PID(QObject):
         lab1 = QtWidgets.QLabel('Current Value:')
         self.toolbar_layout.addWidget(lab1, 4, 0, 1, 2)
 
+        labmaj = QtWidgets.QLabel('Sync Value:')
+        self.toolbar_layout.addWidget(labmaj, 5, 0, 1, 2)
 
         # create main parameter tree
         self.settings_tree = ParameterTree()
@@ -353,6 +356,7 @@ class DAQ_PID(QObject):
     def set_setpoints_buttons(self):
         self.setpoints_sb = []
         self.currpoints_sb = []
+        self.syncvalue_pb = []
         for ind_set in range(self.model_class.Nsetpoints):
 
             self.setpoints_sb.append(SpinBox())
@@ -374,7 +378,17 @@ class DAQ_PID(QObject):
             self.currpoints_sb[-1].setFont(font)
             self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2+ind_set, 1, 1)
 
+            self.syncvalue_pb.append(QtWidgets.QPushButton('Synchro {}'.format(ind_set)))
+            self.syncvalue_pb[ind_set].clicked.connect(partial(self.currpoint_as_setpoint, ind_set))
+            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 5, 2+ind_set)
         self.setpoints_signal.connect(self.setpoints_external)
+
+    def currpoint_as_setpoint(self, i=0):
+        '''
+        Function used by the sync buttons. The button i will attribute the value of the i-th currpoint to the i-th setpoint.
+        '''
+        self.setpoints_sb[i].setValue(self.curr_points[i])
+        self.update_runner_setpoints
 
     def quit_fun(self):
         """
@@ -493,8 +507,8 @@ class PIDRunner(QObject):
         Nsetpoints = model_class.Nsetpoints
         self.current_time = 0
         self.inputs_from_dets = InputFromDetector(values=setpoints)
-        self.outputs = None
-        self.outputs_to_actuators = OutputToActuator(values=[0. for ind in range(Nsetpoints)])
+        self.outputs = [0. for _ in range(Nsetpoints)]
+        self.outputs_to_actuators = OutputToActuator(values=[0. for _ in range(Nsetpoints)])
 
         if 'sample_time' in params:
             self.sample_time = params['sample_time']
@@ -516,7 +530,7 @@ class PIDRunner(QObject):
     #     self.timeout_timer.timeout.connect(self.timeout)
     #
     def timerEvent(self, event):
-       self.pid_output_signal.emit(dict(output=self.outputs_to_actuators.values,
+        self.pid_output_signal.emit(dict(output=self.outputs_to_actuators.values,
                                              input=self.inputs_from_dets.values))
 
     @Slot(ThreadCommand)
