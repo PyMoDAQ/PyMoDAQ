@@ -71,7 +71,8 @@ def timer(func):
     return wrapper_timer
 
 
-def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None):
+def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False,
+               log_level=None) -> logging.Logger:
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
