@@ -225,11 +225,18 @@ class Filter1DFromRois(Filter):
 
     def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes, data_index=0):
         if data is not None:
-            indexes = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes(roi.getRegion())
-            sub_data = data.isig[indexes[0]: indexes[1]]
+            _slice = self.get_slice_from_roi(roi, data)
+            sub_data = data.isig[_slice]
             processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
             return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
                                int_data=processed_data.data[data_index])
+
+    def get_slice_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> slice:
+        ind_x_min, ind_x_max = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes(roi.getRegion())
+        size = data.get_axis_from_index(0)[0].size
+        ind_x_min = int(min(max(ind_x_min, 0), size))
+        ind_x_max = int(max(0, min(ind_x_max, size)))
+        return slice(ind_x_min, ind_x_max)
 
 
 class Filter2DFromRois(Filter):
@@ -271,10 +278,12 @@ class Filter2DFromRois(Filter):
     def get_slices_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> Tuple[slice]:
         x, y = roi.pos().x(), roi.pos().y()
         width, height = roi.size().x(), roi.size().y()
-        ind_x_min = int(max(x, 0))
-        ind_y_min = int(max(y, 0))
-        ind_x_max = int(min(x+width, data.get_axis_from_index(1)[0].size))
-        ind_y_max = int(min(y+height, data.get_axis_from_index(0)[0].size))
+        size_x = data.get_axis_from_index(1)[0].size
+        size_y = data.get_axis_from_index(0)[0].size
+        ind_x_min = int(min(max(x, 0), size_x))
+        ind_y_min = int(min(max(y, 0), size_y))
+        ind_x_max = int(max(0, min(x+width, size_x)))
+        ind_y_max = int(max(0, min(y+height, size_y)))
 
         return slice(ind_y_min,ind_y_max), slice(ind_x_min, ind_x_max)
 
