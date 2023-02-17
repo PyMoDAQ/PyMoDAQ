@@ -107,6 +107,7 @@ def main(plugin_file=None, init=True):
         det_type = f'DAQ{Path(plugin_file).stem[4:6].upper()}'
     prog = DAQ_Viewer(area, title="Testing")
     win.show()
+    prog.daq_type = det_type
     prog.detector = detector
     if init:
         prog.init_det()
