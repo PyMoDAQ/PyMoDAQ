@@ -170,6 +170,7 @@ class DAQ_Move_base(QObject):
     move_done_signal = Signal(float)
     is_multiaxes = False
     stage_names = []
+    axes_name = []
     params = []
     _controller_units = ''
     _epsilon = 1

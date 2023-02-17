@@ -968,8 +968,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 * close: close the current thread and delete corresponding attribute on cascade.
                 * grab : emit grab_status(True)
                 * grab_stopped: emit grab_status(False)
-                * x_axis: update x_axis from status attribute and User Interface viewer consequently.
-                * y_axis: update y_axis from status attribute and User Interface viewer consequently.
+                * x_axis: update x_axis from status attribute and User Interface viewer consequently. (Deprecated)
+                * y_axis: update y_axis from status attribute and User Interface viewer consequently. (Deprecated)
                 * update_channel: update the viewer channels in case of 0D DAQ_type (deprecated)
                 * update_settings: Update the "detector setting" node in the settings tree.
                 * update_main_settings: update the "main setting" node in the settings tree
@@ -1023,10 +1023,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.grab_status.emit(False)
 
         elif status.command == "x_axis":
-            deprecation_msg(f'using emit_x_axis in plugins is deprecated use data emission with correct axis to set it')
+            deprecation_msg(f'using emit_x_axis in plugins is deprecated use data emission with correct axis to set it.'
+                            f'To send it only once, use the data_grabed_signal_temp')
 
         elif status.command == "y_axis":
-            deprecation_msg(f'using emit_y_axis in plugins is deprecated use data emission with correct axis to set it')
+            deprecation_msg(f'using emit_y_axis in plugins is deprecated use data emission with correct axis to set it.'
+                            f'To send it only once, use the data_grabed_signal_temp')
 
         elif status.command == "update_channels":
             pass
@@ -1535,7 +1537,8 @@ def main(init_qt=True, init_det=False):
     title = "Testing"
     viewer = DAQ_Viewer(area, title="Testing", daq_type=config('viewer', 'daq_type'),
                         **prepare_docks(area, title))
-    viewer.init_hardware_ui(init_det)
+    if init_det:
+        viewer.init_hardware_ui(init_det)
 
     if init_qt:
         sys.exit(app.exec_())
