@@ -11,7 +11,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from pyqtgraph import ROI as pgROI
 
-from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw, DataDistribution
+from pymodaq.utils.data import Axis, DataToExport, DataFromRoi, DataFromPlugins, DataRaw, DataDistribution, DataWithAxes
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.managers.roi_manager import ROIManager, SimpleRectROI
 from pymodaq.utils.managers.action_manager import ActionManager
@@ -19,7 +19,7 @@ from pymodaq.utils.plotting.widgets import ImageWidget
 
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
-from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS
+from pymodaq.utils.plotting.items.axis_scaled import AXIS_POSITIONS, AxisItem_Scaled
 from pymodaq.utils.plotting.items.crosshair import Crosshair
 from pymodaq.utils.plotting.utils.filter import Filter2DFromCrosshair, Filter2DFromRois
 import pymodaq.utils.daq_utils as utils
@@ -538,7 +538,7 @@ class View2D(ActionManager, QtCore.QObject):
     def get_double_clicked(self):
         return self.image_widget.view.sig_double_clicked
 
-    def get_axis(self, position='left'):
+    def get_axis(self, position='left') -> AxisItem_Scaled:
         if position not in AXIS_POSITIONS:
             raise KeyError(f'{position} is not a possible position for Axis: {AXIS_POSITIONS}')
         return self.image_widget.getAxis(position)
@@ -692,6 +692,7 @@ class Viewer2D(ViewerBase):
             self.view.set_image_displayer(data.distribution)
             self.filter_from_crosshair.set_graph_items(self.view.data_displayer.get_images())
 
+        self.get_axes_from_view(data)
 
         self.isdata['red'] = len(data) > 0
         self.isdata['green'] = len(data) > 1
@@ -701,6 +702,20 @@ class Viewer2D(ViewerBase):
         self.update_data()
         if not self.view.is_action_checked('roi'):
             self.data_to_export_signal.emit(self.data_to_export)
+
+    def get_axes_from_view(self, data: DataWithAxes):
+        if data.get_axis_from_index(0)[0] is None:
+            axis_view = self.view.get_axis('right')
+            axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
+                        scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=0)
+            axis.create_linear_data(data.shape[0])
+            data.axes.append(axis)
+        if data.get_axis_from_index(1)[0] is None:
+            axis_view = self.view.get_axis('top')
+            axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
+                        scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=1)
+            axis.create_linear_data(data.shape[1])
+            data.axes.append(axis)
 
     def update_data(self):
         if self._raw_data is not None:

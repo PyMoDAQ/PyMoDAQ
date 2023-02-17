@@ -118,6 +118,9 @@ class Axis:
 
         self.get_scale_offset_from_data(data)
 
+    def copy(self):
+        return copy.copy(self)
+
     @property
     def label(self) -> str:
         """str: get/set the label of this axis"""

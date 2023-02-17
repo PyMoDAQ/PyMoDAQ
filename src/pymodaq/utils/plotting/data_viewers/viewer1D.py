@@ -9,7 +9,7 @@ from qtpy.QtCore import QObject, Slot, Signal, Qt
 import pyqtgraph as pg
 import numpy as np
 
-from pymodaq.utils.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated
+from pymodaq.utils.data import DataRaw, DataFromRoi, Axis, DataToExport, DataCalculated, DataWithAxes
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.items.crosshair import Crosshair
@@ -76,9 +76,12 @@ class DataDisplayer(QObject):
         return self._plotitem.legend
 
     def update_axis(self, axis: Axis):
-        self._axis = axis
+        self._axis = axis.copy()
         if self._axis.data is None:  # create real data vector once here for subsequent use
             self._axis.create_linear_data(axis.size)
+
+    def get_axis(self) -> Axis:
+        return self._axis
 
     def get_plot_items(self):
         return self._plot_items
@@ -197,6 +200,11 @@ class View1D(ActionManager, QObject):
 
     def display_roi_lineouts(self, roi_dict):
         self.lineout_plotter.plot_roi_lineouts(roi_dict)
+
+    @property
+    def axis(self):
+        """Get the current axis used to display data"""
+        return self.data_displayer.get_axis()
 
     @property
     def plotitem(self):
@@ -374,17 +382,18 @@ class Viewer1D(ViewerBase):
         self.measure_data_dict = dict([])
         for roi_key, lineout_data in roi_dict.items():
             if not self._display_temporary:
-                self.data_to_export.append(
-                    DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
-                                axes=[Axis(data=lineout_data.hor_axis.data,
-                                           units=lineout_data.hor_axis.units,
-                                           label=lineout_data.hor_axis.label,
-                                           index=0)]))
+                if lineout_data.hor_data.size != 0:
+                    self.data_to_export.append(
+                        DataFromRoi(name=f'Hlineout_{roi_key}', data=[lineout_data.hor_data],
+                                    axes=[Axis(data=lineout_data.hor_axis.get_data(),
+                                               units=lineout_data.hor_axis.units,
+                                               label=lineout_data.hor_axis.label,
+                                               index=0)]))
 
-                self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
-                                                          data=[np.array([lineout_data.int_data])]))
+                    self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
+                                                              data=[np.array([lineout_data.math_data])]))
 
-            self.measure_data_dict[f'{roi_key}:'] = lineout_data.int_data
+            self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
 
             QtWidgets.QApplication.processEvents()
 
@@ -427,11 +436,22 @@ class Viewer1D(ViewerBase):
             self._labels = labels
 
     @Slot(list)
-    def _show_data(self, data: DataRaw):
+    def _show_data(self, data: DataWithAxes):
         self.labels = data.labels
+
+        self.get_axis_from_view(data)
+
         self.view.display_data(data.sort_data())
         if len(self.view.roi_manager.ROIs) == 0:
             self.data_to_export_signal.emit(self.data_to_export)
+        else:
+            self.roi_changed()
+        if self.view.is_action_checked('crosshair'):
+            self.crosshair_changed()
+
+    def get_axis_from_view(self, data: DataWithAxes):
+        if len(data.axes) == 0:
+            data.axes = [self.view.axis]
 
     def update_status(self, txt):
         logger.info(txt)
