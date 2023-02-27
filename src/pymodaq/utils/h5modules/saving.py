@@ -94,7 +94,7 @@ class H5SaverLowLevel(H5Backend):
     def h5_file(self):
         return self._h5file
 
-    def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False, **metadata):
+    def init_file(self, file_name: Path, raw_group_name='RawData', new_file=False, metadata: dict = None):
         """Initializes a new h5 file.
 
         Parameters
@@ -134,8 +134,9 @@ class H5SaverLowLevel(H5Backend):
             self.set_attr(self.root(), 'date', datetime_now.date().isoformat())
             self.set_attr(self.root(), 'time', datetime_now.time().isoformat())
 
-            for metadata_key in metadata:
-                self._raw_group.attrs[metadata_key] = metadata[metadata_key]
+            if metadata is not None:
+                for metadata_key in metadata:
+                    self._raw_group.attrs[metadata_key] = metadata[metadata_key]
 
     def save_file(self, filename=None):
         if filename is None:
@@ -143,7 +144,7 @@ class H5SaverLowLevel(H5Backend):
         if filename != '':
             super().save_file_as(filename)
 
-    def get_set_logger(self, where):
+    def get_set_logger(self, where: Node = None):
         """ Retrieve or create (if absent) a logger enlargeable array to store logs
         Get attributed to the class attribute ``logger_array``
         Parameters
@@ -156,6 +157,8 @@ class H5SaverLowLevel(H5Backend):
         vlarray
             enlargeable array accepting strings as elements
         """
+        if where is None:
+            where = self.raw_group
         if isinstance(where, Node):
             where = where.node
         logger = 'Logger'
@@ -586,7 +589,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         fullpathname = self.h5_file_path.joinpath(self.h5_file_name)
         self.settings.child('current_h5_file').setValue(str(fullpathname))
 
-        super().init_file(fullpathname, new_file=update_h5)
+        super().init_file(fullpathname, new_file=update_h5, metadata=metadata)
 
         self.get_set_logger(self.raw_group)
 

@@ -28,43 +28,47 @@ def ini_daq_viewer_ui(init_qt):
 
     prog.detectors = detectors
     prog.daq_types = daq_types
-    return prog, qtbot, dockarea
+    yield prog, qtbot, dockarea
+    dockarea.close()
 
 
 def test_api_attributes(ini_daq_viewer_ui):
     """Make sure the API attribute and methods used from other modules are present
     """
     daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
-    assert hasattr(daq_viewer, 'command_sig')
-    assert hasattr(daq_viewer, 'title')
-    assert hasattr(daq_viewer, 'detector')
-    assert hasattr(daq_viewer, 'detectors')
-    assert hasattr(daq_viewer, 'daq_type')
-    assert hasattr(daq_viewer, 'daq_types')
-    assert hasattr(daq_viewer, 'add_setting_tree')
-    assert hasattr(daq_viewer, 'add_viewer')
-    assert hasattr(daq_viewer, 'do_init')
-    assert hasattr(daq_viewer, 'detector_init')
-    assert hasattr(daq_viewer, 'do_grab')
-    assert hasattr(daq_viewer, 'do_snap')
-    assert hasattr(daq_viewer, 'statusbar')
+    attributes = daq_viewer.__dir__()[:]
+    assert 'command_sig' in attributes
+    assert 'title' in attributes
+    assert 'detector' in attributes
+    assert 'detectors' in attributes
+    assert 'daq_type' in attributes
+    assert 'daq_types' in attributes
+    assert 'add_setting_tree' in attributes
+    assert 'add_viewer' in attributes
+    assert 'do_init' in attributes
+    assert 'detector_init' in attributes
+    assert 'do_grab' in attributes
+    assert 'do_snap' in attributes
+    assert 'statusbar' in attributes
+
 
 def test_private_attributes(ini_daq_viewer_ui):
     """Make sure the private attribute and methods used from other modules are present
     """
     daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
-    assert hasattr(daq_viewer, '_detector_widget')
-    assert hasattr(daq_viewer, '_settings_widget')
-    assert hasattr(daq_viewer, '_info_detector')
-    assert hasattr(daq_viewer, '_daq_types_combo')
-    assert hasattr(daq_viewer, '_detectors_combo')
-    assert hasattr(daq_viewer, '_ini_det_pb')
-    assert hasattr(daq_viewer, '_ini_state_led')
+    attributes = daq_viewer.__dir__()[:]
+    assert '_detector_widget' in attributes
+    assert '_settings_widget' in attributes
+    assert '_info_detector' in attributes
+    assert '_daq_types_combo' in attributes
+    assert '_detectors_combo' in attributes
+    assert '_ini_det_pb' in attributes
+    assert '_ini_state_led' in attributes
 
-    assert hasattr(daq_viewer, '_enable_grab_buttons')
-    assert hasattr(daq_viewer, '_grab')
-    assert hasattr(daq_viewer, '_send_init')
-    assert hasattr(daq_viewer, '_enable_detchoices')
+    assert '_enable_grab_buttons' in attributes
+    assert '_grab' in attributes
+    assert '_send_init' in attributes
+    assert '_enable_detchoices' in attributes
 
 
 def test_combo(ini_daq_viewer_ui):

@@ -40,7 +40,8 @@ def ini_daq_viewer_ui(init_qt):
     dockarea = DockArea()
     qtbot.addWidget(dockarea)
     prog = daqvm.DAQ_Viewer(dockarea)
-    return prog, qtbot, dockarea
+    yield prog, qtbot, dockarea
+    dockarea.close()
 
 
 class TestMethods:

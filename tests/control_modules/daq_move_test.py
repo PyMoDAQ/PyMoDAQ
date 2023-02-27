@@ -36,7 +36,8 @@ def ini_daq_move_ui(init_qt):
     widget = QtWidgets.QWidget()
     qtbot.addWidget(widget)
     prog = DAQ_Move(widget)
-    return prog, qtbot, widget
+    yield prog, qtbot, widget
+    widget.close()
 
 
 class TestMantatoryAttributes:
