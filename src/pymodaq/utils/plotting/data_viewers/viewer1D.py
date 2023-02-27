@@ -341,7 +341,8 @@ class Viewer1D(ViewerBase):
 
     Datas and measurements are then exported with the signal data_to_export_signal
     """
-    convenience_attributes = ('has_action', 'is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
+    convenience_attributes = ('has_action', 'is_action_checked', 'is_action_visible', 'set_action_checked',
+                              'set_action_visible',
                               'get_action', 'addAction', 'toolbar', 'crosshair',
                               'viewer', 'roi_manager')
 

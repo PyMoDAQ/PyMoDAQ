@@ -93,7 +93,7 @@ class DashBoard(QObject):
         self.splash_sc = QtWidgets.QSplashScreen(splash, Qt.WindowStaysOnTopHint)
         self.overshoot_manager = None
         self.preset_manager = None
-        self.roi_saver = None
+        self.roi_saver: ROISaver = None
 
         self.remote_timer = QtCore.QTimer()
         self.remote_manager = None
