@@ -2,7 +2,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, Signal
 
 import sys
-from post_treatment.daq_measurement.daq_measurement_GUI import Ui_Form
+from pymodaq.post_treatment.daq_measurement.daq_measurement_GUI import Ui_Form
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.plotting.utils.filter import FourierFilterer
 from scipy.optimize import curve_fit

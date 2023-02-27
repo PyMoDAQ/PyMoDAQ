@@ -10,11 +10,11 @@ from simple_pid import PID
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter import Parameter, ParameterTree
 from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.daq_utils import ThreadCommand,  get_models, find_dict_in_list_from_key_val
+from pymodaq.utils.daq_utils import ThreadCommand, find_dict_in_list_from_key_val
 from pymodaq.utils.managers.modules_manager import ModulesManager
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.gui_utils.widgets import QLED
-from pymodaq.extensions.pid.utils import OutputToActuator, InputFromDetector
+from pymodaq.extensions.pid.utils import OutputToActuator, InputFromDetector, get_models
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
 
 logger = set_logger(get_module_name(__file__))
@@ -532,7 +532,7 @@ class PIDRunner(QObject):
                                          input=self.inputs_from_dets.values))
 
     @Slot(ThreadCommand)
-    def queue_command(self, command=ThreadCommand()):
+    def queue_command(self, command: ThreadCommand):
         """
         """
         if command.command == "start_PID":
