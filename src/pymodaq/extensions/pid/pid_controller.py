@@ -1,20 +1,21 @@
+import time
+from functools import partial  # needed for the button to sync setpoint with currpoint
 
+from pyqtgraph.widgets.SpinBox import SpinBox
 from qtpy import QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
-from pyqtgraph.widgets.SpinBox import SpinBox
+
+from simple_pid import PID
 
 from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.daq_utils import ThreadCommand, find_dict_in_list_from_key_val
-from pymodaq.extensions import get_models
-from pymodaq.utils.logger import get_module_name, set_logger
+from pymodaq.utils.parameter import Parameter, ParameterTree
+from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.daq_utils import ThreadCommand,  get_models, find_dict_in_list_from_key_val
 from pymodaq.utils.managers.modules_manager import ModulesManager
-from pyqtgraph.parametertree import Parameter, ParameterTree
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils.gui_utils.widgets import QLED
 from pymodaq.extensions.pid.utils import OutputToActuator, InputFromDetector
 from pymodaq.utils.gui_utils.dock import DockArea, Dock
-from simple_pid import PID
-import time
 
 logger = set_logger(get_module_name(__file__))
 
@@ -47,7 +48,7 @@ class DAQ_PID(QObject):
         {'title': 'Move settings:', 'name': 'move_settings', 'expanded': True, 'type': 'group', 'visible': False,
          'children': [
              {'title': 'Units:', 'name': 'units', 'type': 'str', 'value': ''}]},
-        # here only to be compatible with DAQScan, the model could update it
+        # here only to be compatible with DAQ_Scan, the model could update it
 
         {'title': 'Main Settings:', 'name': 'main_settings', 'expanded': True, 'type': 'group', 'children': [
             {'title': 'Acquisition Timeout (ms):', 'name': 'timeout', 'type': 'int', 'value': 10000},
@@ -79,7 +80,7 @@ class DAQ_PID(QObject):
     ]
 
     def __init__(self, dockarea):
-        
+
         super().__init__()
 
         self.settings = Parameter.create(title='PID settings', name='pid_settings', type='group', children=self.params)
@@ -162,7 +163,7 @@ class DAQ_PID(QObject):
 
     def enable_controls_pid(self, enable=False):
         self.ini_PID_action.setEnabled(enable)
-        #self.setpoint_sb.setOpts(enabled=enable)
+        # self.setpoint_sb.setOpts(enabled=enable)
 
     def enable_controls_pid_run(self, enable=False):
         self.run_action.setEnabled(enable)
@@ -230,10 +231,11 @@ class DAQ_PID(QObject):
         lab = QtWidgets.QLabel('Target Value:')
         self.toolbar_layout.addWidget(lab, 3, 0, 1, 2)
 
-
         lab1 = QtWidgets.QLabel('Current Value:')
         self.toolbar_layout.addWidget(lab1, 4, 0, 1, 2)
 
+        labmaj = QtWidgets.QLabel('Sync Value:')
+        self.toolbar_layout.addWidget(labmaj, 5, 0, 1, 2)
 
         # create main parameter tree
         self.settings_tree = ParameterTree()
@@ -281,7 +283,7 @@ class DAQ_PID(QObject):
             self.command_pid.emit(ThreadCommand('run_PID', [self.model_class.curr_output]))
         else:
             self.run_action.setIcon(self.iconrun)
-            self.command_pid.emit(ThreadCommand('stop_PID', ))
+            self.command_pid.emit(ThreadCommand('stop_PID'))
 
             QtWidgets.QApplication.processEvents()
 
@@ -289,7 +291,6 @@ class DAQ_PID(QObject):
         for setp in self.setpoints_sb:
             setp.setEnabled(not self.pause_action.isChecked())
         self.command_pid.emit(ThreadCommand('pause_PID', [self.pause_action.isChecked()]))
-
 
     def stop_moves(self, overshoot):
         """
@@ -355,15 +356,15 @@ class DAQ_PID(QObject):
     def set_setpoints_buttons(self):
         self.setpoints_sb = []
         self.currpoints_sb = []
+        self.syncvalue_pb = []
         for ind_set in range(self.model_class.Nsetpoints):
-
             self.setpoints_sb.append(SpinBox())
             self.setpoints_sb[-1].setMinimumHeight(40)
             font = self.setpoints_sb[-1].font()
             font.setPointSizeF(20)
             self.setpoints_sb[-1].setFont(font)
             self.setpoints_sb[-1].setDecimals(6)
-            self.toolbar_layout.addWidget(self.setpoints_sb[-1], 3, 2+ind_set, 1, 1)
+            self.toolbar_layout.addWidget(self.setpoints_sb[-1], 3, 2 + ind_set, 1, 1)
             self.setpoints_sb[-1].valueChanged.connect(self.update_runner_setpoints)
 
             self.currpoints_sb.append(SpinBox())
@@ -374,9 +375,19 @@ class DAQ_PID(QObject):
             font = self.currpoints_sb[-1].font()
             font.setPointSizeF(20)
             self.currpoints_sb[-1].setFont(font)
-            self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2+ind_set, 1, 1)
+            self.toolbar_layout.addWidget(self.currpoints_sb[-1], 4, 2 + ind_set, 1, 1)
 
+            self.syncvalue_pb.append(QtWidgets.QPushButton('Synchro {}'.format(ind_set)))
+            self.syncvalue_pb[ind_set].clicked.connect(partial(self.currpoint_as_setpoint, ind_set))
+            self.toolbar_layout.addWidget(self.syncvalue_pb[-1], 5, 2 + ind_set)
         self.setpoints_signal.connect(self.setpoints_external)
+
+    def currpoint_as_setpoint(self, i=0):
+        '''
+        Function used by the sync buttons. The button i will attribute the value of the i-th currpoint to the i-th setpoint.
+        '''
+        self.setpoints_sb[i].setValue(self.curr_points[i])
+        self.update_runner_setpoints
 
     def quit_fun(self):
         """
@@ -434,16 +445,15 @@ class DAQ_PID(QObject):
                 elif param.name() in putils.iter_children(
                         self.settings.child('main_settings', 'pid_controls', 'output_limits'), []):
 
-
                     output_limits = convert_output_limits(
                         self.settings.child('main_settings', 'pid_controls', 'output_limits',
                                             'output_limit_min').value(),
                         self.settings.child('main_settings', 'pid_controls', 'output_limits',
-                                           'output_limit_min_enabled').value(),
+                                            'output_limit_min_enabled').value(),
                         self.settings.child('main_settings', 'pid_controls', 'output_limits',
-                                                               'output_limit_max').value(),
+                                            'output_limit_max').value(),
                         self.settings.child('main_settings', 'pid_controls', 'output_limits',
-                                           'output_limit_max_enabled').value())
+                                            'output_limit_max_enabled').value())
 
                     self.command_pid.emit(ThreadCommand('update_options', dict(output_limits=output_limits)))
 
@@ -495,8 +505,8 @@ class PIDRunner(QObject):
         Nsetpoints = model_class.Nsetpoints
         self.current_time = 0
         self.inputs_from_dets = InputFromDetector(values=setpoints)
-        self.outputs = None
-        self.outputs_to_actuators = OutputToActuator(values=[0. for ind in range(Nsetpoints)])
+        self.outputs = [0. for _ in range(Nsetpoints)]
+        self.outputs_to_actuators = OutputToActuator(values=[0. for _ in range(Nsetpoints)])
 
         if 'sample_time' in params:
             self.sample_time = params['sample_time']
@@ -518,41 +528,41 @@ class PIDRunner(QObject):
     #     self.timeout_timer.timeout.connect(self.timeout)
     #
     def timerEvent(self, event):
-       self.pid_output_signal.emit(dict(output=self.outputs_to_actuators.values,
-                                             input=self.inputs_from_dets.values))
+        self.pid_output_signal.emit(dict(output=self.outputs_to_actuators.values,
+                                         input=self.inputs_from_dets.values))
 
     @Slot(ThreadCommand)
-    def queue_command(self, command=ThreadCommand):
+    def queue_command(self, command=ThreadCommand()):
         """
         """
         if command.command == "start_PID":
-            self.start_PID(*command.attribute)
+            self.start_PID(*command.attributes)
 
         elif command.command == "run_PID":
-            self.run_PID(*command.attribute)
+            self.run_PID(*command.attributes)
 
         elif command.command == "pause_PID":
-            self.pause_PID(*command.attribute)
+            self.pause_PID(*command.attributes)
 
         elif command.command == "stop_PID":
             self.stop_PID()
 
         elif command.command == 'update_options':
-            self.set_option(**command.attribute)
+            self.set_option(**command.attributes)
 
         elif command.command == 'update_setpoints':
-            self.update_setpoints(command.attribute)
+            self.update_setpoints(command.attributes)
 
         elif command.command == 'input':
-            self.update_input(*command.attribute)
+            self.update_input(*command.attributes)
 
         elif command.command == 'update_timer':
-            if command.attribute[0] == 'refresh_plot_time':
+            if command.attributes[0] == 'refresh_plot_time':
                 self.killTimer(self.timer)
-                self.refreshing_ouput_time = command.attribute[1]
+                self.refreshing_ouput_time = command.attributes[1]
                 self.timer = self.startTimer(self.refreshing_ouput_time)
-            elif command.attribute[0] == 'timeout':
-                self.timeout_timer.setInterval(command.attribute[1])
+            elif command.attributes[0] == 'timeout':
+                self.timeout_timer.setInterval(command.attributes[1])
 
     def update_input(self, measurements):
         self.inputs_from_dets = self.model_class.convert_input(measurements)
@@ -619,11 +629,11 @@ class PIDRunner(QObject):
     def set_option(self, **option):
         for pid in self.pids:
             for key in option:
-                    if hasattr(pid, key):
-                        if key == 'sample_time':
-                            setattr(pid, key, option[key] / 1000)
-                        else:
-                            setattr(pid, key, option[key])
+                if hasattr(pid, key):
+                    if key == 'sample_time':
+                        setattr(pid, key, option[key] / 1000)
+                    else:
+                        setattr(pid, key, option[key])
 
     def run_PID(self, last_values):
         logger.info('Stabilization started')
@@ -647,7 +657,7 @@ class PIDRunner(QObject):
 
 def main():
     from pymodaq.dashboard import DashBoard
-    from pymodaq.utils.config import get_set_preset_path
+    from pymodaq.daq_utils.config import get_set_preset_path
     from pathlib import Path
     import sys
     app = QtWidgets.QApplication(sys.argv)
