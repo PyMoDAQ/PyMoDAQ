@@ -10,6 +10,7 @@ import numpy as np
 from typing import List, Tuple, Union
 from typing import Iterable as IterableType
 from collections.abc import Iterable
+import logging
 
 import warnings
 from time import time
@@ -22,9 +23,34 @@ from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
 from pymodaq.utils.math_utils import flatten
-from pymodaq.utils import math_utils as mutils
 
 logger = set_logger(get_module_name(__file__))
+
+
+class DataIndexWarning(Warning):
+    pass
+
+
+class DataTypeWarning(Warning):
+    pass
+
+
+class DataDimWarning(Warning):
+    pass
+
+
+class DataSizeWarning(Warning):
+    pass
+
+
+WARNINGS = [DataIndexWarning, DataTypeWarning, DataDimWarning, DataSizeWarning]
+
+if logging.getLevelName(logger.level) == 'DEBUG':
+    for warning in WARNINGS:
+        warnings.filterwarnings('default', category=warning)
+else:
+    for warning in WARNINGS:
+        warnings.filterwarnings('ignore', category=warning)
 
 
 class DataShapeError(Exception):
@@ -589,12 +615,12 @@ class DataBase(DataLowLevel):
         if not isinstance(data, list):
             # try to transform the data to regular type
             if isinstance(data, np.ndarray):
-                warnings.warn(UserWarning(f'Your data should be a list of numpy arrays not just a single numpy array'
-                                          f', wrapping them with a list'))
+                warnings.warn(DataTypeWarning(f'Your data should be a list of numpy arrays not just a single numpy'
+                                              f' array, wrapping them with a list'))
                 data = [data]
             elif isinstance(data, numbers.Number):
-                warnings.warn(UserWarning(f'Your data should be a list of numpy arrays not a scalar, wrapping it with a'
-                                          f'list of numpy array'))
+                warnings.warn(DataTypeWarning(f'Your data should be a list of numpy arrays not just a single numpy'
+                                              f' array, wrapping them with a list'))
                 data = [np.array([data])]
             else:
                 is_valid = False
@@ -635,8 +661,8 @@ class DataBase(DataLowLevel):
         else:
             self._dim = enum_checker(DataDim, self._dim)
             if self._dim != dim:
-                # warnings.warn(
-                #     UserWarning('The specified dimensionality is not coherent with the data shape, replacing it'))
+                warnings.warn(DataDimWarning('The specified dimensionality is not coherent with the data shape, '
+                                             'replacing it'))
                 self._dim = dim
 
     def _check_same_shape(self, data: List[np.ndarray]):
@@ -900,8 +926,8 @@ class AxesManagerUniform(AxesManagerBase):
             if not isinstance(axis, Axis):
                 raise TypeError(f'An axis of {self.__class__.__name__} should be an Axis object')
             if self.get_shape_from_index(axis.index) != axis.size:
-                warnings.warn(UserWarning('The size of the axis is not coherent with the shape of the data. '
-                                          'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
+                warnings.warn(DataSizeWarning('The size of the axis is not coherent with the shape of the data. '
+                                              'Replacing it with a linspaced version: np.array([0, 1, 2, ...])'))
                 axis.size = self.get_shape_from_index(axis.index)
                 axis.scaling = 1
                 axis.offset = 0
@@ -931,13 +957,12 @@ class AxesManagerUniform(AxesManagerBase):
         has_axis, axis = self._has_get_axis_from_index(index)
         if not has_axis:
             if create:
-                warnings.warn(
-                    UserWarning(f'The axis requested with index {index} is not present, creating a linear one...'))
+                warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, '
+                                               f'creating a linear one...'))
                 axis = Axis(data=np.zeros((1,)), index=index)
                 axis.create_linear_data(self.get_shape_from_index(index))
             else:
-                warnings.warn(
-                    UserWarning(f'The axis requested with index {index} is not present, returning None'))
+                warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, returning None'))
         return [axis]
 
     def _get_dimension_str(self):
