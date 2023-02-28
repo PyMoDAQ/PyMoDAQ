@@ -37,6 +37,12 @@ class Scan1DLinear(ScannerBase):
                                               self.settings['step'])
         self.get_info_from_positions(self.positions)
 
+    def set_settings_titles(self):
+        if len(self.actuators) == 1:
+            self.settings.child('start').setOpts(title=f'{self.actuators[0].title} start:')
+            self.settings.child('stop').setOpts(title=f'{self.actuators[0].title} stop:')
+            self.settings.child('step').setOpts(title=f'{self.actuators[0].title} step:')
+
     def evaluate_steps(self) -> int:
         n_steps = int(np.abs((self.settings['stop'] - self.settings['start']) / self.settings['step']) + 1)
         return n_steps
@@ -64,7 +70,7 @@ class Scan1DRandom(Scan1DLinear):
                                               self.settings['step'])
         np.random.shuffle(self.positions)
         self.get_info_from_positions(self.positions)
-
+        self.set_settings_titles()
 
 try:
     import adaptive

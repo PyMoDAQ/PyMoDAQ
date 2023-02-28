@@ -66,8 +66,14 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
         self.actuators = actuators
 
+        self.set_settings_titles()
+
         if self.check_steps():
             self.set_scan()
+
+    def set_settings_titles(self):
+        """Update the settings accordingly with the selected actuators"""
+        ...
 
     @property
     def actuators(self):

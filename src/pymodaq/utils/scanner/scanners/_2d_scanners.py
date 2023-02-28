@@ -71,6 +71,15 @@ class Scan2DLinear(ScannerBase):
 
         self.get_info_from_positions(np.array(positions))
 
+    def set_settings_titles(self):
+        if len(self.actuators) == 2:
+            self.settings.child('start_axis1').setOpts(title=f'{self.actuators[0].title} start:')
+            self.settings.child('stop_axis1').setOpts(title=f'{self.actuators[0].title} stop:')
+            self.settings.child('step_axis1').setOpts(title=f'{self.actuators[0].title} step:')
+            self.settings.child('start_axis2').setOpts(title=f'{self.actuators[1].title} start:')
+            self.settings.child('stop_axis2').setOpts(title=f'{self.actuators[1].title} stop:')
+            self.settings.child('step_axis2').setOpts(title=f'{self.actuators[1].title} step:')
+
     def get_nav_axes(self) -> List[Axis]:
         return [Axis(label=f'{act.title}',
                      units=f'{act.units}',
@@ -142,6 +151,15 @@ class Scan2DSpiral(Scan2DLinear):
 
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
+
+    def set_settings_titles(self):
+        if len(self.actuators) == 2:
+            self.settings.child('center_axis1').setOpts(title=f'Center {self.actuators[0].title}:')
+            self.settings.child('rmax_axis1').setOpts(title=f'Rmax {self.actuators[0].title}:')
+            self.settings.child('step_axis1').setOpts(title=f'Step {self.actuators[0].title}:')
+            self.settings.child('center_axis2').setOpts(title=f'Center {self.actuators[1].title}:')
+            self.settings.child('rmax_axis2').setOpts(title=f'Rmax {self.actuators[1].title}:')
+            self.settings.child('step_axis2').setOpts(title=f'Step {self.actuators[1].title}:')
 
     def value_changed(self, param):
         starts, rmaxs, rsteps = self.get_pos()
