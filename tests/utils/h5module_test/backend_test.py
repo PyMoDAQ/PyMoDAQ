@@ -41,7 +41,8 @@ def get_backend(request, tmp_path):
     title = 'this is a test file'
     start_path = get_temp_path(tmp_path, request.param)
     bck.open_file(start_path.joinpath('h5file.h5'), 'w', title)
-    return bck
+    yield bck
+    bck.close_file()
 
 
 def get_temp_path(tmp_path, backend='h5pyd'):
@@ -65,15 +66,17 @@ def test_check_mandatory_attrs():
 
 
 class TestNode:
-    def test_init(self):
+    @pytest.mark.parametrize('backend', tested_backend)
+    def test_init(self, backend):
         node_dict = {'NAME': 'Node', 'TITLE': 'test'}
-        node_obj = backends.Node(node_dict, tested_backend)
+        node_obj = backends.Node(node_dict, backend)
         assert isinstance(node_obj, backends.Node)
         assert node_obj.node == node_dict
-        assert node_obj.backend == tested_backend
+        assert node_obj.backend == backend
 
-        node_obj_2 = backends.Node(node_obj, tested_backend)
+        node_obj_2 = backends.Node(node_obj, backend)
         assert node_obj_2.node == node_dict
+
 
 
 class TestH5Backend:
@@ -325,3 +328,29 @@ class TestH5Backend:
         sarray.append(st2)
         assert sarray[-1] == st2
 
+
+class TestGroup:
+
+    def test_children(self, get_backend):
+        bck = get_backend
+        title = lambda x: f'this is a {x} group'
+        group = bck.add_group('base group', 'scan', bck.root(), title='base group')
+
+        n1 = bck.create_carray(group, name='n1', obj=np.zeros((5, 2)), title=title('n1'))
+        n2 = bck.add_group('n2', 'scan', group, title=title('n2'))
+
+        assert isinstance(group, backends.GROUP)
+        assert group.children_name() == ['n1', 'N2']  # notice the capital for the groups...
+        assert list(group.children().keys()) == group.children_name()
+        assert list(group.children().values()) == [n1, n2]
+
+    def test_remove_children(self, get_backend):
+        bck = get_backend
+        title = lambda x: f'this is a {x} group'
+        group = bck.add_group('base group', 'scan', bck.root(), title='base group')
+
+        n1 = bck.create_carray(group, name='n1', obj=np.zeros((5, 2)), title=title('n1'))
+        n2 = bck.add_group('n2', 'scan', group, title=title('n2'))
+
+        group.remove_children()
+        assert group.children_name() == []  # notice the capital for the groups...

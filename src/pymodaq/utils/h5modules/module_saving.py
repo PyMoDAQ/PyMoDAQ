@@ -28,7 +28,7 @@ class ModuleSaver(metaclass=ABCMeta):
     _module_group: GROUP = abstract_attribute()
     main_module = True
 
-    def get_set_node(self, where: Union[Node, str] = None, new=False) -> Node:
+    def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
         """Get the node corresponding to this particular Module instance
 
         Parameters
@@ -41,15 +41,16 @@ class ModuleSaver(metaclass=ABCMeta):
 
         Returns
         -------
-        Node: the Node associated with this module
+        GROUP: the Node associated with this module which should be a GROUP node
         """
         if where is None:
             where = self._h5saver.raw_group
         if not new:
-            for node in self._h5saver.walk_nodes(where):
-                if 'type' in node.attrs and node.attrs['type'] == self.group_type.name and node.title == self._module.title:
-                    self._module_group = node
-                    return node
+            last_group = self._h5saver.get_last_group(where, self.group_type)
+            if last_group is not None:
+                self._module_group = last_group
+                return last_group  # if I got one I return it else I create one
+
         self._module_group = self._add_module(where)
         return self._module_group
 
@@ -241,23 +242,26 @@ class ScanSaver(ModuleSaver):
         self._h5saver = None
 
     def update_after_h5changed(self):
-        for module in self._module.modules_manager.modules:
+        for module in self._module.modules_manager.modules_all:
             if hasattr(module, 'module_and_data_saver'):
                 module.module_and_data_saver.h5saver = self.h5saver
 
-    def get_set_node(self, where: Union[Node, str] = None, new=False) -> Node:
-        """Get the node corresponding to this particular Module instance
+    def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
+        """Get the group scan node
+
+        Get the last Scan Group else create one or force creation if new is True
 
         Parameters
         ----------
         where: Union[Node, str]
             the path of a given node or the node itself
+        new: bool
 
         Returns
         -------
-        Node: the Node associated with this module
+        GROUP: the GROUP associated with this module
         """
-        super().get_set_node(where, new=new)
+        super().get_set_node(where, new)
         for module in self._module.modules_manager.modules:
             module.module_and_data_saver.main_module = False
             module.module_and_data_saver.get_set_node(self._module_group)

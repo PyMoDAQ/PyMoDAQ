@@ -342,7 +342,7 @@ class DataSaverLoader(DataManagement):
 
         if 'axis' in self.data_type.name:
             ndarrays = [data_node.read() for data_node in data_nodes]
-            axes = [Axis('index', '', np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
+            axes = [Axis(label='index', units='', data=np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
         else:
             ndarrays = self.get_data_arrays(parent_node, with_bkg=with_bkg)
             axes = self.get_axes(parent_node)
@@ -350,10 +350,11 @@ class DataSaverLoader(DataManagement):
         data = DataWithAxes(data_node.attrs['TITLE'],
                             source=data_node.attrs['source'] if 'source' in data_node.attrs else 'raw',
                             dim=data_node.attrs['data_dimension'],
-                            distribution=data_node.attrs['distribution'],
+                            distribution=data_node.attrs['distribution'] if 'axis' not in self.data_type.name
+                            else 'uniform',
                             data=ndarrays,
                             labels=[data_node.attrs['label']],
-                            origin=data_node.attrs['origin'],
+                            origin=data_node.attrs['origin'] if 'origin' in data_node.attrs else '',
                             nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
                             axes=axes)
         return data
@@ -765,6 +766,7 @@ class DataLoader:
             if nav_group is not None:
                 nav_axes = self._axis_loader.get_axes(nav_group)
                 data.axes.extend(nav_axes)
+        data.create_missing_axes()
         return data
 
     def load_all(self, where: GROUP, data: DataToExport) -> DataToExport:

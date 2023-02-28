@@ -29,9 +29,14 @@ def get_h5saver_lowlevel(tmp_path):
 
 @pytest.fixture()
 def get_h5saver(qtbot):
-    h5saver = saving.H5SaverBase()
+    h5saver = saving.H5Saver()
     yield h5saver
     h5saver.close_file()
+
+
+@pytest.fixture(params=tested_backend)
+def get_h5saver_scan(request, qtbot):
+    return saving.H5Saver(save_type='scan', backend=request.param)
 
 
 @pytest.fixture(scope="module")

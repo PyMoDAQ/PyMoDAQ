@@ -45,7 +45,6 @@ config = Config()
 logger = set_logger(get_module_name(__file__))
 
 SHOW_POPUPS = config('scan', 'show_popups')
-SHOW_POPUPS = False
 
 
 class ScanDataTemp:
@@ -314,13 +313,20 @@ class DAQScan(QObject, ParameterManager):
 
     def quit_fun(self):
         """
-            Quit the current instance of DAQ_scan and close on cascade move and detector modules.
+            Quit the current instance of DAQ_scan
 
             See Also
             --------
             quit_fun
         """
         try:
+            if self.temp_path is not None:
+                try:
+                    self.h5temp.close()
+                    self.temp_path.cleanup()
+                except Exception as e:
+                    logger.exception(str(e))
+
             self.h5saver.close_file()
             self.ui.average_dock.close()
             self.ui.scan_dock.close()
@@ -563,8 +569,8 @@ class DAQScan(QObject, ParameterManager):
             self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
                 self.scanner.settings.child('scan_sub_type').value())
 
-            scan_path, scan_name, save_path = self.h5saver.update_file_paths(False)
-            self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_name)
+            scan_node = self.module_and_data_saver.get_set_node()
+            self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_node.name)
             self.scan_attributes.child('scan_info', 'description').setValue('')
 
             res = self.set_metadata_about_current_scan()
@@ -666,6 +672,8 @@ class DAQScan(QObject, ParameterManager):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
+            scan_node = self.module_and_data_saver.get_set_node()
+            scan_node.attrs['scan_done'] = True
             self.save_scan()
             if not self.batch_started:
                 if not self.dashboard.overshoot:
@@ -815,8 +823,7 @@ class DAQScan(QObject, ParameterManager):
 
             self.module_and_data_saver.h5saver = self.h5saver
             scan_node = self.module_and_data_saver.get_set_node(new=True)
-            scan_node.attrs['scan_done'] = False
-            self.save_metadata(self.h5saver.get_last_scan(), 'scan_info')
+            self.save_metadata(scan_node, 'scan_info')
 
             self._init_live()
 

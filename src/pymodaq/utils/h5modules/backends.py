@@ -304,6 +304,14 @@ class GROUP(Node):
             return list(self.node.keys())
         pass
 
+    def remove_children(self):
+        children_dict = self.children()
+        for child_name in children_dict:
+            if self.backend == 'tables':
+                children_dict[child_name].node._f_remove(recursive=True)
+            else:
+                self.node.__delitem__(child_name)
+
 
 class CARRAY(Node):
     def __init__(self, node, backend):
@@ -928,7 +936,7 @@ class H5Backend:
         array.attrs['backend'] = self.backend
         return array
 
-    def add_group(self, group_name, group_type, where, title='', metadata=dict([])):
+    def add_group(self, group_name, group_type, where, title='', metadata=dict([])) -> GROUP:
         """
         Add a node in the h5 file tree of the group type
         Parameters

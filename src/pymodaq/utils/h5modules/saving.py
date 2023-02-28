@@ -262,6 +262,17 @@ class H5SaverLowLevel(H5Backend):
         self._current_group = super().get_set_group(where, name, title)
         return self._current_group
 
+    def get_last_group(self, where: GROUP, group_type: GroupType):
+        groups = []
+        for node_name in list(self.get_children(where)):
+            group = self.get_node(where, node_name)
+            if 'type' in group.attrs and group.attrs['type'] == group_type.name:
+                groups.append(group)
+        if len(groups) != 0:
+            return groups[-1]
+        else:
+            return None
+
     def get_node_from_attribute_match(self, where, attr_name, attr_value):
         """Get a Node starting from a given node (Group) matching a pair of node attribute name and value"""
         for node in self.walk_nodes(where):
@@ -362,14 +373,14 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_incremental_group('detector', where, title, settings_as_xml, metadata)
         return group
 
-    def add_scan_group(self, where, title='', settings_as_xml='', metadata=dict([])):
+    def add_scan_group(self, where='/RawData', title='', settings_as_xml='', metadata=dict([])):
         """
-        Add a new group of type detector
+        Add a new group of type scan
         See Also
         -------
         add_incremental_group
         """
-        metadata.update(dict(description=''))
+        metadata.update(dict(description='', scan_done=False))
         group = self.add_incremental_group('scan', where, title, settings_as_xml, metadata)
         return group
 
@@ -744,13 +755,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
 
         """
-        groups = [group for group in list(self.get_children(self.raw_group)) if 'Scan' in group]
-        groups.sort()
-        if len(groups) != 0:
-            scan_group = self.get_node(self.raw_group, groups[-1])
-        else:
-            scan_group = None
-        return scan_group
+        return self.get_last_group(self.raw_group, GroupType('scan'))
 
     def get_scan_index(self):
         """ return the scan group index in the "scan templating": Scan000, Scan001 as an integer

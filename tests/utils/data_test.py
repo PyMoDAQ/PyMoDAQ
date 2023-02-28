@@ -4,7 +4,7 @@ Created the 28/10/2022
 
 @author: Sebastien Weber
 """
-
+import logging
 import numpy as np
 import pytest
 from pytest import approx, mark
@@ -13,6 +13,7 @@ import time
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.data import DataDim
+
 
 LABEL = 'A Label'
 UNITS = 'units'
@@ -243,12 +244,10 @@ class TestDataBase:
             data_mod.DataBase('myData')
         with pytest.raises(TypeError):
             data_mod.DataBase('myData', data_mod.DataSource(0))
-        with pytest.warns(UserWarning):
-            data = data_mod.DataBase('myData', data_mod.DataSource(0), data=DATA2D)  # only a ndarray
+        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=DATA2D)  # only a ndarray
         assert len(data) == 1
         assert np.all(data.data[0] == approx(DATA2D))
-        with pytest.warns(UserWarning):
-            data = data_mod.DataBase('myData', data_mod.DataSource(0), data=12.4)  # only a numeric
+        data = data_mod.DataBase('myData', data_mod.DataSource(0), data=12.4)  # only a numeric
         assert len(data) == 1
         assert isinstance(data.data[0], np.ndarray)
         assert data.data[0][0] == approx(12.4)
@@ -319,10 +318,9 @@ class TestDataWithAxesUniform:
     def test_axis_index(self, index):
         with pytest.raises(ValueError):
             init_data(DATA2D, 2, axes=[init_axis(np.zeros((DATA2D.shape[1],)), -1)])
-        with pytest.warns(UserWarning):
-            index = 0
-            data = init_data(DATA2D, 2, axes=[init_axis(np.zeros((10,)), index)])
-            assert len(data.get_axis_from_index(0)[0]) == DATA2D.shape[index]
+        index = 0
+        data = init_data(DATA2D, 2, axes=[init_axis(np.zeros((10,)), index)])
+        assert len(data.get_axis_from_index(0)[0]) == DATA2D.shape[index]
 
         index = 1
         data = init_data(DATA2D, 2, axes=[init_axis(np.zeros((DATA2D.shape[index],)), index)])

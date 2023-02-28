@@ -109,7 +109,7 @@ class DataDisplayer(QObject):
                 if not do_xy:
                     if self._axis is None:
                         self.update_axis(Axis('index', data=Axis.create_simple_linear_data(dat.size)))
-                    self._plot_items[ind_data].setData(self._axis.data, dat)
+                    self._plot_items[ind_data].setData(self._axis.get_data(), dat)
                 else:
                     self._plot_items[ind_data].setData(np.array([]), np.array([]))
 
@@ -149,9 +149,6 @@ class DataDisplayer(QObject):
     def update_display_items(self, data: DataRaw):
         while len(self._plot_items) > 0:
             self._plotitem.removeItem(self._plot_items.pop(0))
-
-            #self.legend.removeItem(self.legend_items()[0])
-
         for ind in range(len(data)):
             self._plot_items.append(pg.PlotDataItem(pen=PLOT_COLORS[ind]))
             self._plotitem.addItem(self._plot_items[-1])
@@ -452,7 +449,8 @@ class Viewer1D(ViewerBase):
 
     def get_axis_from_view(self, data: DataWithAxes):
         if len(data.axes) == 0:
-            data.axes = [self.view.axis]
+            if self.view.axis is not None:
+                data.axes = [self.view.axis]
 
     def update_status(self, txt):
         logger.info(txt)

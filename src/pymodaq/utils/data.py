@@ -22,7 +22,7 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.daq_utils import find_objects_in_list_from_attr_name_val
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.slicing import SpecialSlicersData
-from pymodaq.utils.math_utils import flatten
+from pymodaq.utils import math_utils as mutils
 
 logger = set_logger(get_module_name(__file__))
 
@@ -194,7 +194,7 @@ class Axis:
             self._size = 0
         self._data = data
 
-    def get_data(self):
+    def get_data(self) -> np.ndarray:
         """Convenience method to obtain the axis data (usually None because scaling and offset are used)"""
         return self._data if self._data is not None else self._linear_data(self.size)
 
@@ -768,7 +768,7 @@ class AxesManagerBase:
 
     @property
     def shape(self) -> Tuple[int]:
-        self._data_shape = self.compute_shape_from_axes()
+        # self._data_shape = self.compute_shape_from_axes()
         return self._data_shape
 
     @abstractmethod
@@ -873,12 +873,14 @@ class AxesManagerBase:
 
 
         """
-        return list(flatten([copy.copy(self.get_axis_from_index(index, create=True)) for index in self.nav_indexes]))
+        return list(mutils.flatten([copy.copy(self.get_axis_from_index(index, create=True))
+                                    for index in self.nav_indexes]))
 
     def get_signal_axes(self):
         if self.sig_indexes is None:
             self._sig_indexes = tuple([axis.index for axis in self.axes if axis.index not in self.nav_indexes])
-        return list(flatten([copy.copy(self.get_axis_from_index(index, create=True)) for index in self.sig_indexes]))
+        return list(mutils.flatten([copy.copy(self.get_axis_from_index(index, create=True))
+                                    for index in self.sig_indexes]))
 
     def is_axis_signal(self, axis: Axis) -> bool:
         """Check if an axis is considered signal or navigation"""
@@ -959,8 +961,8 @@ class AxesManagerUniform(AxesManagerBase):
             if create:
                 warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, '
                                                f'creating a linear one...'))
-                axis = Axis(data=np.zeros((1,)), index=index)
-                axis.create_linear_data(self.get_shape_from_index(index))
+                axis = Axis(index=index, offset=0, scaling=1)
+                axis.size = self.get_shape_from_index(index)
             else:
                 warnings.warn(DataIndexWarning(f'The axis requested with index {index} is not present, returning None'))
         return [axis]
@@ -1052,6 +1054,8 @@ class AxesManagerSpread(AxesManagerBase):
         """in spread mode, different nav axes have the same index (but not
         the same spread_order integer value) so may return multiple axis
 
+        No possible "linear" creation in this mode
+
         """
         axes = []
         for axis in self.axes:
@@ -1111,19 +1115,22 @@ class DataWithAxes(DataBase):
 
         other_kwargs = dict(x_axis=x_axis, y_axis=y_axis, nav_x_axis=nav_x_axis, nav_y_axis=nav_y_axis)
 
-        if self.distribution.name == 'uniform':
-            self.axes_manager = AxesManagerUniform(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
-                                                   **other_kwargs)
-        elif self.distribution.name == 'spread':
-            self.axes_manager = AxesManagerSpread(data_shape=self.shape, axes=axes, nav_indexes=nav_indexes,
-                                                  **other_kwargs)
-        else:
-            raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
+        self.set_axes_manager(self.shape, axes=axes, nav_indexes=nav_indexes, **other_kwargs)
 
         self.inav: Iterable[DataWithAxes] = SpecialSlicersData(self, True)
         self.isig: Iterable[DataWithAxes] = SpecialSlicersData(self, False)
 
         self.get_dim_from_data_axes()
+
+    def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
+        if self.distribution.name == 'uniform':
+            self.axes_manager = AxesManagerUniform(data_shape=data_shape, axes=axes, nav_indexes=nav_indexes,
+                                                   **kwargs)
+        elif self.distribution.name == 'spread':
+            self.axes_manager = AxesManagerSpread(data_shape=data_shape, axes=axes, nav_indexes=nav_indexes,
+                                                  **kwargs)
+        else:
+            raise ValueError(f'Such a data distribution ({data.distribution}) has no AxesManager')
 
     def __repr__(self):
         return f'<{self.__class__.__name__}, {self.name}, {self._am}>'
@@ -1162,7 +1169,7 @@ class DataWithAxes(DataBase):
     @axes.setter
     def axes(self, axes: List[Axis]):
         """convenience property to set attribute from axis_manager"""
-        self._am.axes = axes
+        self.set_axes_manager(self.shape, axes=axes, nav_indexes=self.nav_indexes)
 
     @property
     def sig_indexes(self):
@@ -1192,6 +1199,15 @@ class DataWithAxes(DataBase):
 
     def get_axis_from_index(self, index, create=False):
         return self._am.get_axis_from_index(index, create)
+
+    def create_missing_axes(self):
+        """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
+        axes = self.axes[:]
+        for index in range(len(self.shape)):
+            if self.get_axis_from_index(index)[0] is None:
+                axes.extend(self.get_axis_from_index(index, create=True))
+        self.axes = axes
+
 
     def _compute_slices(self, slices, is_navigation=True):
         """Compute the total slice to apply to the data
@@ -1672,7 +1688,7 @@ class DataScan(DataToExport):
 
 
 if __name__ == '__main__':
-    from pymodaq.utils import math_utils as mutils
+
 
     d1 = DataFromRoi(name=f'Hlineout_', data=[np.zeros((24,))],
                      x_axis=Axis(data=np.zeros((24,)), units='myunits', label='mylabel1'))
