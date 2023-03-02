@@ -259,6 +259,8 @@ class GROUP(Node):
 
         return "%s\n  children := %s" % (str(self), childlist)
 
+
+
     def children(self) -> Dict[str, Node]:
         """Get a dict containing all children node hanging from self whith their name as keys
 
@@ -291,17 +293,20 @@ class GROUP(Node):
                 children[child_name] = _cls(child, self.backend)
         return children
 
+    def get_child(self, name: str) -> Node:
+        return self.children()[name]
+
     def children_name(self):
-        """Gets the list of children name hanging from self
+        """Gets the sorted list of children name hanging from self
 
         Returns
         -------
         list: list of name of the children
         """
         if self.backend == 'tables':
-            return list(self.node._v_children.keys())
+            return sorted(list(self.node._v_children.keys()))
         else:
-            return list(self.node.keys())
+            return sorted(list(self.node.keys()))
         pass
 
     def remove_children(self):

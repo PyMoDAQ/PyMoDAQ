@@ -49,9 +49,9 @@ class MockDAQMove:
 
 
 class ModulesManagerMock:
-    def __init__(self):
-        self.modules_all = []
-        self.modules = []
+    def __init__(self, actuators, detectors):
+        self.modules_all = actuators + detectors
+        self.modules = actuators + detectors
 
 
 class MockScan:
@@ -61,7 +61,9 @@ class MockScan:
         self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
         self.h5saver = h5saver
         self.title = 'MyScan'
-        self.modules_manager = ModulesManagerMock()
+        actuators = [MockDAQMove(self.h5saver)]
+        detectors = [MockDAQViewer(self.h5saver)]
+        self.modules_manager = ModulesManagerMock(actuators, detectors)
         self.module_and_data_saver = ScanSaver(self)
         self.ui = None
 
@@ -103,21 +105,19 @@ class TestScanSaver:
         assert node0.attrs['TITLE'] == 'MyScan'
         assert node0.title == 'MyScan'
         assert node0.name == 'Scan000'
-        h5saver.add_det_group(node0, 'det1')
-        h5saver.add_move_group(node0, 'act1')
+        assert node0.children_name() == ['Actuator000', 'Detector000']
+        assert node0.get_child('Actuator000').title == 'MyAct'
 
         node1 = scan_saver.get_set_node()
         assert node1 == node0
 
-        h5saver.add_det_group(node0, 'det1')
-        h5saver.add_move_group(node0, 'act1')
-        node0.attrs['scan_done'] = True  # so next call to get_set_node will increment the scan node
-
-        node2 = scan_saver.get_set_node()
+        node2 = scan_saver.get_set_node(new=True)
         assert node2 != node0
         assert node2.name == 'Scan001'
+        assert node0.children_name() == ['Actuator000', 'Detector000']
+        assert node0.get_child('Actuator000').title == 'MyAct'
 
         node3 = scan_saver.get_set_node()
         assert node3 == node2
 
-        node4 = scan_saver.get_set_node()
+

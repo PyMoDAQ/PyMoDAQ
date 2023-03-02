@@ -249,7 +249,10 @@ class ScanSaver(ModuleSaver):
     def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
         """Get the group scan node
 
-        Get the last Scan Group else create one or force creation if new is True
+        Get the last Scan Group or create one
+        get the last Scan Group if:
+        * there is one already created
+        * new is False
 
         Parameters
         ----------

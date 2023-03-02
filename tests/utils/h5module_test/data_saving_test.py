@@ -18,7 +18,7 @@ from pymodaq.utils.data import Axis, DataWithAxes, DataSource, DataToExport
 def get_h5saver(tmp_path):
     h5saver = saving.H5SaverLowLevel()
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
-    h5saver.init_file(file_name=addhoc_file_path, file_type=saving.FileType['detector'])
+    h5saver.init_file(file_name=addhoc_file_path)
 
     yield h5saver
     h5saver.close_file()

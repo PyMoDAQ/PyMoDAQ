@@ -340,9 +340,14 @@ class TestGroup:
         n2 = bck.add_group('n2', 'scan', group, title=title('n2'))
 
         assert isinstance(group, backends.GROUP)
-        assert group.children_name() == ['n1', 'N2']  # notice the capital for the groups...
-        assert list(group.children().keys()) == group.children_name()
-        assert list(group.children().values()) == [n1, n2]
+        assert group.children_name() == ['N2', 'n1']  # notice the capital for the groups...
+        n3 = bck.add_group('m1', 'scan', group, title=title('n2'))
+        assert group.children_name() == ['M1', 'N2', 'n1']  # notice the capital for the groups... and the sorted
+
+        for child_name in list(group.children().keys()):
+            assert child_name in group.children_name()
+        for child in list(group.children().values()):
+            assert child in [n1, n2, n3]
 
     def test_remove_children(self, get_backend):
         bck = get_backend

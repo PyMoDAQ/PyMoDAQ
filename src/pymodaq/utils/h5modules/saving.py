@@ -29,11 +29,12 @@ from pymodaq.utils.config import Config
 from pymodaq.utils.data import DataDim, DataToExport, Axis, DataWithAxes
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.scanner.utils import ScanType
+from pymodaq.utils.messenger import deprecation_msg
 
 
 from .backends import (H5Backend, backends_available, SaveType, InvalidSave, InvalidExport, InvalidDataType,
                        InvalidGroupType, InvalidGroupDataType, Node, GroupType, InvalidDataDimension, InvalidScanType,
-                       GROUP)
+                       GROUP, VLARRAY)
 from . import browsing
 
 
@@ -116,10 +117,13 @@ class H5SaverLowLevel(H5Backend):
         if file_name is not None and isinstance(file_name, Path):
             self.h5_file_name = file_name.stem + ".h5"
             self.h5_file_path = file_name.parent
+            if not self.h5_file_path.joinpath(self.h5_file_name).is_file():
+                new_file = True
 
         else:
             self.h5_file_name = select_file(save=True, ext='h5')
             self.h5_file_path = self.h5_file_name.parent
+            new_file = True
 
         self.close_file()
         self.open_file(self.h5_file_path.joinpath(self.h5_file_name), 'w' if new_file else 'a', title='PyMoDAQ file')
@@ -144,7 +148,7 @@ class H5SaverLowLevel(H5Backend):
         if filename != '':
             super().save_file_as(filename)
 
-    def get_set_logger(self, where: Node = None):
+    def get_set_logger(self, where: Node = None) -> VLARRAY:
         """ Retrieve or create (if absent) a logger enlargeable array to store logs
         Get attributed to the class attribute ``logger_array``
         Parameters
@@ -394,17 +398,6 @@ class H5SaverLowLevel(H5Backend):
         group = self.add_incremental_group('ch', where, title, settings_as_xml, metadata)
         return group
 
-    def add_live_scan_group(self, where, dimensionality, title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type live scan
-        See Also
-        -------
-        add_incremental_group
-        """
-        metadata.update(settings=settings_as_xml)
-        group = self.add_group(utils.capitalize('Live_scan_{:s}'.format(dimensionality)), '', where, title=title,
-                               metadata=metadata)
-        return group
 
     def add_move_group(self, where, title='', settings_as_xml='', metadata=dict([])):
         """
@@ -755,29 +748,14 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
 
         """
-        return self.get_last_group(self.raw_group, GroupType('scan'))
+        return self.get_last_group(self.raw_group, GroupType['scan'])
 
     def get_scan_index(self):
         """ return the scan group index in the "scan templating": Scan000, Scan001 as an integer
         """
-        try:
-            if self.current_scan_group is None:
-                return 0
-            else:
 
-                groups = [group for group in self.get_children(self.raw_group) if 'Scan' in group]
-                groups.sort()
-                flag = False
-                if len(groups) != 0:
-                    if 'scan_done' in self.get_attr(self.get_node(self.raw_group, groups[-1])):
-                        if self.get_attr(self.get_node(self.raw_group, groups[-1]), 'scan_done'):
-                            return len(groups)
-                        return len(groups) - 1
-                    return len(groups) - 1
-                return 0
-
-        except Exception as e:
-            logger.exception(str(e))
+        last_scan = self.get_last_scan()
+        return int(last_scan.name[4:]) if last_scan is not None else 0
 
     def load_file(self, base_path=None, file_path=None):
         """Opens a file dialog to select a h5file saved on disk to be used
@@ -817,40 +795,40 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
             super().save_file_as(filename)
 
 
-    def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title='', scan_subtype=''):
-        isadaptive = scan_subtype == 'Adaptive'
-        if not isadaptive:
-            shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
-                                                              remove_scan_dimension=True)
-        else:
-            shape, dimension, size = data_dict['data'].shape, '0D', 1
-        data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
-                                    title=title,
-                                    data_shape=shape,
-                                    data_dimension=dimension, scan_type=scan_type,
-                                    scan_subtype=scan_subtype,
-                                    array_to_save=data_dict['data'])
-        if 'x_axis' in data_dict:
-            if not isinstance(data_dict['x_axis'], dict):
-                array_to_save = data_dict['x_axis']
-                tmp_dict = dict(label='', units='')
-            else:
-                tmp_dict = copy.deepcopy(data_dict['x_axis'])
-                array_to_save = tmp_dict.pop('data')
-            self.add_array(channel_group, 'x_axis', 'axis',
-                           array_type=np.float, array_to_save=array_to_save,
-                           enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-        if 'y_axis' in data_dict:
-            if not isinstance(data_dict['y_axis'], dict):
-                array_to_save = data_dict['y_axis']
-                tmp_dict = dict(label='', units='')
-            else:
-                tmp_dict = copy.deepcopy(data_dict['y_axis'])
-                array_to_save = tmp_dict.pop('data')
-            self.add_array(channel_group, 'y_axis', 'axis',
-                           array_type=np.float, array_to_save=array_to_save,
-                           enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-        return data_array
+    # def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title='', scan_subtype=''):
+    #     isadaptive = scan_subtype == 'Adaptive'
+    #     if not isadaptive:
+    #         shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
+    #                                                           remove_scan_dimension=True)
+    #     else:
+    #         shape, dimension, size = data_dict['data'].shape, '0D', 1
+    #     data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
+    #                                 title=title,
+    #                                 data_shape=shape,
+    #                                 data_dimension=dimension, scan_type=scan_type,
+    #                                 scan_subtype=scan_subtype,
+    #                                 array_to_save=data_dict['data'])
+    #     if 'x_axis' in data_dict:
+    #         if not isinstance(data_dict['x_axis'], dict):
+    #             array_to_save = data_dict['x_axis']
+    #             tmp_dict = dict(label='', units='')
+    #         else:
+    #             tmp_dict = copy.deepcopy(data_dict['x_axis'])
+    #             array_to_save = tmp_dict.pop('data')
+    #         self.add_array(channel_group, 'x_axis', 'axis',
+    #                        array_type=np.float, array_to_save=array_to_save,
+    #                        enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+    #     if 'y_axis' in data_dict:
+    #         if not isinstance(data_dict['y_axis'], dict):
+    #             array_to_save = data_dict['y_axis']
+    #             tmp_dict = dict(label='', units='')
+    #         else:
+    #             tmp_dict = copy.deepcopy(data_dict['y_axis'])
+    #             array_to_save = tmp_dict.pop('data')
+    #         self.add_array(channel_group, 'y_axis', 'axis',
+    #                        array_type=np.float, array_to_save=array_to_save,
+    #                        enlargeable=False, data_dimension='1D', metadata=tmp_dict)
+    #     return data_array
 
 
     def value_changed(self, param):
