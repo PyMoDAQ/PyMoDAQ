@@ -190,6 +190,18 @@ class Node(object):
         _cls = getattr(mod, klass)
         return _cls(p, self.backend)
 
+    @property
+    def h5file(self):
+        if self.backend == 'tables':
+            return self.node._v_file
+        else:
+            return self.node.file
+
+    def to_h5_backend(self) -> 'H5Backend':
+        h5_backend = H5Backend(self.backend)
+        h5_backend.h5file = self.h5file
+        return h5_backend
+
     def set_attr(self, key, value):
         self.attrs[key] = value
 
@@ -258,8 +270,6 @@ class GROUP(Node):
         childlist = '[%s]' % (', '.join(rep))
 
         return "%s\n  children := %s" % (str(self), childlist)
-
-
 
     def children(self) -> Dict[str, Node]:
         """Get a dict containing all children node hanging from self whith their name as keys
@@ -941,7 +951,7 @@ class H5Backend:
         array.attrs['backend'] = self.backend
         return array
 
-    def add_group(self, group_name, group_type, where, title='', metadata=dict([])) -> GROUP:
+    def add_group(self, group_name, group_type: GroupType, where, title='', metadata=dict([])) -> GROUP:
         """
         Add a node in the h5 file tree of the group type
         Parameters

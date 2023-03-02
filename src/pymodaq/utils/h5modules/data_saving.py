@@ -707,6 +707,9 @@ class DataToExportExtendedSaver(DataToExportSaver):
 class DataLoader:
     """Specialized Object to load DataWithAxes object from a h5file
 
+    On the contrary to DataSaverLoader, does include navigation axes stored elsewhere in the h5file
+    (for instance if saved from the DAQ_Scan)
+
     Parameters
     ----------
     h5saver: H5Saver
