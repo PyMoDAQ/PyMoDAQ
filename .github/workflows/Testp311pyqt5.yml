@@ -1,4 +1,4 @@
-name: '3.8 PySide2'
+name: '3.11 PyQt5'
 
 on: [push]
 
@@ -6,5 +6,5 @@ jobs:
   call_workflow:
     uses: PyMoDAQ/PyMoDAQ/.github/workflows/Testbase.yml@pymodaq-dev
     with:
-      python: '3.8'
-      qt5: 'pyside2'
+      python: '3.11'
+      qt5: 'pyqt5'
