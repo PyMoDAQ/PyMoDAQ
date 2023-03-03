@@ -44,7 +44,8 @@ dependencies = [
     "setuptools>=60",
     "simple_pid",
     "toml",
-    "qtconsole"
+    "qtconsole",
+    "pytables"
 ]
 
 [project.scripts]
