@@ -10,22 +10,25 @@ PyMoDAQ
    :alt: Documentation Status
 
 .. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/pymodaq-dev/graph/badge.svg?token=IQNJRCQDM2
-    :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
+    :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
 .. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
 
 .. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
 
 .. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
 
 .. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
 
-.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyside2.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/CEMES-CNRS/PyMoDAQ/actions/workflows/Testp37pyside2.yml
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyside2.yml/badge.svg?branch=pymodaq-dev
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyside2.yml
+
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt6.yml/badge.svg?branch=pymodaq-dev
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt6.yml
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
    :alt: shortcut
