@@ -1,10 +1,10 @@
-#name: '3.8 PySide2'
-#
-#on: [push]
-#
-#jobs:
-#  call_workflow:
-#    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@pymodaq-dev
-#    with:
-#      python: '3.8'
-#      qt5: 'pyside2'
+name: '3.8 PySide2'
+
+on: [push]
+
+jobs:
+  call_workflow:
+    uses: CEMES-CNRS/PyMoDAQ/.github/workflows/Testbase.yml@pymodaq-dev
+    with:
+      python: '3.8'
+      qt5: 'pyside2'
