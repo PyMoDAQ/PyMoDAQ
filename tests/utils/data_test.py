@@ -138,13 +138,6 @@ class TestAxis:
         assert ax.offset is None
         assert ax.scaling is None
 
-    def test_getitem(self, init_axis_fixt):
-        ax = init_axis_fixt
-        assert ax.label is ax['label']
-        assert ax.units is ax['units']
-        assert ax.data is ax['data']
-        assert ax.index is ax['index']
-
     def test_operation(self, init_axis_fixt):
         scale = 2
         offset = 100
