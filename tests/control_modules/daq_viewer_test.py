@@ -22,7 +22,7 @@ config_viewer = daqvm.config
 config_viewer['viewer', 'viewer_in_thread'] = True
 
 
-@fixture
+@fixture(scope='session')
 def init_qt(qtbot):
     return qtbot
 
