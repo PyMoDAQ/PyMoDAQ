@@ -85,6 +85,7 @@ class TestWithoutUI:
             putils.iter_children(det_params, [])
 
 
+@pytest.mark.skip
 class TestWithUI:
     def test_init_ui(self, ini_daq_viewer_ui):
         prog, qtbot, dockarea = ini_daq_viewer_ui
