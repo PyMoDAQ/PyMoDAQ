@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List
+from typing import List, TYPE_CHECKING
 import pymodaq.utils
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QPointF
@@ -24,6 +24,9 @@ from pymodaq.utils.gui_utils import select_file
 import numpy as np
 from pathlib import Path
 from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 data_processors = DataProcessorFactory()
 
@@ -634,7 +637,7 @@ class ROISaver:
                      'det' in child.opts['name']]
         det_module_names = [det.title for det in self.detector_modules]
         for ind_det, det_roi in enumerate(det_children):
-            det_module: 'DAQ_Viewer' = self.detector_modules[det_module_names.index(det_names[ind_det])]
+            det_module: DAQ_Viewer = self.detector_modules[det_module_names.index(det_names[ind_det])]
             viewer_children = [child for child in det_roi.children() if 'viewer' in child.opts['name']]
             for ind_viewer, viewer in enumerate(det_module.viewers):
                 rois_params = [child for child in viewer_children[ind_viewer].children() if 'ROI' in child.opts['name']]

@@ -1050,19 +1050,21 @@ class DAQScanAcquisition(QObject):
                             break
                         positions = self.scanner.positions[self.ind_scan]  # get positions
                     else:
-                        positions = learner.ask(1)[0][-1]  # next point to probe
-                        if self.scanner.scan_type == 'Tabular':  # translate normalized curvilinear position to real coordinates
-                            self.curvilinear = positions
-                            length = 0.
-                            for v in self.scanner.vectors:
-                                length += v.norm()
-                                if length >= self.curvilinear:
-                                    vec = v
-                                    frac_curvilinear = (self.curvilinear - (length - v.norm())) / v.norm()
-                                    break
-
-                            position = (vec.vectorize() * frac_curvilinear).translate_to(vec.p1()).p2()
-                            positions = [position.x(), position.y()]
+                        pass
+                        #todo update for v4
+                        # positions = learner.ask(1)[0][-1]  # next point to probe
+                        # if self.scanner.scan_type == 'Tabular':  # translate normalized curvilinear position to real coordinates
+                        #     self.curvilinear = positions
+                        #     length = 0.
+                        #     for v in self.scanner.vectors:
+                        #         length += v.norm()
+                        #         if length >= self.curvilinear:
+                        #             vec = v
+                        #             frac_curvilinear = (self.curvilinear - (length - v.norm())) / v.norm()
+                        #             break
+                        #
+                        #     position = (vec.vectorize() * frac_curvilinear).translate_to(vec.p1()).p2()
+                        #     positions = [position.x(), position.y()]
 
                     self.status_sig.emit(["Update_scan_index", [self.ind_scan, ind_average]])
 
@@ -1078,17 +1080,18 @@ class DAQScanAcquisition(QObject):
                     self.det_done(self.modules_manager.grab_datas(positions=positions), positions)
 
                     if self.isadaptive:
-                        det_channel = self.modules_manager.get_selected_probed_data()
-                        det, channel = det_channel[0].split('/')
-                        if self.scanner.scan_type == 'Tabular':
-                            self.curvilinear_array.append(np.array([self.curvilinear]))
-                            new_positions = self.curvilinear
-                        elif self.scanner.scan_type == 'Scan1D':
-                            new_positions = positions[0]
-                        else:
-                            new_positions = positions[:]
-
-                        learner.tell(new_positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])
+                        #todo update for v4
+                        # det_channel = self.modules_manager.get_selected_probed_data()
+                        # det, channel = det_channel[0].split('/')
+                        # if self.scanner.scan_type == 'Tabular':
+                        #     self.curvilinear_array.append(np.array([self.curvilinear]))
+                        #     new_positions = self.curvilinear
+                        # elif self.scanner.scan_type == 'Scan1D':
+                        #     new_positions = positions[0]
+                        # else:
+                        #     new_positions = positions[:]
+                        # learner.tell(new_positions, self.modules_manager.det_done_datas[det]['data0D'][channel]['data'])
+                        pass
 
                     # daq_scan wait time
                     QThread.msleep(self.scan_settings.child('time_flow', 'wait_time').value())

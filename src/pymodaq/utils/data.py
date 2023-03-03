@@ -4,6 +4,8 @@ Created the 28/10/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numbers
 import numpy as np
@@ -1186,10 +1188,10 @@ class DataWithAxes(DataBase):
         """convenience property to fetch attribute from axis_manager"""
         self._am.nav_indexes = indexes
 
-    def get_nav_axes(self) -> List['Axis']:
+    def get_nav_axes(self) -> List[Axis]:
         return self._am.get_nav_axes()
 
-    def get_nav_axes_with_data(self) -> List['Axis']:
+    def get_nav_axes_with_data(self) -> List[Axis]:
         """Get the data's navigation axes making sure there is data in the data field"""
         axes = self.get_nav_axes()
         for axis in axes:
@@ -1207,7 +1209,6 @@ class DataWithAxes(DataBase):
             if self.get_axis_from_index(index)[0] is None:
                 axes.extend(self.get_axis_from_index(index, create=True))
         self.axes = axes
-
 
     def _compute_slices(self, slices, is_navigation=True):
         """Compute the total slice to apply to the data
@@ -1299,7 +1300,7 @@ class DataWithAxes(DataBase):
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
                                remove_axes_index: List[int] = None,
-                               source: DataSource = 'calculated') -> 'DataWithAxes':
+                               source: DataSource = 'calculated') -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
@@ -1458,7 +1459,7 @@ class DataToExport(DataLowLevel):
             raise TypeError(f'Could not divide a {other.__class__.__name__} with a {self.__class__.__name__} '
                             f'of a different length')
 
-    def average(self, other: 'DataToExport', weight: int) -> 'DataToExport':
+    def average(self, other: DataToExport, weight: int) -> DataToExport:
         """ Compute the weighted average between self and other DataToExport and attributes it to self
 
         Parameters
@@ -1559,7 +1560,7 @@ class DataToExport(DataLowLevel):
 
         return dims
 
-    def get_data_from_dim(self, dim: DataDim, deepcopy=False) -> 'DataToExport':
+    def get_data_from_dim(self, dim: DataDim, deepcopy=False) -> DataToExport:
         """Get the data matching the given DataDim
 
         Returns
@@ -1575,7 +1576,7 @@ class DataToExport(DataLowLevel):
             data = [sel[0] for sel in selection]
         return DataToExport(name=self.name, data=data)
 
-    def get_data_from_dims(self, dims: List[DataDim], deepcopy=False) -> 'DataToExport':
+    def get_data_from_dims(self, dims: List[DataDim], deepcopy=False) -> DataToExport:
         """Get the data matching the given DataDim
 
         Returns
@@ -1675,7 +1676,7 @@ class DataToExport(DataLowLevel):
         self._data.append(data)
 
     @dispatch(object)
-    def append(self, data: 'DataToExport'):
+    def append(self, data: DataToExport):
         if isinstance(data, DataToExport):
             for dat in data:
                 self.append(dat)

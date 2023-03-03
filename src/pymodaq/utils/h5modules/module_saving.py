@@ -4,8 +4,9 @@ Created the 23/11/2022
 
 @author: Sebastien Weber
 """
-from typing import Union, List, Dict, Tuple
+from typing import Union, List, Dict, Tuple, TYPE_CHECKING
 import xml.etree.ElementTree as ET
+from __future__ import annotations
 
 import numpy as np
 
@@ -17,7 +18,10 @@ from .backends import GROUP, CARRAY, Node, GroupType
 from .data_saving import DataToExportSaver, AxisSaverLoader, DataToExportTimedSaver, DataToExportExtendedSaver
 from pymodaq.utils.parameter import ioxml
 
-# from pymodaq.extensions.daq_scan import DAQScan
+if TYPE_CHECKING:
+    from pymodaq.extensions.daq_scan import DAQScan
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
+    from pymodaq.control_modules.daq_move import DAQ_Move
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -89,7 +93,7 @@ class DetectorSaver(ModuleSaver):
     """
     group_type = GroupType['detector']
 
-    def __init__(self, module: 'DAQ_Viewer'):
+    def __init__(self, module: DAQ_Viewer):
         self._datatoexport_saver: DataToExportSaver = None
 
         self._module: 'DAQ_Viewer' = module
@@ -163,7 +167,7 @@ class DetectorEnlargeableSaver(DetectorSaver):
     """
     group_type = GroupType['detector']
 
-    def __init__(self, module: 'DAQ_Viewer'):
+    def __init__(self, module: DAQ_Viewer):
         super().__init__(module)
         self._datatoexport_saver: DataToExportTimedSaver = None
 
@@ -180,7 +184,7 @@ class DetectorExtendedSaver(DetectorSaver):
     """
     group_type = GroupType['detector']
 
-    def __init__(self, module: 'DAQ_Viewer', extended_shape: Tuple[int]):
+    def __init__(self, module: DAQ_Viewer, extended_shape: Tuple[int]):
         super().__init__(module)
         self._extended_shape = extended_shape
         self._datatoexport_saver: DataToExportExtendedSaver = None
@@ -206,10 +210,10 @@ class ActuatorSaver(ModuleSaver):
     """
     group_type = GroupType['actuator']
 
-    def __init__(self, module: 'DAQ_Move'):
+    def __init__(self, module: DAQ_Move):
         self._axis_saver = None
         self._module_group: GROUP = None
-        self._module: 'DAQ_Move' = module
+        self._module: DAQ_Move = module
         self._h5saver = None
 
     def update_after_h5changed(self):
