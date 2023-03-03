@@ -45,7 +45,7 @@ dependencies = [
     "simple_pid",
     "toml",
     "qtconsole",
-    "pytables"
+    "tables"
 ]
 
 [project.scripts]
