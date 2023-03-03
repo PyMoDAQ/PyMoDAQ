@@ -11,14 +11,14 @@ import sys
 
 from qtpy import QtWidgets
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QWidget, QToolBar, QComboBox
+from qtpy.QtWidgets import QVBoxLayout,  QWidget, QComboBox
 from pymodaq.utils.daq_utils import ThreadCommand
-from pymodaq.control_modules.utils import ControlModuleUI, ViewerError
-from pymodaq.utils.plotting.data_viewers import DATA_TYPES, Viewer0D, Viewer1D, Viewer2D, ViewerND
-from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, SpinBox, QSpinBox_ro, QLED
-from pymodaq.utils.gui_utils import Dock, DockArea
+from pymodaq.control_modules.utils import ControlModuleUI
+
+from pymodaq.utils.gui_utils.widgets import PushButtonIcon, LabelWithFont, QLED
+from pymodaq.utils.gui_utils import Dock
 from pymodaq.utils.config import Config
-from pymodaq.control_modules.utils import DAQ_TYPES, DET_TYPES, DAQTypesEnum
+from pymodaq.control_modules.utils import DET_TYPES, DAQTypesEnum
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerFactory, ViewersEnum, ViewerDispatcher
 from pymodaq.utils.enums import enum_checker
 

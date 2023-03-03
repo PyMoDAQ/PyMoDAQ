@@ -37,7 +37,7 @@ try:
     backends_available.append('h5py')
 except Exception as e:                              # pragma: no cover
     logger.warning(str(e))
-    is_h5y = False
+    is_h5py = False
 
 is_h5pyd = True
 # this one is to be used for remote reading/writing towards a HSDS server (or h5serv), see HDFGroup
@@ -46,7 +46,7 @@ try:
     backends_available.append('h5pyd')
 except Exception as e:                              # pragma: no cover
     logger.warning(str(e))
-    is_h5yd = False
+    is_h5pyd = False
 
 if not (is_tables or is_h5py or is_h5pyd):
     logger.exception('No valid hdf5 backend has been installed, please install either pytables or h5py')

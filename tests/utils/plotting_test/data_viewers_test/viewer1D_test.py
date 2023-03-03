@@ -20,7 +20,7 @@ pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested local
 
 
 @pytest.fixture
-def init_prog(qtbot):
+def init_viewer1d(qtbot):
     widget = QtWidgets.QWidget()
     prog = Viewer1D(widget)
     qtbot.addWidget(widget)
@@ -49,28 +49,28 @@ class TestView1D:
 
 
 class TestViewer1D:
-    def test_init(self, init_prog):
-        prog, data = init_prog
+    def test_init(self, init_viewer1d):
+        prog, data = init_viewer1d
         assert prog.viewer_type == 'Data1D'
         assert prog.parent is not None
 
-    def test_do_math(self, init_prog):
-        prog, data = init_prog
+    def test_do_math(self, init_viewer1d):
+        prog, data = init_viewer1d
         assert not prog.is_action_checked('do_math')
         prog.get_action('do_math').trigger()
         assert prog.is_action_checked('do_math')
         prog.get_action('do_math').trigger()
         assert not prog.is_action_checked('do_math')
 
-    def test_scatter(self, init_prog):
-        prog, data = init_prog
+    def test_scatter(self, init_viewer1d):
+        prog, data = init_viewer1d
         prog.show_data(data)
         assert not prog.is_action_checked('scatter')
         prog.get_action('scatter').trigger()
         assert prog.is_action_checked('scatter')
 
-    def test_xyplot_action(self, init_prog):
-        prog, data = init_prog
+    def test_xyplot_action(self, init_viewer1d):
+        prog, data = init_viewer1d
         prog.show_data(data)
         assert prog.is_action_visible('scatter')
         assert prog.labels == data.labels
@@ -81,8 +81,8 @@ class TestViewer1D:
         prog.get_action('xyplot').trigger()
         assert not prog.is_action_checked('xyplot')
 
-    def test_crosshairClicked(self, init_prog):
-        prog, data = init_prog
+    def test_crosshairClicked(self, init_viewer1d):
+        prog, data = init_viewer1d
         prog.trigger_action('crosshair')
         assert prog.is_action_visible('x_label')
         assert prog.is_action_visible('y_label')

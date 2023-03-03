@@ -4,9 +4,11 @@ Created the 23/11/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
+
 from typing import Union, List, Dict, Tuple, TYPE_CHECKING
 import xml.etree.ElementTree as ET
-from __future__ import annotations
+
 
 import numpy as np
 

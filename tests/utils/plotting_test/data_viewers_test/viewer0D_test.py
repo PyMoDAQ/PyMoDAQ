@@ -4,7 +4,7 @@ from qtpy import QtWidgets, QtCore
 import numpy as np
 import pytest
 
-from pymodaq.utils.daq_utils import gauss1D
+from pymodaq.utils.math_utils import gauss1D
 from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
 from pymodaq.utils import data as data_mod
 from pymodaq.utils.conftests import qtbotskip
@@ -12,7 +12,7 @@ from pymodaq.utils.conftests import qtbotskip
 pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture
-def init_prog(qtbot):
+def init_viewer0d(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer0D(form)
     form.show()
@@ -43,8 +43,8 @@ class Data0D:
 
 
 class TestViewer0D:
-    def test_init(self, init_prog):
-        prog, qtbot = init_prog
+    def test_init(self, init_viewer0d):
+        prog, qtbot = init_viewer0d
         assert isinstance(prog, Viewer0D)
         assert isinstance(prog.parent, QtWidgets.QWidget)
         assert prog.title == 'Viewer0D'
@@ -52,13 +52,13 @@ class TestViewer0D:
         prog = Viewer0D(None)
         assert isinstance(prog.parent, QtWidgets.QWidget)
 
-    def test_actions(self, init_prog):
-        prog, qtbot = init_prog
+    def test_actions(self, init_viewer0d):
+        prog, qtbot = init_viewer0d
         for action_name in ['clear', 'Nhistory', 'show_data_as_list']:
             assert prog.view.has_action(action_name)
 
-    def test_clear_action(self, init_prog):
-        prog, qtbot = init_prog
+    def test_clear_action(self, init_viewer0d):
+        prog, qtbot = init_viewer0d
 
         for data in Data0D():
             prog.show_data(data)
@@ -70,8 +70,8 @@ class TestViewer0D:
 
         assert prog.view.data_displayer.axis.size == 0
 
-    def test_show_datalist(self, init_prog):
-        prog, qtbot = init_prog
+    def test_show_datalist(self, init_viewer0d):
+        prog, qtbot = init_viewer0d
 
         prog.parent.show()
 
@@ -80,8 +80,8 @@ class TestViewer0D:
         prog.view.get_action('show_data_as_list').trigger()
         assert not prog.view.values_list.isVisible()
         
-    def test_clear_data(self, init_prog):
-        prog, qtbot = init_prog
+    def test_clear_data(self, init_viewer0d):
+        prog, qtbot = init_viewer0d
 
         for data in Data0D():
             prog.show_data(data)

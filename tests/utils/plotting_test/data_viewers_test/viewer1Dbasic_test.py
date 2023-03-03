@@ -11,7 +11,7 @@ pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested local
 
 
 @pytest.fixture
-def init_prog(qtbot):
+def init_viewer1Dbasic(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer1DBasic(form)
     qtbot.addWidget(form)
@@ -20,8 +20,8 @@ def init_prog(qtbot):
 
 
 class TestViewer1DBasic:
-    def test_init(self, init_prog):
-        prog = init_prog
+    def test_init(self, init_viewer1Dbasic):
+        prog = init_viewer1Dbasic
 
         assert isinstance(prog.parent, QtWidgets.QWidget)
         assert not prog.data_to_export
@@ -29,8 +29,8 @@ class TestViewer1DBasic:
         assert not prog._x_axis
         assert not prog.labels
 
-    def test_show(self, init_prog):
-        prog = init_prog
+    def test_show(self, init_viewer1Dbasic):
+        prog = init_viewer1Dbasic
 
         prog.parent.setVisible(False)
         assert not prog.parent.isVisible()
@@ -41,23 +41,23 @@ class TestViewer1DBasic:
         prog.show(False)
         assert not prog.parent.isVisible()
 
-    def test_update_region(self, init_prog):
-        prog = init_prog
+    def test_update_region(self, init_viewer1Dbasic):
+        prog = init_viewer1Dbasic
 
         ROI = LinearRegionItem()
 
         prog.update_region(ROI)
 
-    def test_update_line(self, init_prog):
-        prog = init_prog
+    def test_update_line(self, init_viewer1Dbasic):
+        prog = init_viewer1Dbasic
 
         IL = InfiniteLine()
 
         prog.update_line(IL)
 
-    def test_update_labels(self, init_prog):
+    def test_update_labels(self, init_viewer1Dbasic):
 
-        prog = init_prog
+        prog = init_viewer1Dbasic
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
         prog.datas = datas
         item = PlotItem()
@@ -69,8 +69,8 @@ class TestViewer1DBasic:
         prog.legend = None
         prog.update_labels(labels)
 
-    def test_show_data(self, init_prog):
-        prog = init_prog
+    def test_show_data(self, init_viewer1Dbasic):
+        prog = init_viewer1Dbasic
 
         datas = np.linspace(np.linspace(1, 10, 10), np.linspace(11, 20, 10), 2)
 
@@ -81,8 +81,8 @@ class TestViewer1DBasic:
 
         prog.show_data(datas)
 
-    def test_x_axis(self, init_prog):
-        prog = init_prog
+    def test_x_axis(self, init_viewer1Dbasic):
+        prog = init_viewer1Dbasic
 
         data = np.linspace(1, 10, 10)
         label = ['CH_00', 'CH_01']

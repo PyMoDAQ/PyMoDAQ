@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 from typing import Tuple, List, TYPE_CHECKING
 from collections import OrderedDict
 
@@ -11,12 +11,11 @@ from pymodaq.utils.config import Config
 from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 import pymodaq.utils.daq_utils as utils
+from pymodaq.utils.scanner.utils import ScanInfo
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
 
-
-from pymodaq.utils.scanner.utils import ScanInfo
 
 logger = set_logger(get_module_name(__file__))
 config = Config()

@@ -419,7 +419,7 @@ class DataEnlargeableSaver(DataSaverLoader):
         if self.get_last_node_name(where) is None:
             for ind_data in range(len(data)):
                 nav_indexes = list(data.nav_indexes)
-                nav_indexes = [0] + list(np.array(nav_indexes, dtype=np.int) + 1)
+                nav_indexes = [0] + list(np.array(nav_indexes, dtype=int) + 1)
 
                 self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
                                         array_to_save=data[ind_data],
@@ -485,7 +485,7 @@ class DataExtendedSaver(DataSaverLoader):
             for ind_data in range(len(data)):
                 nav_indexes = list(data.nav_indexes)
                 nav_indexes = [ind for ind in range(len(self.extended_shape))] +\
-                              list(np.array(nav_indexes, dtype=np.int) + len(self.extended_shape))
+                              list(np.array(nav_indexes, dtype=int) + len(self.extended_shape))
 
                 self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
                                         data_shape=data[ind_data].shape,

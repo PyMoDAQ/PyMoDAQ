@@ -26,6 +26,7 @@ jobs:
       - name: Install package
         run: |
           python -m pip install --upgrade pip
+          set QT_DEBUG_PLUGINS=1
           pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }}
           pip install -e .
       - name: Linting with flake8

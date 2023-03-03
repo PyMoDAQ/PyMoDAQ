@@ -35,7 +35,7 @@ dependencies = [
     "packaging",
     "pint",
     "pymodaq_plugin_manager>=0.0.17",
-    "pymodaq_plugins>=3.0.1",
+    "pymodaq_plugins_mock",
     "pyqtgraph>=0.12",
     "python-dateutil",
     "qdarkstyle",
@@ -43,8 +43,6 @@ dependencies = [
     "scipy",
     "setuptools>=60",
     "simple_pid",
-    "tables==3.6.1; python_version<\"3.9\"",
-    "tables>=3.7.0; python_version>\"3.8\"",
     "toml",
     "qtconsole"
 ]

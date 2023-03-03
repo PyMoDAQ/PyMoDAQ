@@ -1,5 +1,5 @@
 
-qtbotskip = False
+qtbotskip = True
 
 main_modules_skip = True
 

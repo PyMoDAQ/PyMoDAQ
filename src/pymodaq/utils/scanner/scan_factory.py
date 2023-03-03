@@ -4,8 +4,11 @@ Created the 05/12/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 from typing import Callable, Union, List, Tuple, TYPE_CHECKING
+
 
 import numpy as np
 

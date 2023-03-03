@@ -9,7 +9,7 @@ from pymodaq.utils.conftests import qtbotskip
 pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
 
 @pytest.fixture
-def init_prog(qtbot):
+def init_viewer2d_basic(qtbot):
     form = QtWidgets.QWidget()
     prog = Viewer2DBasic(form)
     prog.setupUI()
@@ -38,8 +38,8 @@ def init_view(qtbot):
 
 
 class TestViewer2DBasic:
-    def test_init(self, init_prog):
-        prog = init_prog
+    def test_init(self, init_viewer2d_basic):
+        prog = init_viewer2d_basic
 
         assert isinstance(prog, Viewer2DBasic)
 
@@ -47,8 +47,8 @@ class TestViewer2DBasic:
 
         assert isinstance(prog.parent, QtWidgets.QWidget)
 
-    def test_scale_axis(self, init_prog):
-        prog = init_prog
+    def test_scale_axis(self, init_viewer2d_basic):
+        prog = init_viewer2d_basic
 
         xaxis = np.linspace(1, 10, 10)
         yaxis = np.linspace(11, 20, 10)

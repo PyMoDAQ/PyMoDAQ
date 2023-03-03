@@ -7,7 +7,7 @@ pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested local
 
 
 @pytest.fixture
-def init_prog(qtbot):
+def init_viewernd(qtbot):
     widget = QtWidgets.QWidget()
     prog = ViewerND(widget)
     qtbot.addWidget(widget)
