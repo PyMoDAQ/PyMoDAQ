@@ -692,7 +692,7 @@ class Viewer2D(ViewerBase):
             self.view.set_image_displayer(data.distribution)
             self.filter_from_crosshair.set_graph_items(self.view.data_displayer.get_images())
 
-        self.get_axes_from_view(data)
+        self.get_axes_from_view(data)  # in case axes were not specified into data, one try to get them from the view
 
         self.isdata['red'] = len(data) > 0
         self.isdata['green'] = len(data) > 1
@@ -704,28 +704,33 @@ class Viewer2D(ViewerBase):
             self.data_to_export_signal.emit(self.data_to_export)
 
     def get_axes_from_view(self, data: DataWithAxes):
-        if data.get_axis_from_index(0)[0] is None:
-            axis_view = self.view.get_axis('right')
-            axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
-                        scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=0)
-            axis.create_linear_data(data.shape[0])
-            data.axes.append(axis)
-        if data.get_axis_from_index(1)[0] is None:
-            axis_view = self.view.get_axis('top')
-            axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
-                        scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=1)
-            axis.create_linear_data(data.shape[1])
-            data.axes.append(axis)
+        """Obtain axes info from the view
+
+        Only for uniform data
+        """
+        if data.distribution == DataDistribution['uniform']:
+            if data.get_axis_from_index(0)[0] is None:
+                axis_view = self.view.get_axis('right')
+                axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
+                            scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=0)
+                axis.create_linear_data(data.shape[0])
+                data.axes.append(axis)
+            if data.get_axis_from_index(1)[0] is None:
+                axis_view = self.view.get_axis('top')
+                axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
+                            scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=1)
+                axis.create_linear_data(data.shape[1])
+                data.axes.append(axis)
 
     def update_data(self):
         if self._raw_data is not None:
             self._datas = self.set_image_transform()
             if self._datas.distribution.name == 'uniform':
-                self.x_axis = self._datas.axes_manager.get_axis_from_index(1)[0]
-                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
+                self.x_axis = self._datas.get_axis_from_index(1)[0]
+                self.y_axis = self._datas.get_axis_from_index(0)[0]
             else:
-                self.x_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
-                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[1]
+                self.x_axis = self._datas.get_axis_from_index(0)[0]
+                self.y_axis = self._datas.get_axis_from_index(0)[1]
             self.view.display_images(self._datas)
 
             if self.view.is_action_checked('roi'):

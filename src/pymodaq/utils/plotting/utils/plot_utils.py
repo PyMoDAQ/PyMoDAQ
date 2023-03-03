@@ -269,6 +269,10 @@ class Data0DWithHistory:
         self._data_length = 0
 
     @property
+    def size(self):
+        return self._data_length
+
+    @property
     def length(self):
         return self._Nsamples
 
@@ -338,138 +342,6 @@ class Data0DWithHistory:
         self._datas = dict([])
         self._data_length = 0
         self._xaxis = np.array([])
-
-
-class AxisInfos:
-    def __init__(self, scaling=1, offset=0, label='', units=''):
-        self._label = label
-        self._units = units
-        self._scaling = scaling
-        self._offset = offset
-
-        self.label = label
-        self.units = units
-        self.scaling = scaling
-        self.offset = offset
-
-    @property
-    def label(self):
-        return self._label
-
-    @label.setter
-    def label(self, label: str):
-        if not isinstance(label, str):
-            raise TypeError(f'The label should be a string')
-        self._label = label
-
-    @property
-    def units(self):
-        return self._units
-
-    @units.setter
-    def units(self, units: str):
-        if not isinstance(units, str):
-            raise TypeError(f'The units should be a string')
-        self._units = units
-
-    @property
-    def scaling(self):
-        return self._scaling
-
-    @scaling.setter
-    def scaling(self, scaling: Real):
-        if not isinstance(scaling, Real):
-            raise TypeError(f'The scaling should be a real number')
-        self._scaling = scaling
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @offset.setter
-    def offset(self, offset: Real):
-        if not isinstance(offset, Real):
-            raise TypeError(f'The offset should be a real number')
-        self._offset = offset
-
-    def __eq__(self, other):
-        if isinstance(other, AxisInfos):
-            return self.label == other.label and self.units == other.units and self.scaling == other.scaling \
-                   and self.offset == other.offset
-        else:
-            super().__eq__(other)
-
-
-class AxisInfosExtractor:
-    @staticmethod
-    @dispatch(np.ndarray)
-    def extract_axis_info(axis: np.ndarray):
-        label = ''
-        units = ''
-        data = axis
-
-        scaling = 1
-        offset = 0
-        if data is not None:
-            if len(data) > 1:
-                scaling = data[1] - data[0]
-                if scaling > 0:
-                    offset = np.min(data)
-                else:
-                    offset = np.max(data)
-
-        return AxisInfos(scaling, offset, label, units)
-
-    @staticmethod
-    @dispatch(data_mod.Axis)
-    def extract_axis_info(axis: data_mod.Axis):
-        data = axis.data
-        label = axis.label
-        units = axis.units
-
-        scaling = 1
-        offset = 0
-        if data is not None:
-            if len(data) > 1:
-                scaling = data[1] - data[0]
-                if scaling > 0:
-                    offset = np.min(data)
-                else:
-                    offset = np.max(data)
-
-        return AxisInfos(scaling, offset, label, units)
-
-    @staticmethod
-    @dispatch(edict)
-    def extract_axis_info(axis: edict):
-        deprecation_msg('edict should not be used to store axis info, use daq_utils.Axis')
-        data = None
-        if 'data' in axis:
-            data = axis['data']
-        label = axis['label']
-        units = axis['units']
-
-        scaling = 1
-        offset = 0
-        if data is not None:
-            if len(data) > 1:
-                scaling = data[1] - data[0]
-                if scaling > 0:
-                    offset = np.min(data)
-                else:
-                    offset = np.max(data)
-
-        return AxisInfos(scaling, offset, label, units)
-
-    @staticmethod
-    @dispatch(AxisItem_Scaled)
-    def extract_axis_info(axis: AxisItem_Scaled):
-        label = axis.axis_label
-        units = axis.axis_units
-        scaling = axis.axis_scaling
-        offset = axis.axis_offset
-
-        return AxisInfos(scaling, offset, label, units)
 
 
 class View_cust(pg.ViewBox):

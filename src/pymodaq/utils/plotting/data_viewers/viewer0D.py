@@ -75,7 +75,6 @@ class DataDisplayer(QObject):
         self.labels_changed.emit(data.labels)
 
 
-
 class View0D(ActionManager, QObject):
     def __init__(self, parent_widget: QtWidgets.QWidget = None):
         QObject.__init__(self)

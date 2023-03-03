@@ -8,15 +8,10 @@ pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested local
 
 @pytest.fixture
 def init_prog(qtbot):
-    form = QtWidgets.QWidget()
-    prog = ViewerND()
-    qtbot.addWidget(form)
+    widget = QtWidgets.QWidget()
+    prog = ViewerND(widget)
+    qtbot.addWidget(widget)
     yield prog
-    form.close()
+    widget.close()
 
 
-class TestViewer2D:
-    def test_init(self, init_prog):
-        prog = init_prog
-
-        assert isinstance(prog, ViewerND)

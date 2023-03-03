@@ -290,8 +290,8 @@ class Filter2DFromRois(Filter):
     def get_xydata_from_roi(self, roi, data: data_mod.DataWithAxes, math_function: str):
 
         if data is not None:
-            if data.dim.name == 'spread':
-                xvals, yvals, data = self.get_xydata_spread(data.data[0], roi)
+            if data.distribution.name == 'spread':
+                xvals, yvals, data = self.get_xydata_spread(data, roi)
                 ind_xaxis = np.argsort(xvals)
                 ind_yaxis = np.argsort(yvals)
                 xvals = xvals[ind_xaxis]
@@ -299,6 +299,7 @@ class Filter2DFromRois(Filter):
                 data_H = data[ind_xaxis]
                 data_V = data[ind_yaxis]
                 int_data = np.array([np.mean(data)])
+                math_data = int_data
             else:
                 xvals, yvals, data_array = self.get_xydata(data.data[0], roi)
                 slices = self.get_slices_from_roi(roi, data)
@@ -333,11 +334,11 @@ class Filter2DFromRois(Filter):
         data_out = []
         for ind in range(data.shape[0]):
             # invoke the QPainterpath of the ROI (from the shape method)
-            if roi.shape().contains(QPointF(data[ind, 0] - roi.pos().x(),
-                                            data[ind, 1] - roi.pos().y())):
-                xvals.append(data[ind, 0])
-                yvals.append(data[ind, 1])
-                data_out.append(data[ind, 2])
+            if roi.shape().contains(QPointF(data.get_axis_from_index(0)[0].get_data()[ind] - roi.pos().x(),
+                                            data.get_axis_from_index(0)[1].get_data()[ind] - roi.pos().y())):
+                xvals.append(data.get_axis_from_index(0)[0].get_data()[ind])
+                yvals.append(data.get_axis_from_index(0)[1].get_data()[ind])
+                data_out.append(data[0][ind])
         data_out = np.array(data_out)
         xvals = np.array(xvals)
         yvals = np.array(yvals)
