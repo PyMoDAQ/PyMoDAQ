@@ -12,19 +12,19 @@ PyMoDAQ
 .. image:: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ/branch/master/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/CEMES-CNRS/PyMoDAQ
 
-.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg?branch=pymodaq-dev
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
 
-.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg?branch=pymodaq-dev
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml
 
-.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg?branch=pymodaq-dev
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml/badge.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5_win.yml
 
-.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg?branch=pymodaq-dev
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml/badge.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt5.yml
 
-.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyside2.yml/badge.svg?branch=pymodaq-dev
+.. image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyside2.yml/badge.svg
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyside2.yml
 
 .. figure:: http://pymodaq.cnrs.fr/en/latest/_static/splash.png
