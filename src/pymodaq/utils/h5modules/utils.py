@@ -8,14 +8,6 @@ Created the 19/01/2023
 from collections import OrderedDict
 from typing import List, Dict
 
-# 3rd party imports
-import numpy as np
-
-# project imports
-from pymodaq.daq_utils.h5backend import Node
-from pymodaq.daq_utils.daq_utils import set_logger, get_module_name
-from pymodaq.daq_utils.daq_utils import capitalize, Axis, NavAxis
-
 
 def find_scan_node(scan_node):
     """

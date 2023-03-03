@@ -379,7 +379,7 @@ class H5Browser(QObject, ActionManager):
         H5BrowserUtil.export_data
         """
         try:
-            file_filter = "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
+            file_filter = ExporterFactory.get_file_filters()
             file = select_file(save=True, filter=file_filter)
             self.current_node_path = self.get_tree_node_path()
             if file != '':

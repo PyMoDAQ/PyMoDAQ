@@ -35,7 +35,7 @@ try:
             # first verify if the node type is compatible with export. Only data nodes are.
             ############## compatible with v4 done by Seb
             nodetype = node.attrs['data_type']
-            if if 'data' in nodetype.lower():
+            if 'data' in nodetype.lower():
                 # If yes we can use this function (the same for plotting in h5browser) to extract information
 
                 data_loader = DataLoader(node.to_h5_backend())
