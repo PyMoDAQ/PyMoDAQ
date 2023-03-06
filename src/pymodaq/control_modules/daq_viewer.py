@@ -141,7 +141,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
-        self._detector: str = self._detectors[0]
+        if len(self._detectors) > 0:  # will be 0 if no valid plugins are installed
+            self._detector: str = self._detectors[0]
         self.settings.child('main_settings', 'detector_type').setValue(self._detector)
 
         self._grabing: bool = False

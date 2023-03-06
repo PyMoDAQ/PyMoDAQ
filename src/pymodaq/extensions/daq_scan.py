@@ -74,7 +74,7 @@ class DAQScan(QObject, ParameterManager):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
+            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': False},
             {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [

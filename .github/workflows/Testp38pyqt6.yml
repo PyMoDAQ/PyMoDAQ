@@ -1,4 +1,4 @@
-name: '3.8 PyQt6 Linux'
+name: '3.8 PyQt6'
 
 on: [push]
 
