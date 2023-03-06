@@ -77,6 +77,7 @@ params = [
     {'title': 'Detector Settings', 'name': 'detector_settings', 'type': 'group', 'children': []}
 ]
 
+
 def main(plugin_file=None, init=True):
     """
     this method start a DAQ_Viewer object with this defined plugin as detector
