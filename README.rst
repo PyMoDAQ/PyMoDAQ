@@ -12,7 +12,8 @@ PyMoDAQ
 .. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/pymodaq-dev/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
-..  csv-table:: Tests
+
+..  csv-table:: Tests:
   :header: "Python", "Qt Backend", "OS", Passed
   :widths: 15, 20, 15, 30
 

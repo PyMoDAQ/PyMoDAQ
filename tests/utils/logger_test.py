@@ -9,5 +9,5 @@ from pymodaq.utils import logger as logger_mod
 
 
 def test_get_module_name():
-    config_path = config_mod.get_set_config_path()
+    config_path = config_mod.get_set_config_dir()
     assert logger_mod.get_module_name(config_path) == 'config'
