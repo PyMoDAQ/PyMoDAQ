@@ -12,13 +12,9 @@ from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore
 
 
-CONFIG_BASE_PATH = dict(win=Path(environ['PROGRAMDATA']).joinpath('.pymodaq'),
-                        linux=Path('/etc/.pymodaq'),
-                        mac=Path('Library/Application Support/.pymodaq'))
-
-
-MACHINE = 'win' if sys.platform == 'win32' else 'mac' if sys.platform == 'darwin' else 'linux'
 USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
+CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']).joinpath('.pymodaq') if sys.platform == 'win32' else \
+    Path('Library/Application Support/.pymodaq') if sys.platform == 'darwin' else Path('/etc/.pymodaq')
 
 
 def replace_file_extension(filename: str, ext: str):
@@ -70,7 +66,7 @@ def get_set_local_dir(user=False) -> Path:
     if user:
         local_path = Path.home().joinpath('.pymodaq')
     else:
-        local_path = CONFIG_BASE_PATH[MACHINE]
+        local_path = CONFIG_BASE_PATH
 
     if not local_path.is_dir():                            # pragma: no cover
         try:
