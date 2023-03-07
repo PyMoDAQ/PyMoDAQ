@@ -18,9 +18,9 @@ jobs:
       QT_DEBUG_PLUGINS: 1
     steps:
       - name: Set up Python ${{ inputs.python }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install dependencies
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ inputs.python }}
       - name: Install package
@@ -38,7 +38,7 @@ jobs:
         run: |
           pytest --cov=pymodaq --cov-report=xml -n auto
       - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
