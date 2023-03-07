@@ -17,7 +17,6 @@ PyMoDAQ
   :header: "Python", "Qt Backend", "OS", Passed
   :widths: 15, 20, 15, 30
 
-  3.7, Qt5, Linux, |37Qt5|
   3.8, Qt5, Linux, |38Qt5|
   3.9, Qt5, Linux, |39Qt5|
   3.10, Qt5, Linux, |310Qt5|
@@ -26,9 +25,6 @@ PyMoDAQ
   3.8, PySide2, Linux, |38pyside|
   3.9, Qt6, Linux, |39Qt6|
 
-
-.. |37Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml
 
 .. |38Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg?branch=pymodaq-dev
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml

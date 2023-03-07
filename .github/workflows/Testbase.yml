@@ -35,9 +35,6 @@ jobs:
         run: |
           sudo mkdir /etc/.pymodaq
           sudo chmod uo+rw /etc/.pymodaq
-          touch /etc/.pymodaq/myfile.txt
-          ls -la /etc/.pymodaq
-
       - name: Linting with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
