@@ -1,0 +1,9 @@
+[style]
+darkstyle = true
+syntax_highlighting = "github-dark"
+language = "English"
+country = "UnitedStates"
+
+[qtbackend]
+backends = [ "pyqt5", "pyqt6", "pyside2", "pyside6",]
+backend = "pyqt5"

@@ -12,7 +12,8 @@ PyMoDAQ
 .. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/pymodaq-dev/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
-..  csv-table:: Tests
+
+..  csv-table:: Tests:
   :header: "Python", "Qt Backend", "OS", Passed
   :widths: 15, 20, 15, 30
 
@@ -23,7 +24,7 @@ PyMoDAQ
   3.11, Qt5, Linux, |311Qt5|
   3.8, Qt5, Windows, |38Qt5win|
   3.8, PySide2, Linux, |38pyside|
-  3.8, Qt6, Linux, |38Qt6|
+  3.9, Qt6, Linux, |39Qt6|
 
 
 .. |37Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp37pyqt5.yml/badge.svg?branch=pymodaq-dev
@@ -47,8 +48,8 @@ PyMoDAQ
 .. |38pyside| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyside2.yml/badge.svg?branch=pymodaq-dev
     :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyside2.yml
 
-.. |38Qt6| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt6.yml/badge.svg?branch=pymodaq-dev
-    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt6.yml
+.. |39Qt6| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt6.yml/badge.svg?branch=pymodaq-dev
+    :target: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp39pyqt6.yml
 
 
 
