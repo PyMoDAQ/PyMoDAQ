@@ -34,7 +34,7 @@ class ModuleSaver(metaclass=ABCMeta):
     _module_group: GROUP = abstract_attribute()
     main_module = True
 
-    def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
+    def get_set_node(self, where: Union[Node, str] = None, name: str = None) -> GROUP:
         """Get the node corresponding to this particular Module instance
 
         Parameters
@@ -51,13 +51,36 @@ class ModuleSaver(metaclass=ABCMeta):
         """
         if where is None:
             where = self._h5saver.raw_group
-        if not new:
-            last_group = self._h5saver.get_last_group(where, self.group_type)
-            if last_group is not None:
-                self._module_group = last_group
-                return last_group  # if I got one I return it else I create one
+        if name is None:
+            name = self._module.title
+        group = self._h5saver.get_node_from_title(where, name)
+        if group is not None:
+            self._module_group = group
+            return group  # if I got one I return it else I create one
 
         self._module_group = self._add_module(where)
+        return self._module_group
+
+    def get_last_node(self, where: Union[Node, str] = None):
+        """Get the last node corresponding to this particular Module instance
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+           the path of a given node or the node itself
+        new: bool
+           if True force the creation of a new indexed node of this class type
+           if False return the last node (or create one if None)
+
+        Returns
+        -------
+        GROUP: the Node associated with this module which should be a GROUP node
+        """
+        if where is None:
+            where = self._h5saver.raw_group
+
+        group = self._h5saver.get_last_group(where, self.group_type)
+        self._module_group = group
         return self._module_group
 
     @abstractmethod
@@ -270,7 +293,10 @@ class ScanSaver(ModuleSaver):
         -------
         GROUP: the GROUP associated with this module
         """
-        super().get_set_node(where, new)
+        self._module_group = self.get_last_node(where)
+        new = new or (self._module_group is None)
+        if new:
+            self._module_group = self._add_module(where)
         for module in self._module.modules_manager.modules:
             module.module_and_data_saver.main_module = False
             module.module_and_data_saver.get_set_node(self._module_group)
@@ -308,7 +334,9 @@ class ScanSaver(ModuleSaver):
 
     def add_data(self, indexes: Tuple[int] = None, distribution=DataDistribution['uniform']):
         for detector in self._module.modules_manager.detectors:
-            detector.insert_data(indexes, where=self._module_group, distribution=distribution)
-
+            try:
+                detector.insert_data(indexes, where=self._module_group, distribution=distribution)
+            except Exception as e:
+                pass
 
 

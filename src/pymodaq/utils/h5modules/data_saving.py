@@ -75,7 +75,7 @@ class DataManagement(metaclass=ABCMeta):
         -------
         str: the name of the last saved node or None if none saved
         """
-        index = self._get_next_data_type_index_in_group(where) -1
+        index = self._get_next_data_type_index_in_group(where) - 1
         if index == -1:
             return None
         else:
@@ -527,6 +527,7 @@ class DataExtendedSaver(DataSaverLoader):
             self._create_data_arrays(where, data, save_axes=True, distribution=distribution)
 
         for ind_data in range(len(data)):
+            #todo check that getting with index is safe...
             array: CARRAY = self.get_node_from_index(where, ind_data)
             array[tuple(indexes)] = data[ind_data]  # maybe use array.__setitem__(indexes, data[ind_data]) if it's not working
 

@@ -11,8 +11,8 @@ from pymodaq.utils.messenger import deprecation_msg
 
 deprecation_msg('Importing from pymodaq.daq_utils is deprecated, use pymodaq.utils.'
                 'It will cause an error in version 4.1.0', 3)
-import_module('.utils', 'pymodaq')
-sys.modules['pymodaq.daq_utils'] = import_module('.utils', 'pymodaq')
+# import_module('.utils', 'pymodaq')
+# sys.modules['pymodaq.daq_utils'] = import_module('.utils', 'pymodaq')
 # sys.modules['pymodaq.daq_utils.abstract.logger'] = import_module('.abstract.logger', 'pymodaq.utils')
 # sys.modules['pymodaq.daq_utils.array_manipulation'] = import_module('.array_manipulation', 'pymodaq.utils')
 # sys.modules['pymodaq.daq_utils.calibration_camera'] = import_module('.calibration_camera', 'pymodaq.utils')

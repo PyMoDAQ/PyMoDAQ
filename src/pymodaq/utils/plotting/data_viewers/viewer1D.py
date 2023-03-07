@@ -389,7 +389,7 @@ class Viewer1D(ViewerBase):
                                                index=0)]))
 
                     self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
-                                                              data=[np.array([lineout_data.math_data])]))
+                                                              data=[lineout_data.math_data]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
 

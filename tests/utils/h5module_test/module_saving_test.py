@@ -16,7 +16,7 @@ from pymodaq.utils.parameter import Parameter
 
 
 @pytest.fixture()
-def get_h5saver(tmp_path):
+def get_h5saver_module(tmp_path):
     h5saver = saving.H5SaverLowLevel()
     addhoc_file_path = tmp_path.joinpath('h5file.h5')
     h5saver.init_file(file_name=addhoc_file_path)
@@ -29,10 +29,10 @@ def get_h5saver(tmp_path):
 class MockDAQViewer:
     params = [{'title': 'mytitle', 'name': 'title', 'type': 'str', 'value': 'myviewervalue'}]
 
-    def __init__(self, h5saver):
+    def __init__(self, h5saver, title='MyDet0D'):
         self.settings = Parameter.create(name='settings', type='group', children=self.params)  # create a Parameter
         self.h5saver = h5saver
-        self.title = 'MyDet'
+        self.title = title
         self.module_and_data_saver = DetectorSaver(self)
         self.ui = None
 
@@ -62,15 +62,15 @@ class MockScan:
         self.h5saver = h5saver
         self.title = 'MyScan'
         actuators = [MockDAQMove(self.h5saver)]
-        detectors = [MockDAQViewer(self.h5saver)]
+        detectors = [MockDAQViewer(self.h5saver, 'Det0D'), MockDAQViewer(self.h5saver, 'Det1D')]
         self.modules_manager = ModulesManagerMock(actuators, detectors)
         self.module_and_data_saver = ScanSaver(self)
         self.ui = None
 
 
 class TestDetectorSaver:
-    def test_get_set_node(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_get_set_node(self, get_h5saver_module):
+        h5saver = get_h5saver_module
         mock_det = MockDAQViewer(h5saver)
         det_saver = DetectorSaver(module=mock_det)
         det_saver.h5saver = h5saver
@@ -81,8 +81,8 @@ class TestDetectorSaver:
             assert 'detector' not in node.attrs
 
         node0 = det_saver.get_set_node()
-        assert node0.attrs['TITLE'] == 'MyDet'
-        assert node0.title == 'MyDet'
+        assert node0.attrs['TITLE'] == 'MyDet0D'
+        assert node0.title == 'MyDet0D'
         assert node0.name == 'Detector000'
 
         node1 = det_saver.get_set_node()
@@ -90,8 +90,8 @@ class TestDetectorSaver:
 
 
 class TestScanSaver:
-    def test_get_set_node(self, get_h5saver):
-        h5saver = get_h5saver
+    def test_get_set_node(self, get_h5saver_module):
+        h5saver = get_h5saver_module
         mock_scan_module = MockScan(h5saver)
         scan_saver = ScanSaver(module=mock_scan_module)
         scan_saver.h5saver = h5saver
@@ -105,7 +105,8 @@ class TestScanSaver:
         assert node0.attrs['TITLE'] == 'MyScan'
         assert node0.title == 'MyScan'
         assert node0.name == 'Scan000'
-        assert node0.children_name() == ['Actuator000', 'Detector000']
+        assert len(node0.children_name()) == len(mock_scan_module.modules_manager.modules_all)
+        assert node0.children_name() == ['Actuator000', 'Detector000', 'Detector001']
         assert node0.get_child('Actuator000').title == 'MyAct'
 
         node1 = scan_saver.get_set_node()
@@ -114,8 +115,8 @@ class TestScanSaver:
         node2 = scan_saver.get_set_node(new=True)
         assert node2 != node0
         assert node2.name == 'Scan001'
-        assert node0.children_name() == ['Actuator000', 'Detector000']
-        assert node0.get_child('Actuator000').title == 'MyAct'
+        assert node2.children_name() == ['Actuator000', 'Detector000', 'Detector001']
+        assert node2.get_child('Actuator000').title == 'MyAct'
 
         node3 = scan_saver.get_set_node()
         assert node3 == node2

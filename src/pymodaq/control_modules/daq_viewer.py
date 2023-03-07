@@ -698,6 +698,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
             self._received_data += 1
             if len(data) != 0:
+                for dat in data:
+                    dat.origin = self.title
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):

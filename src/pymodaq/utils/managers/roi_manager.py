@@ -476,7 +476,7 @@ class ROIManager(QObject):
             val = self.settings['ROIs', self.roi_format(ind), 'use_channel']
             self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setOpts(limits=channels)
             if val not in channels:
-                self.roi_manager.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
+                self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
 
     def update_roi(self, roi_key, param):
         self._ROIs[roi_key].index_signal[int].disconnect()

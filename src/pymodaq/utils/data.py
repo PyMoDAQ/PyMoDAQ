@@ -416,7 +416,7 @@ class DataBase(DataLowLevel):
         The labels of the data nd-arrays
     origin: str
         An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
-        DataToExport in DAQ_Scan to desintricate from wich origin data comes from when scanning multiple detectors.
+        DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
 
     See Also
     --------
@@ -1099,7 +1099,7 @@ class DataWithAxes(DataBase):
         axes of 2D ndarray data
     """
 
-    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), spread_index: int = None, **kwargs):
+    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), **kwargs):
 
         if 'nav_axes' in kwargs:
             deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
