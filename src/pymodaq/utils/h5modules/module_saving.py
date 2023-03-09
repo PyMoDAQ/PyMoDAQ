@@ -332,12 +332,10 @@ class ScanSaver(ModuleSaver):
         for detector in self._module.modules_manager.detectors:
             detector.module_and_data_saver.add_nav_axes(self._module_group, axes)
 
-    def add_data(self, indexes: Tuple[int] = None, distribution=DataDistribution['uniform'],
-                 save_raw_only=True):
+    def add_data(self, indexes: Tuple[int] = None, distribution=DataDistribution['uniform']):
         for detector in self._module.modules_manager.detectors:
             try:
-                detector.insert_data(indexes, where=self._module_group, distribution=distribution,
-                                     save_raw_only=save_raw_only)
+                detector.insert_data(indexes, where=self._module_group, distribution=distribution)
             except Exception as e:
                 pass
 

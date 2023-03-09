@@ -589,8 +589,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                 where=None)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where=None, distribution=DataDistribution['uniform'],
-                    save_raw_only=True):
+    def insert_data(self, indexes: Tuple[int], where=None, distribution=DataDistribution['uniform']):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
         Parameters
@@ -606,12 +605,13 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         --------
         DAQ_Scan, DetectorExtendedSaver
         """
-        data = self._data_to_save_export if not save_raw_only else self._data_to_save_export.get_data_from_source('raw')
-        self._add_data_to_saver(data, init_step=np.all(np.array(indexes) == 0), where=where,
+        self._add_data_to_saver(self._data_to_save_export, init_step=np.all(np.array(indexes) == 0), where=where,
                                 indexes=indexes, distribution=distribution)
 
     def _add_data_to_saver(self, data: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
 
         Parameters
         ----------
@@ -628,6 +628,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         """
         detector_node = self.module_and_data_saver.get_set_node(where)
+        data = data if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else\
+            self._data_to_save_export.get_data_from_source('raw')
+
         self.module_and_data_saver.add_data(detector_node, data, **kwargs)
 
         if init_step:

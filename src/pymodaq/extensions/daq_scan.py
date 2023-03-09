@@ -1124,8 +1124,7 @@ class DAQScanAcquisition(QObject):
                 nav_axes = self.scanner.get_nav_axes()
                 self.module_and_data_saver.add_nav_axes(nav_axes)
 
-            self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution,
-                                                save_raw_only=self.h5saver.settings['save_raw_only'])
+            self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution)
 
             #todo related to adaptive (solution lies along the Enlargeable data saver)
             if self.isadaptive:
