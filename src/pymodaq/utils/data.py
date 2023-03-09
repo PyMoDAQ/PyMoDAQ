@@ -540,6 +540,7 @@ class DataBase(DataLowLevel):
                     eq = False
                     break
                 eq = eq and np.allclose(self[ind], other[ind])
+            eq = eq and self.labels == other.labels
             return eq
         else:
             raise TypeError()
@@ -1543,13 +1544,16 @@ class DataToExport(DataLowLevel):
         else:
             return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
 
-    def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> 'DataToExport':
+    def get_data_from_full_name(self, full_name: str, deepcopy=False) -> DataWithAxes:
+        """Get the DataWithAxes with matching full name"""
         if deepcopy:
-            data = [self.get_data_from_name_origin(full_name.split('/')[1],
-                                                   full_name.split('/')[0]).deepcopy() for full_name in full_names]
+            data = self.get_data_from_name_origin(full_name.split('/')[1], full_name.split('/')[0]).deepcopy()
         else:
-            data = [self.get_data_from_name_origin(full_name.split('/')[1],
-                                                   full_name.split('/')[0]) for full_name in full_names]
+            data = self.get_data_from_name_origin(full_name.split('/')[1], full_name.split('/')[0])
+        return data
+
+    def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> DataToExport:
+        data = [self.get_data_from_full_name(full_name, deepcopy) for full_name in full_names]
         return DataToExport(name=self.name, data=data)
 
     def get_dim_presents(self) -> List[str]:

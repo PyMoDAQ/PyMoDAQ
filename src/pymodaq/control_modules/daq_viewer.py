@@ -11,7 +11,7 @@ import datetime
 import os
 from pathlib import Path
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import time
 
 from easydict import EasyDict as edict
@@ -134,7 +134,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self._title = title
 
-        self.module_and_data_saver: module_saving.DetectorSaver = None
+        self.module_and_data_saver: Union[module_saving.DetectorSaver,
+                                          module_saving.DetectorEnlargeableSaver,
+                                          module_saving.DetectorExtendedSaver] = None
         self.setup_saving_objects()
 
         self._external_h5_data = None

@@ -116,12 +116,16 @@ class DataManagement(metaclass=ABCMeta):
         -------
         bool
         """
-        node = self._h5saver.get_node(where)
+        node = self._get_node(where)
         return 'data_type' in node.attrs and node.attrs['data_type'] == self.data_type
 
-    def _get_nodes_from_data_type(self, where):
-        """Get the node list having the same data type of the real implementation
-        
+    def _get_node(self, where: Union[str, Node]) -> Node:
+        """Utility method to get a node from a node or a string"""
+        return self._h5saver.get_node(where)
+
+    def _get_nodes(self, where: Union[str, Node]) -> List[Node]:
+        """Get Nodes hanging from where including where
+
         Parameters
         ----------
         where: Union[Node, str]
@@ -129,9 +133,27 @@ class DataManagement(metaclass=ABCMeta):
 
         Returns
         -------
+        List[Node]
+        """
+        node = self._get_node(where)
+        if isinstance(node, GROUP):
+            return [child_node for child_node in self._h5saver.walk_nodes(node)]
+        else:
+            return [node]
+
+    def _get_nodes_from_data_type(self, where):
+        """Get the node list hanging from a parent and having the same data type as self
+        
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node
+
+        Returns
+        -------
         list of Nodes
         """
-        node = self._h5saver.get_node(where)
+        node = self._get_node(where)
         if isinstance(node, GROUP):
             parent_node = node
         else:
@@ -196,7 +218,7 @@ class AxisSaverLoader(DataManagement):
         -------
         Axis
         """
-        axis_node = self._h5saver.get_node(where)
+        axis_node = self._get_node(where)
         if not self._is_node_of_data_type(axis_node):
             raise AxisError(f'Could not create an Axis object from this node: {axis_node}')
         return Axis(label=axis_node.attrs['label'], units=axis_node.attrs['units'],
@@ -283,7 +305,7 @@ class DataSaverLoader(DataManagement):
                 bkg_nodes.append(node)
         return bkg_nodes
 
-    def get_data_arrays(self, where: Union[Node, str], with_bkg=True) -> List[np.ndarray]:
+    def get_data_arrays(self, where: Union[Node, str], with_bkg=False, load_all=False) -> List[np.ndarray]:
         """
 
         Parameters
@@ -292,24 +314,32 @@ class DataSaverLoader(DataManagement):
             the path of a given node or the node itself
         with_bkg: bool
             If True try to load background node and return the array with background subtraction
+        load_all: bool
+            If True load all similar nodes hanging from a parent
 
         Returns
         -------
         list of ndarray
         """
+        where = self._get_node(where)
         if with_bkg:
             bkg_nodes = []
             if with_bkg:
-                bkg_nodes = self.get_bkg_nodes(where)
+                bkg_nodes = self.get_bkg_nodes(where.parent_node)
             if len(bkg_nodes) == 0:
                 with_bkg = False
 
-        if with_bkg:
-            return [array.read()-bkg.read() for array, bkg in zip(self._get_nodes_from_data_type(where), bkg_nodes)]
+        if load_all:
+            getter = self._get_nodes_from_data_type
         else:
-            return [array.read() for array in self._get_nodes_from_data_type(where)]
+            getter = self._get_nodes
 
-    def load_data(self, where, with_bkg=True, plot_all=False) -> DataWithAxes:
+        if with_bkg:
+            return [array.read()-bkg.read() for array, bkg in zip(getter(where), bkg_nodes)]
+        else:
+            return [array.read() for array in getter(where)]
+
+    def load_data(self, where, with_bkg=False, load_all=False) -> DataWithAxes:
         """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node
 
         Does not include navigation axes stored elsewhere in the h5file
@@ -320,7 +350,7 @@ class DataSaverLoader(DataManagement):
             the path of a given node or the node itself
         with_bkg: bool
             If True try to load background node and return the data with background subtraction
-        plot_all: bool
+        load_all: bool
             If True, will load all data hanging from the same parent node
 
         See Also
@@ -328,10 +358,10 @@ class DataSaverLoader(DataManagement):
         load_data
         """
 
-        data_node = self._h5saver.get_node(where)
+        data_node = self._get_node(where)
 
-        if plot_all:
-            parent_node = data_node.parent_node.parent_node
+        if load_all:
+            parent_node = data_node.parent_node
             data_nodes = self._get_nodes_from_data_type(parent_node)
             data_node = data_nodes[0]
         else:
@@ -344,7 +374,7 @@ class DataSaverLoader(DataManagement):
             ndarrays = [data_node.read() for data_node in data_nodes]
             axes = [Axis(label='index', units='', data=np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
         else:
-            ndarrays = self.get_data_arrays(parent_node, with_bkg=with_bkg)
+            ndarrays = self.get_data_arrays(data_node, with_bkg=with_bkg, load_all=load_all)
             axes = self.get_axes(parent_node)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
@@ -353,7 +383,7 @@ class DataSaverLoader(DataManagement):
                             distribution=data_node.attrs['distribution'] if 'axis' not in self.data_type.name
                             else 'uniform',
                             data=ndarrays,
-                            labels=[data_node.attrs['label']],
+                            labels=[node.attrs['label'] for node in data_nodes],
                             origin=data_node.attrs['origin'] if 'origin' in data_node.attrs else '',
                             nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
                             axes=axes)
@@ -545,6 +575,9 @@ class DataToExportSaver:
         self._data_saver = DataSaverLoader(h5saver)
         self._bkg_saver = BkgSaver(h5saver)
 
+    def _get_node(self, where: Union[Node, str]) -> Node:
+        return self._h5saver.get_node(where)
+
     @staticmethod
     def channel_formatter(ind: int):
         """All DataWithAxes included in the DataToExport will be saved into a channel group indexed and
@@ -579,7 +612,7 @@ class DataToExportSaver:
             dim_group = self._h5saver.get_set_group(where, dim)
             for ind, dwa in enumerate(data.get_data_from_dim(dim)):  # dwa: DataWithAxes filtered by dim
                 dwa_group = self._h5saver.get_set_group(dim_group, self.channel_formatter(ind), dwa.name)
-                # dwa_group = self._h5saver.get_node_from_title(dim_group, dwa.name)
+                # dwa_group = self._get_node_from_title(dim_group, dwa.name)
                 if dwa_group is not None:
                     self._bkg_saver.add_data(dwa_group, dwa, save_axes=False)
 
@@ -622,7 +655,7 @@ class DataToExportEnlargeableSaver(DataToExportSaver):
             all extra metadata to be saved in the group node where data will be saved
         """
         super().add_data(where, data, settings_as_xml, metadata)
-        where = self._h5saver.get_node(where)
+        where = self._get_node(where)
         nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
             axis = Axis(label=self._axis_name, units=self._axis_units, data=np.array([0., 1.]), index=0)
@@ -672,7 +705,7 @@ class DataToExportExtendedSaver(DataToExportSaver):
         -----
         For instance the scan axes in the DAQScan
         """
-        where = self._h5saver.get_node(where)
+        where = self._get_node(where)
         nav_group = self._h5saver.get_set_group(where, SPECIAL_GROUP_NAMES['nav_axes'])
         if self._nav_axis_saver.get_last_node_name(nav_group) is None:
             for axis in axes:
@@ -741,7 +774,7 @@ class DataLoader:
                     return self._h5saver.get_node(node, SPECIAL_GROUP_NAMES['nav_axes'])
             node = node.parent_node
 
-    def load_data(self, where: Union[Node, str], with_bkg=True, plot_all=False) -> DataWithAxes:
+    def load_data(self, where: Union[Node, str], with_bkg=False, load_all=False) -> DataWithAxes:
         """Load data from a node (or channel node)
 
         Loaded data contains also nav_axes if any and with optional background subtraction
@@ -751,8 +784,8 @@ class DataLoader:
         where: Union[Node, str]
             the path of a given node or the node itself
         with_bkg: bool
-            If True will attempt to substract a background data node before plotting
-        plot_all: bool
+            If True will attempt to substract a background data node before loading
+        load_all: bool
             If True, will load all data hanging from the same parent node
 
         Returns
@@ -761,7 +794,7 @@ class DataLoader:
         """
         node_data_type = DataType[self._h5saver.get_node(where).attrs['data_type']]
         self._data_loader.data_type = node_data_type
-        data = self._data_loader.load_data(where, with_bkg=with_bkg, plot_all=plot_all)
+        data = self._data_loader.load_data(where, with_bkg=with_bkg, load_all=load_all)
         if 'axis' not in node_data_type.name:
             nav_group = self.get_nav_group(where)
             if nav_group is not None:
@@ -770,16 +803,18 @@ class DataLoader:
         data.create_missing_axes()
         return data
 
-    def load_all(self, where: GROUP, data: DataToExport) -> DataToExport:
+    def load_all(self, where: GROUP, data: DataToExport, with_bkg=False) -> DataToExport:
 
         where = self._h5saver.get_node(where)
         children_dict = where.children()
         data_list = []
         for child in children_dict:
             if isinstance(children_dict[child], GROUP):
-                self.load_all(children_dict[child], data)
+                self.load_all(children_dict[child], data, with_bkg=with_bkg)
             elif 'data_type' in children_dict[child].attrs and 'data' in children_dict[child].attrs['data_type']:
-                data_list.append(self.load_data(children_dict[child].path))
+
+                data_list.append(self.load_data(children_dict[child].path, with_bkg=with_bkg, load_all=True))
+                break
         data_tmp = DataToExport(name=where.name, data=data_list)
         data.append(data_tmp)
 
