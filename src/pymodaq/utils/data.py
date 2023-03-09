@@ -1567,6 +1567,23 @@ class DataToExport(DataLowLevel):
 
         return dims
 
+    def get_data_from_source(self, source: DataSource, deepcopy=False) -> DataToExport:
+        """Get the data matching the given DataSource
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the dimensionality
+        """
+        source = enum_checker(DataSource, source)
+        selection = find_objects_in_list_from_attr_name_val(self.data, 'source', source, return_first=False)
+
+        selection.sort(key=lambda elt: elt[0].name)
+        if deepcopy:
+            data = [sel[0].deepcopy() for sel in selection]
+        else:
+            data = [sel[0] for sel in selection]
+        return DataToExport(name=self.name, data=data)
+
     def get_data_from_dim(self, dim: DataDim, deepcopy=False) -> DataToExport:
         """Get the data matching the given DataDim
 

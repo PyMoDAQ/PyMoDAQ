@@ -36,10 +36,10 @@ def init_axis(data=None, index=0):
     return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
 
 
-def init_data(data=None, Ndata=1, axes=[], name='myData') -> data_mod.DataWithAxes:
+def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw']) -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
-    return data_mod.DataWithAxes(name, data_mod.DataSource(0), data=[data for ind in range(Ndata)],
+    return data_mod.DataWithAxes(name, source, data=[data for ind in range(Ndata)],
                                  axes=axes)
 
 
@@ -523,6 +523,20 @@ class TestDataToExport:
         data.append(dat3)
         assert len(data) == 3
         assert data.data == [dat1, dat2, dat3]
+
+    def test_get_data_from_source(self):
+        dat0D = init_data(DATA0D, 2, name='my0DData', source='raw')
+        dat1D_calculated = init_data(DATA1D, 2, name='my1DDatacalculated', source='calculated')
+        dat1D_raw = init_data(DATA1D, 2, name='my1DDataraw', source='raw')
+
+        data = data_mod.DataToExport(name='toexport', data=[dat0D, dat1D_calculated, dat1D_raw])
+
+        assert len(data.get_data_from_source('calculated')) == 1
+        assert data.get_data_from_source('calculated').data == [dat1D_calculated]
+
+        assert len(data.get_data_from_source('raw')) == 2
+        assert data.get_data_from_source('raw').get_data_from_dim('Data0D').data == [dat0D]
+        assert data.get_data_from_source('raw').get_data_from_dim('Data1D').data == [dat1D_raw]
 
     def test_get_data_by_dim(self, ini_data_to_export):
         dat1, dat2, data = ini_data_to_export
