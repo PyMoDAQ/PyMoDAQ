@@ -171,6 +171,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self.grab_done_signal.connect(self._save_export_data)
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
+
     def setup_saving_objects(self):
         self.module_and_data_saver = module_saving.DetectorSaver(self)
         self._h5saver_continuous = H5Saver(save_type='detector')

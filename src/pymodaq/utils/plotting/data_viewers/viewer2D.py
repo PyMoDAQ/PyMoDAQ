@@ -630,10 +630,6 @@ class Viewer2D(ViewerBase):
 
     crosshair_clicked = Signal(bool)
     ROI_select_signal = Signal(QtCore.QRectF)
-    convenience_attributes = ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
-                              'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
-                              'image_widget', 'scale_axis', 'unscale_axis', 'roi_manager', 'show_roi_target',
-                              'move_scale_roi_target', 'get_data_at')
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent, title)
@@ -655,7 +651,24 @@ class Viewer2D(ViewerBase):
 
         self.prepare_connect_ui()
 
-        self.add_attributes_from_view()
+    @property
+    def roi_manager(self):
+        """Convenience method """
+        return self.view.roi_manager
+
+    @property
+    def crosshair(self):
+        """Convenience method """
+        return self.view.crosshair
+
+    @property
+    def image_widget(self):
+        """Convenience method """
+        return self.view.image_widget
+
+    def get_data_at(self):
+        """Convenience method """
+        return self.view.get_data_at()
 
     def set_crosshair_position(self, xpos, ypos):
         """Convenience method to set the crosshair positions"""
@@ -663,8 +676,8 @@ class Viewer2D(ViewerBase):
 
     def activate_roi(self, activate=True):
         """Activate the Roi manager using the corresponding action"""
-        self.set_action_checked('roi', activate)
-        self.get_action('roi').triggered.emit(activate)
+        self.view.set_action_checked('roi', activate)
+        self.view.get_action('roi').triggered.emit(activate)
 
     @Slot(dict)
     def roi_changed(self):
@@ -775,8 +788,8 @@ class Viewer2D(ViewerBase):
 
     def show_roi(self, show=True, show_roi_widget=True):
         """convenience function to control roi"""
-        if show == (not self.is_action_checked('roi')):
-            self.get_action('roi').trigger()
+        if show == (not self.view.is_action_checked('roi')):
+            self.view.get_action('roi').trigger()
 
         self.view.roi_manager.roiwidget.setVisible(show_roi_widget)
 
@@ -968,8 +981,8 @@ def main(data_distribution='uniform'):
 
     prog.show_data(data_to_plot)
 
-    prog.show_roi_target(True)
-    prog.move_scale_roi_target((50, 40), (20, 20))
+    prog.view.show_roi_target(True)
+    prog.view.move_scale_roi_target((50, 40), (20, 20))
 
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())

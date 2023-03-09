@@ -669,8 +669,8 @@ class ROISaver:
 
                 if hasattr(viewer, 'roi_manager'):
                     viewer_param.addChild({'title': 'ROI type:', 'name': 'roi_type', 'type': 'str',
-                                           'value': viewer.roi_manager.settings.child(('ROIs')).roi_type})
-                    viewer_param.addChildren(viewer.roi_manager.settings.child(('ROIs')).children())
+                                           'value': viewer.roi_manager.settings.child('ROIs').roi_type})
+                    viewer_param.addChildren(viewer.roi_manager.settings.child('ROIs').children())
                 det_param.addChild(viewer_param)
             self.roi_presets.addChild(det_param)
 

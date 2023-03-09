@@ -152,15 +152,11 @@ class Viewer0D(ViewerBase):
 
     Datas and measurements are then exported with the signal data_to_export_signal
     """
-    convenience_attributes = ('has_action', 'is_action_checked', 'is_action_visible', 'set_action_checked',
-                              'set_action_visible', 'get_action', 'addAction', 'toolbar',
-                              'viewer', 'roi_manager')
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent, title)
         self.view = View0D(self.parent)
         self._labels = []
-        self.add_attributes_from_view()
 
     @property
     def labels(self):

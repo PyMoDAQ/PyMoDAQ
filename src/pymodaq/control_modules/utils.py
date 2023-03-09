@@ -111,6 +111,9 @@ class ControlModule(QObject):
         self._hardware_thread = None
         self.module_and_data_saver = None
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.title}'
+
     @property
     def module_type(self):
         """str: Get the module type, either DAQ_Move or DAQ_viewer"""
