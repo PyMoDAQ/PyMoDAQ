@@ -540,10 +540,10 @@ class DataBase(DataLowLevel):
                     eq = False
                     break
                 eq = eq and np.allclose(self[ind], other[ind])
-            labels_not = self.labels == other.labels
-            if labels_not:
-                logger.debug(f'labels from self:{self.labels}, other: {other.labels}')
-            eq = eq and labels_not
+            # labels_not = (self.labels == other.labels)
+            # if labels_not:
+            #     logger.debug(f'labels from self:{self.labels}, other: {other.labels}')
+            # eq = (eq and labels_not)
             return eq
         else:
             raise TypeError()
