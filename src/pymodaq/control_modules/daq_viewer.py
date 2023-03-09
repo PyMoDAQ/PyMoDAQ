@@ -598,6 +598,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             The indexes within the extended array where to place these data
         where: Node or str
         distribution: DataDistribution enum
+        save_raw_only: bool
+            If True save only Raw data (no data processed from Roi)
 
         See Also
         --------
@@ -608,6 +610,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     def _add_data_to_saver(self, data: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
 
         Parameters
         ----------
@@ -624,6 +628,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         """
         detector_node = self.module_and_data_saver.get_set_node(where)
+        data = data if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else\
+            self._data_to_save_export.get_data_from_source('raw')
+
         self.module_and_data_saver.add_data(detector_node, data, **kwargs)
 
         if init_step:

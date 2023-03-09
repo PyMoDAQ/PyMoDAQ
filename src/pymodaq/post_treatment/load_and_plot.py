@@ -19,11 +19,14 @@ from pymodaq.utils.gui_utils import Dock, DockArea
 
 class LoaderPlotter:
 
+    grouped_data1D_fullname = 'Grouped/Data1D'
+
     def __init__(self, dockarea):
         self.dockarea = dockarea
         self.dispatcher = ViewerDispatcher(dockarea, title='ViewerDispatcher')
         self._viewers: dict[str, ViewerBase] = None
         self._viewer_docks: dict[str, ViewerBase] = None
+        self._viewer_types: List[ViewersEnum] = None
         self._h5saver: H5Saver = None
         self._data: DataToExport = None
         self.dataloader: DataLoader = None
@@ -90,7 +93,9 @@ class LoaderPlotter:
                     labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
                     self._data.remove(dwa)
 
-                data1D = DataFromPlugins('data1D', data=data1D_arrays, labels=labels)
+                data1D = DataFromPlugins(self.grouped_data1D_fullname.split('/')[1],
+                                         data=data1D_arrays, labels=labels,
+                                         origin=self.grouped_data1D_fullname.split('/')[0])
                 self._data.append(data1D)
 
         return self._data
@@ -115,15 +120,23 @@ class LoaderPlotter:
         """Processing before showing data
         """
         self._viewer_types = [ViewersEnum(data.dim.name) for data in data]
-        data_names = data.get_full_names()
         self.prepare_viewers(self._viewer_types)
-        self._viewers = dict(zip(data_names, self.dispatcher.viewers))
-        self._viewer_docks = dict(zip(data_names, self.dispatcher.viewer_docks))
 
-    def prepare_viewers(self, viewers_enum: List[ViewersEnum]):
+    def prepare_viewers(self, viewers_enum: List[ViewersEnum], viewers_name: List[str] = None):
+        if self._viewers is not None:
+            while len(self._viewers) > 0:
+                self._viewers.pop(list(self._viewers.keys())[0])
+                self._viewer_docks.pop(list(self._viewer_docks.keys())[0])
+
         self._viewer_types = [enum_checker(ViewersEnum, viewer_enum) for viewer_enum in viewers_enum]
+        if viewers_name is None or len(viewers_enum) != len(viewers_name):
+            viewers_name = [f'DataPlot{ind:02d}' for ind in range(len(self._viewer_types))]
+
         if self.dispatcher.viewer_types != self._viewer_types:
             self.dispatcher.update_viewers(self._viewer_types)
+
+        self._viewers = dict(zip(viewers_name, self.dispatcher.viewers))
+        self._viewer_docks = dict(zip(viewers_name, self.dispatcher.viewer_docks))
 
     def set_data_to_viewers(self, data: DataToExport, temp=False):
         """Process data dimensionality and send appropriate data to their data viewers
@@ -139,11 +152,11 @@ class LoaderPlotter:
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
         """
         for ind, _data in enumerate(data.data):
-            # viewer = self._viewers[_data.get_full_name()]
-            # self._viewer_docks[_data.get_full_name()].setTitle(_data.name)
+            viewer = self._viewers[_data.get_full_name()]
+            self._viewer_docks[_data.get_full_name()].setTitle(_data.name)
 
-            viewer = self.viewers[ind]
-            self.dispatcher.viewer_docks[ind].setTitle(_data.name)
+            # viewer = self.viewers[ind]
+            # self.dispatcher.viewer_docks[ind].setTitle(_data.name)
 
             viewer.title = _data.name
             if temp:

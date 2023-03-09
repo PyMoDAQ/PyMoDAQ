@@ -74,7 +74,7 @@ class DAQScan(QObject, ParameterManager):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': False},
+            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
             {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
@@ -616,12 +616,15 @@ class DAQScan(QObject, ParameterManager):
 
         viewers_enum = [ViewersEnum('Data0D').increase_dim(self.scanner.n_axes)
                         for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
+        data_names = self.settings['plot_options', 'plot_0d']['selected']
 
         if self.settings['scan_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data1D') in viewers_enum:
             viewers_enum = [ViewersEnum('Data1D')]
+            data_names = [self.live_plotter.grouped_data1D_fullname]
         viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
                              for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
-        self.live_plotter.prepare_viewers(viewers_enum)
+        data_names.extend(self.settings['plot_options', 'plot_1d']['selected'])
+        self.live_plotter.prepare_viewers(viewers_enum, viewers_name=data_names)
 
     def update_status(self, txt, wait_time=0, log_type=None):
         """
