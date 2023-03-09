@@ -250,7 +250,6 @@ class TestBkgSaver:
         assert data_bkg_loaded == data_bkg
 
 
-
 class TestDataEnlargeableSaver:
     def test_init(self, get_h5saver):
         h5saver = get_h5saver
