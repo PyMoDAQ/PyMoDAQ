@@ -11,8 +11,8 @@ build:
     python: "3.8"
   jobs:
     pre_install:
-      - sudo mkdir /etc/.pymodaq
-      - sudo chmod uo+rw /etc/.pymodaq
+      - mkdir /etc/.pymodaq
+      - chmod uo+rw /etc/.pymodaq
 
 
 # Build documentation in the docs/ directory with Sphinx
