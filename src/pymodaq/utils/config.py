@@ -71,12 +71,15 @@ def get_set_local_dir(user=False) -> Path:
     else:
         local_path = CONFIG_BASE_PATH
 
-    if not local_path.is_dir():                            # pragma: no cover
+    if not local_path.is_dir():
         try:
             local_path.mkdir()
         except PermissionError as e:
-            info = f"Cannot create local config folder at this location: {local_path}, try using admin rights"
-            raise PermissionError(info)
+            print(f"Cannot create local config folder at this location: {local_path}, try using admin rights. "
+                  f"Changing the system wide path to a user one.")
+            local_path = Path.home().joinpath('.pymodaq')
+            if not local_path.is_dir():
+                local_path.mkdir()
     return local_path
 
 

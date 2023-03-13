@@ -9,10 +9,6 @@ build:
   os: "ubuntu-22.04"
   tools:
     python: "3.8"
-  jobs:
-    pre_install:
-      - mkdir /etc/.pymodaq
-      - chmod uo+rw /etc/.pymodaq
 
 
 # Build documentation in the docs/ directory with Sphinx
