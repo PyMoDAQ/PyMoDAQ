@@ -11,8 +11,11 @@ from qtpy.QtCore import QObject
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore
 
+try:
+    USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
+except:
+    USER = 'unknown_user'
 
-USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
 CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']).joinpath('.pymodaq') if sys.platform == 'win32' else \
     Path('Library/Application Support/.pymodaq') if sys.platform == 'darwin' else Path('/etc/.pymodaq')
 
