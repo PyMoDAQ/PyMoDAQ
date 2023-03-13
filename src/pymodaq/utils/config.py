@@ -16,8 +16,8 @@ try:
 except:
     USER = 'unknown_user'
 
-CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']).joinpath('.pymodaq') if sys.platform == 'win32' else \
-    Path('Library/Application Support/.pymodaq') if sys.platform == 'darwin' else Path('/etc/.pymodaq')
+CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else \
+    Path('Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
 
 
 def replace_file_extension(filename: str, ext: str):
@@ -51,6 +51,21 @@ def getitem_recursive(dic, *args, ndepth=0):
     return dic
 
 
+def get_set_path(a_base_path: Path, dir_name: str) -> Path:
+    path_to_get = a_base_path.joinpath(dir_name)
+    if not path_to_get.is_dir():
+        try:
+            path_to_get.mkdir()
+        except PermissionError as e:
+            print(f"Cannot create local config folder at this location: {path_to_get}"
+                  f", try using admin rights. "
+                  f"Changing the not permitted path to a user one: {Path.home().joinpath(dir_name)}.")
+            path_to_get = Path.home().joinpath(dir_name)
+            if not path_to_get.is_dir():
+                path_to_get.mkdir()
+    return path_to_get
+
+
 def get_set_local_dir(user=False) -> Path:
     """Defines, creates and returns a local folder where configuration files will be saved
 
@@ -67,19 +82,9 @@ def get_set_local_dir(user=False) -> Path:
     Path: the local path
     """
     if user:
-        local_path = Path.home().joinpath('.pymodaq')
+        local_path = get_set_path(Path.home(), '.pymodaq')
     else:
-        local_path = CONFIG_BASE_PATH
-
-    if not local_path.is_dir():
-        try:
-            local_path.mkdir()
-        except PermissionError as e:
-            print(f"Cannot create local config folder at this location: {local_path}, try using admin rights. "
-                  f"Changing the system wide path to a user one.")
-            local_path = Path.home().joinpath('.pymodaq')
-            if not local_path.is_dir():
-                local_path.mkdir()
+        local_path = get_set_path(CONFIG_BASE_PATH, '.pymodaq')
     return local_path
 
 
@@ -104,15 +109,7 @@ def get_set_config_dir(config_name='config', user=False):
     --------
     get_set_local_dir
     """
-    local_path = get_set_local_dir(user=user)
-    path = local_path.joinpath(config_name)
-    if not path.is_dir():
-        try:
-            path.mkdir()
-        except PermissionError as e:
-            info = f"Cannot create local subconfig folder at this location: {local_path}, try using admin rights"
-            raise PermissionError(info)
-    return path
+    return get_set_path(get_set_local_dir(user=user), config_name)
 
 
 def get_set_log_path():
