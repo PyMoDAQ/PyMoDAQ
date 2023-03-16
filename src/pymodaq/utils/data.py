@@ -1380,7 +1380,7 @@ class DataWithAxes(DataBase):
                     #     if sig_ind > index:
                     #         sig_indexes[ind] -= 1
                     for axis in new_data.axes:
-                        if axis.index > index:
+                        if axis.index > index and axis.index not in remove_axes_index:
                             axis.index -= 1
 
                 new_data.nav_indexes = tuple(nav_indexes)
