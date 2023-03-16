@@ -40,8 +40,8 @@ def main():
                                    axes=[Axis('xaxis', units='xpxl', data=x, index=1),
                                          Axis('yaxis', units='ypxl', data=y, index=0),]))
 
-    prog.show_roi_target(True)
-    prog.move_scale_roi_target((50, 40), (20, 20))
+    prog.view.show_roi_target(True)
+    prog.view.move_scale_roi_target((50, 40), (20, 20))
 
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())

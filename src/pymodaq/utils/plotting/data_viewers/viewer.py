@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Union, TYPE_CHECKING
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, Slot
 
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import DataToExport, DataRaw, DataWithAxes
 from pymodaq.utils.exceptions import ViewerError
 from pymodaq.utils.enums import BaseEnum, enum_checker
@@ -11,8 +12,16 @@ from pymodaq.utils.plotting import data_viewers
 from pymodaq.utils.gui_utils import DockArea, Dock
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 
+if TYPE_CHECKING:
+    from pymodaq.utils.plotting.data_viewers.viewer0D import Viewer0D
+    from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
+    from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
+    from pymodaq.utils.plotting.data_viewers.viewerND import ViewerND
+
 config_viewers = {
 }
+
+logger = set_logger(get_module_name(__file__))
 
 
 class ViewersEnum(BaseEnum):
@@ -239,7 +248,7 @@ class ViewerBase(QObject):
 
         self._raw_data = None
         self.data_to_export: DataToExport = DataToExport(name=self.title)
-        self.view = None
+        self.view: Union[Viewer0D, Viewer1D, Viewer2D, ViewerND] = None
 
         if parent is None:
             parent = QtWidgets.QWidget()
@@ -249,11 +258,53 @@ class ViewerBase(QObject):
         self._display_temporary = False
 
     @property
+    def has_action(self):
+        """Convenience method"""
+        if hasattr(self.view, 'has_action'):
+            return self.view.has_action
+
+    @property
+    def is_action_checked(self):
+        """Convenience method"""
+        if hasattr(self.view, 'is_action_checked'):
+            return self.view.is_action_checked
+
+    @property
+    def is_action_visible(self):
+        """Convenience method"""
+        if hasattr(self.view, 'is_action_visible'):
+            return self.view.is_action_visible
+
+    @property
+    def set_action_checked(self):
+        """Convenience method"""
+        if hasattr(self.view, 'set_action_checked'):
+            return self.view.set_action_checked
+
+    @property
+    def set_action_visible(self):
+        """Convenience method"""
+        if hasattr(self.view, 'set_action_visible'):
+            return self.view.set_action_visible
+
+    @property
+    def get_action(self):
+        """Convenience method"""
+        if hasattr(self.view, 'get_action'):
+            return self.view.get_action
+
+    @property
+    def toolbar(self):
+        """Convenience property"""
+        if hasattr(self.view, 'toolbar'):
+            return self.view.toolbar
+
+    @property
     def viewer_type(self):
         """str: the viewer data type see DATA_TYPES"""
         return ViewersEnum[self.__class__.__name__].value
 
-    def show_data(self, data: DataRaw, **kwargs):
+    def show_data(self, data: DataWithAxes, **kwargs):
         """Entrypoint to display data into the viewer
 
         Parameters
@@ -261,8 +312,8 @@ class ViewerBase(QObject):
         data: data_mod.DataFromPlugins
         """
         if len(data.shape) > 4:
-            raise ViewerError(f'Ndarray of dim: {len(data.shape)} cannot be plotted'
-                              f' using a {self.viewer_type}')
+            raise ViewerError(f'Ndarray of dim: {len(data.shape)} cannot be plotted using a {self.viewer_type}')
+
         self.data_to_export = DataToExport(name=self.title)
         self._raw_data = data
 

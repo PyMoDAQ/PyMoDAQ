@@ -338,10 +338,6 @@ class Viewer1D(ViewerBase):
 
     Datas and measurements are then exported with the signal data_to_export_signal
     """
-    convenience_attributes = ('has_action', 'is_action_checked', 'is_action_visible', 'set_action_checked',
-                              'set_action_visible',
-                              'get_action', 'addAction', 'toolbar', 'crosshair',
-                              'viewer', 'roi_manager')
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent=parent, title=title)
@@ -358,9 +354,17 @@ class Viewer1D(ViewerBase):
 
         self.prepare_connect_ui()
 
-        self.add_attributes_from_view()
-
         self._labels = []
+
+    @property
+    def roi_manager(self):
+        """Convenience method """
+        return self.view.roi_manager
+
+    @property
+    def crosshair(self):
+        """Convenience method """
+        return self.view.crosshair
 
     def set_crosshair_position(self, xpos, ypos=0):
         """Convenience method to set the crosshair positions"""
@@ -389,7 +393,7 @@ class Viewer1D(ViewerBase):
                                                index=0)]))
 
                     self.data_to_export.append(DataCalculated(name=f'Integrated_{roi_key}',
-                                                              data=[np.array([lineout_data.math_data])]))
+                                                              data=[lineout_data.math_data]))
 
             self.measure_data_dict[f'{roi_key}:'] = lineout_data.math_data
 
@@ -421,8 +425,8 @@ class Viewer1D(ViewerBase):
         self.filter_from_crosshair.filter_data(self._raw_data)
 
     def activate_roi(self, activate=True):
-        self.set_action_checked('do_math', activate)
-        self.get_action('do_math').triggered.emit(activate)
+        self.view.set_action_checked('do_math', activate)
+        self.view.get_action('do_math').triggered.emit(activate)
 
     @property
     def labels(self):
@@ -481,7 +485,7 @@ def main():
                    axes=[Axis('myaxis', 'units', data=x)])
 
     Form.show()
-    prog.get_action('do_math').trigger()
+    prog.view.get_action('do_math').trigger()
 
     def print_data(data: DataToExport):
         print(data.data)

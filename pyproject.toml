@@ -19,8 +19,13 @@ classifiers = [
     "Environment :: Other Environment",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Human Machine Interfaces",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -35,7 +40,7 @@ dependencies = [
     "packaging",
     "pint",
     "pymodaq_plugin_manager>=0.0.17",
-    "pymodaq_plugins>=3.0.1",
+    "pymodaq_plugins_mock",
     "pyqtgraph>=0.12",
     "python-dateutil",
     "qdarkstyle",
@@ -43,10 +48,9 @@ dependencies = [
     "scipy",
     "setuptools>=60",
     "simple_pid",
-    "tables==3.6.1; python_version<\"3.9\"",
-    "tables>=3.7.0; python_version>\"3.8\"",
     "toml",
-    "qtconsole"
+    "qtconsole",
+    "tables"
 ]
 
 [project.scripts]
@@ -60,6 +64,8 @@ parameter_example = "pymodaq.examples.parameter_ex:main"
 
 [project.urls]
 Homepage = "http://pymodaq.cnrs.fr"
+Source = "https://github.com/PyMoDAQ/PyMoDAQ"
+Tracker = "https://github.com/PyMoDAQ/PyMoDAQ/issues"
 
 [tool.hatch.version]
 path = "src/pymodaq/resources/VERSION"

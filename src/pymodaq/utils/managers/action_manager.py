@@ -2,7 +2,7 @@ import warnings
 
 import pymodaq.utils.messenger
 from multipledispatch import dispatch
-from typing import Union, Callable
+from typing import Union, Callable, List
 
 from qtpy import QtGui, QtWidgets, QtCore
 from qtpy.QtWidgets import QAction
@@ -21,13 +21,13 @@ class QAction(QAction):
 
     def click(self):
         pymodaq.utils.messenger.deprecation_msg("click for PyMoDAQ's QAction is deprecated, use *trigger*",
-                                                    stacklevel=3)
+                                                stacklevel=3)
         self.trigger()
 
     @property
     def clicked(self):
         pymodaq.utils.messenger.deprecation_msg("clicked for PyMoDAQ's QAction is deprecated, use *trigger*",
-                                                    stacklevel=3)
+                                                stacklevel=3)
         return self.triggered
 
     def connect_to(self, slot):
@@ -277,10 +277,10 @@ class ActionManager:
         self.get_action(action_name).setText(text)
 
     @property
-    def actions(self):
+    def actions(self) -> List[QAction]:
         return list(self._actions.values())
 
-    def get_action(self, name):
+    def get_action(self, name) -> QAction:
         """Getter of a given action
 
         Parameters
@@ -298,7 +298,7 @@ class ActionManager:
             raise KeyError(f'The action with name: {name} is not referenced'
                            f' in the view actions: {self._actions.keys()}')
 
-    def has_action(self, action_name):
+    def has_action(self, action_name) -> bool:
         """Check if an action has been defined
         Parameters
         ----------

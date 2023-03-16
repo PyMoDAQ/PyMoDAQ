@@ -1,27 +1,21 @@
-import sys
-from typing import Tuple, List
-
+from __future__ import annotations
+from typing import Tuple, List, TYPE_CHECKING
 from collections import OrderedDict
-import numpy as np
 
-from pymodaq.utils.logger import set_logger, get_module_name
-from pymodaq.utils.config import Config
+
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import QObject, Signal, Slot
 
-from pymodaq.utils.parameter import ioxml
+from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils.config import Config
 from pymodaq.utils.scanner.scan_factory import ScannerFactory, ScannerBase
-from pymodaq.utils.plotting.scan_selector import ScanSelector
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
-
 import pymodaq.utils.daq_utils as utils
-import pymodaq.utils.gui_utils as gutils
-import pymodaq.utils.math_utils as mutils
-from pymodaq.utils.parameter import utils as putils
-from pymodaq.utils.plotting.utils.plot_utils import QVector
-
-
 from pymodaq.utils.scanner.utils import ScanInfo
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_move import DAQ_Move
+
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -36,7 +30,7 @@ class Scanner(QObject, ParameterManager):
     parent_widget: QtWidgets.QWidget
     scanner_items: list of GraphicItems
         used by ScanSelector for chosing scan area or linear traces
-    actuators: List['DAQ_MOVE']
+    actuators: List[DAQ_Move]
         list actuators names
 
     See Also
@@ -54,7 +48,7 @@ class Scanner(QObject, ParameterManager):
     ]
 
     def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]),
-                 actuators: List['DAQ_Move'] = []):
+                 actuators: List[DAQ_Move] = []):
         QObject.__init__(self)
         ParameterManager.__init__(self, self.__class__.__name__)
         if parent_widget is None:

@@ -257,7 +257,7 @@ try:
         def set_scan(self):
 
             self.axes_unique = [np.array([]), np.array([])]
-            self.axes_indexes = np.array([], dtype=np.int)
+            self.axes_indexes = np.array([], dtype=int)
             self.positions = np.zeros((0, 2))
 
         def evaluate_steps(self) -> int:

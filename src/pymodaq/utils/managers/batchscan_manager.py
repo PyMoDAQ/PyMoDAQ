@@ -206,7 +206,8 @@ class BatchManager:
 
         child = {'title': title, 'name': name, 'type': 'group', 'removable': True, 'children': params}
 
-        self.scans[name] = Scanner(actuators=[self.actuators[0]], adaptive_losses=adaptive_losses)
+        #todo update for v4
+        #self.scans[name] = Scanner(actuators=[self.actuators[0]], adaptive_losses=adaptive_losses)
         self.settings.child('scans').addChild(child)
         self.settings.child('scans', name, 'modules',
                             'actuators').setValue(dict(all_items=self.actuators,

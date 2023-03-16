@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import List
+from typing import List, TYPE_CHECKING
 import pymodaq.utils
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QPointF
@@ -24,6 +24,9 @@ from pymodaq.utils.gui_utils import select_file
 import numpy as np
 from pathlib import Path
 from pymodaq.post_treatment.process_to_scalar import DataProcessorFactory
+
+if TYPE_CHECKING:
+    from pymodaq.control_modules.daq_viewer import DAQ_Viewer
 
 data_processors = DataProcessorFactory()
 
@@ -473,7 +476,7 @@ class ROIManager(QObject):
             val = self.settings['ROIs', self.roi_format(ind), 'use_channel']
             self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setOpts(limits=channels)
             if val not in channels:
-                self.roi_manager.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
+                self.settings.child('ROIs', self.roi_format(ind), 'use_channel').setValue(channels[0])
 
     def update_roi(self, roi_key, param):
         self._ROIs[roi_key].index_signal[int].disconnect()
@@ -634,7 +637,7 @@ class ROISaver:
                      'det' in child.opts['name']]
         det_module_names = [det.title for det in self.detector_modules]
         for ind_det, det_roi in enumerate(det_children):
-            det_module: 'DAQ_Viewer' = self.detector_modules[det_module_names.index(det_names[ind_det])]
+            det_module: DAQ_Viewer = self.detector_modules[det_module_names.index(det_names[ind_det])]
             viewer_children = [child for child in det_roi.children() if 'viewer' in child.opts['name']]
             for ind_viewer, viewer in enumerate(det_module.viewers):
                 rois_params = [child for child in viewer_children[ind_viewer].children() if 'ROI' in child.opts['name']]
@@ -666,8 +669,8 @@ class ROISaver:
 
                 if hasattr(viewer, 'roi_manager'):
                     viewer_param.addChild({'title': 'ROI type:', 'name': 'roi_type', 'type': 'str',
-                                           'value': viewer.roi_manager.settings.child(('ROIs')).roi_type})
-                    viewer_param.addChildren(viewer.roi_manager.settings.child(('ROIs')).children())
+                                           'value': viewer.roi_manager.settings.child('ROIs').roi_type})
+                    viewer_param.addChildren(viewer.roi_manager.settings.child('ROIs').children())
                 det_param.addChild(viewer_param)
             self.roi_presets.addChild(det_param)
 

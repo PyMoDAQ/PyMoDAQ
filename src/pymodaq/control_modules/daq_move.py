@@ -97,8 +97,8 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         self.splash_sc = get_splash_sc()
         self._title = title
-
-        self.actuator = ACTUATOR_TYPES[0]
+        if len(ACTUATOR_TYPES) > 0:  # will be 0 if no valid plugins are installed
+            self.actuator = ACTUATOR_TYPES[0]
 
         self.module_and_data_saver = module_saving.ActuatorSaver(self)
 

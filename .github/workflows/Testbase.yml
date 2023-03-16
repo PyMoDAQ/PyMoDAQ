@@ -18,17 +18,23 @@ jobs:
       QT_DEBUG_PLUGINS: 1
     steps:
       - name: Set up Python ${{ inputs.python }}
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install dependencies
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ inputs.python }}
       - name: Install package
         run: |
-          sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+          sudo apt install libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils
           python -m pip install --upgrade pip
+          export QT_DEBUG_PLUGINS=1
           pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }}
-          pip install -e .
+          pip install -e .    
+          pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_mock
+      - name: create local pymodaq folder and setting permissions
+        run: |
+          sudo mkdir /etc/.pymodaq
+          sudo chmod uo+rw /etc/.pymodaq
       - name: Linting with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -37,7 +43,7 @@ jobs:
         run: |
           pytest --cov=pymodaq --cov-report=xml -n auto
       - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml

@@ -1,10 +1,32 @@
+from abc import abstractproperty
+
+from os import environ
+import sys
 import datetime
 from pathlib import Path
+from typing import Union
+
 import toml
 from qtpy.QtCore import QObject
-from pymodaq.utils.messenger import messagebox
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy import QtWidgets, QtCore
+
+try:
+    USER = environ['USERNAME'] if sys.platform == 'win32' else environ['USER']
+except:
+    USER = 'unknown_user'
+
+CONFIG_BASE_PATH = Path(environ['PROGRAMDATA']) if sys.platform == 'win32' else \
+    Path('Library/Application Support') if sys.platform == 'darwin' else Path('/etc')
+
+
+def replace_file_extension(filename: str, ext: str):
+    """Replace the extension of a file by the specified one, without the dot"""
+    file_name = Path(filename).stem  # remove eventual extensions
+    if ext[0] == '.':
+        ext = ext[1:]
+    file_name += '.' + ext
+    return file_name
 
 
 def getitem_recursive(dic, *args, ndepth=0):
@@ -29,132 +51,226 @@ def getitem_recursive(dic, *args, ndepth=0):
     return dic
 
 
-def get_set_local_dir(basename='pymodaq_local'):
-    """Defines, creates abd returns a local folder where configurations files will be saved
+def get_set_path(a_base_path: Path, dir_name: str) -> Path:
+    path_to_get = a_base_path.joinpath(dir_name)
+    if not path_to_get.is_dir():
+        try:
+            path_to_get.mkdir()
+        except PermissionError as e:
+            print(f"Cannot create local config folder at this location: {path_to_get}"
+                  f", try using admin rights. "
+                  f"Changing the not permitted path to a user one: {Path.home().joinpath(dir_name)}.")
+            path_to_get = Path.home().joinpath(dir_name)
+            if not path_to_get.is_dir():
+                path_to_get.mkdir()
+    return path_to_get
+
+
+def get_set_local_dir(user=False) -> Path:
+    """Defines, creates and returns a local folder where configuration files will be saved
+
+    Depending on the os the configurations files will be stored in CONFIG_BASE_PATH, then
+    each user will have another one created that could override the default and system-wide base folder
 
     Parameters
     ----------
-    basename: (str) how the configuration folder will be named
+    user: bool
+        if False get the system-wide folder, otherwise the user folder
 
     Returns
     -------
     Path: the local path
     """
-    local_path = Path.home().joinpath(basename)
-
-    if not local_path.is_dir():                            # pragma: no cover
-        try:
-            local_path.mkdir()
-        except Exception as e:
-            local_path = Path(__file__).parent.parent.joinpath(basename)
-            info = f"Cannot create local folder from your **Home** defined location: {Path.home()}," \
-                   f" using PyMoDAQ's folder as local directory: {local_path}"
-            print(info)
-            if not local_path.is_dir():
-                local_path.mkdir()
+    if user:
+        local_path = get_set_path(Path.home(), '.pymodaq')
+    else:
+        local_path = get_set_path(CONFIG_BASE_PATH, '.pymodaq')
     return local_path
 
 
-def get_set_config_path(config_name='config', local_dir=None):
+def get_config_file(config_file_name: str, user=False):
+    return get_set_local_dir(user).joinpath(replace_file_extension(config_file_name, 'toml'))
+
+
+def get_set_config_dir(config_name='config', user=False):
     """Creates a folder in the local config directory to store specific configuration files
 
     Parameters
     ----------
     config_name: (str) name of the configuration folder
+    user: bool
+        if False get the system-wide folder, otherwise the user folder
 
     Returns
     -------
+    Path
 
     See Also
     --------
     get_set_local_dir
     """
-    if local_dir is None:
-        local_path = get_set_local_dir()
-    else:
-        local_path = get_set_local_dir(local_dir)
-
-    path = local_path.joinpath(config_name)
-    if not path.is_dir():
-        path.mkdir()  # pragma: no cover
-    return path
+    return get_set_path(get_set_local_dir(user=user), config_name)
 
 
 def get_set_log_path():
     """ creates and return the config folder path for log files
     """
-    return get_set_config_path('log')
+    return get_set_config_dir('log')
 
 
 def get_set_preset_path():
     """ creates and return the config folder path for managers files
     """
-    return get_set_config_path('preset_configs')
+    return get_set_config_dir('preset_configs')
 
 
 def get_set_batch_path():
     """ creates and return the config folder path for managers files
     """
-    return get_set_config_path('batch_configs')
+    return get_set_config_dir('batch_configs')
 
 
 def get_set_pid_path():
     """ creates and return the config folder path for PID files
     """
-    return get_set_config_path('pid_configs')
+    return get_set_config_dir('pid_configs')
 
 
 def get_set_layout_path():
     """ creates and return the config folder path for layout files
     """
-    return get_set_config_path('layout_configs')
+    return get_set_config_dir('layout_configs')
 
 
 def get_set_remote_path():
     """ creates and return the config folder path for remote (shortcuts or joystick) files
     """
-    return get_set_config_path('remote_configs')
+    return get_set_config_dir('remote_configs')
 
 
 def get_set_overshoot_path():
     """ creates and return the config folder path for overshoot files
     """
-    return get_set_config_path('overshoot_configs')
+    return get_set_config_dir('overshoot_configs')
 
 
 def get_set_roi_path():
     """ creates and return the config folder path for managers files
     """
-    return get_set_config_path('roi_configs')
+    return get_set_config_dir('roi_configs')
 
 
-def load_config(config_path=None, config_base_path=None):
-    if not config_path:
-        config_path = get_set_local_dir().joinpath('config.toml')
-    if not config_base_path:
-        config_base = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
+def create_toml_from_dict(mydict: dict, dest_path: Path):
+    """Create a Toml file at a given path from a dictionnary"""
+    dest_path.write_text(toml.dumps(mydict))
+
+
+def check_config(config_base: dict, config_local: dict):
+        """Compare two configuration dictionaries. Adding missing keys
+
+        Parameters
+        ----------
+        config_base: dict
+            The base dictionaries with possible new keys
+        config_local: dict
+            a dict from a local config file potentially missing keys
+
+        Returns
+        -------
+        bool: True if keys where missing else False
+        """
+        status = False
+        for key in config_base:
+            if key in config_local:
+                if isinstance(config_base[key], dict):
+                    status = status or check_config(config_base[key], config_local[key])
+            else:
+                config_local[key] = config_base[key]
+                status = True
+        return status
+
+
+def copy_template_config(config_file_name: str = 'config', source_path: Union[Path, str] = None,
+                         dest_path: Union[Path, str] = None):
+    """Get a toml file path and copy it
+
+    the destination is made of a given folder path (or the system-wide local path by default) and the config_file_name
+    appended by the suffix '.toml'
+
+    The source file (or pymodaq config template path by default) is read and dumped in this destination file
+
+    Parameters
+    ----------
+    config_file_name: str
+        the name of the destination config file
+    source_path: Path or str
+        the path of the toml source to be copied
+    dest_path: Path or str
+        the destination path of the copied config
+
+    Returns
+    -------
+    Path: the path of the copied file
+    """
+    if dest_path is None:
+        dest_path = get_set_local_dir()
+
+    file_name = Path(config_file_name).stem  # remove eventual extensions
+    file_name += '.toml'
+    dest_path_with_filename = dest_path.joinpath(file_name)
+
+    if source_path is None:
+        config_template_dict = toml.load(Path(__file__).parent.parent.joinpath('resources/config_template.toml'))
     else:
-        config_base = toml.load(config_base_path)
-    if not config_path.exists():  # copy the template from pymodaq folder and create one in pymodad's local folder
-        config_path.write_text(toml.dumps(config_base))
+        config_template_dict = toml.load(Path(source_path))
 
-    # check if all fields are there
-    config = toml.load(config_path)
-    if check_config(config_base, config):
-        config_path.write_text(toml.dumps(config))
-        config = config_base
-    return config
+    create_toml_from_dict(config_template_dict, dest_path_with_filename)
+    return dest_path_with_filename
+
+
+def load_system_config_and_update_from_user(config_file_name: str):
+    """load from a system-wide config file, update it from the user config file
+
+    Parameters
+    ----------
+    config_file_name: str
+        The config file to be loaded
+    Returns
+    -------
+    dict: contains the toml system-wide file update with the user file
+    """
+    config_dict = dict([])
+    toml_base_path = get_config_file(config_file_name, user=False)
+    if toml_base_path.is_file():
+        config_dict = toml.load(toml_base_path)
+    toml_user_path = get_config_file(config_file_name, user=True)
+    if toml_user_path.is_file():
+        config_dict.update(toml.load(toml_user_path))
+    return config_dict
 
 
 class ConfigError(Exception):
     pass
 
 
-class Config:
-    def __init__(self, config_path=None, config_base_path=None):
-        self._config = load_config(config_path, config_base_path)
-        self.config_path = config_path
-        self.config_base_path = config_base_path
+class BaseConfig:
+    """Base class to manage configuration files
+
+    Should be subclassed with proper class attributes for each configuration file you need with pymodaq
+
+    Attributes
+    ----------
+    config_name: str
+        The name with which the configuration will be saved
+    config_template_path: Path
+        The Path of the template from which the config is constructed
+
+    """
+    config_template_path: Path = abstractproperty()
+    config_name: str = abstractproperty()
+
+    def __init__(self):
+        self._config = self.load_config(self.config_name, self.config_template_path)
 
     def __call__(self, *args):
         try:
@@ -181,37 +297,67 @@ class Config:
         else:
             self._config[key] = value
 
+    def load_config(self, config_file_name, template_path: Path):
+        """Load a configuration file from both system-wide and user file
 
-def set_config(config_as_dict, config_path=None):
-    if not config_path:
-        config_path = get_set_local_dir().joinpath('config.toml')
+        check also if missing entries in the configuration file compared to the template"""
+        toml_base_path = get_config_file(config_file_name, user=False)
+        toml_user_path = get_config_file(config_file_name, user=True)
+        if toml_base_path.is_file():
+            config = toml.load(toml_base_path)
+            config_template = toml.load(template_path)
+            if check_config(config_template, config):  # check if all fields from template are there
+                # (could have been  modified by some commits)
+                create_toml_from_dict(toml.dumps(config), toml_base_path)
 
-    config_path.write_text(toml.dumps(config_as_dict))
-
-
-def check_config(config_base, config_local):
-    status = False
-    for key in config_base:
-        if key in config_local:
-            if isinstance(config_base[key], dict):
-                status = status or check_config(config_base[key], config_local[key])
         else:
-            config_local[key] = config_base[key]
-            status = True
-    return status
+            copy_template_config(config_file_name, template_path, toml_base_path.parent)
+
+        if not toml_user_path.is_file():
+            # create the author from environment variable
+            config_dict = self.dict_to_add_to_user()
+            if config_dict is not None:
+                create_toml_from_dict(config_dict, toml_user_path)
+
+        config_dict = load_system_config_and_update_from_user(config_file_name)
+        return config_dict
+
+    def dict_to_add_to_user(self):
+        """To subclass"""
+        return None
+
+    @property
+    def config_path(self):
+        """Get the user config path"""
+        return get_config_file(self.config_name, user=True)
+
+    @property
+    def system_config_path(self):
+        """Get the system_wide config path"""
+        return get_config_file(self.config_name, user=False)
+
+    def save(self):
+        """Save the current Config object into the user toml file"""
+        self.config_path.write_text(toml.dumps(self.to_dict()))
+
+
+class Config(BaseConfig):
+    """Main class to deal with configuration values for PyMoDAQ"""
+    config_template_path = Path(__file__).parent.parent.joinpath('resources/config_template.toml')
+    config_name = 'config_pymodaq'
+
+    def dict_to_add_to_user(self):
+        """To subclass"""
+        return dict(user=dict(name=USER))
 
 
 class TreeFromToml(QObject):
-    def __init__(self, config=None, conf_path=None, config_base_path=None):
+    def __init__(self, config: Config = None):
         super().__init__()
         if config is None:
-            if conf_path is None:
-                config_path = get_set_local_dir().joinpath('config.toml')
-            else:
-                config_path = conf_path
-            config = Config(config_path, config_base_path)
-        self.config_path = config_path
-        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(config.config_path),
+            config = Config()
+        self._config = config
+        params = [{'title': 'Config path', 'name': 'config_path', 'type': 'str', 'value': str(self._config.config_path),
                    'readonly': True}]
         params.extend(self.dict_to_param(config.to_dict()))
 
@@ -238,12 +384,12 @@ class TreeFromToml(QObject):
 
         if res == self.dialog.Accepted:
             with open(self.config_path, 'w') as f:
-                config = self.param_to_dict(self.settings)
-                config.pop('config_path')
-                toml.dump(config, f)
+                config_dict = self.param_to_dict(self.settings)
+                config_dict.pop('config_path')
+                create_toml_from_dict(config_dict, self._config.config_path)
 
     @classmethod
-    def param_to_dict(cls, param):
+    def param_to_dict(cls, param: Parameter) -> dict:
         config = dict()
         for child in param.children():
             if 'group' in child.opts['type']:
@@ -264,7 +410,7 @@ class TreeFromToml(QObject):
         return config
 
     @classmethod
-    def dict_to_param(cls, config):
+    def dict_to_param(cls, config: dict) -> Parameter:
         params = []
         for key in config:
             if isinstance(config[key], dict):
@@ -295,7 +441,7 @@ class TreeFromToml(QObject):
 
     
 if __name__ == '__main__':
-    config = load_config()
+
     config = Config()
     config('style', 'darkstyle')
     assert config('style', 'darkstyle') == config['style']['darkstyle']

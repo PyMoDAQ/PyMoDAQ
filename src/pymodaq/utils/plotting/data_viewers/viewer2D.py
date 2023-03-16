@@ -630,10 +630,6 @@ class Viewer2D(ViewerBase):
 
     crosshair_clicked = Signal(bool)
     ROI_select_signal = Signal(QtCore.QRectF)
-    convenience_attributes = ('is_action_checked', 'is_action_visible', 'set_action_checked', 'set_action_visible',
-                              'get_action', 'ROIselect', 'addAction', 'toolbar', 'crosshair', 'histogrammer',
-                              'image_widget', 'scale_axis', 'unscale_axis', 'roi_manager', 'show_roi_target',
-                              'move_scale_roi_target', 'get_data_at')
 
     def __init__(self, parent=None, title=''):
         super().__init__(parent, title)
@@ -655,7 +651,24 @@ class Viewer2D(ViewerBase):
 
         self.prepare_connect_ui()
 
-        self.add_attributes_from_view()
+    @property
+    def roi_manager(self):
+        """Convenience method """
+        return self.view.roi_manager
+
+    @property
+    def crosshair(self):
+        """Convenience method """
+        return self.view.crosshair
+
+    @property
+    def image_widget(self):
+        """Convenience method """
+        return self.view.image_widget
+
+    def get_data_at(self):
+        """Convenience method """
+        return self.view.get_data_at()
 
     def set_crosshair_position(self, xpos, ypos):
         """Convenience method to set the crosshair positions"""
@@ -663,8 +676,8 @@ class Viewer2D(ViewerBase):
 
     def activate_roi(self, activate=True):
         """Activate the Roi manager using the corresponding action"""
-        self.set_action_checked('roi', activate)
-        self.get_action('roi').triggered.emit(activate)
+        self.view.set_action_checked('roi', activate)
+        self.view.get_action('roi').triggered.emit(activate)
 
     @Slot(dict)
     def roi_changed(self):
@@ -688,11 +701,14 @@ class Viewer2D(ViewerBase):
 
         if len(data) == 1 and not self._is_gradient_manually_set:
             self.set_gradient('red', 'grey')
+        if len(data) > 3:
+            logger.warning('Cannot plot on 2D plot more than 3 channels')
+            data.data = data.data[:3]
         if data.distribution != self.view.data_displayer.display_type:
             self.view.set_image_displayer(data.distribution)
             self.filter_from_crosshair.set_graph_items(self.view.data_displayer.get_images())
 
-        self.get_axes_from_view(data)
+        self.get_axes_from_view(data)  # in case axes were not specified into data, one try to get them from the view
 
         self.isdata['red'] = len(data) > 0
         self.isdata['green'] = len(data) > 1
@@ -704,28 +720,33 @@ class Viewer2D(ViewerBase):
             self.data_to_export_signal.emit(self.data_to_export)
 
     def get_axes_from_view(self, data: DataWithAxes):
-        if data.get_axis_from_index(0)[0] is None:
-            axis_view = self.view.get_axis('right')
-            axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
-                        scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=0)
-            axis.create_linear_data(data.shape[0])
-            data.axes.append(axis)
-        if data.get_axis_from_index(1)[0] is None:
-            axis_view = self.view.get_axis('top')
-            axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
-                        scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=1)
-            axis.create_linear_data(data.shape[1])
-            data.axes.append(axis)
+        """Obtain axes info from the view
+
+        Only for uniform data
+        """
+        if data.distribution == DataDistribution['uniform']:
+            if data.get_axis_from_index(0)[0] is None:
+                axis_view = self.view.get_axis('right')
+                axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
+                            scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=0)
+                axis.create_linear_data(data.shape[0])
+                data.axes.append(axis)
+            if data.get_axis_from_index(1)[0] is None:
+                axis_view = self.view.get_axis('top')
+                axis = Axis(axis_view.axis_label, units=axis_view.axis_units,
+                            scaling=axis_view.axis_scaling, offset=axis_view.axis_offset, index=1)
+                axis.create_linear_data(data.shape[1])
+                data.axes.append(axis)
 
     def update_data(self):
         if self._raw_data is not None:
             self._datas = self.set_image_transform()
             if self._datas.distribution.name == 'uniform':
-                self.x_axis = self._datas.axes_manager.get_axis_from_index(1)[0]
-                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
+                self.x_axis = self._datas.get_axis_from_index(1)[0]
+                self.y_axis = self._datas.get_axis_from_index(0)[0]
             else:
-                self.x_axis = self._datas.axes_manager.get_axis_from_index(0)[0]
-                self.y_axis = self._datas.axes_manager.get_axis_from_index(0)[1]
+                self.x_axis = self._datas.get_axis_from_index(0)[0]
+                self.y_axis = self._datas.get_axis_from_index(0)[1]
             self.view.display_images(self._datas)
 
             if self.view.is_action_checked('roi'):
@@ -770,8 +791,8 @@ class Viewer2D(ViewerBase):
 
     def show_roi(self, show=True, show_roi_widget=True):
         """convenience function to control roi"""
-        if show == (not self.is_action_checked('roi')):
-            self.get_action('roi').trigger()
+        if show == (not self.view.is_action_checked('roi')):
+            self.view.get_action('roi').trigger()
 
         self.view.roi_manager.roiwidget.setVisible(show_roi_widget)
 
@@ -963,8 +984,8 @@ def main(data_distribution='uniform'):
 
     prog.show_data(data_to_plot)
 
-    prog.show_roi_target(True)
-    prog.move_scale_roi_target((50, 40), (20, 20))
+    prog.view.show_roi_target(True)
+    prog.view.move_scale_roi_target((50, 40), (20, 20))
 
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())

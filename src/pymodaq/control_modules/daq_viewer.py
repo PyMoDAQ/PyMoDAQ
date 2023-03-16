@@ -11,7 +11,7 @@ import datetime
 import os
 from pathlib import Path
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import time
 
 from easydict import EasyDict as edict
@@ -134,14 +134,17 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self._title = title
 
-        self.module_and_data_saver: module_saving.DetectorSaver = None
+        self.module_and_data_saver: Union[module_saving.DetectorSaver,
+                                          module_saving.DetectorEnlargeableSaver,
+                                          module_saving.DetectorExtendedSaver] = None
         self.setup_saving_objects()
 
         self._external_h5_data = None
 
         self.settings.child('main_settings', 'DAQ_type').setValue(self.daq_type.name)
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
-        self._detector: str = self._detectors[0]
+        if len(self._detectors) > 0:  # will be 0 if no valid plugins are installed
+            self._detector: str = self._detectors[0]
         self.settings.child('main_settings', 'detector_type').setValue(self._detector)
 
         self._grabing: bool = False
@@ -167,6 +170,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._set_setting_tree()  # to activate parameters of default Mock detector
 
         self.grab_done_signal.connect(self._save_export_data)
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
 
     def setup_saving_objects(self):
         self.module_and_data_saver = module_saving.DetectorSaver(self)
@@ -592,6 +598,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             The indexes within the extended array where to place these data
         where: Node or str
         distribution: DataDistribution enum
+        save_raw_only: bool
+            If True save only Raw data (no data processed from Roi)
 
         See Also
         --------
@@ -602,6 +610,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     def _add_data_to_saver(self, data: DataToExport, init_step=False, where=None, **kwargs):
         """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
 
         Parameters
         ----------
@@ -618,6 +628,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         """
         detector_node = self.module_and_data_saver.get_set_node(where)
+        data = data if not self.module_and_data_saver.h5saver.settings['save_raw_only'] else\
+            self._data_to_save_export.get_data_from_source('raw')
+
         self.module_and_data_saver.add_data(detector_node, data, **kwargs)
 
         if init_step:
@@ -697,6 +710,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self._data_to_save_export is not None:  # means that somehow data are not initialized so no further procsessing
             self._received_data += 1
             if len(data) != 0:
+                for dat in data:
+                    dat.origin = self.title
                 self._data_to_save_export.append(data)
 
             if self._received_data == len(self.viewers):

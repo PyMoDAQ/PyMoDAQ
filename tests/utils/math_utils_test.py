@@ -143,7 +143,7 @@ class TestMath:
         with pytest.raises(TypeError):
             assert mutils.ftAxis_time("40", time_max)
         with pytest.raises(ValueError):
-            assert utils.ftAxis_time(0, time_max)
+            assert mutils.ftAxis_time(0, time_max)
 
     def test_ft(self):
         omega_max = units.l2w(300)

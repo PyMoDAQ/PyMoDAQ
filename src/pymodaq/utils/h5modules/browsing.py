@@ -95,7 +95,6 @@ class H5BrowserUtil(H5Backend):
     def get_h5_attributes(node_path):
         return get_h5_attributes(node_path)
 
-
 class View(QObject):
     item_clicked_sig = Signal(object)
     item_double_clicked_sig = Signal(object)
@@ -274,6 +273,7 @@ class H5Browser(QObject, ActionManager):
         self.connect_action('plot_node', lambda: self.get_node_and_plot(False))
         self.connect_action('plot_nodes', lambda: self.get_node_and_plot(False, True))
         self.connect_action('plot_node_with_bkg', lambda: self.get_node_and_plot(True))
+        self.connect_action('plot_nodes_with_bkg', lambda: self.get_node_and_plot(True, True))
 
         self.status_signal.connect(self.add_log)
 
@@ -309,10 +309,14 @@ class H5Browser(QObject, ActionManager):
         self.add_action('plot_node_with_bkg', 'Plot Node With Bkg', 'color', tip='Plot the current node with background'
                                                                                  ' substraction if possible',
                         toolbar=self.toolbar)
-
+        self.add_action('plot_nodes_with_bkg', 'Plot Nodes With Bkg', 'color', tip='Plot all nodes hanging from'
+                                                                                   ' the same parent with background'
+                                                                                   ' substraction if possible',
+                        toolbar=self.toolbar)
         self.view.add_actions([self.get_action('export'), self.get_action('comment'),
                                self.get_action('plot_node'), self.get_action('plot_nodes'),
-                               self.get_action('plot_node_with_bkg')])
+                               self.get_action('plot_node_with_bkg'),
+                               self.get_action('plot_nodes_with_bkg')])
 
         self.add_action('load', 'Load File', 'Open', tip='Open a new file')
         self.add_action('save', 'Save File as', 'SaveAs', tip='Save as another file')
@@ -490,7 +494,7 @@ class H5Browser(QObject, ActionManager):
                 for txt in node.read():
                     self.view.text_list.addItem(txt)
             else:
-                data_with_axes = self.data_loader.load_data(node, with_bkg=with_bkg, plot_all=plot_all)
+                data_with_axes = self.data_loader.load_data(node, with_bkg=with_bkg, load_all=plot_all)
                 self.hyper_viewer.show_data(data_with_axes, force_update=True)
 
         except Exception as e:

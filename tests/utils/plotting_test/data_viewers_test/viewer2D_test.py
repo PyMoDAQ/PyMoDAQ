@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import pymodaq.utils.managers.action_manager
 import pymodaq.utils.plotting.utils.filter
 import pymodaq.utils.plotting.utils.plot_utils
@@ -25,25 +27,34 @@ def init_qt(qtbot):
     return qtbot
 
 
-def init_data():
+def init_data(Ndata=1, uniform=True):
     Nx = 100
     Ny = 200
     data_random = np.random.normal(size=(Ny, Nx))
     x = np.linspace(0, Nx - 1, Nx)
     y = np.linspace(0, Ny - 1, Ny)
-    from pymodaq.utils.daq_utils import gauss2D
+    from pymodaq.utils.math_utils import gauss2D
+    if uniform:
+        data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x / 5) ** 2
+        data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
+        data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
+        data_blue = pg.gaussianFilter(data_blue, (2, 2))
+        data_list = [data_red, data_green, data_blue]
+        data = data_mod.DataRaw('raw', data=[data_list[ind] for ind in range(min(3, Ndata))])
+    else:
+        here = Path(__file__).parent
+        data_spread = np.load(str(here.joinpath('triangulation_data.npy')))
+        axes = [data_mod.Axis(data=data_spread[:, 0], index=0, label='x_axis', units='xunits', spread_order=0),
+                data_mod.Axis(data=data_spread[:, 1], index=0, label='y_axis', units='yunits', spread_order=1)]
+        data_list = [data_spread[:, 2] for _ in range(Ndata)]
+        data = data_mod.DataRaw('raw', distribution='spread', dim='DataND', data=data_list, nav_indexes=(0,),
+                                axes=axes)
 
-    data_red = 3 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 90) * np.sin(x / 5) ** 2
-    data_green = 24 * gauss2D(x, 0.2 * Nx, Nx / 5, y, 0.3 * Ny, Ny / 5, 1, 0)
-    data_blue = 10 * gauss2D(x, 0.7 * Nx, Nx / 5, y, 0.2 * Ny, Ny / 5, 1)
-    data_blue = pg.gaussianFilter(data_blue, (2, 2))
-    here = Path(__file__).parent
-    data_spread = np.load(str(here.joinpath('triangulation_data.npy')))
-    return data_red, data_green, data_blue, data_spread
+    return data
 
 
 @fixture
-def init_prog(qtbot):
+def init_viewer2D(qtbot) -> Tuple[Viewer2D, None]:
     form = QtWidgets.QWidget()
     prog = Viewer2D()
     qtbot.addWidget(form)
@@ -54,15 +65,11 @@ def init_prog(qtbot):
     form.close()
 
 @fixture
-def init_prog_show_data(init_prog, distribution='uniform'):
-    prog, qtbot = init_prog
-    data_red, data_green, data_blue, data_spread = init_data()
-    if distribution == 'uniform':
-        data = data_mod.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green, data_blue])
-    else:
-        data = data_mod.DataFromPlugins(name='mydata', distribution='uniform', data=[data_spread])
+def init_prog_show_data(init_viewer2D, distribution='uniform'):
+    prog, qtbot = init_viewer2D
+    data = init_data(3, uniform=(distribution == 'uniform'))
     prog.show_data(data)
-    return prog, qtbot, (data_red, data_green, data_blue, data_spread)
+    return prog, qtbot, data
 
 
 def create_one_roi(prog, qtbot, roitype='RectROI'):
@@ -109,9 +116,6 @@ class TestHistoFactory:
         histo = v2d.histogram_factory(image_item, gradient='red')
 
         assert histo.imageItem() is image_item
-
-
-
 
 
 class TestData0DWithHistory:
@@ -165,68 +169,39 @@ class TestLineoutData:
 
 
 class TestViewer2D:
-    def test_init(self, init_prog):
-        prog, qtbot = init_prog
+    def test_init(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         assert isinstance(prog, Viewer2D)
 
-    def test_show_data_triggers_data_to_export_signal(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_green])
+    def test_show_data_triggers_data_to_export_signal(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
 
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
             prog.show_data(data)
 
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
             prog.show_data(data)
-
-    def test_show_data_setImagered(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        with qtbot.waitSignal(prog.data_to_export_signal, timeout=10000) as blocker:
-            prog.setImage(data_red=data_red)
-
-        data_to_export_from_signal = blocker.args[0]
-        for elt in ['timestamp', 'name', 'data']:
-            assert hasattr(prog.data_to_export, elt)
-            assert hasattr(data_to_export_from_signal, elt)
-
-        assert prog.data_to_export == data_to_export_from_signal
-        assert prog.data_to_export.name == prog.title
-        assert len(data_to_export_from_signal) == 0
-        assert len(data_to_export_from_signal) == 0
 
     @pytest.mark.xfail
-    def test_setimage_temp(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
+    def test_show_data_temp(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=500) as blocker:
-            prog.setImageTemp(data_red=data_red)
+            prog.show_data_temp(data)
 
-    def test_show_data_setImageredblue(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
+    def test_show_data_setImageredblue(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data(3)
         
-        prog.setImage(data_red=data_red, data_blue=data_blue)
+        prog.show_data(data)
         assert prog.view.is_action_checked('red')
         assert prog.view.is_action_checked('green')
         assert prog.view.is_action_checked('blue')
 
-    def test_show_data_setImageSpread(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        prog.setImage(data_spread=data_spread)
-
-        assert prog.view.is_action_checked('red')
-        assert not prog.view.is_action_checked('green')
-        assert not prog.view.is_action_checked('blue')
-
-    def test_show_data_uniform(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='mydata', distribution='uniform', data=[data_red, data_blue])
+    def test_show_data_uniform(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data(2)
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
             prog.show_data(data)
 
@@ -237,11 +212,10 @@ class TestViewer2D:
         assert prog.isdata['green']
         assert not prog.isdata['blue']
 
-    def test_show_data_spread(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='mydata', distribution='spread', data=[data_spread, data_spread])
+    def test_show_data_spread(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data(2, uniform=False)
+
         prog.show_data(data)
         assert prog.view.is_action_checked('red')
         assert prog.view.is_action_checked('green')
@@ -266,47 +240,22 @@ class TestViewer2D:
 
 class TestAxis:
     @pytest.mark.parametrize('position', ('left', 'bottom', 'right', 'top'))
-    def test_axis_label(self, init_prog, position):
-        prog, qtbot = init_prog
+    def test_axis_label(self, init_viewer2D, position):
+        prog, qtbot = init_viewer2D
         UNITS= 'myunits'
         LABEL = 'mylabel'
 
         prog.view.set_axis_label(position, label=LABEL, units=UNITS)
         assert prog.view.get_axis_label(position) == (LABEL, UNITS)
 
-    def test_get_axis_error(self, init_prog):
-        prog, qtbot = init_prog
+    def test_get_axis_error(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
 
         with pytest.raises(KeyError):
             prog.view.get_axis_label('unvalid key')
 
-    def test_set_scaling_axes(self, init_prog):
-        prog, qtbot = init_prog
-        XUNITS= 'myxunits'
-        XLABEL = 'myxlabel'
-        XSCALING = 0.1
-        XOFFSET = 24
-
-        YUNITS= 'myyunits'
-        YLABEL = 'myylabel'
-        YSCALING = -2.1
-        YOFFSET = 0.87
-
-        x_scaling_options = data_mod.ScaledAxis(scaling=XSCALING, offset=XOFFSET, label=XLABEL, units=XUNITS)
-        y_scaling_options = data_mod.ScaledAxis(scaling=YSCALING, offset=YOFFSET, label=YLABEL, units=YUNITS)
-        prog.set_scaling_axes(data_mod.ScalingOptions(x_scaling_options, y_scaling_options))
-
-        assert prog.x_axis.axis_units == XUNITS
-        assert prog.x_axis.axis_label == XLABEL
-        assert prog.x_axis.axis_offset == XOFFSET
-        assert prog.x_axis.axis_scaling == XSCALING
-        assert prog.y_axis.axis_units == YUNITS
-        assert prog.y_axis.axis_label == YLABEL
-        assert prog.y_axis.axis_offset == YOFFSET
-        assert prog.y_axis.axis_scaling == YSCALING
-
-    def test_scale_axis(self, init_prog):
-        prog, qtbot = init_prog
+    def test_scale_axis(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         XSCALING = 0.1
         XOFFSET = 24
         YSCALING = -2.1
@@ -331,15 +280,15 @@ class TestActions:
     @pytest.mark.parametrize('action', ['position', 'red', 'green', 'blue', 'autolevels', 'auto_levels_sym',
                                         'histo', 'roi', 'isocurve', 'aspect_ratio', 'crosshair',
                                         'ROIselect', 'flip_ud', 'flip_lr', 'rotate'])
-    def test_actionhas(self, init_prog, action):
-        prog, qtbot = init_prog
+    def test_actionhas(self, init_viewer2D, action):
+        prog, qtbot = init_viewer2D
         assert prog.view.has_action(action)
 
     @pytest.mark.parametrize('color', ['red', 'green', 'blue'])
-    def test_color_action(self, init_prog, color):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        prog.setImage(data_red=data_red, data_green=data_green, data_blue=data_blue)
+    def test_color_action(self, init_viewer2D, color):
+        prog, qtbot = init_viewer2D
+        data = init_data(3)
+        prog.show_data(data)
 
         assert prog.view.data_displayer.get_image(color).isVisible()
         assert prog.view.is_action_checked(color)
@@ -349,11 +298,9 @@ class TestActions:
         assert not prog.view.is_action_checked(color)
         assert not prog.view.data_displayer.get_image(color).isVisible()
 
-    def test_histo_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_histo_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data(2)
         prog.show_data(data)
 
         prog.view.get_action('histo').trigger()
@@ -363,11 +310,9 @@ class TestActions:
         assert prog.view.histogrammer.get_histogram('green').isVisible()
         assert not prog.view.histogrammer.get_histogram('blue').isVisible()
 
-    def test_histo_autolevel_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green, data_blue])
+    def test_histo_autolevel_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data(3)
         prog.show_data(data)
         prog.view.get_action('histo').trigger()
 
@@ -382,9 +327,8 @@ class TestActions:
         assert prog.view.histogrammer.get_histogram('blue').getLevels() ==\
                approx((5.693320370703248e-09, 9.83017824174412))
 
-    def test_autolevel_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
+    def test_autolevel_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         prog.view.get_action('autolevels').trigger()
         assert prog.view.histogrammer.autolevels
         assert prog.view.data_displayer.autolevels
@@ -396,38 +340,16 @@ class TestActions:
 
 class TestHistogrammer:
     @pytest.mark.parametrize('color', ['red', 'green', 'blue'])
-    def test_get_histogram(self, init_prog, color):
-        prog, qtbot = init_prog
+    def test_get_histogram(self, init_viewer2D, color):
+        prog, qtbot = init_viewer2D
 
         assert color in prog.view.histogrammer.get_histograms()
         assert prog.view.histogrammer.get_histogram(color) == prog.view.histogrammer.get_histograms()[color]
 
-    def test_get_histogram_name_error(self, init_prog):
-        prog, qtbot = init_prog
+    def test_get_histogram_name_error(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         with pytest.raises(KeyError):
             prog.view.histogrammer.get_histogram('not a valid identifier')
-
-    def test_histo_connected_to_image(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green, data_blue])
-        prog.show_data(data)
-        QtWidgets.QApplication.processEvents()
-        for color in ['red', 'green', 'blue']:
-            assert prog.view.histogrammer.get_histogram(color).getLookupTable == \
-                   prog.view.data_displayer.get_image(color).lut
-
-    def test_histo_connected_to_image_spread(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='spread', data=[data_spread, data_spread, data_spread])
-        prog.show_data(data)
-        QtWidgets.QApplication.processEvents()
-        for color in ['red', 'green', 'blue']:
-            assert prog.view.histogrammer.get_histogram(color).getLookupTable == \
-                   prog.view.data_displayer.get_image(color).lut
 
     @pytest.mark.parametrize('histo', ['red', 'blue', 'green', 'all'])
     @pytest.mark.parametrize('gradient', ['blue', 'green', 'spread'])
@@ -437,23 +359,18 @@ class TestHistogrammer:
 
 
 class TestROI:
-    def test_roi_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_roi_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
-
         create_one_roi(prog, qtbot, roitype='RectROI')
 
         assert prog.view.is_action_checked('roi')
         assert prog.view.roi_manager.roiwidget.isVisible()
 
-    def test_add_roi(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_add_roi(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
@@ -466,11 +383,9 @@ class TestROI:
         assert index_roi == 1
         assert len(prog.view.lineout_plotter.get_roi_curves_triplet()) == 2
 
-    def test_remove_roi(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_remove_roi(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data= init_data()
         prog.show_data(data)
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
@@ -480,11 +395,9 @@ class TestROI:
 
         assert len(prog.view.lineout_plotter._roi_curves) == 0
 
-    def test_update_color_roi(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_update_color_roi(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
@@ -494,11 +407,9 @@ class TestROI:
         QtWidgets.QApplication.processEvents()
         assert roi.pen == mkPen('b')
 
-    def test_data_from_roi(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_data_from_roi(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
@@ -507,7 +418,7 @@ class TestROI:
         assert prog.view.is_action_checked('roi')
 
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
-            roi.setSize((data_red.T).shape)
+            roi.setSize((data[0].T).shape)
             roi.setPos((0, 0))
 
         data_to_export: data_mod.DataToExport = blocker.args[0]
@@ -524,24 +435,21 @@ class TestROI:
         vlineout = data_to_export.get_data_from_name(f'Vlineout_{ROIManager.roi_format(index_roi)}')
         intlineout = data_to_export.get_data_from_name(f'Integrated_{ROIManager.roi_format(index_roi)}')
 
-        assert np.any(hlineout.data[0] == approx(np.mean(data_red, 0)))
-        assert np.any(vlineout.data[0] == approx(np.mean(data_red, 1)))
-        assert np.any(intlineout.data[0] == approx(np.mean(data_red)))
+        assert np.any(hlineout.data[0] == approx(np.mean(data[0], 0)))
+        assert np.any(vlineout.data[0] == approx(np.mean(data[0], 1)))
+        assert np.any(intlineout.data[0] == approx(np.mean(data[0])))
 
-    def test_data_from_roi_spread(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-
-        data = data_mod.DataFromPlugins(name='myname', distribution='spread', data=[data_spread])
+    def test_data_from_roi_spread(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data(uniform=False)
         prog.show_data(data)
 
         index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
         roi.setPos((0, 0))
 
         assert prog.view.is_action_checked('roi')
-
         with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
-            roi.setSize(data_red.T.shape)
+            roi.setSize((10, 10))
             roi.setPos((0, 0))
 
         data_to_export = blocker.args[0]
@@ -552,16 +460,9 @@ class TestROI:
         assert f'Vlineout_{ROIManager.roi_format(index_roi)}' in data_to_export.get_names('data1D')
         assert f'Integrated_{ROIManager.roi_format(index_roi)}' in data_to_export.get_names('data0D')
 
-    def test_data_from_roi_without_data(self, init_prog):
-        prog, qtbot = init_prog
 
-        index_roi, roi, roi_type = create_one_roi(prog, qtbot, roitype='RectROI')
-        roi.setPos((0, 0))
-
-        assert prog.view.is_action_checked('roi')
-
-    def test_show_roi(self, init_prog):
-        prog, qtbot = init_prog
+    def test_show_roi(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         prog.show_roi(show=True, show_roi_widget=True)
         assert prog.is_action_checked('roi')
         assert prog.view.roi_manager.roiwidget.isVisible()
@@ -581,10 +482,9 @@ class TestROI:
 
 class TestIsocurve:
 
-    def test_isocurve_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_isocurve_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
 
         prog.view.get_action('isocurve').trigger()
@@ -594,15 +494,14 @@ class TestIsocurve:
 
     @pytest.mark.parametrize('histo', ['blue', 'green', 'red'])
     @pytest.mark.parametrize('im_source', ['blue', 'green', 'red'])
-    def test_isocurve_parent(self, init_prog, im_source, histo):
-        prog, qtbot = init_prog
+    def test_isocurve_parent(self, init_viewer2D, im_source, histo):
+        prog, qtbot = init_viewer2D
         prog.view.isocurver.update_image_source(prog.view.data_displayer.get_image(im_source))
         prog.view.isocurver.update_histogram_parent(prog.view.histogrammer.get_histogram(histo))
 
-    def test_change_isoline(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_change_isoline(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
 
         ISOLEVEL = 0.1
@@ -615,10 +514,9 @@ class TestIsocurve:
 
 
 class TestAspectRatio:
-    def test_aspect_ratio_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_aspect_ratio_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data= init_data()
         prog.show_data(data)
 
         prog.view.get_action('aspect_ratio').trigger()
@@ -631,10 +529,9 @@ class TestAspectRatio:
 
 
 class TestCrosshair:
-    def test_crosshair_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_crosshair_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
         assert not prog.view.is_action_visible('position')
 
@@ -663,10 +560,9 @@ class TestCrosshair:
             for curve in prog.view.lineout_plotter.get_crosshair_curves_triplet()[image_key].values():
                 assert not curve.isVisible()
 
-    def test_setpos_crosshair(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_setpos_crosshair(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
         QtWidgets.QApplication.processEvents()
         XCROSS = 24
@@ -682,11 +578,10 @@ class TestCrosshair:
         assert blocker.args[1] == approx(YCROSS)
 
     @pytest.mark.parametrize('position', [(24, 75), (300, 10), (50, 300)])
-    def test_get_crosshair_lineout_uniform(self, init_prog, position):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
-        datas = dict(red=data_red, green=data_green)
+    def test_get_crosshair_lineout_uniform(self, init_viewer2D, position):
+        prog, qtbot = init_viewer2D
+        data = init_data(2)
+        datas = dict(red=data[0], green=data[1])
         prog.show_data(data)
         QtWidgets.QApplication.processEvents()
 
@@ -710,11 +605,9 @@ class TestCrosshair:
                 assert np.any(lineout_data.ver_data == approx(datas[data_key][:, XCROSS]))
 
     @pytest.mark.parametrize('position', [(-2., -3), (2., 1.), (50, 300)])
-    def test_get_crosshair_lineout_spread(self, init_prog, position):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='spread', data=[data_spread])
-        datas = dict(spread=data_spread)
+    def test_get_crosshair_lineout_spread(self, init_viewer2D, position):
+        prog, qtbot = init_viewer2D
+        data = init_data(uniform=False)
         prog.show_data(data)
         QtWidgets.QApplication.processEvents()
 
@@ -742,9 +635,8 @@ class TestCrosshair:
             assert np.any(lineout_data.hor_data == approx(hor_data))
             assert np.any(lineout_data.ver_data == approx(ver_data))
 
-    def test_crosshair_doubleclicked(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
+    def test_crosshair_doubleclicked(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         prog.view.get_action('crosshair').trigger()
         with qtbot.waitSignal(prog.sig_double_clicked, timeout=10000) as blocker:
             prog.view.get_double_clicked().emit(10.5, 20.9)
@@ -754,9 +646,8 @@ class TestCrosshair:
 
 
 class TestRoiSelect:
-    def test_ROIselect_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
+    def test_ROIselect_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
 
         prog.view.get_action('ROIselect').trigger()
         with qtbot.waitSignal(prog.ROI_select_signal, timeout=1000) as blocker:
@@ -773,81 +664,68 @@ class TestRoiSelect:
 
 
 class TestImageDisplayer:
-    def test_get_image(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_get_image(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
         QtWidgets.QApplication.processEvents()
 
         with pytest.raises(KeyError):
             prog.view.data_displayer.get_image('not a valid image name')
 
-    def test_update_display_items(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_update_display_items(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
         QtWidgets.QApplication.processEvents()
 
-        data = data_mod.DataFromPlugins(name='myname', distribution='spread', data=[data_spread])
+        data = init_data(uniform=False)
         prog.show_data(data)
         QtWidgets.QApplication.processEvents()
+
 
 class TestModifyImages:
-    def test_FlipUD_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
-        datas = dict(red=data_red, green=data_green)
+    def test_FlipUD_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
 
-        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
+            prog.show_data(data)
+        assert np.any(prog._datas[0] == approx(data[0]))
+
+        prog.view.get_action('flip_ud').trigger()
+        QtWidgets.QApplication.processEvents()
+        assert np.any(prog._datas[0] == approx(np.flipud(data[0])))
+
+    def test_FlipLR_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
+        prog.show_data(data)
+
+        with qtbot.waitSignal(prog.data_to_export_signal, timeout=1000) as blocker:
             prog.show_data(data)
 
-        for ind, data_to_show in enumerate(blocker.args[0]['data']):
-            assert np.any(data_to_show == approx(data['data'][ind]))
+        prog.view.get_action('flip_lr').trigger()
+        QtWidgets.QApplication.processEvents()
+        assert np.any(prog._datas[0] == approx(np.fliplr(data[0])))
 
-        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
-            prog.view.get_action('flip_ud').trigger()
-        for ind, data_to_show in enumerate(blocker.args[0]['data']):
-            assert np.any(data_to_show == approx(np.flipud(data['data'][ind])))
+        prog.view.get_action('flip_lr').trigger()
+        QtWidgets.QApplication.processEvents()
+        assert np.any(prog._datas[0] == approx(data[0]))
 
-    def test_FlipLR_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
+    def test_rotate_action(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
+        data = init_data()
         prog.show_data(data)
-
-        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
-            prog.view.get_action('flip_lr').trigger()
-        for ind, data_to_show in enumerate(blocker.args[0]['data']):
-            assert np.any(data_to_show == approx(np.fliplr(data['data'][ind])))
-
-        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
-            prog.view.get_action('flip_lr').trigger()
-        for ind, data_to_show in enumerate(blocker.args[0]['data']):
-            assert np.any(data_to_show == approx(data['data'][ind]))
-
-    def test_rotate_action(self, init_prog):
-        prog, qtbot = init_prog
-        data_red, data_green, data_blue, data_spread = init_data()
-        data = data_mod.DataFromPlugins(name='myname', distribution='uniform', data=[data_red, data_green])
-        prog.show_data(data)
-
-        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
-            prog.view.get_action('rotate').trigger()
-        for ind, data_to_show in enumerate(blocker.args[0]['data']):
-            assert np.any(data_to_show == approx(np.flipud(np.transpose(data['data'][ind]))))
-
-        with qtbot.waitSignal(prog._data_to_show_signal, timeout=1000) as blocker:
-            prog.view.get_action('rotate').trigger()
-        for ind, data_to_show in enumerate(blocker.args[0]['data']):
-            assert np.any(data_to_show == approx(data['data'][ind]))
+        QtWidgets.QApplication.processEvents()
+        prog.view.get_action('rotate').trigger()
+        QtWidgets.QApplication.processEvents()
+        assert np.any(prog._datas[0] == approx(np.flipud(np.transpose(data[0]))))
 
 
 class TestMiscellanous:
-    def test_double_clicked(self, init_prog):
-        prog, qtbot = init_prog
+    def test_double_clicked(self, init_viewer2D):
+        prog, qtbot = init_viewer2D
         with qtbot.waitSignal(prog.sig_double_clicked, timeout=10000) as blocker:
             prog.view.get_double_clicked().emit(10.5, 20.9)
 

@@ -4,6 +4,8 @@ Created the 28/10/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod, abstractproperty
 import numbers
 import numpy as np
@@ -282,6 +284,8 @@ class Axis:
         ax = copy.deepcopy(self)
         if isinstance(_slice, int):
             return None
+        elif _slice is Ellipsis:
+            return ax
         elif isinstance(_slice, slice):
             if ax._data is not None:
                 ax.data = ax._data.__getitem__(_slice)
@@ -414,7 +418,7 @@ class DataBase(DataLowLevel):
         The labels of the data nd-arrays
     origin: str
         An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
-        DataToExport in DAQ_Scan to desintricate from wich origin data comes from when scanning multiple detectors.
+        DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
 
     See Also
     --------
@@ -478,16 +482,16 @@ class DataBase(DataLowLevel):
             raise StopIteration
 
     def __getitem__(self, item) -> np.ndarray:
-        if isinstance(item, int) and 0 <= item < len(self):
+        if isinstance(item, int) and item < len(self):
             return self.data[item]
         else:
-            raise IndexError(f'The index should be a positive integer lower than the data length')
+            raise IndexError(f'The index should be an integer lower than the data length')
 
     def __setitem__(self, key, value):
-        if isinstance(key, int) and 0 <= key < len(self) and isinstance(value, np.ndarray) and value.shape == self.shape:
+        if isinstance(key, int) and key < len(self) and isinstance(value, np.ndarray) and value.shape == self.shape:
             self.data[key] = value
         else:
-            raise IndexError(f'The index should be a positive integer lower than the data length')
+            raise IndexError(f'The index should be an positive integer lower than the data length')
 
     def __add__(self, other: object):
         if isinstance(other, DataBase) and len(other) == len(self):
@@ -538,6 +542,10 @@ class DataBase(DataLowLevel):
                     eq = False
                     break
                 eq = eq and np.allclose(self[ind], other[ind])
+            # labels_not = (self.labels == other.labels)
+            # if labels_not:
+            #     logger.debug(f'labels from self:{self.labels}, other: {other.labels}')
+            # eq = (eq and labels_not)
             return eq
         else:
             raise TypeError()
@@ -558,6 +566,13 @@ class DataBase(DataLowLevel):
         else:
             raise TypeError(f'Could not average a {other.__class__.__name__} or a {self.__class__.__name__} '
                             f'of a different length')
+
+    def append(self, data: DataWithAxes):
+        for dat in data:
+            if dat.shape != self.shape:
+                raise DataShapeError('Cannot append those ndarrays, they don\'t have the same shape as self')
+        self.data = self.data + data.data
+        self.labels.extend(data.labels)
 
     @property
     def shape(self):
@@ -597,7 +612,15 @@ class DataBase(DataLowLevel):
     def labels(self):
         return self._labels
 
-    def _check_labels(self, labels):
+    @labels.setter
+    def labels(self, labels: List['str']):
+        self._check_labels(labels)
+
+    def _check_labels(self, labels: List['str']):
+        if labels is None:
+            labels = []
+        else:
+            labels = labels[:]
         while len(labels) < self.length:
             labels.append(f'CH{len(labels):02d}')
         self._labels = labels
@@ -672,7 +695,7 @@ class DataBase(DataLowLevel):
                 raise DataShapeError('The shape of the ndarrays in data is not the same')
 
     @property
-    def data(self):
+    def data(self) -> List[np.ndarray]:
         """List[np.ndarray]: get/set (and check) the data the object is storing"""
         return self._data
 
@@ -1097,7 +1120,7 @@ class DataWithAxes(DataBase):
         axes of 2D ndarray data
     """
 
-    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), spread_index: int = None, **kwargs):
+    def __init__(self, *args, axes: List[Axis] = [], nav_indexes: Tuple[int] = (), **kwargs):
 
         if 'nav_axes' in kwargs:
             deprecation_msg('nav_axes parameter should not be used anymore, use nav_indexes')
@@ -1123,7 +1146,8 @@ class DataWithAxes(DataBase):
         self.get_dim_from_data_axes()
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
-        if self.distribution.name == 'uniform':
+        if self.distribution.name == 'uniform' or len(nav_indexes) == 0:
+            self._distribution = DataDistribution['uniform']
             self.axes_manager = AxesManagerUniform(data_shape=data_shape, axes=axes, nav_indexes=nav_indexes,
                                                    **kwargs)
         elif self.distribution.name == 'spread':
@@ -1150,10 +1174,30 @@ class DataWithAxes(DataBase):
             return self
 
     def transpose(self):
+        """replace the data by their transposed version
+
+        Valid only for 2D data
+        """
         if self.dim == 'Data2D':
             self.data[:] = [data.T for data in self.data]
             for axis in self.axes:
                 axis.index = 0 if axis.index == 1 else 1
+
+    def mean(self, axis: int = 0) -> DataWithAxes:
+        """Process the mean of the data on the specified axis and returns the new data
+
+        Parameters
+        ----------
+        axis: int
+
+        Returns
+        -------
+        DataWithAxes
+        """
+        dat_mean = []
+        for dat in self.data:
+            dat_mean.append(np.mean(dat, axis=axis))
+        return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
 
     def get_dim_from_data_axes(self):
         """Get the dimensionality DataDim from data taking into account nav indexes
@@ -1183,19 +1227,23 @@ class DataWithAxes(DataBase):
 
     @nav_indexes.setter
     def nav_indexes(self, indexes: List[int]):
-        """convenience property to fetch attribute from axis_manager"""
-        self._am.nav_indexes = indexes
+        """create new axis manager with new navigation indexes"""
+        self.set_axes_manager(self.shape, axes=self.axes, nav_indexes=indexes)
 
-    def get_nav_axes(self) -> List['Axis']:
+    def get_nav_axes(self) -> List[Axis]:
         return self._am.get_nav_axes()
 
-    def get_nav_axes_with_data(self) -> List['Axis']:
+    def get_nav_axes_with_data(self) -> List[Axis]:
         """Get the data's navigation axes making sure there is data in the data field"""
         axes = self.get_nav_axes()
         for axis in axes:
             if axis.data is None:
                 axis.create_linear_data(self.shape[axis.index])
         return axes
+
+    def get_axis_indexes(self) -> List[int]:
+        """Get all present different axis indexes"""
+        return sorted(list(set([axis.index for axis in self.axes])))
 
     def get_axis_from_index(self, index, create=False):
         return self._am.get_axis_from_index(index, create)
@@ -1207,7 +1255,6 @@ class DataWithAxes(DataBase):
             if self.get_axis_from_index(index)[0] is None:
                 axes.extend(self.get_axis_from_index(index, create=True))
         self.axes = axes
-
 
     def _compute_slices(self, slices, is_navigation=True):
         """Compute the total slice to apply to the data
@@ -1267,15 +1314,10 @@ class DataWithAxes(DataBase):
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            if isinstance(ax, list):
-                """This is meant for the spread data case where index navigation 0 can point to multiple navigation 
-                axes"""
-                for ind in range(len(ax)):
-                    ax[ind] = ax[ind].iaxis[_slice]
-            else:
-                ax = ax.iaxis[_slice]
-                ax = [ax]
-            if ax[0] is not None:  # means the slice kept part of the axis
+            for ind in range(len(ax)):
+                ax[ind] = ax[ind].iaxis[_slice]
+
+            if not(ax[0] is None or ax[0].size <= 1):  # means the slice kept part of the axis
                 if is_navigation:
                     nav_indexes.append(self._am.nav_indexes[ind_slice])
                 axes.extend(ax)
@@ -1293,13 +1335,13 @@ class DataWithAxes(DataBase):
         for ind in range(len(nav_indexes)):
             nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
         data = DataWithAxes(self.name, data=new_arrays_data, nav_indexes=tuple(nav_indexes), axes=axes,
-                            source='calculated',
+                            source='calculated', origin=self.origin,
                             distribution=self.distribution if len(nav_indexes) != 0 else DataDistribution['uniform'])
         return data
 
     def deepcopy_with_new_data(self, data: List[np.ndarray] = None,
                                remove_axes_index: List[int] = None,
-                               source: DataSource = 'calculated') -> 'DataWithAxes':
+                               source: DataSource = 'calculated') -> DataWithAxes:
         """deepcopy without copying the initial data (saving memory)
 
         The new data, may have some axes stripped as specified in remove_axes_index
@@ -1310,6 +1352,7 @@ class DataWithAxes(DataBase):
             new_data = self.deepcopy()
             new_data._data = data
             new_data.get_dim_from_data(data)
+
             if source is not None:
                 source = enum_checker(DataSource, source)
                 new_data._source = source
@@ -1318,20 +1361,45 @@ class DataWithAxes(DataBase):
                 remove_axes_index = [remove_axes_index]
 
             if remove_axes_index is not None:
+                lower_indexes = dict(zip(new_data.get_axis_indexes(),
+                                         [0 for _ in range(len(new_data.get_axis_indexes()))]))
+                # lower_indexes will store for each *axis index* how much the index should be reduced because one axis has
+                # been removed
+
+                nav_indexes = list(new_data.nav_indexes)
+                sig_indexes = list(new_data.sig_indexes)
                 for index in remove_axes_index:
                     for axis in new_data.get_axis_from_index(index):
                         new_data.axes.remove(axis)
+
                     if index in new_data.nav_indexes:
-                        nav_indexes = list(new_data.nav_indexes)
                         nav_indexes.pop(nav_indexes.index(index))
-                        new_data.nav_indexes = tuple(nav_indexes)
                     if index in new_data.sig_indexes:
-                        sig_indexes = list(new_data.sig_indexes)
                         sig_indexes.pop(sig_indexes.index(index))
-                        new_data._am.sig_indexes = tuple(sig_indexes)
+
+                    # for ind, nav_ind in enumerate(nav_indexes):
+                    #     if nav_ind > index and nav_ind not in remove_axes_index:
+                    #         nav_indexes[ind] -= 1
+
+                    # for ind, sig_ind in enumerate(sig_indexes):
+                    #     if sig_ind > index:
+                    #         sig_indexes[ind] -= 1
+                    for axis in new_data.axes:
+                        if axis.index > index and axis.index not in remove_axes_index:
+                            lower_indexes[axis.index] += 1
+
+                for axis in new_data.axes:
+                    axis.index -= lower_indexes[axis.index]
+                for ind in range(len(nav_indexes)):
+                    nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
+
+                new_data.nav_indexes = tuple(nav_indexes)
+                # new_data._am.sig_indexes = tuple(sig_indexes)
+
             new_data._shape = data[0].shape
             new_data._dim = self.get_dim_from_data(data)
             return new_data
+
         except Exception as e:
             pass
         finally:
@@ -1346,6 +1414,8 @@ class DataWithAxes(DataBase):
 
     def get_data_dimension(self) -> str:
         return str(self._am)
+
+
 
 
 class DataRaw(DataWithAxes):
@@ -1458,7 +1528,7 @@ class DataToExport(DataLowLevel):
             raise TypeError(f'Could not divide a {other.__class__.__name__} with a {self.__class__.__name__} '
                             f'of a different length')
 
-    def average(self, other: 'DataToExport', weight: int) -> 'DataToExport':
+    def average(self, other: DataToExport, weight: int) -> DataToExport:
         """ Compute the weighted average between self and other DataToExport and attributes it to self
 
         Parameters
@@ -1542,13 +1612,16 @@ class DataToExport(DataLowLevel):
         else:
             return [data.get_full_name() for data in self.get_data_from_dim(dim).data]
 
-    def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> 'DataToExport':
+    def get_data_from_full_name(self, full_name: str, deepcopy=False) -> DataWithAxes:
+        """Get the DataWithAxes with matching full name"""
         if deepcopy:
-            data = [self.get_data_from_name_origin(full_name.split('/')[1],
-                                                   full_name.split('/')[0]).deepcopy() for full_name in full_names]
+            data = self.get_data_from_name_origin(full_name.split('/')[1], full_name.split('/')[0]).deepcopy()
         else:
-            data = [self.get_data_from_name_origin(full_name.split('/')[1],
-                                                   full_name.split('/')[0]) for full_name in full_names]
+            data = self.get_data_from_name_origin(full_name.split('/')[1], full_name.split('/')[0])
+        return data
+
+    def get_data_from_full_names(self, full_names: List[str], deepcopy=False) -> DataToExport:
+        data = [self.get_data_from_full_name(full_name, deepcopy) for full_name in full_names]
         return DataToExport(name=self.name, data=data)
 
     def get_dim_presents(self) -> List[str]:
@@ -1559,7 +1632,24 @@ class DataToExport(DataLowLevel):
 
         return dims
 
-    def get_data_from_dim(self, dim: DataDim, deepcopy=False) -> 'DataToExport':
+    def get_data_from_source(self, source: DataSource, deepcopy=False) -> DataToExport:
+        """Get the data matching the given DataSource
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the dimensionality
+        """
+        source = enum_checker(DataSource, source)
+        selection = find_objects_in_list_from_attr_name_val(self.data, 'source', source, return_first=False)
+
+        selection.sort(key=lambda elt: elt[0].name)
+        if deepcopy:
+            data = [sel[0].deepcopy() for sel in selection]
+        else:
+            data = [sel[0] for sel in selection]
+        return DataToExport(name=self.name, data=data)
+
+    def get_data_from_dim(self, dim: DataDim, deepcopy=False) -> DataToExport:
         """Get the data matching the given DataDim
 
         Returns
@@ -1575,7 +1665,7 @@ class DataToExport(DataLowLevel):
             data = [sel[0] for sel in selection]
         return DataToExport(name=self.name, data=data)
 
-    def get_data_from_dims(self, dims: List[DataDim], deepcopy=False) -> 'DataToExport':
+    def get_data_from_dims(self, dims: List[DataDim], deepcopy=False) -> DataToExport:
         """Get the data matching the given DataDim
 
         Returns
@@ -1675,7 +1765,7 @@ class DataToExport(DataLowLevel):
         self._data.append(data)
 
     @dispatch(object)
-    def append(self, data: 'DataToExport'):
+    def append(self, data: DataToExport):
         if isinstance(data, DataToExport):
             for dat in data:
                 self.append(dat)

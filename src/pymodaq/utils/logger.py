@@ -9,13 +9,13 @@ import warnings
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-from pymodaq.utils.config import get_set_config_path, Config
+from pymodaq.utils.config import get_set_config_dir, Config
 
 config = Config()
 
 
 def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console=False, log_level=None,
-               logger_base_name='pymodaq', local_dir=None) -> logging.Logger:
+               logger_base_name='pymodaq') -> logging.Logger:
     """defines a logger of a given name and eventually add an handler to it
 
     Parameters
@@ -36,7 +36,7 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         logger_name = f'{logger_base_name}.{logger_name}'
 
     logger = logging.getLogger(logger_name)
-    log_path = get_set_config_path('log', local_dir=local_dir)
+    log_path = get_set_config_dir('log')
     if log_level is None:
         log_level = config('general', 'debug_level')
     logger.setLevel(log_level)

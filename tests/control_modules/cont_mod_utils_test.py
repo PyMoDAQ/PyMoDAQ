@@ -9,8 +9,8 @@ import pytest
 from pymodaq.control_modules import utils
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
 
-class TestDAQType:
 
+class TestDAQType:
     def test_daq_types_enum(self):
         for value in utils.DAQTypesEnum.values():
             assert value in ViewersEnum.names()

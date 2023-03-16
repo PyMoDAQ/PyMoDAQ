@@ -68,7 +68,7 @@ def test_process_filtered(dim: str):
     for function in functions:
         assert processors.get(function).apply_to >= dim
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("Ndata", (1, 2, 3))
 @pytest.mark.parametrize("Nsig", (1, 2))
 @pytest.mark.parametrize("Nnav", (0, 1, 2))

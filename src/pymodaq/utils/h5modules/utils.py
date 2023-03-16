@@ -8,6 +8,9 @@ Created the 19/01/2023
 from collections import OrderedDict
 from typing import List, Dict
 
+# 3rd party imports
+import numpy as np
+
 
 def find_scan_node(scan_node):
     """

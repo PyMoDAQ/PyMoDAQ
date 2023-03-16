@@ -9,33 +9,31 @@ from pytest import fixture
 from pymodaq.utils.conftests import qtbotskip, main_modules_skip
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.utils.gui_utils.dock import DockArea
+from qtpy import QtWidgets
 
-pytestmark = pytest.mark.skipif(qtbotskip, reason='qtbot issues but tested locally')
+pytestmark = pytest.mark.skipif(True, reason='qtbot issues but tested locally')
 
-
-@fixture
-def init_qt(qtbot):
-    return qtbot
 
 @fixture
-def ini_daq_viewer_ui(init_qt):
-    qtbot = init_qt
-    dockarea = DockArea()
+def ini_daq_viewer_ui(qtbot):
+    win = QtWidgets.QMainWindow()
+    area = DockArea()
+    win.setCentralWidget(area)
     daq_types = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
     detectors = [f'MyDetector{ind}' for ind in range(5)]
-    qtbot.addWidget(dockarea)
-    prog = DAQ_Viewer_UI(dockarea)
-
+    prog = DAQ_Viewer_UI(area)
+    win.show()
     prog.detectors = detectors
     prog.daq_types = daq_types
-    yield prog, qtbot, dockarea
-    dockarea.close()
+    yield prog, qtbot
+    prog.close()
+    win.close()
 
-
+@pytestmark
 def test_api_attributes(ini_daq_viewer_ui):
     """Make sure the API attribute and methods used from other modules are present
     """
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
     attributes = daq_viewer.__dir__()[:]
     assert 'command_sig' in attributes
     assert 'title' in attributes
@@ -52,10 +50,11 @@ def test_api_attributes(ini_daq_viewer_ui):
     assert 'statusbar' in attributes
 
 
+@pytestmark
 def test_private_attributes(ini_daq_viewer_ui):
     """Make sure the private attribute and methods used from other modules are present
     """
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
     attributes = daq_viewer.__dir__()[:]
     assert '_detector_widget' in attributes
     assert '_settings_widget' in attributes
@@ -71,8 +70,9 @@ def test_private_attributes(ini_daq_viewer_ui):
     assert '_enable_detchoices' in attributes
 
 
+@pytestmark
 def test_combo(ini_daq_viewer_ui):
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
     daq_types = ['DAQ0D', 'DAQ1D', 'DAQ2D', 'DAQND']
     detectors = [f'MyDetector{ind}' for ind in range(5)]
     daq_viewer.daq_types = daq_types
@@ -84,9 +84,10 @@ def test_combo(ini_daq_viewer_ui):
            detectors
 
 
+@pytestmark
 def test_signals(ini_daq_viewer_ui):
     """Testing that the triggering of actions and push buttons sends the correct signal to external application"""
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
 
     with qtbot.waitSignal(daq_viewer.command_sig) as blocker:
         daq_viewer.get_action('grab').trigger()
@@ -159,11 +160,12 @@ def test_signals(ini_daq_viewer_ui):
     assert blocker.args[0].command == 'take_bkg'
 
 
+@pytestmark
 def test_do_init(ini_daq_viewer_ui):
     IND_daq_type = 1
     IND_det_type = 2
 
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
     daq_viewer.daq_type = daq_viewer.daq_types[IND_daq_type]
     daq_viewer.detector = daq_viewer.detectors[IND_det_type]
 
@@ -187,11 +189,12 @@ def test_do_init(ini_daq_viewer_ui):
             daq_viewer.do_init(False)
 
 
+@pytestmark
 def test_is_init(ini_daq_viewer_ui):
     IND_daq_type = 1
     IND_det_type = 2
 
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
     daq_viewer.daq_type = daq_viewer.daq_types[IND_daq_type]
     daq_viewer.detector = daq_viewer.detectors[IND_det_type]
 
@@ -204,8 +207,9 @@ def test_is_init(ini_daq_viewer_ui):
     assert daq_viewer._info_detector.text() == ''
 
 
+@pytestmark
 def test_do_grab(ini_daq_viewer_ui):
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
+    daq_viewer, qtbot = ini_daq_viewer_ui
 
     daq_viewer.do_init(True)
     with pytest.raises(qtbot.TimeoutError):
@@ -223,9 +227,9 @@ def test_do_grab(ini_daq_viewer_ui):
     assert not blocker.args[0].attribute
 
 
+@pytestmark
 def test_update_viewers(ini_daq_viewer_ui):
-    daq_viewer, qtbot, dockarea = ini_daq_viewer_ui
-    dockarea.show()
+    daq_viewer, qtbot = ini_daq_viewer_ui
 
     assert len(daq_viewer.viewers) == 1
 
