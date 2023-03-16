@@ -40,7 +40,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def setup_actions(self):
         self.add_action('quit', 'Quit the module', 'close2', menu=self.file_menu)
-        self.add_action('set_scan', 'Set Scan', '', menu=self.action_menu)
         self.add_action('ini_positions', 'Init Positions', '', menu=self.action_menu)
         self.add_action('start', 'Start Scan', 'run2', "Start the scan", menu=self.action_menu)
         self.add_action('stop', 'Stop Scan', 'stop', "Stop the scan", menu=self.action_menu)
@@ -63,7 +62,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def connect_things(self):
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
-        self.connect_action('set_scan', lambda: self.command_sig.emit(ThreadCommand('set_scan')))
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
@@ -185,6 +183,9 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
     def set_scan_step(self, step_ind: int):
         self._indice_scan_sb.setValue(step_ind)
+
+    def show_average_step(self, show: bool = True):
+        self._indice_average_sb.setVisible(show)
 
     def set_scan_step_average(self, step_ind: int):
         self._indice_average_sb.setValue(step_ind)

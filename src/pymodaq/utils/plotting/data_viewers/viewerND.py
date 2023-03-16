@@ -227,6 +227,7 @@ class UniformDataDisplayer(BaseDataDisplayer):
         if self._data is not None and self._filter_type is not None and len(self._data.nav_indexes) != 0:
             nav_data = self.get_nav_data(self._data, x, y, width, height)
             if nav_data is not None:
+                nav_data.nav_indexes = ()  # transform nav axes in sig axes for plotting
                 if len(nav_data.shape) < 2:
                     self._navigator1D.show_data(nav_data)
                 elif len(nav_data.shape) == 2:

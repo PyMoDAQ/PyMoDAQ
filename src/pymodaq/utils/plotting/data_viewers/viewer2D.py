@@ -701,6 +701,9 @@ class Viewer2D(ViewerBase):
 
         if len(data) == 1 and not self._is_gradient_manually_set:
             self.set_gradient('red', 'grey')
+        if len(data) > 3:
+            logger.warning('Cannot plot on 2D plot more than 3 channels')
+            data.data = data.data[:3]
         if data.distribution != self.view.data_displayer.display_type:
             self.view.set_image_displayer(data.distribution)
             self.filter_from_crosshair.set_graph_items(self.view.data_displayer.get_images())

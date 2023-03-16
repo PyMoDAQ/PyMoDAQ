@@ -36,11 +36,25 @@ def init_axis(data=None, index=0):
     return data_mod.Axis(label=LABEL, units=UNITS, data=data, index=index)
 
 
-def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw']) -> data_mod.DataWithAxes:
+def init_data(data=None, Ndata=1, axes=[], name='myData', source=data_mod.DataSource['raw'],
+              labels=None) -> data_mod.DataWithAxes:
     if data is None:
         data = DATA2D
     return data_mod.DataWithAxes(name, source, data=[data for ind in range(Ndata)],
-                                 axes=axes)
+                                 axes=axes, labels=labels)
+
+
+def init_dataND():
+    N0 = 5
+    N1 = 6
+    N2 = 3
+    DATAND = np.arange(0, N0 * N1 * N2).reshape((N0, N1, N2))
+
+    axis0 = data_mod.Axis(label='myaxis0', data=np.linspace(0, N0 - 1, N0), index=0)
+    axis1 = data_mod.Axis(label='myaxis1', data=np.linspace(0, N1 - 1, N1), index=1)
+    axis2 = data_mod.Axis(label='myaxis2', data=np.linspace(0, N2 - 1, N2), index=2)
+    return data_mod.DataWithAxes('mydata', 'raw', data=[DATAND], axes=[axis0, axis1, axis2], nav_indexes=(0, 1)),\
+           (N0, N1, N2)
 
 
 @pytest.fixture()
@@ -260,8 +274,8 @@ class TestDataBase:
             count += 1
         assert count == len(data)
 
-        with pytest.raises(IndexError):
-            data[-1]
+        assert np.all(DATA0D == pytest.approx(data[-1]))
+
         with pytest.raises(IndexError):
             data['str']
         with pytest.raises(IndexError):
@@ -295,6 +309,18 @@ class TestDataBase:
         data_averaged = data.average(data1, WEIGHT)
         for ind_data in range(len(data_averaged)):
             assert np.all(data_averaged[ind_data] == pytest.approx(DATA2D * ((WEIGHT-1) * FRAC + 1) / WEIGHT))
+
+    def test_append(self):
+        Ndata = 2
+        labels = [f'label{ind}' for ind in range(Ndata)]
+        Ndatabis = 3
+        label_bis = [f'labelbis{ind}' for ind in range(Ndatabis)]
+        data = init_data(data=DATA1D, Ndata=Ndata, labels=labels)
+        data_bis = init_data(data=DATA1D, Ndata=Ndatabis, labels=label_bis)
+
+        data.append(data_bis)
+        assert len(data) == Ndata + Ndatabis
+        assert data.labels == labels + label_bis
 
 
 class TestDataWithAxesUniform:
@@ -346,14 +372,83 @@ class TestDataWithAxesUniform:
         axis = data.get_axis_from_index(index0, create=True)[0]
         assert len(axis) == data.axes_manager.get_shape_from_index(index0)
 
+    def test_deep_copy_with_new_data(self):
+        data, shape = init_dataND()
+        #on nav_indexes
+        IND_TO_REMOVE = 1
+        new_data = data.deepcopy_with_new_data([np.squeeze(dat[:, 0, :]) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == (0,)
+        assert new_data.sig_indexes == (1,)
+        assert new_data.shape == np.squeeze(data.data[0][:, 0, :]).shape
+        assert len(new_data.get_axis_indexes()) == 2
+        assert data.get_axis_from_index(IND_TO_REMOVE)[0] not in new_data.axes
+
+        # on sig_indexes
+        IND_TO_REMOVE = 2
+        new_data = data.deepcopy_with_new_data([np.squeeze(dat[:, :, 0]) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == (0, 1)
+        assert new_data.sig_indexes == ()
+        assert new_data.shape == np.squeeze(data.data[0][:, :, 0]).shape
+        assert len(new_data.get_axis_indexes()) == 2
+        assert data.get_axis_from_index(IND_TO_REMOVE)[0] not in new_data.axes
+
+
+        # on nav_indexes both axes
+        IND_TO_REMOVE = [0, 1]
+        new_data = data.deepcopy_with_new_data([np.squeeze(dat[0, 0, :]) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == ()
+        assert new_data.sig_indexes == (0,)
+        assert new_data.shape == np.squeeze(data.data[0][0, 0, :]).shape
+        assert len(new_data.get_axis_indexes()) == 1
+        for ind in IND_TO_REMOVE:
+            assert data.get_axis_from_index(ind)[0] not in new_data.axes
+
+        # on all axes
+        IND_TO_REMOVE = [0, 1, 2]
+        new_data = data.deepcopy_with_new_data([np.atleast_1d(np.mean(dat)) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == ()
+        assert new_data.sig_indexes == (0,)
+        assert new_data.shape == (1,)
+        assert len(new_data.get_axis_indexes()) == 0
+        for ind in IND_TO_REMOVE:
+            assert data.get_axis_from_index(ind)[0] not in new_data.axes
+
+    @pytest.mark.parametrize("IND_MEAN", [0, 1, 2])
+    def test_mean(self, IND_MEAN):
+        data, shape = init_dataND()
+        new_data = data.mean(IND_MEAN)
+        for ind, dat in enumerate(data):
+            assert np.all(new_data[ind] == pytest.approx(np.mean(dat, IND_MEAN)))
+        assert len(new_data.get_axis_indexes()) == 2
+
+
+class TestNavIndexes:
+
+    def test_set_nav_indexes(self):
+        data, shape = init_dataND()
+
+        assert data.shape == shape
+        assert data.sig_indexes == (2,)
+
+        data.nav_indexes = (1,)
+        assert data.shape == shape
+        assert data.nav_indexes == (1,)
+        assert data.axes_manager.nav_indexes == (1,)
+        assert data.sig_indexes == (0, 2)
+
+        data.nav_indexes = ()
+        assert data.sig_indexes == (0, 1,  2)
+
 
 class TestDataWithAxesSpread:
-    def test_init(self):
-        Ndata = 2
-        data = data_mod.DataWithAxes('myData', data_mod.DataSource(0), distribution=data_mod.DataDistribution['spread'],
-                                     data=[DATA2D for ind in range(Ndata)])
-        assert data.axes == []
-
     def test_init_data(self, init_data_spread):
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
         data_mod.DataWithAxes(name='spread', source=data_mod.DataSource['raw'], dim=data_mod.DataDim['Data1D'],
@@ -386,6 +481,44 @@ class TestDataWithAxesSpread:
         data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
         assert data.axes_manager._get_dimension_str() == f'({nav_axis_1.size}|{sig_axis.size})'
 
+    def test_deep_copy_with_new_data(self, init_data_spread):
+        data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+
+        #on nav_indexes
+        IND_TO_REMOVE = 0
+        new_data = data.deepcopy_with_new_data([np.squeeze(dat[0, :]) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == ()
+        assert new_data.sig_indexes == (0,)
+        assert new_data.shape == np.squeeze(data.data[0][0, :]).shape
+        assert len(new_data.get_axis_indexes()) == 1
+        assert data.get_axis_from_index(IND_TO_REMOVE)[0] not in new_data.axes
+
+        # on sig_indexes
+        IND_TO_REMOVE = 1
+        new_data = data.deepcopy_with_new_data([np.squeeze(dat[:, 0]) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == (0,)
+        assert new_data.sig_indexes == ()
+        assert new_data.shape == np.squeeze(data.data[0][:, 0]).shape
+        assert len(new_data.get_axis_indexes()) == 1
+        assert data.get_axis_from_index(IND_TO_REMOVE)[0] not in new_data.axes
+
+    @pytest.mark.parametrize("IND_MEAN", [0, 1])
+    def test_mean(self, IND_MEAN, init_data_spread):
+        data, data_array, sig_axis, nav_axis_0, nav_axis_1, Nspread = init_data_spread
+
+        new_data = data.mean(IND_MEAN)
+        for ind, dat in enumerate(data):
+            assert np.all(new_data[ind] == pytest.approx(np.mean(dat, IND_MEAN)))
+        assert len(new_data.get_axis_indexes()) == 1
+        if IND_MEAN in data.nav_indexes:
+            assert len(new_data.axes) == 1
+        else:
+            assert len(new_data.axes) == 2
+
 
 class TestSlicingUniform:
     def test_slice_navigation(self, init_data_uniform):
@@ -413,6 +546,24 @@ class TestSlicingUniform:
         assert data_2.shape == (3, 2, DATA2D.shape[0], DATA2D.shape[1])
         assert data_2.get_axis_from_index(0)[0].size == 3
         assert data_2.get_axis_from_index(1)[0].size == 2
+
+    def test_slice_ellipsis(self, init_data_uniform):
+        data_raw = init_data_uniform
+        assert data_raw.shape == (Nn0, Nn1, DATA2D.shape[0], DATA2D.shape[1])
+
+        data_sliced = data_raw.inav[0, ...]
+        assert data_sliced.nav_indexes == (0,)
+        assert data_sliced.shape == (Nn1, DATA2D.shape[0], DATA2D.shape[1])
+
+    def test_slice_miscellanous(self, init_data_uniform):
+        data_raw = init_data_uniform
+        assert data_raw.shape == (Nn0, Nn1, DATA2D.shape[0], DATA2D.shape[1])
+
+        data_sliced = data_raw.inav[0:1, ...]
+        assert data_sliced.shape == (Nn1, DATA2D.shape[0], DATA2D.shape[1])
+        assert data_sliced.nav_indexes == (0,)
+
+
 
     def test_slice_signal(self, init_data_uniform):
         data_raw = init_data_uniform
