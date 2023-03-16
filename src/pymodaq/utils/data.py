@@ -447,7 +447,7 @@ class DataBase(DataLowLevel):
 
         self.data = data  # dim consistency is actually checked within the setter method
 
-        self._check_labels(labels[:])
+        self._check_labels(labels)
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -616,7 +616,11 @@ class DataBase(DataLowLevel):
     def labels(self, labels: List['str']):
         self._check_labels(labels)
 
-    def _check_labels(self, labels):
+    def _check_labels(self, labels: List['str']):
+        if labels is None:
+            labels = []
+        else:
+            labels = labels[:]
         while len(labels) < self.length:
             labels.append(f'CH{len(labels):02d}')
         self._labels = labels
