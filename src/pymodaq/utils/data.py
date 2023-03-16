@@ -1361,6 +1361,11 @@ class DataWithAxes(DataBase):
                 remove_axes_index = [remove_axes_index]
 
             if remove_axes_index is not None:
+                lower_indexes = dict(zip(new_data.get_axis_indexes(),
+                                         [0 for _ in range(len(new_data.get_axis_indexes()))]))
+                # lower_indexes will store for each *axis index* how much the index should be reduced because one axis has
+                # been removed
+
                 nav_indexes = list(new_data.nav_indexes)
                 sig_indexes = list(new_data.sig_indexes)
                 for index in remove_axes_index:
@@ -1372,16 +1377,21 @@ class DataWithAxes(DataBase):
                     if index in new_data.sig_indexes:
                         sig_indexes.pop(sig_indexes.index(index))
 
-                    for ind, nav_ind in enumerate(nav_indexes):
-                        if nav_ind > index:
-                            nav_indexes[ind] -= 1
+                    # for ind, nav_ind in enumerate(nav_indexes):
+                    #     if nav_ind > index and nav_ind not in remove_axes_index:
+                    #         nav_indexes[ind] -= 1
 
                     # for ind, sig_ind in enumerate(sig_indexes):
                     #     if sig_ind > index:
                     #         sig_indexes[ind] -= 1
                     for axis in new_data.axes:
                         if axis.index > index and axis.index not in remove_axes_index:
-                            axis.index -= 1
+                            lower_indexes[axis.index] += 1
+
+                for axis in new_data.axes:
+                    axis.index -= lower_indexes[axis.index]
+                for ind in range(len(nav_indexes)):
+                    nav_indexes[ind] -= lower_indexes[nav_indexes[ind]]
 
                 new_data.nav_indexes = tuple(nav_indexes)
                 # new_data._am.sig_indexes = tuple(sig_indexes)

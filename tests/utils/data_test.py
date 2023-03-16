@@ -396,6 +396,31 @@ class TestDataWithAxesUniform:
         assert len(new_data.get_axis_indexes()) == 2
         assert data.get_axis_from_index(IND_TO_REMOVE)[0] not in new_data.axes
 
+
+        # on nav_indexes both axes
+        IND_TO_REMOVE = [0, 1]
+        new_data = data.deepcopy_with_new_data([np.squeeze(dat[0, 0, :]) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == ()
+        assert new_data.sig_indexes == (0,)
+        assert new_data.shape == np.squeeze(data.data[0][0, 0, :]).shape
+        assert len(new_data.get_axis_indexes()) == 1
+        for ind in IND_TO_REMOVE:
+            assert data.get_axis_from_index(ind)[0] not in new_data.axes
+
+        # on all axes
+        IND_TO_REMOVE = [0, 1, 2]
+        new_data = data.deepcopy_with_new_data([np.atleast_1d(np.mean(dat)) for dat in data.data],
+                                               remove_axes_index=IND_TO_REMOVE)
+
+        assert new_data.nav_indexes == ()
+        assert new_data.sig_indexes == (0,)
+        assert new_data.shape == (1,)
+        assert len(new_data.get_axis_indexes()) == 0
+        for ind in IND_TO_REMOVE:
+            assert data.get_axis_from_index(ind)[0] not in new_data.axes
+
     @pytest.mark.parametrize("IND_MEAN", [0, 1, 2])
     def test_mean(self, IND_MEAN):
         data, shape = init_dataND()
