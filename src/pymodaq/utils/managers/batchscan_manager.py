@@ -1,3 +1,5 @@
+from typing import List
+
 import pymodaq.utils.config
 import pymodaq.utils.gui_utils.dock
 import pymodaq.utils.gui_utils.file_io
@@ -5,22 +7,22 @@ import pymodaq.utils.messenger
 from qtpy import QtWidgets, QtCore
 import sys
 import os
-from pyqtgraph.parametertree import Parameter, ParameterTree
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq.utils.managers.modules_manager import ModulesManager
+from pymodaq.utils.gui_utils import Dock
+from pymodaq.utils.logger import set_logger, get_module_name
+from pymodaq.utils import config as config_mod
 from pymodaq.utils.parameter import ioxml
-from pymodaq.utils.parameter import pymodaq_ptypes
-from pymodaq.utils.managers import preset_manager_utils
-from pymodaq.utils import daq_utils as utils
-from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.scanner import Scanner
-from pymodaq.utils.scanner.utils import ScanType#, adaptive_losses
+from pymodaq.utils.scanner.utils import ScanType #, adaptive_losses
 from pathlib import Path
 from collections import OrderedDict
+from pymodaq.utils.messenger import messagebox
 
 logger = set_logger(get_module_name(__file__))
 
-batch_path = pymodaq.utils.config.get_set_batch_path()
+batch_path = config_mod.get_set_batch_path()
 
 params = [
     {'title': 'Actuators/Detectors Selection', 'name': 'modules', 'type': 'group', 'children': [
@@ -30,30 +32,32 @@ params = [
     ]
 
 
-class BatchManager:
+class BatchManager(ParameterManager):
 
     params = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'batch_default'},
               {'title': 'Scans', 'name': 'scans', 'type': 'group', 'children': []}]
 
     def __init__(self, msgbox=False, actuators=[], detectors=[], path=None):
-        self.actuators = actuators
-        self.detectors = detectors
+        super().__init__('batch_settings')
 
+        self.modules_manager: ModulesManager = ModulesManager(detectors, actuators)
+        self.modules_manager.show_only_control_modules(True)
+        self.modules_manager.actuators_changed[list].connect(self.update_actuators)
+        self.modules_manager.settings_tree.setMinimumHeight(200)
+        self.modules_manager.settings_tree.setMaximumHeight(200)
         self.scans = OrderedDict([])
 
-        self.tree = ParameterTree()
-        self.tree.setMinimumWidth(400)
-        self.tree.setMaximumWidth(500)
-        self.tree.setMinimumHeight(500)
+        self.scanner = Scanner(actuators=self.modules_manager.actuators_all)
+
+        self.settings_tree.setMinimumWidth(400)
+        self.settings_tree.setMaximumWidth(500)
+        self.settings_tree.setMinimumHeight(500)
 
         if path is None:
             path = batch_path
         else:
             assert isinstance(path, Path)
         self.batch_path = path
-
-        self.settings = None
-
 
         if msgbox:
             msgBox = QtWidgets.QMessageBox()
@@ -73,48 +77,37 @@ class BatchManager:
             else:  # cancel
                 pass
 
-
     def get_act_dets(self):
         acts = dict([])
         dets = dict([])
-        for name in self.scans:
-            acts[name] = self.settings.child('scans', name, 'modules',
-                            'actuators').value()['selected']
-            dets[name] = self.settings.child('scans', name, 'modules',
-                                             'detectors').value()['selected']
+        for name in [child.name() for child in self.settings.child('scans').children()]:
+            acts[name] = self.settings.child('scans', name, 'modules', 'actuators').value()['selected']
+            dets[name] = self.settings.child('scans', name, 'modules', 'detectors').value()['selected']
         return acts, dets
 
     def set_file_batch(self, filename=None, show=True):
         """
 
         """
-
-        if filename is None or filename == False:
+        if filename is None or filename is False:
             filename = pymodaq.utils.gui_utils.file_io.select_file(start_path=self.batch_path, save=False, ext='xml')
             if filename == '':
                 return
 
         status = False
-        settings_tmp = Parameter.create(title='Batch', name='settings_tmp',
-                                        type='group', children=ioxml.XML_file_to_parameter(str(filename)))
-
+        settings_tmp = self.create_parameter(filename)
         children = settings_tmp.child('scans').children()
-        self.settings = Parameter.create(title='Batch', name='settings', type='group', children=self.params)
+
+        self.settings = self.create_parameter(self.params)
         actuators = children[0].child('modules', 'actuators').value()['all_items']
-        if actuators != self.actuators:
-            pymodaq.utils.messenger.show_message('The loaded actuators from the batch file do not corresponds to the'
-                                ' dashboard actuators')
+        if actuators != self.modules_manager.actuators_name:
+            messagebox(text='The loaded actuators from the batch file do not corresponds to the dashboard actuators')
             return
-        else:
-            self.actuators = actuators
 
         detectors = children[0].child('modules', 'detectors').value()['all_items']
-        if detectors != self.detectors:
-            pymodaq.utils.messenger.show_message('The loaded detectors from the batch file do not corresponds to the'
-                                ' dashboard detectors')
+        if detectors != self.modules_manager.detectors_name:
+            messagebox(text='The loaded detectors from the batch file do not corresponds to the dashboard detectors')
             return
-        else:
-            self.detectors = detectors
 
         for child in children:
             self.add_scan(name=child.name(), title=child.opts['title'])
@@ -123,75 +116,79 @@ class BatchManager:
         if show:
             status = self.show_tree()
         else:
-            self.tree.setParameters(self.settings, showTop=False)
+            self.settings_tree.setParameters(self.settings, showTop=False)
         return status
 
     def set_scans(self):
         infos = []
         acts, dets = self.get_act_dets()
-        for scan in self.scans:
-            infos.append(f'{scan}: {acts[scan]} / {dets[scan]}')
-            infos.append(f'{scan}: {self.scans[scan].set_scan()}')
+        for name in [child.name() for child in self.settings.child('scans').children()]:
+            scanner = Scanner(actuators=self.modules_manager.get_mods_from_names(acts[name], 'act'))
+            scanner.set_scan_from_settings(self.settings.child('scans', name, 'Scanner'),
+                                           self.settings.child('scans', name, 'scanner_settings'))
+
+            infos.append(f'{name}: {acts[name]} / {dets[name]}')
+            infos.append(f'{name}: {self.scans[name].set_scan()}')
         return infos
 
     def set_new_batch(self):
-        self.settings = Parameter.create(title='Batch', name='settings', type='group', children=self.params)
-        self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
+        self.settings = self.create_parameter(self.params)
         status = self.show_tree()
         return status
 
-    def parameter_tree_changed(self, param, changes):
-        """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, update the DAQscan_settings tree consequently.
-
-            =============== ============================================ ==============================
-            **Parameters**    **Type**                                     **Description**
-            *param*           instance of pyqtgraph parameter              the parameter to be checked
-            *changes*         (parameter,change,information) tuple list    the current changes state
-            =============== ============================================ ==============================
-        """
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if change == 'childAdded':
-                pass
-
-            elif change == 'value':
-
-                pass
-
-            elif change == 'parent':
-                pass
-
     def show_tree(self):
-        dialog = QtWidgets.QDialog()
-        vlayout = QtWidgets.QVBoxLayout()
-        add_scan = QtWidgets.QPushButton('Add Scan')
-        add_scan.clicked.connect(self.add_scan)
-        self.tree.setParameters(self.settings, showTop=False)
-        vlayout.addWidget(add_scan)
-        vlayout.addWidget(self.tree)
-        dialog.setLayout(vlayout)
 
+
+        dialog = QtWidgets.QDialog()
+        dialog.setLayout(QtWidgets.QVBoxLayout())
+
+        widget_all_settings = QtWidgets.QWidget()
+
+        dialog.layout().addWidget(widget_all_settings)
         buttonBox = QtWidgets.QDialogButtonBox(parent=dialog)
         buttonBox.addButton('Save', buttonBox.AcceptRole)
         buttonBox.accepted.connect(dialog.accept)
         buttonBox.addButton('Cancel', buttonBox.RejectRole)
         buttonBox.rejected.connect(dialog.reject)
 
-        vlayout.addWidget(buttonBox)
+        dialog.layout().addWidget(buttonBox)
         dialog.setWindowTitle('Fill in information about this Scan batch')
+
+        widget_all_settings.setLayout(QtWidgets.QHBoxLayout())
+        widget_all_settings.layout().addWidget(self.settings_tree)
+
+        widget_vertical = QtWidgets.QWidget()
+        widget_vertical.setLayout(QtWidgets.QVBoxLayout())
+        widget_all_settings.layout().addWidget(widget_vertical)
+
+        self.scanner_widget = self.scanner.parent_widget
+        add_scan = QtWidgets.QPushButton('Add Scan')
+        add_scan.clicked.connect(self.add_scan)
+
+        widget_vertical.layout().addWidget(self.modules_manager.settings_tree)
+        widget_vertical.layout().addWidget(self.scanner_widget)
+        widget_vertical.layout().addWidget(add_scan)
+
         res = dialog.exec()
 
         if res == dialog.Accepted:
-            # save managers parameters in a xml file
-            # start = os.path.split(os.path.split(os.path.realpath(__file__))[0])[0]
-            # start = os.path.join("..",'daq_scan')
             ioxml.parameter_to_xml_file(
-                self.settings, os.path.join(self.batch_path, self.settings.child('filename').value()))
+                self.settings, self.batch_path.joinpath(self.settings.child('filename').value()))
 
         return res == dialog.Accepted
+
+    def set_scanner_settings(self, settings_tree: QtWidgets.QWidget):
+        while True:
+            child = self.scanner_widget.layout().takeAt(0)
+            if not child:
+                break
+            child.widget().deleteLater()
+            QtWidgets.QApplication.processEvents()
+
+        self.scanner_widget.layout().addWidget(settings_tree)
+
+    def update_actuators(self, actuators: List[str]):
+        self.scanner.actuators = self.modules_manager.actuators
 
     def add_scan(self, name=None, title=None):
         if name is None or name is False:
@@ -206,18 +203,18 @@ class BatchManager:
 
         child = {'title': title, 'name': name, 'type': 'group', 'removable': True, 'children': params}
 
-        #todo update for v4
-        #self.scans[name] = Scanner(actuators=[self.actuators[0]], adaptive_losses=adaptive_losses)
+        # self.scans[name] = Scanner(actuators=self.modules_manager.actuators)
+
         self.settings.child('scans').addChild(child)
         self.settings.child('scans', name, 'modules',
-                            'actuators').setValue(dict(all_items=self.actuators,
-                                                       selected=[self.actuators[0]]))
+                            'actuators').setValue(dict(all_items=self.modules_manager.actuators_name,
+                                                       selected=self.modules_manager.selected_actuators_name))
         self.settings.child('scans', name, 'modules',
-                            'detectors').setValue(dict(all_items=self.detectors,
-                                                       selected=[self.detectors[0]]))
+                            'detectors').setValue(dict(all_items=self.modules_manager.detectors_name,
+                                                       selected=self.modules_manager.selected_detectors_name))
 
-        self.settings.child('scans', name).addChild(
-            self.scans[name].settings)
+        self.settings.child('scans', name).addChild(self.scanner.settings)
+        self.settings.child('scans', name).addChild(self.scanner.get_scanner_detailed_settings())
 
 
 class BatchScanner(QtCore.QObject):
@@ -239,20 +236,19 @@ class BatchScanner(QtCore.QObject):
 
     def setupUI(self):
         # %% create scan dock and make it a floating window
-        self.batch_dock = pymodaq.utils.gui_utils.dock.Dock("BatchScanner", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
+        self.batch_dock = Dock("BatchScanner", size=(1, 1), autoOrientation=False)  # give this dock the minimum possible size
         self.dockarea.addDock(self.batch_dock, 'left')
         self.batch_dock.float()
 
         self.widget = QtWidgets.QWidget()
         self.widget.setLayout(QtWidgets.QVBoxLayout())
 
-
         widget_infos = QtWidgets.QWidget()
         self.widget_infos_list = QtWidgets.QListWidget()
         widget_infos.setLayout(QtWidgets.QHBoxLayout())
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         widget_infos.layout().addWidget(splitter)
-        splitter.addWidget(self.batchmanager.tree)
+        splitter.addWidget(self.batchmanager.settings_tree)
         splitter.addWidget(self.widget_infos_list)
         self.batch_dock.addWidget(self.widget)
         self.widget.layout().addWidget(widget_infos)
@@ -282,7 +278,6 @@ class BatchScanner(QtCore.QObject):
                 slots[filestem].triggered.connect(
                     self.create_menu_slot(batch_path.joinpath(file)))
 
-
     def load_file(self, filepath=None):
         if filepath is None:
             path = pymodaq.utils.gui_utils.file_io.select_file(start_path=batch_path, save=False, ext='xml')
@@ -292,7 +287,6 @@ class BatchScanner(QtCore.QObject):
                 return
         self.batchmanager.set_file_batch(str(filepath), show=False)
 
-
         infos = self.batchmanager.set_scans()
         self.widget_infos_list.addItems(infos)
 
@@ -300,7 +294,8 @@ class BatchScanner(QtCore.QObject):
         return lambda: self.load_file(filename)
 
 
-if __name__ == '__main__':
+def main_batch_scanner():
+    from pymodaq.control_modules.mocks import MockDAQMove, MockDAQViewer
     app = QtWidgets.QApplication(sys.argv)
     win = QtWidgets.QMainWindow()
     area = pymodaq.utils.gui_utils.dock.DockArea()
@@ -309,11 +304,24 @@ if __name__ == '__main__':
     # prog = BatchManager(msgbox=False, actuators=['Xaxis', 'Yaxis'], detectors=['Det0D', 'Det1D'])
     # prog.set_file_batch('C:\\Users\\weber\\pymodaq_local\\batch_configs\\batch_default.xml', show=False)
     # prog.set_scans()
-
-    main = BatchScanner(area, actuators=['Xaxis', 'Yaxis', 'theta axis'],
-                        detectors=['Det 2D', 'Det 0D', 'Det 1D'])
+    actuators = [MockDAQMove(title='Xaxis'), MockDAQMove(title='Yaxis')]
+    detectors = [MockDAQViewer(title='Det0D'), MockDAQViewer(title='Det1D')]
+    main = BatchScanner(area, actuators=actuators, detectors=detectors)
     main.setupUI()
     main.create_menu()
     win.show()
     sys.exit(app.exec_())
 
+
+def main_batch_manager():
+    from pymodaq.control_modules.mocks import MockDAQMove, MockDAQViewer
+    app = QtWidgets.QApplication(sys.argv)
+    actuators = [MockDAQMove(title='Xaxis'), MockDAQMove(title='Yaxis')]
+    detectors = [MockDAQViewer(title='Det0D'), MockDAQViewer(title='Det1D')]
+    prog = BatchManager(msgbox=True, actuators=actuators, detectors=detectors)
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    #main_batch_manager()
+    main_batch_scanner()

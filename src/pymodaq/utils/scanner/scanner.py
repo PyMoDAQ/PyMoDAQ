@@ -104,6 +104,9 @@ class Scanner(QObject, ParameterManager):
         except ValueError:
             pass
 
+    def get_scanner_detailed_settings(self):
+        return self._scanner.settings
+
     def value_changed(self, param: Parameter):
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
@@ -167,6 +170,11 @@ class Scanner(QObject, ParameterManager):
             if scan_subtype is not None:
                 if scan_subtype in scanner_factory.scan_sub_types(scan_type):
                     self.settings.child('scan_sub_type').setValue(scan_subtype)
+
+    def set_scan_from_settings(self, settings: Parameter, scanner_settings: Parameter):
+
+        self.set_scan_type_and_subtypes(self.settings['scans', name, 'batch_settings', 'scan_type'],
+                                           self.settings['scans', name, 'batch_settings', 'scan_sub_type'])
 
     @property
     def scan_type(self) -> str:

@@ -90,6 +90,12 @@ class ModulesManager(QObject, ParameterManager):
         self.set_actuators(actuators, selected_actuators)
         self.set_detectors(detectors, selected_detectors)
 
+    def show_only_control_modules(self, show: True):
+        self.settings.child('move_done').show(not show)
+        self.settings.child('det_done').show(not show)
+        self.settings.child('data_dimensions').show(not show)
+        self.settings.child('actuators_positions').show(not show)
+
     @classmethod
     def get_names(cls, modules):
         """Get the titles of a list of Control Modules
