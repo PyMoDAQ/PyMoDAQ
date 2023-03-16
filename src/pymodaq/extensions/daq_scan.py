@@ -82,7 +82,7 @@ class DAQScan(QObject, ParameterManager):
             {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect'},
             {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect'},
             {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'bool_push'},
-            {'title': 'Plot_each?', 'name': 'plot_each', 'type': 'bool', 'value': True},
+            {'title': 'Plot at each step?', 'name': 'plot_at_each_step', 'type': 'bool', 'value': True},
             {'title': 'Refresh Plots (ms)', 'name': 'refresh_live', 'type': 'int', 'value': 1000, 'visible': False},
             ]},
     ]
@@ -161,7 +161,7 @@ class DAQScan(QObject, ParameterManager):
         self.live_timer = QtCore.QTimer()
         self.live_timer.timeout.connect(self.update_live_plots)
 
-        self.ui.enable_start_stop(False)
+        self.ui.enable_start_stop(True)
         logger.info('DAQScan Initialized')
 
     def plot_from(self):
@@ -266,7 +266,6 @@ class DAQScan(QObject, ParameterManager):
         cmd: ThreadCommand
             Possible values are:
                 * quit
-                * set_scan
                 * ini_positions
                 * start
                 * stop
@@ -281,8 +280,6 @@ class DAQScan(QObject, ParameterManager):
         """
         if cmd.command == 'quit':
             self.quit_fun()
-        elif cmd.command == 'set_scan':
-            self.set_scan()
         elif cmd.command == 'ini_positions':
             self.set_ini_positions()
         elif cmd.command == 'start':
@@ -604,12 +601,12 @@ class DAQScan(QObject, ParameterManager):
 
         """
         if param.name() == 'scan_average':
-            self.show_average_dock(param.value() > 1)
+            self.ui.show_average_step(param.value() > 1)
         elif param.name() == 'prepare_viewers':
             self.prepare_viewers()
         elif param.name() == 'plot_probe':
             self.plot_from()
-        elif param.name() == 'plot_each':
+        elif param.name() == 'plot_at_each_step':
             self.settings.child('plot_options', 'refresh_live').show(not param.value())
 
     def prepare_viewers(self):
@@ -667,9 +664,9 @@ class DAQScan(QObject, ParameterManager):
         elif status[0] == "Update_scan_index":
             # status[1] = [ind_scan,ind_average]
             self.ind_scan = status[1][0]
-            self.ui.set_scan_step(status[1][0])
+            self.ui.set_scan_step(status[1][0] + 1)
             self.ind_average = status[1][1]
-            self.ui.set_scan_step_average(status[1][1])
+            self.ui.set_scan_step_average(status[1][1] + 1)
 
         elif status[0] == "Scan_done":
             self.modules_manager.reset_signals()
@@ -681,7 +678,6 @@ class DAQScan(QObject, ParameterManager):
             if not self.batch_started:
                 if not self.dashboard.overshoot:
                     self.set_ini_positions()
-                self.ui.set_action_enabled('set_scan', True)
                 self.ui.set_action_enabled('ini_positions', True)
                 self.ui.set_action_enabled('start', True)
 
@@ -699,23 +695,33 @@ class DAQScan(QObject, ParameterManager):
     ############
     #  PLOTTING
 
-    def show_average_dock(self, show=True):
-        self.ui.average_dock.setVisible(show)
-        self.ui.indice_average_sb.setVisible(show)
-        if show:
-            self.ui.average_dock.setStretch(100, 100)
-
     def save_temp_live_data(self, scan_data: ScanDataTemp):
         if scan_data.scan_index == 0:
-            self.extended_saver.add_nav_axes(self.h5temp.raw_group, self.scanner.get_nav_axes())
+            nav_axes = self.scanner.get_nav_axes()
+
+            #
+            #     for nav_axe in nav_axes:
+            #         nav_axe.index += 1
+            #     nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
+            #                                   index=0))
+            self.extended_saver.add_nav_axes(self.h5temp.raw_group, nav_axes)
+
         self.extended_saver.add_data(self.h5temp.raw_group, scan_data.data, scan_data.indexes,
                                      distribution=self.scanner.distribution)
-        if self.settings['plot_options', 'plot_each']:
+        if self.settings['plot_options', 'plot_at_each_step']:
             self.update_live_plots()
 
     def update_live_plots(self):
-        self.live_plotter.load_plot_data(group_1D=self.settings['scan_options', 'group0D'])
 
+        if self.settings['scan_options', 'scan_average'] > 1:
+            average_axis = 0
+        else:
+            average_axis = None
+        try:
+            self.live_plotter.load_plot_data(group_1D=self.settings['scan_options', 'group0D'],
+                                             average_axis=average_axis, average_index=self.ind_average)
+        except Exception as e:
+            logger.exception(str(e))
     #################
     #  SCAN FLOW
 
@@ -853,11 +859,10 @@ class DAQScan(QObject, ParameterManager):
             self.scan_thread.scan_acquisition = scan_acquisition
             self.scan_thread.start()
 
-            self.ui.set_action_enabled('set_scan', False)
             self.ui.set_action_enabled('ini_positions', False)
             self.ui.set_action_enabled('start', False)
             self.ui.set_scan_done(False)
-            if not self.settings['plot_options', 'plot_each']:
+            if not self.settings['plot_options', 'plot_at_each_step']:
                 self.live_timer.start(self.settings['plot_options', 'refresh_live'])
             self.command_daq_signal.emit(utils.ThreadCommand('start_acquisition'))
             self.ui.set_permanent_status('Running acquisition')
@@ -914,7 +919,6 @@ class DAQScan(QObject, ParameterManager):
         self.update_status(status, log_type='log')
         self.ui.set_permanent_status('')
 
-        self.ui.set_action_enabled('set_scan', True)
         self.ui.set_action_enabled('ini_positions', True)
         self.ui.set_action_enabled('start', True)
 
@@ -1117,11 +1121,15 @@ class DAQScanAcquisition(QObject):
         try:
             indexes = self.scanner.get_indexes_from_scan_index(self.ind_scan)
             if self.Naverage > 1:
-                indexes = list(indexes)
-                indexes.append(self.ind_average)
+                indexes = [self.ind_average] + list(indexes)
             indexes = tuple(indexes)
             if self.ind_scan == 0:
                 nav_axes = self.scanner.get_nav_axes()
+                if self.Naverage > 1:
+                    for nav_axis in nav_axes:
+                        nav_axis.index += 1
+                    nav_axes.append(data_mod.Axis('Average', data=np.linspace(0, self.Naverage - 1, self.Naverage),
+                                                  index=0))
                 self.module_and_data_saver.add_nav_axes(nav_axes)
 
             self.module_and_data_saver.add_data(indexes=indexes, distribution=self.scanner.distribution)

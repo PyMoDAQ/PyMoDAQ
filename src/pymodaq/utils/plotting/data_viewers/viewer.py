@@ -3,6 +3,7 @@ from typing import List, Union, TYPE_CHECKING
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, Slot
 
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import DataToExport, DataRaw, DataWithAxes
 from pymodaq.utils.exceptions import ViewerError
 from pymodaq.utils.enums import BaseEnum, enum_checker
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
 
 config_viewers = {
 }
+
+logger = set_logger(get_module_name(__file__))
 
 
 class ViewersEnum(BaseEnum):
@@ -301,7 +304,7 @@ class ViewerBase(QObject):
         """str: the viewer data type see DATA_TYPES"""
         return ViewersEnum[self.__class__.__name__].value
 
-    def show_data(self, data: DataRaw, **kwargs):
+    def show_data(self, data: DataWithAxes, **kwargs):
         """Entrypoint to display data into the viewer
 
         Parameters
@@ -309,8 +312,8 @@ class ViewerBase(QObject):
         data: data_mod.DataFromPlugins
         """
         if len(data.shape) > 4:
-            raise ViewerError(f'Ndarray of dim: {len(data.shape)} cannot be plotted'
-                              f' using a {self.viewer_type}')
+            raise ViewerError(f'Ndarray of dim: {len(data.shape)} cannot be plotted using a {self.viewer_type}')
+
         self.data_to_export = DataToExport(name=self.title)
         self._raw_data = data
 

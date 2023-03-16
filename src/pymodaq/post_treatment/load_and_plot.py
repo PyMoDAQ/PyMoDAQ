@@ -60,9 +60,20 @@ class LoaderPlotter:
         return self._data
 
     def load_data(self, filter_dims: List[Union[DataDim, str]] = None, filter_full_names: List[str] = None,
-                  remove_navigation: bool = True, group_1D=False):
+                  remove_navigation: bool = True, group_1D=False, average_axis=None, average_index: int = 0):
         self._data = DataToExport('All')
         self.dataloader.load_all('/', self._data)
+
+        if average_axis is not None:
+            for ind, data in enumerate(self._data):
+                current_data = data.inav[average_index, ...]
+                if average_index == 0:
+                    data_to_append = data.inav[0:average_index + 1, ...]
+                else:
+                    data_to_append = data.inav[0:average_index+1, ...].mean(axis=average_axis)
+                data_to_append.labels = [f'{label}_averaged' for label in data_to_append.labels]
+                current_data.append(data_to_append)
+                self._data[ind] = current_data
 
         if remove_navigation:
             for data in self._data:
