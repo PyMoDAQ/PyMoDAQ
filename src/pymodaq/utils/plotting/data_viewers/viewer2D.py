@@ -3,6 +3,7 @@ import copy
 import datetime
 import numpy as np
 import sys
+from typing import Union, Iterable
 
 import pymodaq.utils.messenger
 from qtpy import QtCore, QtGui, QtWidgets
@@ -300,6 +301,7 @@ class LineoutPlotter(LineoutPlotter):
 
 
 class View2D(ActionManager, QtCore.QObject):
+
     def __init__(self, parent_widget=None):
         QtCore.QObject.__init__(self)
         ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
@@ -356,19 +358,24 @@ class View2D(ActionManager, QtCore.QObject):
 
     def move_scale_roi_target(self, pos=None, size=None):
         """
-        Move and scale the target ROI (used to displat a particular area, for instance the currently scanned points
+        Move and scale the target ROI (used to display a particular area, for instance the currently scanned points
         during a scan
         Parameters
         ----------
         pos: (iterable) precising the central position of the ROI in the view
         size: (iterable) precising the size of the ROI
         """
-        if pos is not None:
-            if self.roi_target.pos() != pos:
-                self.roi_target.setPos(pos)
         if size is not None:
-            if self.roi_target.size() != size:
-                self.roi_target.setSize(size)
+            x_offset, x_scaling, y_offset, y_scaling = self._get_axis_scaling_offset()
+            size = list(np.divide(list(size), [x_scaling, y_scaling]))
+            if list(self.roi_target.size()) != size:
+                self.roi_target.setSize(size, center=(0.5, 0.5))
+
+        if pos is not None:
+            pos = self.unscale_axis(*list(pos))
+            pos = list(pos)
+            if list(self.roi_target.pos()) != pos:
+                self.roi_target.setPos(pos)
 
     def setup_widgets(self):
         vertical_layout = QtWidgets.QVBoxLayout()
@@ -381,7 +388,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.graphs_widget = QtWidgets.QWidget()
         self.graphs_widget.setLayout(QtWidgets.QHBoxLayout())
         self.graphs_widget.layout().setContentsMargins(0, 0, 0, 0)
-        self.setupGraphs(self.graphs_widget.layout())
+        self.setup_graphs(self.graphs_widget.layout())
         splitter_vertical.addWidget(self.graphs_widget)
 
         self.plotitem.addItem(self.ROIselect)
@@ -390,7 +397,7 @@ class View2D(ActionManager, QtCore.QObject):
         self.splitter_VLeft.splitterMoved[int, int].connect(self.move_right_splitter)
         self.splitter_VRight.splitterMoved[int, int].connect(self.move_left_splitter)
 
-    def setupGraphs(self, graphs_layout):
+    def setup_graphs(self, graphs_layout):
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         graphs_layout.addWidget(self.splitter)
 
@@ -655,6 +662,14 @@ class Viewer2D(ViewerBase):
     def roi_manager(self):
         """Convenience method """
         return self.view.roi_manager
+
+    @property
+    def roi_target(self) -> pgROI:
+        return self.view.roi_target
+
+    def move_roi_target(self, pos: Iterable[float] = None, size: Iterable[float] = (1, 1)):
+        """move a specific read only ROI at the given position on the viewer"""
+        self.view.move_scale_roi_target(pos, size)
 
     @property
     def crosshair(self):
@@ -958,7 +973,7 @@ def main(data_distribution='uniform'):
         Nx = 100
         Ny = 2 * Nx
         data_random = np.random.normal(size=(Ny, Nx))
-        x = np.linspace(-Nx / 2, Nx / 2 - 1, Nx)
+        x = 0.5 * np.linspace(-Nx / 2, Nx / 2 - 1, Nx)
         y = 0.2 * np.linspace(-Ny / 2, Ny / 2 - 1, Ny)
         data_red = 3 * np.sin(x/5)**2 * gauss2D(x, 5, Nx / 10, y, -1, Ny / 10, 1, 90) + 0.1 * data_random
         data_green = 10 * gauss2D(x, -20, Nx / 10, y, -10, Ny / 20, 1, 0)
@@ -985,7 +1000,7 @@ def main(data_distribution='uniform'):
     prog.show_data(data_to_plot)
 
     prog.view.show_roi_target(True)
-    prog.view.move_scale_roi_target((50, 40), (20, 20))
+    prog.view.move_scale_roi_target((50, 40), (10, 20))
 
     QtWidgets.QApplication.processEvents()
     sys.exit(app.exec_())

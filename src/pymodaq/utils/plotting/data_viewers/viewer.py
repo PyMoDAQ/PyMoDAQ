@@ -1,7 +1,9 @@
-from typing import List, Union, TYPE_CHECKING
+from typing import List, Union, TYPE_CHECKING, Iterable
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Signal, Slot
+
+from pyqtgraph.graphicsItems import InfiniteLine, ROI
 
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils.data import DataToExport, DataRaw, DataWithAxes
@@ -355,6 +357,21 @@ class ViewerBase(QObject):
     def setVisible(self, show=True):
         """convenience method to show or hide the paretn widget"""
         self.parent.setVisible(show)
+
+    @property
+    def roi_target(self) -> Union[InfiniteLine.InfiniteLine, ROI.ROI]:
+        """To be implemented if necessary (Viewer1D and above)"""
+        return None
+
+    def move_roi_target(self, pos: Iterable[float] = None, **kwargs):
+        """move a specific read only ROI at the given position on the viewer"""
+        ...
+
+    def show_roi_target(self, show=True):
+        """Show/Hide a specific read only ROI"""
+        if self.roi_target is not None:
+            self.roi_target.setVisible(show)
+
 
 
 if __name__ == '__main__':

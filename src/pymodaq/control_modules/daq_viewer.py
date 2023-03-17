@@ -80,7 +80,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     size of the corresponding ROI is then directly transferred to a plugin function named `ROISelect` that you have to
     create if one want to receive infos from the ROI
     """
-
+    settings_name = 'daq_viewer_settings'
     custom_sig = Signal(ThreadCommand)  # particular case where DAQ_Viewer  is used for a custom module
 
     grab_done_signal = Signal(DataToExport)
@@ -100,7 +100,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.logger.info(f'Initializing DAQ_Viewer: {title}')
 
         QObject.__init__(self)
-        ParameterManager.__init__(self, self.__class__.__name__)
+        ParameterManager.__init__(self)
         ControlModule.__init__(self)
 
         daq_type = enum_checker(DAQTypesEnum, daq_type)

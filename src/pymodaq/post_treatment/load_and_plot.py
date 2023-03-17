@@ -6,7 +6,7 @@ Created the 22/01/2023
 """
 import os
 import sys
-from typing import List, Union, Callable
+from typing import List, Union, Callable, Iterable
 
 from qtpy import QtWidgets, QtCore
 
@@ -106,7 +106,8 @@ class LoaderPlotter:
 
                 data1D = DataFromPlugins(self.grouped_data1D_fullname.split('/')[1],
                                          data=data1D_arrays, labels=labels,
-                                         origin=self.grouped_data1D_fullname.split('/')[0])
+                                         origin=self.grouped_data1D_fullname.split('/')[0],
+                                         axes=dwa.get_nav_axes())
                 self._data.append(data1D)
 
         return self._data
@@ -118,14 +119,16 @@ class LoaderPlotter:
         -----
         load_data
         """
+        if 'target_at' in kwargs:
+            target_at = kwargs.pop('target_at')
         self.load_data(**kwargs)
-        self.show_data()
+        self.show_data(target_at=target_at)
 
-    def show_data(self):
+    def show_data(self, **kwargs):
         """Send data to their dedicated viewers
         """
         #self._init_show_data(self._data)
-        self.set_data_to_viewers(self._data)
+        self.set_data_to_viewers(self._data, **kwargs)
 
     def _init_show_data(self, data: DataToExport):
         """Processing before showing data
@@ -149,7 +152,7 @@ class LoaderPlotter:
         self._viewers = dict(zip(viewers_name, self.dispatcher.viewers))
         self._viewer_docks = dict(zip(viewers_name, self.dispatcher.viewer_docks))
 
-    def set_data_to_viewers(self, data: DataToExport, temp=False):
+    def set_data_to_viewers(self, data: DataToExport, temp=False, target_at: Iterable[float] = None):
         """Process data dimensionality and send appropriate data to their data viewers
 
         Parameters
@@ -157,7 +160,8 @@ class LoaderPlotter:
         data: list of DataFromPlugins
         temp: bool
             if True notify the data viewers to display data as temporary (meaning not exporting processed data from roi)
-
+        target_at: Iterable[float]
+            if specified show and plot the roi_target of each viewer at the given position
         See Also
         --------
         ViewerBase, Viewer0D, Viewer1D, Viewer2D
@@ -174,6 +178,13 @@ class LoaderPlotter:
                 viewer.show_data_temp(_data)
             else:
                 viewer.show_data(_data)
+            if target_at is not None:
+                viewer.show_roi_target(True)
+                if _data.dim == 'Data1D':
+                    viewer.move_roi_target(target_at)
+                elif _data.dim == 'Data2D' and _data.distribution == 'uniform':
+                    size = [axis.scaling for axis in _data.get_nav_axes()]
+                    viewer.move_roi_target(target_at, size)
 
 
 def main(init_qt=True):

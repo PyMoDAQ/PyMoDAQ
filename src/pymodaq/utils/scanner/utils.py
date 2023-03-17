@@ -38,6 +38,7 @@ class ScanInfo:
 
     Parameters
     ----------
+
     Nsteps: int
         Number of steps of the scan
     positions: ndarray
@@ -47,6 +48,8 @@ class ScanInfo:
         of the corresponding positions within the axis_unique
     axes_unique: list of ndarray
         list of sorted (and with unique values) 1D arrays of unique positions of each defined axes
+    selected_actuators: List[str]
+        The actuators to be used for this scan
     kwargs: dict of other named parameters to be saved as attributes
 
     Attributes
@@ -62,19 +65,19 @@ class ScanInfo:
         list of sorted (and with unique values) 1D arrays of unique positions of each defined axes
     kwargs: dict of other named attributes
     """
-    def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, **kwargs):
+    def __init__(self, Nsteps=0, positions=None, axes_indexes=None, axes_unique=None, selected_actuators=[],
+                 **kwargs):
         self.Nsteps = Nsteps
         self.positions = positions
         self.axes_indexes = axes_indexes
         self.axes_unique = axes_unique
+        self.selected_actuators = selected_actuators
         for k in kwargs:
             setattr(self, k, kwargs[k])
 
     def __repr__(self):
-        if self.positions is not None:
-            return f'[ScanInfo with {self.Nsteps} positions of shape {self.positions.shape})'
-        else:
-            return '[ScanInfo with position is None)'
+        return f'Scan of {self.selected_actuators} with {self.Nsteps} positions'
+
 
 
 

@@ -42,6 +42,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('quit', 'Quit the module', 'close2', menu=self.file_menu)
         self.add_action('ini_positions', 'Init Positions', '', menu=self.action_menu)
         self.add_action('start', 'Start Scan', 'run2', "Start the scan", menu=self.action_menu)
+        self.add_action('start_batch', 'Start ScanBatches', 'run_all', "Start the batch of scans", menu=self.action_menu)
         self.add_action('stop', 'Stop Scan', 'stop', "Stop the scan", menu=self.action_menu)
         self.add_action('move_at', 'Move at doubleClicked', 'move_contour',
                         "Move to positions where you double clicked", checkable=True, menu=self.action_menu)
@@ -55,6 +56,8 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('navigator', 'Show Navigator', '', menu=self.settings_menu, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=self.settings_menu, auto_toolbar=False)
 
+        self.set_action_visible('start_batch', False)
+
     def enable_start_stop(self, enable=True):
         """If True enable main buttons to launch/stop scan"""
         self.set_action_enabled('start', enable)
@@ -64,6 +67,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.connect_action('quit', lambda: self.command_sig.emit(ThreadCommand('quit')))
         self.connect_action('ini_positions', lambda: self.command_sig.emit(ThreadCommand('ini_positions')))
         self.connect_action('start', lambda: self.command_sig.emit(ThreadCommand('start')))
+        self.connect_action('start_batch', lambda: self.command_sig.emit(ThreadCommand('start_batch')))
         self.connect_action('stop', lambda: self.command_sig.emit(ThreadCommand('stop')))
         self.connect_action('move_at', lambda: self.command_sig.emit(ThreadCommand('move_at')))
         self.connect_action('log', lambda: self.command_sig.emit(ThreadCommand('show_log', )))

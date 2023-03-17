@@ -56,12 +56,15 @@ class DAQ_Move(ParameterManager, ControlModule):
     --------
     :class:`ControlModule`, :class:`ParameterManager`
     """
+    settings_name = 'daq_move_settings'
+
     move_done_signal = Signal(str, float)
     _current_value_signal = Signal(str, float)
     # to be used in external program to make sure the move has been done,
     # export the current position. str refer to the unique title given to the module
     _update_settings_signal = Signal(edict)
     bounds_signal = Signal(bool)
+
     
     params = daq_move_params
 
@@ -81,7 +84,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         self.logger.info(f'Initializing DAQ_Move: {title}')
 
         QObject.__init__(self)
-        ParameterManager.__init__(self, self.__class__.__name__)
+        ParameterManager.__init__(self)
         ControlModule.__init__(self)
 
         self.parent = parent
