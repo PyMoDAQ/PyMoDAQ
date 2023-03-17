@@ -469,7 +469,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
                    Widget representing as a Tree structure, all the settings defined in the class preamble variable ``params``
 
     """
-
+    settings_name = 'h5saver_settings'
     params = [
         {'title': 'Save type:', 'name': 'save_type', 'type': 'list', 'limits': SaveType.names(), 'readonly': True},
     ] + dashboard_submodules_params + \
@@ -521,7 +521,7 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         https://github.com/HDFGroup/hsds
         """
         H5SaverLowLevel.__init__(self, save_type, backend)
-        ParameterManager.__init__(self, self.__class__.__name__)
+        ParameterManager.__init__(self)
 
         self.current_scan_group = None
         self.current_scan_name = None

@@ -15,6 +15,7 @@ from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import config as config_mod
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.scanner import Scanner
+from pymodaq.utils.scanner.scan_factory import ScannerBase
 from pymodaq.utils.scanner.utils import ScanType #, adaptive_losses
 from pathlib import Path
 from collections import OrderedDict
@@ -33,19 +34,20 @@ params = [
 
 
 class BatchManager(ParameterManager):
-
+    settings_name = 'batch_settings'
     params = [{'title': 'Filename:', 'name': 'filename', 'type': 'str', 'value': 'batch_default'},
               {'title': 'Scans', 'name': 'scans', 'type': 'group', 'children': []}]
 
     def __init__(self, msgbox=False, actuators=[], detectors=[], path=None):
-        super().__init__('batch_settings')
+        super().__init__()
 
         self.modules_manager: ModulesManager = ModulesManager(detectors, actuators)
         self.modules_manager.show_only_control_modules(True)
         self.modules_manager.actuators_changed[list].connect(self.update_actuators)
         self.modules_manager.settings_tree.setMinimumHeight(200)
         self.modules_manager.settings_tree.setMaximumHeight(200)
-        self.scans = OrderedDict([])
+
+        self._scans = OrderedDict([])
 
         self.scanner = Scanner(actuators=self.modules_manager.actuators_all)
 
@@ -98,7 +100,7 @@ class BatchManager(ParameterManager):
         settings_tmp = self.create_parameter(filename)
         children = settings_tmp.child('scans').children()
 
-        self.settings = self.create_parameter(self.params)
+        #self.settings = self.create_parameter(self.params)
         actuators = children[0].child('modules', 'actuators').value()['all_items']
         if actuators != self.modules_manager.actuators_name:
             messagebox(text='The loaded actuators from the batch file do not corresponds to the dashboard actuators')
@@ -109,9 +111,12 @@ class BatchManager(ParameterManager):
             messagebox(text='The loaded detectors from the batch file do not corresponds to the dashboard detectors')
             return
 
-        for child in children:
-            self.add_scan(name=child.name(), title=child.opts['title'])
-            self.settings.child('scans', child.name()).restoreState(child.saveState())
+        self.settings = settings_tmp
+
+        # for child in children:
+        #     self.add_scan(name=child.name(), title=child.opts['title'])
+        #
+        #     self.settings.child('scans', child.name()).restoreState(child.saveState())
 
         if show:
             status = self.show_tree()
@@ -122,14 +127,27 @@ class BatchManager(ParameterManager):
     def set_scans(self):
         infos = []
         acts, dets = self.get_act_dets()
+        self._scans = OrderedDict([])
         for name in [child.name() for child in self.settings.child('scans').children()]:
-            scanner = Scanner(actuators=self.modules_manager.get_mods_from_names(acts[name], 'act'))
-            scanner.set_scan_from_settings(self.settings.child('scans', name, 'Scanner'),
-                                           self.settings.child('scans', name, 'scanner_settings'))
-
+            self._scans[name] = Scanner(actuators=self.modules_manager.get_mods_from_names(acts[name], 'act'))
+            self._scans[name].set_scan_from_settings(self.settings.child('scans', name, Scanner.settings_name),
+                                                     self.settings.child('scans', name, ScannerBase.settings_name))
             infos.append(f'{name}: {acts[name]} / {dets[name]}')
-            infos.append(f'{name}: {self.scans[name].set_scan()}')
+            infos.append(f'{name}: {self._scans[name].get_scan_info()}')
         return infos
+
+    def get_scan(self, name: str):
+        """Get a Scanner object from name"""
+        if len(self._scans) == 0:
+            self.set_scans()
+        return self._scans.get(name)
+
+    @property
+    def scans(self):
+        return self._scans
+
+    def get_scan_names(self) -> List[str]:
+        return list(self._scans.keys())
 
     def set_new_batch(self):
         self.settings = self.create_parameter(self.params)
@@ -203,7 +221,7 @@ class BatchManager(ParameterManager):
 
         child = {'title': title, 'name': name, 'type': 'group', 'removable': True, 'children': params}
 
-        # self.scans[name] = Scanner(actuators=self.modules_manager.actuators)
+        # self._scans[name] = Scanner(actuators=self.modules_manager.actuators)
 
         self.settings.child('scans').addChild(child)
         self.settings.child('scans', name, 'modules',
@@ -213,8 +231,8 @@ class BatchManager(ParameterManager):
                             'detectors').setValue(dict(all_items=self.modules_manager.detectors_name,
                                                        selected=self.modules_manager.selected_detectors_name))
 
-        self.settings.child('scans', name).addChild(self.scanner.settings)
-        self.settings.child('scans', name).addChild(self.scanner.get_scanner_detailed_settings())
+        self.settings.child('scans', name).addChild(self.create_parameter(self.scanner.settings))
+        self.settings.child('scans', name).addChild(self.create_parameter(self.scanner.get_scanner_sub_settings()))
 
 
 class BatchScanner(QtCore.QObject):
@@ -229,7 +247,10 @@ class BatchScanner(QtCore.QObject):
 
     @property
     def scans_names(self):
-        return list(self.batchmanager.scans.keys())
+        return self.batchmanager.get_scan_names()
+
+    def get_scan(self, name: str):
+        return self.batchmanager.get_scan(name)
 
     def get_act_dets(self):
         return self.batchmanager.get_act_dets()

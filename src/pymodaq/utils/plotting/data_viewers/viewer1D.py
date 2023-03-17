@@ -1,9 +1,8 @@
 import sys
 import datetime
 from collections import OrderedDict
-from typing import List
+from typing import List, Iterable
 
-import pyqtgraph
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, Qt
 import pyqtgraph as pg
@@ -63,7 +62,7 @@ class DataDisplayer(QObject):
     updated_item = Signal(list)
     labels_changed = Signal(list)
 
-    def __init__(self, plotitem: pyqtgraph.PlotItem):
+    def __init__(self, plotitem: pg.PlotItem):
         super().__init__()
         self._plotitem = plotitem
         self._plotitem.addLegend()
@@ -175,6 +174,8 @@ class View1D(ActionManager, QObject):
         self.graphical_widgets: dict = None
         self.crosshair: Crosshair = None
 
+        self.roi_target = pg.InfiniteLine(pen='w')
+
         self.setup_actions()
 
         self.parent_widget = parent_widget
@@ -191,6 +192,11 @@ class View1D(ActionManager, QObject):
         self.lineout_plotter = LineoutPlotter(self.graphical_widgets, self.roi_manager, self.crosshair)
         self.connect_things()
         self.prepare_ui()
+
+        self.plotitem.addItem(self.roi_target)
+
+    def move_roi_target(self, pos: Iterable[float], **kwargs):
+        self.roi_target.setPos(pos[0])
 
     def get_double_clicked(self):
         return self.plot_widget.view.sig_double_clicked
@@ -360,6 +366,14 @@ class Viewer1D(ViewerBase):
     def roi_manager(self):
         """Convenience method """
         return self.view.roi_manager
+
+    @property
+    def roi_target(self) -> pg.InfiniteLine:
+        return self.view.roi_target
+
+    def move_roi_target(self, pos: Iterable[float] = None):
+        """move a specific read only ROI at the given position on the viewer"""
+        self.view.move_roi_target(pos)
 
     @property
     def crosshair(self):

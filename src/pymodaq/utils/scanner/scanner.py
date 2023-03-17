@@ -38,6 +38,7 @@ class Scanner(QObject, ParameterManager):
     ScanSelector, ScannerBase, TableModelSequential, TableModelTabular, pymodaq_types.TableViewCustom
     """
     scanner_updated_signal = Signal()
+    settings_name = 'scanner'
 
     params = [
         {'title': 'Calculate positions:', 'name': 'calculate_positions', 'type': 'action'},
@@ -50,7 +51,7 @@ class Scanner(QObject, ParameterManager):
     def __init__(self, parent_widget: QtWidgets.QWidget = None, scanner_items=OrderedDict([]),
                  actuators: List[DAQ_Move] = []):
         QObject.__init__(self)
-        ParameterManager.__init__(self, self.__class__.__name__)
+        ParameterManager.__init__(self)
         if parent_widget is None:
             parent_widget = QtWidgets.QWidget()
         self.parent_widget = parent_widget
@@ -104,7 +105,8 @@ class Scanner(QObject, ParameterManager):
         except ValueError:
             pass
 
-    def get_scanner_detailed_settings(self):
+    def get_scanner_sub_settings(self):
+        """Get the current ScannerBase implementation's settings"""
         return self._scanner.settings
 
     def value_changed(self, param: Parameter):
@@ -173,8 +175,10 @@ class Scanner(QObject, ParameterManager):
 
     def set_scan_from_settings(self, settings: Parameter, scanner_settings: Parameter):
 
-        self.set_scan_type_and_subtypes(self.settings['scans', name, 'batch_settings', 'scan_type'],
-                                           self.settings['scans', name, 'batch_settings', 'scan_sub_type'])
+        self.set_scan_type_and_subtypes(settings['scan_type'],
+                                        settings['scan_sub_type'])
+        self.settings.restoreState(settings.saveState())
+        self._scanner.settings.restoreState(scanner_settings.saveState())
 
     @property
     def scan_type(self) -> str:
@@ -190,7 +194,8 @@ class Scanner(QObject, ParameterManager):
     def get_scan_info(self) -> ScanInfo:
         """Get a summary of the configured scan as a ScanInfo object"""
         return ScanInfo(self._scanner.n_steps, positions=self._scanner.positions,
-                        axes_indexes=self._scanner.axes_indexes, axes_unique=self._scanner.axes_unique)
+                        axes_indexes=self._scanner.axes_indexes, axes_unique=self._scanner.axes_unique,
+                        selected_actuators=[act.title for act in self.actuators])
 
     def get_nav_axes(self):
         return self._scanner.get_nav_axes()
