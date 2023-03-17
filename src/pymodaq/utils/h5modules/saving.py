@@ -84,7 +84,7 @@ class H5SaverLowLevel(H5Backend):
         self.file_loaded = False
 
         self._current_group = None
-        self._raw_group = None
+        self._raw_group: Union[GROUP, str] = '/RawData'
         self._logger_array = None
 
     @property
@@ -266,12 +266,17 @@ class H5SaverLowLevel(H5Backend):
         self._current_group = super().get_set_group(where, name, title)
         return self._current_group
 
-    def get_last_group(self, where: GROUP, group_type: GroupType):
+    def get_groups(self, where: Union[str, GROUP], group_type: GroupType):
+        """Get all groups hanging from a Group and of a certain type"""
         groups = []
         for node_name in list(self.get_children(where)):
             group = self.get_node(where, node_name)
             if 'type' in group.attrs and group.attrs['type'] == group_type.name:
                 groups.append(group)
+        return groups
+
+    def get_last_group(self, where: GROUP, group_type: GroupType):
+        groups = self.get_groups(where, group_type)
         if len(groups) != 0:
             return groups[-1]
         else:
@@ -749,6 +754,9 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
 
         """
         return self.get_last_group(self.raw_group, GroupType['scan'])
+
+    def get_scan_groups(self):
+        return self.get_groups(self.raw_group, GroupType['scan'])
 
     def get_scan_index(self):
         """ return the scan group index in the "scan templating": Scan000, Scan001 as an integer
