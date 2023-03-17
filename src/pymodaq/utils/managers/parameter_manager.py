@@ -1,5 +1,4 @@
 from pathlib import Path
-
 from typing import List, Union, Dict
 from pymodaq.utils.parameter import Parameter, ParameterTree, ioxml
 
@@ -11,14 +10,18 @@ class ParameterManager:
     ----------
     params: list of dicts
         Defining the Parameter tree like structure
+    settings_name: str
+        The particular name to give to the object parent Parameter (self.settings)
     settings: Parameter
         The higher level (parent) Parameter
     settings_tree: ParameterTree
     """
-
+    settings_name = 'custom_settings'
     params = []
 
-    def __init__(self, settings_name='settings'):
+    def __init__(self, settings_name: str = None):
+        if settings_name is None:
+            settings_name = self.settings_name
         # create a settings tree to be shown eventually in a dock
         self.settings_tree: ParameterTree = ParameterTree()
         self.settings_tree.setMinimumWidth(150)
@@ -42,16 +45,17 @@ class ParameterManager:
     def create_parameter(settings: Union[Parameter, List[Dict[str, str]], Path]) -> Parameter:
 
         if isinstance(settings, List):
-            settings = Parameter.create(title='Settings', name='settings', type='group', children=settings)
+            _settings = Parameter.create(title='Settings', name='settings', type='group', children=settings)
         elif isinstance(settings, Path) or isinstance(settings, str):
             settings = Path(settings)
-            settings = Parameter.create(title='Settings', name='settings',
+            _settings = Parameter.create(title='Settings', name='settings',
                                         type='group', children=ioxml.XML_file_to_parameter(str(settings)))
         elif isinstance(settings, Parameter):
-            pass
+            _settings = Parameter.create(title='Settings', name=settings.name(), type='group')
+            _settings.restoreState(settings.saveState())
         else:
-            raise TypeError(f'Cannot create Parameter object from {settings}\n{str(e)}')
-        return settings
+            raise TypeError(f'Cannot create Parameter object from {settings}')
+        return _settings
 
     def parameter_tree_changed(self, param, changes):
         for param, change, data in changes:

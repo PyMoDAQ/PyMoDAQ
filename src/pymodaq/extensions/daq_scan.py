@@ -59,6 +59,7 @@ class DAQScan(QObject, ParameterManager):
     """
     Main class initializing a DAQScan module with its dashboard and scanning control panel
     """
+    settings_name = 'daq_scan_settings'
     command_daq_signal = Signal(utils.ThreadCommand)
     status_signal = Signal(str)
     live_data_1D_signal = Signal(list)
@@ -99,7 +100,7 @@ class DAQScan(QObject, ParameterManager):
         
         logger.info('Initializing DAQScan')
         QObject.__init__(self)
-        ParameterManager.__init__(self, self.__class__.__name__)
+        ParameterManager.__init__(self)
 
         self.title = __class__.__name__
 
@@ -144,7 +145,7 @@ class DAQScan(QObject, ParameterManager):
         self.scanner = Scanner(actuators=self.modules_manager.actuators)  # , adaptive_losses=adaptive_losses)
         self.scan_parameters = None
 
-        self.batcher = None
+        self.batcher: BatchScanner = None
         self.batch_started = False
         self.ind_batch = 0
 
@@ -268,6 +269,7 @@ class DAQScan(QObject, ParameterManager):
                 * quit
                 * ini_positions
                 * start
+                * start_batch
                 * stop
                 * move_at
                 * show_log
@@ -284,6 +286,8 @@ class DAQScan(QObject, ParameterManager):
             self.set_ini_positions()
         elif cmd.command == 'start':
             self.start_scan()
+        elif cmd.command == 'start_batch':
+            self.start_scan_batch()
         elif cmd.command == 'stop':
             self.stop_scan()
         elif cmd.command == 'move_at':
@@ -357,12 +361,11 @@ class DAQScan(QObject, ParameterManager):
     # external modules
 
     def show_batcher(self, menubar):
-        #todo update with v4 layout
-        self.batcher = BatchScanner(self.dockarea, self.modules_manager.actuators_name,
-                                    self.modules_manager.detectors_name)
+        self.batcher = BatchScanner(self.dockarea, self.modules_manager.actuators_all,
+                                    self.modules_manager.detectors_all)
         self.batcher.create_menu(menubar)
         self.batcher.setupUI()
-        self.ui.start_batch_pb.setVisible(True)
+        self.ui.set_action_visible('start_batch', True)
 
     def start_scan_batch(self):
         self.batch_started = True
@@ -373,7 +376,7 @@ class DAQScan(QObject, ParameterManager):
         if self.ind_batch >= len(self.batcher.scans_names):
             self.stop_scan()
             return
-        self.scanner = self.batcher.scans[self.batcher.scans_names[self.ind_batch]]
+        self.scanner = self.batcher.get_scan(self.batcher.scans_names[self.ind_batch])
         actuators, detectors = self.batcher.get_act_dets()
         self.set_scan_batch(actuators[self.batcher.scans_names[self.ind_batch]],
                             detectors[self.batcher.scans_names[self.ind_batch]])
@@ -719,7 +722,8 @@ class DAQScan(QObject, ParameterManager):
             average_axis = None
         try:
             self.live_plotter.load_plot_data(group_1D=self.settings['scan_options', 'group0D'],
-                                             average_axis=average_axis, average_index=self.ind_average)
+                                             average_axis=average_axis, average_index=self.ind_average,
+                                             target_at=self.scanner.positions[self.ind_scan])
         except Exception as e:
             logger.exception(str(e))
     #################

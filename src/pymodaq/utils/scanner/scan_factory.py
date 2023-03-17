@@ -27,13 +27,12 @@ if TYPE_CHECKING:
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
 
-SCANNER_SETTINGS_NAME = 'scanner_settings'
-
 
 class ScanParameterManager(ParameterManager):
+    settings_name = 'scanner_settings'
+
     def __init__(self):
         super().__init__()
-        self.settings.setName(SCANNER_SETTINGS_NAME)
         self.settings_tree.header().setVisible(False)
         self.settings_tree.setMinimumHeight(150)
 
