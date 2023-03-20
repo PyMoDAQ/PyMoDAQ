@@ -46,11 +46,11 @@ class UniformImageItem(PymodaqImage):
         """
         return self.image[int(xy[1]), int(xy[0])]
 
-    def setRect(self, rect):
-        """Scale and translate the image to fit within rect (must be a QRect or QRectF)."""
-        self.resetTransform()
-        self.translate(rect.left(), rect.top())
-        self.scale(rect.width() / self.width(), rect.height() / self.height())
+    # def setRect(self, rect):
+    #     """Scale and translate the image to fit within rect (must be a QRect or QRectF)."""
+    #     self.resetTransform()
+    #     self._dataTransform.translate(rect.left(), rect.top())
+    #     self._dataTransform.scale(rect.width() / self.width(), rect.height() / self.height())
 
 
 class SpreadImageItem(PymodaqImage):
