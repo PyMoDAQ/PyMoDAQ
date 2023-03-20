@@ -419,6 +419,8 @@ class DataBase(DataLowLevel):
     origin: str
         An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
         DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
+    kwargs: named parameters
+        All other parameters are stored dynamically using the name/value pair
 
     See Also
     --------
@@ -1199,11 +1201,19 @@ class DataWithAxes(DataBase):
             dat_mean.append(np.mean(dat, axis=axis))
         return self.deepcopy_with_new_data(dat_mean, remove_axes_index=axis)
 
-    def get_dim_from_data_axes(self):
+    def get_dim_from_data_axes(self) -> DataDim:
         """Get the dimensionality DataDim from data taking into account nav indexes
         """
         if len(self.nav_indexes) > 0:
             self._dim = DataDim['DataND']
+        else:
+            if len(self.axes) == 0:
+                self._dim = DataDim['Data0D']
+            elif len(self.axes) == 1:
+                self._dim = DataDim['Data1D']
+            elif len(self.axes) == 2:
+                self._dim = DataDim['Data2D']
+        return self._dim
 
     @property
     def axes(self):
@@ -1229,6 +1239,7 @@ class DataWithAxes(DataBase):
     def nav_indexes(self, indexes: List[int]):
         """create new axis manager with new navigation indexes"""
         self.set_axes_manager(self.shape, axes=self.axes, nav_indexes=indexes)
+        self.get_dim_from_data_axes()
 
     def get_nav_axes(self) -> List[Axis]:
         return self._am.get_nav_axes()
@@ -1675,6 +1686,22 @@ class DataToExport(DataLowLevel):
         data = DataToExport(name=self.name)
         for dim in dims:
             data.append(self.get_data_from_dim(dim, deepcopy=deepcopy))
+        return data
+
+    def get_data_from_Naxes(self, Naxes: int, deepcopy: bool = False) -> DataToExport:
+        """Get the data matching the given number of axes
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the number of axes
+        """
+        data = DataToExport(name=self.name)
+        for _data in self:
+            if len(_data.shape) == Naxes:
+                if deepcopy:
+                    data.append(_data.deepcopy())
+                else:
+                    data.append(_data)
         return data
 
     def get_data_from_name(self, name: str) -> List[DataWithAxes]:
