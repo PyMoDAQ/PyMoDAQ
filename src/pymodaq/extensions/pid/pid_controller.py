@@ -644,10 +644,10 @@ class PIDRunner(QObject):
         for ind, pid in enumerate(self.pids):
             if pause_state:
                 pid.set_auto_mode(False)
-            logger.info('Stabilization paused')
-        else:
-            pid.set_auto_mode(True, self.outputs[ind])
-            logger.info('Stabilization restarted from pause')
+                logger.info('Stabilization paused')
+            else:
+                pid.set_auto_mode(True, self.outputs[ind])
+                logger.info('Stabilization restarted from pause')
         self.paused = pause_state
 
     def stop_PID(self):
