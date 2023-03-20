@@ -342,7 +342,8 @@ class DataSaverLoader(DataManagement):
     def load_data(self, where, with_bkg=False, load_all=False) -> DataWithAxes:
         """Return a DataWithAxes object from the Data and Axis Nodes hanging from (or among) a given Node
 
-        Does not include navigation axes stored elsewhere in the h5file
+        Does not include navigation axes stored elsewhere in the h5file. The node path is stored in the DatWithAxis
+        using the attribute path
 
         Parameters
         ----------
@@ -386,7 +387,8 @@ class DataSaverLoader(DataManagement):
                             labels=[node.attrs['label'] for node in data_nodes],
                             origin=data_node.attrs['origin'] if 'origin' in data_node.attrs else '',
                             nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
-                            axes=axes)
+                            axes=axes,
+                            path=data_node.path)
         return data
 
 
