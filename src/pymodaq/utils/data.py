@@ -381,6 +381,12 @@ class DataLowLevel:
     ----------
     name: str
         the identifier of the data
+
+    Attributes
+    ----------
+    name: str
+    timestamp: float
+        Time in seconds since epoch. See method time.time()
     """
 
     def __init__(self, name: str):
@@ -394,8 +400,13 @@ class DataLowLevel:
 
     @property
     def timestamp(self):
-        """The timestamp of when the object has been created"""
+        """Get/Set the timestamp of when the object has been created"""
         return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, timestamp: float):
+        """The timestamp of when the object has been created"""
+        self._timestamp = timestamp
 
 
 class DataBase(DataLowLevel):
@@ -420,11 +431,40 @@ class DataBase(DataLowLevel):
         An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
         DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
     kwargs: named parameters
-        All other parameters are stored dynamically using the name/value pair
+        All other parameters are stored dynamically using the name/value pair. The name of these extra parameters are
+        added into the extra_attributes attribute
+
+    Attributes
+    ----------
+    name: str
+        the identifier of these data
+    source: DataSource or str
+        Enum specifying if data are raw or processed (for instance from roi)
+    dim: DataDim or str
+        The identifier of the data type
+    distribution: DataDistribution or str
+        The distribution type of the data: uniform if distributed on a regular grid or spread if on specific
+        unordered points
+    data: list of ndarray
+        The data the object is storing
+    labels: list of str
+        The labels of the data nd-arrays
+    origin: str
+        An identifier of the element where the data originated, for instance the DAQ_Viewer's name. Used when appending
+        DataToExport in DAQ_Scan to disintricate from which origin data comes from when scanning multiple detectors.
+    shape: Tuple[int]
+        The shape of the underlying data
+    size: int
+        The size of the ndarrays stored in the object
+    length: int
+        The number of ndarrays stored in the object
+    extra_attributes: List[str]
+        list of string giving identifiers of the attributes added dynamically at the initialization (for instance
+        to save extra metadata using the DataSaverLoader
 
     See Also
     --------
-    DataWithAxes, DataFromPlugins, DataRaw
+    DataWithAxes, DataFromPlugins, DataRaw, DataSaverLoader
     """
 
     def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
@@ -450,7 +490,9 @@ class DataBase(DataLowLevel):
         self.data = data  # dim consistency is actually checked within the setter method
 
         self._check_labels(labels)
+        self.extra_attributes = []
         for key in kwargs:
+            self.extra_attributes.append(key)
             setattr(self, key, kwargs[key])
 
     def get_full_name(self) -> str:
