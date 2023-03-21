@@ -749,6 +749,17 @@ class DataLoader:
     """
 
     def __init__(self, h5saver: H5Saver):
+        self._axis_loader: AxisSaverLoader = None
+        self._data_loader: DataSaverLoader = None
+
+        self.h5saver = h5saver
+
+    @property
+    def h5saver(self):
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver: H5Saver):
         self._h5saver = h5saver
         self._axis_loader = AxisSaverLoader(h5saver)
         self._data_loader = DataSaverLoader(h5saver)

@@ -9,9 +9,12 @@ from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
 
 class PixmapCheckData:
     def __init__(self, data: np.ndarray, path: str = '', checked: bool = False, info: str = ''):
-        data = data / np.max(data) * 255
-        data = data.astype(np.uint8)
-        self.data = data[:,:]
+        if data is not None:
+            data = data / np.max(data) * 255
+            data = data.astype(np.uint8)
+            self.data = data[:, :]
+        else:
+            self.data = []
         self.path = path
         self.checked = checked
         self.info = info
@@ -79,8 +82,10 @@ class PixmapCheckWidget(QtWidgets.QWidget):
         self._data = data
 
     def value(self):
-        return PixmapCheckData(data=self._data.data, checked=self.checkbox.isChecked(),
-                               info=self._data.info, path=self._data.path)
+        return PixmapCheckData(data=self._data.data if self._data is not None else None,
+                               checked=self.checkbox.isChecked(),
+                               info=self._data.info if self._data is not None else '',
+                               path=self._data.path if self._data is not None else '')
 
 
 class PixmapParameterItem(WidgetParameterItem):

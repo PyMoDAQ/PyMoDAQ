@@ -4,6 +4,7 @@ Created the 15/11/2022
 
 @author: Sebastien Weber
 """
+from typing import Tuple
 import os
 from collections import OrderedDict
 from typing import List
@@ -33,6 +34,7 @@ from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.managers.parameter_manager import ParameterManager
 from pymodaq.utils.messenger import messagebox
 from .backends import H5Backend
+from .saving import H5Saver
 from . import data_saving
 from .utils import find_scan_node
 
@@ -609,7 +611,7 @@ class H5Browser(QObject, ActionManager):
             logger.exception(str(e))
 
 
-def browse_data(fname=None, ret_all=False, message=None):
+def browse_data(fname=None, ret_all=False, message=None) -> Tuple[data_saving.DataWithAxes, str, str]:
     """Browse data present in any h5 file using the H5Browser within a dialog window
     when the user has selected a given node, return its content
 
@@ -621,7 +623,7 @@ def browse_data(fname=None, ret_all=False, message=None):
 
     Returns
     -------
-    data: the numpy array in the selected node
+    data: DataWithAxes
     if argument ret_all is True, returns also:
     fname: the file name
     node_path: hte path of the selected node within the H5 file tree
@@ -642,7 +644,7 @@ def browse_data(fname=None, ret_all=False, message=None):
 
         form = QtWidgets.QMainWindow()
         browser = H5Browser(form, h5file_path=fname)
-
+        dataloader = data_saving.DataLoader(browser.h5utils)
         dialog = QtWidgets.QDialog()
         vlayout = QtWidgets.QVBoxLayout()
 
@@ -665,7 +667,7 @@ def browse_data(fname=None, ret_all=False, message=None):
 
         if res == dialog.Accepted:
             node_path = browser.current_node_path
-            data = browser.h5utils.get_node(node_path).read()
+            data = dataloader.load_data(node_path, with_bkg=True)
         else:
             data = None
             node_path = None

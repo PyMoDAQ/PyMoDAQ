@@ -48,6 +48,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
             {'title': 'Load Image:', 'name': 'Load Image', 'type': 'action'},
             {'title': 'Image path:', 'name': 'imagepath', 'type': 'str', 'value': '', 'readonly': True},
         ]},
+        {'title': 'Image', 'name': 'image', 'type': 'pixmap_check'},
         {'title': 'Overlays', 'name': 'overlays', 'type': 'group', 'children': []},
     ]
 
@@ -64,6 +65,8 @@ class Navigator(ParameterManager, ActionManager, QObject):
 
         self.h5saver = H5Saver()
         self.h5file_path = h5file_path
+        self.h5saver_image = H5Saver()
+
         self.viewer: Viewer2DBasic = None
         self.dataloader = DataLoader(self.h5saver)
 
@@ -182,31 +185,17 @@ class Navigator(ParameterManager, ActionManager, QObject):
             logger.exception(str(e))
 
     def load_image(self):
-        # image_filepath = str(utils.select_file(start_path=None, save=False, ext='h5'))
         data, fname, node_path = browse_data(ret_all=True)
-        if data is not None and fname != '':
-            self.h5module_image = H5BrowserUtil()
-            self.h5module_image.open_file(fname, 'a')
-            node = self.h5module_image.get_node(node_path)
-            pixmaps = self.h5module_image.get_h5file_scans(node.parent_node)
 
-            self.settings.child('settings', 'imagepath').setValue(fname)
-            other_child = [child for child in self.settings.child(('overlays')).children() if 'Scan' not in child.name()]
-            if len(other_child) >= 1:
-                for child in other_child:
-                    self.settings.child(('overlays')).removeChild(child)
-            params = []
-            for pixmap in pixmaps:
-                params.append({'name': pixmap['scan_name'], 'type': 'pixmap_check',
-                               'value': dict(data=pixmap['data'], checked=False, path=pixmap['path'])})
-            self.settings.child(('overlays')).addChildren(params)
+        self.h5saver_image = H5Saver()
+        self.h5saver_image.open_file(fname, 'r')
 
-            val = self.settings.child('overlays', pixmaps[0]['scan_name']).value()
-            val.update(dict(checked=True))
-            self.settings.child('overlays', pixmaps[0]['scan_name']).setValue(val)
-            self.settings.child('overlays', pixmaps[0]['scan_name']).sigValueChanged.emit(
-                self.settings.child('overlays', pixmaps[0]['scan_name']),
-                self.settings.child('overlays', pixmaps[0]['scan_name']).value())
+        self.settings.child('settings', 'imagepath').setValue(fname)
+        self.settings.child('image').setValue(PixmapCheckData(data=data[0], checked=True, path=data.path))
+
+        self.settings.child('image').sigValueChanged.emit(
+            self.settings.child('image'),
+            self.settings.child('image').value())
 
     def load_data(self):
         self.h5file_path = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'),
@@ -222,46 +211,61 @@ class Navigator(ParameterManager, ActionManager, QObject):
     def set_aspect_ratio(self):
         self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=self.is_action_checked('ratio'), ratio=1)
 
+    def add_image_data(self, dwa: DataWithAxes):
+        if dwa.distribution.name == 'spread':
+            im = SpreadImageItem()
+        else:
+            im = UniformImageItem()
+
+        im.setOpacity(1)
+        # im.setOpts(axisOrder='row-major')
+        self.viewer.image_widget.plotitem.addItem(im)
+        self.viewer.histogram_red.item.setImageItem(im)
+        im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+
+        if dwa.distribution.name == 'uniform':
+            x_axis = dwa.get_axis_from_index(1)[0].get_data()
+            y_axis = dwa.get_axis_from_index(0)[0].get_data()
+
+            rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
+                                 (np.max(x_axis) - np.min(x_axis)),
+                                 (np.max(y_axis) - np.min(y_axis)))
+
+            im.setImage(dwa.data[0])
+            im.setOpts(rect=rect)
+        else:
+            y_axis, x_axis = dwa.get_axis_from_index(0)
+            im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
+        self.viewer.histogram_red.setImageItem(im)
+        return im
+
+    def remove_image_data(self, param):
+        for overlay in self.overlays[:]:
+            if param.name() in overlay['name']:
+                ind = self.overlays.index(overlay)
+                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
+                self.overlays.pop(ind)
+
     def value_changed(self, param):
 
         if param.parent().name() == 'overlays':
             data: PixmapCheckData = param.value()
             if data.checked:
                 dwa = self.dataloader.load_data(data.path)
-
-                if dwa.distribution.name == 'spread':
-                    im = SpreadImageItem()
-                else:
-                    im = UniformImageItem()
-
-                im.setOpacity(1)
-                # im.setOpts(axisOrder='row-major')
-                self.viewer.image_widget.plotitem.addItem(im)
-                self.viewer.histogram_red.item.setImageItem(im)
-                im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-
-                if dwa.distribution.name == 'uniform':
-                    x_axis = dwa.get_axis_from_index(1)[0].get_data()
-                    y_axis = dwa.get_axis_from_index(0)[0].get_data()
-
-                    rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
-                                         (np.max(x_axis) - np.min(x_axis)),
-                                         (np.max(y_axis) - np.min(y_axis)))
-
-                    im.setImage(dwa.data[0])
-                    im.setOpts(rect=rect)
-                else:
-                    y_axis, x_axis = dwa.get_axis_from_index(0)
-                    im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
-                self.viewer.histogram_red.setImageItem(im)
+                im = self.add_image_data(dwa)
                 self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
 
             else:
-                for overlay in self.overlays[:]:
-                    if param.name() in overlay['name']:
-                        ind = self.overlays.index(overlay)
-                        self.viewer.image_widget.plotitem.removeItem(overlay['image'])
-                        self.overlays.pop(ind)
+                self.remove_image_data(param)
+        elif param.name() == 'image':
+            data: PixmapCheckData = param.value()
+            if data.checked:
+                dataloader = DataLoader(self.h5saver_image)
+                dwa = dataloader.load_data(data.path)
+                im = self.add_image_data(dwa)
+                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+            else:
+                self.remove_image_data(param)
 
     def param_deleted(self, param):
         for overlay in self.overlays[:]:
