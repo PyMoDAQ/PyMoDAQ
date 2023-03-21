@@ -178,8 +178,8 @@ class Scan2DSpiral(Scan2DLinear):
         r_steps: np.ndarray
             steps size in both directions
         """
-        centers = np.array([self.settings['center_axis1'], self.settings['center_axis1']])
-        rmaxs = np.array([self.settings['rmax_axis1'], self.settings['rmax_axis1']])
+        centers = np.array([self.settings['center_axis1'], self.settings['center_axis2']])
+        rmaxs = np.array([self.settings['rmax_axis1'], self.settings['rmax_axis2']])
         r_steps = 2 * rmaxs / self.settings['npts_by_axis']
         return centers, rmaxs, r_steps
 

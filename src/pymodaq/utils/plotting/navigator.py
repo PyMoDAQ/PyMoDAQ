@@ -8,13 +8,17 @@ import os
 import numpy as np
 import tables
 
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker, DataWithAxes
+from pymodaq.utils.h5modules.data_saving import DataLoader
+from pymodaq.utils.managers.parameter_manager import ParameterManager
+from pymodaq.utils.managers.action_manager import ActionManager
 from pymodaq.utils.plotting.data_viewers.viewer2D_basic import Viewer2DBasic
 from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.h5modules.browsing import browse_data, H5BrowserUtil
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils import gui_utils as gutils
+from pymodaq.utils.parameter.pymodaq_ptypes.pixmap import PixmapCheckData
 
 from pymodaq.utils.config import get_set_local_dir, Config
 
@@ -32,95 +36,92 @@ colors_blue = np.array([(0, 0, int(b)) for b in np.linspace(0, 255, Ntick)])
 config = Config()
 
 
-class Navigator(QObject):
+class Navigator(ParameterManager, ActionManager, QObject):
+
+    settings_name = 'navigator_settings'
     log_signal = Signal(str)
     sig_double_clicked = Signal(float, float)
+    params = [
+        {'title': 'Settings', 'name': 'settings', 'type': 'group', 'children': [
+            {'title': 'Load h5:', 'name': 'Load h5', 'type': 'action'},
+            {'title': 'h5 path:', 'name': 'filepath', 'type': 'str', 'value': '', 'readonly': True},
+            {'title': 'Load Image:', 'name': 'Load Image', 'type': 'action'},
+            {'title': 'Image path:', 'name': 'imagepath', 'type': 'str', 'value': '', 'readonly': True},
+        ]},
+        {'title': 'Image', 'name': 'image', 'type': 'pixmap_check'},
+        {'title': 'Overlays', 'name': 'overlays', 'type': 'group', 'children': []},
+    ]
 
     def __init__(self, parent=None, h5file_path=None):
-        super().__init__(parent)
-
+        QObject.__init__(self)
+        ParameterManager.__init__(self)
+        ActionManager.__init__(self, toolbar=QtWidgets.QToolBar())
         if parent is None:
             parent = QtWidgets.QWidget()
         self.parent = parent
         self.title = 'Navigator'
+
         self.status_time = 1000
+
+        self.h5saver = H5Saver()
+        self.h5file_path = h5file_path
+        self.h5saver_image = H5Saver()
+
+        self.viewer: Viewer2DBasic = None
+        self.dataloader = DataLoader(self.h5saver)
+
         self.x_range = []
         self.y_range = []
-        self.filters = tables.Filters(complevel=5)
+
         self.next_scan_index = 0
-        self.viewer = None
+
         self.overlays = []  # %list of imageItem items displaying 2D scans info
-        self.h5module_path = h5file_path
-        self.h5module = H5BrowserUtil()
+
+        # self.h5module = H5BrowserUtil()
+
+        self.setup_actions()
+        self.setup_ui()
+        self.connect_things()
+        self.set_aspect_ratio()
 
         if h5file_path is not None:
-            self.h5module.open_file(h5file_path, 'a')
+            self.h5saver.open_file(h5file_path, 'a')
             self.settings.child('settings', 'filepath').setValue(h5file_path)
             self.settings.child('settings', 'Load h5').hide()
-            self.show_overlay()
+            self.list_2D_scans()
+            # self.show_overlay()
 
-        self.setupUI()
+    def setup_actions(self):
 
-    def create_toolbar(self):
-        iconload = QtGui.QIcon()
-        iconload.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/NewLayer.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.loadaction = QtWidgets.QAction(iconload, "Load scan file (.h5)", None)
-        self.toolbar.addAction(self.loadaction)
-        self.loadaction.triggered.connect(self.load_data)
+        self.add_action('load_scan', 'Load Scan file', 'NewLayer', 'Load scan file (.h5)')
+        self.add_action('load_image', 'Load Image File', 'Open_File_32', 'Load image file (.h5)')
+        self.add_action('ratio', 'Viewbox Aspect Ratio', 'Zoom_1_1', 'Set viewbox aspect ratio to 1', checkable=True)
+        self.add_action('move_at', 'Move at DoubleClicked', 'move_contour',
+                        'When selected, double clicking on viewbox will move DAQ_Move modules',
+                        checkable=True)
+        self.add_action('select_all', 'Select All', 'select_all2', 'Select (show) all 2D scans on the viewer')
+        self.add_action('select_none', 'Select None', 'select_none', 'Unselect (hide) all 2D scans on the viewer')
+        self.add_action('histogram', 'Show Histograms', 'Histogram', 'Show (hide) histograms', checkable=True)
 
-        iconloadim = QtGui.QIcon()
-        iconloadim.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Open_File_32.png"), QtGui.QIcon.Normal,
-                             QtGui.QIcon.Off)
-        self.loadactionim = QtWidgets.QAction(iconloadim, "Load image file (.h5)", None)
-        self.toolbar.addAction(self.loadactionim)
-        self.loadactionim.triggered.connect(self.load_image)
+    def connect_things(self):
+        self.connect_action('load_scan', self.load_data)
+        self.connect_action('load_image', self.load_image)
+        self.connect_action('ratio', self.set_aspect_ratio)
+        self.connect_action('select_all', self.show_all)
+        self.connect_action('select_none', self.show_none)
+        self.connect_action('histogram', self.show_histo)
 
-        icon_ratio = QtGui.QIcon()
-        icon_ratio.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Zoom_1_1.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.action_ratio = QtWidgets.QAction(icon_ratio, "Set viewbox aspect ratio to 1", None)
-        self.action_ratio.setCheckable(True)
-        self.toolbar.addAction(self.action_ratio)
-        self.action_ratio.triggered.connect(self.set_aspect_ratio)
-
-        icon_moveat = QtGui.QIcon()
-        icon_moveat.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/move_contour.png"), QtGui.QIcon.Normal,
-                              QtGui.QIcon.Off)
-        self.moveat_action = QtWidgets.QAction(icon_moveat,
-                                               "When selected, double clicking on viewbox will move DAQ_Move modules",
-                                               None)
-        self.moveat_action.setCheckable(True)
-        self.toolbar.addAction(self.moveat_action)
-
-        icon_sel_all = QtGui.QIcon()
-        icon_sel_all.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/select_all2.png"), QtGui.QIcon.Normal,
-                               QtGui.QIcon.Off)
-        self.sel_all_action = QtWidgets.QAction(icon_sel_all, "Select (show) all 2D scans on the viewer", None)
-        self.toolbar.addAction(self.sel_all_action)
-        self.sel_all_action.triggered.connect(self.show_all)
-
-        icon_sel_none = QtGui.QIcon()
-        icon_sel_none.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/select_none.png"), QtGui.QIcon.Normal,
-                                QtGui.QIcon.Off)
-        self.sel_none_action = QtWidgets.QAction(icon_sel_none, "Unselect (hide) all 2D scans on the viewer", None)
-        self.toolbar.addAction(self.sel_none_action)
-        self.sel_none_action.triggered.connect(self.show_none)
-
-        icon_histo = QtGui.QIcon()
-        icon_histo.addPixmap(QtGui.QPixmap(":/icons/Icon_Library/Histogram.png"), QtGui.QIcon.Normal,
-                             QtGui.QIcon.Off)
-        self.histo_action = QtWidgets.QAction(icon_histo, "Show (hide) histograms", None)
-        self.toolbar.addAction(self.histo_action)
-        self.histo_action.setCheckable(True)
-        self.histo_action.triggered.connect(self.show_histo)
+        self.viewer.sig_double_clicked.connect(self.move_at)
+        self.settings.child('settings', 'Load h5').sigActivated.connect(self.load_data)
+        self.settings.child('settings', 'Load Image').sigActivated.connect(self.load_image)
 
     @Slot(float, float)
     def move_at(self, posx, posy):
-        if self.moveat_action.isChecked():
+        if self.is_action_checked('move_at'):
             self.sig_double_clicked.emit(posx, posy)
 
     def show_histo(self):
-        show_state = self.histo_action.isChecked()
-        self.viewer.histo_widget.setVisible(show_state)
+        self.viewer.histo_widget.setVisible(self.is_action_checked('histogram'))
 
     def show_all(self):
         self.show_scans()
@@ -129,29 +130,54 @@ class Navigator(QObject):
         self.show_scans(False)
 
     def show_scans(self, show=True):
-        for child in self.settings.child('scans'):
+        for child in self.settings.child('overlays'):
             val = child.value()
-            val['checked'] = show
+            val.checked = show
             child.setValue(val)
             child.sigValueChanged.emit(child, val)
 
-    def list_2Dscans(self):
-        try:
-            scans = self.h5module.get_h5file_scans()
-            # settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
-            params = []
-            for child in self.settings.child(('scans')).children():
-                if 'Scan' in child.name():
-                    self.settings.child(('scans')).removeChild(child)
-            for scan in scans:
-                params.append({'name': scan['scan_name'], 'type': 'pixmap_check',
-                               'value': dict(data=scan['data'], checked=False, path=scan['path'],
-                                             info=scan['scan_name'])})
-            self.settings.child(('scans')).addChildren(params)
+    def get_data_from_scan_name(self, scan_name: str) -> DataToExport:
+        _data = DataToExport('All')
+        self.dataloader.load_all(f'/RawData/{scan_name}', _data)
+        data_2D = _data.get_data_from_Naxes(2)
+        for dat in data_2D:  # convert DataWithAxes DataND to Data2D
+            dat.nav_indexes = ()
+        return data_2D
 
-            for child in self.settings.child(('scans')).children():
+    def set_axes(self, dwa: DataWithAxes):
+        x_axis = dwa.get_axis_from_index(1)[0]
+        y_axis = dwa.get_axis_from_index(0)[0]
+
+        self.viewer.scaled_xaxis.axis_label = x_axis.label
+        self.viewer.scaled_xaxis.axis_units = x_axis.units
+
+        self.viewer.scaled_yaxis.axis_label = y_axis.label
+        self.viewer.scaled_yaxis.axis_units = y_axis.units
+
+    def list_2D_scans(self):
+        try:
+            scans = self.h5saver.get_scan_groups()
+
+            params = []
+            for child in self.settings.child('overlays').children():
+                self.settings.child('overlays').removeChild(child)
+            ind_overlay = 0
+            axes_init = False
+            for scan in scans:
+                data_2D = self.get_data_from_scan_name(scan.name)
+                for _dat in data_2D:
+                    if not axes_init:
+                        self.set_axes(_dat)
+                        axes_init = True
+                    params.append({'name': f'Overlay{ind_overlay:03.0f}', 'type': 'pixmap_check',
+                                   'value': PixmapCheckData(data=_dat[0], checked=False, path=_dat.path,
+                                                            info=f'{scan.name}/{_dat.get_full_name()}')})
+                    ind_overlay += 1
+            self.settings.child('overlays').addChildren(params)
+
+            for child in self.settings.child('overlays').children():
                 val = child.value()
-                val.update(dict(checked=True))
+                val.checked = True
                 child.setValue(val)
                 child.sigValueChanged.emit(child, child.value())
 
@@ -159,180 +185,104 @@ class Navigator(QObject):
             logger.exception(str(e))
 
     def load_image(self):
-        # image_filepath = str(utils.select_file(start_path=None, save=False, ext='h5'))
         data, fname, node_path = browse_data(ret_all=True)
-        if data is not None and fname != '':
-            self.h5module_image = H5BrowserUtil()
-            self.h5module_image.open_file(fname, 'a')
-            node = self.h5module_image.get_node(node_path)
-            pixmaps = self.h5module_image.get_h5file_scans(node.parent_node)
 
-            self.settings.child('settings', 'imagepath').setValue(fname)
-            other_child = [child for child in self.settings.child(('scans')).children() if 'Scan' not in child.name()]
-            if len(other_child) >= 1:
-                for child in other_child:
-                    self.settings.child(('scans')).removeChild(child)
-            params = []
-            for pixmap in pixmaps:
-                params.append({'name': pixmap['scan_name'], 'type': 'pixmap_check',
-                               'value': dict(data=pixmap['data'], checked=False, path=pixmap['path'])})
-            self.settings.child(('scans')).addChildren(params)
+        self.h5saver_image = H5Saver()
+        self.h5saver_image.open_file(fname, 'r')
 
-            val = self.settings.child('scans', pixmaps[0]['scan_name']).value()
-            val.update(dict(checked=True))
-            self.settings.child('scans', pixmaps[0]['scan_name']).setValue(val)
-            self.settings.child('scans', pixmaps[0]['scan_name']).sigValueChanged.emit(
-                self.settings.child('scans', pixmaps[0]['scan_name']),
-                self.settings.child('scans', pixmaps[0]['scan_name']).value())
+        self.settings.child('settings', 'imagepath').setValue(fname)
+        self.settings.child('image').setValue(PixmapCheckData(data=data[0], checked=True, path=data.path))
+
+        self.settings.child('image').sigValueChanged.emit(
+            self.settings.child('image'),
+            self.settings.child('image').value())
 
     def load_data(self):
-        self.h5module_path = str(
-            select_file(start_path=config('data_saving', 'h5file', 'save_path'),
-                                                            save=False, ext='h5'))
-        if self.h5module_path != '':
-            self.settings.child('settings', 'filepath').setValue(self.h5module_path)
-            if self.h5module is not None:
-                if self.h5module.isopen():
-                    self.h5module.close_file()
-            self.h5module.open_file(self.h5module_path, 'a')
-            self.list_2Dscans()
+        self.h5file_path = str(select_file(start_path=config('data_saving', 'h5file', 'save_path'),
+                                           save=False, ext='h5'))
+        if self.h5file_path != '':
+            self.settings.child('settings', 'filepath').setValue(self.h5file_path)
+            if self.h5saver is not None:
+                if self.h5saver.isopen():
+                    self.h5saver.close_file()
+            self.h5saver.open_file(self.h5file_path, 'a')
+            self.list_2D_scans()
 
     def set_aspect_ratio(self):
-        if self.action_ratio.isChecked():
-            self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=True, ratio=1)
+        self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=self.is_action_checked('ratio'), ratio=1)
+
+    def add_image_data(self, dwa: DataWithAxes):
+        if dwa.distribution.name == 'spread':
+            im = SpreadImageItem()
         else:
-            self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=False, ratio=1)
+            im = UniformImageItem()
 
-    def settings_changed(self, param, changes):
-        """
-            Check for changes in the given (parameter,change,information) tuple list.
-            In case of value changed, update the DAQscan_settings tree consequently.
+        im.setOpacity(1)
+        # im.setOpts(axisOrder='row-major')
+        self.viewer.image_widget.plotitem.addItem(im)
+        self.viewer.histogram_red.item.setImageItem(im)
+        im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
-            =============== ============================================ ==============================
-            **Parameters**    **Type**                                     **Description**
-            *param*           instance of pyqtgraph parameter              the parameter to be checked
-            *changes*         (parameter,change,information) tuple list    the current changes state
-            =============== ============================================ ==============================
-        """
-        for param, change, data in changes:
-            path = self.settings.childPath(param)
-            if path is not None:
-                childName = '.'.join(path)
+        if dwa.distribution.name == 'uniform':
+            x_axis = dwa.get_axis_from_index(1)[0].get_data()
+            y_axis = dwa.get_axis_from_index(0)[0].get_data()
+
+            rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
+                                 (np.max(x_axis) - np.min(x_axis)),
+                                 (np.max(y_axis) - np.min(y_axis)))
+
+            im.setImage(dwa.data[0])
+            im.setOpts(rect=rect)
+        else:
+            y_axis, x_axis = dwa.get_axis_from_index(0)
+            im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
+        self.viewer.histogram_red.setImageItem(im)
+        return im
+
+    def remove_image_data(self, param):
+        for overlay in self.overlays[:]:
+            if param.name() in overlay['name']:
+                ind = self.overlays.index(overlay)
+                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
+                self.overlays.pop(ind)
+
+    def value_changed(self, param):
+
+        if param.parent().name() == 'overlays':
+            data: PixmapCheckData = param.value()
+            if data.checked:
+                dwa = self.dataloader.load_data(data.path)
+                im = self.add_image_data(dwa)
+                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+
             else:
-                childName = param.name()
-            if change == 'childAdded':
-                pass
+                self.remove_image_data(param)
+        elif param.name() == 'image':
+            data: PixmapCheckData = param.value()
+            if data.checked:
+                dataloader = DataLoader(self.h5saver_image)
+                dwa = dataloader.load_data(data.path)
+                im = self.add_image_data(dwa)
+                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+            else:
+                self.remove_image_data(param)
 
-            elif change == 'value':
-                if param.parent().name() == 'scans':
-                    if data['checked']:
-                        try:
-                            if 'Scan' in param.name():
-                                h5module = self.h5module
-                                nodes = [node for node in h5module.walk_nodes(data['path'])]
-                            else:
-                                h5module = self.h5module_image
-                                nodes = [h5module.get_node(data['path'])]
-                            ind = 0
-                            for node in nodes:
-                                flag = False
-                                if 'type' in node.attrs.attrs_name and 'data_dimension' in node.attrs.attrs_name:
-                                    if 'scan_type' in node.attrs.attrs_name:
-                                        if node.attrs['scan_type'] == 'scan2D' and node.attrs['data_dimension'] == '0D':
-                                            # 2d scan of 0D data
-                                            flag = True
-                                        elif node.attrs['scan_type'] == '' and node.attrs['data_dimension'] == '2D':
-                                            # image data (2D) with no scan
-                                            flag = True
+    def param_deleted(self, param):
+        for overlay in self.overlays[:]:
+            if param.name() in overlay['name']:
+                ind = self.overlays.index(overlay)
+                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
+                self.overlays.pop(ind)
 
-                                if flag:
-                                    isadaptive = 'adaptive' in node.attrs['scan_subtype'].lower()
-                                    if isadaptive:
-                                        im = SpreadImageItem()
-                                    else:
-                                        im = UniformImageItem()
-                                    im.setOpacity(1)
-                                    # im.setOpts(axisOrder='row-major')
-                                    self.viewer.image_widget.plotitem.addItem(im)
-                                    im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
-
-                                    if 'Scan' in param.name():
-                                        if isadaptive:
-                                            x_axis = h5module.get_node(h5module.get_node(data['path']).parent_node,
-                                                                       utils.capitalize('scan_x_axis')).read()
-                                            y_axis = h5module.get_node(h5module.get_node(data['path']).parent_node,
-                                                                       utils.capitalize('scan_y_axis')).read()
-                                        else:
-                                            x_axis = np.unique(
-                                                h5module.get_node(h5module.get_node(data['path']).parent_node,
-                                                                  utils.capitalize('scan_x_axis')).read())
-                                            y_axis = np.unique(
-                                                h5module.get_node(h5module.get_node(data['path']).parent_node,
-                                                                  utils.capitalize('scan_y_axis')).read())
-                                    else:
-                                        x_axis = np.unique(
-                                            h5module.get_node(h5module.get_node(data['path']).parent_node,
-                                                              utils.capitalize('x_axis')).read())
-                                        y_axis = np.unique(
-                                            h5module.get_node(h5module.get_node(data['path']).parent_node,
-                                                              utils.capitalize('y_axis')).read())
-                                    if not isadaptive:
-                                        rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
-                                                             (np.max(x_axis) - np.min(x_axis)),
-                                                             (np.max(y_axis) - np.min(y_axis)))
-                                        im.setOpts(rescale=rect)
-                                        im.setImage(node.read())
-                                    else:
-                                        im.setImage(np.vstack((x_axis, y_axis, node.read())).T)
-
-                                    if ind == 0:
-                                        # im.setLookupTable(colors_red)
-                                        self.viewer.histogram_red.setImageItem(im)
-                                        if not self.viewer.histogram_red.isVisible():
-                                            self.viewer.histogram_red.setVisible(True)
-                                    elif ind == 1:
-                                        # im.setLookupTable(colors_green)
-                                        self.viewer.histogram_green.setImageItem(im)
-                                        if not self.viewer.histogram_green.isVisible():
-                                            self.viewer.histogram_green.setVisible(True)
-                                    else:
-                                        # im.setLookupTable(colors_blue)
-                                        self.viewer.histogram_blue.setImageItem(im)
-                                        if not self.viewer.histogram_blue.isVisible():
-                                            self.viewer.histogram_blue.setVisible(True)
-
-                                    self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), ind), image=im))
-
-                                    ind += 1
-                            # self.viewer.image_widget.view.autoRange()
-                        except Exception as e:
-                            logger.exception(str(e))
-
-                    else:
-                        for overlay in self.overlays[:]:
-                            if param.name() in overlay['name']:
-                                ind = self.overlays.index(overlay)
-                                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
-                                self.overlays.pop(ind)
-
-            elif change == 'parent':
-                for overlay in self.overlays[:]:
-                    if param.name() in overlay['name']:
-                        ind = self.overlays.index(overlay)
-                        self.viewer.image_widget.plotitem.removeItem(overlay['image'])
-                        self.overlays.pop(ind)
-
-    def setupUI(self):
-        self.ui = QObject()
+    def setup_ui(self):
         layout = QtWidgets.QVBoxLayout()
 
         self.parent.setLayout(layout)
+        self.parent.layout().addWidget(self.toolbar)
         sett_widget = QtWidgets.QWidget()
         self.sett_layout = QtWidgets.QHBoxLayout()
         sett_widget.setLayout(self.sett_layout)
-        # creating a toolbar
-        self.toolbar = QtWidgets.QToolBar()
-        self.create_toolbar()
+
         layout.addWidget(self.toolbar)
 
         splitter = QtWidgets.QSplitter(Qt.Horizontal)
@@ -340,39 +290,17 @@ class Navigator(QObject):
 
         # set viewer area
         widg = QtWidgets.QWidget()
-        # self.viewer = Viewer2D(widg)
         self.viewer = Viewer2DBasic(widg)
-        self.viewer.histogram_red.setVisible(False)
+        self.viewer.histogram_red.setVisible(True)
         self.viewer.histogram_green.setVisible(False)
         self.viewer.histogram_blue.setVisible(False)
-        self.viewer.sig_double_clicked.connect(self.move_at)
+        self.viewer.histogram_adaptive.setVisible(False)
 
-        # displaying the scan list tree
-        self.settings_tree = ParameterTree()
-        # self.settings_tree.setMaximumWidth(300)
-        self.settings_tree.setMinimumWidth(300)
-        # self.settings_tree.setVisible(False)
-        params_scan = [
-            {'title': 'Settings', 'name': 'settings', 'type': 'group', 'children': [
-                {'title': 'Load h5:', 'name': 'Load h5', 'type': 'action'},
-                {'title': 'h5 path:', 'name': 'filepath', 'type': 'str', 'value': '', 'readonly': True},
-                {'title': 'Load Image:', 'name': 'Load Image', 'type': 'action'},
-                {'title': 'Image path:', 'name': 'imagepath', 'type': 'str', 'value': '', 'readonly': True},
-            ]},
-            {'title': 'Scans', 'name': 'scans', 'type': 'group', 'children': []},
-        ]
-        self.settings = Parameter.create(name='settings', type='group', children=params_scan)
-        self.settings_tree.setParameters(self.settings, showTop=False)
-        self.settings.sigTreeStateChanged.connect(self.settings_changed)
-
-        self.settings.child('settings', 'Load h5').sigActivated.connect(self.load_data)
-        self.settings.child('settings', 'Load Image').sigActivated.connect(self.load_image)
-
-        self.ui.statusbar = QtWidgets.QStatusBar()
-        self.ui.statusbar.setMaximumHeight(25)
-        layout.addWidget(self.ui.statusbar)
-        self.ui.log_message = QtWidgets.QLabel('Initializing')
-        self.ui.statusbar.addPermanentWidget(self.ui.log_message)
+        self.statusbar = QtWidgets.QStatusBar()
+        self.statusbar.setMaximumHeight(25)
+        layout.addWidget(self.statusbar)
+        self.log_message = QtWidgets.QLabel('Initializing')
+        self.statusbar.addPermanentWidget(self.log_message)
 
         self.sett_layout.addWidget(self.settings_tree)
         splitter.addWidget(sett_widget)
@@ -444,37 +372,13 @@ class Navigator(QObject):
             except Exception as e:
                 logger.exception(str(e))
 
-        self.update_2Dscans()
-
-    def update_2Dscans(self):
-        try:
-            if not self.h5module.isopen():
-                self.h5module.open_file(self.h5module.file_path, 'a')
-            scans = self.h5module.get_h5file_scans(self.h5module.root())
-            # settings=[dict(scan_name=node._v_name,path=node._v_pathname, pixmap=nparray2Qpixmap(node.read()))),...]
-            params = []
-            children = [child.name() for child in self.settings.child(('scans')).children()]
-            for scan in scans:
-                if scan['scan_name'] not in children:
-                    params.append({'name': scan['scan_name'], 'type': 'pixmap_check',
-                                   'value': dict(data=scan['data'], checked=False, path=scan['path'],
-                                                 info=scan['scan_name'])})
-            self.settings.child(('scans')).addChildren(params)
-
-            for child in self.settings.child(('scans')).children():
-                if child.name() not in children:
-                    val = child.value()
-                    val.update(dict(checked=True))
-                    child.setValue(val)
-                    child.sigValueChanged.emit(child, child.value())
-
-        except Exception as e:
-            logger.exception(str(e))
+        self.list_2D_scans()
 
     def update_h5file(self, h5file):
-        if self.h5module is not None:
-            self.h5module.h5file = h5file
-        self.update_2Dscans()
+        if self.h5saver is not None:
+            self.h5saver.h5file = h5file
+            self.dataloader = DataLoader(self.h5saver)
+        self.list_2D_scans()
 
     def update_status(self, txt, status_time=0, log_type=None):
         """
@@ -494,9 +398,16 @@ class Navigator(QObject):
             logger.exception(str(e))
 
 
-if __name__ == '__main__':
+def main():
     app = QtWidgets.QApplication(sys.argv)
     widg = QtWidgets.QWidget()
-    prog = Navigator(widg)
+    prog = Navigator(widg,
+                     h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
+
     widg.show()
+    prog.list_2D_scans()
     sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

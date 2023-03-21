@@ -70,7 +70,7 @@ class ParameterManager:
                 self.param_deleted(param)
 
     def value_changed(self, param):
-        """Non mandatory method  to be subclassed for actions to perform (methods to call) when one of the param's
+        """Non-mandatory method  to be subclassed for actions to perform (methods to call) when one of the param's
         value in self._settings is changed
 
         Parameters
@@ -85,9 +85,10 @@ class ParameterManager:
         >>>         print('Do something')
         >>>         self.settings.child('main_settings', 'something_done').setValue(False)
         """
+        ...
 
     def child_added(self, param, data):
-        """Non mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
+        """Non-mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
 
         Parameters
         ----------
@@ -99,7 +100,7 @@ class ParameterManager:
         pass
 
     def param_deleted(self, param):
-        """Non mandatory method to be subclassed for actions to perform when one of the param in self.settings has been deleted
+        """Non-mandatory method to be subclassed for actions to perform when one of the param in self.settings has been deleted
 
         Parameters
         ----------

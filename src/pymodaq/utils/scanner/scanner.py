@@ -403,7 +403,7 @@ if __name__ == '__main__':
 #         super().__init__()
 #
 #         self.settings_tree = None
-#         self.setupUI()
+#         self.setup_ui()
 #
 #         self.scan_selector = ScanSelector(scanner_items, scan_type)
 #         self.settings.child('scan_type').setValue(scan_type)
@@ -752,7 +752,7 @@ if __name__ == '__main__':
 #             elif change == 'parent':
 #                 pass
 #
-#     def setupUI(self):
+#     def setup_ui(self):
 #         # layout = QtWidgets.QHBoxLayout()
 #         # layout.setSpacing(0)
 #         # self.parent.setLayout(layout)
