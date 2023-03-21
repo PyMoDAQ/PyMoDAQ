@@ -232,6 +232,35 @@ class TestDataSaverLoader:
         for dat in loaded_data:
             assert np.allclose(dat, np.zeros(dat.shape))
 
+    def test_extra_attributes_and_timestamping(self, get_h5saver):
+        h5saver = get_h5saver
+        data_saver = DataSaverLoader(h5saver)
+        Ndata = 2
+
+        data = DataWithAxes(name='mydata', data=[DATA2D for _ in range(Ndata)], labels=['mylabel1', 'mylabel2'],
+                            source='raw',
+                            dim='Data2D', distribution='uniform',
+                            axes=[Axis(data=create_axis_array(DATA2D.shape[0]), label='myaxis0', units='myunits0',
+                                       index=0),
+                                  Axis(data=create_axis_array(DATA2D.shape[1]), label='myaxis1', units='myunits1',
+                                       index=1)],
+                            another_attribute='another_attribute',
+                            another_other_attribute=123)
+
+        data_saver.add_data(h5saver.raw_group, data)
+        loaded_data = data_saver.load_data(h5saver.get_node('/RawData/Data01'), load_all=True, with_bkg=True)
+
+        node = h5saver.get_node('/RawData/Data01')
+        assert 'another_attribute' in node.attrs
+        assert node.attrs['another_attribute'] == 'another_attribute'
+        assert 'another_other_attribute' in node.attrs
+        assert node.attrs['another_other_attribute'] == 123
+
+        assert loaded_data.another_attribute == 'another_attribute'
+        assert 'another_other_attribute' in node.attrs
+        assert loaded_data.another_other_attribute == 123
+        assert loaded_data.timestamp == data.timestamp
+
 
 class TestBkgSaver:
     def test_load_data(self, get_h5saver):

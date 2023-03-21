@@ -444,6 +444,13 @@ class Attributes(object):
     def __len__(self):
         return len(self.attrs_name)
 
+    def to_dict(self) -> dict:
+        """Returns attributes name/value as a dict"""
+        attrs_dict = dict()
+        for name in self.attrs_name:
+            attrs_dict[name] = self[name]
+        return attrs_dict
+
     @property
     def node(self):
         return self._node

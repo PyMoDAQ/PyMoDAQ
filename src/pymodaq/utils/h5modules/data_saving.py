@@ -259,27 +259,26 @@ class DataSaverLoader(DataManagement):
         self._axis_saver = AxisSaverLoader(h5saver)
 
     def add_data(self, where: Union[Node, str], data: DataWithAxes, save_axes=True, **kwargs):
-        """
+        """Adds Array nodes to a given location adding eventually axes as others nodes and metadata
 
         Parameters
         ----------
         where: Union[Node, str]
             the path of a given node or the node itself
-        data
+        data: DataWithAxes
         save_axes: bool
-
-        Returns
-        -------
-
         """
+
         for ind_data in range(len(data)):
+            metadata = dict(timestamp=data.timestamp, label=data.labels[ind_data],
+                            source=data.source.name, distribution=data.distribution.name,
+                            origin=data.origin,
+                            nav_indexes=tuple(data.nav_indexes)
+                            if data.nav_indexes is not None else None)
+            for name in data.extra_attributes:
+                metadata[name] = getattr(data, name)
             self._h5saver.add_array(where, self._get_next_node_name(where), self.data_type, title=data.name,
-                                    array_to_save=data[ind_data], data_dimension=data.dim.name,
-                                    metadata=dict(timestamp=data.timestamp, label=data.labels[ind_data],
-                                                  source=data.source.name, distribution=data.distribution.name,
-                                                  origin=data.origin,
-                                                  nav_indexes=tuple(data.nav_indexes)
-                                                  if data.nav_indexes is not None else None))
+                                    array_to_save=data[ind_data], data_dimension=data.dim.name, metadata=metadata)
         if save_axes:
             for axis in data.axes:
                 self._axis_saver.add_axis(where, axis)
@@ -377,6 +376,11 @@ class DataSaverLoader(DataManagement):
             ndarrays = self.get_data_arrays(data_node, with_bkg=with_bkg, load_all=load_all)
             axes = self.get_axes(parent_node)
 
+        extra_attributes = data_node.attrs.to_dict()
+        for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension', 'distribution', 'label',
+                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape']:
+            extra_attributes.pop(name, None)
+
         data = DataWithAxes(data_node.attrs['TITLE'],
                             source=data_node.attrs['source'] if 'source' in data_node.attrs else 'raw',
                             dim=data_node.attrs['data_dimension'],
@@ -386,7 +390,9 @@ class DataSaverLoader(DataManagement):
                             labels=[node.attrs['label'] for node in data_nodes],
                             origin=data_node.attrs['origin'] if 'origin' in data_node.attrs else '',
                             nav_indexes=data_node.attrs['nav_indexes'] if 'nav_indexes' in data_node.attrs else (),
-                            axes=axes)
+                            axes=axes,
+                            path=data_node.path,
+                            **extra_attributes)
         return data
 
 
