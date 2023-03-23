@@ -1187,7 +1187,8 @@ class DataWithAxes(DataBase):
         self.inav: Iterable[DataWithAxes] = SpecialSlicersData(self, True)
         self.isig: Iterable[DataWithAxes] = SpecialSlicersData(self, False)
 
-        self.get_dim_from_data_axes()
+        self.get_dim_from_data_axes()  # in DataBase, dim is processed from the shape of data, but if axes are provided
+        #then use get_dim_from axes
 
     def set_axes_manager(self, data_shape, axes, nav_indexes, **kwargs):
         if self.distribution.name == 'uniform' or len(nav_indexes) == 0:
@@ -1246,15 +1247,18 @@ class DataWithAxes(DataBase):
     def get_dim_from_data_axes(self) -> DataDim:
         """Get the dimensionality DataDim from data taking into account nav indexes
         """
-        if len(self.nav_indexes) > 0:
-            self._dim = DataDim['DataND']
+        if len(self.axes) != len(self.shape):
+            self._dim = self.get_dim_from_data(self.data)
         else:
-            if len(self.axes) == 0:
-                self._dim = DataDim['Data0D']
-            elif len(self.axes) == 1:
-                self._dim = DataDim['Data1D']
-            elif len(self.axes) == 2:
-                self._dim = DataDim['Data2D']
+            if len(self.nav_indexes) > 0:
+                self._dim = DataDim['DataND']
+            else:
+                if len(self.axes) == 0:
+                    self._dim = DataDim['Data0D']
+                elif len(self.axes) == 1:
+                    self._dim = DataDim['Data1D']
+                elif len(self.axes) == 2:
+                    self._dim = DataDim['Data2D']
         return self._dim
 
     @property
