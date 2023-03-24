@@ -24,7 +24,7 @@ PLOT_COLORS = utils.plot_colors
 
 class DataDisplayer(QObject):
     """
-    This Object deals with the display of 1D data  on a plotitem
+    This Object deals with the display of 0D data  on a plotitem
     """
 
     updated_item = Signal(list)
@@ -35,7 +35,14 @@ class DataDisplayer(QObject):
         self._plotitem = plotitem
         self._plotitem.addLegend()
         self._plot_items: List[pyqtgraph.PlotDataItem] = []
+        self._min_lines: List[pyqtgraph.InfiniteLine] = []
+        self._max_lines: List[pyqtgraph.InfiniteLine] = []
         self._data = Data0DWithHistory()
+
+        self._mins: List = []
+        self._maxs: List = []
+
+        self._show_lines: bool = False
 
         axis = self._plotitem.getAxis('bottom')
         axis.setLabel(text='Samples', units='S')
@@ -61,18 +68,49 @@ class DataDisplayer(QObject):
         self._data.add_datas(data)
         for ind, data_str in enumerate(self._data.datas):
             self._plot_items[ind].setData(self._data.xaxis, self._data.datas[data_str])
+        if len(self._mins) != len(self._data.datas):
+            self._mins = []
+            self._maxs = []
+
+        for ind, label in enumerate(self._data.datas):
+            if len(self._mins) != len(self._data.datas):
+                self._mins.append(float(np.min(self._data.datas[label])))
+                self._maxs.append(float(np.max(self._data.datas[label])))
+            else:
+                self._mins[ind] = min(self._mins[ind], float(np.min(self._data.datas[label])))
+                self._maxs[ind] = max(self._maxs[ind], float(np.max(self._data.datas[label])))
+            self._min_lines[ind].setValue(self._mins[ind])
+            self._max_lines[ind].setValue(self._maxs[ind])
 
     def update_display_items(self, data: data_mod.DataRaw):
         while len(self._plot_items) > 0:
             self._plotitem.removeItem(self._plot_items.pop(0))
             self.legend.removeItem(self.legend_items[0])
+            self._plotitem.removeItem(self._max_lines.pop(0))
+            self._plotitem.removeItem(self._min_lines.pop(0))
 
         for ind in range(len(data)):
             self._plot_items.append(pyqtgraph.PlotDataItem(pen=PLOT_COLORS[ind]))
             self._plotitem.addItem(self._plot_items[-1])
             self.legend.addItem(self._plot_items[-1], data.labels[ind])
+            max_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=PLOT_COLORS[ind], style=Qt.DashLine))
+            min_line = pyqtgraph.InfiniteLine(angle=0, pen=pyqtgraph.mkPen(color=PLOT_COLORS[ind], style=Qt.DashLine))
+            self._max_lines.append(max_line)
+            self._min_lines.append(min_line)
+            max_line.setVisible(self._show_lines)
+            min_line.setVisible(self._show_lines)
+            self._plotitem.addItem(self._max_lines[-1])
+            self._plotitem.addItem(self._min_lines[-1])
+
         self.updated_item.emit(self._plot_items)
         self.labels_changed.emit(data.labels)
+
+    def show_min_max(self, show=True):
+        self._show_lines = show
+        for line in self._max_lines:
+            line.setVisible(show)
+        for line in self._min_lines:
+            line.setVisible(show)
 
 
 class View0D(ActionManager, QObject):
@@ -97,12 +135,16 @@ class View0D(ActionManager, QObject):
         self._connect_things()
         self._prepare_ui()
 
+        self.get_action('Nhistory').setValue(200) #default history length
+
     def setup_actions(self):
         self.add_action('clear', 'Clear plot', 'clear2', 'Clear the current plots')
         self.add_widget('Nhistory', pyqtgraph.SpinBox, tip='Set the history length of the plot',
                         setters=dict(setMaximumWidth=100))
-        self.add_action('show_data_as_list', 'Show numbers', 'ChnNum', 'It triggered will display last data as numbers'
+        self.add_action('show_data_as_list', 'Show numbers', 'ChnNum', 'If triggered, will display last data as numbers'
                                                                        'in a side panel', checkable=True)
+        self.add_action('show_min_max', 'Show Min/Max lines', 'Statistics',
+                        'If triggered, will display horizontal dashed lines for min/max of data', checkable=True)
 
     def _setup_widgets(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
@@ -122,6 +164,7 @@ class View0D(ActionManager, QObject):
         self.connect_action('clear', self.data_displayer.clear_data)
         self.connect_action('show_data_as_list', self.show_data_list)
         self.connect_action('Nhistory', self.data_displayer.update_axis, signal_name='valueChanged')
+        self.connect_action('show_min_max', self.data_displayer.show_min_max)
 
     def _prepare_ui(self):
         """add here everything needed at startup"""
@@ -189,8 +232,8 @@ def main():
     from pymodaq.utils.daq_utils import gauss1D
 
     x = np.linspace(0, 200, 201)
-    y1 = gauss1D(x, 75, 25)
-    y2 = gauss1D(x, 120, 50, 2)
+    y1 = gauss1D(x, 75, 25) + 0.1*np.random.rand(len(x))
+    y2 = 0.7 * gauss1D(x, 120, 50, 2) + 0.2*np.random.rand(len(x))
     widget.show()
     prog.get_action('show_data_as_list').trigger()
     for ind, data in enumerate(y1):
