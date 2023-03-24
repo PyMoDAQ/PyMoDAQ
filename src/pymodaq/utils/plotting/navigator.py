@@ -8,6 +8,7 @@ import os
 import numpy as np
 import tables
 
+from pymodaq.utils.plotting.scan_selector import ScanSelector
 from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker, DataWithAxes
 from pymodaq.utils.h5modules.data_saving import DataLoader
 from pymodaq.utils.managers.parameter_manager import ParameterManager
@@ -67,9 +68,10 @@ class Navigator(ParameterManager, ActionManager, QObject):
         self.h5file_path = h5file_path
         self.h5saver_image = H5Saver()
 
+
         self.viewer: Viewer2DBasic = None
         self.dataloader = DataLoader(self.h5saver)
-
+        self.scan_selector: ScanSelector = None
         self.x_range = []
         self.y_range = []
 
@@ -90,6 +92,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
             self.settings.child('settings', 'Load h5').hide()
             self.list_2D_scans()
             # self.show_overlay()
+
 
     def setup_actions(self):
 

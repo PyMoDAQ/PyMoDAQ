@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
 
 import numpy as np
 from qtpy import QtWidgets, QtCore, QtGui
@@ -40,6 +40,8 @@ from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving, data_saving
 
+if TYPE_CHECKING:
+    from pymodaq.dashboard import DashBoard
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -88,13 +90,15 @@ class DAQScan(QObject, ParameterManager):
             ]},
     ]
 
-    def __init__(self, dockarea=None, dashboard=None):
+    def __init__(self, dockarea: gutils.DockArea = None, dashboard: DashBoard = None):
         """
 
         Parameters
         ----------
-        dockarea: (dockarea) instance of the modified pyqtgraph Dockarea
-        dashboard: (DashBoard) instance of the pymodaq dashboard
+        dockarea: DockArea
+            instance of the modified pyqtgraph Dockarea
+        dashboard: DashBoard
+            instance of the pymodaq dashboard
 
         """
         
@@ -104,8 +108,8 @@ class DAQScan(QObject, ParameterManager):
 
         self.title = __class__.__name__
 
-        self.dockarea = dockarea
-        self.dashboard = dashboard
+        self.dockarea: gutils.DockArea = dockarea
+        self.dashboard: DashBoard = dashboard
         if dashboard is None:
             raise Exception('No valid dashboard initialized')
 
@@ -114,7 +118,7 @@ class DAQScan(QObject, ParameterManager):
 
         self.wait_time = 1000
 
-        self.navigator = None
+        self.navigator: Navigator = None
 
         self.ind_scan = 0
         self.ind_average = 0
@@ -444,18 +448,21 @@ class DAQScan(QObject, ParameterManager):
             logger.exception(str(e))
 
     def show_navigator(self):
-        #todo update with v4 layout
+
         if self.navigator is None:
             # loading navigator
-
+            self.navigator_dock = gutils.Dock('Navigator')
             widgnav = QtWidgets.QWidget()
+            self.navigator_dock.addWidget(widgnav)
+            self.dockarea.addDock(self.navigator_dock)
+            self.navigator_dock.float()
+
             self.navigator = Navigator(widgnav)
 
             self.navigator.log_signal[str].connect(self.dashboard.add_status)
             self.navigator.settings.child('settings', 'Load h5').hide()
-            self.navigator.loadaction.setVisible(False)
+            self.navigator.set_action_visible('load', False)
 
-            self.ui.navigator_layout.addWidget(widgnav)
             self.navigator.sig_double_clicked.connect(self.move_at)
 
             self.scanner.scan_selector.remove_scan_selector()

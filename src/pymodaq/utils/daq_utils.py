@@ -809,7 +809,7 @@ if __name__ == '__main__':
     # mit = license.find('MIT')
     #
     paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
-                                         exp="dispatch",
+                                         exp="ScanSelector",
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
                                                   '.tox', 'daq_utils.py',],
