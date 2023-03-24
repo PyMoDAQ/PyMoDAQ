@@ -5,6 +5,7 @@
 
 Contains all objects related to the DAQScan module, to do automated scans, saving data...
 """
+from __future__ import annotations
 from collections import OrderedDict
 import logging
 import os
@@ -28,6 +29,7 @@ from pymodaq.utils import exceptions
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq.utils.plotting.navigator import Navigator
+from pymodaq.utils.plotting.scan_selector import ScanSelector
 from pymodaq.utils.scanner.scanner import Scanner, scanner_factory  #, adaptive, adaptive_losses
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
@@ -119,6 +121,7 @@ class DAQScan(QObject, ParameterManager):
         self.wait_time = 1000
 
         self.navigator: Navigator = None
+        self.scan_selector: ScanSelector = None
 
         self.ind_scan = 0
         self.ind_average = 0
@@ -461,17 +464,23 @@ class DAQScan(QObject, ParameterManager):
 
             self.navigator.log_signal[str].connect(self.dashboard.add_status)
             self.navigator.settings.child('settings', 'Load h5').hide()
-            self.navigator.set_action_visible('load', False)
+            self.navigator.set_action_visible('load_scan', False)
 
             self.navigator.sig_double_clicked.connect(self.move_at)
+            self.navigator.h5saver = self.h5saver
+            self.navigator.list_2D_scans()
 
-            self.scanner.scan_selector.remove_scan_selector()
-            items = OrderedDict(Navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"]))
-            items.update(self.scanner.scan_selector.viewers_items)
-            self.scanner.viewers_items = items
+        self.show_scan_selector()
 
-            self.ui.tabWidget.setCurrentIndex(self.ui.tabWidget.addTab(self.ui.tab_navigator, 'Navigator'))
-            self.set_scan()  # to load current scans into the navigator
+    def show_scan_selector(self):
+        viewer_items = dict([])
+        if self.navigator is not None:
+            viewer_items.update(dict(navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"])))
+        for viewer in self.live_plotter.viewers:
+            viewer_items.update({viewer.title: dict(viewers=[viewer], names=[viewer.title])})
+        self.scan_selector = ScanSelector(viewer_items)
+
+        self.ui.add_scanner_settings(self.scan_selector.settings_tree)
 
     ################
     #  LOADING SAVING
@@ -695,6 +704,8 @@ class DAQScan(QObject, ParameterManager):
                 if hasattr(self.dashboard, 'remote_manager'):
                     remote_manager = getattr(self.dashboard, 'remote_manager')
                     remote_manager.activate_all(True)
+                if self.navigator is not None:
+                    self.navigator.list_2D_scans()
             else:
                 self.ind_batch += 1
                 self.loop_scan_batch()

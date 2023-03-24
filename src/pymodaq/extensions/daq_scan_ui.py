@@ -5,7 +5,7 @@ Created the 06/12/2022
 @author: Sebastien Weber
 """
 import sys
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from qtpy import QtWidgets, QtCore
 from qtpy.QtCore import Signal
@@ -18,6 +18,9 @@ from pymodaq.utils.gui_utils.widgets.spinbox import QSpinBox_ro
 from pymodaq.utils.parameter.pymodaq_ptypes.led import QLED
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerDispatcher, ViewersEnum
 from pymodaq.utils.daq_utils import ThreadCommand
+
+if TYPE_CHECKING:
+    from pymodaq.utils.parameter import ParameterTree
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -55,7 +58,6 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
 
         self.add_action('navigator', 'Show Navigator', '', menu=self.settings_menu, auto_toolbar=False)
         self.add_action('batch', 'Show Batch Scanner', '', menu=self.settings_menu, auto_toolbar=False)
-
         self.set_action_visible('start_batch', False)
 
     def enable_start_stop(self, enable=True):
@@ -129,6 +131,14 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.scanner_widget = QtWidgets.QWidget()
         self.scanner_widget.setLayout(QtWidgets.QVBoxLayout())
         self.settings_toolbox.addItem(self.scanner_widget, 'Scanner Settings')
+
+    def add_settings_toolbox_widget(self, widget: QtWidgets.QWidget, name: str):
+        """Add a widget, usaually a ParameterTree to the SettingsToolbox"""
+        self.settings_toolbox.addItem(widget, name)
+
+    def add_scanner_settings(self, tree: 'ParameterTree'):
+        """Adds a  ParameterTree to the Scanner settings widget"""
+        self.scanner_widget.layout().addWidget(tree)
 
     def populate_toolbox_widget(self, widgets: List[QtWidgets.QWidget], names: List[str]):
         for widget, name in zip(widgets, names):

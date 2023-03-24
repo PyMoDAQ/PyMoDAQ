@@ -63,13 +63,14 @@ class Navigator(ParameterManager, ActionManager, QObject):
 
         self.status_time = 1000
 
-        self.h5saver = H5Saver()
+        self._h5saver = H5Saver()
+        self.dataloader = DataLoader(self._h5saver)
+
         self.h5file_path = h5file_path
         self.h5saver_image = H5Saver()
 
-
         self.viewer: Viewer2DBasic = None
-        self.dataloader = DataLoader(self.h5saver)
+
         self.x_range = []
         self.y_range = []
 
@@ -91,6 +92,14 @@ class Navigator(ParameterManager, ActionManager, QObject):
             self.list_2D_scans()
             # self.show_overlay()
 
+    @property
+    def h5saver(self):
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver: H5Saver):
+        self._h5saver = h5saver
+        self.dataloader = DataLoader(h5saver)
 
     def setup_actions(self):
 
