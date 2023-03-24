@@ -57,6 +57,8 @@ class DataDisplayer(QObject):
 
     def clear_data(self):
         self._data.clear_data()
+        self._mins = []
+        self._maxs = []
 
     def update_axis(self, history_length: int):
         self._data.length = history_length
