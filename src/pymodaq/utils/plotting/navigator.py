@@ -8,7 +8,6 @@ import os
 import numpy as np
 import tables
 
-from pymodaq.utils.plotting.scan_selector import ScanSelector
 from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker, DataWithAxes
 from pymodaq.utils.h5modules.data_saving import DataLoader
 from pymodaq.utils.managers.parameter_manager import ParameterManager
@@ -71,7 +70,6 @@ class Navigator(ParameterManager, ActionManager, QObject):
 
         self.viewer: Viewer2DBasic = None
         self.dataloader = DataLoader(self.h5saver)
-        self.scan_selector: ScanSelector = None
         self.x_range = []
         self.y_range = []
 
@@ -215,38 +213,45 @@ class Navigator(ParameterManager, ActionManager, QObject):
         self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=self.is_action_checked('ratio'), ratio=1)
 
     def add_image_data(self, dwa: DataWithAxes):
-        if dwa.distribution.name == 'spread':
-            im = SpreadImageItem()
-        else:
-            im = UniformImageItem()
+        ims = []
+        histograms = [self.viewer.histogram_red, self.viewer.histogram_green, self.viewer.histogram_blue]
+        for ind, data in enumerate(dwa):
+            if ind > 2:
+                break
+            if dwa.distribution.name == 'spread':
+                im = SpreadImageItem()
+            else:
+                im = UniformImageItem()
+            ims.append(im)
 
-        im.setOpacity(1)
-        # im.setOpts(axisOrder='row-major')
-        self.viewer.image_widget.plotitem.addItem(im)
-        self.viewer.histogram_red.item.setImageItem(im)
-        im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+            im.setOpacity(1)
+            im.setOpts(axisOrder='row-major')
+            self.viewer.image_widget.plotitem.addItem(im)
+            histograms[ind].item.setImageItem(im)
+            im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
-        if dwa.distribution.name == 'uniform':
-            x_axis = dwa.get_axis_from_index(1)[0].get_data()
-            y_axis = dwa.get_axis_from_index(0)[0].get_data()
+            if dwa.distribution.name == 'uniform':
+                x_axis = dwa.get_axis_from_index(1)[0].get_data()
+                y_axis = dwa.get_axis_from_index(0)[0].get_data()
 
-            rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
-                                 (np.max(x_axis) - np.min(x_axis)),
-                                 (np.max(y_axis) - np.min(y_axis)))
+                rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
+                                     (np.max(x_axis) - np.min(x_axis)),
+                                     (np.max(y_axis) - np.min(y_axis)))
 
-            im.setImage(dwa.data[0])
-            im.setOpts(rect=rect)
-        else:
-            y_axis, x_axis = dwa.get_axis_from_index(0)
-            im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
-        self.viewer.histogram_red.setImageItem(im)
-        return im
+                im.setImage(data)
+                im.setOpts(rect=rect)
+            else:
+                y_axis, x_axis = dwa.get_axis_from_index(0)
+                im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
+            histograms[ind].setImageItem(im)
+        return ims
 
     def remove_image_data(self, param):
         for overlay in self.overlays[:]:
             if param.name() in overlay['name']:
                 ind = self.overlays.index(overlay)
-                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
+                for image in overlay['images']:
+                    self.viewer.image_widget.plotitem.removeItem(image)
                 self.overlays.pop(ind)
 
     def value_changed(self, param):
@@ -254,9 +259,9 @@ class Navigator(ParameterManager, ActionManager, QObject):
         if param.parent().name() == 'overlays':
             data: PixmapCheckData = param.value()
             if data.checked:
-                dwa = self.dataloader.load_data(data.path)
-                im = self.add_image_data(dwa)
-                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+                dwa = self.dataloader.load_data(data.path, load_all=True)
+                ims = self.add_image_data(dwa)
+                self.overlays.append(dict(name=f'{param.name()}_{0}', images=ims))
 
             else:
                 self.remove_image_data(param)
@@ -265,17 +270,13 @@ class Navigator(ParameterManager, ActionManager, QObject):
             if data.checked:
                 dataloader = DataLoader(self.h5saver_image)
                 dwa = dataloader.load_data(data.path)
-                im = self.add_image_data(dwa)
-                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+                ims = self.add_image_data(dwa)
+                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), images=ims))
             else:
                 self.remove_image_data(param)
 
     def param_deleted(self, param):
-        for overlay in self.overlays[:]:
-            if param.name() in overlay['name']:
-                ind = self.overlays.index(overlay)
-                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
-                self.overlays.pop(ind)
+        self.remove_image_data(param)
 
     def setup_ui(self):
         layout = QtWidgets.QVBoxLayout()
@@ -295,8 +296,8 @@ class Navigator(ParameterManager, ActionManager, QObject):
         widg = QtWidgets.QWidget()
         self.viewer = Viewer2DBasic(widg)
         self.viewer.histogram_red.setVisible(True)
-        self.viewer.histogram_green.setVisible(False)
-        self.viewer.histogram_blue.setVisible(False)
+        self.viewer.histogram_green.setVisible(True)
+        self.viewer.histogram_blue.setVisible(True)
         self.viewer.histogram_adaptive.setVisible(False)
 
         self.statusbar = QtWidgets.QStatusBar()
@@ -404,8 +405,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widg = QtWidgets.QWidget()
-    prog = Navigator(widg,
-                     h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
+    prog = Navigator(widg)#, h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
 
     widg.show()
     prog.list_2D_scans()

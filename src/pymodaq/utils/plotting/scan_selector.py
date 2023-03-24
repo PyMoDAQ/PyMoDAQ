@@ -1,6 +1,7 @@
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, QThread, Signal
 import sys
+from typing import List, Dict
 from collections import OrderedDict
 from pyqtgraph import ROI, RectROI, PolyLineROI, Point
 
@@ -82,9 +83,12 @@ class ScanSelector(ParameterManager, QObject):
         ]},
     ]
 
-    def __init__(self, viewer_items: dict = dict([]), scan_type='Scan2D', positions=[]):
+    def __init__(self, viewer_items=None, scan_type='Scan2D', positions=[]):
         QObject.__init__(self)
         ParameterManager.__init__(self, 'selector_settings')
+
+        if viewer_items is None:
+            viewer_items = dict([])
 
         self._viewers_items = viewer_items
         self.sources_names = list(viewer_items.keys())
