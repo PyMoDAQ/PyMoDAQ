@@ -65,6 +65,10 @@ class TestSelectors:
             assert np.all(scan_selector.selector.get_coordinates() ==
                           pytest.approx(scan_selector.settings['coordinates'].data_as_ndarray()))
 
+            wrapper = select.SelectorWrapper(scan_selector.selector)
+            assert np.all(wrapper.get_coordinates() ==
+                          pytest.approx(scan_selector.settings['coordinates'].data_as_ndarray()))
+
 
 class TestScanSelector:
 

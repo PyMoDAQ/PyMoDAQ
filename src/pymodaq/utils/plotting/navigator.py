@@ -155,8 +155,8 @@ class Navigator(ParameterManager, ActionManager, QObject):
         return data_2D
 
     def set_axes(self, dwa: DataWithAxes):
-        x_axis = dwa.get_axis_from_index(1)[0]
-        y_axis = dwa.get_axis_from_index(0)[0]
+        x_axis = dwa.get_axis_from_index(0)[0]
+        y_axis = dwa.get_axis_from_index(1)[0]
 
         self.viewer.scaled_xaxis.axis_label = x_axis.label
         self.viewer.scaled_xaxis.axis_units = x_axis.units
@@ -234,7 +234,6 @@ class Navigator(ParameterManager, ActionManager, QObject):
             ims.append(im)
 
             im.setOpacity(1)
-            im.setOpts(axisOrder='row-major')
             self.viewer.add_image_item(im, histogram=histograms[ind])
             im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
@@ -242,9 +241,9 @@ class Navigator(ParameterManager, ActionManager, QObject):
                 x_axis = dwa.get_axis_from_index(1)[0].get_data()
                 y_axis = dwa.get_axis_from_index(0)[0].get_data()
 
-                rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
-                                     (np.max(x_axis) - np.min(x_axis)),
-                                     (np.max(y_axis) - np.min(y_axis)))
+                rect = QtCore.QRectF(np.min(y_axis), np.min(x_axis),
+                                     (np.max(y_axis) - np.min(y_axis)),
+                                     (np.max(x_axis) - np.min(x_axis)))
 
                 im.setImage(data)
                 im.setOpts(rect=rect)

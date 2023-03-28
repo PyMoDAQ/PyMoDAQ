@@ -29,7 +29,7 @@ from pymodaq.utils import exceptions
 from pymodaq.utils.plotting.data_viewers.viewer2D import Viewer2D
 from pymodaq.utils.plotting.data_viewers.viewer1D import Viewer1D
 from pymodaq.utils.plotting.navigator import Navigator
-from pymodaq.utils.plotting.scan_selector import ScanSelector
+from pymodaq.utils.plotting.scan_selector import ScanSelector, SelectorItem
 from pymodaq.utils.scanner.scanner import Scanner, scanner_factory  #, adaptive, adaptive_losses
 from pymodaq.utils.managers.batchscan_manager import BatchScanner
 from pymodaq.utils.managers.modules_manager import ModulesManager
@@ -473,14 +473,17 @@ class DAQScan(QObject, ParameterManager):
         self.show_scan_selector()
 
     def show_scan_selector(self):
-        viewer_items = dict([])
+        viewer_items = []
         if self.navigator is not None:
-            viewer_items.update(dict(navigator=dict(viewers=[self.navigator.viewer], names=["Navigator"])))
-        for viewer in self.live_plotter.viewers:
-            viewer_items.update({viewer.title: dict(viewers=[viewer], names=[viewer.title])})
+            viewer_items.append(SelectorItem(self.navigator.viewer, name='Navigator'))
+        #
+        # for viewer in self.live_plotter.viewers:
+        #     viewer_items.update({viewer.title: dict(viewers=[viewer], names=[viewer.title])})
         self.scan_selector = ScanSelector(viewer_items)
 
         self.ui.add_scanner_settings(self.scan_selector.settings_tree)
+
+        self.scan_selector.scan_select_signal.connect(self.scanner.update_from_scan_selector)
 
     ################
     #  LOADING SAVING

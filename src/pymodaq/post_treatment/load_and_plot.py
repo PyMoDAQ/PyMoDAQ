@@ -184,7 +184,7 @@ class LoaderPlotter:
                     viewer.move_roi_target(target_at)
                 elif _data.dim == 'Data2D' and _data.distribution == 'uniform':
                     size = [axis.scaling for axis in _data.get_nav_axes()]
-                    viewer.move_roi_target(target_at, size)
+                    viewer.move_roi_target(target_at, (1, 1))
 
 
 def main(init_qt=True):

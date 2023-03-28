@@ -145,7 +145,7 @@ class SelectorWrapper(Selector):
         return self._selector.get_header()
 
     def get_coordinates(self):
-        self._selector.get_coordinates()
+        return self._selector.get_coordinates()
 
     def set_coordinates(self, coordinates: np.ndarray):
         self._selector.set_coordinates(coordinates)
