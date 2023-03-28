@@ -219,11 +219,11 @@ class Navigator(ParameterManager, ActionManager, QObject):
             self.list_2D_scans()
 
     def set_aspect_ratio(self):
-        self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=self.is_action_checked('ratio'), ratio=1)
+        self.viewer.set_aspect_ratio(self.is_action_checked('ratio'))
 
     def add_image_data(self, dwa: DataWithAxes):
         ims = []
-        histograms = [self.viewer.histogram_red, self.viewer.histogram_green, self.viewer.histogram_blue]
+        histograms = self.viewer.histograms
         for ind, data in enumerate(dwa):
             if ind > 2:
                 break
@@ -235,8 +235,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
 
             im.setOpacity(1)
             im.setOpts(axisOrder='row-major')
-            self.viewer.image_widget.plotitem.addItem(im)
-            histograms[ind].item.setImageItem(im)
+            self.viewer.add_image_item(im, histogram=histograms[ind])
             im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
             if dwa.distribution.name == 'uniform':
@@ -260,7 +259,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
             if param.name() in overlay['name']:
                 ind = self.overlays.index(overlay)
                 for image in overlay['images']:
-                    self.viewer.image_widget.plotitem.removeItem(image)
+                    self.viewer.plotitem.removeItem(image)
                 self.overlays.pop(ind)
 
     def value_changed(self, param):
@@ -318,74 +317,6 @@ class Navigator(ParameterManager, ActionManager, QObject):
         self.sett_layout.addWidget(self.settings_tree)
         splitter.addWidget(sett_widget)
         splitter.addWidget(self.viewer.parent)
-
-    def show_image(self, data):
-        """
-
-        Parameters
-        ----------
-        data: (dict) with keys 'names', 'data', 'x_axis', 'y_axis', 'pixmap2D'
-        """
-
-        if self.h5module is None:
-            scan_path, current_filename, dataset_path = H5Saver.set_current_scan_path(navigator_path, base_name='Scan',
-                                                                                      update_h5=True,
-                                                                                      next_scan_index=self.next_scan_index,
-                                                                                      create_scan_folder=False)
-            self.h5module = H5BrowserUtil()
-            self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name + ".h5")), 'w')
-
-        else:
-            scan_path, current_filename, dataset_path = H5Saver.set_current_scan_path(navigator_path, base_name='Scan',
-                                                                                      update_h5=False,
-                                                                                      next_scan_index=self.next_scan_index,
-                                                                                      create_scan_folder=False)
-            if not self.h5module.isopen():
-                self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name + ".h5")), 'a')
-
-        h5group = self.h5module.root()
-        data2D_group = self.h5module.get_set_group(h5group, 'Data2D')
-        data2D_group.attrs.type = 'data2D'
-
-        self.next_scan_index += 1
-        curr_group = self.h5module.get_set_group('/Data2D', current_filename)
-        live_group = self.h5module.get_set_group(curr_group, 'Live_scan_2D')
-        live_group.attrs['pixmap2D'] = data['pixmap2D']
-
-        xdata = data['x_axis']
-        if isinstance(xdata, dict):
-            xdata = xdata['data']
-        xarray = self.h5module.create_carray(curr_group, "Scan_x_axis", obj=xdata,
-                                             title=current_filename)
-        xarray.attrs['type'] = 'navigation_axis'
-        xarray.attrs['data_dimension'] = '1D'
-        xarray.attrs['nav_index'] = 0
-
-        ydata = data['y_axis']
-        if isinstance(ydata, dict):
-            ydata = ydata['data']
-        yarray = self.h5module.create_carray(curr_group, "Scan_y_axis", obj=ydata,
-                                             title=current_filename)
-        yarray.attrs['type'] = 'navigation_axis'
-        yarray.attrs['data_dimension'] = '1D'
-        yarray.attrs['nav_index'] = 1
-
-        for ind_channel, name in enumerate(data['names']):
-            try:
-                channel_group = self.h5module.get_set_group(live_group, name)
-                channel_group.attrs.Channel_name = name
-                array = self.h5module.create_carray(channel_group, current_filename + '_' + name,
-                                                    obj=data['data'][ind_channel],
-                                                    title='data', )
-                array.attrs['type'] = 'data'
-                array.attrs['data_dimension'] = '0D'
-                array.attrs['data_name'] = name
-                array.attrs['scan_type'] = 'scan2D'
-                array.attrs['scan_subtype'] = ''
-            except Exception as e:
-                logger.exception(str(e))
-
-        self.list_2D_scans()
 
     def update_h5file(self, h5file):
         if self.h5saver is not None:
