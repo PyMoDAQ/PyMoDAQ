@@ -1,4 +1,5 @@
 import importlib
+import time
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -18,12 +19,13 @@ from pymodaq.utils import gui_utils as gutils
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.parameter import utils as putils
-
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
 
 logger = set_logger(get_module_name(__file__))
 
 
 class SelectorType(BaseEnum):
+    """Gives a relation between a description of the Selector and the actual class doing the graphical selection"""
     ROI2D = 'RectangularRoi'
     ROI1D = 'LinearRegionItem'
     PolyLines = 'PolyLineROI'
@@ -95,7 +97,7 @@ class PolyLineROI(Selector, PolyLineROI):
 class RectangularRoi(Selector, RectROI):
 
     def __init__(self, *args, **kwargs):
-        super().__init__([0, 0], [10, 10], *args, **kwargs)
+        super().__init__([0, 0], [10, 10], *args, invertible=True, **kwargs)
 
     def get_header(self):
         return ['x', 'y']
@@ -109,7 +111,7 @@ class RectangularRoi(Selector, RectROI):
     def set_coordinates(self, coordinates: np.ndarray):
         if len(coordinates) != 0:
             self.setPos(coordinates[0, :], finish=False)
-            self.setSize(coordinates[1, :] - coordinates[0, :], finish=False)
+            self.setSize(coordinates[1, :] - coordinates[0, :])
 
 
 class LinearRegionItem(Selector, LinearRegionItem):
@@ -185,6 +187,22 @@ class TableModel(gutils.TableModel):
         return True
 
 
+class SelectorItem:
+    """An object storing a viewer to display selectors and a name to reference it
+
+    If the name is not given, constructs one from a unique index
+    """
+    _index: int = 0
+
+    def __init__(self, viewer: ViewerBase, name: str = None):
+        self.viewer = viewer
+        if name is None:
+            name = f'{self.viewer.title}_{self._index:03d}'
+        self.name = name
+
+        SelectorItem._index += 1
+
+
 class ScanSelector(ParameterManager, QObject):
     """Allows selection of a given 2D viewer to get scan info
 
@@ -208,55 +226,59 @@ class ScanSelector(ParameterManager, QObject):
     params = [
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Sources:', 'name': 'sources', 'type': 'list', },
-            {'title': 'Viewers:', 'name': 'viewers', 'type': 'list', },
             {'title': 'Selector type:', 'name': 'selector_type', 'type': 'list', 'limits': SelectorType.names()},
         ]},
-        # {'title': 'Scan Area', 'name': 'scan_area', 'type': 'group', 'children': [
-        #     {'title': 'ROI select:', 'name': 'ROIselect', 'type': 'group', 'visible': True, 'children': [
-        #         {'title': 'x0:', 'name': 'x0', 'type': 'float', 'value': 0,},
-        #         {'title': 'y0:', 'name': 'y0', 'type': 'float', 'value': 0,},
-        #         {'title': 'width:', 'name': 'width', 'type': 'float', 'value': 10, 'min': 0.00001},
-        #         {'title': 'height:', 'name': 'height', 'type': 'float', 'value': 10, 'min': 0.00001},
-        #     ]},
         {'title': 'Coordinates:', 'name': 'coordinates', 'type': 'table_view', 'visible': True,
          'delegate': gutils.SpinBoxDelegate,},
         # ]},
     ]
 
-    def __init__(self, viewer_items=None, selector_type='ROI2D', positions: List = None):
+    def __init__(self, viewer_items: List[SelectorItem] = None, selector_type='ROI2D', positions: List = None):
         QObject.__init__(self)
         ParameterManager.__init__(self, 'selector_settings')
 
         self.table_model: TableModel = None
         self.table_view: TableViewCustom = None
 
-        if viewer_items is None:
-            viewer_items = dict([])
-
-        self._viewers_items = viewer_items
-        self.sources_names = list(viewer_items.keys())
-        if len(viewer_items) != 0:
-            self.scan_selector_source = viewer_items[self.sources_names[0]]['viewers'][0]
-        else:
-            self.scan_selector_source = None
         self.selector: Selector = None
+        self.selector_source: ViewerBase = None
 
-        self.setupUI()
+        self.selector_type = enum_checker(SelectorType, selector_type)
+        self.update_selector_type()
 
-        selector_type = enum_checker(SelectorType, selector_type)
-        self.settings.child('scan_options', 'selector_type').setValue(selector_type.name)
+        if viewer_items is None:
+            viewer_items = []
 
-        self.remove_scan_selector()
-        if self.scan_selector_source is not None:
-            if len(viewer_items[self.sources_names[0]]['viewers']) == 1:
-                self.settings.child('scan_options', 'viewers').hide()
+        self.viewers_items = viewer_items
+        self.sources_names = [item.name for item in viewer_items]
+        if len(viewer_items) != 0:
+            self.selector_source = viewer_items[0].viewer
         else:
-            self.settings.child('scan_options', 'viewers').hide()
-        self.update_scan_area_type()
+            self.selector_source = None
+
+        # self.remove_selector()
+        # self.update_selector_type()
 
         if positions is not None:
             self.selector.set_coordinates(positions)
 
+    @property
+    def selector_type(self) -> SelectorType:
+        return SelectorType(self.settings['scan_options', 'selector_type'])
+
+    @selector_type.setter
+    def selector_type(self, selector_type: SelectorType):
+        selector_type = enum_checker(SelectorType, selector_type)
+        self.settings.child('scan_options', 'selector_type').setValue(selector_type.name)
+
+    @property
+    def source_name(self) -> str:
+        return self.settings['scan_options', 'sources']
+
+    @source_name.setter
+    def source_name(self, source: str):
+        if source in self.settings.child('scan_options', 'sources').opts['limits']:
+            self.settings.child('scan_options', 'sources').setValue(source)
 
     def update_model(self, init_data=None):
         if init_data is None:
@@ -292,13 +314,11 @@ class ScanSelector(ParameterManager, QObject):
         return self._viewers_items
 
     @viewers_items.setter
-    def viewers_items(self, items):
+    def viewers_items(self, items: List[SelectorItem]):
         self._viewers_items = items
-        self.sources_names = list(items.keys())
-        self.scan_selector_source = items[self.sources_names[0]]['viewers'][0]
+        self.sources_names = [item.name for item in items]
+        self.selector_source = items[0].viewer
         self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
-        viewer_names = self._viewers_items[self.sources_names[0]]['names']
-        self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
 
     def show(self, visible=True):
         self.show_selector(visible)
@@ -310,59 +330,46 @@ class ScanSelector(ParameterManager, QObject):
     def hide(self):
         self.show(False)
 
-    def setupUI(self):
-        self.settings.child('scan_options', 'sources').setOpts(limits=self.sources_names)
-        if len(self.viewers_items):
-            viewer_names = self._viewers_items[self.sources_names[0]]['names']
-        else:
-            viewer_names = []
-        self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
-
     def value_changed(self, param):
 
         if param.name() == 'sources' and param.value() is not None:
-            viewer_names = self._viewers_items[param.value()]['names']
-            self.settings.child('scan_options', 'viewers').setOpts(limits=viewer_names)
-            if len(viewer_names) == 1:
-                self.settings.child('scan_options', 'viewers').hide()
-
-            self.remove_scan_selector()
-            self.scan_selector_source = self._viewers_items[param.value()]['viewers'][0]
-            self.update_scan_area_type()
+            self.remove_selector()
+            self.selector_source = \
+                utils.find_objects_in_list_from_attr_name_val(
+                    self.viewers_items, 'name', param.value(), return_first=True)[0].viewer
+            self.update_selector_type()
 
         if param.name() == 'selector_type':
-            self.remove_scan_selector()
-            self.update_scan_area_type()
-            #self.selector.sigRegionChangeFinished.emit(self.selector)
+            self.update_selector_type()
+            self.selector.sigRegionChangeFinished.emit(self.selector)
 
         if param.name() == 'coordinates':
             self.selector.set_coordinates(param.value().data_as_ndarray())
 
-    def remove_scan_selector(self):
-        if self.scan_selector_source is not None:
+    def remove_selector(self):
+        if self.selector_source is not None:
             try:
-                self.scan_selector_source.image_widget.plotitem.removeItem(self.selector)
+                self.selector_source.image_widget.plotitem.removeItem(self.selector)
             except Exception as e:
                 logger.exception(str(e))
                 pass
 
-    def update_scan_area_type(self):
-        self.remove_scan_selector()
+    def update_selector_type(self):
+        self.remove_selector()
         mod = importlib.import_module('.scan_selector', 'pymodaq.utils.plotting')
         self.selector = getattr(mod, SelectorType[self.settings['scan_options', 'selector_type']].value)()
 
-        if self.scan_selector_source is not None and self.selector is not None:
+        if self.selector_source is not None and self.selector is not None:
             self.selector.sigRegionChangeFinished.connect(self.update_scan)
-            self.scan_selector_source.image_widget.plotitem.addItem(self.selector)
+            self.selector_source.plotitem.addItem(self.selector)
             self.show_selector()
             self.update_model(self.selector.get_coordinates())
-            # self.selector.sigRegionChangeFinished.emit(self.selector)
 
     def show_selector(self, visible=True):
         self.selector.setVisible(visible)
 
-    def update_scan(self, roi):
-        if self.scan_selector_source is not None:
+    def update_scan(self):
+        if self.selector_source is not None:
             self.update_model_data(self.selector.get_coordinates())
             self.scan_select_signal.emit(SelectorWrapper(self.selector))
 
@@ -440,10 +447,14 @@ def main_navigator():
 
     viewer = DAQ_Viewer(area, title="Testing", daq_type='DAQ2D')
     viewer.init_hardware_ui(True)
+    time.sleep(1)
+    QtWidgets.QApplication.processEvents()
 
-    scan_selector = ScanSelector(viewer_items=dict(
-        navigator=dict(viewers=[navigator.viewer], names=["Navigator"]),
-        viewer=dict(viewers=viewer.viewers, names=[dock.name for dock in viewer.viewer_docks])))
+    items = [SelectorItem(viewer=navigator.viewer, name="Navigator")]
+    for _viewer_dock, _viewer in zip(viewer.viewers_docks, viewer.viewers):
+        items.append(SelectorItem(viewer=_viewer, name=_viewer_dock.title()))
+
+    scan_selector = ScanSelector(viewer_items=items)
     scan_selector.settings_tree.show()
 
     sys.exit(app.exec_())

@@ -158,7 +158,7 @@ class TabularScanner(ScannerBase):
             if positions is None:
                 if self.settings.child('tabular_settings',
                                        'tabular_selection').value() == 'Polylines':  # from ROI
-                    viewer = self.scan_selector.scan_selector_source
+                    viewer = self.scan_selector.selector_source
 
                     if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
                         positions = self.scan_selector.scan_selector.getArrayIndexes(

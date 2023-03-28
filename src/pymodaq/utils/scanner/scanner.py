@@ -64,18 +64,6 @@ class Scanner(QObject, ParameterManager):
         self.actuators = actuators
         self.settings.child('n_steps').setValue(self._scanner.evaluate_steps())
 
-        # self.scan_selector = ScanSelector(scanner_items, scan_type)
-        # self.scan_selector.scan_select_signal.connect(self.update_scan_2D_positions)
-        # self.scan_selector.scan_select_signal.connect(lambda: self.update_tabular_positions())
-        # self.scan_selector.widget.setVisible(False)
-        # self.scan_selector.show_scan_selector(visible=False)
-
-        # self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
-        #     limits=self.scan_selector.sources_names)
-        # self.settings.child('scan2D_settings', 'scan2D_roi_module').setOpts(
-        #     limits=self.scan_selector.sources_names)
-        # self.table_model = None
-
     def setup_ui(self):
         self.parent_widget.setLayout(QtWidgets.QVBoxLayout())
         self.parent_widget.layout().setContentsMargins(0, 0, 0, 0)
@@ -113,7 +101,6 @@ class Scanner(QObject, ParameterManager):
         if param.name() == 'scan_type':
             self.settings.child('scan_sub_type').setOpts(
                 limits=scanner_factory.scan_sub_types(param.value()))
-            # todo self.scan_selector.settings.child('scan_options', 'scan_type').setValue(param.value())
         if param.name() in ['scan_type', 'scan_sub_type']:
             self.set_scanner()
 
@@ -128,29 +115,6 @@ class Scanner(QObject, ParameterManager):
     def actuators(self, act_list):
         self._actuators = act_list
         self.set_scanner()
-
-    @property
-    def viewers_items(self):
-        return self.scan_selector.viewers_items
-
-    @viewers_items.setter
-    def viewers_items(self, items):
-        """Add 2D viewer objects where one can plot ROI or Polylines to define a Scan using the ScanSelector
-
-        Parameters
-        ----------
-        items: list of Viewer2D
-
-        See Also
-        --------
-        Viewer2D, ScanSelector
-        """
-        self.scan_selector.remove_scan_selector()
-        self.scan_selector.viewers_items = items
-        self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
-            limits=self.scan_selector.sources_names)
-        self.settings.child('scan2D_settings', 'scan2D_roi_module').setOpts(
-            limits=self.scan_selector.sources_names)
 
     def set_scan_type_and_subtypes(self, scan_type: str, scan_subtype: str):
         """Convenience function to set the main scan type
@@ -607,7 +571,7 @@ if __name__ == '__main__':
 #         --------
 #         Viewer2D, ScanSelector
 #         """
-#         self.scan_selector.remove_scan_selector()
+#         self.scan_selector.remove_selector()
 #         self.scan_selector.viewers_items = items
 #         self.settings.child('tabular_settings', 'tabular_roi_module').setOpts(
 #             limits=self.scan_selector.sources_names)
@@ -844,7 +808,7 @@ if __name__ == '__main__':
 #                 if positions is None:
 #                     if self.settings.child('tabular_settings',
 #                                            'tabular_selection').value() == 'Polylines':  # from ROI
-#                         viewer = self.scan_selector.scan_selector_source
+#                         viewer = self.scan_selector.selector_source
 #
 #                         if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
 #                             positions = self.scan_selector.scan_selector.getArrayIndexes(
@@ -871,7 +835,7 @@ if __name__ == '__main__':
 #     def update_scan_2D_positions(self):
 #         """Compute scan positions from the ROI set with the scan_selector"""
 #         try:
-#             viewer = self.scan_selector.scan_selector_source
+#             viewer = self.scan_selector.selector_source
 #             pos_dl = self.scan_selector.scan_selector.pos()
 #             pos_ur = self.scan_selector.scan_selector.pos() + self.scan_selector.scan_selector.size()
 #             pos_dl_scaled = viewer.scale_axis(pos_dl[0], pos_dl[1])
