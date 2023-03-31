@@ -194,8 +194,11 @@ class View1D(ActionManager, QObject):
         self.prepare_ui()
 
         self.plotitem.addItem(self.roi_target)
+        self.roi_target.setVisible(False)
 
     def move_roi_target(self, pos: Iterable[float], **kwargs):
+        if not self.roi_target.isVisible():
+            self.roi_target.setVisible(True)
         self.roi_target.setPos(pos[0])
 
     def get_double_clicked(self):
