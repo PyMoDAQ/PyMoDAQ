@@ -9,6 +9,8 @@ import re
 import time
 import warnings
 
+from ctypes import WINFUNCTYPE, CFUNCTYPE
+
 from packaging import version as version_mod
 from pathlib import Path
 import pkgutil
@@ -658,6 +660,53 @@ def caller_name(skip=2):
     return ".".join(name)
 
 
+def cfunc(name, dll, result, *args):
+    """build and apply a ctypes prototype complete with parameter flags
+
+    Parameters
+    ----------
+    name: (str) function name in the dll
+    dll: (ctypes.windll) dll object
+    result : result is the type of the result (c_int,..., python function handle,...)
+    args: list of tuples with 3 or 4 elements each like (argname, argtype, in/out, default) where argname is the
+    name of the argument, argtype is the type, in/out is 1 for input and 2 for output, and default is an optional
+    default value.
+
+    Returns
+    -------
+    python function
+    """
+    atypes = []
+    aflags = []
+    for arg in args:
+        atypes.append(arg[1])
+        aflags.append((arg[2], arg[0]) + arg[3:])
+    return CFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
+
+
+def winfunc(name, dll, result, *args):
+    """build and apply a ctypes prototype complete with parameter flags
+    Parameters
+    ----------
+    name:(str) function name in the dll
+    dll: (ctypes.windll) dll object
+    result: result is the type of the result (c_int,..., python function handle,...)
+    args: list of tuples with 3 or 4 elements each like (argname, argtype, in/out, default) where argname is the
+    name of the argument, argtype is the type, in/out is 1 for input and 2 for output, and default is an optional
+    default value.
+
+    Returns
+    -------
+    python function
+    """
+    atypes = []
+    aflags = []
+    for arg in args:
+        atypes.append(arg[1])
+        aflags.append((arg[2], arg[0]) + arg[3:])
+    return WINFUNCTYPE(result, *atypes)((name, dll), tuple(aflags))
+
+
 def zeros_aligned(n, align, dtype=np.uint32):
     """
     Get aligned memory array wih alignment align.
@@ -808,11 +857,11 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
-                                         exp="dispatch",
+    paths = recursive_find_expr_in_files(r'D:\PyMoDAQ_Git\PyMoDAQ\src\pymodaq',
+                                         exp="cfunc",
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py',],
+                                                  '.tox',],
                                          replace=False,
                                          replace_str="pymodaq.utils")
     get_version()
