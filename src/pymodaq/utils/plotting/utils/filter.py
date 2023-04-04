@@ -228,8 +228,11 @@ class Filter1DFromRois(Filter):
             _slice = self.get_slice_from_roi(roi, data)
             sub_data = data.isig[_slice]
             processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
-            return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
-                               int_data=processed_data.data[data_index])
+            if processed_data is None:
+                return LineoutData()
+            else:
+                return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
+                                   int_data=processed_data.data[data_index])
 
     def get_slice_from_roi(self, roi: RectROI, data: data_mod.DataWithAxes) -> slice:
         ind_x_min, ind_x_max = data.get_axis_from_index(data.sig_indexes[0])[0].find_indexes(roi.getRegion())

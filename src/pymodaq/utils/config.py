@@ -383,7 +383,7 @@ class TreeFromToml(QObject):
         res = self.dialog.exec()
 
         if res == self.dialog.Accepted:
-            with open(self.config_path, 'w') as f:
+            with open(self._config.config_path, 'w') as f:
                 config_dict = self.param_to_dict(self.settings)
                 config_dict.pop('config_path')
                 create_toml_from_dict(config_dict, self._config.config_path)

@@ -36,12 +36,15 @@ def set_logger(logger_name, add_handler=False, base_logger=False, add_to_console
         logger_name = f'{logger_base_name}.{logger_name}'
 
     logger = logging.getLogger(logger_name)
-    log_path = get_set_config_dir('log')
+    log_path = get_set_config_dir('log', user=True)
     if log_level is None:
         log_level = config('general', 'debug_level')
     logger.setLevel(log_level)
     if add_handler:
-        handler = TimedRotatingFileHandler(log_path.joinpath(f'{logger_base_name}.log'), when='midnight')
+        log_file_path = log_path.joinpath(f'{logger_base_name}.log')
+        if not log_file_path.is_file():
+            log_file_path.touch(mode=0o777)
+        handler = TimedRotatingFileHandler(log_file_path, when='midnight')
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
