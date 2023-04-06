@@ -209,28 +209,35 @@ class Filter1DFromRois(Filter):
 
     def _filter_data(self, data: data_mod.DataFromPlugins) -> dict:
         data_dict = dict([])
-        axis = data.get_axis_from_index(0, create=False)
-        if axis is not None:
-            self.update_axis(axis)
-        if data is not None:
-            for roi_key, roi in self._ROIs.items():
-                try:
-                    data_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
-                except ValueError:
-                    data_index = 0
-                data_dict[roi_key] = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                            data, data_index)
-
+        try:
+            axis = data.get_axis_from_index(0, create=False)
+            if axis is not None:
+                self.update_axis(axis)
+            if data is not None:
+                for roi_key, roi in self._ROIs.items():
+                    try:
+                        data_index = data.labels.index(self._roi_settings['ROIs', roi_key, 'use_channel'])
+                    except ValueError:
+                        data_index = 0
+                    data_dict[roi_key] = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
+                                                                data, data_index)
+        except Exception as e:
+            pass
         return data_dict
 
     def get_data_from_roi(self, roi: LinearROI,  roi_param: Parameter, data: data_mod.DataWithAxes, data_index=0):
         if data is not None:
             _slice = self.get_slice_from_roi(roi, data)
             sub_data = data.isig[_slice]
-            processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
+            if sub_data.size != 0:
+                processed_data = data_processors.get(roi_param['math_function']).process(sub_data)
+            else:
+                processed_data = None
             if processed_data is None:
                 return LineoutData()
             else:
+                if len(sub_data.axes) == 0:
+                    pass
                 return LineoutData(hor_axis=sub_data.axes[0], hor_data=sub_data.data[data_index],
                                    int_data=processed_data.data[data_index])
 

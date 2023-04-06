@@ -126,7 +126,7 @@ class LineoutPlotter(QObject):
     @Slot(int, str)
     def add_ROI(self, newindex, roi_type):
         item = self._roi_manager.get_roi_from_index(newindex)
-        item.sigRegionChanged.connect(lambda: self.roi_changed.emit(self._roi_manager.ROIs))
+        item.sigRegionChangeFinished.connect(lambda: self.roi_changed.emit(self._roi_manager.ROIs))
         item_param = self._roi_manager.settings.child('ROIs', 'ROI_{:02d}'.format(newindex))
         color = item_param.child('Color').value()
 
