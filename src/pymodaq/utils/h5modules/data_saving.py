@@ -372,21 +372,21 @@ class DataSaverLoader(DataManagement):
 
         if 'axis' in self.data_type.name:
             ndarrays = [data_node.read() for data_node in data_nodes]
-            axes = [Axis(label='index', units='', data=np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
+            axes = [Axis(label=data_node.attrs['label'], units=data_node.attrs['units'],
+                         data=np.linspace(0, ndarrays[0].size-1, ndarrays[0].size-1))]
         else:
             ndarrays = self.get_data_arrays(data_node, with_bkg=with_bkg, load_all=load_all)
             axes = self.get_axes(parent_node)
 
         extra_attributes = data_node.attrs.to_dict()
         for name in ['TITLE', 'CLASS', 'VERSION', 'backend', 'source', 'data_dimension', 'distribution', 'label',
-                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape']:
+                     'origin', 'nav_indexes', 'dtype', 'data_type', 'subdtype', 'shape', 'size']:
             extra_attributes.pop(name, None)
 
         data = DataWithAxes(data_node.attrs['TITLE'],
                             source=data_node.attrs['source'] if 'source' in data_node.attrs else 'raw',
                             dim=data_node.attrs['data_dimension'],
-                            distribution=data_node.attrs['distribution'] if 'axis' not in self.data_type.name
-                            else 'uniform',
+                            distribution=data_node.attrs['distribution'],
                             data=ndarrays,
                             labels=[node.attrs['label'] for node in data_nodes],
                             origin=data_node.attrs['origin'] if 'origin' in data_node.attrs else '',
@@ -818,6 +818,7 @@ class DataLoader:
             if nav_group is not None:
                 nav_axes = self._axis_loader.get_axes(nav_group)
                 data.axes.extend(nav_axes)
+                data.get_dim_from_data_axes()
         data.create_missing_axes()
         return data
 

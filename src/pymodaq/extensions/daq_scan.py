@@ -129,6 +129,7 @@ class DAQScan(QObject, ParameterManager):
         self.modules_manager = ModulesManager(self.dashboard.detector_modules, self.dashboard.actuators_modules)
         self.modules_manager.settings.child('data_dimensions').setOpts(expanded=False)
         self.modules_manager.settings.child('actuators_positions').setOpts(expanded=False)
+        self.modules_manager.detectors_changed.connect(self.clear_plot_from)
 
         self.h5saver = H5Saver()
         self.module_and_data_saver = module_saving.ScanSaver(self)
@@ -611,6 +612,10 @@ class DAQScan(QObject, ParameterManager):
             self.plot_from()
         elif param.name() == 'plot_at_each_step':
             self.settings.child('plot_options', 'refresh_live').show(not param.value())
+
+    def clear_plot_from(self):
+        self.settings.child('plot_options', 'plot_0d').setValue(dict(all_items=[], selected=[]))
+        self.settings.child('plot_options', 'plot_1d').setValue(dict(all_items=[], selected=[]))
 
     def prepare_viewers(self):
 
