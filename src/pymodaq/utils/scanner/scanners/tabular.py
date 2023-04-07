@@ -18,7 +18,8 @@ from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.plotting.scan_selector import Selector
-
+from pymodaq.utils.plotting.utils.plot_utils import QVector
+from pyqtgraph import Point
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -242,15 +243,14 @@ class TabularScannerCurvilinear(TabularScanner):
 
         self.table_model_points = TableModelTabular(init_data, [act.title for act in self._actuators])
         self.table_view_points = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
-        self.settings.child('tabular_table').setValue(self.table_model)
-        self.n_axes = len(self._actuators)
+        self.settings.child('tabular_points').setValue(self.table_model_points)
         self.update_table_view_points()
 
     def update_table_view(self):
         self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_view.horizontalHeader().setStretchLastSection(True)
-        self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
-        self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        # self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        # self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
 
     def update_table_view_points(self):
         self.table_view_points.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -269,10 +269,39 @@ class TabularScannerCurvilinear(TabularScanner):
         self.table_view_points.setDragDropMode(QtWidgets.QTableView.InternalMove)
         self.table_view_points.setDragDropOverwriteMode(False)
 
-        self.table_view_points.add_data_signal[int].connect(self.table_model.add_data)
-        self.table_view_points.remove_row_signal[int].connect(self.table_model.remove_data)
-        self.table_view_points.load_data_signal.connect(self.table_model.load_txt)
-        self.table_view_points.save_data_signal.connect(self.table_model.save_txt)
+        self.table_view_points.add_data_signal[int].connect(self.table_model_points.add_data)
+        self.table_view_points.remove_row_signal[int].connect(self.table_model_points.remove_data)
+        self.table_view_points.load_data_signal.connect(self.table_model_points.load_txt)
+        self.table_view_points.save_data_signal.connect(self.table_model_points.save_txt)
+
+    def set_scan(self):
+        points = np.array(self.table_model_points.get_data_all())
+        positions = self.get_curvilinear_positions(self.settings['tabular_step'], points)
+
+        self.table_model.set_data_all(positions)
+        positions = np.array(self.table_model.get_data_all())
+        self.get_info_from_positions(positions)
+
+    def get_vectors(self, points: np.ndarray):
+        #imgPts = self.get_vertex()
+        d = []
+        for ind in range(len(points) - 1):
+            d.append(QVector(points[ind], Point(points[ind + 1])))
+        return d
+
+    def get_curvilinear_positions(self, spacing: float, points: np.ndarray):
+        positions = []
+        for ind in range(len(points) - 1):
+            d = Point(points[ind + 1] - points[ind])
+            o = Point(points[ind])
+            vect = Point(d.norm())
+            Npts = 0
+            while Npts * spacing < d.length():
+                positions.append(((o + Npts * spacing * vect).x(), (o + Npts * spacing * vect).y()))
+                Npts += 1
+        # add_last point not taken into account
+        positions.append((points[-1].x(), points[-1].y()))
+        return positions
 
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
