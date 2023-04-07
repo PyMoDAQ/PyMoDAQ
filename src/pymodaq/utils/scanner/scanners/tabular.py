@@ -18,8 +18,8 @@ from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.plotting.scan_selector import Selector
-from pymodaq.utils.plotting.utils.plot_utils import QVector
-from pyqtgraph import Point
+from pymodaq.utils.plotting.utils.plot_utils import Point, get_sub_segmented_positions
+
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -200,7 +200,7 @@ class TabularScanner(ScannerBase):
         self.update_model(init_data=coordinates)
 
 
-@ScannerFactory.register('Tabular', 'Curvilinear')
+@ScannerFactory.register('Tabular', 'Subsegmented')
 class TabularScannerCurvilinear(TabularScanner):
 
     params = [{'title': 'Step:', 'name': 'tabular_step', 'type': 'float', 'value': 0.1},
@@ -249,8 +249,9 @@ class TabularScannerCurvilinear(TabularScanner):
     def update_table_view(self):
         self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.table_view.horizontalHeader().setStretchLastSection(True)
-        # self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
-        # self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        self.table_view.setEnabled(False)
 
     def update_table_view_points(self):
         self.table_view_points.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -275,33 +276,12 @@ class TabularScannerCurvilinear(TabularScanner):
         self.table_view_points.save_data_signal.connect(self.table_model_points.save_txt)
 
     def set_scan(self):
-        points = np.array(self.table_model_points.get_data_all())
-        positions = self.get_curvilinear_positions(self.settings['tabular_step'], points)
+        points = [Point(coordinates) for coordinates in self.table_model_points.get_data_all()]
+        positions = get_sub_segmented_positions(self.settings['tabular_step'], points)
 
         self.table_model.set_data_all(positions)
         positions = np.array(self.table_model.get_data_all())
         self.get_info_from_positions(positions)
-
-    def get_vectors(self, points: np.ndarray):
-        #imgPts = self.get_vertex()
-        d = []
-        for ind in range(len(points) - 1):
-            d.append(QVector(points[ind], Point(points[ind + 1])))
-        return d
-
-    def get_curvilinear_positions(self, spacing: float, points: np.ndarray):
-        positions = []
-        for ind in range(len(points) - 1):
-            d = Point(points[ind + 1] - points[ind])
-            o = Point(points[ind])
-            vect = Point(d.norm())
-            Npts = 0
-            while Npts * spacing < d.length():
-                positions.append(((o + Npts * spacing * vect).x(), (o + Npts * spacing * vect).y()))
-                Npts += 1
-        # add_last point not taken into account
-        positions.append((points[-1].x(), points[-1].y()))
-        return positions
 
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
