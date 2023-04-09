@@ -3,6 +3,8 @@ import sys
 from typing import List, Tuple, Union
 
 import numpy as np
+from scipy.spatial import QhullError
+from scipy.spatial import Delaunay as Triangulation
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal, QRectF, QPointF
 
@@ -272,6 +274,8 @@ class SpreadDataDisplayer(BaseDataDisplayer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.triangulation = True
+
     def init(self, data: DataWithAxes):
         processor = data_processors  # if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
@@ -311,7 +315,7 @@ class SpreadDataDisplayer(BaseDataDisplayer):
                     ind_nav = nav_axes[0].find_index(posx)
                     data = self._data.inav[ind_nav]
 
-                elif len(nav_axes) == 2:
+                elif len(nav_axes) == 2 and self.triangulation:
                     # signal data plotted as a function of nav_axes[0] and nav_axes[1] so get the common
                     # index corresponding to the position posx and posy
                     ind_nav, x0, y0 = mutils.find_common_index(nav_axes[0].data, nav_axes[1].data, posx, posy)
@@ -345,9 +349,19 @@ class SpreadDataDisplayer(BaseDataDisplayer):
                 if len(nav_axes) < 2:
                     self._navigator1D.show_data(nav_data)
                 elif len(nav_axes) == 2:
-                    self._navigator2D.show_data(nav_data)
+                    try:
+                        Triangulation(np.array([axis.get_data() for axis in nav_data.get_nav_axes()]))
+                        self._navigator2D.show_data(nav_data)
+                    except QhullError as e:
+                        self.triangulation = False
+                        self._navigator2D.setVisible(False)
+                        self._navigator1D.setVisible(True)
+                        data_arrays = [axis.get_data() for axis in nav_axes]
+                        labels = [axis.label for axis in nav_axes]
+                        nav_data = DataCalculated('nav', data=data_arrays, labels=labels)
+                        self._navigator1D.show_data(nav_data)
                 else:
-                    data_arrays = [axis.data for axis in nav_axes]
+                    data_arrays = [axis.get_data() for axis in nav_axes]
                     labels = [axis.label for axis in nav_axes]
                     nav_data = DataCalculated('nav', data=data_arrays, labels=labels)
                     self._navigator1D.show_data(nav_data)
@@ -600,9 +614,15 @@ class ViewerND(ParameterManager, ActionManager, ViewerBase):
         self.viewer2D.roi.setVisible(len(data.nav_indexes) != 0)
         self._dock_navigation.setVisible(len(data.nav_indexes) != 0)
         nav_axes = data.get_nav_axes()
-        self.navigator1D.setVisible(len(nav_axes) == 1 or (len(nav_axes) > 2 and data.distribution.name == 'spread'))
-        self.navigator2D.setVisible(len(nav_axes) == 2)
-        self.axes_viewer.setVisible(len(data.nav_indexes) > 2 and data.distribution.name == 'uniform')
+
+        if data.distribution.name == 'uniform':
+            self.navigator1D.setVisible(len(nav_axes) == 1)
+            self.navigator2D.setVisible(len(nav_axes) == 2)
+            self.axes_viewer.setVisible(len(data.nav_indexes) > 2)
+        else:
+            self.navigator1D.setVisible(len(nav_axes) == 1 or len(nav_axes) > 2)
+            self.navigator2D.setVisible(len(nav_axes) == 2 and self.data_displayer.triangulation)
+            self.navigator1D.setVisible(len(nav_axes) == 2 and not self.data_displayer.triangulation)
 
     def update_filters(self, processor: DataProcessorFactory):
         self.get_action('filters').clear()

@@ -1309,7 +1309,7 @@ class DataWithAxes(DataBase):
         """Check if given the data shape, some axes are missing to properly define the data (especially for plotting)"""
         axes = self.axes[:]
         for index in range(len(self.shape)):
-            if self.get_axis_from_index(index)[0] is None:
+            if len(self.get_axis_from_index(index)) != 0 and self.get_axis_from_index(index)[0] is None:
                 axes.extend(self.get_axis_from_index(index, create=True))
         self.axes = axes
 
@@ -1371,20 +1371,21 @@ class DataWithAxes(DataBase):
         nav_indexes = [] if is_navigation else list(self._am.nav_indexes)
         for ind_slice, _slice in enumerate(slices):
             ax = self._am.get_axis_from_index(indexes_to_get[ind_slice])
-            for ind in range(len(ax)):
-                ax[ind] = ax[ind].iaxis[_slice]
+            if len(ax) != 0:
+                for ind in range(len(ax)):
+                    ax[ind] = ax[ind].iaxis[_slice]
 
-            if not(ax[0] is None or ax[0].size <= 1):  # means the slice kept part of the axis
-                if is_navigation:
-                    nav_indexes.append(self._am.nav_indexes[ind_slice])
-                axes.extend(ax)
-            else:
-                for axis in axes_to_append:  # means we removed one of the axes (and data dim),
-                    # hence axis index above current index should be lowered by 1
-                    if axis.index > indexes_to_get[ind_slice]:
-                        lower_indexes[axis.index] += 1
-                for index in indexes_to_get[ind_slice+1:]:
-                    lower_indexes[index] += 1
+                if not(ax[0] is None or ax[0].size <= 1):  # means the slice kept part of the axis
+                    if is_navigation:
+                        nav_indexes.append(self._am.nav_indexes[ind_slice])
+                    axes.extend(ax)
+                else:
+                    for axis in axes_to_append:  # means we removed one of the axes (and data dim),
+                        # hence axis index above current index should be lowered by 1
+                        if axis.index > indexes_to_get[ind_slice]:
+                            lower_indexes[axis.index] += 1
+                    for index in indexes_to_get[ind_slice+1:]:
+                        lower_indexes[index] += 1
 
         axes.extend(axes_to_append)
         for axis in axes:
