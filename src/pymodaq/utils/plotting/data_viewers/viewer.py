@@ -157,15 +157,17 @@ class ViewerDispatcher:
     def add_viewer(self, viewer_type: ViewersEnum, dock_viewer=None, dock_name=None):
         viewer_type = enum_checker(ViewersEnum, viewer_type)
 
-        self._viewer_widgets.append(QtWidgets.QWidget())
-        self.viewers.append(viewer_factory.get(viewer_type.name, parent=self._viewer_widgets[-1]))
-
-        self.viewer_types.append(viewer_type)
         if dock_viewer is None:
             if dock_name is None:
                 dock_name = f'{self._title}_Viewer_{len(self.viewer_docks) + 1}'
             dock_viewer = Dock(dock_name, size=(350, 350), closable=False)
         self.viewer_docks.append(dock_viewer)
+
+        self._viewer_widgets.append(QtWidgets.QWidget())
+        self.viewers.append(viewer_factory.get(viewer_type.name, parent=self._viewer_widgets[-1]))
+
+        self.viewer_types.append(viewer_type)
+
         self.viewer_docks[-1].addWidget(self._viewer_widgets[-1])
         # if len(self.viewer_docks) == 1:
         #     if self._next_to_dock is not None:
@@ -371,7 +373,6 @@ class ViewerBase(QObject):
         """Show/Hide a specific read only ROI"""
         if self.roi_target is not None:
             self.roi_target.setVisible(show)
-
 
 
 if __name__ == '__main__':

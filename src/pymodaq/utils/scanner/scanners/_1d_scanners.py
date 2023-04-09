@@ -11,9 +11,10 @@ from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
-
+from pymodaq.utils.plotting.scan_selector import Selector
 
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
+
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -58,6 +59,12 @@ class Scan1DLinear(ScannerBase):
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
         return tuple(self.axes_indexes[scan_index])
+
+    def update_from_scan_selector(self, scan_selector: Selector):
+        coordinates = scan_selector.get_coordinates()
+        if coordinates.shape == (2, 2) or coordinates.shape == (2, 1):
+            self.settings.child('start').setValue(coordinates[0, 0])
+            self.settings.child('stop').setValue(coordinates[1, 0])
 
 
 @ScannerFactory.register('Scan1D', 'Random')

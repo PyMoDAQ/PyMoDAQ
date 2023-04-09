@@ -99,8 +99,8 @@ default_preset_for_logger = "preset_default"
         start2 = -5
         stop1 = 5
         stop2 = 5
-        step1 = 0.1
-        step2 = 0.1
+        step1 = 0.5
+        step2 = 0.5
 
 
     [scan.tabular]

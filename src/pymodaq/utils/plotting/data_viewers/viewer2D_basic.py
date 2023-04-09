@@ -1,3 +1,5 @@
+from typing import Union
+
 from qtpy import QtCore, QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 import sys
@@ -6,20 +8,28 @@ import numpy as np
 from easydict import EasyDict as edict
 
 from pymodaq.utils.plotting.widgets import ImageWidget
+from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.utils.data import DataRaw
+from pymodaq.utils.plotting.items.image import UniformImageItem, SpreadImageItem
 
 
-class Viewer2DBasic(QObject):
-    sig_double_clicked = Signal(float, float)
+class Viewer2DBasic(ViewerBase):
+    """Very Basic 2D Viewer used as a view to add Image Items into it and use the image object directly
+
+    Not meant to plot directly data, see Viewer2D for that
+
+    See Also
+    --------
+    Navigator, UniformImageItem, SpreadImageItem
+
+    """
 
     def __init__(self, parent=None, **kwargs):
-        super().__init__()
-        # setting the gui
-        if parent is None:
-            parent = QtWidgets.QWidget()
-        self.parent = parent
+        super().__init__(parent, **kwargs)
+
         self.scaling_options = edict(scaled_xaxis=edict(label="", units=None, offset=0, scaling=1),
                                      scaled_yaxis=edict(label="", units=None, offset=0, scaling=1))
-        self.setupUI()
+        self.setup_ui()
 
     def scale_axis(self, xaxis, yaxis):
         return xaxis * self.scaling_options.scaled_xaxis.scaling + self.scaling_options.scaled_xaxis.offset, yaxis * self.scaling_options.scaled_yaxis.scaling + self.scaling_options.scaled_yaxis.offset
@@ -28,7 +38,7 @@ class Viewer2DBasic(QObject):
     def double_clicked(self, posx, posy):
         self.sig_double_clicked.emit(posx, posy)
 
-    def setupUI(self):
+    def setup_ui(self):
         vlayout = QtWidgets.QVBoxLayout()
         hsplitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
 
@@ -77,6 +87,32 @@ class Viewer2DBasic(QObject):
         histo_layout.addWidget(self.histogram_blue)
         histo_layout.addWidget(self.histogram_adaptive)
         hsplitter.addWidget(self.histo_widget)
+
+    def _show_data(self, data: DataRaw):
+        """This basic viewer is not meant to plot data directly
+
+        """
+        ...
+
+    def set_aspect_ratio(self, status=True):
+        self.image_widget.plotitem.vb.setAspectLocked(lock=status, ratio=1)
+
+    @property
+    def plotitem(self):
+        return self.image_widget.plotitem
+
+    @property
+    def histograms(self):
+        return [self.histogram_red, self.histogram_green, self.histogram_blue]
+
+    def add_image_item(self, image: Union[SpreadImageItem, UniformImageItem], histogram: pg.HistogramLUTWidget = None):
+        """Adds an image item to this viewer plotitem
+
+        Links it to an existing histogram
+        """
+        self.plotitem.addItem(image)
+        if histogram in self.histograms:
+            histogram.item.setImageItem(image)
 
 
 if __name__ == '__main__':  # pragma: no cover

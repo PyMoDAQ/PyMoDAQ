@@ -17,6 +17,9 @@ from pymodaq.utils import gui_utils as gutils
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
+from pymodaq.utils.plotting.scan_selector import Selector
+from pymodaq.utils.plotting.utils.plot_utils import Point, get_sub_segmented_positions
+
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -82,6 +85,11 @@ class TableModelTabular(gutils.TableModel):
         """
 
         return True
+
+
+class TableModelTabularReadOnly(TableModelTabular):
+    def setData(self, index, value, role):
+        return False
 
 
 @ScannerFactory.register('Tabular', 'Linear')
@@ -158,7 +166,7 @@ class TabularScanner(ScannerBase):
             if positions is None:
                 if self.settings.child('tabular_settings',
                                        'tabular_selection').value() == 'Polylines':  # from ROI
-                    viewer = self.scan_selector.scan_selector_source
+                    viewer = self.scan_selector.selector_source
 
                     if self.settings.child('tabular_settings', 'tabular_subtype').value() == 'Linear':
                         positions = self.scan_selector.scan_selector.getArrayIndexes(
@@ -191,3 +199,96 @@ class TabularScanner(ScannerBase):
 
     def get_scan_shape(self) -> Tuple[int]:
         return len(self.table_model),
+
+    def update_from_scan_selector(self, scan_selector: Selector):
+        coordinates = scan_selector.get_coordinates()
+        self.update_model(init_data=coordinates)
+
+
+@ScannerFactory.register('Tabular', 'Subsegmented')
+class TabularScannerSubsegmented(TabularScanner):
+
+    params = [{'title': 'Step:', 'name': 'tabular_step', 'type': 'float', 'value': 0.1},
+              {'title': 'Points', 'name': 'tabular_points', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
+               'menu': True},
+             ] + TabularScanner.params
+
+    def __init__(self, actuators: List[str]):
+        self.table_model: TableModelTabularReadOnly = None
+        self.table_view: TableViewCustom = None
+        self.table_model_points: TableModelTabular = None
+        self.table_view_points: TableViewCustom = None
+        super().__init__(actuators=actuators)
+        self.update_model()
+        self.update_model_points()
+
+    @property
+    def actuators(self):
+        return self._actuators
+
+    @actuators.setter
+    def actuators(self, actuators_name):
+        self._actuators = actuators_name
+        self.update_model()
+        self.update_model_points()
+
+    def update_model(self, init_data=None):
+        if init_data is None:
+            init_data = [[0. for _ in self._actuators]]
+
+        self.table_model = TableModelTabularReadOnly(init_data, [act.title for act in self._actuators])
+        self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[1]
+        self.settings.child('tabular_table').setValue(self.table_model)
+        self.n_axes = len(self._actuators)
+        self.update_table_view()
+
+    def update_model_points(self, init_data=None):
+        if init_data is None:
+            init_data = [[0. for _ in self._actuators]]
+
+        self.table_model_points = TableModelTabular(init_data, [act.title for act in self._actuators])
+        self.table_view_points = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[0]
+        self.settings.child('tabular_points').setValue(self.table_model_points)
+        self.update_table_view_points()
+
+    def update_table_view(self):
+        self.table_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        # self.table_view.setEnabled(False)
+
+    def update_table_view_points(self):
+        self.table_view_points.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.table_view_points.horizontalHeader().setStretchLastSection(True)
+        self.table_view_points.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table_view_points.setSelectionMode(QtWidgets.QTableView.SingleSelection)
+        styledItemDelegate = QtWidgets.QStyledItemDelegate()
+        styledItemDelegate.setItemEditorFactory(gutils.SpinBoxDelegate())
+        self.table_view.setItemDelegate(styledItemDelegate)
+
+        self.table_view_points.setDragEnabled(True)
+        self.table_view_points.setDropIndicatorShown(True)
+        self.table_view_points.setAcceptDrops(True)
+        self.table_view_points.viewport().setAcceptDrops(True)
+        self.table_view_points.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.table_view_points.setDragDropMode(QtWidgets.QTableView.InternalMove)
+        self.table_view_points.setDragDropOverwriteMode(False)
+
+        self.table_view_points.add_data_signal[int].connect(self.table_model_points.add_data)
+        self.table_view_points.remove_row_signal[int].connect(self.table_model_points.remove_data)
+        self.table_view_points.load_data_signal.connect(self.table_model_points.load_txt)
+        self.table_view_points.save_data_signal.connect(self.table_model_points.save_txt)
+
+    def set_scan(self):
+        points = [Point(coordinates) for coordinates in self.table_model_points.get_data_all()]
+        positions = get_sub_segmented_positions(self.settings['tabular_step'], points)
+
+        self.table_model.set_data_all(positions)
+        positions = np.array(self.table_model.get_data_all())
+        self.get_info_from_positions(positions)
+
+    def update_from_scan_selector(self, scan_selector: Selector):
+        coordinates = scan_selector.get_coordinates()
+        self.update_model_points(init_data=coordinates)
+        self.set_scan()

@@ -808,6 +808,7 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
+
     paths = recursive_find_expr_in_files(r'C:\Users\weber\Labo\Programmes Python\PyMoDAQ_Git',
                                          exp="cfunc",
                                          paths=[],

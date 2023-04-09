@@ -1,7 +1,9 @@
+from collections import Iterable
 
 import copy
-from numbers import Real
-from typing import List
+from numbers import Real, Number
+from typing import List, Union
+from typing import Iterable as IterableType
 
 from easydict import EasyDict as edict
 from multipledispatch import dispatch
@@ -15,6 +17,143 @@ from pymodaq.utils.plotting.items.axis_scaled import AxisItem_Scaled
 from pymodaq.utils.plotting.data_viewers.viewer1Dbasic import Viewer1DBasic
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.messenger import deprecation_msg
+
+
+class Point:
+    def __init__(self, *elt: IterableType[float]):
+        """Initialize a geometric point in an arbitrary number of dimensions
+
+        Parameters
+        ----------
+        elt: either a tuple of floats, passed as multiple parameters or a single Iterable parameter
+        """
+        if len(elt) == 1 and isinstance(elt[0], Iterable):
+            elt = elt[0]
+
+        self._coordinates = np.atleast_1d(np.squeeze(elt))
+        self._ndim = len(elt)
+
+    @property
+    def coordinates(self):
+        return self._coordinates
+
+    def copy(self):
+        return Point(self.coordinates.copy())
+
+    def __getitem__(self, item: int):
+        return self._coordinates[item]
+
+    def __setitem__(self, key: int, value: float):
+        self._coordinates[key] = value
+
+    def __len__(self):
+        return self._ndim
+
+    def _compare_length(self, other: 'Point'):
+        if len(self) != len(other):
+            raise ValueError('Those points should be expressed in the same coordinate system and dimensions')
+
+    def __add__(self, other: Union['Point', 'Vector']):
+        self._compare_length(other)
+        return Point(*(self._coordinates + other._coordinates))
+
+    def __sub__(self, other: 'Point'):
+        self._compare_length(other)
+        return Point(*(self._coordinates - other._coordinates))
+
+    def __repr__(self):
+        return f'Point({self.coordinates})'
+
+
+class Vector:
+    def __init__(self, coordinates: Union[Point, np.ndarray], origin: Point = None):
+        if isinstance(coordinates, Point):
+            self._coordinates = coordinates.coordinates
+        else:
+            self._coordinates = coordinates
+
+        if origin is None:
+            origin = np.zeros((len(coordinates)))
+        else:
+            self._compare_length(origin)
+
+        self._origin = origin
+
+    def _compare_length(self, other: 'Point'):
+        if len(self) != len(other):
+            raise ValueError('Those Points/Vectors should be expressed in the same coordinate system and dimensions')
+
+    @property
+    def origin(self):
+        return self._origin
+
+    @property
+    def coordinates(self):
+        return self._coordinates
+
+    def copy(self):
+        return Vector(self.coordinates.copy(), origin=self.origin.copy())
+
+    def __len__(self):
+        return len(self._coordinates)
+
+    def norm(self):
+        return np.linalg.norm(self._coordinates)
+
+    def unit_vector(self):
+        return self * (1 / self.norm())
+
+    def __add__(self, other: 'Vector'):
+        self._compare_length(other)
+        return Vector(self.coordinates + other.coordinates, origin=self.origin.copy())
+
+    def __sub__(self, other: 'Vector'):
+        self._compare_length(other)
+        return Vector(self.coordinates - other.coordinates, origin=self.origin.copy())
+
+    def __mul__(self, other: Number):
+        if not isinstance(other, Number):
+            raise TypeError(f'Cannot multiply a vector with {other}')
+        return Vector(other * self.coordinates, origin=self.origin.copy())
+
+    def dot(self, other: 'Vector'):
+        self._compare_length(other)
+        return np.dot(self.coordinates, other.coordinates)
+
+    def cross(self, other: 'Vector'):
+        self._compare_length(other)
+        return np.cross(self.coordinates, other.coordinates)
+
+    def __repr__(self):
+        return f'Vector({self.coordinates})/Origin({self.origin.coordinates})'
+
+
+def get_sub_segmented_positions(spacing: float, points: List[Point]) -> List[np.ndarray]:
+    """Get Points coordinates spaced in between subsequent Points
+
+    Parameters
+    ----------
+    spacing: float
+        Distance between two subpoints
+    points: List[Point]
+        List of Points in arbitrary dimension forming segments one want to sample with a distance equal to spacing
+
+    Returns
+    -------
+    List[np.ndarray]: The list of the coordinates of the points
+    """
+    positions = []
+    for ind in range(len(points) - 1):
+        vect = Vector(points[ind+1]-points[ind], origin=points[ind])
+        npts = 0
+        while npts * spacing < vect.norm():
+            positions.append(
+                (vect.origin + vect.unit_vector() * npts * spacing).coordinates)
+            npts += 1
+
+    # # add_last point not taken into account
+    positions.append(points[-1].coordinates)
+    return positions
 
 
 class QVector(QtCore.QLineF):

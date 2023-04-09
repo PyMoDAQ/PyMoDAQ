@@ -11,6 +11,7 @@ from pymodaq.utils.data import Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.utils import math_utils as mutils
 from pymodaq.utils import config as configmod
+from pymodaq.utils.plotting.scan_selector import Selector
 
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 
@@ -92,6 +93,14 @@ class Scan2DLinear(ScannerBase):
     def get_indexes_from_scan_index(self, scan_index: int) -> Tuple[int]:
         """To be reimplemented. Calculations of indexes within the scan"""
         return tuple(self.axes_indexes[scan_index])
+
+    def update_from_scan_selector(self, scan_selector: Selector):
+        coordinates = scan_selector.get_coordinates()
+        if coordinates.shape == (2, 2):
+            self.settings.child('start_axis1').setValue(coordinates[0, 0])
+            self.settings.child('start_axis2').setValue(coordinates[0, 1])
+            self.settings.child('stop_axis1').setValue(coordinates[1, 0])
+            self.settings.child('stop_axis2').setValue(coordinates[1, 1])
 
 
 @ScannerFactory.register('Scan2D', 'LinearBack&Force')
@@ -228,10 +237,17 @@ class Scan2DSpiral(Scan2DLinear):
 
         self.get_info_from_positions(np.array(positions))
 
+    def update_from_scan_selector(self, scan_selector: Selector):
+        coordinates = scan_selector.get_coordinates()
+        if coordinates.shape == (2, 2):
+            self.settings.child('center_axis1').setValue((coordinates[0, 0] + coordinates[1, 0]) / 2)
+            self.settings.child('center_axis2').setValue((coordinates[0, 1] + coordinates[1, 1]) / 2)
+            self.settings.child('rmax_axis1').setValue(abs(coordinates[1, 0] - coordinates[0, 0]) / 2)
+            self.settings.child('rmax_axis2').setValue(abs(coordinates[1, 1] - coordinates[0, 1]) / 2)
+
 
 try:
     import adaptive
-
 
     @ScannerFactory.register('Scan2D', 'Adaptive')
     class Scan2DAdaptive(Scan2DLinear):

@@ -63,12 +63,13 @@ class Navigator(ParameterManager, ActionManager, QObject):
 
         self.status_time = 1000
 
-        self.h5saver = H5Saver()
+        self._h5saver = H5Saver()
+        self.dataloader = DataLoader(self._h5saver)
+
         self.h5file_path = h5file_path
         self.h5saver_image = H5Saver()
 
         self.viewer: Viewer2DBasic = None
-        self.dataloader = DataLoader(self.h5saver)
 
         self.x_range = []
         self.y_range = []
@@ -90,6 +91,15 @@ class Navigator(ParameterManager, ActionManager, QObject):
             self.settings.child('settings', 'Load h5').hide()
             self.list_2D_scans()
             # self.show_overlay()
+
+    @property
+    def h5saver(self):
+        return self._h5saver
+
+    @h5saver.setter
+    def h5saver(self, h5saver: H5Saver):
+        self._h5saver = h5saver
+        self.dataloader = DataLoader(h5saver)
 
     def setup_actions(self):
 
@@ -145,8 +155,8 @@ class Navigator(ParameterManager, ActionManager, QObject):
         return data_2D
 
     def set_axes(self, dwa: DataWithAxes):
-        x_axis = dwa.get_axis_from_index(1)[0]
-        y_axis = dwa.get_axis_from_index(0)[0]
+        x_axis = dwa.get_axis_from_index(0)[0]
+        y_axis = dwa.get_axis_from_index(1)[0]
 
         self.viewer.scaled_xaxis.axis_label = x_axis.label
         self.viewer.scaled_xaxis.axis_units = x_axis.units
@@ -209,41 +219,46 @@ class Navigator(ParameterManager, ActionManager, QObject):
             self.list_2D_scans()
 
     def set_aspect_ratio(self):
-        self.viewer.image_widget.plotitem.vb.setAspectLocked(lock=self.is_action_checked('ratio'), ratio=1)
+        self.viewer.set_aspect_ratio(self.is_action_checked('ratio'))
 
     def add_image_data(self, dwa: DataWithAxes):
-        if dwa.distribution.name == 'spread':
-            im = SpreadImageItem()
-        else:
-            im = UniformImageItem()
+        ims = []
+        histograms = self.viewer.histograms
+        for ind, data in enumerate(dwa):
+            if ind > 2:
+                break
+            if dwa.distribution.name == 'spread':
+                im = SpreadImageItem()
+            else:
+                im = UniformImageItem()
+            ims.append(im)
 
-        im.setOpacity(1)
-        # im.setOpts(axisOrder='row-major')
-        self.viewer.image_widget.plotitem.addItem(im)
-        self.viewer.histogram_red.item.setImageItem(im)
-        im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
+            im.setOpacity(1)
+            self.viewer.add_image_item(im, histogram=histograms[ind])
+            im.setCompositionMode(QtGui.QPainter.CompositionMode_Plus)
 
-        if dwa.distribution.name == 'uniform':
-            x_axis = dwa.get_axis_from_index(1)[0].get_data()
-            y_axis = dwa.get_axis_from_index(0)[0].get_data()
+            if dwa.distribution.name == 'uniform':
+                x_axis = dwa.get_axis_from_index(1)[0].get_data()
+                y_axis = dwa.get_axis_from_index(0)[0].get_data()
 
-            rect = QtCore.QRectF(np.min(x_axis), np.min(y_axis),
-                                 (np.max(x_axis) - np.min(x_axis)),
-                                 (np.max(y_axis) - np.min(y_axis)))
+                rect = QtCore.QRectF(np.min(y_axis), np.min(x_axis),
+                                     (np.max(y_axis) - np.min(y_axis)),
+                                     (np.max(x_axis) - np.min(x_axis)))
 
-            im.setImage(dwa.data[0])
-            im.setOpts(rect=rect)
-        else:
-            y_axis, x_axis = dwa.get_axis_from_index(0)
-            im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
-        self.viewer.histogram_red.setImageItem(im)
-        return im
+                im.setImage(data)
+                im.setOpts(rect=rect)
+            else:
+                y_axis, x_axis = dwa.get_axis_from_index(0)
+                im.setImage(np.vstack((x_axis, y_axis, dwa.data[0])).T)
+            histograms[ind].setImageItem(im)
+        return ims
 
     def remove_image_data(self, param):
         for overlay in self.overlays[:]:
             if param.name() in overlay['name']:
                 ind = self.overlays.index(overlay)
-                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
+                for image in overlay['images']:
+                    self.viewer.plotitem.removeItem(image)
                 self.overlays.pop(ind)
 
     def value_changed(self, param):
@@ -251,9 +266,9 @@ class Navigator(ParameterManager, ActionManager, QObject):
         if param.parent().name() == 'overlays':
             data: PixmapCheckData = param.value()
             if data.checked:
-                dwa = self.dataloader.load_data(data.path)
-                im = self.add_image_data(dwa)
-                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+                dwa = self.dataloader.load_data(data.path, load_all=True)
+                ims = self.add_image_data(dwa)
+                self.overlays.append(dict(name=f'{param.name()}_{0}', images=ims))
 
             else:
                 self.remove_image_data(param)
@@ -262,17 +277,13 @@ class Navigator(ParameterManager, ActionManager, QObject):
             if data.checked:
                 dataloader = DataLoader(self.h5saver_image)
                 dwa = dataloader.load_data(data.path)
-                im = self.add_image_data(dwa)
-                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), image=im))
+                ims = self.add_image_data(dwa)
+                self.overlays.append(dict(name='{:s}_{:03d}'.format(param.name(), 0), images=ims))
             else:
                 self.remove_image_data(param)
 
     def param_deleted(self, param):
-        for overlay in self.overlays[:]:
-            if param.name() in overlay['name']:
-                ind = self.overlays.index(overlay)
-                self.viewer.image_widget.plotitem.removeItem(overlay['image'])
-                self.overlays.pop(ind)
+        self.remove_image_data(param)
 
     def setup_ui(self):
         layout = QtWidgets.QVBoxLayout()
@@ -292,8 +303,8 @@ class Navigator(ParameterManager, ActionManager, QObject):
         widg = QtWidgets.QWidget()
         self.viewer = Viewer2DBasic(widg)
         self.viewer.histogram_red.setVisible(True)
-        self.viewer.histogram_green.setVisible(False)
-        self.viewer.histogram_blue.setVisible(False)
+        self.viewer.histogram_green.setVisible(True)
+        self.viewer.histogram_blue.setVisible(True)
         self.viewer.histogram_adaptive.setVisible(False)
 
         self.statusbar = QtWidgets.QStatusBar()
@@ -305,74 +316,6 @@ class Navigator(ParameterManager, ActionManager, QObject):
         self.sett_layout.addWidget(self.settings_tree)
         splitter.addWidget(sett_widget)
         splitter.addWidget(self.viewer.parent)
-
-    def show_image(self, data):
-        """
-
-        Parameters
-        ----------
-        data: (dict) with keys 'names', 'data', 'x_axis', 'y_axis', 'pixmap2D'
-        """
-
-        if self.h5module is None:
-            scan_path, current_filename, dataset_path = H5Saver.set_current_scan_path(navigator_path, base_name='Scan',
-                                                                                      update_h5=True,
-                                                                                      next_scan_index=self.next_scan_index,
-                                                                                      create_scan_folder=False)
-            self.h5module = H5BrowserUtil()
-            self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name + ".h5")), 'w')
-
-        else:
-            scan_path, current_filename, dataset_path = H5Saver.set_current_scan_path(navigator_path, base_name='Scan',
-                                                                                      update_h5=False,
-                                                                                      next_scan_index=self.next_scan_index,
-                                                                                      create_scan_folder=False)
-            if not self.h5module.isopen():
-                self.h5module.open_file(str(dataset_path.joinpath(dataset_path.name + ".h5")), 'a')
-
-        h5group = self.h5module.root()
-        data2D_group = self.h5module.get_set_group(h5group, 'Data2D')
-        data2D_group.attrs.type = 'data2D'
-
-        self.next_scan_index += 1
-        curr_group = self.h5module.get_set_group('/Data2D', current_filename)
-        live_group = self.h5module.get_set_group(curr_group, 'Live_scan_2D')
-        live_group.attrs['pixmap2D'] = data['pixmap2D']
-
-        xdata = data['x_axis']
-        if isinstance(xdata, dict):
-            xdata = xdata['data']
-        xarray = self.h5module.create_carray(curr_group, "Scan_x_axis", obj=xdata,
-                                             title=current_filename)
-        xarray.attrs['type'] = 'navigation_axis'
-        xarray.attrs['data_dimension'] = '1D'
-        xarray.attrs['nav_index'] = 0
-
-        ydata = data['y_axis']
-        if isinstance(ydata, dict):
-            ydata = ydata['data']
-        yarray = self.h5module.create_carray(curr_group, "Scan_y_axis", obj=ydata,
-                                             title=current_filename)
-        yarray.attrs['type'] = 'navigation_axis'
-        yarray.attrs['data_dimension'] = '1D'
-        yarray.attrs['nav_index'] = 1
-
-        for ind_channel, name in enumerate(data['names']):
-            try:
-                channel_group = self.h5module.get_set_group(live_group, name)
-                channel_group.attrs.Channel_name = name
-                array = self.h5module.create_carray(channel_group, current_filename + '_' + name,
-                                                    obj=data['data'][ind_channel],
-                                                    title='data', )
-                array.attrs['type'] = 'data'
-                array.attrs['data_dimension'] = '0D'
-                array.attrs['data_name'] = name
-                array.attrs['scan_type'] = 'scan2D'
-                array.attrs['scan_subtype'] = ''
-            except Exception as e:
-                logger.exception(str(e))
-
-        self.list_2D_scans()
 
     def update_h5file(self, h5file):
         if self.h5saver is not None:
@@ -401,8 +344,7 @@ class Navigator(ParameterManager, ActionManager, QObject):
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widg = QtWidgets.QWidget()
-    prog = Navigator(widg,
-                     h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
+    prog = Navigator(widg)#, h5file_path=r'C:\Data\2023\20230320\Dataset_20230320_001.h5')
 
     widg.show()
     prog.list_2D_scans()

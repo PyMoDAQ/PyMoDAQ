@@ -188,7 +188,6 @@ class LoaderPlotter:
                         size.append(_data.get_axis_from_index(0)[0].scaling)
                     viewer.move_roi_target(_target_at, size)
 
-
 def main(init_qt=True):
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)

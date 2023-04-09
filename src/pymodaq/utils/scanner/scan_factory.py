@@ -22,6 +22,7 @@ from pymodaq.utils import config as configmod
 
 if TYPE_CHECKING:
     from pymodaq.control_modules.daq_move import DAQ_Move
+    from pymodaq.utils.plotting.scan_selector import Selector
 
 
 logger = set_logger(get_module_name(__file__))
@@ -153,6 +154,16 @@ class ScannerBase(ScanParameterManager, metaclass=ABCMeta):
 
     def value_changed(self, param):
         self.evaluate_steps()
+
+    @abstractmethod
+    def update_from_scan_selector(self, scan_selector: Selector):
+        """To be reimplemented. Process the Selector object to set the Scanner settings
+
+        See Also
+        --------
+        Selector, ScanSelector
+        """
+        ...
 
 
 class ScannerFactory(ObjectFactory):

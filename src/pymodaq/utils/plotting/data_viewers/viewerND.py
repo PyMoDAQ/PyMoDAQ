@@ -273,7 +273,7 @@ class SpreadDataDisplayer(BaseDataDisplayer):
         super().__init__(*args, **kwargs)
 
     def init(self, data: DataWithAxes):
-        processor = data_processors# if len(data.axes_manager.sig_shape) > 1 else math_processors1D
+        processor = data_processors  # if len(data.axes_manager.sig_shape) > 1 else math_processors1D
         self.update_processor(processor)
 
     def init_rois(self, data: DataRaw):

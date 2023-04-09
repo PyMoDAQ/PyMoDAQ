@@ -17,6 +17,7 @@ from pymodaq.utils import gui_utils as gutils
 from ..scan_factory import ScannerFactory, ScannerBase, ScanParameterManager
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
+from pymodaq.utils.plotting.scan_selector import Selector
 
 logger = set_logger(get_module_name(__file__))
 config = configmod.Config()
@@ -186,3 +187,6 @@ class SequentialScanner(ScannerBase):
     def get_scan_shape(self) -> Tuple[int]:
         return tuple([len(axis) for axis in self.axes_unique])
 
+    def update_from_scan_selector(self, scan_selector: Selector):
+        coordinates = scan_selector.get_coordinates()
+        pass
