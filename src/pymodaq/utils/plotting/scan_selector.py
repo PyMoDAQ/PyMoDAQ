@@ -282,7 +282,7 @@ class ScanSelector(ParameterManager, QObject):
 
     @selector_type.setter
     def selector_type(self, selector_type: str):
-        if selector_type not in SelectorFactory.keys:
+        if selector_type not in selector_factory.keys:
             raise TypeError(f'{selector_type} is an unknown Selector Type')
         self.settings.child('scan_options', 'selector_type').setValue(selector_type)
 

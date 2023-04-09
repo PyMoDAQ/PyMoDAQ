@@ -20,11 +20,6 @@ def init_viewer(qtbot) -> Viewer2DBasic:
     return prog
 
 
-def test_enum():
-    for name in select.SelectorType.values():
-        assert hasattr(select, name)
-
-
 def test_table_model():
     assert hasattr(select, 'TableModel')
     assert hasattr(select.TableModel, 'data_as_ndarray')
@@ -46,11 +41,11 @@ def test_selector_items():
 class TestSelectors:
     def test_selectors_methods(self):
 
-        selectors = select.SelectorType.values()
-        selectors.append(select.SelectorWrapper.__name__)
+        selectors = [select.selector_factory.builders['SelectorFactory'].get(name)
+                     for name in select.selector_factory.keys]
+        selectors.append(select.SelectorWrapper)
 
-        for name in selectors:
-            selector = getattr(select, name)
+        for selector in selectors:
             assert hasattr(selector, 'get_header')
             assert hasattr(selector, 'get_coordinates')
             assert hasattr(selector, 'set_coordinates')
@@ -59,7 +54,7 @@ class TestSelectors:
         viewer2D = init_viewer(qtbot)
         scan_selector = select.ScanSelector(viewer_items=[select.SelectorItem(viewer2D, 'viewer2D')])
 
-        for selector_name in select.SelectorType.names():
+        for selector_name in select.selector_factory.keys:
             scan_selector.selector_type = selector_name
 
             assert np.all(scan_selector.selector.get_coordinates() ==
@@ -112,12 +107,3 @@ class TestScanSelector:
             scan_selector.selector.set_coordinates(coordinates)
         assert np.all(scan_selector.selector.get_coordinates() ==
                       pytest.approx(scan_selector.settings['coordinates'].data_as_ndarray()))
-
-    def test_change_selector_type(self, qtbot):
-        viewer2D = init_viewer(qtbot)
-        scan_selector = select.ScanSelector(viewer_items=[select.SelectorItem(viewer2D, 'viewer2D')])
-
-        for selector_type in select.SelectorType.names():
-            scan_selector.selector_type = selector_type
-
-            assert isinstance(scan_selector.selector, getattr(select, select.SelectorType[selector_type].value))
