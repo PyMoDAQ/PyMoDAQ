@@ -23,8 +23,6 @@ from pymodaq.utils.config import get_set_preset_path, Config
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.qvariant import QVariant
 
-if 'win32' in sys.platform:
-    pass
 
 python_version = f'{str(sys.version_info.major)}.{str(sys.version_info.minor)}'
 if version_mod.parse(python_version) >= version_mod.parse('3.8'):  # from version 3.8 this feature is included in the
@@ -793,6 +791,8 @@ def ift2(x, dim=(-2, -1)):
     return mutils.ift2(x, dim)
 
 
+
+
 if __name__ == '__main__':
     #paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git', 'visa')
     # for p in paths:
@@ -808,11 +808,12 @@ if __name__ == '__main__':
     # import license
     # mit = license.find('MIT')
     #
-    paths = recursive_find_expr_in_files('C:\\Users\\weber\\Labo\\Programmes Python\\PyMoDAQ_Git\\pymodaq',
-                                         exp="ScanSelector",
+
+    paths = recursive_find_expr_in_files(r'C:\Users\weber\Labo\Programmes Python\PyMoDAQ_Git',
+                                         exp="cfunc",
                                          paths=[],
                                          filters=['.git', '.idea', '__pycache__', 'build', 'egg', 'documentation',
-                                                  '.tox', 'daq_utils.py',],
+                                                  '.tox',],
                                          replace=False,
                                          replace_str="pymodaq.utils")
     get_version()

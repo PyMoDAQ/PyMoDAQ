@@ -77,15 +77,9 @@ class LoaderPlotter:
 
         if remove_navigation:
             for data in self._data:
-                if len(data.shape) == 1 and data.size == 1:
-                    data.set_dim(DataDim['Data0D'])
-                elif len(data.shape) == 1 and data.size > 1:
-                    data.set_dim(DataDim['Data1D'])
-                elif len(data.shape) == 2:
-                    data.set_dim(DataDim['Data2D'])
-                    data.transpose()
-                else:
-                    data.set_dim(DataDim['DataND'])
+                data.nav_indexes = ()
+                data.transpose()  # because usual ND data should be plotted here as 2D with the nav axes as the minor
+                # (horizontal)
 
         if filter_dims is not None:
             filter_dims[:] = [enum_checker(DataDim, dim) for dim in filter_dims]
@@ -107,7 +101,7 @@ class LoaderPlotter:
                 data1D = DataFromPlugins(self.grouped_data1D_fullname.split('/')[1],
                                          data=data1D_arrays, labels=labels,
                                          origin=self.grouped_data1D_fullname.split('/')[0],
-                                         axes=dwa.get_nav_axes())
+                                         axes=dwa.axes)
                 self._data.append(data1D)
 
         return self._data
@@ -183,9 +177,16 @@ class LoaderPlotter:
                 if _data.dim == 'Data1D':
                     viewer.move_roi_target(target_at)
                 elif _data.dim == 'Data2D' and _data.distribution == 'uniform':
-                    size = [axis.scaling for axis in _data.get_nav_axes()]
-                    viewer.move_roi_target(target_at, (1, 1))
+                    _target_at = target_at.copy()
 
+                    size = [_data.get_axis_from_index(1)[0].scaling]
+                    if len(_target_at) == 1:  # means concatenation of 1D data
+                        axis = _data.get_axis_from_index(0)[0]
+                        size.append(axis.scaling * axis.size)
+                        _target_at = list(_target_at) + [axis.offset]
+                    else:
+                        size.append(_data.get_axis_from_index(0)[0].scaling)
+                    viewer.move_roi_target(_target_at, size)
 
 def main(init_qt=True):
     if init_qt:  # used for the test suite

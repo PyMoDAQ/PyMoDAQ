@@ -1371,7 +1371,7 @@ def main(init_qt=True):
     # win.setVisible(False)
     prog = DashBoard(area)
     if init_qt:
-        sys.exit(app.exec_())
+        sys.exit(app.exec())
     return prog, win
 
 

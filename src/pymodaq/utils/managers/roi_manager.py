@@ -356,7 +356,7 @@ class ROIManager(QObject):
     def __len__(self):
         return len(self._ROIs)
 
-    def get_roi_from_index(self, index: int):
+    def get_roi_from_index(self, index: int) -> ROI:
         return self.ROIs[self.roi_format(index)]
 
     def _set_roi_from_index(self, index: int, roi):
