@@ -87,6 +87,11 @@ class TableModelTabular(gutils.TableModel):
         return True
 
 
+class TableModelTabularReadOnly(TableModelTabular):
+    def setData(self, index, value, role):
+        return False
+
+
 @ScannerFactory.register('Tabular', 'Linear')
 class TabularScanner(ScannerBase):
     params = [
@@ -201,7 +206,7 @@ class TabularScanner(ScannerBase):
 
 
 @ScannerFactory.register('Tabular', 'Subsegmented')
-class TabularScannerCurvilinear(TabularScanner):
+class TabularScannerSubsegmented(TabularScanner):
 
     params = [{'title': 'Step:', 'name': 'tabular_step', 'type': 'float', 'value': 0.1},
               {'title': 'Points', 'name': 'tabular_points', 'type': 'table_view', 'delegate': gutils.SpinBoxDelegate,
@@ -209,7 +214,7 @@ class TabularScannerCurvilinear(TabularScanner):
              ] + TabularScanner.params
 
     def __init__(self, actuators: List[str]):
-        self.table_model: TableModelTabular = None
+        self.table_model: TableModelTabularReadOnly = None
         self.table_view: TableViewCustom = None
         self.table_model_points: TableModelTabular = None
         self.table_view_points: TableViewCustom = None
@@ -231,7 +236,7 @@ class TabularScannerCurvilinear(TabularScanner):
         if init_data is None:
             init_data = [[0. for _ in self._actuators]]
 
-        self.table_model = TableModelTabular(init_data, [act.title for act in self._actuators])
+        self.table_model = TableModelTabularReadOnly(init_data, [act.title for act in self._actuators])
         self.table_view = putils.get_widget_from_tree(self.settings_tree, TableViewCustom)[1]
         self.settings.child('tabular_table').setValue(self.table_model)
         self.n_axes = len(self._actuators)
@@ -251,7 +256,7 @@ class TabularScannerCurvilinear(TabularScanner):
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.table_view.setSelectionMode(QtWidgets.QTableView.SingleSelection)
-        self.table_view.setEnabled(False)
+        # self.table_view.setEnabled(False)
 
     def update_table_view_points(self):
         self.table_view_points.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -286,5 +291,4 @@ class TabularScannerCurvilinear(TabularScanner):
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
         self.update_model_points(init_data=coordinates)
-        positions = scan_selector.getArrayIndexes(spacing=self.settings['tabular_step'])
-        self.update_model(init_data=positions)
+        self.set_scan()

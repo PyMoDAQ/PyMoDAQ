@@ -1,5 +1,7 @@
 import importlib
 import time
+from typing import Callable, Union, List, Tuple, TYPE_CHECKING
+from abc import abstractproperty
 
 import numpy as np
 from qtpy import QtWidgets, QtCore
@@ -20,15 +22,10 @@ from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.parameter.pymodaq_ptypes import TableViewCustom
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase
+from pymodaq.utils.factory import ObjectFactory
+from pymodaq.utils.data import DataDim
 
 logger = set_logger(get_module_name(__file__))
-
-
-class SelectorType(BaseEnum):
-    """Gives a relation between a description of the Selector and the actual class doing the graphical selection"""
-    ROI2D = 'RectangularRoi'
-    ROI1D = 'LinearRegionItem'
-    PolyLines = 'PolyLineROI'
 
 
 class Selector:
@@ -55,7 +52,13 @@ class Selector:
         ...
 
 
+class SelectorFactory(ObjectFactory):
+    """Factory class registering and storing Selectors"""
+
+
+@SelectorFactory.register('PolyLines')
 class PolyLineROI(Selector, PolyLineROI):
+
     def __init__(self, *args, **kwargs):
         super().__init__(positions=[(0, 0), (10, 10)], *args, **kwargs)
 
@@ -94,6 +97,7 @@ class PolyLineROI(Selector, PolyLineROI):
         return positions
 
 
+@SelectorFactory.register('RectangularROI')
 class RectangularRoi(Selector, RectROI):
 
     def __init__(self, *args, **kwargs):
@@ -114,7 +118,9 @@ class RectangularRoi(Selector, RectROI):
             self.setSize(coordinates[1, :] - coordinates[0, :])
 
 
+@SelectorFactory.register('LinearROI')
 class LinearRegionItem(Selector, LinearRegionItem):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -133,13 +139,18 @@ class LinearRegionItem(Selector, LinearRegionItem):
 class SelectorWrapper(Selector):
     """Wrapper around real implementation of Selector objects but having the same interface
 
-    Used to be emitted with only one signature for all type of Selector
+    Mandatory because signal can only be emitted with one signature and not with child classes
+    Hence this single wrapper of all real implementation of Selector
     """
     def __init__(self, selector: Selector):
         self._selector: Selector = selector
 
     def __call__(self, *args, **kwargs):
         return self._selector
+
+    @property
+    def name(self):
+        return self._selector.__class__
 
     def get_header(self):
         return self._selector.get_header()
@@ -203,6 +214,9 @@ class SelectorItem:
         SelectorItem._index += 1
 
 
+selector_factory = SelectorFactory()
+
+
 class ScanSelector(ParameterManager, QObject):
     """Allows selection of a given 2D viewer to get scan info
 
@@ -226,14 +240,15 @@ class ScanSelector(ParameterManager, QObject):
     params = [
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Sources:', 'name': 'sources', 'type': 'list', },
-            {'title': 'Selector type:', 'name': 'selector_type', 'type': 'list', 'limits': SelectorType.names()},
+            {'title': 'Selector type:', 'name': 'selector_type', 'type': 'list',
+             'limits': selector_factory.keys},
         ]},
         {'title': 'Coordinates:', 'name': 'coordinates', 'type': 'table_view', 'visible': True,
          'delegate': gutils.SpinBoxDelegate,},
         # ]},
     ]
 
-    def __init__(self, viewer_items: List[SelectorItem] = None, selector_type='ROI2D', positions: List = None):
+    def __init__(self, viewer_items: List[SelectorItem] = None, positions: List = None):
         QObject.__init__(self)
         ParameterManager.__init__(self, 'selector_settings')
 
@@ -243,7 +258,6 @@ class ScanSelector(ParameterManager, QObject):
         self.selector: Selector = None
         self.selector_source: ViewerBase = None
 
-        self.selector_type = enum_checker(SelectorType, selector_type)
         self.update_selector_type()
 
         if viewer_items is None:
@@ -263,13 +277,14 @@ class ScanSelector(ParameterManager, QObject):
             self.selector.set_coordinates(positions)
 
     @property
-    def selector_type(self) -> SelectorType:
-        return SelectorType(self.settings['scan_options', 'selector_type'])
+    def selector_type(self) -> str:
+        return self.settings['scan_options', 'selector_type']
 
     @selector_type.setter
-    def selector_type(self, selector_type: SelectorType):
-        selector_type = enum_checker(SelectorType, selector_type)
-        self.settings.child('scan_options', 'selector_type').setValue(selector_type.name)
+    def selector_type(self, selector_type: str):
+        if selector_type not in SelectorFactory.keys:
+            raise TypeError(f'{selector_type} is an unknown Selector Type')
+        self.settings.child('scan_options', 'selector_type').setValue(selector_type)
 
     @property
     def source_name(self) -> str:
@@ -357,7 +372,7 @@ class ScanSelector(ParameterManager, QObject):
     def update_selector_type(self):
         self.remove_selector()
         mod = importlib.import_module('.scan_selector', 'pymodaq.utils.plotting')
-        self.selector = getattr(mod, SelectorType[self.settings['scan_options', 'selector_type']].value)()
+        self.selector = selector_factory.create(self.settings['scan_options', 'selector_type'])
 
         if self.selector_source is not None and self.selector is not None:
             self.selector.sigRegionChangeFinished.connect(self.update_scan)

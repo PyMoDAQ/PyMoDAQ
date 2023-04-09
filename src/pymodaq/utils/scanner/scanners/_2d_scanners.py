@@ -239,10 +239,11 @@ class Scan2DSpiral(Scan2DLinear):
 
     def update_from_scan_selector(self, scan_selector: Selector):
         coordinates = scan_selector.get_coordinates()
-        self.settings.child('center_axis1').setValue((coordinates[0, 0] + coordinates[1, 0]) / 2)
-        self.settings.child('center_axis2').setValue((coordinates[0, 1] + coordinates[1, 1]) / 2)
-        self.settings.child('rmax_axis1').setValue(abs(coordinates[1, 0] - coordinates[0, 0]) / 2)
-        self.settings.child('rmax_axis2').setValue(abs(coordinates[1, 1] - coordinates[0, 1]) / 2)
+        if coordinates.shape == (2, 2):
+            self.settings.child('center_axis1').setValue((coordinates[0, 0] + coordinates[1, 0]) / 2)
+            self.settings.child('center_axis2').setValue((coordinates[0, 1] + coordinates[1, 1]) / 2)
+            self.settings.child('rmax_axis1').setValue(abs(coordinates[1, 0] - coordinates[0, 0]) / 2)
+            self.settings.child('rmax_axis2').setValue(abs(coordinates[1, 1] - coordinates[0, 1]) / 2)
 
 
 try:
