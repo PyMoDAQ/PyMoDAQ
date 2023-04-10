@@ -685,7 +685,7 @@ class DataToExportTimedSaver(DataToExportEnlargeableSaver):
         super().__init__(h5saver, 'time', 's')
 
     def add_data(self, where: Union[Node, str], data: DataToExport, settings_as_xml='', metadata={}):
-        super().add_data(where, data, axis_value=time(), settings_as_xml=settings_as_xml, metadata=metadata)
+        super().add_data(where, data, axis_value=data.timestamp, settings_as_xml=settings_as_xml, metadata=metadata)
 
 
 class DataToExportExtendedSaver(DataToExportSaver):
