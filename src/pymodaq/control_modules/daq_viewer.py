@@ -573,23 +573,22 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def append_data(self, where=None):
-        """Appends DataToExport to a DetectorEnlargeableSaver
+    def append_data(self, data: DataToExport, where: Union['Node', str] = None):
+        """Appends current DataToExport to a DetectorEnlargeableSaver
 
         Parameters
         ----------
-        data: DataToExport
-            The data to be added to an enlargeable h5 array
-
+        where: Node or str
         See Also
         --------
         DetectorEnlargeableSaver
         """
         self._add_data_to_saver(self._data_to_save_export, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
-                                where=None)
+                                where=where)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where=None, distribution=DataDistribution['uniform']):
+    def insert_data(self, indexes: Tuple[int], where: Union['Node', str] = None,
+                    distribution=DataDistribution['uniform']):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
         Parameters
