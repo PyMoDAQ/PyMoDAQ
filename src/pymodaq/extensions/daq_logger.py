@@ -154,7 +154,7 @@ class DAQ_Logger(CustomApp):
             self.docks['logger_settings'].removeWidgets()
 
         if logger_interface == 'H5 File':
-            self.logger = H5Logger()
+            self.logger = H5Logger(self.modules_manager)
         elif logger_interface == 'SQL DataBase':
             self.logger = DataBaseLogger(self.dashboard.preset_file.stem)
         else:
@@ -434,10 +434,8 @@ class DAQ_Logging(QObject):
             logger.exception(str(e))
 
     def format_actuators_data(self, act_name, act_value):
-        acq_time = datetime.datetime.now().timestamp()
-        data = OrderedDict(name=act_name, acq_time_s=acq_time, control_module='DAQ_Move',
-                           data0D=OrderedDict(data=data_mod.DataToExport(name=act_name, dim='Data0D', source='raw',
-                                                                           data=np.array([act_value]))))
+        data = data_mod.DataToExport(name=act_name, data=[data_mod.DataRaw(name=act_name, dim='Data0D',
+                                                                           data=[np.array([act_value])])])
         self.do_save_continuous(data)
 
     def connect_actuators(self, connect=True):

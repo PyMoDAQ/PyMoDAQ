@@ -137,6 +137,15 @@ class ControlModule(QObject):
         """Programmatic entry to stop data grabbing from detectors or current value polling from actuator"""
         raise NotImplementedError
 
+    def _add_data_to_saver(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def append_data(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def insert_data(self, *args, **kwargs):
+        raise NotImplementedError
+
     def quit_fun(self):
         """Programmatic entry to quit the controle module"""
         raise NotImplementedError

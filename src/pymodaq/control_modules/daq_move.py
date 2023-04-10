@@ -5,6 +5,8 @@ Created the 29/07/2022
 @author: Sebastien Weber
 """
 import sys
+from typing import List, Tuple, Union
+import numpy as np
 
 from qtpy.QtCore import QObject, Signal, QThread, Slot, Qt, QTimer
 from qtpy import QtWidgets
@@ -26,6 +28,7 @@ from pymodaq.utils import config
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
+from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis, DataDistribution
 
 
 local_path = config.get_set_local_dir()
@@ -59,7 +62,7 @@ class DAQ_Move(ParameterManager, ControlModule):
     settings_name = 'daq_move_settings'
 
     move_done_signal = Signal(str, float)
-    _current_value_signal = Signal(str, float)
+    current_value_signal = Signal(str, float)
     # to be used in external program to make sure the move has been done,
     # export the current position. str refer to the unique title given to the module
     _update_settings_signal = Signal(edict)
@@ -156,6 +159,43 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'rel_value':
             self._relative_value = cmd.attribute
 
+    def append_data(self, data: DataToExport = None, where: Union['Node', str] = None):
+        """Appends current DataToExport to an ActuatorEnlargeableSaver
+
+        Parameters
+        ----------
+        where: Node or str
+        See Also
+        --------
+        ActuatorEnlargeableSaver
+        """
+        if data is None:
+            data = DataToExport(name=self.title, data=[DataRaw(name=self.title, dim='Data0D',
+                                                               data=[np.array([self._current_value])])])
+        self._add_data_to_saver(data, where=where)
+        # todo: test this for logging
+
+    def _add_data_to_saver(self, data: DataToExport, where=None, **kwargs):
+        """Adds DataToExport data to the current node using the declared module_and_data_saver
+
+        Filters the data to be saved by DataSource as specified in the current H5Saver (see self.module_and_data_saver)
+
+        Parameters
+        ----------
+        data: DataToExport
+            The data to be saved
+        kwargs: dict
+            Other named parameters to be passed as is to the module_and_data_saver
+
+        See Also
+        --------
+        DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver
+
+        """
+        #todo: test this for logging
+
+        node = self.module_and_data_saver.get_set_node(where)
+        self.module_and_data_saver.add_data(node, data, **kwargs)
 
     def stop_motion(self):
         """Stop any motion
@@ -463,7 +503,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             if self.ui is not None:
                 self.ui.display_value(status.attribute[0])
             self._current_value = status.attribute[0]
-            self._current_value_signal.emit(self.title, self._current_value)
+            self.current_value_signal.emit(self.title, self._current_value)
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('position_is', status.attribute))
 
@@ -559,7 +599,7 @@ class DAQ_Move(ParameterManager, ControlModule):
 
     def grab(self):
         if self.ui is not None:
-            self.manage_ui_actions('refresh_value', 'setChecked', 'False')
+            self.manage_ui_actions('refresh_value', 'setChecked', False)
         self.get_continuous_actuator_value(False)
 
     def stop_grab(self):
@@ -568,7 +608,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         First uncheck the ui action if ui is not None, then stop the polling
         """
         if self.ui is not None:
-            self.manage_ui_actions('refresh_value', 'setChecked', 'False')
+            self.manage_ui_actions('refresh_value', 'setChecked', False)
         self.get_continuous_actuator_value(False)
 
     def get_continuous_actuator_value(self, get_value=True):

@@ -57,6 +57,7 @@ class SaveType(BaseEnum):
     detector = 1
     logger = 2
     custom = 3
+    actuator = 4
 
 
 class GroupType(BaseEnum):
@@ -67,6 +68,7 @@ class GroupType(BaseEnum):
     scan = 4
     external_h5 = 5
     data_dim = 6
+    data_logger = 7
 
 
 class InvalidExport(Exception):
