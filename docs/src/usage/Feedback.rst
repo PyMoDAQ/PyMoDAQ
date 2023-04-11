@@ -58,10 +58,13 @@ Some Scientific publication on/using PyMoDAQ
   `Appl. Phys. Lett. 119, 062106 (2021)`__
 * F. Houdellier *et al.* Development of a high brightness ultrafast Transmission Electron Microscope based on a
   laser-driven cold field emission source `Ultramicroscopy, 186, 128 (2018)`__.
+* D. Bresteau *et al.* FAB10: a user-oriented bandwidth-tunable extreme ultraviolet lightsource for investigations of
+  femtosecond to attosecond dynamics in gas and condensed phases `Eur. Phys. J. Spec. Top. (2023)`__
+
 
 
 __ https://aip.scitation.org/doi/full/10.1063/5.0032116
 __ https://journals.aps.org/prapplied/abstract/10.1103/PhysRevApplied.15.034036
 __ https://doi.org/10.1063/5.0057861
 __ https://doi.org/10.1016/j.ultramic.2017.12.015
-
+__ https://doi.org/10.1140/epjs/s11734-022-00752-x

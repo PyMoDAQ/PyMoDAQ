@@ -91,6 +91,6 @@ and many others to simplify any application development.
 
 Published under the CeCILL-B FREE SOFTWARE LICENSE
 
-GitHub repo: https://github.com/CEMES-CNRS
+GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/
