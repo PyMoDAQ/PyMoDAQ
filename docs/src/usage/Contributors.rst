@@ -13,6 +13,7 @@ Functionalities
 
 * Sébastien Weber, Research Engineer at CEMES/CNRS
 * David Bresteau, Research Engineer at Attolab facility, CEA Saclay
+* Nicolas Tappy, Engineer at Attolight (https://attolight.com/)
 
 Cleaning
 --------
@@ -27,6 +28,7 @@ Plugins
 * Sébastien Weber, Research Engineer at CEMES/CNRS
 * Sophie Meuret, Researcher at CEMES/CNRS
 * David Bresteau, Research Engineer at Attolab facility, CEA Saclay
+* and many others...
 
 Extensions
 **********
@@ -37,6 +39,7 @@ Documentation
 *************
 * Sébastien Weber, Research Engineer at CEMES/CNRS
 * Matthieu Cabos helped with this documentation
+* David Bresteau wrote the documentation of the PID extension
 
 Testing
 *******
