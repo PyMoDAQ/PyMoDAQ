@@ -69,7 +69,7 @@ Training
 Information
 ***********
 
-GitHub repo: https://github.com/CEMES-CNRS
+GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/
 
@@ -87,7 +87,7 @@ Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT license.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/
 
 __ https://youtube.com/playlist?list=PLGdoHByMKfIdn-N51goippSSP_9iG4wds
 
