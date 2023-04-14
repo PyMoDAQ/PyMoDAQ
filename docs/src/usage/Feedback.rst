@@ -34,6 +34,13 @@ What they think of PyMoDAQ?
   more complete. Of course you need to invest a bit of your time to get used to it, but it is worth it!*, Dr David
   Bresteau, Researcher at CEA Saclay, Attolab platform.
 
+* We are setting up Pymodaq on our scanning NV microscopy and deep UV spectroscopy experiments and we appreciate a lot
+  its easy installation, its modularity and the automatic generation of the graphical interfaces, as well as the strong
+  community support. The updates of the modules, the training sessions organized regularly and the numerous video
+  tutorials also reflect the vitality of the community. We also start contributing by adding our own instruments and
+  functionalities to share them with all the users. We fully support this great project!
+  A. Finco, P. Valvin - L2C/S2QT
+
 .. note::
 
   If you are using PyMoDAQ and would like to help to promote the project, please send your feedback to
