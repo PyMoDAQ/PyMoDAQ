@@ -528,7 +528,7 @@ class DAQScan(QObject, ParameterManager):
         else:
             attr['type'] = 'scan'
             params = self.scan_attributes
-        for child in params.child((type_info)).children():
+        for child in params.child(type_info).children():
             if type(child.value()) is QDateTime:
                 attr[child.name()] = child.value().toString('dd/mm/yyyy HH:MM:ss')
             else:
@@ -563,6 +563,7 @@ class DAQScan(QObject, ParameterManager):
         if new_file:
             self._metada_dataset_set = False
         self.h5saver.init_file(update_h5=new_file)
+        self.module_and_data_saver.h5saver = self.h5saver
         res = self.update_file_settings()
         if new_file:
             self.ui.enable_start_stop()
@@ -570,35 +571,48 @@ class DAQScan(QObject, ParameterManager):
 
     def update_file_settings(self):
         try:
+            res = True
             if not self._metada_dataset_set:
-                self.set_metadata_about_dataset()
+                res = self.set_metadata_about_dataset()
                 self.save_metadata(self.h5saver.raw_group, 'dataset_info')
-
-            # if self.h5saver.current_scan_name is None:
-            #     self.h5saver.add_scan_group(self.h5saver.raw_group)
-            # elif not self.h5saver.is_node_in_group(self.h5saver.raw_group, self.h5saver.current_scan_name):
-            #     self.h5saver.add_scan_group(self.h5saver.raw_group)
 
             if self.navigator is not None:
                 self.navigator.update_h5file(self.h5saver.h5_file)
                 self.navigator.settings.child('settings', 'filepath').setValue(self.h5saver.h5_file.filename)
 
-            # set attributes to the current group, such as scan_type....
-            self.scan_attributes.child('scan_info', 'scan_type').setValue(
-                self.scanner.settings.child('scan_type').value())
-            self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
-                self.scanner.settings.child('scan_sub_type').value())
-
-            scan_node = self.module_and_data_saver.get_set_node()
-            self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_node.name)
-            self.scan_attributes.child('scan_info', 'description').setValue('')
-
-            res = self.set_metadata_about_current_scan()
+            # # set attributes to the current group, such as scan_type....
+            # self.scan_attributes.child('scan_info', 'scan_type').setValue(
+            #     self.scanner.settings.child('scan_type').value())
+            # self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
+            #     self.scanner.settings.child('scan_sub_type').value())
+            #
+            # scan_node = self.module_and_data_saver.get_set_node()
+            # self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_node.name)
+            # self.scan_attributes.child('scan_info', 'description').setValue('')
+            #
+            # res = self.set_metadata_about_current_scan()
 
             return res
 
         except Exception as e:
             logger.exception(str(e))
+
+    def update_scan_info(self):
+        # set attributes to the current group, such as scan_type....
+        self.scan_attributes.child('scan_info', 'scan_type').setValue(
+            self.scanner.settings.child('scan_type').value())
+        self.scan_attributes.child('scan_info', 'scan_sub_type').setValue(
+            self.scanner.settings.child('scan_sub_type').value())
+        scan_node = self.module_and_data_saver.get_set_node(new=False)
+        if scan_node.attrs['scan_done']:
+            scan_name = self.module_and_data_saver.get_next_node_name()
+        else:
+            scan_name = scan_node.name
+        self.scan_attributes.child('scan_info', 'scan_name').setValue(scan_name)
+        self.scan_attributes.child('scan_info', 'description').setValue('')
+
+        res = self.set_metadata_about_current_scan()
+        return res
 
     #  PROCESS MODIFICATIONS
     def update_actuators(self, actuators: List[str]):
@@ -762,7 +776,9 @@ class DAQScan(QObject, ParameterManager):
         """
         try:
             # set the filename and path
-            res = self.create_new_file(False)
+            if self.h5saver.h5_file is None:  # only the first time start scan is called
+                self.create_new_file(True)
+            res = self.update_scan_info()
             if not res:
                 return False
 
@@ -855,13 +871,14 @@ class DAQScan(QObject, ParameterManager):
 
         res = self.set_scan()
         if res:
-            # deactivate module controls usiong remote_control
+            # deactivate module controls using remote_control
             if hasattr(self.dashboard, 'remote_manager'):
                 remote_manager = getattr(self.dashboard, 'remote_manager')
                 remote_manager.activate_all(False)
 
             self.module_and_data_saver.h5saver = self.h5saver
-            scan_node = self.module_and_data_saver.get_set_node(new=True)
+            new_scan = self.module_and_data_saver.get_set_node(new=False).attrs['scan_done']
+            scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
             self.save_metadata(scan_node, 'scan_info')
 
             self._init_live()
