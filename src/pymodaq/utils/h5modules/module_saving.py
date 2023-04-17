@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 from pymodaq.utils.abstract import ABCMeta, abstract_attribute, abstractmethod
-
+from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.data import Axis, DataDim, DataWithAxes, DataToExport, DataDistribution
 from .saving import H5SaverLowLevel
 from .backends import GROUP, CARRAY, Node, GroupType
@@ -107,6 +107,14 @@ class ModuleSaver(metaclass=ABCMeta):
     @abstractmethod
     def update_after_h5changed(self):
         ...
+
+    def get_last_node_index(self, where: Union[Node, str] = None):
+        node = self.get_last_node(where)
+        return int(node.name.split(capitalize(self.group_type.name))[1])
+
+    def get_next_node_name(self, where: Union[Node, str] = None):
+        index = self.get_last_node_index(where)
+        return f'{capitalize(self.group_type.name)}{index+1:03d}'
 
 
 class DetectorSaver(ModuleSaver):
@@ -276,7 +284,7 @@ class ScanSaver(ModuleSaver):
                 module.module_and_data_saver.h5saver = self.h5saver
 
     def get_set_node(self, where: Union[Node, str] = None, new=False) -> GROUP:
-        """Get the group scan node
+        """Get the last group scan node
 
         Get the last Scan Group or create one
         get the last Scan Group if:
