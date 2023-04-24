@@ -144,7 +144,7 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
 .. _data_emission:
 
 Emission of data
-****************
+----------------
 When data are ready (see :ref:`data_ready` to know about that), the plugin has to notify the viewer module in order
 to display data and eventually save them. For this PyMoDAQ use two types of signals (see pyqtsignal documentation for details):
 
@@ -336,6 +336,42 @@ controller provides an efficient method to do it (that will save time) then you 
     """
         hardware_averaging = True #will use the accumulate acquisition mode if averaging
         #is True else averaging is done software wise
+
+
+Live Mode
+*********
+
+By default, the live *Grab* mode is done software wise in the core code of the DAQ_Viewer. However, if
+one want to send data as fast as possible, the live mode is possible within a plugin.
+
+For this, the plugin class attribute, ``live_mode_available``, should be set to ``True``. The method
+``grab_data`` will then receive a named boolean parameter (in ``kwargs``) called *live* that tells if one should
+grab or snap data. The MockCamera plugin illustrates this feature:
+
+.. code-block:: python
+
+    def grab_data(self, Naverage=1, **kwargs):
+        """Start a grab from the detector
+
+        Parameters
+        ----------
+        Naverage: int
+            Number of hardware averaging (if hardware averaging is possible, self.hardware_averaging should be set to
+            True in class preamble and you should code this implementation)
+        kwargs: dict
+            others optionals arguments
+        """
+        if 'live' in kwargs:
+            if kwargs['live']:
+                self.live = True
+                # self.live = False  # don't want to use that for the moment
+
+        if self.live:
+            while self.live:
+                data = self.average_data(Naverage)
+                QThread.msleep(kwargs.get('wait_time', 100))
+                self.data_grabed_signal.emit(data)
+                QtWidgets.QApplication.processEvents()
 
 
 
