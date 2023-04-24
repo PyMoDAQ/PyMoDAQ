@@ -344,8 +344,15 @@ Live Mode
 By default, the live *Grab* mode is done software wise in the core code of the DAQ_Viewer. However, if
 one want to send data as fast as possible, the live mode is possible within a plugin.
 
-For this, the plugin class attribute, ``live_mode_available``, should be set to ``True``. The method
-``grab_data`` will then receive a named boolean parameter (in ``kwargs``) called *live* that tells if one should
+For this, the plugin class attribute, ``live_mode_available``, should be set to ``True``.
+
+.. code-block:: python
+
+    class DAQ_2DViewer_MockCamera(DAQ_Viewer_base):
+
+        live_mode_available = True
+
+The method ``grab_data`` will then receive a named boolean parameter (in ``kwargs``) called *live* that tells if one should
 grab or snap data. The MockCamera plugin illustrates this feature:
 
 .. code-block:: python
@@ -394,11 +401,33 @@ How to contribute?
 ------------------
 
 If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
-to do so!!), you will have to follow the rules as stated above. However, the best practice would be to *fork*
-pymodaq_plugins repository. On windows, you can use
-`Github Desktop`__. Then you can manually install the forked package in developer using ``pip install -e .`` from
-the command line where you *cd* within the forked package. This command will install the package but
-any change you apply on the local folder will be applied on the package. Once you're ready with a working plugin, you can then
-*push* your branch that will be merged with the main branch after validation.
+to do so!!), you will have to follow the rules as stated above.
 
-__ https://desktop.github.com/
+Two cases are possible: either you want to add a new hardware from a manufacturer for which
+a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
+
+#. You have to fork the existing repo
+#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
+
+Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
+the command line where you *cd* within the cloned package. This command will install the package but
+any change you apply on the local folder will be applied on the package. Then just add a new python file in the correct location
+
+In the case of a new repo, you will have to rename a few files (plugin_info.toml, README.rst ...) then add the
+python file of your instrument at the right location.
+
+Once you're ready with a working plugin, you can then:
+
+#. Publish your repo on pypi (just by doing a release on github will trigger the creation
+   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
+#. do a pull request on the initial repository to merge your new implementations.
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+
+All the packages published on pypi using the template and the naming convention will be available
+in the plugin manager.
+
+Some more detailed instruction would be published and you can in the mean time look at this
+`video`__
+
+__ https://youtu.be/9O6pqz89UT8
