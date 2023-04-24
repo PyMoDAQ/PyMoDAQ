@@ -56,7 +56,7 @@ On the module side, they will be instantiated as a list of dictionaries and late
 This object inherits from the ``Parameter`` object defined in `pyqtgraph`__.
 
 
-__ http://www.pyqtgraph.org/documentation/parametertree/index.html
+__ https://pyqtgraph.readthedocs.io/en/latest/api_reference/parametertree/parameter.html
 
    .. _figure_settings:
 
