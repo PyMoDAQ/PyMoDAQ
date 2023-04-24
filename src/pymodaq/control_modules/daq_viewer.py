@@ -911,6 +911,19 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value():
                     self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
+    def child_added(self, param, data):
+        """Non-mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
+
+        Parameters
+        ----------
+        param: Parameter
+            the parameter where child will be added
+        data: Parameter
+            the child parameter
+        """
+        if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
+            self._update_settings_signal.emit(edict(path=putils.get_param_path(param)[1:], param=data[0], change='childAdded'))
+
     def param_deleted(self, param):
         """ParameterManager subclassed method. Process events from parameter deleted by user in the UI Settings
 

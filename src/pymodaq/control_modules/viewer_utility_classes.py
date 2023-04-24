@@ -299,7 +299,7 @@ class DAQ_Viewer_base(QObject):
                 self.settings.child(*path[1:]).setValue(param.value())  # blocks signal back to main UI
             elif change == 'childAdded':
                 child = Parameter.create(name='tmp')
-                child.restoreState(param)
+                child.restoreState(param.saveState())
                 self.settings.child(*path[1:]).addChild(child)  # blocks signal back to main UI
                 param = child
 
