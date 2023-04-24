@@ -447,7 +447,7 @@ class Data0DWithHistory:
         ----------
         datas: (dict) dictionaary of floats or np.array(float)
         """
-        if len(datas) != len(self._datas):
+        if datas.keys() != self._datas.keys():
             self.clear_data()
 
         self._data_length += 1

@@ -86,8 +86,8 @@ class DataDisplayer(QObject):
 
     def update_display_items(self, data: data_mod.DataRaw):
         while len(self._plot_items) > 0:
-            self._plotitem.removeItem(self._plot_items.pop(0))
-            self.legend.removeItem(self.legend_items[0])
+            plot_item = self._plotitem.removeItem(self._plot_items.pop(0))
+            self.legend.removeItem(plot_item)
             self._plotitem.removeItem(self._max_lines.pop(0))
             self._plotitem.removeItem(self._min_lines.pop(0))
 
