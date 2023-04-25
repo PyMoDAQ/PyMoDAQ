@@ -10,7 +10,7 @@ dynamic = [
 description = "Modular Data Acquisition with Python"
 readme = "README.rst"
 license = { file="LICENSE" }
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 authors = [
     { name = "Sébastien Weber", email = "sebastien.weber@cemes.fr" },
 ]
