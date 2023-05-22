@@ -12,18 +12,17 @@ PyMoDAQ
 .. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/pymodaq-dev/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
-
-..  csv-table:: Tests:
-  :header: "Python", "Qt Backend", "OS", Passed
-  :widths: 15, 20, 15, 30
-
-  3.8, Qt5, Linux, |38Qt5|
-  3.9, Qt5, Linux, |39Qt5|
-  3.10, Qt5, Linux, |310Qt5|
-  3.11, Qt5, Linux, |311Qt5|
-  3.8, Qt5, Windows, |38Qt5win|
-  3.8, PySide2, Linux, |38pyside|
-  3.9, Qt6, Linux, |39Qt6|
+====== ========== ======= ======
+Python Qt Backend OS      Passed
+====== ========== ======= ======
+3.8    Qt5        Linux   |38Qt5|
+3.9    Qt5        Linux   |39Qt5|
+3.10   Qt5        Linux   |310Qt5|
+3.11   Qt5        Linux   |311Qt5|
+3.8    Qt5        Windows |38Qt5win|
+3.8    PySide2    Linux   |38pyside|
+3.9    Qt6        Linux   |39Qt6|
+====== ========== ======= ======
 
 
 .. |38Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg?branch=pymodaq-dev
@@ -84,12 +83,7 @@ The detectors and the actuators are represented and manipulated using two contro
 
 and many others to simplify any application development.
 
-.. raw:: html
-
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
-     autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-Published under the CeCILL-B FREE SOFTWARE LICENSE
+Published under the MIT FREE SOFTWARE LICENSE
 
 GitHub repo: https://github.com/PyMoDAQ
 
