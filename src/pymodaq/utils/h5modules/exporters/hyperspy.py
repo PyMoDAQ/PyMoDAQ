@@ -52,7 +52,8 @@ try:
 
                 #deprecated
                 # data, axes, nav_axes, is_spread = get_h5_data_from_node(node)
-
+                is_spread = node.attrs['distribution'] != 'uniform'
+                
                 data_array = data.data.reshape(data.shape, order='F')
                 logger.debug(f"extracted data of shape {data.shape}")
                 logger.debug(f"extracted axes: {axes}")
