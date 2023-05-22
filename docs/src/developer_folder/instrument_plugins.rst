@@ -1,4 +1,4 @@
-.. _plugin_doc:
+.. _instrument_plugin_doc:
 
 Instrument Plugins
 ==================

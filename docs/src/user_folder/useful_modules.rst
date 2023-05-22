@@ -1,10 +1,5 @@
-Utility Modules
-===============
-
-.. toctree::
-   :maxdepth: 3
-   :caption: Contents:
-
+Useful Modules
+==============
 
 Introduction
 ------------
@@ -13,6 +8,95 @@ Utility modules are used within each main modules of PyMoDAQ but can also be use
 blocks for custom application. In that sense, all :ref:`data_viewers` and even :ref:`DAQ_Viewer_module` and
 :ref:`DAQ_Move_module` can be used as building blocks to control actuators and display datas in a
 custom application.
+
+
+.. _data_viewers:
+
+Data Viewers
+------------
+
+These modules are to be used to display various type of data and helps you manipulate these using
+scaling, ROI, measurements...
+They are mostly used within the main modules of PyMoDAQ but can also be used as building
+blocks for custom application. In that sense, :ref:`DAQ_Viewer_module` and
+:ref:`DAQ_Move_module` can also be used as building blocks to control actuators and display datas in a
+custom application.
+
+
+0D Viewer
++++++++++
+
+   .. _figure_0Dviewer:
+
+.. figure:: /image/Utils/figure_0Dviewer.PNG
+
+   0D viewer data display
+
+.. :download:`png <figure_0Dviewer.png>`
+
+
+
+1D Viewer
++++++++++
+
+   .. _figure_1Dviewer:
+
+.. figure:: /image/Utils/1Ddetector.PNG
+   :alt: figure_1Dviewer
+
+   1D viewer data display
+
+.. :download:`png <figure_1Dviewer.png>`
+
+
+
+2D Viewer
++++++++++
+
+   .. _figure_2Dviewer:
+
+.. figure:: /image/Utils/figure_2Dviewer.PNG
+   :alt: figure_2Dviewer
+
+   2D viewer data display
+
+.. :download:`png <figure_2Dviewer.png>`
+
+
+.. _NDviewer:
+
+ND Viewer
++++++++++
+.. |axes| image:: /image/Utils/axis_selection.png
+   :width: 20
+   :alt: axes
+
+A ND viewer is a display object that can represent 0D, 1D, 2D, 3D or 4D data. It is a combination of 2 Viewers (up:
+navigation viewer and bottom: signal viewer, see panels of :numref:`figure_NDviewer`) and use the concept of
+*signal* axis and *navigation* axis. Let's say you
+want to represent a previously acquired 2D scan where each of the pixels in the scan is actually data from a camera (2D).
+It then means that you have 2 navigation axis (the ones of the scan) and two signal axis (the ones of the camera) and
+4D data to deal with. The way to plot them is to represent the *scan* on a navigation 2D viewer where each pixel intensity
+is the result of the integration of the actual data taken at this pixel (or within a ROI that you can select, see white rectangle
+on :numref:`figure_NDviewer` bottom panel). Moving the crosshair on the navigation panel change the display in the signal panel
+in order to show the data within the pixel pointed by the crosshair.
+
+   .. _figure_NDviewer:
+
+.. figure:: /image/Utils/figure_NDviewer.PNG
+   :alt: figure_NDviewer
+
+   ND viewer data display
+
+ND viewer is mostly used by the H5Browser (and sometimes by the DAQ_Viewer) to display data saved with PyMoDAQ,
+a few metadata attributes written in the h5file nodes (see :ref:`daq_scan_saving`)
+tells the NDViewer how to display acquired scans. If, for some reasons, you want to display your 4D data in another way (that is changing
+which dimension is navigation and which is signal), you can press the |axes| button on the top viewer and change the navigation
+axes on the popup window it opened.
+
+
+
+
 
 .. _module_manager:
 
@@ -281,29 +365,6 @@ way to synchronize detectors and actuators that should be set together within a 
 
    User interface of the module manager listing detectors and actuators that can be selected for a given action.
 
-
-
-
-.. _H5Browser_module:
-
-H5Browser
----------
-
-The h5 browser is an object that helps browsing of datas and metadatas. It asks you to select a h5 file
-and then display a window such as :numref:`figure_h5browser`. Depending the element of the file you are
-selecting in the h5 file tree, various metadata can be displayed, such as *scan settings* or
-*module settings* at the time of saving. When double clicking on data type entries in the tree, the
-data viewer (type :ref:`NDviewer` that can display data dimensionality up to 4)
-
-
-   .. _figure_h5browser:
-
-.. figure:: /image/Utils/h5browser.PNG
-   :alt: h5 browser
-
-   h5 browser to explore saved datas
-
-.. :download:`png <h5browser.png>`
 
 
 .. _h5saver_module:

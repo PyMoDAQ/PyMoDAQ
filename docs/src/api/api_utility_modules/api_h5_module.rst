@@ -6,11 +6,9 @@ Hdf5 module and classes
 Summary of the classes in the h5module
 
 .. autosummary::
-    H5Backend
-    H5SaverBase
-    H5Saver
-    H5BrowserUtil
-    H5Browser
+    backends.H5Backend
+    saving.H5Saver
+    browsing.H5Browser
 
 
 .. _H5BackendClassDescr:

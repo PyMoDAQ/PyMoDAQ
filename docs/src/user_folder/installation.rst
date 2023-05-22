@@ -111,7 +111,12 @@ will probably prefer using shortcuts on the desktop. Here is how to do it (Thank
 Plugin Manager
 --------------
 
-The complete list of available plugins is maintained on this GitHub `repository`__.
+Any new hardware has to be included in PyMoDAQ within a :term:`plugin`. A PyMoDAQ's plugin is a python package
+containing several added functionalities such as instruments objects. A instrument object is a class inheriting from either
+a ``DAQ_Move_Base`` or a ``DAQ_Viewer_Base`` class and implements mandatory methods for easy and quick inclusion
+of the instrument within the PyMoDAQ control modules.
+
+The complete list of available Instrument Plugins is maintained on this GitHub `repository`__.
 
 While you can install them manually (for instance using ``pip install plugin_name``), from PyMoDAQ 2.2.2 a plugin
 manager is available. You can open it from the **Dashboard** in the help section or directly using the command
@@ -131,7 +136,7 @@ to interface Andor CCD camera.
    Plugin Manager interface
 
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager
 
 
 What about the Hardware

@@ -65,7 +65,7 @@ Hardware initialization
 -----------------------
 
 * ``Stage``: list of available hardware plugins of the DAQ_Move type.
-* ``Ini. Stage``: Initialize the hardware with the given settings (see :ref:`plugin_doc` for details on how to set hardware settings.)
+* ``Ini. Stage``: Initialize the hardware with the given settings (see :ref:`instrument_plugin_doc` for details on how to set hardware settings.)
 * ``Quit``: De-initialize the hardware and quit the module
 
 

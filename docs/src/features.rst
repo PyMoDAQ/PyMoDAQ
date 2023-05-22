@@ -33,11 +33,8 @@ Dashboard's extensions can be used to perform advanced and automated tasks on th
   * a local or distant SQL Database (such as PostgreSQL). The current advantage of this solution is to be able to access
     your data on the database from a web application such as `Grafana`__. Soon a tutorial on this!!
 * Joystick control of the dashboard actuators (and eventually detectors).
-
-* Soon to be:
-
-  * PID closed loop interface
-  * A possibility to program a batch of scans.
+* PID closed loop interface
+* Direct code execution in a Console
 
    .. _overview_submodules_bis:
 

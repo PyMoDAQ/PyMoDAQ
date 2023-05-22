@@ -66,8 +66,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
     'sphinx.ext.napoleon',
-    #'autoapi.extension',
-    #'sphinx.ext.autosummary',
+    'sphinx.ext.autosummary',
     'releases',
     'crate.sphinx.csv',
     'numpydoc',
@@ -76,11 +75,6 @@ extensions = [
 qt_documentation = "PySide6"
 # -- Options for autodocumentation ---------------------------------------------
 numfig = True
-
-# autoapi_type = 'python'
-# autoapi_dirs = ['../../src/pymodaq']
-# autoapi_generate_api_docs = False
-#autoapi_include_summaries = False
 
 autodoc_member_order = "groupwise"
 autoclass_content = "class"
@@ -136,7 +130,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 html_logo = 'splash.png'
 
 # Custom sidebar templates, must be a dictionary that maps document names

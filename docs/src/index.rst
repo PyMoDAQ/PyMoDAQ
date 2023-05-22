@@ -22,7 +22,7 @@ __ https://youtu.be/TrRy6HL3h3c
 
 
 .. note::
-   :ref:`Announcement`: Second edition of the PyMoDAQ's Days: Paris 16/17 October. Training session in Paris, France 18/19/20 October 2023
+   Second edition of the PyMoDAQ's Days: Paris 16/17 October. Training session in Paris, France 18/19/20 October 2023
 
 
 PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
@@ -122,23 +122,15 @@ Please see :doc:`the changelog </changelog>`.
    :maxdepth: 3
    :caption: Contents:
 
-   usage/Features
-   usage/Installation
-   usage/How_to_start
-   usage/configuration
-   usage/Description
-   usage/Plugins
-   usage/CustomApp
-   usage/tcpip
-   usage/Feedback
-   usage/Contributors
-   usage/glossary
-   usage/APIdoc
+   features
+   user
+   developer
+   feedback
+   glossary
+   api/api_doc
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
 
 ..   usage/classDiagram
-   usage/APIdoc
-
 
 
 Indices and tables

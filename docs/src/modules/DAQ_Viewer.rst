@@ -6,7 +6,7 @@ This module is to be used to interface any detector. It will display hardware se
 and display data as exported by the hardware plugins (see :ref:`data_emission`). The default detector
 is a Mock ones (a kind of software based
 detector generating data and useful to test the program development). Other detectors may be loaded as
-plugins, see :ref:`plugin_doc`.
+plugins, see :ref:`instrument_plugin_doc`.
 
 
 Introduction
@@ -41,7 +41,7 @@ Hardware initialization
 * ``DAQ_type``: either *DAQ0D*, *DAQ1D*, *DAQ2D* or *DAQND* respectively for scalar detectors (powermeter for instance),
   vector detectors (spectrometer for instance), image like detectors and rare hyperdimensional detectors.
 * ``Detector``: list of available hardware plugins of the DAQ_type type.
-* ``Ini. Det``: Initialize the hardware with the given settings (see :ref:`plugin_doc` for details on how to set hardware settings.)
+* ``Ini. Det``: Initialize the hardware with the given settings (see :ref:`instrument_plugin_doc` for details on how to set hardware settings.)
 * ``Quit``: De-initialize the hardware and quit the application
 
 Data Acquisition
@@ -132,12 +132,12 @@ detector currently activated.
   intermediate averaging data will be displayed
 * **Live averaging**: *show averaging* must be set to ``False``. If set to ``True``, a *live* ``grab`` will perform
   non-stop averaging (current averaging value will be displayed just below).  Could be used to check how much one
-should average, then set *Naverage* to this value
+  should average, then set *Naverage* to this value
 * **Wait time (ms)**: Extra waiting time before sending data to viewer, can be used to cadence DAQ_Scan execution, or data logging
 * **Continuous saving**: useful for data logging. Will display new options below in order to set a h5 file to log live data, see :ref:`continuous_saving`.
 * **Overshoot options**: useful to protect the experiment. If this is activated, then as soon as any value of the datas exported by this
   detector reaches the *overshoot value*, the module will throw a ``overshoot_signal`` (boolean PyQtSignal). The overshoot manager of the
-   *Dashboard* generalize this feature (see :ref:`overshoot_manager`) by triggering actions on actuators if overshoot signals are detected.
+  *Dashboard* generalize this feature (see :ref:`overshoot_manager`) by triggering actions on actuators if overshoot signals are detected.
   Other features related will soon be added (action triggered on a DAQ_Move, for instance a shutter on a laser beam)
 * **Axis options**: only valid for 2D detector. You can add labels, units, scaling and offset (with respect to pixels)
   to both x and y axis of the detector. Redundant with the plugin data export feature (see :ref:`data_emission`)
