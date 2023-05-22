@@ -31,6 +31,7 @@ from pymodaq.utils.config import Config, get_set_local_dir
 from pymodaq.utils.h5modules.browsing import browse_data
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
+from pymodaq.utils.h5modules.backends import Node
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter import utils as putils
@@ -573,7 +574,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def append_data(self, data: DataToExport = None, where: Union['Node', str] = None):
+    def append_data(self, data: DataToExport = None, where: Union[Node, str] = None):
         """Appends current DataToExport to a DetectorEnlargeableSaver
 
         Parameters
@@ -591,7 +592,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                                 where=where)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where: Union['Node', str] = None,
+    def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
                     distribution=DataDistribution['uniform']):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 

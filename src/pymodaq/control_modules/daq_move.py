@@ -4,7 +4,9 @@ Created the 29/07/2022
 
 @author: Sebastien Weber
 """
+
 from __future__ import annotations
+
 import sys
 from typing import List, Tuple, Union
 import numpy as np
@@ -30,6 +32,7 @@ from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
 from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis, DataDistribution
+from pymodaq.utils.h5modules.backends import Node
 
 
 local_path = config.get_set_local_dir()
@@ -160,11 +163,12 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif cmd.command == 'rel_value':
             self._relative_value = cmd.attribute
 
-    def append_data(self, data: DataToExport = None, where: Union['Node', str] = None):
+    def append_data(self, data: DataToExport = None, where: Union[Node, str] = None):
         """Appends current DataToExport to an ActuatorEnlargeableSaver
 
         Parameters
         ----------
+        data
         where: Node or str
         See Also
         --------
