@@ -6,9 +6,7 @@ from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
 from pymodaq.utils.config import Config
 from qtpy import QtCore
 from contextlib import contextmanager
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy_utils import database_exists, create_database
+
 from pymodaq.utils.db.db_logger.db_logger_models import Base, Data0D, Data1D, Data2D, LogInfo,\
     Configuration, ControlModule
 from pymodaq.utils import daq_utils as utils
@@ -17,6 +15,9 @@ from pymodaq.utils.messenger import messagebox, deprecation_msg
 from pymodaq.utils.abstract.logger import AbstractLogger
 from pyqtgraph.parametertree import Parameter, ParameterTree
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy_utils import database_exists, create_database
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -214,8 +215,6 @@ class DbLogger:
             # not yet dataND as db should not know where to save these datas
 
 
-
-
 class DbLoggerGUI(DbLogger, QtCore.QObject):
     params = [
         {'title': 'Database:', 'name': 'database_type', 'type': 'list', 'value': 'PostgreSQL',
@@ -236,7 +235,7 @@ class DbLoggerGUI(DbLogger, QtCore.QObject):
 
         self.settings = Parameter.create(title='DB settings', name='db_settings', type='group',
                                          children=self.params)
-        self.settings.child(('do_save')).hide()
+        self.settings.child('do_save').hide()
         self.settings_tree = ParameterTree()
         self.settings_tree.setMinimumHeight(310)
         self.settings_tree.setParameters(self.settings, showTop=False)

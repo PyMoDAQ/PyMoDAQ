@@ -4,7 +4,7 @@ Created on Wed Jan 10 16:54:14 2018
 
 @author: Weber Sébastien
 """
-
+from __future__ import annotations
 from collections import OrderedDict
 import copy
 import datetime
@@ -31,6 +31,7 @@ from pymodaq.utils.config import Config, get_set_local_dir
 from pymodaq.utils.h5modules.browsing import browse_data
 from pymodaq.utils.h5modules.saving import H5Saver
 from pymodaq.utils.h5modules import module_saving
+from pymodaq.utils.h5modules.backends import Node
 from pymodaq.utils.daq_utils import ThreadCommand
 from pymodaq.utils.parameter import ioxml
 from pymodaq.utils.parameter import utils as putils
@@ -573,23 +574,26 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             except Exception as e:
                 self.logger.exception(str(e))
 
-    def append_data(self, where=None):
-        """Appends DataToExport to a DetectorEnlargeableSaver
+    def append_data(self, data: DataToExport = None, where: Union[Node, str] = None):
+        """Appends current DataToExport to a DetectorEnlargeableSaver
 
         Parameters
         ----------
         data: DataToExport
-            The data to be added to an enlargeable h5 array
-
+            not really used
+        where: Node or str
         See Also
         --------
         DetectorEnlargeableSaver
         """
-        self._add_data_to_saver(self._data_to_save_export, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
-                                where=None)
+        if data is None:
+            data = self._data_to_save_export
+        self._add_data_to_saver(data, init_step=self._h5saver_continuous.settings['N_saved'] == 0,
+                                where=where)
         self._h5saver_continuous.settings.child('N_saved').setValue(self._h5saver_continuous.settings['N_saved'] + 1)
 
-    def insert_data(self, indexes: Tuple[int], where=None, distribution=DataDistribution['uniform']):
+    def insert_data(self, indexes: Tuple[int], where: Union[Node, str] = None,
+                    distribution=DataDistribution['uniform']):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
         Parameters

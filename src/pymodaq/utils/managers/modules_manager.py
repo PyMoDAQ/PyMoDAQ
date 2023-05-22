@@ -302,8 +302,8 @@ class ModulesManager(QObject, ParameterManager):
         signal: str
             What kind of signal is to be used:
 
-            * 'move_done' will connect the `move_done signal` to the slot
-            * 'current_value' will connect the 'current_signal' to the slot
+            * 'move_done' will connect the `move_done_signal` to the slot
+            * 'current_value' will connect the 'current_value_signal' to the slot
 
         See Also
         --------

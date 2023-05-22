@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from pymodaq.extensions.daq_scan import DAQScan
     from pymodaq.control_modules.daq_viewer import DAQ_Viewer
     from pymodaq.control_modules.daq_move import DAQ_Move
+    from pymodaq.utils.h5modules.h5logging import H5Logger
 
 
 class ModuleSaver(metaclass=ABCMeta):
@@ -244,13 +245,13 @@ class ActuatorSaver(ModuleSaver):
     group_type = GroupType['actuator']
 
     def __init__(self, module: DAQ_Move):
-        self._axis_saver = None
+        self._datatoexport_saver: DataToExportTimedSaver = None
         self._module_group: GROUP = None
         self._module: DAQ_Move = module
         self._h5saver = None
 
-    def update_after_h5changed(self):
-        self._axis_saver = AxisSaverLoader(self.h5saver)
+    def update_after_h5changed(self, ):
+        self._datatoexport_saver = DataToExportTimedSaver(self.h5saver)
 
     def _add_module(self, where: Union[Node, str] = None, metadata={}):
         if where is None:
@@ -261,6 +262,9 @@ class ActuatorSaver(ModuleSaver):
 
         return self._h5saver.add_act_group(where, title=self._module.title, settings_as_xml=ET.tostring(settings_xml),
                                            metadata=metadata)
+
+    def add_data(self, where: Union[Node, str], data: DataToExport):
+        self._datatoexport_saver.add_data(where, data)
 
 
 class ScanSaver(ModuleSaver):
@@ -275,7 +279,7 @@ class ScanSaver(ModuleSaver):
 
     def __init__(self, module):
         self._module_group: GROUP = None
-        self._module: 'DAQScan' = module
+        self._module: DAQScan = module
         self._h5saver = None
 
     def update_after_h5changed(self):
@@ -332,9 +336,9 @@ class ScanSaver(ModuleSaver):
             saver_xml = ET.SubElement(settings_xml, 'H5Saver', type='group')
             saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
-        return self._h5saver.add_scan_group(where, title=self._module.title,
-                                            settings_as_xml=ET.tostring(settings_xml),
-                                            metadata=metadata)
+        return self._h5saver.add_incremental_group(self.group_type, where, title=self._module.title,
+                                                   settings_as_xml=ET.tostring(settings_xml),
+                                                   metadata=metadata)
 
     def add_nav_axes(self, axes: List[Axis]):
         for detector in self._module.modules_manager.detectors:
@@ -348,3 +352,32 @@ class ScanSaver(ModuleSaver):
                 pass
 
 
+class LoggerSaver(ScanSaver):
+    """Implementation of the ModuleSaver class dedicated to H5Logger module
+
+    H5Logger is the special logger to h5file of the DAQ_Logger extension
+
+    Parameters
+    ----------
+    h5saver
+    module
+    """
+    group_type = GroupType['data_logger']
+
+    def __init__(self, module):
+        self._module_group: GROUP = None
+        self._module: H5Logger = module
+        self._h5saver = None
+
+    def add_data(self):
+        for detector in self._module.modules_manager.detectors:
+            try:
+                detector.append_data(data=None, where=self._module_group)
+            except Exception as e:
+                pass
+
+        for actuator in self._module.modules_manager.actuators:
+            try:
+                actuator.append_data(data=None, where=self._module_group)
+            except Exception as e:
+                pass
