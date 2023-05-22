@@ -22,7 +22,7 @@ __ https://youtu.be/TrRy6HL3h3c
 
 
 .. note::
-   Announcement: :ref:`training` session in Toulouse, France 17/18/19 October 2022 followed by the PyMoDAQ's Days
+   :ref:`Announcement`: Second edition of the PyMoDAQ's Days: Paris 16/17 October. Training session in Paris, France 18/19/20 October 2023
 
 
 PyMoDAQ, Modular Data Acquisition with Python, is a set of **python** modules used to interface any kind of experiments.
@@ -69,13 +69,15 @@ Training
 Information
 ***********
 
-GitHub repo: https://github.com/CEMES-CNRS
+GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/
 
 List of available `plugins`__
 
 Video tutorials `here`__
+
+Mailing List: pymodaq@services.cnrs.fr
 
 
 Credits
@@ -85,7 +87,7 @@ Based on the ``pyqtgraph`` library : http://www.pyqtgraph.org by Luke Campagnola
 
 PyMoDAQ is written by Sébastien Weber: sebastien.weber@cemes.fr under a MIT license.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager/
 
 __ https://youtube.com/playlist?list=PLGdoHByMKfIdn-N51goippSSP_9iG4wds
 
@@ -117,7 +119,7 @@ Please see :doc:`the changelog </changelog>`.
 
 .. toctree::
    :numbered:
-   :maxdepth: 6
+   :maxdepth: 3
    :caption: Contents:
 
    usage/Features
@@ -125,10 +127,12 @@ Please see :doc:`the changelog </changelog>`.
    usage/How_to_start
    usage/configuration
    usage/Description
+   usage/Plugins
    usage/CustomApp
    usage/tcpip
    usage/Feedback
    usage/Contributors
+   usage/glossary
    usage/APIdoc
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
 

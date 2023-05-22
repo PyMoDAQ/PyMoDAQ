@@ -77,3 +77,6 @@ class ObjectFactory(metaclass=ABCMeta):
             raise ValueError(key)
         return builder(**kwargs)
 
+    @classmethod
+    def get_class(cls, key):
+        return cls._builders[cls.__name__].get(key)

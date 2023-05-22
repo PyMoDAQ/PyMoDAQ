@@ -26,10 +26,12 @@ check_qt_presence()
 
 
 try:
-    with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
-        __version__ = fvers.read().strip()
+    # with open(str(Path(__file__).parent.joinpath('resources/VERSION')), 'r') as fvers:
+    #     __version__ = fvers.read().strip()
 
     from pymodaq.utils.logger import set_logger
+    from pymodaq.utils.daq_utils import get_version
+    __version__ = get_version()
     try:
         logger = set_logger('pymodaq', add_handler=True, base_logger=True)
     except Exception:

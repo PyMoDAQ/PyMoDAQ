@@ -1,3 +1,5 @@
+.. _control_modules:
+
 Control Modules
 ===============
 

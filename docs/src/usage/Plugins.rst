@@ -1,24 +1,41 @@
-Any new hardware has to be included in PyMoDAQ as a plugin. A PyMoDAQ's plugin is a script containing a python object
-following a particular template and behaviour and inheriting from a base class.
-Plugins are articulated given their type: Moves or Viewers and for the latter their main dimensionality: **0D**, **1D** or **2D**.
-It is recommended to start from the *template* plugins (daq_move_Template, daq_NDviewer_Template, see below)
-and then check from other examples (pymodaq_plugins `repository`__) the proper way of writing a plugin.
-You will find below some information on the **how to** but comparison with existing ones will be beneficial.
+.. _plugin_doc:
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins
+Instrument Plugins
+==================
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Contents:
+
+Any new hardware has to be included in PyMoDAQ within a :term:`plugin`. A PyMoDAQ's plugin is a python package
+containing several added functionalities such as instruments objects. A instrument object is a class inheriting from either
+a ``DAQ_Move_Base`` or a ``DAQ_Viewer_Base`` class`and implementing mandatory methods for easy and quick inclusion of the instrument
+within the PyMoDAQ control modules.
+
+Plugins are articulated given their type: Moves or Viewers and for the latter their main dimensionality: **0D**, **1D** or **2D**.
+It is recommended to start from the *template* `repository`__ that includes templates for all kind of instruments and also
+the generic structure to build and publish a given plugin.
+
+You will find below some information on the **how to** but comparison with existing plugins packages will be beneficial.
+
+.. note::
+   Some more detailed documentation is under work
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+
 
 Installation
 ------------
 
-The main and official list of plugins is located in the `pymodaq_plugins`__ repository on github. This constitutes a
-list of (contributed) python package that can be installed using the :ref:`PluginManager`. Other unofficial  plugins may
-also be installed if they follow PyMoDAQ's plugin specifications but you are invited to let know other users of the plugins
-you develop in order to contribute to PyMoDAQ's development.
+The main and official list of plugins is located in the `pymodaq_plugin_manager`__ repository on github. This constitutes a
+list of (contributed) python package that can be installed using the :ref:`PluginManager` (or directly using pip).
+Other unofficial plugins may also be installed if they follow PyMoDAQ's plugin specifications but you are invited
+to let know other users of the plugins you develop in order to contribute to PyMoDAQ's development.
 
 PyMoDAQ is looking at startup for all installed packages that it can consider as its plugins. This includes by default
-the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
+the *pymodaq_plugins_mock* package of mock instruments installed on the *site_packages* location in your python distribution.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager
 
 Contributions:
 --------------
@@ -29,21 +46,23 @@ Users are welcomed to contribute to PyMoDAQ by writing their own plugins. Two ap
 * Copy the `plugin template package`__ on you disk and work on the templates within then ask to create an official
   plugin package
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 Naming convention:
 ------------------
 
-For the plugin to be properly recognised by PyMoDAQ, its location and name must follow some rules and syntax. The
-`plugin template package`__ could be copied locally as a starting point:
+For an instrument plugin to be properly recognised by PyMoDAQ, the location and name of the underlying script must
+follow some rules and syntax. The `plugin template package`__ could be copied locally as a starting point:
 
 * An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)
-* The plugin class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well)
+* The main instrument class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well and sorry
+  if it is troublesome)
 
-* A detector plugin of dimensionality N (N=0, 1, 2 or N) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
-* The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
+* A detector plugin of dimensionality N (N=0, 1, 2 or N) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx
+  (notice first X letter is capital, and replace N by 0, 1, 2 or leave it for higher dimensionality)
+* The main instrument class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 .. _hardware_settings:
 
@@ -56,7 +75,7 @@ On the module side, they will be instantiated as a list of dictionaries and late
 This object inherits from the ``Parameter`` object defined in `pyqtgraph`__.
 
 
-__ http://www.pyqtgraph.org/documentation/parametertree/index.html
+__ https://pyqtgraph.readthedocs.io/en/latest/api_reference/parametertree/parameter.html
 
    .. _figure_settings:
 
@@ -83,8 +102,7 @@ Here is an example of such a list of dictionaries corresponding to :numref:`figu
 
 .. _parameter_tree:
 
-The list of available types of parameters :module:`pymodaq_ptypes`
-(defined in ``pymodaq.utils.parameter.pymodaq_ptypes.py``) is:
+The list of available types of parameters (defined in ``pymodaq.utils.parameter.pymodaq_ptypes.py``) is:
 
 * ``group`` : "camera settings" on :numref:`figure_settings` is of type group
 * ``int`` : settable integer (SpinBox_Custom object)
@@ -144,7 +162,7 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
 .. _data_emission:
 
 Emission of data
-****************
+----------------
 When data are ready (see :ref:`data_ready` to know about that), the plugin has to notify the viewer module in order
 to display data and eventually save them. For this PyMoDAQ use two types of signals (see pyqtsignal documentation for details):
 
@@ -226,7 +244,7 @@ to be send to the user interface for plotting and saving. There are a few soluti
 
 * **synchronous**: The simplest one. When the ``grab`` command has been send to the controller (let's say to its
   ``grab_sync`` method), the ``grab_sync`` method will hold and freeze the plugin until the data are ready.
-   The Mock plugin work like this.
+  The Mock plugin work like this.
 
 * **asynchronous**: There are 2 ways of doing asynchronous *waiting*. The first is to poll the controller state to check if data are
   ready within a loop. This polling could be done with a while loop but if nothing more is done then the plugin will still be
@@ -338,6 +356,49 @@ controller provides an efficient method to do it (that will save time) then you 
         #is True else averaging is done software wise
 
 
+Live Mode
+*********
+
+By default, the live *Grab* mode is done software wise in the core code of the DAQ_Viewer. However, if
+one want to send data as fast as possible, the live mode is possible within a plugin.
+
+For this, the plugin class attribute, ``live_mode_available``, should be set to ``True``.
+
+.. code-block:: python
+
+    class DAQ_2DViewer_MockCamera(DAQ_Viewer_base):
+
+        live_mode_available = True
+
+The method ``grab_data`` will then receive a named boolean parameter (in ``kwargs``) called *live* that tells if one should
+grab or snap data. The MockCamera plugin illustrates this feature:
+
+.. code-block:: python
+
+    def grab_data(self, Naverage=1, **kwargs):
+        """Start a grab from the detector
+
+        Parameters
+        ----------
+        Naverage: int
+            Number of hardware averaging (if hardware averaging is possible, self.hardware_averaging should be set to
+            True in class preamble and you should code this implementation)
+        kwargs: dict
+            others optionals arguments
+        """
+        if 'live' in kwargs:
+            if kwargs['live']:
+                self.live = True
+                # self.live = False  # don't want to use that for the moment
+
+        if self.live:
+            while self.live:
+                data = self.average_data(Naverage)
+                QThread.msleep(kwargs.get('wait_time', 100))
+                self.data_grabed_signal.emit(data)
+                QtWidgets.QApplication.processEvents()
+
+
 
 Hardware needed files
 ---------------------
@@ -358,11 +419,33 @@ How to contribute?
 ------------------
 
 If you wish to develop a plugin specific to a new hardware not present on the github repo (and I strongly encourage you
-to do so!!), you will have to follow the rules as stated above. However, the best practice would be to *fork*
-pymodaq_plugins repository. On windows, you can use
-`Github Desktop`__. Then you can manually install the forked package in developer using ``pip install -e .`` from
-the command line where you *cd* within the forked package. This command will install the package but
-any change you apply on the local folder will be applied on the package. Once you're ready with a working plugin, you can then
-*push* your branch that will be merged with the main branch after validation.
+to do so!!), you will have to follow the rules as stated above.
 
-__ https://desktop.github.com/
+Two cases are possible: either you want to add a new hardware from a manufacturer for which
+a repository already exists 1) (thorlabs, PI, Andor...) or not 2)
+
+#. You have to fork the existing repo
+#. you will use the `pymodaq_plugins_template`__  on github to create a new repo.
+
+Once you've done that, you can clone the package locally and install it in developer using ``pip install -e .`` from
+the command line where you *cd* within the cloned package. This command will install the package but
+any change you apply on the local folder will be applied on the package. Then just add a new python file in the correct location
+
+In the case of a new repo, you will have to rename a few files (plugin_info.toml, README.rst ...) then add the
+python file of your instrument at the right location.
+
+Once you're ready with a working plugin, you can then:
+
+#. Publish your repo on pypi (just by doing a release on github will trigger the creation
+   of a pypi repository, you'll just have to create an account on pypi and enter your credentials in the SECRETS on github)
+#. do a pull request on the initial repository to merge your new implementations.
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+
+All the packages published on pypi using the template and the naming convention will be available
+in the plugin manager.
+
+Some more detailed instruction would be published and you can in the mean time look at this
+`video`__
+
+__ https://youtu.be/9O6pqz89UT8

@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 import numpy as np
+
+if TYPE_CHECKING:
+    from pymodaq.utils.parameter import Parameter
 
 
 def get_widget_from_tree(parameter_tree, widget_instance):
@@ -61,7 +67,7 @@ def iter_children_params(param, childlist=[]):
     return childlist
 
 
-def get_param_from_name(parent, name):
+def get_param_from_name(parent, name) -> Parameter:
     """Get Parameter under parent whose name is name
 
     Parameters

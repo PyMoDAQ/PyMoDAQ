@@ -20,13 +20,4 @@ pytables, h5py and h5pyd).
 
 .. _plugin_doc:
 
-Plugins
-=======
-
-.. toctree::
-   :maxdepth: 5
-   :caption: Contents:
-
-   modules/Plugins
-
 

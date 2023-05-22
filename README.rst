@@ -12,18 +12,17 @@ PyMoDAQ
 .. image:: https://codecov.io/gh/PyMoDAQ/PyMoDAQ/branch/pymodaq-dev/graph/badge.svg?token=IQNJRCQDM2
     :target: https://codecov.io/gh/PyMoDAQ/PyMoDAQ
 
-
-..  csv-table:: Tests:
-  :header: "Python", "Qt Backend", "OS", Passed
-  :widths: 15, 20, 15, 30
-
-  3.8, Qt5, Linux, |38Qt5|
-  3.9, Qt5, Linux, |39Qt5|
-  3.10, Qt5, Linux, |310Qt5|
-  3.11, Qt5, Linux, |311Qt5|
-  3.8, Qt5, Windows, |38Qt5win|
-  3.8, PySide2, Linux, |38pyside|
-  3.9, Qt6, Linux, |39Qt6|
+====== ========== ======= ======
+Python Qt Backend OS      Passed
+====== ========== ======= ======
+3.8    Qt5        Linux   |38Qt5|
+3.9    Qt5        Linux   |39Qt5|
+3.10   Qt5        Linux   |310Qt5|
+3.11   Qt5        Linux   |311Qt5|
+3.8    Qt5        Windows |38Qt5win|
+3.8    PySide2    Linux   |38pyside|
+3.9    Qt6        Linux   |39Qt6|
+====== ========== ======= ======
 
 
 .. |38Qt5| image:: https://github.com/PyMoDAQ/PyMoDAQ/actions/workflows/Testp38pyqt5.yml/badge.svg?branch=pymodaq-dev
@@ -69,28 +68,29 @@ It is organised a shown below:
 
    PyMoDAQ's Dashboard and its extensions: DAQ_Scan for automated acquisitions, DAQ_Logger for data logging and many other.
 
+The main component is the **Dashboard** : This is a graphical component that will initialize actuators and detectors given
+the need of your particular experiment. You configure the dashboard using an interface for quick launch of various
+configurations (numbers and types of control modules).
 
-* **Dashboard_module** : This is the module that will initialize actuators and detectors given the need of your
-  particular experiment. You configure the dashboard using an interface for quick launch of various configurations.
+The detectors and the actuators are represented and manipulated using two control modules:
+
+* **DAQ_Move_module** : used to control/drive an actuator (stand alone and/or automated).
+  Any number of these modules can be instantiated in the Dashboard
+* **DAQ_Viewer_module** : used to control/drive a detector (stand alone and/or automated).
+
+Any number of these modules can be instantiated in the Dashboard.
+
+The Dashboard allows you to start dedicated extensions that will make use of the control modules:
+
 * **DAQ_Logger_module** : This module lets you log data from one or many detectors defined in the dashboard. You can log data
   in a binary hierarchical hdf5 file or towards a sql database
 * **DAQ_Scan_module** : This module lets you configure automated data acquisition from one or many detectors defined
   in the dashboard as a function or one or more actuators defined also in the dashboard.
 
-The detectors and the actuators are represented and manipulated using two control modules:
-
-* **DAQ_Move_module** : used to control/drive an actuator (stand alone and/or automated). Any number of these modules can be instantiated.
-* **DAQ_Viewer_module** : used to control/drive a detector (stand alone and/or automated). Any number of these modules can be instantiated.
-
 and many others to simplify any application development.
 
-.. raw:: html
+Published under the MIT FREE SOFTWARE LICENSE
 
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/ZdYpQIZHMCY" frameborder="0" allow="accelerometer;
-     autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-Published under the CeCILL-B FREE SOFTWARE LICENSE
-
-GitHub repo: https://github.com/CEMES-CNRS
+GitHub repo: https://github.com/PyMoDAQ
 
 Documentation: http://pymodaq.cnrs.fr/
