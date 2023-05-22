@@ -4,6 +4,7 @@ Created the 29/07/2022
 
 @author: Sebastien Weber
 """
+from __future__ import annotations
 import sys
 from typing import List, Tuple, Union
 import numpy as np

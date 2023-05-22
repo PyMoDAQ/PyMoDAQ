@@ -4,7 +4,7 @@ Created on Wed Jan 10 16:54:14 2018
 
 @author: Weber Sébastien
 """
-
+from __future__ import annotations
 from collections import OrderedDict
 import copy
 import datetime
