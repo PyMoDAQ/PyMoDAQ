@@ -1,24 +1,41 @@
-Any new hardware has to be included in PyMoDAQ as a plugin. A PyMoDAQ's plugin is a script containing a python object
-following a particular template and behaviour and inheriting from a base class.
-Plugins are articulated given their type: Moves or Viewers and for the latter their main dimensionality: **0D**, **1D** or **2D**.
-It is recommended to start from the *template* plugins (daq_move_Template, daq_NDviewer_Template, see below)
-and then check from other examples (pymodaq_plugins `repository`__) the proper way of writing a plugin.
-You will find below some information on the **how to** but comparison with existing ones will be beneficial.
+.. _plugin_doc:
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins
+Instrument Plugins
+==================
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Contents:
+
+Any new hardware has to be included in PyMoDAQ within a :term:`plugin`. A PyMoDAQ's plugin is a python package
+containing several added functionalities such as instruments objects. A instrument object is a class inheriting from either
+a ``DAQ_Move_Base`` or a ``DAQ_Viewer_Base`` class`and implementing mandatory methods for easy and quick inclusion of the instrument
+within the PyMoDAQ control modules.
+
+Plugins are articulated given their type: Moves or Viewers and for the latter their main dimensionality: **0D**, **1D** or **2D**.
+It is recommended to start from the *template* `repository`__ that includes templates for all kind of instruments and also
+the generic structure to build and publish a given plugin.
+
+You will find below some information on the **how to** but comparison with existing plugins packages will be beneficial.
+
+.. note::
+   Some more detailed documentation is under work
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
+
 
 Installation
 ------------
 
-The main and official list of plugins is located in the `pymodaq_plugins`__ repository on github. This constitutes a
-list of (contributed) python package that can be installed using the :ref:`PluginManager`. Other unofficial  plugins may
-also be installed if they follow PyMoDAQ's plugin specifications but you are invited to let know other users of the plugins
-you develop in order to contribute to PyMoDAQ's development.
+The main and official list of plugins is located in the `pymodaq_plugin_manager`__ repository on github. This constitutes a
+list of (contributed) python package that can be installed using the :ref:`PluginManager` (or directly using pip).
+Other unofficial plugins may also be installed if they follow PyMoDAQ's plugin specifications but you are invited
+to let know other users of the plugins you develop in order to contribute to PyMoDAQ's development.
 
 PyMoDAQ is looking at startup for all installed packages that it can consider as its plugins. This includes by default
-the *pymodaq_plugins* package installed on the *site_packages* location in python distribution.
+the *pymodaq_plugins_mock* package of mock instruments installed on the *site_packages* location in your python distribution.
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugin_manager
+__ https://github.com/PyMoDAQ/pymodaq_plugin_manager
 
 Contributions:
 --------------
@@ -29,21 +46,23 @@ Users are welcomed to contribute to PyMoDAQ by writing their own plugins. Two ap
 * Copy the `plugin template package`__ on you disk and work on the templates within then ask to create an official
   plugin package
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 Naming convention:
 ------------------
 
-For the plugin to be properly recognised by PyMoDAQ, its location and name must follow some rules and syntax. The
-`plugin template package`__ could be copied locally as a starting point:
+For an instrument plugin to be properly recognised by PyMoDAQ, the location and name of the underlying script must
+follow some rules and syntax. The `plugin template package`__ could be copied locally as a starting point:
 
 * An actuator plugin (name: xxxx) will be a script whose name is daq_move_Xxxx (notice first X letter is capital)
-* The plugin class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well)
+* The main instrument class within the script will be named DAQ_Move_Xxxx (notice the capital letters here as well and sorry
+  if it is troublesome)
 
-* A detector plugin of dimensionality N (N=0, 1, 2 or N) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx (notice first X letter is capital, and replace N by 0, 1 or 2)
-* The plugin class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
+* A detector plugin of dimensionality N (N=0, 1, 2 or N) (name: xxxx) will be a script whose name is daq_NDviewer_Xxxx
+  (notice first X letter is capital, and replace N by 0, 1, 2 or leave it for higher dimensionality)
+* The main instrument class within the script will be named DAQ_NDViewer_Xxxx (notice the capital letters here as well)
 
-__ https://github.com/CEMES-CNRS/pymodaq_plugins_template
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 .. _hardware_settings:
 
@@ -83,8 +102,7 @@ Here is an example of such a list of dictionaries corresponding to :numref:`figu
 
 .. _parameter_tree:
 
-The list of available types of parameters :module:`pymodaq_ptypes`
-(defined in ``pymodaq.utils.parameter.pymodaq_ptypes.py``) is:
+The list of available types of parameters (defined in ``pymodaq.utils.parameter.pymodaq_ptypes.py``) is:
 
 * ``group`` : "camera settings" on :numref:`figure_settings` is of type group
 * ``int`` : settable integer (SpinBox_Custom object)
@@ -226,7 +244,7 @@ to be send to the user interface for plotting and saving. There are a few soluti
 
 * **synchronous**: The simplest one. When the ``grab`` command has been send to the controller (let's say to its
   ``grab_sync`` method), the ``grab_sync`` method will hold and freeze the plugin until the data are ready.
-   The Mock plugin work like this.
+  The Mock plugin work like this.
 
 * **asynchronous**: There are 2 ways of doing asynchronous *waiting*. The first is to poll the controller state to check if data are
   ready within a loop. This polling could be done with a while loop but if nothing more is done then the plugin will still be

@@ -37,6 +37,9 @@ With this logic, when the hot water will have dissipated enough energy in its en
 
 The difference between the setpoint and the current value of the control parameter, here T - T_setpoint, is called the **error signal**.
 
+
+.. _pid_model:
+
 The PID Model
 ^^^^^^^^^^^^^
 
@@ -114,7 +117,7 @@ Let us choose a name, for example **preset_mock_beam_steering**.
 
 Under the Moves section add two actuators by selecting **BeamSteering** in the menu, and configure them as follow. The **controller ID** parameter could be different from the picture in your case. Let this number unchanged for the first actuator, but it is important that all the two actuators and the detector have the same controller ID number. It is also important that the controller status of the first actuator be **Master**, and that the status of the second actuator and the detector be **Slave**. (This configuration is specific to the demonstration. Underneath the actuators and the detector share a same virtual controller to mimic a real beam steering system, but you do not need to understand that for now!)
 
-    .. _fig_actuators_config
+    .. _fig_actuators_config:
 
 .. figure:: /image/PID_Module/preset_actuators_config.png
     :width: 350
@@ -123,7 +126,7 @@ Under the Moves section add two actuators by selecting **BeamSteering** in the m
 
 Now, add a 2D detector by selecting **DAQ2D/BeamSteering** in the menu, and configure it as follow
 
-    .. _fig_camera_config
+    .. _fig_camera_config:
 
 .. figure:: /image/PID_Module/preset_camera.png
     :width: 350
@@ -138,7 +141,7 @@ Back to the dashboard menu
 
 Your dashboard should look like this once you have grabbed the camera and unwrapped the option menus of the actuators.
 
-    .. _fig_dashboard_preset_loaded
+    .. _fig_dashboard_preset_loaded:
 
 .. figure:: /image/PID_Module/dashboard_preset_loaded.png
     :width: 700
@@ -167,7 +170,7 @@ Configure it as follow:
 
 Then **(2) intialize the PID** and **(3) start the PID** loop with the **PLAY** button. Notice that at this stage the corrections are calculated, but the piezo motors are not moving. It is only when you will **(4) untick the PAUSE button** that the corrections will be applied.
 
-    .. _fig_pid_module_interface
+    .. _fig_pid_module_interface:
 
 .. figure:: /image/PID_Module/pid_kp_change_v2.png
     :width: 700
@@ -218,7 +221,7 @@ Start with a fresh dashboard, we have to change a bit the configuration of our p
 
 and select the one that we defined previously. You just need to tick **Use PID as actuator** and save it.
 
-    .. _fig_preset_pid_as_actuator
+    .. _fig_preset_pid_as_actuator:
 
 .. figure:: /image/PID_Module/preset_pid_as_actuator.png
     :width: 400
@@ -229,7 +232,7 @@ and select the one that we defined previously. You just need to tick **Use PID a
 
 Load this new preset. Notice that it now automatically loaded the PID module, and that our dashboard got two more actuators of type PID named **Xaxis** and **Yaxis**. If you change manually the position of those actuators, you should see that they control the setpoints of the PID module.
 
-    .. _fig_setpoints_as_actuators
+    .. _fig_setpoints_as_actuators:
 
 .. figure:: /image/PID_Module/setpoints_as_actuators_v2.png
     :width: 700
@@ -242,7 +245,7 @@ Those virtual actuators can be manipulated as normal actuators, and you can ask 
 
 **Extensions > Do scans**
 
-    .. _fig_scan_configuration
+    .. _fig_scan_configuration:
 
 .. figure:: /image/PID_Module/scan_configuration_v8.png
     :width: 600
@@ -265,12 +268,14 @@ Some popup windows will ask you to name your scan. This is not important here. C
 
 The beam should follow automatically the scan that we have defined. Of course in this demonstration with a virtual system, this sounds quite artificial, but if you need to perform stabilized scans with long acquisition times, this feature can be very useful!
 
-    .. _fig_scan_on_camera
+
+    .. _fig_scan_on_camera:
 
 .. figure:: /image/PID_Module/scan_on_camera.png
     :width: 500
 
     Movement of the beam on the camera with a scan of the setpoints.
+
 
 How to write my own PID application?
 ------------------------------------
@@ -278,11 +283,14 @@ How to write my own PID application?
 Package structure for a PID application
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To write your own PID application, you should create a package with a similar structure as a standard *pymodaq_plugins_xxx* package. There are few modifications. Let us have a look at the *pymodaq_plugins_pid*.
+To write your own PID application, you should create a package with a similar structure as a standard
+*pymodaq_plugins_xxx* package. There are few modifications. Let us have a look at the *pymodaq_plugins_pid*.
 
-Notice there is a *models* folder next to the *hardware* folder, at the root of the package. This folder will contains the PID models.
+Notice there is a *models* folder next to the *hardware* folder, at the root of the package.
+This folder will contains the PID models.
 
-    .. _fig_beam_steering:
+
+    .. _fig_pid_models_folder:
 
 .. figure:: /image/PID_Module/pid_package_structure.png
     :width: 300
@@ -416,7 +424,7 @@ Packages
 General structure of the module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    .. _fig_pid_structure_overview
+    .. _fig_pid_structure_overview:
 
 .. figure:: /image/PID_Module/PID_StructureOverview.svg
     :width: 600
@@ -436,7 +444,7 @@ The PID loop
 
 The conductor of the PID loop is the **PIDRunner**, in particular the **start_PID** method. The workflow for each iteration of the loop can be mapped as in the following figure.
 
-    .. _fig_pid_loop
+    .. _fig_pid_loop:
 
 .. figure:: /image/PID_Module/PIDLoop.svg
     :width: 600

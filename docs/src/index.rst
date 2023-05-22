@@ -119,7 +119,7 @@ Please see :doc:`the changelog </changelog>`.
 
 .. toctree::
    :numbered:
-   :maxdepth: 6
+   :maxdepth: 3
    :caption: Contents:
 
    usage/Features
@@ -127,10 +127,12 @@ Please see :doc:`the changelog </changelog>`.
    usage/How_to_start
    usage/configuration
    usage/Description
+   usage/Plugins
    usage/CustomApp
    usage/tcpip
    usage/Feedback
    usage/Contributors
+   usage/glossary
    usage/APIdoc
    PyMoDAQ Femto <https://pymodaq-femto.readthedocs.io/en/latest/>
 
