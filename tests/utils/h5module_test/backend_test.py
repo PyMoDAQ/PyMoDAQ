@@ -77,6 +77,23 @@ class TestNode:
         node_obj_2 = backends.Node(node_obj, backend)
         assert node_obj_2.node == node_dict
 
+    def test_h5file(self, get_backend):
+        bck = get_backend
+        attrs = dict(attr1='one attr', attr2=(10, 15), attr3=12.4)
+        node = bck.add_group('mygroup', 'detector', '/', metadata=attrs)
+
+        assert isinstance(node, backends.Node)
+        assert node.h5file is not None
+
+    def test_to_backend(self, get_backend):
+        bck = get_backend
+        attrs = dict(attr1='one attr', attr2=(10, 15), attr3=12.4)
+        node = bck.add_group('mygroup', 'detector', '/', metadata=attrs)
+
+        bck_bis = node.to_h5_backend()
+        assert bck_bis.h5file == node.h5file
+        group_node = bck_bis.get_node('/Mygroup')
+        assert group_node == node
 
 
 class TestH5Backend:

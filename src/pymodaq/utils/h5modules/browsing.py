@@ -36,7 +36,8 @@ from pymodaq.utils.messenger import messagebox
 from .backends import H5Backend
 from .saving import H5Saver
 from . import data_saving
-from .utils import find_scan_node
+from .utils import find_scan_node, get_h5_attributes
+from .exporter import ExporterFactory
 
 config = Config()
 logger = set_logger(get_module_name(__file__))
@@ -55,70 +56,18 @@ class H5BrowserUtil(H5Backend):
     def __init__(self, backend='tables'):
         super().__init__(backend=backend)
 
-    def export_data(self, node_path='/', filesavename='datafile.h5'):
-        """Export data in nodes in another file format
+    def export_data(self, node_path='/', filesavename: str = 'datafile.h5'):
+        """Initialize the correct exporter and export the node"""
 
-        Parameters
-        ----------
-        node_path: str
-            the path in the file
-        filesavename:
-            the exported file name with a particular extension
-            Accepted extensions are:
-            * txt: to save node content in a tab delimited text file
-            * ascii: to save node content in a tab delimited ascii file
-            * h5
-        """
-        if filesavename != '':
-            file = Path(filesavename)
-            node = self.get_node(node_path)
-            if file.suffix == '.txt' or file.suffix == '.ascii':
-                if 'ARRAY' in node.attrs['CLASS']:
-                    data = node.read()
-                    if not isinstance(data, np.ndarray):
-                        # in case one has a list of same objects (array of strings for instance, logger or other)
-                        data = np.array(data)
-                        np.savetxt(filesavename,
-                                   data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
-                                   '%s', '\t')
-                    else:
-                        np.savetxt(filesavename,
-                                   data if file.suffix == '.txt' else data.T if len(data.shape) > 1 else [data],
-                                   '%.6e', '\t')
-
-                elif 'GROUP' in node.attrs['CLASS']:
-                    data_tot = []
-                    header = []
-                    dtypes = []
-                    fmts = []
-                    for subnode_name, subnode in node.children().items():
-                        if 'ARRAY' in subnode.attrs['CLASS']:
-                            if len(subnode.attrs['shape']) == 1:
-                                data = subnode.read()
-                                if not isinstance(data, np.ndarray):
-                                    # in case one has a list of same objects (array of strings for instance, logger or other)
-                                    data = np.array(data)
-                                data_tot.append(data)
-                                dtypes.append((subnode_name, data.dtype))
-                                header.append(subnode_name)
-                                if data.dtype.char == 'U':
-                                    fmt = '%s'  # for strings
-                                elif data.dtype.char == 'l':
-                                    fmt = '%d'  # for integers
-                                else:
-                                    fmt = '%.6f'  # for decimal numbers
-                                fmts.append(fmt)
-
-                    data_trans = np.array(list(zip(*data_tot)), dtype=dtypes)
-                    np.savetxt(filesavename, data_trans, fmts, '\t', header='#' + '\t'.join(header))
-            elif file.suffix == '.h5':
-                self.save_file_as(str(file))
-                copied_file = H5Backend()
-                copied_file.open_file(str(file), 'a')
-
-                copied_file.h5file.move_node(self.get_node_path(node), newparent=copied_file.h5file.get_node('/'))
-                copied_file.h5file.remove_node('/Raw_datas', recursive=True)
-                copied_file.close_file()
+        # Format the node and file type
+        filepath = Path(filesavename)
+        node = self.get_node(node_path)
+        # Separate dot from extension
+        extension = filepath.suffix[1:]
+        # Obtain the suitable exporter object
+        exporter = ExporterFactory.create_exporter(extension)
+        # Export the data
+        exporter.export_data(node, filepath)
 
     def get_h5file_scans(self, where='/'):
         """Get the list of the scan nodes in the file
@@ -144,47 +93,9 @@ class H5BrowserUtil(H5Backend):
 
         return scan_list
 
-    def get_h5_attributes(self, node_path):
-        """Get the list of attributes (metadata) of a given node
-
-        Parameters
-        ----------
-        node_path: str
-            the path in the file
-
-        Returns
-        -------
-        attr_dict: OrderedDict
-            attributes as a dict
-        settings: str
-            settings attribute
-        scan_settings: str
-            scan settings attribute
-        pixmaps: list of pixmap
-        """
-        node = self.get_node(node_path)
-        attrs_names = node.attrs.attrs_name
-        attr_dict = OrderedDict([])
-        for attr in attrs_names:
-            # if attr!='settings':
-            attr_dict[attr] = node.attrs[attr]
-
-        settings = None
-        scan_settings = None
-        if 'settings' in attrs_names:
-            if node.attrs['settings'] != '':
-                settings = node.attrs['settings']
-
-        if 'scan_settings' in attrs_names:
-            if node.attrs['scan_settings'] != '':
-                scan_settings = node.attrs['scan_settings']
-        pixmaps = []
-        for attr in attrs_names:
-            if 'pixmap' in attr:
-                pixmaps.append(node.attrs[attr])
-
-        return attr_dict, settings, scan_settings, pixmaps
-
+    @staticmethod
+    def get_h5_attributes(node_path):
+        return get_h5_attributes(node_path)
 
 class View(QObject):
     item_clicked_sig = Signal(object)
@@ -474,7 +385,7 @@ class H5Browser(QObject, ActionManager):
         H5BrowserUtil.export_data
         """
         try:
-            file_filter = "Single node h5 file (*.h5);;Text files (*.txt);;Ascii file (*.ascii)"
+            file_filter = ExporterFactory.get_file_filters()
             file = select_file(save=True, filter=file_filter)
             self.current_node_path = self.get_tree_node_path()
             if file != '':
