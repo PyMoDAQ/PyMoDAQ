@@ -77,15 +77,15 @@ The detectors and the actuators are represented and manipulated using two contro
 * **DAQ_Move_module** : used to control/drive an actuator (stand alone and/or automated).
   Any number of these modules can be instantiated in the Dashboard
 * **DAQ_Viewer_module** : used to control/drive a detector (stand alone and/or automated).
-  Any number of these modules can be instantiated in the Dashboard.
 
+Any number of these modules can be instantiated in the Dashboard.
 
+The Dashboard allows you to start dedicated extensions that will make use of the control modules:
 
 * **DAQ_Logger_module** : This module lets you log data from one or many detectors defined in the dashboard. You can log data
   in a binary hierarchical hdf5 file or towards a sql database
 * **DAQ_Scan_module** : This module lets you configure automated data acquisition from one or many detectors defined
   in the dashboard as a function or one or more actuators defined also in the dashboard.
-
 
 and many others to simplify any application development.
 
