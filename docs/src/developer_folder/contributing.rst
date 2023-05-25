@@ -9,6 +9,7 @@ How to contribute
 
 If you're willing to help, there are several ways to do it:
 
+
 * Use PyMoDAQ and report bug or issues using github issue tracker
 * Talk about PyMoDAQ to your colleagues
 * Cite PyMoDAQ in your papers
