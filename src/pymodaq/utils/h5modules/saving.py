@@ -383,14 +383,16 @@ class H5SaverLowLevel(H5Backend):
         return group
 
     def add_scan_group(self, where='/RawData', title='', settings_as_xml='', metadata=dict([])):
-        """
-        Add a new group of type scan
+        """Add a new group of type scan
+
+        At creation adds the attributes description and scan_done to be used elsewhere
+
         See Also
         -------
         add_incremental_group
         """
         metadata.update(dict(description='', scan_done=False))
-        group = self.add_incremental_group('scan', where, title, settings_as_xml, metadata)
+        group = self.add_incremental_group(GroupType['scan'], where, title, settings_as_xml, metadata)
         return group
 
     def add_ch_group(self, where, title='', settings_as_xml='', metadata=dict([])):
