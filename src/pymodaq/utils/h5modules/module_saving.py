@@ -336,9 +336,9 @@ class ScanSaver(ModuleSaver):
             saver_xml = ET.SubElement(settings_xml, 'H5Saver', type='group')
             saver_xml.append(ioxml.walk_parameters_to_xml(param=self._h5saver.settings))
 
-        return self._h5saver.add_incremental_group(self.group_type, where, title=self._module.title,
-                                                   settings_as_xml=ET.tostring(settings_xml),
-                                                   metadata=metadata)
+        return self._h5saver.add_scan_group(where, title=self._module.title,
+                                            settings_as_xml=ET.tostring(settings_xml),
+                                            metadata=metadata)
 
     def add_nav_axes(self, axes: List[Axis]):
         for detector in self._module.modules_manager.detectors:
