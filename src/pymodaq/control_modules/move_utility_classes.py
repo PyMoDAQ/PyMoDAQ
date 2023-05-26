@@ -73,14 +73,20 @@ def comon_parameters_fun(is_multiaxes=False, axes_names=[], master=True, epsilon
     master: bool
         If True consider this plugin has to init the controller, otherwise use an already initialized instance
     """
-    params = [{'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
-        {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
-         'default': False},
-        {'title': 'Status:', 'name': 'multi_status', 'type': 'list', 'value': 'Master' if master else 'Slave',
-         'limits': ['Master', 'Slave']},
-        {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
-
-    ]}] + comon_parameters(epsilon)
+    params = [
+                 {'title': 'MultiAxes:', 'name': 'multiaxes', 'type': 'group', 'visible': is_multiaxes, 'children': [
+                     {'title': 'is Multiaxes:', 'name': 'ismultiaxes', 'type': 'bool', 'value': is_multiaxes,
+                      'default': False},
+                     {'title': 'Status:', 'name': 'multi_status', 'type': 'list',
+                      'value': 'Master' if master else 'Slave', 'limits': ['Master', 'Slave']},
+                     {'title': 'Axis:', 'name': 'axis', 'type': 'list', 'limits': axes_names},
+                 ]},
+                 {'title': 'Grouping', 'name': 'grouping', 'type': 'group', 'visible': is_multiaxes, 'children': [
+                     {'title': 'Axes', 'name': 'grouped_axes', 'type': 'itemselect',
+                      'value': dict(all_items=axes_names, selected=[])},
+                     {'title': 'Do group', 'name': 'do_group', 'type': 'bool'},
+                 ]}
+             ] + comon_parameters(epsilon)
     return params
 
 
