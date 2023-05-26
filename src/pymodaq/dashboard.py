@@ -1159,7 +1159,7 @@ class DashBoard(QObject):
 
             See Also
             --------
-            stop_scan,  DAQ_Move_main.daq_move.stop_Motion
+            stop_scan,  DAQ_Move_main.daq_move.stop_motion
         """
         self.overshoot = overshoot
         if self.scan_module is not None:
