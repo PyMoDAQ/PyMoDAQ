@@ -1166,7 +1166,7 @@ class DashBoard(QObject):
             self.scan_module.stop_scan()
 
         for mod in self.actuators_modules:
-            mod.stop_Motion()
+            mod.stop_motion()
 
     def show_log(self):
         import webbrowser
