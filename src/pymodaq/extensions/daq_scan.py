@@ -713,7 +713,7 @@ class DAQScan(QObject, ParameterManager):
             self.modules_manager.reset_signals()
             self.live_timer.stop()
             self.ui.set_scan_done()
-            scan_node = self.module_and_data_saver.get_set_node()
+            scan_node = self.module_and_data_saver.get_last_node()
             scan_node.attrs['scan_done'] = True
             self.save_scan()
             if not self.batch_started:
@@ -877,7 +877,7 @@ class DAQScan(QObject, ParameterManager):
                 remote_manager.activate_all(False)
 
             self.module_and_data_saver.h5saver = self.h5saver
-            new_scan = self.module_and_data_saver.get_set_node(new=False).attrs['scan_done']
+            new_scan = self.module_and_data_saver.get_last_node().attrs['scan_done'] # get_last_node
             scan_node = self.module_and_data_saver.get_set_node(new=new_scan)
             self.save_metadata(scan_node, 'scan_info')
 
@@ -956,6 +956,8 @@ class DAQScan(QObject, ParameterManager):
         """
         self.ui.set_permanent_status('Stoping acquisition')
         self.command_daq_signal.emit(utils.ThreadCommand("stop_acquisition"))
+        scan_node = self.module_and_data_saver.get_last_node()
+        scan_node.attrs['scan_done'] = True
 
         if not self.dashboard.overshoot:
             self.set_ini_positions()  # do not set ini position again in case overshoot fired
