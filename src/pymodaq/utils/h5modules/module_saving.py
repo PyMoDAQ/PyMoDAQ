@@ -36,7 +36,7 @@ class ModuleSaver(metaclass=ABCMeta):
     main_module = True
 
     def get_set_node(self, where: Union[Node, str] = None, name: str = None) -> GROUP:
-        """Get the node corresponding to this particular Module instance
+        """Get or create the node corresponding to this particular Module instance
 
         Parameters
         ----------
