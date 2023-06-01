@@ -20,6 +20,7 @@ from pymodaq.utils.gui_utils import Dock, DockArea
 class LoaderPlotter:
 
     grouped_data1D_fullname = 'Grouped/Data1D'
+    grouped_data2D_fullname = 'Grouped/Data2D'
 
     def __init__(self, dockarea):
         self.dockarea = dockarea
@@ -88,7 +89,7 @@ class LoaderPlotter:
         if filter_full_names is not None:
             self._data.data[:] = [data for data in self._data if data.get_full_name() in filter_full_names]
 
-        if group_1D:
+        if group_1D:  # 0D initial data
             data = self._data.get_data_from_dim('Data1D')
             if len(data) > 0:
                 data1D_arrays = []
@@ -103,6 +104,25 @@ class LoaderPlotter:
                                          origin=self.grouped_data1D_fullname.split('/')[0],
                                          axes=dwa.axes)
                 self._data.append(data1D)
+
+        if group_1D:  # 0D initial data but 2D final
+            data = self._data.get_data_from_dim('Data2D')
+            if len(data) > 0:
+                data2D_arrays = []
+                labels = []
+                for dwa in data:
+                    if len(data2D_arrays) == 0 or dwa.shape == data2D_arrays[-1].shape:
+                        data2D_arrays.extend(dwa.data)
+                        labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                        self._data.remove(dwa)
+                    else:
+                        break
+
+                data2D = DataFromPlugins(self.grouped_data2D_fullname.split('/')[1],
+                                         data=data2D_arrays, labels=labels,
+                                         origin=self.grouped_data2D_fullname.split('/')[0],
+                                         axes=dwa.axes)
+                self._data.append(data2D)
 
         return self._data
 

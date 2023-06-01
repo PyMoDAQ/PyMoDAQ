@@ -659,6 +659,10 @@ class DAQScan(QObject, ParameterManager):
         if self.settings['scan_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data1D') in viewers_enum:
             viewers_enum = [ViewersEnum('Data1D')]
             data_names = [self.live_plotter.grouped_data1D_fullname]
+        elif self.settings['scan_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data2D') in viewers_enum:
+            viewers_enum = [ViewersEnum('Data2D')]
+            data_names = [self.live_plotter.grouped_data2D_fullname]
+
         viewers_enum.extend([ViewersEnum('Data1D').increase_dim(self.scanner.n_axes)
                              for _ in range(len(self.settings['plot_options', 'plot_1d']['selected']))])
         data_names.extend(self.settings['plot_options', 'plot_1d']['selected'][:])
