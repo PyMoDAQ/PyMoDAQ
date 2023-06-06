@@ -39,6 +39,7 @@ class Scan2DLinear(ScannerBase):
 
     def __init__(self, actuators: List = None, **_ignored):
         super().__init__(actuators=actuators)
+        self.axes_unique = []
 
     def get_pos(self):
         starts = np.array([self.settings['start_axis1'], self.settings['start_axis2']])
