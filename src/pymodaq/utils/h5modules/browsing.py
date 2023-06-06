@@ -36,7 +36,6 @@ from pymodaq.utils.messenger import messagebox
 from .backends import H5Backend
 from .saving import H5Saver
 from . import data_saving
-from .utils import find_scan_node, get_h5_attributes
 from .exporter import ExporterFactory
 
 config = Config()
@@ -93,9 +92,32 @@ class H5BrowserUtil(H5Backend):
 
         return scan_list
 
-    @staticmethod
-    def get_h5_attributes(node_path):
-        return get_h5_attributes(node_path)
+    def get_h5_attributes(self, node_path):
+        """
+        """
+        node = self.get_node(node_path)
+        attrs_names = node.attrs.attrs_name
+        attr_dict = OrderedDict([])
+        for attr in attrs_names:
+            # if attr!='settings':
+            attr_dict[attr] = node.attrs[attr]
+
+        settings = None
+        scan_settings = None
+        if 'settings' in attrs_names:
+            if node.attrs['settings'] != '':
+                settings = node.attrs['settings']
+
+        if 'scan_settings' in attrs_names:
+            if node.attrs['scan_settings'] != '':
+                scan_settings = node.attrs['scan_settings']
+        pixmaps = []
+        for attr in attrs_names:
+            if 'pixmap' in attr:
+                pixmaps.append(node.attrs[attr])
+
+        return attr_dict, settings, scan_settings, pixmaps
+
 
 class View(QObject):
     item_clicked_sig = Signal(object)
