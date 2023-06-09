@@ -24,6 +24,20 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     XML file containing the number and type of control modules to be used for a given experiment. You can
     create, modify and load a preset from the Dashboard
 
+  DataSource
+    Enum informing about the source of the data object, for instance raw from a  detector or processed from
+    mathematical functions (from ROI, ...)
+
+  DataDim
+    Enum for the dimensionality representation of the data object, for instance scalars have a dimensionality *Data0D*,
+    waveforms or vectors have *Data1D* dimensionality, camera's data are *Data2D*, and hyperspectral (or other) are
+    *DataND*
+
+  DataDistribution
+    Enum for the distribution type of the data object. Data can be stored on linear grid (think about an oscilloscope
+    trace having a fixed time interval, or camera having a regular grid of pixels) or stored on non uniform and non
+    linear "positions", for instance data taken at random time intervals. Data can therefore have two ditributions:
+    **uniform** or **spread**.
 
   Plugin
     A plugin is a python package whose name is of the type: *pymodaq_plugins_apluginname* containing functionalities
@@ -43,3 +57,6 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
       the :ref:`Dashboard_module`
 
     Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extension plugins
+
+
+

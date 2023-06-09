@@ -1474,8 +1474,6 @@ class DataWithAxes(DataBase):
         return str(self._am)
 
 
-
-
 class DataRaw(DataWithAxes):
     """Specialized DataWithAxes set with source as 'raw'. To be used for raw data"""
     def __init__(self, *args,  **kwargs):
