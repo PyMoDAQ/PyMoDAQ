@@ -562,6 +562,7 @@ class DAQScan(QObject, ParameterManager):
     def create_new_file(self, new_file):
         if new_file:
             self._metada_dataset_set = False
+            self.h5saver.close_file()
         self.h5saver.init_file(update_h5=new_file)
         self.module_and_data_saver.h5saver = self.h5saver
         res = self.update_file_settings()
