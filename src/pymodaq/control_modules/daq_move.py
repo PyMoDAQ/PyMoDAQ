@@ -282,7 +282,7 @@ class DAQ_Move(ParameterManager, ControlModule):
             self._move_done_bool = False
             self.update_status("Moving")
             self.command_hardware.emit(ThreadCommand(command="reset_stop_motion"))
-            self.command_hardware.emit(ThreadCommand(command="move_Home"))
+            self.command_hardware.emit(ThreadCommand(command="move_home"))
 
         except Exception as e:
             self.logger.exception(str(e))
@@ -903,7 +903,7 @@ class DAQ_Move_Hardware(QObject):
                 * In case of **'close'** command, unitinalise the stage closing hardware and emitting the corresponding status signal
                 * In case of **'move_abs'** command, call the move_Abs method with position from command attribute
                 * In case of **'move_rel'** command, call the move_Rel method with the relative position from the command attribute.
-                * In case of **'move_home'** command, call the move_Home method
+                * In case of **'move_home'** command, call the move_home method
                 * In case of **'get_actuator_value'** command, get the current position from the check_position method
                 * In case of **'Stop_motion'** command, stop any motion via the stop_Motion method
                 * In case of **'reset_stop_motion'** command, set the motion_stopped attribute to false
