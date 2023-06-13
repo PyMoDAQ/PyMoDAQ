@@ -39,6 +39,17 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     linear "positions", for instance data taken at random time intervals. Data can therefore have two ditributions:
     **uniform** or **spread**.
 
+  Signal
+    Signal and Navigation is a term taken from the hyperspy package vocabulary. It is useful when dealing with
+    multidimensional data.
+    Imagine data you obtained from a camera (256x1024 pixels) during a linear 1D scan of one actuator (100 steps).
+    The final shape of the data would be (100, 256, 1024). The first dimension corresponds to a Navigation axis
+    (the scan), and the rest to Signal axes (the real detector's data).
+    The corresponding data has a dimensionality of DataND and a representation of (100|256,1024).
+
+  Navigation
+    See above.
+
   Plugin
     A plugin is a python package whose name is of the type: *pymodaq_plugins_apluginname* containing functionalities
     to be added to PyMoDAQ
