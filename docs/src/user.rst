@@ -12,5 +12,4 @@ User's Guide
    user_folder/extensions
    user_folder/useful_modules
    user_folder/saving
-   user_folder/data_management
    user_folder/tcpip

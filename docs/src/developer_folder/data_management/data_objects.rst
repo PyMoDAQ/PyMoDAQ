@@ -1,17 +1,10 @@
-
-
-Data Management
-===============
-Data are at the center of the PyMoDAQ ecosystem. From their acquisition up to
-their saving and plotting, you'll be confronted with them. It is therefore of
-paramount importance that data objects be well understood and be used
-transparently by all of PyMoDAQ's modules.
-
+.. _data_objects:
 
 What is PyMoDAQ's Data?
 +++++++++++++++++++++++
 
 Data in PyMoDAQ are objects with many characteristics:
+
 
 * a type: float, int, ...
 * a dimensionality: Data0D, Data1D, Data2D and we will discuss about :ref:`DataND <navigation_signal>`
@@ -83,6 +76,8 @@ One course for data that are not scalar, a very important information is the axi
 for waveforms, two for 2D data or more fro hyperspectral data). PyMoDAQ therefore introduces `Axis` and `DataWithAxis`
 objects.
 
+.. _data_axis:
+
 Axis
 ----
 
@@ -126,6 +121,8 @@ and a special slicer property to get subparts of the axis's data (but as a new `
 
 >>> axis.iaxis[2:].get_data()
 array([11., 15.])
+
+.. _datawithaxes:
 
 DataWithAxes
 ------------
@@ -285,6 +282,9 @@ For explicit meaning, several classes are inheriting ``DataWithAxes`` with adhoc
 * ``DataCalculated``: ``DataWithAxes`` with its source set to ``DataSource['calculated']``
 * ``DataFromRoi``: explicit ``DataCalculated`` to be used when processing data using ROI.
 
+
+.. _datatoexport:
+
 DataToExport
 ++++++++++++
 
@@ -325,13 +325,3 @@ or get dwa from their dimensionality, their name, the number of axes they have .
 Dwa can also be appended or removed to/from a ``DataToExport``.
 
 For more details see :ref:`datatoexport_api`
-
-How to save such data?
-++++++++++++++++++++++
-hjdhgj
-
-
-How to load data?
-+++++++++++++++++
-
-
