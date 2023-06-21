@@ -11,7 +11,7 @@ As PyMoDAQ is not a library for professional developers, we consider that you re
 
 Rather than looking for a general and exhaustive documentation, we will illustrate the development flow with a precise example. We will go step by step through the development of the **PI E-870 controller** plugin: from the reception of the device up to controlling it with PyMoDAQ. This one is chosen to be quite simple and standard. This controller can be used for example to control PiezoMike actuators, as illustrated below.
 
-    .. _fig_controller_actuators:
+.. _fig_controller_actuators:
 
 .. figure:: /image/plugin_development/PI_E870&PiezoMike.png
     :width: 600
@@ -92,7 +92,7 @@ In the following, we will follow different routes, as illustrated in the followi
 .. figure:: /image/plugin_development/software_layers_V2.png
     :width: 800
 
-    The different routes to establish the communication between the computer and the controller.
+    The different routes (blue, gold, green) to establish the communication between the computer and the controller.
 
 The blue route: use the manufacturer GUI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -244,7 +244,7 @@ You dispose of several ways to do so.
 
     How to raise an issue on a GitHub repository.
 
-Now we have gone as far as possible we could go without digging into the code, but if you are keen on it, let's continue on the gold route!
+Now we have gone as far as possible we could go without digging into the code, but if you are keen on it, let's continue on the gold route (:numref:`fig_communication_routes`)!
 
 The gold route: control your device with a Python script
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -554,7 +554,7 @@ __ https://github.com/PyMoDAQ/pymodaq_plugins_thorlabs/blob/main/src/pymodaq_plu
 The green route: control your device with PyMoDAQ
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Now that we know how to control our actuators with Python, it will be quite simple to write our PyMoDAQ plugin, that is what we will tackle in this section!
+Now that we know how to control our actuators with Python, it will be quite simple to write our PyMoDAQ plugin, that is what we will learn in this section!
 
 Before doing so, we have to introduce a few tools and prepare a few things that are indispensable to work properly in an open-source project.
 
@@ -795,7 +795,7 @@ First, it is important that we comment the context of this plugin, this can be d
 
 __ https://numpydoc.readthedocs.io/en/latest/format.html
 
-Notice that the import of the wrapper is very similar to what we have done in the gold route. However, we do not call anymore the *InterfaceSetupDlg()* method (see Fig. $$$$$$$$$$$$$$$$$$$$$) that was poping up a window. We rather use the *EnumerateUSB()* method to get the list of the addresses of the plugged controllers, which will then be sent in the parameter panel (in the item named *Devices*) of the DAQ_Move UI. We now understand precisely the sequence of events that makes the list of controller addresses available just after we have selected our plugin.
+Notice that the import of the wrapper is very similar to what we have done in the gold route. However, we do not call anymore the *InterfaceSetupDlg()* method that was poping up a window. We rather use the *EnumerateUSB()* method to get the list of the addresses of the plugged controllers, which will then be sent in the parameter panel (in the item named *Devices*) of the DAQ_Move UI. We now understand precisely the sequence of events that makes the list of controller addresses available just after we have selected our plugin.
 
 Notice that in the class declaration not all the parameters are visible. Most of them are declared in the *comon_parameters_fun* that declares all the parameters that are common to every plugin. But if at some point you need to add some specific parameter to your plugin, you just have to add an element in this *params* list, and it will directly be displayed and controllable through the DAQ_Move UI! You should fill in a *title*, a *name*, a *type* of data, a *value* ... You will find this kind of tree everywhere in the PyMoDAQ code. Copy-paste the first lign for exemple and see what happens when you execute the code ;)
 
@@ -894,7 +894,7 @@ It is for those kind of reasons that it is so efficient to work with a remote se
 
 ``C:\Users\<OS username>\local_repository\pymodaq_plugins_physik_instrumente>git push``
 
-In the Git vocabulary, *pushing* means that you send your work to your *remote repository* (see Fig. $$$$$$$$$$$$$$$$$$). If we go on our remote server on GitHub, we can notice that our repository has actually been updated!
+In the Git vocabulary, *pushing* means that you send your work to your *remote repository*. If we go on our remote server on GitHub, we can notice that our repository has actually been updated!
 
 .. figure:: /image/plugin_development/github_remote.svg
     :width: 600
@@ -920,29 +920,38 @@ You have to be careful to select properly the good repositories and the good bra
 
     The GitHub interface to create a PR.
 
+Leave a message to describe your changes and submit. Our pull request is now visible `on the upstream repository`__.
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_physik_instrumente/pull/4
+
+.. figure:: /image/plugin_development/github_pull_request_2.png
+    :width: 600
+
+    Our pull request in the upstream repository.
+
+This opens a space where you can discuss your changes with the owner of the repository. It will be his decision to accept or not the changes that we propose. Let us hope that we will convince him! :) Often these discussions will lead to a significant improvement of the code.
+
 Conclusion
 ^^^^^^^^^^
 
+That’s it!
 
+We have tried, with this concrete example, to present the global workflow of a plugin development, and the most common problems you will face. Do not forget that you are not alone: ask for help, it is an other way to meet your collegues!
 
-The result is of course still perfectible, and let us hope that there will be a new version by the time you are reading this! ;)
+We have also introduce a software toolbox for Python development in general, that we sum up in the following table. They are all free of charge. Of course this is just a suggestion, you may prefer different solutions. We wanted to present here the main types of software you need to develop efficiently.
 
-We hope to have presented the most common problems you will face while developing a plugin.
++------------------------------------+---------------------------------------+
+| Software function                  | Solution presented                    |
++====================================+=======================================+
+| Python environment manager         | Anaconda                              |
++------------------------------------+---------------------------------------+
+| Python package manager             | pip                                   |
++------------------------------------+---------------------------------------+
+| Python IDE                         | Spyder / PyCharm                      |
++------------------------------------+---------------------------------------+
+| Version control software           | Git                                   |
++------------------------------------+---------------------------------------+
+| Repository host	             | GitHub                                |
++------------------------------------+---------------------------------------+
 
-Before purchasing an instrument, check what your supplier provides as a software solution (Python wrapper, Linux drivers...).
-
-Let us summerize the different tools we have used: table. Of course here was a quick introduction to those tools, and more time is needed to really master them. All those tools are free of use.
-
---------------------------
-
-Where to put documentation.
-
-Where to put a wrapper.
-
-How to publish my plugin on PyPI?
-
-
-
-
-
-
+Finally, remember that while purchasing an instrument, it is important to check what your supplier provides as a software solution (Python wrapper, Linux drivers...). This can save you a lot of time!
