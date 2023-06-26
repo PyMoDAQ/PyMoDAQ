@@ -1,15 +1,16 @@
 .. _plugin_development:
 
-Story of a plugin development
-=============================
+Story of an instrument plugin development
+=========================================
 
-In this section we will explain step by step the way to develop a plugin, so that you can control your specific device through PyMoDAQ. If you are not familiar with it, start with this `introduction to plugins`__.
+In this tutorial, we will explain step by step the way to develop an `instrument plugin`__. It is a specific type of `plugin`__, that will allow you to control your device through PyMoDAQ. In the following, we may use the term *plugin* in order to ease the reading of the tutorial, but it will always actually refer to an *instrument plugin*.
 
-__ https://pymodaq.cnrs.fr/en/pymodaq-dev/usage/modules/Plugins.html
+__ https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html
+__ https://pymodaq.cnrs.fr/en/latest/glossary.html#term-Plugin
 
 As PyMoDAQ is not a library for professional developers, we consider that you reader do not know anything about how the development of an open source project works. We will take the time to start from scratch, and allow us to expand the scope of this documentation out of PyMoDAQ itself, to introduce Python environment, Git, external python libraries...
 
-Rather than looking for a general and exhaustive documentation, we will illustrate the development flow with a precise example. We will go step by step through the development of the **PI E-870 controller** plugin: from the reception of the device up to controlling it with PyMoDAQ. This one is chosen to be quite simple and standard. This controller can be used for example to control PiezoMike actuators, as illustrated below.
+Rather than looking for a general and exhaustive documentation, we will illustrate the development flow with a precise example. We will go step by step through the development of the **PI E-870 controller** instrument plugin: from the reception of the device up to controlling it with PyMoDAQ. This one is chosen to be quite simple and standard. This controller can be used for example to control PiezoMike actuators, as illustrated below.
 
 .. _fig_controller_actuators:
 
@@ -18,12 +19,12 @@ Rather than looking for a general and exhaustive documentation, we will illustra
 
     The PI E-870 controller and PiezoMike actuators mounted on an optical mount.
 
-The benefit of writing a plugin is twofold:
+The benefit of writing an instrument plugin is twofold:
 
 * First, you will learn a lot about coding, and coding the good way! Using the most efficient tools that are used by professional developpers. We will introduce how to use Python editors, linters, code-versioning, testing, publication, bug reporting, how to integrate open-source external libraries in my code… so that in the end you have a good understanding of how to develop a code in a collaborative way.
-* Secondly, writing a plugin is a great opportunity to dig into the understanding of your hardware: what are the physical principles that make my instrument working? How to benefit completely of all its functionalities? What are the different communication layers between my device and my Python script?
+* Secondly, writing an instrument plugin is a great opportunity to dig into the understanding of your hardware: what are the physical principles that make my instrument working? How to benefit completely of all its functionalities? What are the different communication layers between my device and my Python script?
 
-Writing a plugin is very instructive, and match perfectly for a student project.
+Writing an instrument plugin is very instructive, and match perfectly for a student project.
 
 The controller manual
 ^^^^^^^^^^^^^^^^^^^^^
@@ -46,13 +47,13 @@ __ https://www.youtube.com/watch?v=oVRv9fcx6AI
 
 Nice! :)
 
-What is *open-loop* operation? It means the system has no reading of the actuator position, as opposed to a *close-loop* operation. The open-loop operation is simpler and cheaper, because it does not require any *encoder* or *limit switch*, but it means that you will have no absolute reference of your axis, and less precision. This is an important choice when you buy an actuator, and it depends on your application. This will have big impact on our plugin development.
+What is *open-loop* operation? It means the system has no reading of the actuator position, as opposed to a *close-loop* operation. The open-loop operation is simpler and cheaper, because it does not require any *encoder* or *limit switch*, but it means that you will have no absolute reference of your axis, and less precision. This is an important choice when you buy an actuator, and it depends on your application. This will have big impact on our instrument plugin development.
 
 *"The E-870 supports one PIShift channel. The piezo voltage of the PIShift channel can be transferred to one of
 two (E-870.2G) or four (E-870.4G) demultiplexer channels, depending on the model. Up to two or four PIShift
 drives can be controlled serially in this manner."* (page 19)
 
-Here we learn that in this controller, there is actually only one *channel* followed by a demultiplexer that will distribute the amplified current to the addressed axis. This means that only one axis can be moved at a time, the drives can only be controlled *serially*. This also depends on your hardware, and is an important information for the plugin development.
+Here we learn that in this controller, there is actually only one *channel* followed by a demultiplexer that will distribute the amplified current to the addressed axis. This means that only one axis can be moved at a time, the drives can only be controlled *serially*. This also depends on your hardware, and is an important information for the instrument plugin development.
 
 The installer
 ^^^^^^^^^^^^^
@@ -118,18 +119,24 @@ Whenever you want to control a device with PyMoDAQ for the first time, even if y
 
 We are now ready for the serious stuff!
 
-A shortcut through an existing green route? Readily available PyMoDAQ plugins
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A shortcut through an existing green route? Readily available PyMoDAQ instrument plugins
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Before dedicating hours of work to develop your own solution, we should check what has already been done. If we are lucky, some good fellow would already have developped the plugin for our controller!
+Before dedicating hours of work to develop your own solution, we should check what has already been done. If we are lucky, some good fellow would already have developped the instrument plugin for our controller!
 
 Here is the `list of readily available plugins`__.
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
 
-Each plugin is a *Git repository* (we will talk about that latter), and each plugin is associated to a manufacturer. The naming convention is *pymodaq_plugins_<manufacturer_name>*. Notice the "s" at the end of "plugins".
+Each plugin is a *Git repository* (we will talk about that latter), and each instrument plugin is associated to a manufacturer. The naming convention for an instrument plugin is **pymodaq_plugins_<manufacturer name>_<a plugin name>**.
 
-One plugin can be used to control several devices, if they are from the same manufacturer. And those several hardwares can be actuators or detectors of different dimensionalities.
+.. note::
+	Notice the "s" at the end of "plugins".
+
+.. note::
+	Any kind of plugin should follow the naming convention **pymodaq_plugins_<a plugin name>**, but for an instrument plugin, the name should be **pymodaq_plugins_<manufacturer name>_<a plugin name>**. **<a plugin name>** could be a controller name for example, but it is not mandatory.
+
+One instrument plugin can be used to control several devices, if they are from the same manufacturer. And those several hardwares can be actuators or detectors of different dimensionalities.
 
 All the plugins that are listed there can directly be installed with the `plugin manager module`__.
 
@@ -167,7 +174,7 @@ First, we have to install PyMoDAQ in a dedicated Python environment, that we wil
 
 __ https://pymodaq.cnrs.fr/en/pymodaq-dev/user_folder/installation.html#
 
-Let's try to install it with the plugin manager. In your terminal, within your activated environment where you just installed PyMoDAQ (the lign of your terminal should start with *(pmd_dev)*), type
+Now that PyMoDAQ is installed and you have activated your environment (the lign of your terminal should start with *(pmd_dev)*), we will try to install the PI instrument plugin with the plugin manager. In your terminal, execute the following command
 
 ``(pmd_dev) >plugin_manager``
 
@@ -269,7 +276,7 @@ In our example, PI developped a library that is common to a lot of its controlle
 
 __ https://github.com/quantumm/pymodaq_plugins_physik_instrumente/blob/E-870/docs/E870/PI_GCS_2_0_DLL_SM151E220.pdf
 
-This documentation is supposed to be exhaustive about all the functions that are provided by the library to communicate with a lot of controllers from PI. Fortunately, we will only need very few of them. The game is thus to pick up the good information there. This is probably the most difficult part of the plugin development. This is mostly due to the fact that there is no standardization of the way the library is written. Thus the route we will follow here will probably not be exactly the same for an other device. Here we also depend a lot on the quality of the work of the developpers of the library. If the documentation is shitty, that could be a nightmare.
+This documentation is supposed to be exhaustive about all the functions that are provided by the library to communicate with a lot of controllers from PI. Fortunately, we will only need very few of them. The game is thus to pick up the good information there. This is probably the most difficult part of the instrument plugin development. This is mostly due to the fact that there is no standardization of the way the library is written. Thus the route we will follow here will probably not be exactly the same for an other device. Here we also depend a lot on the quality of the work of the developpers of the library. If the documentation is shitty, that could be a nightmare.
 
 What is a Python wrapper?
 -------------------------
@@ -540,7 +547,7 @@ Then, one problem you will have to face is that the Python types are different f
 
 __ https://docs.python.org/3/library/ctypes.html
 
-Finally, found examples of codes that are the closest possible to your problem. You can look for examples in other pymodaq plugins, the wrappers should be in the *hardware* subfolder of the plugin:
+Finally, found examples of codes that are the closest possible to your problem. You can look for examples in other instrument plugins, the wrappers should be in the *hardware* subfolder of the plugin:
 
 * `SmarAct MCS2 wrapper`__
 * `Thorlabs TLPM wrapper`__
@@ -582,7 +589,7 @@ A repository is basically just a folder that contains subfolders and files. But 
 
 What about our precise case?
 
-We noticed before that there is already a *Physik Instrument* plugin repository, it is then not necessary to create another one. We would rather like to *modify* it, and add a new plugin that would deal with our E870 controller. Let first make a copy of this repository into our account. In the technical jargon of Git, we say that we will make a *fork* of the repository. The term *fork* images the fact that we will make a new history of the evolution of the folder. By forking the repository into our account, we will keep track of *our modifications* of the folder, and the original one can follow another trajectory.
+We noticed before that there is already a *Physik Instrument* plugin repository, it is then not necessary to create another one. We would rather like to *modify* it, and add a new file that would deal with our E870 controller. Let first make a copy of this repository into our account. In the technical jargon of Git, we say that we will make a *fork* of the repository. The term *fork* images the fact that we will make a new history of the evolution of the folder. By forking the repository into our account, we will keep track of *our modifications* of the folder, and the original one can follow another trajectory.
 
 To fork a repository, follow this procedure:
 
@@ -698,9 +705,9 @@ Let us now open the *daq_move_PI.py* file. This file defines a class correspondi
 .. figure:: /image/plugin_development/correspondance_methods_GUI.svg
     :width: 600
 
-    Each action of the user on the UI triggers a method of the plugin class.
+    Each action of the user on the UI triggers a method of the instrument class.
 
-During our first test of the plugin, earlier in this tutorial, we noticed that things went wrong at the moment we click the *Initialize* button, which correspond to the *ini_stage* method of the DAQ_Move_PI class. We will place inside this method some *breakpoints* to analyse what is going on. To do so you just have to click within the *breakpoints column* at the lign you are interested in. A red disk will appear, as illustrated by the next capture.
+During our first test of the plugin, earlier in this tutorial, we noticed that things went wrong at the moment we click the *Initialize* button, which correspond to the *ini_stage* method of the DAQ_Move_PI class. We will place inside this method some *breakpoints* to analyse what is going on. To do so, you just have to click within the *breakpoints column* at the lign you are interested in. A red disk will appear, as illustrated by the next capture.
 
 .. figure:: /image/plugin_development/pycharm_view_breakpoints_2.svg
     :width: 600
@@ -730,8 +737,8 @@ Let's go there to see what happens. We can attach the *pipython* package to our 
 
     The *axes* attribute calls the *SAI?* GCS command that is not supported by the E870 controller.
 
-Write the class for our new PyMoDAQ plugin
-------------------------------------------
+Write the class for our new instrument
+--------------------------------------
 
 Coding a PyMoDAQ plugin actually consists in writting a Python class with specific conventions such that the PyMoDAQ core knows where to find the installed plugins and where to call the correct methods.
 
@@ -746,8 +753,8 @@ __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 
 The *src* directory of the repository is subdivided into three subfolders
 
-* *daq_move_plugins* which stores all the plugins corresponding to actuators.
-* *daq_viewer_plugins*, which stores all the plugins corresponding to detectors. It is itself divided into subfolders corresponding to the dimensionality of the detector.
+* *daq_move_plugins* which stores all the instruments corresponding to actuators.
+* *daq_viewer_plugins*, which stores all the instruments corresponding to detectors. It is itself divided into subfolders corresponding to the dimensionality of the detector.
 * *hardware*, within which you will find Python wrappers (optional).
 
 Within each of the first two subfolders, you will find a Python file defining a class. In our context we are interested in the one that is defined in the first subfolder.
@@ -757,11 +764,11 @@ Within each of the first two subfolders, you will find a Python file defining a 
 
     Definition of the DAQ_Move_Template class.
 
-As you can see the structure of the class is already coded. What we have to do is to follow the comments associated to each line, and insert the scripts we have developped in a previous section (see *gold route*) in the right method.
+As you can see the structure of the instrument class is already coded. What we have to do is to follow the comments associated to each line, and insert the scripts we have developped in a previous section (see *gold route*) in the right method.
 
 There are *naming conventions* that should be followed:
 
-* The name of the package should be *pymodaq_plugins_<company name>*. Do not forget the "s" at "plugins" ;)
+* The name of the package should be *pymodaq_plugins_<company name>_<a plugin name>*. Do not forget the "s" at "plugins" ;)
 * The name of the file should be *daq_move_xxx.py* and replace *xxx* by whatever you like (something that makes sense is recommended ;) )
 * The name of the class here should be *DAQ_Move_xxx*.
 * The name of the methods that are already present in the template should be kept as it is.
@@ -776,28 +783,28 @@ Change the name of the class to *DAQ_Move_PI_E870*.
 
 *Run* again the *daq_move_main.py* file.
 
-You should now notice that our new plugin is already available in the list! This is thanks to the naming conventions. However, the initialization will obviously fail, because for now we did not input any logic in our class.
+You should now notice that our new instrument is already available in the list! This is thanks to the naming conventions. However, the initialization will obviously fail, because for now we did not input any logic in our class.
 
 Before we go further, let us configure a bit more PyCharm. We will first fix the maximum number of characters per lign. Each Python project fixes its own convention, so that the code is easier to read. For PyMoDAQ, the convention is **120 characters**. Go to *File > Settings > Editor > Code Style* and configure *Hard wrap* to 120 characters.
 
 **Introduction of the class**
 
-We call the *introduction of the class* the code that is sandwitched between the *class* keyword and the first method definition. This code will be executed after the user selected the plugin he wants to use through the *DAQ_Move* UI.
+We call the *introduction of the class* the code that is sandwitched between the *class* keyword and the first method definition. This code will be executed after the user selected the instrument he wants to use through the *DAQ_Move* UI.
 
 This part of the code from the original plugin was working, so let's just copy-paste it, and adapt a bit to our case.
 
 .. figure:: /image/plugin_development/daq_move_pi_e870_introduction+ui.svg
     :width: 800
 
-    Introduction of the class of our PI E870 plugin.
+    Introduction of the class of our PI E870 instrument.
 
-First, it is important that we comment the context of this plugin, this can be done in the *docstring* attach to the class, PyMoDAQ follows the `Numpy style`__ for its documentation
+First, it is important that we comment the context of this file, this can be done in the *docstring* attach to the class, PyMoDAQ follows the `Numpy style`__ for its documentation
 
 __ https://numpydoc.readthedocs.io/en/latest/format.html
 
-Notice that the import of the wrapper is very similar to what we have done in the gold route. However, we do not call anymore the *InterfaceSetupDlg()* method that was poping up a window. We rather use the *EnumerateUSB()* method to get the list of the addresses of the plugged controllers, which will then be sent in the parameter panel (in the item named *Devices*) of the DAQ_Move UI. We now understand precisely the sequence of events that makes the list of controller addresses available just after we have selected our plugin.
+Notice that the import of the wrapper is very similar to what we have done in the gold route. However, we do not call anymore the *InterfaceSetupDlg()* method that was poping up a window. We rather use the *EnumerateUSB()* method to get the list of the addresses of the plugged controllers, which will then be sent in the parameter panel (in the item named *Devices*) of the DAQ_Move UI. We now understand precisely the sequence of events that makes the list of controller addresses available just after we have selected our instrument.
 
-Notice that in the class declaration not all the parameters are visible. Most of them are declared in the *comon_parameters_fun* that declares all the parameters that are common to every plugin. But if at some point you need to add some specific parameter to your plugin, you just have to add an element in this *params* list, and it will directly be displayed and controllable through the DAQ_Move UI! You should fill in a *title*, a *name*, a *type* of data, a *value* ... You will find this kind of tree everywhere in the PyMoDAQ code. Copy-paste the first lign for exemple and see what happens when you execute the code ;)
+Notice that in the class declaration not all the parameters are visible. Most of them are declared in the *comon_parameters_fun* that declares all the parameters that are common to every plugin. But if at some point you need to add some specific parameter for your instrument, you just have to add an element in this *params* list, and it will directly be displayed and controllable through the DAQ_Move UI! You should fill in a *title*, a *name*, a *type* of data, a *value* ... You will find this kind of tree everywhere in the PyMoDAQ code. Copy-paste the first lign for exemple and see what happens when you execute the code ;)
 
 To modify the value of such a parameter, you will use something like
 
@@ -819,7 +826,7 @@ As mentioned before, the *ini_stage* method is triggered when the user click the
 .. figure:: /image/plugin_development/daq_move_pi_e870_ini_stage.svg
     :width: 600
 
-    *ini_stage* method of our PI E870 plugin.
+    *ini_stage* method of our PI E870 instrument class.
 
 Compared to the initial plugin, we simplified this method by removing the functions that were intended for close-loop operation. Plus we only consider the USB connexion. The result is that our controller initializes correctly now: the LED is green!
 
@@ -835,7 +842,7 @@ Another important method is *commit_settings*. This one contains the logic that 
 .. figure:: /image/plugin_development/daq_move_pi_e870_commit_settings.svg
     :width: 600
 
-    *commit_settings* method of our PI E870 plugin. Implementation of a change of axis.
+    *commit_settings* method of our PI E870 instrument class. Implementation of a change of axis.
 
 **move_rel method**
 
@@ -844,11 +851,11 @@ Finally, the *move_rel* method, that implements a relative move of the actuator 
 .. figure:: /image/plugin_development/daq_move_pi_e870_move_rel.svg
     :width: 600
 
-    *move_rel* method of our PI E870 plugin. Implementation of a relative move.
+    *move_rel* method of our PI E870 instrument class. Implementation of a relative move.
 
 We can now test the *Rel +* / *Rel -* buttons, a change of axis... it works!
 
-There is still minor methods to implement, but now you master the basics of the plugin development ;)
+There is still minor methods to implement, but now you master the basics of the instrument plugin development ;)
 
 Commit our changes with Git
 ---------------------------
@@ -936,7 +943,7 @@ Conclusion
 
 That’s it!
 
-We have tried, with this concrete example, to present the global workflow of a plugin development, and the most common problems you will face. Do not forget that you are not alone: ask for help, it is an other way to meet your collegues!
+We have tried, with this concrete example, to present the global workflow of an instrument plugin development, and the most common problems you will face. Do not forget that you are not alone: ask for help, it is an other way to meet your collegues!
 
 We have also introduce a software toolbox for Python development in general, that we sum up in the following table. They are all free of charge. Of course this is just a suggestion, you may prefer different solutions. We wanted to present here the main types of software you need to develop efficiently.
 
