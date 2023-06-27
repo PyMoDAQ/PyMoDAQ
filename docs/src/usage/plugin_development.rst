@@ -265,18 +265,27 @@ As you may have noticed, the installer saved locally a file called *PI_GCS2_DLL.
 
 The .dll file is a *library* that contains functions that are written in C++. It is an `API`__ between the controller and a computer application like PyMoDAQ or the PI GUI. It is made so that the person that intends to communicate with the controller is forced to do it the proper way (defined by the manufacturer's developpers). You cannot see the content of this file, but **it is always provided with a documentation**.
 
+__ https://en.wikipedia.org/wiki/API
+
+If you want to know more about DLL, have a look at the `Microsoft documentation`__.
+
+__ https://learn.microsoft.com/en-us/troubleshoot/windows-client/deployment/dynamic-link-library
+
 .. note::
     We suppose in this documentation that you use a Windows operating system, because it is the great majority of the cases, but PyMoDAQ is also compatible with Linux operating systems. If you wish to control a device with a Linux system, you have to be careful during your purchase that your manufacturer provide Linux drivers, which is unfortunately not always the case. The equivalent of the .dll format for a Linux operating system is a .so file. PI provide such file, which is great! The development of Linux-compatible plugins will be the topic of another tutorial.
 
-**The all thing of the gold route is just to find how to talk to the DLL with Python.**
+**The all thing of the gold route is to find how to talk to the DLL with Python.**
 
-__ https://en.wikipedia.org/wiki/API
-
-In our example, PI developped a library that is common to a lot of its controllers, called the *GCS 2.0 library* (it is the 2.0 version that is adapted to our controller). The `associated documentation`__ is quite impressive at first sight: 100+ (harsh!) pages.
+In our example, PI developped a DLL library that is common to a lot of its controllers, called the *GCS 2.0 library* (it is the 2.0 version that is adapted to our controller). The `associated documentation`__ is quite impressive at first sight: 100+ (harsh!) pages.
 
 __ https://github.com/quantumm/pymodaq_plugins_physik_instrumente/blob/E-870/docs/E870/PI_GCS_2_0_DLL_SM151E220.pdf
 
-This documentation is supposed to be exhaustive about all the functions that are provided by the library to communicate with a lot of controllers from PI. Fortunately, we will only need very few of them. The game is thus to pick up the good information there. This is probably the most difficult part of the instrument plugin development. This is mostly due to the fact that there is no standardization of the way the library is written. Thus the route we will follow here will probably not be exactly the same for an other device. Here we also depend a lot on the quality of the work of the developpers of the library. If the documentation is shitty, that could be a nightmare.
+This documentation is supposed to be exhaustive about all the functions that are provided by the library to communicate with a lot of controllers from PI. Fortunately, we will only need very few of them. The game is thus to pick up the good information there. This is probably the most difficult part of an instrument plugin development. This is mostly due to the fact that there is no standardization of the way the library is written. Thus the route we will follow here will probably not be exactly the same for an other device. Here we also depend a lot on the quality of the work of the developpers of the library. If the documentation is shitty, that could be a nightmare.
+
+.. note::
+	Our example deals with a C++ DLL, but there exists other ways to communicate with a device: ASCII commands, .NET libraries (using `pythonnet`__)...
+
+__ https://pypi.org/project/pythonnet/
 
 What is a Python wrapper?
 -------------------------
