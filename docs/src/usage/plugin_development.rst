@@ -309,6 +309,8 @@ In our example, our supplier is serious. Probably the wrapper he developped will
 
 PyMoDAQ is of course not the only project of its kind. You can find on the internet a lot of non-official ressources to help you communicate with your equipment. Some of them are so great and cover so much instruments that you should automatically check if your device is supported. Even if your supplier proposes a solution, it can be inspiring to have a look at them. Let's present the most important ones.
 
+**PyLabLib**
+
 `PyLabLib`__ is a very impressive library that interfaces the most common instruments that you will find in a lab:
 
 __ https://pylablib.readthedocs.io/en/latest/index.html
@@ -340,22 +342,51 @@ Of particular interest are the **camera drivers**, that are often the most diffi
 
 __ https://pylablib-cam-control.readthedocs.io/en/latest/overview.html
 
-`Instrumental`__ is also a very good library that you should know about. It can be complementary to PyLabLib as it covers different instruments.
+**Instrumental**
+
+`Instrumental`__ is also a very good library that you should know about, which covers different instruments.
+
+__ https://instrumental-lib.readthedocs.io/en/stable/index.html
+
+Here is the `list of supported instruments`__.
+
+__ https://instrumental-lib.readthedocs.io/en/stable/overview.html#drivers
 
 As you can see with the little script that is given as an example, it is super easy to use.
 
-__ https://instrumental-lib.readthedocs.io/en/stable/index.html
+Instrumental is particularly good to create drivers from DLL written from C where one have the header file, autoprocessing the function signatures...
 
 .. figure:: /image/plugin_development/instrumental_page.png
     :width: 500
 
     The Instrumental website.
 
-This list is of course not exhaustive. Those external ressources should not be neglected, they will often provide a good solution to start with!
+**PyMeasure**
+
+`PyMeasure`__ will be our final example.
+
+__ https://pymeasure.readthedocs.io/en/latest/
+
+You can find here the `list of supported instruments`__ by the library.
+
+__ https://pymeasure.readthedocs.io/en/latest/api/instruments/index.html
+
+This libray is very efficient for all instruments that communicate through ASCII commands (`pyvisa`__ basically) and make drivers very easy to use and develop.
+
+__ https://pyvisa.readthedocs.io/en/latest/
+
+.. figure:: /image/plugin_development/pymeasure_website.png
+    :width: 500
+
+    The PyMeasure website.
+
+**Installation of external librairies**
 
 The installation of those libraries in our environment cannot be simpler:
 
 ``(pmd_dev) >pip install <library name>``
+
+This list is of course not exhaustive. Those external ressources are precious, they will often provide a good solution to start with!
 
 Back to PIPython wrapper
 ------------------------
