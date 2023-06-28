@@ -3,7 +3,7 @@
 Story of an instrument plugin development
 =========================================
 
-In this tutorial, we will explain step by step the way to develop an `instrument plugin`__. It is a specific type of `plugin`__, that will allow you to control your device through PyMoDAQ. In the following, we may use the term *plugin* in order to ease the reading of the tutorial, but it will always actually refer to an *instrument plugin*.
+In this tutorial, we will explain step by step the way to develop an `instrument plugin`__. It is a specific type of `plugin`__, that will allow you to control your device through PyMoDAQ. In the following, we may use the term *plugin* in quite a loosy way in order to ease the reading of the tutorial, but we will try to not be ambiguous.
 
 __ https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html
 __ https://pymodaq.cnrs.fr/en/latest/glossary.html#term-Plugin
@@ -21,10 +21,10 @@ Rather than looking for a general and exhaustive documentation, we will illustra
 
 The benefit of writing an instrument plugin is twofold:
 
-* First, you will learn a lot about coding, and coding the good way! Using the most efficient tools that are used by professional developpers. We will introduce how to use Python editors, linters, code-versioning, testing, publication, bug reporting, how to integrate open-source external libraries in my code… so that in the end you have a good understanding of how to develop a code in a collaborative way.
-* Secondly, writing an instrument plugin is a great opportunity to dig into the understanding of your hardware: what are the physical principles that make my instrument working? How to benefit completely of all its functionalities? What are the different communication layers between my device and my Python script?
+* Firstly, you will learn a lot about coding, and coding the good way! Using the most efficient tools that are used by professional developpers. We will introduce how to use Python editors, linters, code-versioning, testing, publication, bug reporting, how to integrate open-source external libraries in your code… so that in the end you have a good understanding of how to develop a code in a collaborative way.
+* Secondly, writing an instrument plugin is a great opportunity to dig into the understanding of your hardware: what are the physical principles that make my instrument working? How to fully benefit of all its functionalities? What are the different communication layers between my device and my Python script?
 
-Writing an instrument plugin is very instructive, and match perfectly for a student project.
+Writing an instrument plugin is very instructive, and perfectly matches a student project.
 
 The controller manual
 ^^^^^^^^^^^^^^^^^^^^^
@@ -58,7 +58,7 @@ Here we learn that in this controller, there is actually only one *channel* foll
 The installer
 ^^^^^^^^^^^^^
 
-It is important to notice that **PyMoDAQ itself does not necessarily provide all the software needed to control your device**. Most of the time, you have to install *drivers*, which are pieces of software, specific to each device, that are indispensable to establish the communication between your device and the operating system. Those are necessarily provided by the manufacturer. The ones you will install can depend on your operating system, and also on the way your establish the communication between them. Most of the time, you will install the USB driver for example, but this is probably useless if you communicate throught Ethernet.
+It is important to notice that **PyMoDAQ itself does not necessarily provide all the software needed to control your device**. Most of the time, you have to install *drivers*, which are pieces of software, specific to each device, that are indispensable to establish the communication between your device and the operating system. Those are necessarily provided by the manufacturer. The ones you will install can depend on your operating system, and also on the way your establish the communication between them. Most of the time, you will install the USB driver for example, but this is probably useless if you communicate through Ethernet.
 
 Let's now run the *installer* provided in the CD that comes with the controller. The filename is *PI_E-870.CD_Setup.exe*. It is an *executable* file, which means that it hosts a program.
 
@@ -68,7 +68,7 @@ Let's now run the *installer* provided in the CD that comes with the controller.
 
     The GUI of the installer.
 
-In the capture at the right, you can see what it will install on your local computer, in particular:
+On the capture on the right, you can see what it will install on your local computer, in particular:
 
 * Documentation.
 * A *graphical user interface* (GUI) to control the instrument, called the *PI E870Control*.
@@ -79,7 +79,7 @@ In the capture at the right, you can see what it will install on your local comp
 
 Whatever the way you want to communicate with your device, you will need the drivers. Thus, again, **you need to install them before using PyMoDAQ**.
 
-Once those are installed, plug the controller with a USB cable, and go to the *Device settings* of Windows. An icon should appear like in the following figure. It is the first thing to check when you are not sure about the communication with your device. If this icon does not appear or there is a warning sign, change the cable or reinstall the drivers, it is no need to go further. You can also get some information about the driver.
+Once those are installed, plug the controller with a USB cable, and go to the *Device settings* of Windows. An icon should appear like in the following figure. It is the first thing to check when you are not sure about the communication with your device. If this icon does not appear or there is a warning sign, change the cable or reinstall the drivers, no need to go further. You can also get some information about the driver.
 
 .. figure:: /image/plugin_development/peripherique_imprimante.svg
     :width: 400
@@ -98,7 +98,7 @@ In the following, we will follow different routes, as illustrated in the followi
 The blue route: use the manufacturer GUI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The simplest way to control your device is to use the GUI software that is provided by the manufacturer. It is usefull while you are under development, but will be useless once you have developped your plugin. PyMoDAQ will replace it, and even provide much broader functionalities. While a specific manufacturer GUI talks to only one specific device, PyMoDAQ provides you a common framework to talk to many different instruments, synchronize them, save the acquisitions, and many more!
+The simplest way to control your device is to use the GUI software that is provided by the manufacturer. It is usefull while you are under development, but will be useless once you have developped your plugin. PyMoDAQ will replace it, and even provide much broader functionalities. While a specific manufacturer GUI talks to only one specific device, PyMoDAQ provides to you a common framework to talk to many different instruments, synchronize them, save the acquisitions, and many more!
 
 In the main tab, we found the buttons to send relative move orders, change the number of steps, change the controlled axis (in this example we can control 4 axis). **Check all that works properly.**
 
@@ -117,7 +117,7 @@ Whenever you want to control a device with PyMoDAQ for the first time, even if y
 * The communication with the controller is OK.
 * The actuators are moving properly.
 
-We are now ready for the serious stuff!
+We are now ready for the serious part!
 
 A shortcut through an existing green route? Readily available PyMoDAQ instrument plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -128,21 +128,27 @@ Here is the `list of readily available plugins`__.
 
 __ https://github.com/CEMES-CNRS/pymodaq_plugin_manager/blob/main/doc/PluginList.md
 
-Each plugin is a *Git repository* (we will talk about that latter), and each instrument plugin is associated to a manufacturer. The naming convention for an instrument plugin is **pymodaq_plugins_<manufacturer name>_<a plugin name>**.
+Each plugin is a *Python package*, and also a *Git repository* (we will talk about that later).
+
+By convention, an instrument plugin can be used to control several devices, **but only if they are from the same manufacturer**. Those several hardwares can be actuators or detectors of different dimensionalities. The **naming convention for an instrument plugin** is
+
+*pymodaq-plugins-<manufacturer name>*
 
 .. note::
 	Notice the "s" at the end of "plugins".
 
 .. note::
-	Any kind of plugin should follow the naming convention **pymodaq_plugins_<a plugin name>**, but for an instrument plugin, the name should be **pymodaq_plugins_<manufacturer name>_<a plugin name>**. **<a plugin name>** could be a controller name for example, but it is not mandatory.
+	Any kind of plugin should follow the naming convention *pymodaq-plugins-<something more specific>*, but an instrument plugin is a specific kind of `plugin`__. For (an advanced) example, imagine that we create a beam pointing stabilization plugin, and that this system uses devices from different companies. We could have an actuator class that controls a SmarAct optical mount, a detector class that control a Thorlabs camera, and a `PID model`__ specifically designed for our needs. In that case we could use the name *pymodaq-plugins-beam-stabilization*.
 
-One instrument plugin can be used to control several devices, if they are from the same manufacturer. And those several hardwares can be actuators or detectors of different dimensionalities.
+__ https://pymodaq.cnrs.fr/en/latest/glossary.html#term-Plugin
+
+__ https://pymodaq.cnrs.fr/en/latest/extensions_folder/pid_module.html#the-pid-model
 
 All the plugins that are listed there can directly be installed with the `plugin manager module`__.
 
 __ https://pymodaq.cnrs.fr/en/pymodaq-dev/user_folder/installation.html#plugin-manager
 
-Some of those - let say the *official* ones - are hosted by the `PyMoDAQ organization on GitHub`__, but they can also be hosted by other organizations. For example, the repository `pymodaq_plugins_greateyes`__ is hosted by the ATTOLab organization, but you can directly install it with the plugin manager.
+Some of those - let say the *official* ones - are hosted by the `PyMoDAQ organization on GitHub`__, but they can also be hosted by other organizations. For example, the repository `pymodaq-plugins-greateyes`__ is hosted by the ATTOLab organization, but you can directly install it with the plugin manager.
 
 __ https://github.com/PyMoDAQ
 
@@ -808,12 +814,18 @@ As you can see the structure of the instrument class is already coded. What we h
 
 There are *naming conventions* that should be followed:
 
-* The name of the package should be *pymodaq_plugins_<company name>_<a plugin name>*. Do not forget the "s" at "plugins" ;)
+* We already mentioned that the name of the package should be *pymodaq-plugins-<company name>*. Do not forget the "s" at "plugins" ;)
 * The name of the file should be *daq_move_xxx.py* and replace *xxx* by whatever you like (something that makes sense is recommended ;) )
 * The name of the class here should be *DAQ_Move_xxx*.
 * The name of the methods that are already present in the template should be kept as it is.
 
+.. note::
+	Be careful that in the package names, the separator is "-", whereas in file names, the separator is "_".
+
 The name of the methods is quite explicit. Moreover, the *docstrings* are here to help you understand what is expected in each method.
+
+.. note::
+	In Python, a method’s name should be lowercase.
 
 Go to the *daq_move_plugins* folder, you should find some files like *daq_move_PI.py*, which correspond to the other plugins that are already present in this package.
 
