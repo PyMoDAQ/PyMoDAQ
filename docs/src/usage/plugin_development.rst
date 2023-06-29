@@ -164,7 +164,7 @@ __ https://pypi.org/project/pymodaq-plugins-greateyes
 
 Remember that the already developed plugins will give you a lot of working examples, probably the way you will develop your own plugin will be very similar to one that already exist.
 
-It sounds like we are very lucky... the PI plugin already exists!! :O
+It sounds like we are very lucky... the PI plugin already exists!
 
     .. _fig_pi_plugin_in_list:
 
@@ -176,7 +176,7 @@ It sounds like we are very lucky... the PI plugin already exists!! :O
 
 Let's try it!
 
-First, we have to install PyMoDAQ in a dedicated Python environment, that we will call *pmd_dev* in this tutorial, as is described `in this page`__.
+First, we have to install PyMoDAQ in a dedicated Python environment, that we will call *pmd_dev* in this tutorial, as described `in this page`__.
 
 __ https://pymodaq.cnrs.fr/en/pymodaq-dev/user_folder/installation.html#
 
@@ -205,27 +205,27 @@ Now let's launch a DAQ_Move
 
     DAQ Move interface.
 
-(1) The list of available actuator plugins proposes the *PI* one, that sounds good!
+(1) The list of available actuator contains the *PI* one, that sounds good!
 
-(2) Let select the *USB* connexion type.
+(2) Let select the *USB* connection type.
 
-(3) The list of available devices proposes our controller with his serial number! That sounds veeeeery good because it means that the program can see the controller!
+(3) The list of available devices contains our controller with his serial number! That sounds really good because it means that the program can see the controller!
 
-(4) Let's launch the initialization! Arrrrrrf :( The LED stays red! Something went wrong...
+(4) Let's launch the initialization! Damn. The LED stays red! Something went wrong...
 
-In a perfect world this should work, we followed the correct way. But PyMoDAQ is a project under development, and some bugs may appear. Let's not be discourage! Actually we should be happy to have found this bug, otherwise we would not have the opportunity to explain how to face it ;)
+In a perfect world this should work, since we followed the proper way. But PyMoDAQ is a project under development, and some bugs may appear. Let's not be discouraged! Actually we should be happy to have found this bug, otherwise we would not have the opportunity to explain how to face it.
 
-What do we do now?!
+What do we do now?
 
-First, let's try to get more information about this bug. PyMoDAQ automatically feeds a log file, let see what he has to tell us. You can find it on your computer at the location
+First, let's try to get more information about this bug. PyMoDAQ automatically feeds a log file, let’s see what it has to tell us. You can find it on your computer at the location
 
-**<OS username>/pymodaq_local/log/pymodaq.log**
+**<OS username>/.pymodaq/log/pymodaq.log**
 
 or you can open it through the Dashboard menu :
 
 **File > Show log file**
 
-it looks like this
+It looks like this
 
     .. _fig_pi_existing_plugin_error:
 
@@ -234,13 +234,13 @@ it looks like this
 
     The log file of PyMoDAQ after trying to initialize the plugin.
 
-This log file contains a lot of information that is written during the execution of PyMoDAQ. It is classified in a chronological order. If you find a bug, the first thing to do is thus to go at the end of this file.
+This log file contains a lot of information that is written during the execution of PyMoDAQ. It is sorted in chronological order. If you find a bug, the first thing to do is thus to go at the end of this file.
 
-In the above capture, we see that the first lign indicates the moment we clicked on the *Initialization* button of the interface.
+In the above capture, we see that the first line indicates the moment we clicked on the *Initialization* button of the interface.
 
 In the following we see that an error appeared: **Unknown command (2)**. The least we can say is that it is not crystal clear to deduce the error from this!
 
-At this point, we will not escape from digging into the code, if you do not feel like it, there is a last but very important thing that you can do, which is to **report the bug**. Try to detail as much as possible every step of your problem, and copy paste the part of the log file that is important. Even if you do not provide any solution, this reporting will be a usefull step to make PyMoDAQ better.
+At this point, we will not escape from digging into the code. If you do not feel like it, there is a last but very important thing that you can do, which is to **report the bug**. Try to detail as much as possible every step of your problem, and copy paste the part of the log file that is important. Even if you do not provide any solution, this reporting will be a usefull step to make PyMoDAQ better.
 
 You dispose of several ways to do so.
 
@@ -269,27 +269,27 @@ What is a DLL?
 
 As you may have noticed, the installer saved locally a file called *PI_GCS2_DLL.dll*.
 
-The .dll file is a *library* that contains functions that are written in C++. It is an `API`__ between the controller and a computer application like PyMoDAQ or the PI GUI. It is made so that the person that intends to communicate with the controller is forced to do it the proper way (defined by the manufacturer's developpers). You cannot see the content of this file, but **it is always provided with a documentation**.
+The .dll file is a *library* that contains functions that are written in C++. It is an `API`__ between the controller and a computer application like PyMoDAQ or the PI GUI. It is made so that the person that intends to communicate with the controller is forced to do it the proper way (defined by the manufacturer's developers). You cannot see the content of this file, but **it is always provided with a documentation**.
 
 __ https://en.wikipedia.org/wiki/API
 
-If you want to know more about DLL, have a look at the `Microsoft documentation`__.
+If you want to know more about DLLs, have a look at the `Microsoft documentation`__.
 
 __ https://learn.microsoft.com/en-us/troubleshoot/windows-client/deployment/dynamic-link-library
 
 .. note::
-    We suppose in this documentation that you use a Windows operating system, because it is the great majority of the cases, but PyMoDAQ is also compatible with Linux operating systems. If you wish to control a device with a Linux system, you have to be careful during your purchase that your manufacturer provide Linux drivers, which is unfortunately not always the case. The equivalent of the .dll format for a Linux operating system is a .so file. PI provide such file, which is great! The development of Linux-compatible plugins will be the topic of another tutorial.
+    We suppose in this documentation that you use a Windows operating system, because it is the vast majority of the cases, but PyMoDAQ is also compatible with Linux operating systems. If you wish to control a device with a Linux system, you have to be careful during your purchase that your manufacturer provides Linux drivers, which is unfortunately not always the case. The equivalent of the .dll format for a Linux operating system is a .so file. PI provide such file, which is great! The development of Linux-compatible plugins will be the topic of another tutorial.
 
-**The all thing of the gold route is to find how to talk to the DLL with Python.**
+**The whole thing of the gold route is to find how to talk to the DLL through Python.**
 
 In our example, PI developped a DLL library that is common to a lot of its controllers, called the *GCS 2.0 library* (it is the 2.0 version that is adapted to our controller). The `associated documentation`__ is quite impressive at first sight: 100+ (harsh!) pages.
 
 __ https://github.com/quantumm/pymodaq_plugins_physik_instrumente/blob/E-870/docs/E870/PI_GCS_2_0_DLL_SM151E220.pdf
 
-This documentation is supposed to be exhaustive about all the functions that are provided by the library to communicate with a lot of controllers from PI. Fortunately, we will only need very few of them. The game is thus to pick up the good information there. This is probably the most difficult part of an instrument plugin development. This is mostly due to the fact that there is no standardization of the way the library is written. Thus the route we will follow here will probably not be exactly the same for an other device. Here we also depend a lot on the quality of the work of the developpers of the library. If the documentation is shitty, that could be a nightmare.
+This documentation is supposed to be exhaustive about all the functions that are provided by the library to communicate with a lot of controllers from PI. Fortunately, we will only need very few of them. The challenge here is to pick up the good information there. This is probably the most difficult part of an instrument plugin development. This is mostly due to the fact that there is no standardization of the way the library is written. Thus the route we will follow here will probably not be exactly the same for another device. Here we also depend a lot on the quality of the work of the developers of the library. If the documentation is shitty, that could be a nightmare.
 
 .. note::
-	Our example deals with a C++ DLL, but there exists other ways to communicate with a device: ASCII commands, .NET libraries (using `pythonnet`__)...
+	Our example deals with a C++ DLL, but there are other ways to communicate with a device: ASCII commands, .NET libraries (using `pythonnet`__)...
 
 __ https://pypi.org/project/pythonnet/
 
@@ -315,14 +315,14 @@ We can now understand a bit better the error given in the PyMoDAQ log earlier. I
 .. note::
     All the Python packages of your environment are stored in the *site-packages* folder. In our case the complete path is *C:\\Users\\<OS username>\\Anaconda3\\envs\\pmd_dev\\Lib\\site-packages*. Be careful to not end up in the *base* environment of Anaconda, which is located at *C:\\Users\\<OS username>\\Anaconda3\\Lib\\site-packages*.
 
-That's great news! The PI developpers did a great job, and this will save us a lot of time. Unfortunately, this is not always the case. There are still some less serious suppliers that do not provide an open-source Python wrapper. You should consider this as a serious argument *before* you buy your lab equipment, as it can save you a lot of time and struggle. Doing so, you will put some pressure on the suppliers to develop Python open-source code, so that we can free our lab instruments! Yeah! :D
+That's great news! The PI developpers did a great job, and this will save us a lot of time. Unfortunately, this is not always the case. There are still some less serious suppliers that do not provide an open-source Python wrapper. You should consider this as a serious argument *before* you buy your lab equipment, as it can save you a lot of time and struggle. Doing so, you will put some pressure on the suppliers to develop Python open-source code, so that we can free our lab instruments!
 
 External open-source libraries
 ------------------------------
 
-In our example, our supplier is serious. Probably the wrapper he developped will do a good job. But let us imagine that it is not the case, and take a bit of time to present a few *external libraries*.
+In our example, our supplier is serious. Probably the wrapper it developped will do a good job. But let us imagine that it is not the case, and take a bit of time to present a few *external libraries*.
 
-PyMoDAQ is of course not the only project of its kind. You can find on the internet a lot of non-official ressources to help you communicate with your equipment. Some of them are so great and cover so much instruments that you should automatically check if your device is supported. Even if your supplier proposes a solution, it can be inspiring to have a look at them. Let's present the most important ones.
+PyMoDAQ is of course not the only project of its kind. You can find on the internet a lot of non-official resources to help you communicate with your equipment. Some of them are so great and cover so much instruments that you should automatically check if your device is supported. Even if your supplier proposes a solution, it can be inspiring to have a look at them. Let's present the most important ones.
 
 **PyLabLib**
 
@@ -386,7 +386,7 @@ You can find here the `list of supported instruments`__ by the library.
 
 __ https://pymeasure.readthedocs.io/en/latest/api/instruments/index.html
 
-This libray is very efficient for all instruments that communicate through ASCII commands (`pyvisa`__ basically) and make drivers very easy to use and develop.
+This libray is very efficient for all instruments that communicate through ASCII commands (`pyvisa`__ basically) and makes drivers very easy to use and develop.
 
 __ https://pyvisa.readthedocs.io/en/latest/
 
