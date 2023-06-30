@@ -98,7 +98,7 @@ Documentation
 *************
 * Sébastien Weber, Research Engineer at CEMES/CNRS
 * Matthieu Cabos helped with this documentation
-* David Bresteau wrote the documentation of the PID extension
+* David Bresteau wrote the documentation of the PID extension and the tutorial: :ref:`plugin_development`
 
 Testing
 *******

@@ -26,7 +26,7 @@ Axes
 .. automodule:: pymodaq.utils.data
    :members: AxisBase, Axis
 
-.. _data_objects:
+.. _data_objects_api:
 
 DataObjects
 -----------
