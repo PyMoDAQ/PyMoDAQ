@@ -127,6 +127,7 @@ Please see :doc:`the changelog </changelog>`.
    usage/Description
    usage/CustomApp
    usage/tcpip
+   usage/plugin_development
    usage/Feedback
    usage/Contributors
    usage/APIdoc
