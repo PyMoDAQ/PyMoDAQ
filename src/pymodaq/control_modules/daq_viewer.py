@@ -535,7 +535,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """
         browse_data()
 
-
     def save_current(self):
         """Save current data into a h5file"""
         self._do_save_data = True
@@ -665,7 +664,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.module_and_data_saver = module_saving.DetectorSaver(self)
         self.module_and_data_saver.h5saver = h5saver
 
-        self._add_data_to_saver(data)
+        self._add_data_to_saver(data, init_step=True)
 
         if self.ui is not None:
             (root, filename) = os.path.split(str(path))
