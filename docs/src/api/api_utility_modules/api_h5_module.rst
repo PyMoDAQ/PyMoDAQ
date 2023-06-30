@@ -93,3 +93,14 @@ file.
 
 .. automodule:: pymodaq.utils.h5modules.browsing
    :members: H5BrowserUtil, H5Browser
+
+
+.. _module_savers_api:
+
+Module savers
+-------------
+
+.. currentmodule:: pymodaq.utils.h5modules.module_saving
+
+.. automodule:: pymodaq.utils.h5modules.module_saving
+   :members: ModuleSaver, DetectorSaver, DetectorEnlargeableSaver, DetectorExtendedSaver, ActuatorSaver, ScanSaver, LoggerSaver

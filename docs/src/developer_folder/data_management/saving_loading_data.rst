@@ -1,5 +1,4 @@
-
-
+.. _saving_loading_data:
 
 Saving and loading data
 +++++++++++++++++++++++
@@ -86,8 +85,9 @@ DataSaverLoader
 
 The ``DataSaverLoader`` object will behave similarly with DataWithAxes objects, introducing the methods:
 
-* add_data
-* load_data
+
+*  add_data
+*  load_data
 
 with a slight asymmetry between the two if one want to load background subtracted data previously saved using the
 specialized ``BkgSaver``. This guy is identical to the ``DataSaverLoader`` except it considers the DataWithAxes
@@ -237,3 +237,90 @@ Some more dedicated objects are derived from the objects above. They allow to ad
 (arrays that will be populated after creation, for instance for a scan) and Enlargeable arrays (whose final length
 is not known at the moment of creation, for instance when logging or continuously saving)
 see :ref:`specific_data_saver`.
+
+.. _module_savers:
+
+Module Savers
+#############
+
+Data saved from the various PyMoDAQ's modules should follow a particular layout. For instance grouped in a `Detector`
+node for data from the DAQ_Viewer modules. This node also has metadata such as the settings of the DAQ_Viewer
+at the time when the data have been saved. Special layouts and special saver objects are available for each module
+able to save data: :ref:`DAQ_Viewer_module`, :ref:`DAQ_Move_module`, :ref:`DAQ_Scan_module` and :ref:`DAQ_Logger_module`.
+See :ref:`module_savers_api` for the related objects.
+
+All of these objects inherit from the ``ModuleSaver`` base class that implements common methods for all savers. Specific
+saver, such as the ``DetectorSaver`` then defines a GroupType:
+
+.. code-block::
+
+    class GroupType(BaseEnum):
+        detector = 0
+        actuator = 1
+        data = 2
+        ch = 3
+        scan = 4
+        external_h5 = 5
+        data_dim = 6
+        data_logger = 7
+
+
+This correspond to a particular type of group node in the h5 file. For what we are discussing the relevant group
+types are *detector*, *actuator*, *scan* and *data_logger*. For the ``DetectorSaver`` the group type is therefore:
+detector. Once instanced these objects can be attributed with a given
+``H5Saver`` instance. for instance, when saving snapshots from the ``DAQ_Viewer``, this code is called:
+
+.. code-block::
+
+    path = 'a/custom/path/for/a/hdf5/file.h5'
+
+    h5saver = H5Saver(save_type='detector')
+    h5saver.init_file(update_h5=True, custom_naming=False, addhoc_file_path=path)
+
+    self.module_and_data_saver = module_saving.DetectorSaver(self)
+    self.module_and_data_saver.h5saver = h5saver
+
+Then ``self.module_and_data_saver`` will automatically create a dedicated group node in the h5 file.
+Then it can call specific methods to add properly formatted data in the hdf5 file:
+
+.. code-block::
+
+    detector_node = self.module_and_data_saver.get_set_node(where)
+    self.module_and_data_saver.add_data(detector_node, data, **kwargs)
+
+where ``data`` is a ``DataToExport`` object (containing possibly multiple ``DataWithAxes`` objects). The content of such a file
+can be displayed using the `H5Browser` as shown on figure :numref:`detector_saver_content`
+
+
+   .. _detector_saver_content:
+
+.. figure:: /image/Utils/detector_saver_file_content.png
+   :alt: detector_saver_content
+
+   HDF5 file content containing a single ``DataWithAxes`` (with two channels) saved using the `DetectorSaver` object
+
+One clearly see the layout with the ``Detector000`` group node (with the setting metadata displayed on the right in a
+``ParameterTree``), the grouping of data by dimensionality, both channels having the same Axis grouped in the
+``CH00`` group node. Both channels are plotted on the right panel in a ``Viewer1D`` object.
+
+If multiple ``DataWithAxes`` where contained in the ``DataToExport`` they would be stored within CH00 and CH01
+group nodes as shown in :numref:`detector_saver_content_bis` together with their axes and even here
+with their background
+
+   .. _detector_saver_content_bis:
+
+.. figure:: /image/Utils/detector_saver_file_content_bis.png
+   :alt: detector_saver_content
+
+   HDF5 file content containing two ``DataWithAxes`` (with one channel each) saved using the ``DetectorSaver`` object.
+   They are stored within ``CH00`` and ``CH01`` group nodes each with their axes and even here with their background.
+
+The code used to add the background is:
+
+
+.. code-block::
+
+    self.module_and_data_saver.add_bkg(detector_node, self._bkg)
+
+
+where ``self._bkg`` is a ``DataToExport`` similar to the one we saved but containing background data.

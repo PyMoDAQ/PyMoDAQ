@@ -6,11 +6,11 @@ What is PyMoDAQ's Data?
 Data in PyMoDAQ are objects with many characteristics:
 
 
-* a type: float, int, ...
-* a dimensionality: Data0D, Data1D, Data2D and we will discuss about :ref:`DataND <navigation_signal>`
-* units
-* axes
-* actual data as numpy arrays
+*  a type: float, int, ...
+*  a dimensionality: Data0D, Data1D, Data2D and we will discuss about :ref:`DataND <navigation_signal>`
+*  units
+*  axes
+*  actual data as numpy arrays
 
 Because of this variety, PyMoDAQ introduce a set of objects including metadata (for instance the time of acquisition)
 and various methods and properties to manipulate those (getting name, slicing, concatenating...). The most basic object
@@ -39,9 +39,11 @@ labels=['channel1', 'channel2'], origin="documentation's code")
 
 When instantiated, some checks are performed:
 
-* checking the homogeneity of the data
-* the consistency of the dimensionality and the shape of the numpy arrays
-* if no dimensionality is given, it is inferred from the data's shape
+
+*  checking the homogeneity of the data
+*  he consistency of the dimensionality and the shape of the numpy arrays
+*  if no dimensionality is given, it is inferred from the data's shape
+
 
 Useful properties can then be used to check and manipulate the data.
 For instance one can check the `length` of the object (number of numpy arrays in the list), the size (number of elements

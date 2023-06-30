@@ -129,11 +129,26 @@ The General Settings are comprised of (see :numref:`general_settings_fig`):
    General settings for the DAQ_Scan module
 
 
-Save Settings
-+++++++++++++++
+Saving: Dataset and scans
++++++++++++++++++++++++++
+
+DAQ_Scan module will save your data in **datasets**. Each **dataset** is a unique h5 file and may contain multiple scans. The
+idea behind this is to have a unique file for a set of related data (the **dataset**) together with all the meta information:
+logger data, module parameters (settings, ROI...) even *png* screenshots of the various panels.
+
+:numref:`figure_h5browser_data` displays the content of a typical **dataset** file containing various scans and how each data
+and metadata is used by the H5Browser to display the info to the user.
+
+   .. _figure_h5browser_data:
+
+.. figure:: /image/Utils/h5browser_datas.PNG
+   :alt: h5 browser
+
+   h5 browser and arrows to explain how each data or metadata is being displayed
+
 
 The Save Settings (see :numref:`save_settings_fig`) is the user interface of the :ref:`h5saver_module`, it is a general
-interface to save the scans in hierarchical hdf5 file (it is also used in the DAQ_Logger extension):
+interface to parametrize data saving in the hdf5 file:
 
    .. _save_settings_fig:
 
@@ -141,6 +156,10 @@ interface to save the scans in hierarchical hdf5 file (it is also used in the DA
    :alt: list_modules
 
    Save settings for the DAQ_Scan extension
+
+
+In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.utils.h5saver,
+it will save scans and datas following the rules
 
 
 Scanner

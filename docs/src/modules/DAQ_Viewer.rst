@@ -173,3 +173,79 @@ There are other functionalities that can be triggered in specific conditions. Am
 * The LCD screen to display 0D Data
 * The ROI_select button and ROI on a Viewer2D
 
+
+Saving data
+-----------
+
+Data saved from the DAQ_Viewer are data objects has described in :ref:`data_objects` and their saving mechanism
+use one of the objects defined in :ref:`module_savers`. There are three possibilities to save data within the
+DAQ_Viewer.
+
+*  The first one is a direct one using the snapshots buttons to save current or new data from the
+   detector, it uses a ``DetectorSaver`` object to do so. The private method triggering the saving is ``_save_data``.
+*  The second one is the continuous saving mode. It uses a ``DetectorEnlargeableSaver`` object to *continuously*
+   save data within enlargeable arrays. Methods related to this are: ``append_data`` and ``_init_continuous_save``
+*  The third one is not used directly from the ``DAQ_Viewer`` but triggered by extensions such as the ``DAQ_Scan``.
+   Data are indexed within an already defined array using a ``DetectorExtendedSaver``. Methods related to this are:
+   ``insert_data`` and some code in the ``DAQ_Scan``, see below.
+
+.. code-block::
+
+    for det in self.modules_manager.detectors:
+        det.module_and_data_saver = module_saving.DetectorExtendedSaver(det, self.scan_shape)
+    self.module_and_data_saver.h5saver = self.h5saver  # will update its h5saver and all submodules's h5saver
+
+
+Snapshots
+^^^^^^^^^
+
+Datas saved directly from a DAQ_Viewer (for instance the one on :numref:`det1D`) will be recorded in
+a h5file whose structure will be represented
+like :numref:`detector_saver_content` using PyMoDAQ's h5 browser.
+
+
+.. _continuous_saving:
+
+Continuous Saving
+^^^^^^^^^^^^^^^^^
+When the *continuous saving* parameter is set, new parameters are appearing on the *DAQ_Viewer* panel
+(see :numref:`figure_continuous`).
+
+
+* *Base path*: indicates where the data will be saved. If it doesn't exist the module will try to create it
+* *Base name*: indicates the base name from which the save file will derive
+* *Current Path*: *readonly*, complete path of the saved file
+* *Do Save*: Initialize the file and logging can start. A new file is created if clicked again.
+* *Compression options*: data can be compressed before saving, using one of the proposed library and the given value of compression [0-9], see *pytables* documentation.
+
+   .. _figure_continuous:
+
+.. figure:: /image/DAQ_Viewer/continuous_saving.PNG
+   :alt: continuous
+
+   Continuous Saving options
+
+.. :download:`png <continuous_saving.png>`
+
+
+The saved file will follow this general structure:
+
+..
+
+  D:\\Data\\2018\\20181220\\Data_20181220_16_58_48.h5
+
+
+With a base path (``D:\Data`` in this case) followed by a subfolder year, a subfolder day and a filename
+formed from a *base name* followed by the date of the day and the time at which you started to log data.
+:numref:`figure_continuous_struct` displays the tree structure of such a file, with two nodes (prefixed as
+enlargeable, *EnlData*) and a navigation axis corresponding to the timestamps at the time of each snapshot taken
+once the continuous saving has been activated (ticking the ``Do Save`` checkbox)
+
+   .. _figure_continuous_struct:
+
+.. figure:: /image/DAQ_Viewer/continuous_data_structure.PNG
+   :alt: continuous
+
+   Continuous Saving options
+
+.. :download:`png <continuous_saving.png>`
