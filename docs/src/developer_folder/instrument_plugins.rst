@@ -19,7 +19,7 @@ the generic structure to build and publish a given plugin.
 You will find below some information on the **how to** but comparison with existing plugins packages will be beneficial.
 
 .. note::
-   Some more detailed documentation is under work
+   You'll find in this documentation a detailed tutorial on :ref:`plugin_development`.
 
 __ https://github.com/PyMoDAQ/pymodaq_plugins_template
 

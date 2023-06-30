@@ -125,6 +125,7 @@ Please see :doc:`the changelog </changelog>`.
    features
    user
    developer
+   tutorials
    feedback
    glossary
    api/api_doc
