@@ -3,10 +3,7 @@
 Story of an instrument plugin development
 =========================================
 
-In this tutorial, we will explain step by step the way to develop an `instrument plugin`__. It is a specific type of `plugin`__, that will allow you to control your device through PyMoDAQ. In the following, we may use the term *plugin* in quite a loosy way in order to ease the reading of the tutorial, but we will try to not be ambiguous.
-
-__ https://pymodaq.cnrs.fr/en/latest/developer_folder/instrument_plugins.html
-__ https://pymodaq.cnrs.fr/en/latest/glossary.html#term-Plugin
+In this tutorial, we will explain step by step the way to develop an :ref:`instrument plugin <instrument_plugin_doc>`. It is a specific type of :term:`plugin`, that will allow you to control your device through PyMoDAQ.
 
 As PyMoDAQ is not a library for professional developers, we consider that you reader do not know anything about how the development of an open source project works. We will take the time to start from scratch, and allow us to expand the scope of this documentation out of PyMoDAQ itself, to introduce Python environment, Git, external python libraries...
 
@@ -138,15 +135,9 @@ By convention, an instrument plugin can be used to control several devices, **bu
 	Notice the "s" at the end of "plugins".
 
 .. note::
-	Any kind of plugin should follow the naming convention *pymodaq-plugins-<something more specific>*, but an instrument plugin is a specific kind of `plugin`__. For (an advanced) example, imagine that we create a beam pointing stabilization plugin, and that this system uses devices from different companies. We could have an actuator class that controls a SmarAct optical mount, a detector class that control a Thorlabs camera, and a `PID model`__ specifically designed for our needs. In that case we could use the name *pymodaq-plugins-beam-stabilization*.
+	Any kind of plugin should follow the naming convention *pymodaq-plugins-<something more specific>*, but an instrument plugin is a specific kind of :term:`plugin`. For (an advanced) example, imagine that we create a beam pointing stabilization plugin, and that this system uses devices from different companies. We could have an actuator class that controls a SmarAct optical mount, a detector class that control a Thorlabs camera, and a :ref:`PID model <PID_module>` specifically designed for our needs. In that case we could use the name *pymodaq-plugins-beam-stabilization*.
 
-__ https://pymodaq.cnrs.fr/en/latest/glossary.html#term-Plugin
-
-__ https://pymodaq.cnrs.fr/en/latest/extensions_folder/pid_module.html#the-pid-model
-
-All the plugins that are listed there can directly be installed with the `plugin manager module`__.
-
-__ https://pymodaq.cnrs.fr/en/pymodaq-dev/user_folder/installation.html#plugin-manager
+All the plugins that are listed there can directly be installed with the :ref:`plugin manager <PluginManager>`.
 
 Some of those - let say the *official* ones - are hosted by the `PyMoDAQ organization on GitHub`__, but they can also be hosted by other organizations. For example, the repository `pymodaq-plugins-greateyes`__ is hosted by the ATTOLab organization, but you can directly install it with the plugin manager.
 
@@ -176,9 +167,7 @@ It sounds like we are very lucky... the PI plugin already exists!
 
 Let's try it!
 
-First, we have to install PyMoDAQ in a dedicated Python environment, that we will call *pmd_dev* in this tutorial, as described `in this page`__.
-
-__ https://pymodaq.cnrs.fr/en/pymodaq-dev/user_folder/installation.html#
+Firstly, we have to :ref:`install PyMoDAQ <section_installation>` in a dedicated Python environment, that we will call *pmd_dev* in this tutorial.
 
 Now that PyMoDAQ is installed and you have activated your environment (the lign of your terminal should start with *(pmd_dev)*), we will try to install the PI instrument plugin with the plugin manager. In your terminal, execute the following command
 
@@ -865,7 +854,9 @@ To modify the value of such a parameter, you will use something like
 Here we say "in the parameter tree, choose the *axis* parameter, in the *multiaxes* group, and attribute him the value *2* "
 
 .. note::
-    *self.settings* is a *Parameter* object of the *pyqtgraph* library: https://pyqtgraph.readthedocs.io/en/latest/api_reference/parametertree/index.html
+    *self.settings* is a *Parameter* object of the `pyqtgraph`__ library.
+
+__ https://pyqtgraph.readthedocs.io/en/latest/api_reference/parametertree/index.html
 
 Get the value of this parameter will be done with
 
