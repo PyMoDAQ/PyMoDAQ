@@ -88,7 +88,7 @@ class LoaderPlotter:
         self.dataloader.load_all('/', self._data)
 
         if average_axis is not None:
-            self.average_axis(average_index)
+            self.average_axis(average_axis, average_index)
 
         if filter_dims is not None:
             filter_dims[:] = [enum_checker(DataDim, dim) for dim in filter_dims]

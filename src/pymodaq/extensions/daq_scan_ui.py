@@ -56,8 +56,8 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.add_action('save', 'Save file as', 'SaveAs', menu=self.file_menu, auto_toolbar=False)
         self.add_action('show_file', 'Show file content', '', menu=self.file_menu, auto_toolbar=False)
 
-        self.add_action('navigator', 'Show Navigator', '', menu=self.settings_menu, auto_toolbar=False)
-        self.add_action('batch', 'Show Batch Scanner', '', menu=self.settings_menu, auto_toolbar=False)
+        self.add_action('navigator', 'Show Navigator', '', menu=self._extensions_menu, auto_toolbar=False)
+        self.add_action('batch', 'Show Batch Scanner', '', menu=self._extensions_menu, auto_toolbar=False)
         self.set_action_visible('start_batch', False)
 
     def enable_start_stop(self, enable=True):
@@ -85,7 +85,7 @@ class DAQScanUI(CustomApp, ViewerDispatcher):
         self.menubar.setMaximumHeight(30)
         self.mainwindow.setMenuBar(self.menubar)
         self.file_menu = self.menubar.addMenu('File')
-        self.settings_menu = self.menubar.addMenu('Settings')
+        self._extensions_menu = self.menubar.addMenu('Extensions')
         self.action_menu = self.menubar.addMenu('Actions')
 
     def setup_docks(self):

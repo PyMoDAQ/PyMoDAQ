@@ -79,11 +79,11 @@ class DAQScan(QObject, ParameterManager):
         ]},
         {'title': 'Scan options', 'name': 'scan_options', 'type': 'group', 'children': [
             {'title': 'Naverage:', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1},
-            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
             {'title': 'Sort 1D scan data:', 'name': 'sort_scan1D', 'type': 'bool', 'value': False},]},
 
         {'title': 'Plotting options', 'name': 'plot_options', 'type': 'group', 'children': [
-            {'title': 'Get Probe signals', 'name': 'plot_probe', 'type': 'bool_push'},
+            {'title': 'Get data', 'name': 'plot_probe', 'type': 'bool_push'},
+            {'title': 'Group 0D data:', 'name': 'group0D', 'type': 'bool', 'value': True},
             {'title': 'Plot 0Ds:', 'name': 'plot_0d', 'type': 'itemselect'},
             {'title': 'Plot 1Ds:', 'name': 'plot_1d', 'type': 'itemselect'},
             {'title': 'Prepare Viewers', 'name': 'prepare_viewers', 'type': 'bool_push'},
@@ -239,7 +239,7 @@ class DAQScan(QObject, ParameterManager):
             #
             # self.ui.scan_dock.setEnabled(True)
             # self.file_menu.setEnabled(True)
-            # self.settings_menu.setEnabled(True)
+            # self._extensions_menu.setEnabled(True)
             # self.create_new_file(True)
 
         except Exception as e:
@@ -657,10 +657,10 @@ class DAQScan(QObject, ParameterManager):
                         for _ in range(len(self.settings['plot_options', 'plot_0d']['selected']))]
         data_names = self.settings['plot_options', 'plot_0d']['selected'][:]
 
-        if self.settings['scan_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data1D') in viewers_enum:
+        if self.settings['plot_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data1D') in viewers_enum:
             viewers_enum = [ViewersEnum('Data1D')]
             data_names = [self.live_plotter.grouped_data0D_fullname]
-        elif self.settings['scan_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data2D') in viewers_enum:
+        elif self.settings['plot_options', 'group0D'] and len(viewers_enum) > 0 and ViewersEnum('Data2D') in viewers_enum:
             viewers_enum = [ViewersEnum('Data2D')]
             data_names = [self.live_plotter.grouped_data0D_fullname]
 
@@ -766,7 +766,7 @@ class DAQScan(QObject, ParameterManager):
         else:
             average_axis = None
         try:
-            self.live_plotter.load_plot_data(group_0D=self.settings['scan_options', 'group0D'],
+            self.live_plotter.load_plot_data(group_0D=self.settings['plot_options', 'group0D'],
                                              average_axis=average_axis, average_index=self.ind_average,
                                              target_at=self.scanner.positions[self.ind_scan])
         except Exception as e:
