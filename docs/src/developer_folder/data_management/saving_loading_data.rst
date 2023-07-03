@@ -19,8 +19,12 @@ correctly data need a specific layout and metadata in the hdf5 file, higher leve
 used to save and load data. They insure that any data loaded from the hdf5 file will have a correct type:
 :ref:`datawithaxes` or :ref:`datatoexport` and that these data objects will be saved with the appropriate layout
 and metadata to insure their reconstruction when loading. These objects are defined in the
-``pymodaq.utils.h5modules.data_saving`` module. Their specificity is described below. For a more detailed description,
-see :ref:`data_saving_loading`
+``pymodaq.utils.h5modules.data_saving`` module. Their specificity is described below but for a more detailed
+description, see :ref:`data_saving_loading`.
+
+All these high level saving objects have under the hood a ``H5Saver`` object dealing with the actual saving. User
+interface related to saving in PyMoDAQ all use the ``H5Saver`` ParameterTree and settings associated with to control
+what/where/how to save data, see :ref:`h5saver_module`.
 
 
 DataSaver/DataLoader
@@ -241,10 +245,10 @@ see :ref:`specific_data_saver`.
 .. _module_savers:
 
 Module Savers
-#############
+-------------
 
 Data saved from the various PyMoDAQ's modules should follow a particular layout. For instance grouped in a `Detector`
-node for data from the DAQ_Viewer modules. This node also has metadata such as the settings of the DAQ_Viewer
+node for data from the DAQ_Viewer modules or a ``Scan`` node for data from the ``DAQ_Scan`` module. This node also has metadata such as the settings of the DAQ_Viewer
 at the time when the data have been saved. Special layouts and special saver objects are available for each module
 able to save data: :ref:`DAQ_Viewer_module`, :ref:`DAQ_Move_module`, :ref:`DAQ_Scan_module` and :ref:`DAQ_Logger_module`.
 See :ref:`module_savers_api` for the related objects.

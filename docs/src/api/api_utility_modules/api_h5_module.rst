@@ -21,10 +21,10 @@ of any of these with PyMoDAQ features.
 Low Level saving
 ----------------
 
-`H5SaverBase` and `H5Saver` classes are a help to save data in a hierachical hdf5 binary file through the H5Backend
+``H5SaverBase`` and ``H5Saver`` classes are a help to save data in a hierachical hdf5 binary file through the H5Backend
 object and allowing integration in the PyMoDAQ Framework. These objects allows the creation of a file, of the various
-nodes necessary to save PyMoDAQ's data. The saving functionalities are divided in two objects: `H5SaverBase` and `H5Saver`. `H5SaverBase` contains everything
-needed for saving, while `H5Saver`, inheriting `H5SaverBase`, add Qt functionality such as emitted signals. However,
+nodes necessary to save PyMoDAQ's data. The saving functionalities are divided in two objects: `H5SaverBase` and ``H5Saver``. `H5SaverBase` contains everything
+needed for saving, while ``H5Saver``, inheriting `H5SaverBase`, add Qt functionality such as emitted signals. However,
 these are not specific of PyMoDAQ's data types. To save and load data, one should use higher level objects, see
 :ref:`data_saving_loading`.
 
@@ -32,6 +32,11 @@ these are not specific of PyMoDAQ's data types. To save and load data, one shoul
 
 .. automodule:: pymodaq.utils.h5modules.saving
    :members: H5SaverBase, H5Saver
+
+
+They both inherits from the ``ParameterManager`` MixIn class that deals with Parameter and ParameterTree,
+see :numref:`saving_settings_fig`.
+
 
 .. _data_saving_loading:
 

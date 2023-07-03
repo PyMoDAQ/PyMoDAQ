@@ -1,4 +1,11 @@
-.. _DAQ_Scan_module:
+
+
+
+Introduction
+------------
+The dashboard gives you full control for manual adjustments (using the UI)
+of each actuator, checking their impact on live data from the detectors. Once all is set, one can move to
+an automated scan using the main control window of the ``DAQ_Scan``, see :numref:`daq_scan_main`.
 
 
 .. |start| image:: /image/DAQ_Scan/start_scan.PNG
@@ -24,34 +31,6 @@
 .. |log| image:: /image/DAQ_Scan/log.PNG
     :width: 20pt
     :height: 20pt
-
-
-DAQ Scan
-========
-
-This module is an extension of the DashBoard but is the heart of PyMoDAQ, it will:
-
-* setup automatic data acquisition of detectors as a function of one or more actuators
-* save datas in hierarchical hdf5 binary files (compatible with the :ref:`H5Browser_module` used to display/explore
-  data)
-
-The flow of this module is as follow:
-
-* at startup you have to define/load a preset (see :ref:`preset_manager`) in the Dashboard
-* Select DAQ_Scan in the actions menu
-* A dataset will be declared the first time you set a scan. A dataset is equivalent to a single saved file
-  containing multiple scans.  One can see a dataset as a series of scans related to single *subject/sample to be characterized*.
-* Metadata can be saved for each dataset and then for each scan and be later retrieved from the saved file
-  (see :ref:`module_savers` and :ref:`H5Browser_module`)
-* Performs multiple scans exploring all the parameters needed for your experiment
-
-
-Introduction
-------------
-The dashboard gives you full control for manual adjustments (using the UI)
-of each actuator, checking their impact on live data from the detectors. Once all is set, one can move to
-an automated scan using the main control window of the ``DAQ_Scan``, see :numref:`daq_scan_main`.
-
 
 
 Main Control Window
@@ -255,7 +234,7 @@ needed to define a given scan, save data and plot live information.
 General Settings
 ****************
 
-The General Settings are comprised of (see :numref:`general_settings_fig`):
+The General Settings are comprised of:
 
 * **Time Flow**
 
@@ -268,15 +247,19 @@ The General Settings are comprised of (see :numref:`general_settings_fig`):
 * **Scan options** :
 
   * **N average**: Select how many scans to average. Save all individual scans.
-  * **Group 0D data**: select the detector from which data will be taken in order to plot live data
 
+* **Scan options** :
+  * **Get Data** probe selected detectors to get info on the data they are generating (including processed data from ROI)
+  * **Group 0D data**: Will group all generated 0D data to be plotted on the same viewer panel (work only for 0D data)
+  * **Plot 0D** shows the list of data that are 0D
+  * **Plot 1D** shows the list of data that are 1D
+  * **Prepare Viewers** generates viewer panels depending on the selected data to be live ploted
+  * **Plot at each step**
 
-   .. _general_settings_fig:
+    * if checked, update the live plots at each step in the scan
+    * if not, display a **Refresh plots** integer parameter, say T. Will update the live plots every T milliseconds
 
-.. figure:: /image/DAQ_Scan/general_settings.PNG
-   :alt: list_modules
-
-   General settings for the DAQ_Scan module
+*  **Save Settings**: See :ref:`h5saver_settings`
 
 
 .. _daq_scan_saving:
@@ -304,60 +287,10 @@ interface to parametrize data saving in the hdf5 file:
 
    .. _save_settings_fig:
 
-.. figure:: /image/DAQ_Scan/save_settings.PNG
+.. figure:: /image/Utils/h5saver_settings.PNG
    :alt: list_modules
 
    Save settings for the DAQ_Scan extension
 
 
-In order to save correctly your datas in custom applications, a utility module is to be used: pymodaq.utils.h5saver,
-it will save scans and datas following the rules
-
-
-
-
-
-
-.. _navigator_paragrah:
-
-Navigator
----------
-
-From version 1.4.0, a new module has been added: the Navigator (daq_utils.plotting.navigator). It is most useful when
-dealing with 2D scans such as XY
-cartography. As such, it is not displayed by default. It consists of a tree like structure displaying all
-currently saved 2D scans (in the current dataset) and a viewer where selected scans can be displayed at their respective
-locations. It can be displayed using the *Settings* menu, *Show Navigator* option. :numref:`navigator` shows the DAQ_scan extension
-with activated Navigator and a few scans. This navigator can also be used as a :ref:`scan_selector_paragraph` viewer to
-quickly explore and select areas to scan on a 2D phase space.
-
-   .. _navigator:
-
-.. figure:: /image/DAQ_Scan/navigator.PNG
-   :alt: navigator
-
-   An example of dataset displaying several 2D scans at their respective locations (up and right axis)
-
-
-Scan Batch Manager
-------------------
-
-If the *Scan Batch Manager* is activated, a new menu entry will appear: *Batch Configs*, that let the user
-define, modify or load scan batch configurations. When loaded, a particular configuration will
-be displayed in the batch window. This window (see :numref:`scanbatch`) displays (in a tree) a list of scans to perform.
-Each scan is defined by a set of actuators/detectors to use and scan settings (*Scan1D*, *Linear*... just as described in
-:ref:`settings_paragraph`).
-
-   .. _scanbatch:
-
-.. figure:: /image/DAQ_Scan/scanbatch.png
-   :alt: scanbatch
-
-   An example of a Scan Batch configuration displaying several scans to perform
-
-A new start button |startbatch| will also appear on the main window to start the currently loaded
-scan batch.
-
-.. |startbatch| image:: /image/DAQ_Scan/start_scanbatch.PNG
-    :width: 20pt
-    :height: 20pt
+In order to save correctly your datas, saving modules are to be used, see :ref:`module_savers`.

@@ -209,7 +209,8 @@ like :numref:`detector_saver_content` using PyMoDAQ's h5 browser.
 Continuous Saving
 ^^^^^^^^^^^^^^^^^
 When the *continuous saving* parameter is set, new parameters are appearing on the *DAQ_Viewer* panel
-(see :numref:`figure_continuous`).
+(see :numref:`figure_continuous`). This is in fact the settings associated with the ``H5Saver`` object used under the hood,
+see :ref:`h5saver_module`.
 
 
 * *Base path*: indicates where the data will be saved. If it doesn't exist the module will try to create it
