@@ -11,5 +11,4 @@ User's Guide
    user_folder/dashboard_control_modules
    user_folder/extensions
    user_folder/useful_modules
-   user_folder/saving
    user_folder/tcpip
