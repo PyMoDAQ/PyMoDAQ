@@ -3,5 +3,5 @@ sphinx-csv-filter
 pillow
 toml
 pyqt5
-docutils
+docutils==0.19
 numpydoc
