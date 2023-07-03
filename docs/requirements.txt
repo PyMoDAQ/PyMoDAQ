@@ -1,7 +1,8 @@
+sphinx<7
+sphinx_rtd_theme
 releases
 sphinx-csv-filter
 pillow
 toml
 pyqt5
-sphinx_rtd_theme
 numpydoc
