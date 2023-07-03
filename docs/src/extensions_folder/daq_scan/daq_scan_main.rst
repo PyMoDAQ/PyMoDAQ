@@ -272,7 +272,7 @@ idea behind this is to have a unique file for a set of related data (the **datas
 logger data, module parameters (settings, ROI...) even *png* screenshots of the various panels.
 
 :numref:`figure_h5browser_data` displays the content of a typical **dataset** file containing various scans and how each data
-and metadata is used by the H5Browser to display the info to the user.
+and metadata is used by the :ref:`H5Browser_module` to display the info to the user.
 
    .. _figure_h5browser_data:
 
