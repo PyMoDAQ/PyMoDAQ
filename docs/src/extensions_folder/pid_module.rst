@@ -3,6 +3,9 @@
 PID Module
 ==========
 
+.. note::
+    For now this module is **not compatible with PyMoDAQ 4**. Please use the PyMoDAQ 3.6.8 version, as mentioned latter in this documentation. We are currently working on to update the PID extension.
+
 Introduction
 ------------
 
