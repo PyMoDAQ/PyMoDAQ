@@ -44,7 +44,7 @@ from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
-
+from pymodaq.utils.data import DataToExport
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -420,8 +420,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     hardware.moveToThread(self._hardware_thread)
 
                 self.command_hardware[ThreadCommand].connect(hardware.queue_command)
-                hardware.data_detector_sig[list].connect(self.show_data)
-                hardware.data_detector_temp_sig[list].connect(self.show_temp_data)
+                hardware.data_detector_sig[DataToExport].connect(self.show_data)
+                hardware.data_detector_temp_sig[DataToExport].connect(self.show_temp_data)
                 hardware.status_sig[ThreadCommand].connect(self.thread_status)
                 self._update_settings_signal[edict].connect(hardware.update_settings)
 
@@ -725,8 +725,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     def current_data(self) -> DataToExport:
         return self._data_to_save_export
 
-    @Slot(list)
-    def show_temp_data(self, data: List[DataFromPlugins]):
+    @Slot(DataToExport)
+    def show_temp_data(self, data: DataToExport):
         """Send data to their dedicated viewers but those will not emit processed data signal
 
         Slot receiving data from plugins emitted with the `data_grabed_signal_temp`
@@ -739,8 +739,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.ui is not None:
             self.set_data_to_viewers(data, temp=True)
 
-    @Slot(list)
-    def show_data(self, data: List[DataFromPlugins]):
+    @Slot(DataToExport)
+    def show_data(self, dte: DataToExport):
         """Send data to their dedicated viewers but those will not emit processed data signal
 
         Slot receiving data from plugins emitted with the `data_grabed_signal`
@@ -756,7 +756,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         Parameters
         ----------
-        data: list of DataFromPlugins
+        dte: DataToExport
 
         See Also
         --------
@@ -764,13 +764,13 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """
         try:
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
-                self._command_tcpip.emit(ThreadCommand('data_ready', data))
+                self._command_tcpip.emit(ThreadCommand('data_ready', dte))
             if self.ui is not None:
                 self.ui.data_ready = True
-            self._init_show_data(data)
+            self._init_show_data(dte)
 
             # store raw data for further processing
-            self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=data)
+            self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self.settings['main_settings', 'live_averaging']:
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self._ind_continuous_grab)
@@ -806,7 +806,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def _init_show_data(self, data):
+    def _init_show_data(self, data: DataToExport):
         """Processing before showing data
 
         * process the data to check if they overshoot
@@ -814,7 +814,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         Parameters
         ----------
-        data: list of DataFromPlugins
+        data: DataToExport
 
         See Also
         --------
@@ -958,13 +958,13 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def _process_overshoot(self, data):
+    def _process_overshoot(self, dte: DataToExport):
         """Compare data value (0D) to the given overshoot setting
         """
         if self.settings.child('main_settings', 'overshoot', 'stop_overshoot').value():
-            for channels in data:
-                for channel in channels['data']:
-                    if any(channel >= self.settings.child('main_settings', 'overshoot', 'overshoot_value').value()):
+            for dwa in dte:
+                for data_array in dwa.data:
+                    if any(data_array >= self.settings.child('main_settings', 'overshoot', 'overshoot_value').value()):
                         self.overshoot_signal.emit(True)
 
     def get_scaling_options(self):
@@ -1228,8 +1228,8 @@ class DAQ_Detector(QObject):
         ========================= ==========================
     """
     status_sig = Signal(ThreadCommand)
-    data_detector_sig = Signal(list)
-    data_detector_temp_sig = Signal(list)
+    data_detector_sig = Signal(DataToExport)
+    data_detector_temp_sig = Signal(DataToExport)
 
     def __init__(self, title, settings_parameter, detector_name):
         super().__init__()
@@ -1241,7 +1241,7 @@ class DAQ_Detector(QObject):
         self.controller_adress = None
         self.grab_state = False
         self.single_grab = False
-        self.datas = None
+        self.datas: DataToExport = None
         self.ind_average = 0
         self.Naverage = None
         self.average_done = False
@@ -1399,12 +1399,13 @@ class DAQ_Detector(QObject):
             self.logger.exception(str(e))
             return status
 
-    @Slot(list)
-    def emit_temp_data(self, datas):
-        self.data_detector_temp_sig.emit(datas)
+    def emit_temp_data(self, data: Union[DataToExport, list]):
+        if isinstance(data, list):
+            data = DataToExport('temp', data)
+        self.data_detector_temp_sig.emit(data)
 
     @Slot(list)
-    def data_ready(self, datas):
+    def data_ready(self, datas: list):
         """
             | Update the local datas attribute from the given datas parameter if the averaging has to be done software wise.
             |
@@ -1420,30 +1421,15 @@ class DAQ_Detector(QObject):
             daq_utils.ThreadCommand
         """
 
-        # datas validation check for backcompatibility with plugins not exporting new DataFromPlugins list of objects
-
-        for dat in datas:
-            if not isinstance(dat, DataFromPlugins):
-                if 'type' in dat:
-                    dat['dim'] = dat['type']
-                    dat['type'] = 'raw'
-
         if not self.hardware_averaging:  # to execute if the averaging has to be done software wise
             self.ind_average += 1
             if self.ind_average == 1:
-                self.datas = datas
+                self.datas = DataToExport('raw_data', data=datas)
             else:
-                try:
-                    for indpannel, dic in enumerate(datas):
-                        self.datas[indpannel]['data'] = \
-                            [((self.ind_average - 1) * self.datas[indpannel]['data'][ind] + datas[indpannel]['data'][
-                                ind]) / self.ind_average for ind in range(len(datas[indpannel]['data']))]
+                self.datas = DataToExport(name='temp', data=datas).average(self.datas, self.ind_average)
 
-                    if self.show_averaging:
-                        self.emit_temp_data(self.datas)
-
-                except Exception as e:
-                    self.logger.exception(str(e))
+                if self.show_averaging:
+                    self.emit_temp_data(self.datas)
 
             if self.ind_average == self.Naverage:
                 self.average_done = True
@@ -1453,7 +1439,6 @@ class DAQ_Detector(QObject):
             self.data_detector_sig.emit(datas)
         self.waiting_for_data = False
         if not self.grab_state:
-            # self.status_sig.emit(["Update_Status","Grabing braked"])
             self.detector.stop()
 
     def single(self, Naverage=1, args_as_dict={}):
