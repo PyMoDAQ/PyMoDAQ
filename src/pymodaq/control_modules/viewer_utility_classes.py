@@ -10,8 +10,8 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.config import Config, get_set_local_dir
-#from pymodaq.utils.scanner import ScanParameters
 from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.data import DataToExport
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -33,7 +33,6 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': False},
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
@@ -526,9 +525,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                 data = self.data_mock
 
             if command_sock is None:
-                # self.data_grabed_signal.emit([OrderedDict(data=[data],name='TCP GRABBER', type='Data2D')]) #to be directly send to a viewer
                 self.data_ready(data)
-                # print(data)
             else:
                 self.send_data(command_sock, data)  # to be send to a client
 
