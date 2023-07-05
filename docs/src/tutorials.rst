@@ -6,3 +6,4 @@ Tutorials
    :caption: Contents:
 
    tutorials/plugin_development
+   tutorials/write_documentation
