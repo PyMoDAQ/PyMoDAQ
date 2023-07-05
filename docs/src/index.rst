@@ -119,7 +119,7 @@ Please see :doc:`the changelog </changelog>`.
 
 .. toctree::
    :numbered:
-   :maxdepth: 3
+   :maxdepth: 5
    :caption: Contents:
 
    features

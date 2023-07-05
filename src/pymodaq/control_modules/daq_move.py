@@ -27,7 +27,7 @@ from pymodaq.control_modules.move_utility_classes import params as daq_move_para
 from pymodaq.utils import daq_utils as utils
 from pymodaq.utils.parameter import utils as putils
 from pymodaq.utils.gui_utils import get_splash_sc
-from pymodaq.utils import config
+from pymodaq.utils import config as config_mod
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
@@ -35,9 +35,11 @@ from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis, Dat
 from pymodaq.utils.h5modules.backends import Node
 
 
-local_path = config.get_set_local_dir()
+local_path = config_mod.get_set_local_dir()
 sys.path.append(local_path)
 logger = set_logger(get_module_name(__file__))
+config = config_mod.Config()
+
 DAQ_Move_Actuators = utils.get_plugins('daq_move')
 ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
 
@@ -1000,6 +1002,9 @@ class DAQ_Move_Hardware(QObject):
 def main(init_qt=True):
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
+        if config('style', 'darkstyle'):
+            import qdarkstyle
+            app.setStyleSheet(qdarkstyle.load_stylesheet(qdarkstyle.DarkPalette))
 
     widget = QtWidgets.QWidget()
     prog = DAQ_Move(widget, title="test")
