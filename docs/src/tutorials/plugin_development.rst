@@ -956,6 +956,8 @@ From now on, anyone who has an internet connexion have access to this precise ve
 .. note::
     You may wonder how Git knows where to push? This has been configured when we cloned our remote repository. You can ask what is the current address configured of your remote repository (named *origin*) with the *git remote -v* command.
 
+.. _pull_request_to_upstream:
+
 Pull request to the upstream repository
 ---------------------------------------
 

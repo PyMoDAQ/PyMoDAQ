@@ -5,13 +5,46 @@ How to contribute to PyMoDAQ’s documentation?
 
 In this tutorial we will learn how to contribute to PyMoDAQ’s documentation. This is quite an advanced topic so we consider that you know quite well Python and PyMoDAQ ecosystem.
 
-There are several levels of documentation of the project:
+The documentation of PyMoDAQ
+----------------------------
 
-* the documentation in the source code: docstrings
-* tests
-* the documentation on the website (high level)
+There are several levels of documentation of the project that we introduce in the following sections.
 
-We will be interested here in the latter point.
+Documentation of the source code: docstrings
+++++++++++++++++++++++++++++++++++++++++++++
+
+The documentation of the source code is done using comments in the source files that are called *docstrings*. This documentation is addressed to the developers and is very precise. Typically, it will explain the job of a particular method, give the type of its arguments, what it returns...
+
+.. figure:: /image/write_documentation/move_abs_docstring.svg
+    :width: 600
+
+    Docstring of the *move_abs* method in the `daq_move_Template.py`__ file.
+
+__ https://github.com/PyMoDAQ/pymodaq_plugins_template/blob/main/src/pymodaq_plugins_template/daq_move_plugins/daq_move_Template.py
+
+This kind of documentation is standardized. PyMoDAQ follows the `Numpy docstrings style`__. Following those conventions permits to generate automatically the :ref:`Library Reference <library_reference>`.
+
+__ https://numpydoc.readthedocs.io/en/latest/format.html
+
+Tests
++++++
+
+At each modification of the source code of PyMoDAQ, a series of tests is launched automatically. This is done to ensure that the modification proposed does not have an unexpected effect and does not break the rest of the code. This development practice is indispensable to ensure its stability. A big effort has been devoted to testing in the version 4 of PyMoDAQ.
+
+The files defining the tests are located in the `/tests`__ directory at the root of the repository.
+
+__ https://github.com/PyMoDAQ/PyMoDAQ/tree/main/tests
+
+Most of those tests simulate a user interacting with PyMoDAQ UI, pressing buttons and so on, and verify that everything is working as expected.
+
+Reading those tests (which is not straightforward ;) ) allows to get a global picture of what the application is doing.
+
+Website
++++++++
+
+Finally, there is the website that you are reading right now. This documentation is of higher level than the previous ones, easier to read for a human! It is then adapted mostly to an introduction of PyMoDAQ to users.
+
+This tutorial intends to present the workflow to contribute to the improvement of this website.
 
 Sphinx
 ------
@@ -20,7 +53,7 @@ You may have noticed that most of Python librairies, share a common presentation
 
 __ https://pypi.org/project/Sphinx/
 
-Sphinx uses `reStructuredText`__, which is the standard lightweight language to write documentation in the Python community.
+Sphinx uses `reStructuredText`__, which is the standard lightweight language to write documentation within the Python community.
 
 __ https://en.wikipedia.org/wiki/ReStructuredText
 
@@ -156,10 +189,14 @@ and refresh the page in the navigator. Our new tutorial is already included in t
 
     First compilation of our new tutorial.
 
-We just have to fill the rest of the page with what we have to say!
+We just have to fill the rest of the page with what we have to say! We will introduce a bit the RST language in the following section.
 
-Restructured text
------------------
+reStructuredText (RST) language
+-------------------------------
+
+Here we give a brief overview of the RST language. Here is the `full documentation about RST`__.
+
+__ https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html
 
 Page structure
 ++++++++++++++
@@ -172,24 +209,105 @@ Page structure
 	Section
 	-------
 
+	Lorem ipsum lorem ipsum.
+
 	Subsection
 	++++++++++
 
-How to add a new page?
+	Lorem ipsum lorem ipsum. Lorem ipsum lorem ipsum.
 
-Page of contents
-++++++++++++++++
+List
+++++
 
-index.rst toctree
+.. code-block::
+
+	* First item
+
+		* First item of nested list
+		* Second item of nested list
+
+	* Second item
+
+External link (URL)
++++++++++++++++++++
+
+.. code-block::
+
+	`PyMoDAQ repository`__
+
+	__ https://github.com/PyMoDAQ/PyMoDAQ
 
 Integrate an image
 ++++++++++++++++++
 
-* Where to save my images
-* Do not use .PNG uppercase: build on Windows.
+.. code-block::
+
+	.. _fig_label
+	.. figure:: /image/write_documentation/my_image.svg
+		:width: 600
+
+	Caption of the figure.
+
+The images are saved in the */src/image* folder and subfolders.
+
+Notice that you can directly integrate SVG images.
+
+.. note::
+	Be careful that the extensions of your files **should be lowercase**. The Windows operating system does not differentiate file extensions .PNG and .png for example (it is not case sensitive). If you build the documentation locally on Windows, it could render it without problem, while when compiled with a Linux system (what will be done on the server) your paths can be broken and your images not found.
 
 Cross-referencing
 +++++++++++++++++
 
-External URL link
-+++++++++++++++++
+If we want to refer to the image from the previous section:
+
+.. code-block::
+
+	:numref:`fig_label`
+
+.. note::
+	Note that the underscore disappeared.
+
+If we want to refer to another page of the documentation:
+
+.. code-block::
+
+	:ref:`text to display <label at the begining of the page>`
+
+for example to refer to the installation page, we will use
+
+.. code-block::
+
+	:ref:`install PyMoDAQ <section_installation>`
+
+Glossary terms
+++++++++++++++
+
+You may have notice the :ref:`Glossary Terms <glossary>` page in the page of contents. This is a kind of dictionary dedicated to PyMoDAQ documentation. There are defined terms that are used frequently in the documentation. Refering to those term is then very simple
+
+.. code-block::
+
+	:term:`the glossary term`
+
+Browse the already written RST files to get some examples ;)
+
+Submit our documentation to the upstream repository
+---------------------------------------------------
+
+We are now happy with the content of our page. It is time to submit it for reviewing.
+
+First we have to commit our modifications with Git
+
+``git commit -am "Tutorial: How to contribute to PyMoDAQ documentation. Initial commit."``
+
+.. note::
+	If we also included some new files in the repository, like images, we have to tell Git to take those files under its supervision, which is done with the ``git add -i`` command. A simple command line interface will guide you to `select the files to add`__.
+
+__ https://stackoverflow.com/questions/7446640/adding-only-untracked-files
+
+We then push our changes to our remote repository
+
+``git push``
+
+Finally, we will open a pull request to the upstream repository, as is explained in the :ref:`plugin development tutorial <pull_request_to_upstream>`.
+
+Let’s hope we will convince the owner that our tutorial is usefull! Thanks for contributing ;)
