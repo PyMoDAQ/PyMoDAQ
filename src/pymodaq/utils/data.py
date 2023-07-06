@@ -1865,6 +1865,9 @@ class DataToExport(DataLowLevel):
         if not isinstance(data, DataWithAxes):
             raise TypeError('Data stored in a DataToExport object should be objects inherited from DataWithAxis')
 
+    def deepcopy(self):
+        return DataToExport('Copy', data=[data.deepcopy() for data in self])
+
     @dispatch(list)
     def append(self, data: List[DataWithAxes]):
         for dat in data:
