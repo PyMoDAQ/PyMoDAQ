@@ -5,9 +5,9 @@ Created on Wed Jan 10 16:54:14 2018
 @author: Weber Sébastien
 """
 from __future__ import annotations
+
 from collections import OrderedDict
 import copy
-import datetime
 import os
 from pathlib import Path
 import sys
@@ -19,12 +19,10 @@ import numpy as np
 from qtpy import QtWidgets
 from qtpy.QtCore import Qt, QObject, Slot, QThread, Signal
 
-from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis, DataDistribution
+from pymodaq.utils.data import DataFromPlugins, DataToExport, Axis, DataDistribution
 from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.gui_utils.file_io import select_file
-from pymodaq.utils.gui_utils.utils import widget_to_png_to_bytes
-import pymodaq.utils.scanner
 from pymodaq.utils.tcp_server_client import TCPClient
 from pymodaq.utils.gui_utils.widgets.lcd import LCD
 from pymodaq.utils.config import Config, get_set_local_dir
@@ -44,7 +42,7 @@ from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
 from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
-from pymodaq.utils.data import DataToExport
+from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
 
 logger = set_logger(get_module_name(__file__))
 config = Config()
@@ -138,7 +136,9 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.module_and_data_saver: Union[module_saving.DetectorSaver,
                                           module_saving.DetectorEnlargeableSaver,
                                           module_saving.DetectorExtendedSaver] = None
-        self.setup_saving_objects()
+        self._h5saver_continuous: H5Saver = None
+        self._ind_continuous_grab = 0
+        self.setup_continuous_saving()
 
         self._external_h5_data = None
 
@@ -158,7 +158,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         self._lcd: LCD = None
 
-        self._bkg: List[DataFromPlugins] = None  # buffer to store background
+        self._bkg: DataToExport = None  # buffer to store background
 
         self._save_file_pathname: Path = None  # to store last active path, will be an Path object
         
@@ -175,7 +175,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title} ({self.daq_type}/{self.detector}'
 
-    def setup_saving_objects(self):
+    def setup_continuous_saving(self):
+        """Configure the objects dealing with the continuous saving mode"""
         self.module_and_data_saver = module_saving.DetectorSaver(self)
         self._h5saver_continuous = H5Saver(save_type='detector')
         self._h5saver_continuous.show_settings(False)
@@ -238,16 +239,23 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.viewers = cmd.attribute['viewers']
 
     @property
-    def bkg(self):
+    def bkg(self) -> DataToExport:
+        """Get the background data object"""
         return self._bkg
 
     @property
-    def viewer_docks(self):
-        """:obj:`list` of Viewer Docks from the UI"""
+    def viewer_docks(self) -> List[Dock]:
+        """list of Viewer Docks from the UI"""
         if self.ui is not None:
             return self.ui.viewer_docks
 
     def daq_type_changed_from_ui(self, daq_type: DAQTypesEnum):
+        """ Apply changes from the selection of a different DAQTypesEnum in the UI
+
+        Parameters
+        ----------
+        daq_type: DAQTypesEnum
+        """
         daq_type = enum_checker(DAQTypesEnum, daq_type)
         self._daq_type = daq_type
         self.settings.child('main_settings', 'DAQ_type').setValue(daq_type.name)
@@ -256,7 +264,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @property
     def daq_type(self) -> DAQTypesEnum:
-        """:obj:`DAQTypesEnum`: Get/Set the daq_type
+        """Get/Set the daq_type as a DAQTypesEnum
 
         Update the detector property with the list of available detectors of a given daq_type
         """
@@ -274,21 +282,21 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.detector = self.detectors[0]
 
     @property
-    def daq_types(self):
-        """:obj:`list` of :obj:`str`: List of available DAQ_TYPES"""
+    def daq_types(self) -> List[str]:
+        """List of available DAQ_TYPES as keys of the DAQTypesEnum"""
         return DAQTypesEnum.names()
 
-    def detector_changed_from_ui(self, detector):
+    def detector_changed_from_ui(self, detector: str):
         self._detector = detector
         self._set_setting_tree()
 
     @property
-    def detector(self):
-        """:obj:`str`: Get/Set the detector among detectors property"""
+    def detector(self) -> str:
+        """:obj:`str`: Get/Set the currently selected detector among available detectors"""
         return self._detector
 
     @detector.setter
-    def detector(self, det):
+    def detector(self, det: str):
         if det not in self.detectors:
             raise ValueError(f'{det} is not a valid Detector: {self.detectors}')
         self._detector = det
@@ -296,12 +304,12 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.ui.detector = det
         self._set_setting_tree()
 
-    def detectors_changed_from_ui(self, detectors):
+    def detectors_changed_from_ui(self, detectors: List[str]):
         self._detectors = detectors
 
     @property
-    def detectors(self):
-        """:obj:`list` of :obj:`str`: List of available detectors of the current daq_type"""
+    def detectors(self) -> str:
+        """:obj:`list` of :obj:`str`: List of available detectors of the current daq_type (DAQTypesEnum)"""
         return self._detectors
 
     @detectors.setter
@@ -315,9 +323,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         """:obj:`bool`: Get the current grabbing status"""
         return self._grabing
 
-
     @property
-    def do_bkg(self):
+    def do_bkg(self) -> bool:
         """:obj:`bool`: Get/Set if background subtraction should be done"""
         return self._do_bkg
 
@@ -327,7 +334,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @property
     def viewers(self) -> List[ViewerBase]:
-        """:obj:`list` of Viewers from the UI"""
+        """:obj:`list`: Get/Set the Viewers (instances of real implementation of ViewerBase class) from the UI"""
         if self.ui is not None:
             return self._viewers
 
@@ -345,14 +352,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     lambda roi_pos_size: self.command_hardware.emit(ThreadCommand('ROISelect', roi_pos_size)))
         self._viewers = viewers
 
-    @property
-    def viewers_docks(self):
-        if self.ui is not None:
-            return self.ui.viewer_docks
-
     def quit_fun(self):
-        """Quit the application, closing the hardware and other modules
-        """
+        """ Quit the application, closing the hardware and other modules """
 
         # insert anything that needs to be closed before leaving
 
@@ -384,16 +385,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         if self.ui is not None:
             self.ui.do_init()
 
-    def init_det(self):
-        deprecation_msg(f'The function *init_det* is deprecated, use init_hardware_ui')
-        self.init_hardware_ui(True)
-
-    def ini_det_fun(self):
-        deprecation_msg(f'The function *ini_det_fun* is deprecated, use init_hardware')
-        self.init_hardware(True)
-
     def init_hardware(self, do_init=True):
-        """Init the selected detector
+        """ Init the selected detector
 
         Parameters
         ----------
@@ -438,11 +431,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.logger.exception(str(e))
 
     def snap(self):
-        """Programmatic click on the UI snap button"""
+        """ Launch a single grab """
         self.grab_data(False, snap_state=True)
 
     def grab(self):
-        """Programmatic click on the UI grab button"""
+        """ Launch a continuous grab """
         if self.ui is not None:
             self.manage_ui_actions('grab', 'setChecked', not self._grabing)
             self.grab_data(not self._grabing, snap_state=False)
@@ -457,7 +450,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         dosave: bool
             Do save or just grab data
         send_to_tcpip: bool
-            If True, send the grabed data through the TCP/IP pipe
+            If True, send the grabbed data through the TCP/IP pipe
         """
         try:
             self._do_save_data = dosave
@@ -470,14 +463,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             self.logger.exception(str(e))
 
     def grab_data(self, grab_state=False, send_to_tcpip=False, snap_state=False):
-        """Generic method to grab or snap data from the selected (and initialized) detector
+        """ Generic method to grab or snap data from the selected (and initialized) detector
 
         Parameters
         ----------
         grab_state: bool
-            Defines the grab status: if True: do live grabing if False stops the grab
+            Defines the grab status: if True: do live grabbing if False stops the grab
         send_to_tcpip: bool
-            If True, send the grabed data through the TCP/IP pipe
+            If True, send the grabbed data through the TCP/IP pipe
         snap_state: bool
             if True performs a single grab
         """
@@ -504,7 +497,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     ThreadCommand("grab", [self.settings.child('main_settings', 'Naverage').value()]))
 
     def take_bkg(self):
-        """Do a snap and store data to be used as background into an attribute: `self._bkg`
+        """ Do a snap and store data to be used as background into an attribute: `self._bkg`
 
         The content of the bkg will be saved if data is further saved with do_bkg property set to True
         """
@@ -512,11 +505,18 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.grab_data(snap_state=True)
 
     def stop_grab(self):
+        """ Stop the current continuous grabbing and unchecked the stop button of the UI
+
+        See Also
+        --------
+        :meth:`stop`
+        """
         if self.ui is not None:
             self.manage_ui_actions('grab', 'setChecked', False)
         self.stop()
 
     def stop(self):
+        """ Stop the current continuous grabbing """
         self.update_status(f'{self._title}: Stop Grab')
         self.command_hardware.emit(ThreadCommand("stop_all", ))
         self._grabing = False
@@ -550,6 +550,10 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self.snapshot(pathname=self._save_file_pathname, dosave=True)
 
     def _init_continuous_save(self):
+        """ Initialize the continuous saving H5Saver object
+
+        Update the module_and_data_saver attribute as :class:`DetectorEnlargeableSaver` object
+        """
         if self._h5saver_continuous.settings.child('do_save').value():
 
             self._h5saver_continuous.settings.child('base_name').setValue('Data')
@@ -576,6 +580,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     def append_data(self, data: DataToExport = None, where: Union[Node, str] = None):
         """Appends current DataToExport to a DetectorEnlargeableSaver
 
+        Method to be used when performing continuous saving into a h5file (continuous mode or DAQ_Logger)
+
         Parameters
         ----------
         data: DataToExport
@@ -583,7 +589,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         where: Node or str
         See Also
         --------
-        DetectorEnlargeableSaver
+        :class:`DetectorEnlargeableSaver`
         """
         if data is None:
             data = self._data_to_save_export
@@ -595,14 +601,14 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     distribution=DataDistribution['uniform']):
         """Insert DataToExport to a DetectorExtendedSaver at specified indexes
 
+        Method to be used when saving into an already initialized array within a h5file (DAQ_Scan for instance)
+
         Parameters
         ----------
         indexes: tuple(int)
             The indexes within the extended array where to place these data
         where: Node or str
         distribution: DataDistribution enum
-        save_raw_only: bool
-            If True save only Raw data (no data processed from Roi)
 
         See Also
         --------
@@ -675,17 +681,13 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         h5saver.close_file()
         self.data_saved.emit()
 
-    @Slot(OrderedDict)
+    @Slot(DataToExport)
     def _save_export_data(self, data: DataToExport):
         """Auxiliary method (Slot) to receive all data (raw and processed from rois) and save them
 
         Parameters
         ----------
         data: DataToExport
-            contains a timestamp and data (raw and extracted from roi in dataviewers) on the dorm:
-            `_data_to_save_export = OrderedDict(Ndatas=Ndatas, acq_time_s=acq_time, name=name,
-             control_module='DAQ_Viewer')`
-             with extra keys for data dimensionality such as Data0D=OrderedDict(...)
 
         See Also
         --------
@@ -723,6 +725,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
     @property
     def current_data(self) -> DataToExport:
+        """ Get the current data stored internally"""
         return self._data_to_save_export
 
     @Slot(DataToExport)
@@ -848,7 +851,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             else:
                 self.viewers[ind].show_data(data)
 
-    def value_changed(self, param):
+    def value_changed(self, param: Parameter):
         """ParameterManager subclassed method. Process events from value changed by user in the UI Settings
 
         Parameters
@@ -915,7 +918,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
     def child_added(self, param, data):
-        """Non-mandatory method to be subclassed for actions to perform when a param  has been added in self.settings
+        """ Adds a child in the settings attribute
 
         Parameters
         ----------
@@ -925,10 +928,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
             the child parameter
         """
         if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
-            self._update_settings_signal.emit(edict(path=putils.get_param_path(param)[1:], param=data[0], change='childAdded'))
+            self._update_settings_signal.emit(edict(path=putils.get_param_path(param)[1:], param=data[0],
+                                                    change='childAdded'))
 
     def param_deleted(self, param):
-        """ParameterManager subclassed method. Process events from parameter deleted by user in the UI Settings
+        """ Remove a child from the settings attribute
 
         Parameters
         ----------
@@ -972,7 +976,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
         Returns
         -------
-        pymodaq.utils.data.ScalingOptions
+        Tuple[Axis]
         """
         scaled_xaxis = Axis(label=self.settings['main_settings', 'axes', 'xaxis', 'xlabel'],
                             units=self.settings['main_settings', 'axes', 'xaxis', 'xunits'],
@@ -1135,7 +1139,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
     def connect_tcp_ip(self):
         """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
 
-        Use the settings: ip_adress and port to specify the connection
+        Use the settings: ip_address and port to specify the connection
 
         See Also
         --------
@@ -1201,31 +1205,16 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
 
 class DAQ_Detector(QObject):
-    """
-        ========================= ==========================
-        **Attributes**              **Type**
-        *status_sig*                instance of pyqt Signal
-        *data_detector_sig*         instance of pyqt Signal
-        *data_detector_temp_sig*    instance of pyqt Signal
+    """ Worker class to control the instrument plugin
 
-        *waiting_for_data*          boolean
-        *controller*                ???
-        *detector_name*             string
-        *detector*                  ???
-        *controller_adress*         ???
-        *grab_state*                boolean
-        *single_grab*               boolean
-        *x_axis*                    1D numpy array
-        *y_axis*                    1D numpy array
-        *datas*                     dictionnary
-        *ind_average*               int
-        *Naverage*                  int
-        *average_done*              boolean
-        *hardware_averaging*        boolean
-        *show_averaging*            boolean
-        *wait_time*                 int
-        *daq_type*                  string
-        ========================= ==========================
+    Attributes
+    ----------
+    detector: real instance of the instrument plugin class
+    controller: DAQ_Viewer_base
+        wrapper object used to control a given instrument in the instrument plugin
+    controller_adress: int
+        unique integer used to identify a controller shared among multiple instrument plugins
+
     """
     status_sig = Signal(ThreadCommand)
     data_detector_sig = Signal(DataToExport)
@@ -1237,8 +1226,8 @@ class DAQ_Detector(QObject):
         self.controller = None
         self.logger = set_logger(f'{logger.name}.{title}.detector')
         self.detector_name = detector_name
-        self.detector = None
-        self.controller_adress = None
+        self.detector: DAQ_Viewer_base = None
+        self.controller_adress: int = None
         self.grab_state = False
         self.single_grab = False
         self.datas: DataToExport = None
@@ -1252,18 +1241,12 @@ class DAQ_Detector(QObject):
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
-        """
-            | Set attribute values in case of "main_settings" path with corresponding parameter values.
-            | Recursively call the method on detector class attribute else.
+        """ Apply a Parameter serialized as a dict to the instrument plugin class
 
-            ======================== ============== ======================================
-            **Parameters**             **Type**      **Description**
-            settings_parameter_dict    dictionnary   the (pathname,parameter) dictionnary
-            ======================== ============== ======================================
-
-            See Also
-            --------
-            update_settings
+        Parameters
+        ----------
+        settings_parameter_dict: dict
+            dictionary serializing a Parameter object
         """
 
         path = settings_parameter_dict['path']
@@ -1339,27 +1322,21 @@ class DAQ_Detector(QObject):
         elif command.command == 'get_axis':
             self.detector.get_axis()
 
-        else:  # custom commands for particular plugins (see ROISelect in relation to a Viewer2D and the plugin
-            # Mock2D or the spectrometer module 'get_spectro_wl' for instance)
+        else:  # custom commands for particular plugins
             if hasattr(self.detector, command.command):
                 cmd = getattr(self.detector, command.command)
                 cmd(command.attribute)
 
     def ini_detector(self, params_state=None, controller=None):
-        """
-            Init the detector from params_state parameter and DAQ_type class attribute :
-                * in **0D** profile : update the local status and send the "x_axis" Thread command via a status signal
-                * in **1D** profile : update the local status and send the "x_axis" Thread command via a status signal
-                * in **2D** profile : update the local status and send the "x_axis" and the "y_axis" Thread command via a status signal
+        """ Initialize an instrument plugin class and tries to apply preset settings
 
-            =============== =========== ==========================================
-            **Parameters**    **Type**    **Description**
-            *params_state*     ???         the parameter's state of initialization
-            =============== =========== ==========================================
+        When the instrument is initialized from the Dashboard using a Preset, tries to apply the preset
+        settings to the instrument instance
 
-            See Also
-            --------
-            ini_detector, daq_utils.ThreadCommand
+        Parameters
+        ----------
+        params_state: dict
+        controller: wrapper
         """
         try:
             # status="Not initialized"
@@ -1384,28 +1361,26 @@ class DAQ_Detector(QObject):
                 status.info = infos[0]
                 status.initialized = infos[1]
 
-
-            if status['x_axis'] is not None:
-                x_axis = status['x_axis']
-                self.status_sig.emit(ThreadCommand("x_axis", [x_axis]))
-            if status['y_axis'] is not None:
-                y_axis = status['y_axis']
-                self.status_sig.emit(ThreadCommand("y_axis", [y_axis]))
-
-            self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by the hardware or done here software wise
+            self.hardware_averaging = class_.hardware_averaging  # to check if averaging can be done directly by
+            # the hardware or done here software wise
 
             return status
         except Exception as e:
             self.logger.exception(str(e))
             return status
 
-    def emit_temp_data(self, data: Union[DataToExport, list]):
+    def emit_temp_data(self, data: Union[DataToExport, List[DataFromPlugins]]):
+        """ Convenience method to export temporary data using the data_detector_temp_sig Signal
+
+        Parameters
+        ----------
+        data: DataToExport (or List[DataFromPlugins] for old plugins)
+        """
         if isinstance(data, list):
             data = DataToExport('temp', data)
         self.data_detector_temp_sig.emit(data)
 
-    @Slot(list)
-    def data_ready(self, datas: list):
+    def data_ready(self, data: Union[DataToExport, list]):
         """
             | Update the local datas attribute from the given datas parameter if the averaging has to be done software wise.
             |
@@ -1420,13 +1395,15 @@ class DAQ_Detector(QObject):
             --------
             daq_utils.ThreadCommand
         """
+        if isinstance(data, list):
+            data = DataToExport('temp', data)
 
         if not self.hardware_averaging:  # to execute if the averaging has to be done software wise
             self.ind_average += 1
             if self.ind_average == 1:
-                self.datas = DataToExport('raw_data', data=datas)
+                self.datas = data.deepcopy()
             else:
-                self.datas = DataToExport(name='temp', data=datas).average(self.datas, self.ind_average)
+                self.datas = data.average(self.datas, self.ind_average)
 
                 if self.show_averaging:
                     self.emit_temp_data(self.datas)
@@ -1436,7 +1413,7 @@ class DAQ_Detector(QObject):
                 self.data_detector_sig.emit(self.datas)
                 self.ind_average = 0
         else:
-            self.data_detector_sig.emit(datas)
+            self.data_detector_sig.emit(data)
         self.waiting_for_data = False
         if not self.grab_state:
             self.detector.stop()
