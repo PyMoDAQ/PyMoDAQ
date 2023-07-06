@@ -1398,7 +1398,9 @@ class DAQ_Detector(QObject):
         if isinstance(data, list):
             data = DataToExport('temp', data)
 
-        if not self.hardware_averaging:  # to execute if the averaging has to be done software wise
+        do_averaging = self.Naverage > 1 and not self.hardware_averaging
+
+        if do_averaging:  # to execute if the averaging has to be done software wise
             self.ind_average += 1
             if self.ind_average == 1:
                 self.datas = data.deepcopy()
