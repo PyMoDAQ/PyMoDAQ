@@ -308,6 +308,13 @@ We then push our changes to our remote repository
 
 ``git push``
 
-Finally, we will open a pull request to the upstream repository, as is explained in the :ref:`plugin development tutorial <pull_request_to_upstream>`.
+Finally, we will open a pull request to the upstream repository from the GitHub interface. Be careful to select the *pymodaq-dev* branch!
+
+Those steps are explained with more details in the :ref:`plugin development tutorial <pull_request_to_upstream>`.
+
+.. figure:: /image/write_documentation/pull_request_write_doc_tutorial.svg
+    :width: 600
+
+    Pull request to the upstream repository. Be careful to select the **pymodaq-dev** branch!
 
 Let’s hope we will convince the owner that our tutorial is usefull! Thanks for contributing ;)
