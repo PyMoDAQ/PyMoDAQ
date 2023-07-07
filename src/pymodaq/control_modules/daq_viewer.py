@@ -163,7 +163,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._save_file_pathname: Path = None  # to store last active path, will be an Path object
         
         self._snapshot_pathname: Path = None
-        self._current_data: DataToExport = None
         self._data_to_save_export: DataToExport = None
 
         self._do_save_data: bool = False
@@ -772,20 +771,19 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.ui.data_ready = True
             self._init_show_data(dte)
 
-            # store raw data for further processing
-            self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
-
             if self.settings['main_settings', 'live_averaging']:
                 self.settings.child('main_settings', 'N_live_averaging').setValue(self._ind_continuous_grab)
-                self._current_data = copy.deepcopy(self._data_to_save_export)
+                _current_data = dte.deepcopy()
 
                 self._ind_continuous_grab += 1
                 if self._ind_continuous_grab > 1:
                     self._data_to_save_export = \
-                        self._data_to_save_export.average(self._current_data, self._ind_continuous_grab)
+                        _current_data.average(self._data_to_save_export, self._ind_continuous_grab)
+            else:
+                self._data_to_save_export = DataToExport(self._title, control_module='DAQ_Viewer', data=dte.data)
 
             if self._take_bkg:
-                self._bkg = copy.deepcopy(self._data_to_save_export)
+                self._bkg = self._data_to_save_export.deepcopy()
                 self._take_bkg = False
 
             if self._grabing:  # if live
@@ -876,6 +874,7 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                 self.settings.child('main_settings', 'N_live_averaging').setValue(0)
             else:
                 self.settings.child('main_settings', 'N_live_averaging').hide()
+            #self._update_settings_signal.emit(edict(path=path, param=param, change='value'))
 
         elif param.name() in putils.iter_children(self.settings.child('main_settings', 'axes'), []):
             if self.daq_type.name == "DAQ2D":
@@ -1235,18 +1234,24 @@ class DAQ_Detector(QObject):
         self.Naverage = None
         self.average_done = False
         self.hardware_averaging = False
+        #self.live_averaging = settings_parameter['main_settings', 'live_averaging']
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
         self.daq_type = DAQTypesEnum[settings_parameter['main_settings', 'DAQ_type']]
 
     @Slot(edict)
     def update_settings(self, settings_parameter_dict):
-        """ Apply a Parameter serialized as a dict to the instrument plugin class
+        """ Apply a Parameter serialized as a dict to the instrument plugin class or to self
 
         Parameters
         ----------
         settings_parameter_dict: dict
             dictionary serializing a Parameter object
+
+        Examples
+        --------
+        If the parameter is of the form ('detector_settings', 'xxx') then the parameter is sent to the instrument
+        plugin class.
         """
 
         path = settings_parameter_dict['path']
@@ -1407,14 +1412,15 @@ class DAQ_Detector(QObject):
             else:
                 self.datas = data.average(self.datas, self.ind_average)
 
-                if self.show_averaging:
-                    self.emit_temp_data(self.datas)
+            if self.show_averaging:
+                self.emit_temp_data(self.datas)
 
             if self.ind_average == self.Naverage:
                 self.average_done = True
                 self.data_detector_sig.emit(self.datas)
                 self.ind_average = 0
         else:
+            self.average_done = True  # expected to make sure the single_grab stop by itself
             self.data_detector_sig.emit(data)
         self.waiting_for_data = False
         if not self.grab_state:
