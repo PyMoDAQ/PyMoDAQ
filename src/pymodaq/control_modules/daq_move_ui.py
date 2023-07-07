@@ -110,7 +110,20 @@ class DAQ_Move_UI(ControlModuleUI):
         self.get_action('move_abs').setEnabled(status)
         self.get_action('move_abs_2').setEnabled(status)
 
-    def set_spinbox_properties(self, **properties):
+    def set_abs_spinbox_properties(self, **properties):
+        """ Change the Spinbox properties
+
+        Parameters
+        --------
+        properties: dict or named parameters
+            possible keys are :
+
+            * decimals: to set the number of displayed decimals
+            * 'minimum': to set the minimum value
+            * 'maximum': to set the maximum value
+            * 'step': to set the step value
+
+        """
         if 'decimals' in properties:
             self.abs_value_sb.setDecimals(properties['decimals'])
             self.abs_value_sb_2.setDecimals(properties['decimals'])

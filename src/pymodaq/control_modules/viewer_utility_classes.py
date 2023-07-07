@@ -1,3 +1,4 @@
+from typing import Union
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
@@ -10,8 +11,10 @@ import numpy as np
 from pymodaq.utils.math_utils import gauss1D, gauss2D
 from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.config import Config, get_set_local_dir
-#from pymodaq.utils.scanner import ScanParameters
 from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
+from pymodaq.utils.data import DataToExport
+from pymodaq.utils.messenger import deprecation_msg
+
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -33,7 +36,6 @@ params = [
          'readonly': True},
         {'title': 'Detector type:', 'name': 'detector_type', 'type': 'str', 'value': '', 'readonly': True},
         {'title': 'Detector Name:', 'name': 'module_name', 'type': 'str', 'value': '', 'readonly': True},
-        {'title': 'Nviewers:', 'name': 'Nviewers', 'type': 'int', 'value': 1, 'min': 1, 'default': 1, 'readonly': True},
         {'title': 'Controller ID:', 'name': 'controller_ID', 'type': 'int', 'value': 0, 'default': 0, 'readonly': False},
         {'title': 'Show data and process:', 'name': 'show_data', 'type': 'bool', 'value': True, },
         {'title': 'Refresh time (ms):', 'name': 'refresh_time', 'type': 'float', 'value': 50., 'min': 0.},
@@ -111,7 +113,7 @@ def main(plugin_file=None, init=True):
     prog.daq_type = det_type
     prog.detector = detector
     if init:
-        prog.init_det()
+        prog.init_hardware()
 
     sys.exit(app.exec_())
 
@@ -134,14 +136,18 @@ class DAQ_Viewer_base(QObject):
     """
     hardware_averaging = False
     live_mode_available = False
-    data_grabed_signal = Signal(list)
-    data_grabed_signal_temp = Signal(list)
+    data_grabed_signal = Signal(list)  # will be deprecated use dte_signal
+    data_grabed_signal_temp = Signal(list)  # will be deprecated use dte_signal_temp
+    dte_signal = Signal(DataToExport)
+    dte_signal_temp = Signal(DataToExport)
 
     params = []
 
     def __init__(self, parent=None, params_state=None):
-        QObject.__init__(self)
-        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
+        super().__init__()
+
+        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when
+        # the current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
@@ -166,6 +172,25 @@ class DAQ_Viewer_base(QObject):
         self.y_axis = None
 
         self.ini_attributes()
+
+        self.data_grabed_signal.connect(self._emit_dte)
+        self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+
+    def _emit_dte(self, dte: Union[DataToExport, list]):
+        if isinstance(dte, list):
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance'
+                            f'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
+                            f'instrument_plugins.html#emission-of-data')
+            dte = DataToExport('temp', dte)
+        self.dte_signal.emit(dte)
+
+    def _emit_dte_temp(self, dte: Union[DataToExport, list]):
+        if isinstance(dte, list):
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance'
+                            f'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
+                            f'instrument_plugins.html#emission-of-data')
+            dte = DataToExport('temp', dte)
+        self.dte_signal_temp.emit(dte)
 
     def ini_attributes(self):
         """
@@ -236,15 +261,6 @@ class DAQ_Viewer_base(QObject):
         """
         pass
 
-    def update_com(self):
-        """
-        If some communications settings have to be re init
-        To be reimplemented in subclass
-        -------
-
-        """
-        pass
-
     def get_axis(self):
         if self.plugin_type == '1D' or self.plugin_type == '2D':
             self.emit_x_axis()
@@ -252,7 +268,7 @@ class DAQ_Viewer_base(QObject):
         if self.plugin_type == '2D':
             self.emit_y_axis()
 
-    def emit_status(self, status):
+    def emit_status(self, status: ThreadCommand):
         """
             Emit the status signal from the given status.
 
@@ -349,28 +365,6 @@ class DAQ_Viewer_base(QObject):
 
             pass
 
-    def emit_x_axis(self, x_axis=None):
-        """
-            Convenience function
-            Emit the thread command "x_axis" with x_axis as an attribute.
-
-            See Also
-            --------
-            daq_utils.ThreadCommand
-        """
-        if x_axis is None:
-            x_axis = self.x_axis
-        self.emit_status(ThreadCommand("x_axis", [x_axis]))
-
-    def emit_y_axis(self):
-        """
-            Emit the thread command "y_axis" with y_axis as an attribute.
-
-            See Also
-            --------
-            daq_utils.ThreadCommand
-        """
-        self.emit_status(ThreadCommand("y_axis", [self.y_axis]))
 
 
 class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
@@ -526,9 +520,7 @@ class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):
                 data = self.data_mock
 
             if command_sock is None:
-                # self.data_grabed_signal.emit([OrderedDict(data=[data],name='TCP GRABBER', type='Data2D')]) #to be directly send to a viewer
                 self.data_ready(data)
-                # print(data)
             else:
                 self.send_data(command_sock, data)  # to be send to a client
 

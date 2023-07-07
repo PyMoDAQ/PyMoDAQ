@@ -122,6 +122,10 @@ class Axis:
     spread_order: int
         An integer needed in the case where data has a spread DataDistribution. It refers to the index along the data's
         spread_index dimension
+
+    Examples
+    --------
+    >>> axis = Axis('myaxis', units='seconds', data=np.array([1,2,3,4,5]), index=0)
     """
 
     def __init__(self, label: str = '', units: str = '', data: np.ndarray = None, index: int = 0, scaling=None,
@@ -465,6 +469,24 @@ class DataBase(DataLowLevel):
     See Also
     --------
     DataWithAxes, DataFromPlugins, DataRaw, DataSaverLoader
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from pymodaq.utils.data import DataBase, DataSource, DataDim, DataDistribution
+    >>> data = DataBase('mydata', source=DataSource['raw'], dim=DataDim['Data1D'], \
+distribution=DataDistribution['uniform'], data=[np.array([1.,2.,3.]), np.array([4.,5.,6.])],\
+labels=['channel1', 'channel2'], origin='docutils code')
+    >>> data.dim
+    <DataDim.Data1D: 1>
+    >>> data.source
+    <DataSource.raw: 0>
+    >>> data.shape
+    (3,)
+    >>> data.length
+    2
+    >>> data.size
+    3
     """
 
     def __init__(self, name: str, source: DataSource = None, dim: DataDim = None,
@@ -1474,8 +1496,6 @@ class DataWithAxes(DataBase):
         return str(self._am)
 
 
-
-
 class DataRaw(DataWithAxes):
     """Specialized DataWithAxes set with source as 'raw'. To be used for raw data"""
     def __init__(self, *args,  **kwargs):
@@ -1735,8 +1755,34 @@ class DataToExport(DataLowLevel):
             data.append(self.get_data_from_dim(dim, deepcopy=deepcopy))
         return data
 
+    def get_data_from_sig_axes(self, Naxes: int, deepcopy: bool = False) -> DataToExport:
+        """Get the data matching the given number of signal axes
+
+        Parameters
+        ----------
+        Naxes: int
+            Number of signal axes in the DataWithAxes objects
+
+        Returns
+        -------
+        DataToExport: filtered with data matching the number of signal axes
+        """
+        data = DataToExport(name=self.name)
+        for _data in self:
+            if len(_data.sig_indexes) == Naxes:
+                if deepcopy:
+                    data.append(_data.deepcopy())
+                else:
+                    data.append(_data)
+        return data
+
     def get_data_from_Naxes(self, Naxes: int, deepcopy: bool = False) -> DataToExport:
         """Get the data matching the given number of axes
+
+        Parameters
+        ----------
+        Naxes: int
+            Number of axes in the DataWithAxes objects
 
         Returns
         -------
@@ -1818,6 +1864,9 @@ class DataToExport(DataLowLevel):
         """Make sure data is a DataWithAxes object or inherited"""
         if not isinstance(data, DataWithAxes):
             raise TypeError('Data stored in a DataToExport object should be objects inherited from DataWithAxis')
+
+    def deepcopy(self):
+        return DataToExport('Copy', data=[data.deepcopy() for data in self])
 
     @dispatch(list)
     def append(self, data: List[DataWithAxes]):

@@ -121,204 +121,6 @@ The module manager is an object used to deal with:
    The Module Manager user interface with selectable detectors and actuators, with probed data feature and actuators testing.
 
 
-
-.. _scanner_paragrah:
-
-Scanner
--------
-
-The *Scanner* module is an object dealing with configuration of scan modes and is mainly used by the DAQ_Scan extension.
-It features a graphical interface, see :numref:`scan2D_fig`, allowing the configuration of the scan type and all its
-particular settings. The **Scan type** sets the type of scan, **Scan1D** for a scan as a function of only one actuator,
-**Scan2D** for a scan as a function of two actuators, **Sequential** for scans as a function of 1, 2...N actuators and
-**Tabular** for a list of points coordinates in any number of actuator phase space. All specific features of these scan
-types are described below:
-
-Scan1D
-++++++
-
-The possible settings are visible on :numref:`scan1D_fig` and described below:
-
-* **scan subtype**: either *Linear* (usual uniform 1D scan), *Back to start* (the actuator comes back to the initial position
-  after each linear step, for a referenced measurement for instance), *Random* same as *Linear* except the
-  predetermined positions are sampled randomly and from version 2.0.1 *Adaptive* that features no predetermined
-  positions. These will be determined by an algorithm influenced by the signal returned from a detector on the
-  previously sampled positions (see :ref:`adaptive_scans`)
-* **Start**: Initial position of the selected actuator (in selected actuator controller unit)
-* **Stop**: Last position of the scan (in selected actuator controller unit)
-* **Step**: Step size of the step (in selected actuator controller unit)
-
-For the special case of the Adaptive mode, one more feature is available: the *Loss type**. It modifies the algorithm
-behaviour (see :ref:`adaptive_scans`)
-
-  .. _scan1D_fig:
-
-.. figure:: /image/managers/scanner_widget_1D.PNG
-   :alt: scanner_fig
-
-   The Scanner user interface set on a *Scan1D* scan type and the visible list of scan subtype.
-
-
-
-Scan2D
-++++++
-
-The possible settings are visible on :numref:`scan2D_fig` and described below:
-
-  .. _scan2D_fig:
-
-.. figure:: /image/managers/scanner_widget.PNG
-   :alt: scanner_fig
-
-   The Scanner user interface set on a *Scan2D* scan type and a *Spiral* scan subtype and its particular settings.
-
-
-* **Scan subtype**: See :numref:`scan2D_subtypes` either *linear* (scan line by line), *linear back and forth* (scan line by line
-  but in reverse direction each 2 lines), *spiral* (start from the center and scan as a spiral), *Random* (random
-  sampling of the *linear* case) and *Adaptive* (see :ref:`adaptive_scans`)
-* **Start, Stop, Step**: for each axes (each actuators)
-* **Rmax, Rstep, Npts/axis**: in case of spiral scan only. Rmax is the maximum radius of the spiral (calculated),
-  and Npts/axis is the number of points for both axis (total number of points is therefore Npts/axis²).
-* **Selection**: see :ref:`scan_selector_paragraph`
-
-
-  .. _scan2D_subtypes:
-
-.. figure:: /image/DAQ_Scan/scan2D_subtypes.png
-   :alt: scannersubtypes_fig
-
-   The main Scan2D subtypes: Linear, Back and Forth and Spiral.
-
-
-
-
-Sequential
-++++++++++
-
-The possible settings are visible on :numref:`scan_seq_fig` and described below:
-
-* **Scan subtype**: only *linear* this means the scan have a sequence of Scan1D of the last specified actuator
-  (on :numref:`scan_seq_fig`, it is *Xaxis*) for all positions of the last but end actuator (here *Yaxis*) and so on. So on
-  :numref:`scan_seq_fig` there will be 11 steps for *Xaxis* times 11 steps for *Yaxis* times 10 steps for *Theta axis*
-  so in total 11x11x10=1210 total steps for this 3 dimensions scan.
-
-.. note::
-
-  If only 1 actuator is selected, then the Sequential scan is identical to the *Scan1D* scan but where only the *linear*
-  subtype is available. If 2 actuators are selected, then the Sequential scan is identical to the *Scan2D* scan but
-  where only the *linear* subtype is available.
-
-
-  .. _scan_seq_fig:
-
-.. figure:: /image/managers/scanner_widget_sequential.PNG
-   :alt: scanner_fig
-
-   The Scanner user interface set on a *Sequential* scan type with a sequence of three actuators
-
-
-Tabular
-+++++++
-
-The tabular scan type consists of a list of positions (for each selected actuators).
-
-Tabular Linear/Manual case
-##########################
-In the Linear/Manual case, the module will
-move actuators on each positions and grab datas. On :numref:`scan_tabular_fig`, a list of 79 positions has been set.
-By right clicking on the table, a context manager pops up and gives the possibility to:
-
-* add one more position in the list
-* remove the selected position
-* clear all the positions
-* load positions from a text file (as many columns as selected actuators with their positions separated by a tab)
-* save the current list of positions in a text file (for later quick loading of positions)
-
-One can also drag and drop elements of the list at a different index in the list.
-
-  .. _scan_tabular_fig:
-
-.. figure:: /image/managers/scanner_widget_tabular.PNG
-   :alt: scanner_fig
-
-   The Scanner user interface set on a *Tabular* scan type with a list of points for 2 actuators. A context menu with
-   other options is also visible (right click on the table to show it)
-
-Tabular Linear/Polylines case
-#############################
-
-In the particular case of 2 selected actuators, it could be more interesting to draw the positions for the tabular scan.
-One possibility is to draw segments on a 2D viewer (see :numref:`scan_selector`) and positions will be points along
-these segments (it will be a kind of 1D cuts within a 2D phase space). A new setting, *Curvilinear step*  appears. The
-positions will be points starting from the start of the first segment and then step along them by the value of this setting.
-That gives, for :numref:`scan_selector`, 40 points defined along the segments.
-
-   .. _scan_selector:
-
-.. figure:: /image/DAQ_Scan/scan_selector.PNG
-   :alt: scan_selector
-
-   An example of 1D complex sections selected within a 2D area
-
-Tabular Adaptive case
-#####################
-
-**Valid for 1 or 2 selected actuators**. The tabular adaptive case will be similar to scan1D adaptive mode, except that one
-adaptive Scan1D will be done for each segments defined by the list of positions in the table. For instance,
-:numref:`scan_tabular_adaptive_fig` shows a list of 4 positions defining 4 segments in a 2D space. The adaptive scan will
-be done on/along these 4 segments. Positions can be set manually or from a *Polylines* selection as seen on :numref:`scan_selector`.
-
-
-  .. _scan_tabular_adaptive_fig:
-
-.. figure:: /image/managers/scanner_widget_tabular_adaptive.PNG
-   :alt: scanner_fig
-
-   The Scanner user interface set on a *Tabular* scan type with a list of points for 2 actuators. A context menu with
-   other options is also visible (right click on the table to show it)
-
-
-.. _adaptive_scans:
-
-Adaptive
-++++++++
-
-
-All the adaptive features are using the `python-adaptive`__ package (Parallel active learning of
-mathematical functions, 10.5281/zenodo.1182437). And the reader is invited to explore their tutorials to discover how
-these algorithms work. In PyMoDAQ the `learner1D`__ algorithm is used for the *Scan1D and Tabular* scan types while the
-`learner2D`__ one is used for *Scan2D* scan type.
-
-Bounds
-######
-As a general rule, the adaptive algorithm will need bounds to work with. For *Scan1D* scan type, these will be defined
-from the *start* and *stop* settings. For *Tabular*, it is the start and ends of the segments. Finally for *Scan2D*, it
-is the: *Start Ax 1*, *Stop Ax 1* and *Start Ax 2*, *Stop Ax 2* that are defining scan bounds.
-
-Feedback
-########
-
-The adaptive algorithm will need for each probed positions a feedback value telling it the fitness of the probed points.
-From these on all previous points, it will determine the best next points to probe. In order to provide such a feedback,
-on has to choose a signal among all available from the DashBoard detectors. It has to be a Scalar so originate from a 0D
-detector or integrated ROI from 1D or 2D detectors. The module manager user interface (right most setting tree in the
-DAQ_Scan module ,see :numref:`module_managerfig`) will let you probe available datas exported from currently selected
-detectors. You can then pick the Data0D one you want to use as the Adaptive feedback. For instance, on :numref:`module_managerfig`,
-three Data0D are available, one from a 0D detector (CH000) and 2 from the Measurements ROIs of a 1D detector. In that case the
-CH000 data has been selected and will therefore be use as feedback for the Adaptive algorithm.
-
-Loss
-####
-
-All the Adaptive options are called *Loss* on the Scanner UI. These influence the adaptive algorithm, using previously
-probed positions and their feedback to guess the next point to probe. See the `Adaptive documentation`__ on *loss*
-to understand all the possibilities.
-
-__ https://adaptive.readthedocs.io/en/latest/
-__ https://adaptive.readthedocs.io/en/latest/tutorial/tutorial.Learner1D.html
-__ https://adaptive.readthedocs.io/en/latest/tutorial/tutorial.Learner2D.html
-__ https://adaptive.readthedocs.io/en/latest/tutorial/tutorial.custom_loss.html
-
 .. _scan_selector_paragraph:
 
 Scan Selector
@@ -379,28 +181,29 @@ of data such as with the DAQ_Viewer (see :ref:`daq_viewer_saving_single`), save 
 
    .. _save_settings_fig2:
 
-.. figure:: /image/DAQ_Scan/save_settings.PNG
+.. figure:: /image/Utils/h5saver_settings.PNG
    :alt: list_modules
+   :figwidth: 300 px
 
    User interface of the H5Saver module
 
 On the possible saving options, you'll find (see :numref:`save_settings_fig2`):
 
-
-* **Save 2D datas and above**: if not selected, 2D datas (and above) will **not** be saved but only lineouts or
-  integrated area (this is only in order to save memory space, but is dangerous as you loose the possibility to get back
-  initial raw data. Save raw datas should be unselected in that case)
-* **Save raw datas only**: if selected, only data exported form the detector plugins will be saved, not the data
-  generated from ROIs or lineouts.
-* **Backend**: you can chose among any of the three hdf5 backend (*tables* is recommended and by default)
-* **Show File Content?**: if clicked, the :ref:`H5Browser_module` will open to display content of the current hdf5 file
-* **Base path**: The folder where all datasets and scans will be saved, for instance: ``C:\Data``
-* **Base name**: the name given to the scans you are going to do (default is *Scan*)
-* **current Scan**: indexed name from *base name*, for instance: ``Scan000``
-* **h5 file**: complete path of the current h5 file, for instance: ``C:\Data\2018\20181226\Dataset_20181226_000\Dataset_20181226_000.h5``
-* **Compression options**: by default data are compressed to mid level
-  * **compression library**: see *pytables* package or *HDF5* documentation for details
-  * **Compression level**: integer between 0 (no compression) and 9 (maximum compression)
+* *Save type*:
+* *Save 2D and above*: True by default, allow to save data with high dimensionality (taking a lot of memory space)
+* *Save raw data only*: True by default, will only save data not processed from the Viewer's ROIs.
+* *backend* display which backend is being used: pytables or h5py
+* *Show file content* is a button that will open the ``H5Browser`` interface to explore data in the current h5 file
+* *Base path*: where will be saved all the data
+* *Base name*: indicates the base name from which the actual filename will derive
+* *Current scan* indicate the increment of the scans (valid for DAQ_Scan extension only)
+* *h5file*: *readonly*, complete path of the saved file
+* *Do Save*: Initialize the file and logging can start. A new file is created if clicked again, valid for the continuous
+  saving mode of the ``DAQ_Viewer``
+* *New file* is a button that will create a new file for subsequent saving
+* *Saving dynamic* is a list of number types that could be used for saving. Default is float 64 bits, but if your data
+  are 16 bits integers, there is no use to use float, so select int16 or uint16
+* *Compression options*: data can be compressed before saving, using one of the proposed library and the given value of compression [0-9], see *pytables* documentation.
 
 
 

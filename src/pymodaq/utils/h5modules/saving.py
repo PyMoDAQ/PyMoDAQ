@@ -804,43 +804,6 @@ class H5SaverBase(H5SaverLowLevel, ParameterManager):
         if filename != '':
             super().save_file_as(filename)
 
-
-    # def add_data_live_scan(self, channel_group, data_dict, scan_type='scan1D', title='', scan_subtype=''):
-    #     isadaptive = scan_subtype == 'Adaptive'
-    #     if not isadaptive:
-    #         shape, dimension, size = utils.get_data_dimension(data_dict['data'], scan_type=scan_type,
-    #                                                           remove_scan_dimension=True)
-    #     else:
-    #         shape, dimension, size = data_dict['data'].shape, '0D', 1
-    #     data_array = self.add_array(channel_group, 'Data', 'data', array_type=np.float,
-    #                                 title=title,
-    #                                 data_shape=shape,
-    #                                 data_dimension=dimension, scan_type=scan_type,
-    #                                 scan_subtype=scan_subtype,
-    #                                 array_to_save=data_dict['data'])
-    #     if 'x_axis' in data_dict:
-    #         if not isinstance(data_dict['x_axis'], dict):
-    #             array_to_save = data_dict['x_axis']
-    #             tmp_dict = dict(label='', units='')
-    #         else:
-    #             tmp_dict = copy.deepcopy(data_dict['x_axis'])
-    #             array_to_save = tmp_dict.pop('data')
-    #         self.add_array(channel_group, 'x_axis', 'axis',
-    #                        array_type=np.float, array_to_save=array_to_save,
-    #                        enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-    #     if 'y_axis' in data_dict:
-    #         if not isinstance(data_dict['y_axis'], dict):
-    #             array_to_save = data_dict['y_axis']
-    #             tmp_dict = dict(label='', units='')
-    #         else:
-    #             tmp_dict = copy.deepcopy(data_dict['y_axis'])
-    #             array_to_save = tmp_dict.pop('data')
-    #         self.add_array(channel_group, 'y_axis', 'axis',
-    #                        array_type=np.float, array_to_save=array_to_save,
-    #                        enlargeable=False, data_dimension='1D', metadata=tmp_dict)
-    #     return data_array
-
-
     def value_changed(self, param):
         if param.name() == 'show_file':
             param.setValue(False)

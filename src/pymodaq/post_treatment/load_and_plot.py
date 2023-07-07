@@ -19,7 +19,7 @@ from pymodaq.utils.gui_utils import Dock, DockArea
 
 class LoaderPlotter:
 
-    grouped_data1D_fullname = 'Grouped/Data1D'
+    grouped_data0D_fullname = 'Grouped/Data0D'
 
     def __init__(self, dockarea):
         self.dockarea = dockarea
@@ -60,26 +60,35 @@ class LoaderPlotter:
         return self._data
 
     def load_data(self, filter_dims: List[Union[DataDim, str]] = None, filter_full_names: List[str] = None,
-                  remove_navigation: bool = True, group_1D=False, average_axis=None, average_index: int = 0):
+                  remove_navigation: bool = True, group_0D=False, average_axis: int=None, average_index: int = 0):
+        """Load Data from the h5 node of the dataloader and apply some filtering/manipulation before plotting
+
+        Parameters
+        ----------
+        filter_dims: List[Union[DataDim, str]]
+            load only data with correct dims
+        filter_full_names: List[str]
+            load only data matching these names
+        remove_navigation: bool
+            if True, make navigation axes as signal axes (means DataND could be plotted on Viewer1D or
+            Viewer2D by concatenation)
+        group_0D: bool
+            if True, group all (initial) Data0D into one DataFromPlugins
+        average_axis: int or None
+            which axis in the data shapes should be interpereted as the average (in general it is 0 or None)
+        average_index: int
+            which step in the averaging process are we in.
+
+        Returns
+        -------
+        DataToExport
+        """
+
         self._data = DataToExport('All')
         self.dataloader.load_all('/', self._data)
 
         if average_axis is not None:
-            for ind, data in enumerate(self._data):
-                current_data = data.inav[average_index, ...]
-                if average_index == 0:
-                    data_to_append = data.inav[0:average_index + 1, ...]
-                else:
-                    data_to_append = data.inav[0:average_index+1, ...].mean(axis=average_axis)
-                data_to_append.labels = [f'{label}_averaged' for label in data_to_append.labels]
-                current_data.append(data_to_append)
-                self._data[ind] = current_data
-
-        if remove_navigation:
-            for data in self._data:
-                data.nav_indexes = ()
-                data.transpose()  # because usual ND data should be plotted here as 2D with the nav axes as the minor
-                # (horizontal)
+            self.average_axis(average_axis, average_index)
 
         if filter_dims is not None:
             filter_dims[:] = [enum_checker(DataDim, dim) for dim in filter_dims]
@@ -88,23 +97,65 @@ class LoaderPlotter:
         if filter_full_names is not None:
             self._data.data[:] = [data for data in self._data if data.get_full_name() in filter_full_names]
 
-        if group_1D:
-            data = self._data.get_data_from_dim('Data1D')
-            if len(data) > 0:
-                data1D_arrays = []
-                labels = []
-                for dwa in data:
-                    data1D_arrays.extend(dwa.data)
-                    labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
-                    self._data.remove(dwa)
+        if group_0D:  # 0D initial data
+            self.group_0D_data()
 
-                data1D = DataFromPlugins(self.grouped_data1D_fullname.split('/')[1],
-                                         data=data1D_arrays, labels=labels,
-                                         origin=self.grouped_data1D_fullname.split('/')[0],
-                                         axes=dwa.axes)
-                self._data.append(data1D)
+        if remove_navigation:
+            self.remove_navigation_axes()
 
         return self._data
+
+    def average_axis(self, average_axis, average_index) -> None:
+        """ Average the data along their average axis
+
+        Parameters
+        ----------
+        average_axis: int or None
+            which axis in the data shapes should be interpereted as the average (in general it is 0 or None)
+        average_index: int
+            which step in the averaging process are we in.
+        """
+        for ind, data in enumerate(self._data):
+            current_data = data.inav[average_index, ...]
+            if average_index == 0:
+                data_to_append = data.inav[0:average_index + 1, ...]
+            else:
+                data_to_append = data.inav[0:average_index + 1, ...].mean(axis=average_axis)
+            data_to_append.labels = [f'{label}_averaged' for label in data_to_append.labels]
+            current_data.append(data_to_append)
+            self._data[ind] = current_data
+
+    def remove_navigation_axes(self):
+        """Make the navigation axes as signal axes
+
+        transforms DataND into Data1D or Data2D or error... depending the exact shape of the data and the number of
+        navigation axes
+        """
+        for data in self._data:
+            data.nav_indexes = ()
+            data.transpose()  # because usual ND data should be plotted here as 2D with the nav axes as the minor
+            # (horizontal)
+
+    def group_0D_data(self):
+        """Group in a single DataFromPlugins all data that are initialy Data0D
+
+        """
+        data = self._data.get_data_from_sig_axes(0)
+        if len(data) > 0:
+            data0D_arrays = []
+            labels = []
+            for dwa in data:
+                data0D_arrays.extend(dwa.data)
+                labels.extend([f'{dwa.get_full_name()}/{label}' for label in dwa.labels])
+                self._data.remove(dwa)
+
+            data0D = DataFromPlugins(self.grouped_data0D_fullname.split('/')[1],
+                                     data=data0D_arrays, labels=labels,
+                                     dim='DataND',
+                                     origin=self.grouped_data0D_fullname.split('/')[0],
+                                     axes=dwa.axes, nav_indexes=dwa.nav_indexes,
+                                     )
+            self._data.append(data0D)
 
     def load_plot_data(self, **kwargs):
         """Load and plot all data from the current H5Saver

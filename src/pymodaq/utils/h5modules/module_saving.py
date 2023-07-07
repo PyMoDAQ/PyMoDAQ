@@ -172,6 +172,19 @@ class DetectorSaver(ModuleSaver):
         self._datatoexport_saver.add_data(where, data)
 
     def add_bkg(self, where: Union[Node, str], data_bkg: DataToExport):
+        """ Adds a DataToExport as a background node in the h5file
+
+        Parameters
+        ----------
+        where: Union[Node, str]
+            the path of a given node or the node itself
+        data_bkg: DataToExport
+            The data to be saved as background
+
+        Returns
+        -------
+
+        """
         self._datatoexport_saver.add_bkg(where, data_bkg)
 
     def add_external_h5(self, other_h5data: H5SaverLowLevel):

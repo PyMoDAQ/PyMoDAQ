@@ -32,7 +32,7 @@ classifiers = [
     "Topic :: Software Development :: User Interfaces",
 ]
 dependencies = [
-    "docutils==0.17.1",
+    #"docutils==0.17.1",
     "easydict",
     "importlib_metadata; python_version<\"3.8\"",
     "multipledispatch",

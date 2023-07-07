@@ -3,7 +3,7 @@
 DAQ Move
 ========
 
-This module is to be used to control any actuator hardware. An actuator is, in a general sense, any parameter
+This module is to be used to control any :term:`Actuator` hardware. An :term:`Actuator` is, in a general sense, any parameter
 that one can control and may vary during an experiment.  The default actuator
 is a Mock one (a kind of software based
 actuator displaying a *position* and accepting absolute or relative *positioning*).
@@ -13,7 +13,8 @@ Introduction
 
 This module has a generic interface in the form of a dockable panel containing the interface for initialization,
 the manual control of the actuator *position* and a side tree like interface displaying all the settings.
-:numref:`daq_move_gui_base` shows the minimal interface of the module (in order to take minimal place in the Dashboard)
+:numref:`daq_move_gui_base` shows the minimal interface of the module (in order to take minimal place in the
+Dashboard)
 
 
    .. _daq_move_gui_base:
@@ -23,9 +24,13 @@ the manual control of the actuator *position* and a side tree like interface dis
 
    Minimal DAQ_Move user interface
 
-.. :download:`png <daq_move_gui_base.png>`
+
 
 .. |green_arrow| image:: /image/DAQ_Move/green_arrow.PNG
+    :width: 20pt
+    :height: 20pt
+
+.. |red_arrow| image:: /image/DAQ_Move/red_arrow.PNG
     :width: 20pt
     :height: 20pt
 
@@ -34,6 +39,18 @@ the manual control of the actuator *position* and a side tree like interface dis
     :height: 20pt
 
 .. |settings| image:: /image/DAQ_Move/settings_button.PNG
+    :width: 20pt
+    :height: 20pt
+
+.. |refresh| image:: /image/DAQ_Move/loop_get_value.PNG
+    :width: 20pt
+    :height: 20pt
+
+.. |quit| image:: /image/DAQ_Move/quit.PNG
+    :width: 20pt
+    :height: 20pt
+
+.. |log| image:: /image/DAQ_Move/log.PNG
     :width: 20pt
     :height: 20pt
 
@@ -61,20 +78,33 @@ the manual control of the actuator *position* and a side tree like interface dis
     :width: 60pt
     :height: 20pt
 
+.. |init| image:: /image/DAQ_Move/init.PNG
+    :width: 80pt
+    :height: 20pt
+
 Hardware initialization
 -----------------------
 
-* ``Stage``: list of available hardware plugins of the DAQ_Move type.
-* ``Ini. Stage``: Initialize the hardware with the given settings (see :ref:`instrument_plugin_doc` for details on how to set hardware settings.)
-* ``Quit``: De-initialize the hardware and quit the module
+* ``Actuator``: list of available instrument plugins of the DAQ_Move type, see :numref:`daq_move_gui_base_actuators`.
+* |init|: Initialize the hardware with the given settings (see :ref:`instrument_plugin_doc` for details
+  on how to set hardware settings.)
+* |quit|: De-initialize the hardware and quit the module
 
+
+   .. _daq_move_gui_base_actuators:
+
+.. figure:: /image/DAQ_Move/daq_move_gui_actuators.PNG
+   :alt: daq_move_gui_base
+
+   Menu list displaying the available instrument plugin of type ``DAQ_Move``
 
 Positioning
 -----------
 
-Once the hardware is initialized, the actual *position* is displayed on the *Current position* display
-(bottom of :numref:`daq_move_gui_base`) while the absolute *position* can be set using the top spinbox
-and apply it using the |green_arrow| button.
+Once the hardware is initialized, the actuator's *value* is displayed on the *Current value* display
+(bottom of :numref:`daq_move_gui_base`) while the absolute *value* can be set using one of the top spinbox
+(respectively green or red) and apply it using respectively the |green_arrow| or |red_arrow| button. This double
+positioning allows to quickly define two values and switch between them.
 
 Advanced positioning
 --------------------
@@ -88,28 +118,24 @@ The user interface will then look like :numref:`daq_move_gui_rel`.
 .. figure:: /image/DAQ_Move/daq_move_gui_rel.PNG
    :alt: daq_move_gui_rel
 
-   DAQ_Move user interface with controls
-
-.. :download:`png <daq_move_gui_rel.png>`
+   DAQ_Move user interface with finer controls
 
 
-The two new displayed spinbox relate to Absolute positioning (redundant with the one on the top)  and
-Relative one.
+The two new displayed spinbox relate to *Absolute* positioning and *Relative* one.
 
-* |home|: the actuator will try to reach a home position (knwon position or physical switch limit)
-* |abs|: the actuator will try to reach the set Absolute position
-* |move_rel|: the actuator will try to reach a relative position (+increment)
-* |move_rel_m|: the actuator will try to reach a relative position (-increment)
-* |where|: will update the current position display
+* |home|: the actuator will try to reach a home position (known position or physical switch limit)
+* |abs|: the actuator will try to reach the set *absolute* position
+* |move_rel|: the actuator will try to reach a *relative* position (+increment)
+* |move_rel_m|: the actuator will try to reach a *relative* position (-increment)
+* |where|: will update the current actuator's value display
 * |stop|: stop the current motion (if possible)
 
 
 Settings
 --------
 
-The hardware and module settings can be displayed in order to initialize correctly the actuator and add other
-options by pressing the |settings| button. The user interface will then look like
-:numref:`daq_move_gui_settings`.
+The hardware and module settings can be displayed by pressing the |settings| button.
+The user interface will then look like :numref:`daq_move_gui_settings`.
 
 
    .. _daq_move_gui_settings:
@@ -119,23 +145,52 @@ options by pressing the |settings| button. The user interface will then look lik
 
    Full DAQ_Move user interface with controls and settings
 
-.. :download:`png <daq_move_gui_settings.png>`
-
-In the settings tree, there is two sections. The first relates to *Main settings* (not much there for
-the moment apart for the selected stage type and *Controller ID* that is related to multiaxes controller.
-The second relates to the hardware settings (the ones the hardware will need in order
+In the settings tree, there is two sections. The first relates to the *Main settings* of the actuator while
+the second relates to the hardware settings (the ones the hardware will need in order
 to initialize...). There is also specific settings explained below.
+
+
+(not much there for
+the moment apart for the selected stage type and *Controller ID* that is related to multi-axes controller.
+
+
+Main Settings
+^^^^^^^^^^^^^
+
+* *Actuator type*: is recalling the instrument plugin class being selected
+* *Actuator name*: is the name as defined in the preset (otherwise it is defaulted to *test*)
+* *Controller ID*: is related to multi-axes controller (see :ref:`multiaxes_controller`)
+* *Refresh value*: is the timer duration when grabbing the actuator's current value (see :ref:`daq_move_grabing`).
+
 
 .. _multiaxes_controller:
 
 Multiaxes controller
 ^^^^^^^^^^^^^^^^^^^^
 
-Sometimes one hardware controller can drive multiple actuators (for instance a XY translation stage). For
-this particular case the controller should not be initialized multiple times. One should identify one actuator
-refered to as *Master* and the other ones will be referred to as *Slave*. They will share the same controller
-address represented in the settings tree by the *Controller ID* entry. These settings will be activated
-within the plugin script where one can define a unique identifier for each actuator (U or V for the conex
+Sometimes one hardware controller can drive multiple actuators (for instance a XY translation stage). In the
+simplest use case, one should just initialize the instrument plugin and select (in the settings) which *axis* to
+use, see :numref:`daq_move_gui_multiaxes`.
+
+
+   .. _daq_move_gui_multiaxes:
+
+.. figure:: /image/DAQ_Move/daq_move_gui_settings.PNG
+   :alt: daq_move_gui_settings
+
+   Selection of one of the axis this controller is able to drive.
+
+Then the selected axis can be driven normally and you can switch at any time to another one.
+
+It is more complex when you want to drive two or more of these multi-axes during a scan. Indeed, each one should be
+considered in the Dashboard as one actuator. But if no particular care is taken, the Dashboard will try to initialize
+the controller multiple times, but only one communication channel exists, for instance a COM port. The solution
+in PyMoDAQ is to identify one actuator (one axis) as *Master* and the other ones will be referred to as *Slave*.
+They will share the same controller
+address (and actual driver, wrapper, ...) represented in the settings tree by the *Controller ID* entry.
+These settings will be activated
+within the instrument plugin class where one can define a unique identifier for each actuator
+(U or V for the conex
 in :numref:`daq_move_gui_settings`).
 
 * ``Controller ID``: unique identifier of the controller driving the stage
@@ -173,3 +228,11 @@ Other settings
   *epsilon*. So one could use it if one want to be sure the actuator really reached a given position before moving on.
   However if the set precision is too small, the actuator may never reached it and will issue a timeout
 * ``Timeout``: maximum amout of time the module will wait for the actuator to reach the desired position.
+
+
+.. _daq_move_grabing:
+
+Grabing the actuator's value
+----------------------------
+
+

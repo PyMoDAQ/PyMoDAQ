@@ -1,7 +1,9 @@
+sphinx<7  # constraint from readthedocs
+sphinx_rtd_theme>=1.2.2
+docutils<=0.17.1  # for proper bullets rendering...
 releases
 sphinx-csv-filter
 pillow
 toml
 pyqt5
-docutils==0.17.1
 numpydoc
