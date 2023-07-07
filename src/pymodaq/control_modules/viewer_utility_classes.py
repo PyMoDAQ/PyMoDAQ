@@ -1,3 +1,4 @@
+from typing import Union
 from qtpy import QtWidgets
 from qtpy.QtCore import QObject, Slot, Signal
 
@@ -12,6 +13,8 @@ from pymodaq.utils.daq_utils import ThreadCommand, getLineInfo
 from pymodaq.utils.config import Config, get_set_local_dir
 from pymodaq.utils.tcp_server_client import TCPServer, tcp_parameters
 from pymodaq.utils.data import DataToExport
+from pymodaq.utils.messenger import deprecation_msg
+
 
 comon_parameters = [{'title': 'Controller Status:', 'name': 'controller_status', 'type': 'list', 'value': 'Master',
                      'limits': ['Master', 'Slave']}, ]
@@ -110,7 +113,7 @@ def main(plugin_file=None, init=True):
     prog.daq_type = det_type
     prog.detector = detector
     if init:
-        prog.init_det()
+        prog.init_hardware()
 
     sys.exit(app.exec_())
 
@@ -133,14 +136,18 @@ class DAQ_Viewer_base(QObject):
     """
     hardware_averaging = False
     live_mode_available = False
-    data_grabed_signal = Signal(list)
-    data_grabed_signal_temp = Signal(list)
+    data_grabed_signal = Signal(list)  # will be deprecated use dte_signal
+    data_grabed_signal_temp = Signal(list)  # will be deprecated use dte_signal_temp
+    dte_signal = Signal(DataToExport)
+    dte_signal_temp = Signal(DataToExport)
 
     params = []
 
     def __init__(self, parent=None, params_state=None):
-        QObject.__init__(self)
-        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when the current class instance parameter list is a child of some other class
+        super().__init__()
+
+        self.parent_parameters_path = []  # this is to be added in the send_param_status to take into account when
+        # the current class instance parameter list is a child of some other class
         self.settings = Parameter.create(name='Settings', type='group', children=self.params)
         if params_state is not None:
             if isinstance(params_state, dict):
@@ -165,6 +172,21 @@ class DAQ_Viewer_base(QObject):
         self.y_axis = None
 
         self.ini_attributes()
+
+        self.data_grabed_signal.connect(self._emit_dte)
+        self.data_grabed_signal_temp.connect(self._emit_dte_temp)
+
+    def _emit_dte(self, dte: Union[DataToExport, list]):
+        if isinstance(dte, list):
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance')
+            dte = DataToExport('temp', dte)
+        self.dte_signal.emit(dte)
+
+    def _emit_dte_temp(self, dte: Union[DataToExport, list]):
+        if isinstance(dte, list):
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance')
+            dte = DataToExport('temp', dte)
+        self.dte_signal_temp.emit(dte)
 
     def ini_attributes(self):
         """
@@ -232,15 +254,6 @@ class DAQ_Viewer_base(QObject):
     def commit_settings(self, param):
         """
         To be reimplemented in subclass
-        """
-        pass
-
-    def update_com(self):
-        """
-        If some communications settings have to be re init
-        To be reimplemented in subclass
-        -------
-
         """
         pass
 
@@ -348,28 +361,6 @@ class DAQ_Viewer_base(QObject):
 
             pass
 
-    def emit_x_axis(self, x_axis=None):
-        """
-            Convenience function
-            Emit the thread command "x_axis" with x_axis as an attribute.
-
-            See Also
-            --------
-            daq_utils.ThreadCommand
-        """
-        if x_axis is None:
-            x_axis = self.x_axis
-        self.emit_status(ThreadCommand("x_axis", [x_axis]))
-
-    def emit_y_axis(self):
-        """
-            Emit the thread command "y_axis" with y_axis as an attribute.
-
-            See Also
-            --------
-            daq_utils.ThreadCommand
-        """
-        self.emit_status(ThreadCommand("y_axis", [self.y_axis]))
 
 
 class DAQ_Viewer_TCP_server(DAQ_Viewer_base, TCPServer):

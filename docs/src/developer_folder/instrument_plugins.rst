@@ -164,10 +164,20 @@ The ``param`` method argument is of the type ``Parameter`` (from ``pyqtgraph``):
 Emission of data
 ----------------
 When data are ready (see :ref:`data_ready` to know about that), the plugin has to notify the viewer module in order
-to display data and eventually save them. For this PyMoDAQ use two types of signals (see pyqtsignal documentation for details):
+to display data and eventually save them. For this PyMoDAQ use two types of signals (see pyqtsignal documentation
+for details):
 
-* ``data_grabed_signal_temp``
-* ``data_grabed_signal``
+* ``dte_signal_temp``
+* ``dte_signal``
+
+where ``dte`` stands for DataToExport, see :ref:`datatoexport`.
+
+.. note::
+  So far (07/07/2023) instrument plugins would use signals below to emit a list of DataFromPlugins objects
+
+  * ``data_grabed_signal_temp`` (old style, will be deprecated)
+  * ``data_grabed_signal`` (old style, will be deprecated)
+  It will be deprecated, as the object to use and emit are now DataToExport objects
 
 They both *emit* the same type of signal but will trigger different behaviour from the viewer module. The first is to be
 used to send temporary data to update the plotting but without triggering anything else (so that the DAQ_Scan still awaits
@@ -178,61 +188,24 @@ and further processed by DAQ_Scan or DAQ_Viewer instances. The code below is an 
 
 .. code-block:: python
 
-    from pymodaq.utils.daq_utils import Axis
-    from pymodaq.utils.daq_utils import DataFromPlugins
+    from pymodaq.utils.data import Axis, DataFromPlugins, DataToExport
     x_axis = Axis(label='Wavelength', units= "nm", data = vector_X)
     y_axis = Axis(data=vector_Y)
-    self.data_grabed_signal.emit([DataFromPlugins(name='Camera',data=[data2D_0, data2D_1,...],
-                                        dim='Data2D', x_axis=x_axis,y_axis=y_axis),
-                                  DataFromPlugins(name='Spectrum',data=[data1D_0, data1D_1,...],
-                                        dim='Data1D', x_axis=x_axis, labels=['label0', 'label1', ...]),
-                                  DataFromPlugins(name='Current',data=[data0D_0, data0D_1,...],
-                                        dim='Data0D'),
-                                  DataFromPlugins(name='Datacube',data=[dataND_0, dataND_1,...],
-                                        dim='DataND', nav_axes=[0,2]),
-                                        nav_x_axis=NavAxis(data=.., label='Xaxis', units= "µm", nav_index=0])
+    self.dte_signal.emit(DataToExport('mydata', data=[
+        DataFromPlugins(name='Camera',data=[data2D_0, data2D_1,...],
+                        dim='Data2D', x_axis=x_axis,y_axis=y_axis),
+        DataFromPlugins(name='Spectrum',data=[data1D_0, data1D_1,...],
+                        dim='Data1D', x_axis=x_axis, labels=['label0', 'label1', ...]),
+        DataFromPlugins(name='Current',data=[data0D_0, data0D_1,...],
+                        dim='Data0D'),
+        DataFromPlugins(name='Datacube',data=[dataND_0, dataND_1,...],
+                        dim='DataND', nav_indexes=(0,2),
+                        axes=[Axis(data=.., label='Xaxis', units= "µm", index=0)]))
 
-Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each ``DataFromPlugins``
-in the emitted list. The type of data viewer will be determined by the *dim* key value while its name will be set to the *name* key value.
-The *data* key value is also a list of numpy arrays, their shape should be adequate with the *dim* key of the dictionary. (in fact the
-*dim* key could be omitted as the ``DataFromPlugins`` class check its values or assess it from the data numpy array shape.
-Each array will generate one channel within the corresponding viewer. Here is the detailed list of the possible keys:
-
-* ``name``: will display the corresponding value on the viewer dock
-* ``dim``: (either 'Data0D', 'Data1D', 'Data2D' or 'DataND') will set the viewer type (0D, 1D, 2D or multi-dimensional ND). The ND viewer will be able to deal with data dimensionality up to 4)
-* ``data``: list of numpy array. Each array shape should correspond to the *type*
-* ``labels``: list of string, one for each numpy array within the ``data`` field. Will be displayed on 0DViewer and 1DViewer
-* ``x_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
-  (see code above and the Axis object in the daq_utils module)
-* ``y_axis``: **Axis** instance containing various fields to set the axis *label*, *units* and *data* on the viewer
-  (see code above and the Axis object in the daq_utils module)
-* ``nav_axes``: in case of a ND data viewer, will be the index of the navigation axis, see :ref:`NDviewer`
-* ``nav_x_axis``: **NavAxis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
-  (see code above, the NavAxis object in the daq_utils module and the paragraph below)
-* ``nav_y_axis``: **NavAxis** instance containing various fields to set the axis *label*, *units* and *data* on the NDViewer, concerning the navigation viewer
-  (see code above, the NavAxis object in the daq_utils module and the paragraph below)
-
-To export properly ND datas, the DataFromPlugins object must have 2 other arguments set (compared to 0D, 1D or 2D datas):
-
-* nav_axes: it is a tuple of integers telling which dimensions of the data numpy array is to be considered as navigation
-  axis. The first integer of the tuple will be used as the *xaxis* in the viewers (1D or 2D) while the second will be
-  used as the *yaxis* in the viewers.
-* the navigation axis objects (optional): these are arguments starting by *nav* (the *_x_axis* or *_y_axis* or whatever
-  part is just there to clarify the meaning for the reader of the code) and are instances of **NavAxis**. A
-  **NavAxis** is similar to the **Axis** object but **have an important supplementary argument** that is *nav_index*.
-  This one will be used to sort all navigation axes. An index of 0 means this particular NavAxis will be used to display
-  properties of the *xaxis* on the viewers
-
-:numref:`figure_viewerND` highlights how these arguments will change the behaviour of the NDviewer.
-
-
-   .. _figure_viewerND:
-
-.. figure:: /image/DAQ_Viewer/viewerND_axes.png
-   :alt: NavAxis stuff
-
-   An example of 3D datas with 2 navigation axes and how these will be displayed by the NDviewer.
-
+Such an emitted signal would trigger the initialization of 4 data viewers in the viewer module. One for each
+``DataFromPlugins`` in the data attribute (which is a list of DataFromPlugins). The type of data viewer will be
+determined by the *dim* key value while its name will be set to the *name* parameter value, for more details on
+data objects, see :ref:`data_objects`
 
 
 .. _data_ready:
@@ -279,6 +252,7 @@ The code below illustrates the poll method using a loop:
             QtWidgets.QApplication.processEvents()
         self.emit_data()
 
+
 Asynchronous example:
 *********************
 
@@ -311,7 +285,10 @@ The code below is derived from *daq_Andor_SDK2* (in *andor* hardware folder) and
             Function used to emit data obtained by callback.
         """
         ...
-        self.data_grabed_signal.emit([OrderedDict(name='Camera',data=[np.squeeze(self.data.reshape((sizey, sizex)).astype(np.float))], type=self.data_shape)])
+        self.dte_signal.emit(
+            DataToExport('mydata',
+                         data=[DataFromPlugins('Camera',
+                                               data=[np.squeeze(self.data.reshape((sizey, sizex)).astype(np.float))])])
 
 
     class AndorCallback(QtCore.QObject):
@@ -395,7 +372,7 @@ grab or snap data. The MockCamera plugin illustrates this feature:
             while self.live:
                 data = self.average_data(Naverage)
                 QThread.msleep(kwargs.get('wait_time', 100))
-                self.data_grabed_signal.emit(data)
+                self.dte_signal.emit(data)
                 QtWidgets.QApplication.processEvents()
 
 
