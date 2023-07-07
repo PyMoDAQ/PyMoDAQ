@@ -178,13 +178,17 @@ class DAQ_Viewer_base(QObject):
 
     def _emit_dte(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
-            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance')
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance'
+                            f'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
+                            f'instrument_plugins.html#emission-of-data')
             dte = DataToExport('temp', dte)
         self.dte_signal.emit(dte)
 
     def _emit_dte_temp(self, dte: Union[DataToExport, list]):
         if isinstance(dte, list):
-            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance')
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance'
+                            f'See: http://pymodaq.cnrs.fr/en/latest/developer_folder/'
+                            f'instrument_plugins.html#emission-of-data')
             dte = DataToExport('temp', dte)
         self.dte_signal_temp.emit(dte)
 
@@ -264,7 +268,7 @@ class DAQ_Viewer_base(QObject):
         if self.plugin_type == '2D':
             self.emit_y_axis()
 
-    def emit_status(self, status):
+    def emit_status(self, status: ThreadCommand):
         """
             Emit the status signal from the given status.
 

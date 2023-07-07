@@ -987,40 +987,28 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                             scaling=self.settings['main_settings', 'axes', 'yaxis', 'yscaling'])
         return scaled_xaxis, scaled_yaxis
 
-    @Slot(ThreadCommand)
-    def thread_status(self, status):
+    def thread_status(self, status: ThreadCommand):
         """Get back info (using the ThreadCommand object) from the hardware
 
         And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
+
+        Commands valid for all control modules are defined in the parent class, here are described only the specific
+        ones
 
         Parameters
         ----------
         status: ThreadCommand
             The info returned from the hardware, the command (str) can be either:
-                * Update_Status: display messages and log info
                 * ini_detector: update the status with "detector initialized" value and init state if attribute not null.
-                * close: close the current thread and delete corresponding attribute on cascade.
                 * grab : emit grab_status(True)
                 * grab_stopped: emit grab_status(False)
-                * x_axis: update x_axis from status attribute and User Interface viewer consequently. (Deprecated)
-                * y_axis: update y_axis from status attribute and User Interface viewer consequently. (Deprecated)
-                * update_channel: update the viewer channels in case of 0D DAQ_type (deprecated)
-                * update_settings: Update the "detector setting" node in the settings tree.
-                * update_main_settings: update the "main setting" node in the settings tree
-                * raise_timeout:
-                * show_splash: Display the splash screen with attribute as message
-                * close_splash
                 * init_lcd: display a LCD panel
                 * lcd: display on the LCD panel, the content of the attribute
                 * stop: stop the grab
         """
-        if status.command == "Update_Status":
-            if len(status.attribute) > 1:
-                self.update_status(status.attribute[0], log=status.attribute[1])
-            else:
-                self.update_status(status.attribute[0])
+        super().thread_status(status, 'detector')
 
-        elif status.command == "ini_detector":
+        if status.command == "ini_detector":
             self.update_status("detector initialized: " + str(status.attribute[0]['initialized']))
             if self.ui is not None:
                 self.ui.detector_init = status.attribute[0]['initialized']
@@ -1032,80 +1020,11 @@ class DAQ_Viewer(ParameterManager, ControlModule):
 
             self.init_signal.emit(self._initialized_state)
 
-        elif status.command == "close":
-            try:
-                self.update_status(status.attribute[0])
-                self._hardware_thread.quit()
-                self._hardware_thread.wait()
-                finished = self._hardware_thread.isFinished()
-                if finished:
-                    pass
-                else:
-                    print('Thread still running')
-                    self._hardware_thread.terminate()
-                    self.update_status('thread is locked?!', 'log')
-            except Exception as e:
-                self.logger.exception(str(e))
-
-            self._initialized_state = False
-            self.init_signal.emit(self._initialized_state)
-
         elif status.command == "grab":
             self.grab_status.emit(True)
 
         elif status.command == 'grab_stopped':
             self.grab_status.emit(False)
-
-        elif status.command == "update_channels":
-            pass
-
-        elif status.command == 'update_main_settings':
-            # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
-            try:
-                if status.attribute[2] == 'value':
-                    self.settings.child('main_settings', *status.attribute[0]).setValue(status.attribute[1])
-                elif status.attribute[2] == 'limits':
-                    self.settings.child('main_settings', *status.attribute[0]).setLimits(status.attribute[1])
-                elif status.attribute[2] == 'options':
-                    self.settings.child('main_settings', *status.attribute[0]).setOpts(**status.attribute[1])
-            except Exception as e:
-                self.logger.exception(str(e))
-
-        elif status.command == 'update_settings':
-            # using this the settings shown in the UI for the plugin reflects the real plugin settings
-            try:
-                self.settings.sigTreeStateChanged.disconnect(
-                    self.parameter_tree_changed)  # any changes on the detcetor settings will update accordingly the gui
-            except Exception as e:
-                self.logger.exception(str(e))
-            try:
-                if status.attribute[2] == 'value':
-                    self.settings.child('detector_settings', *status.attribute[0]).setValue(status.attribute[1])
-                elif status.attribute[2] == 'limits':
-                    self.settings.child('detector_settings', *status.attribute[0]).setLimits(status.attribute[1])
-                elif status.attribute[2] == 'options':
-                    self.settings.child('detector_settings', *status.attribute[0]).setOpts(**status.attribute[1])
-                elif status.attribute[2] == 'childAdded':
-                    child = Parameter.create(name='tmp')
-                    child.restoreState(status.attribute[1][0])
-                    self.settings.child('detector_settings', *status.attribute[0]).addChild(status.attribute[1][0])
-
-            except Exception as e:
-                self.logger.exception(str(e))
-            self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
-
-        elif status.command == 'raise_timeout':
-            self._raise_timeout()
-
-        elif status.command == 'show_splash':
-            self.ui.settings_tree.setEnabled(False)
-            self.splash_sc.show()
-            self.splash_sc.raise_()
-            self.splash_sc.showMessage(status.attribute[0], color=Qt.white)
-
-        elif status.command == 'close_splash':
-            self.splash_sc.close()
-            self.ui.settings_tree.setEnabled(True)
 
         elif status.command == 'init_lcd':
             if self._lcd is not None:
@@ -1115,17 +1034,15 @@ class DAQ_Viewer(ParameterManager, ControlModule):
                     self.logger.exception(str(e))
             # lcd module
             lcd = QtWidgets.QWidget()
-            self._lcd = LCD(lcd, **status.attribute[0])
+            self._lcd = LCD(lcd, **status.attribute)
             lcd.setVisible(True)
             QtWidgets.QApplication.processEvents()
 
         elif status.command == 'lcd':
-            self._lcd.setvalues(status.attribute[0])
+            self._lcd.setvalues(status.attribute)
 
         elif status.command == 'stop':
-            self.stop()
-
-        self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
+            self.stop_grab()
 
     def connect_tcp_ip(self):
         """Init a TCPClient in a separated thread to communicate with a distant TCp/IP Server
@@ -1223,7 +1140,7 @@ class DAQ_Detector(QObject):
         self.single_grab = False
         self.datas: DataToExport = None
         self.ind_average = 0
-        self.Naverage = None
+        self.Naverage = 1
         self.average_done = False
         self.hardware_averaging = False
         self.show_averaging = False
@@ -1359,33 +1276,24 @@ class DAQ_Detector(QObject):
             self.logger.exception(str(e))
             return status
 
-    def emit_temp_data(self, data: Union[DataToExport, List[DataFromPlugins]]):
+    def emit_temp_data(self, data: DataToExport):
         """ Convenience method to export temporary data using the data_detector_temp_sig Signal
 
         Parameters
         ----------
-        data: DataToExport (or List[DataFromPlugins] for old plugins)
+        data: DataToExport
         """
-        if isinstance(data, list):
-            data = DataToExport('temp', data)
         self.data_detector_temp_sig.emit(data)
 
-    def data_ready(self, data: Union[DataToExport, list]):
-        """
+    def data_ready(self, data: DataToExport):
+        """ Process the data received from the instrument plugin class
+
+        Processing here is eventual software averaging if it was not possible in the instrument plugin class
 
         Parameters
         ----------
         data: DataToExport
-
-
-        Returns
-        -------
-
         """
-        if isinstance(data, list):
-            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance')
-            data = DataToExport('temp', data)
-
         do_averaging = self.Naverage > 1 and not self.hardware_averaging
 
         if do_averaging:  # to execute if the averaging has to be done software wise
@@ -1409,50 +1317,40 @@ class DAQ_Detector(QObject):
         if not self.grab_state:
             self.detector.stop()
 
-    def single(self, Naverage=1, args_as_dict={}):
+    def single(self, Naverage=1, **kwargs):
+        """ Convenience function to grab a single set of data
+
+        Parameters
+        ----------
+        Naverage: int
+            The number of data to average before displaying
+        kwargs: optional named arguments
         """
-            Call the grab method with Naverage parameter as an attribute.
-
-            =============== =========== ==================
-            **Parameters**    **Type**    **Description**
-            *Naverage*        int
-            *savepath*           str        eventual savepath
-            =============== =========== ==================
-
-            See Also
-            --------
-            daq_utils.ThreadCommand, grab
-        """
-        try:
-            self.grab_data(Naverage, live=False, **args_as_dict)
-
-        except Exception as e:
-            self.logger.exception(str(e))
+        self.grab_data(Naverage, live=False, **kwargs)
 
     def grab_data(self, Naverage=1, live=True, **kwargs):
-        """
-            | Update status with 'Start Grabing' Update_status sub command of the Thread command.
-            | Process events and grab naverage is needed.
+        """ General method to grab data from the instrument plugin class
 
-            =============== =========== ==================
-            **Parameters**    **Type**    **Description**
-            *Naverage*        int
-            =============== =========== ==================
+        Will check if the plugin class can do hardware averaging (if NAverage > 1) and and live_mode, otherwise
+        do both software wise here
 
-            See Also
-            --------
-            daq_utils.ThreadCommand, grab
+        Parameters
+        ----------
+        Naverage: int
+            The number of data to average
+        live: bool
+            Try to run the instrument plugin class grabbing in live mode
+        kwargs: optional named arguments passed to the grab_data method of the instrument plugin class
         """
         try:
             self.ind_average = 0
             self.Naverage = Naverage
             if Naverage > 1:
                 self.average_done = False
-            # self.status_sig.emit(ThreadCommand("Update_Status", [f'Start Grabing']))
             self.waiting_for_data = False
 
             # for live mode:two possibilities: either snap one data and regrab softwarewise (while True) or if
-            # self.detector.live_mode_available is True all data is continuously emited from the plugin
+            # self.detector.live_mode_available is True all data is continuously emitted from the plugin
             if self.detector.live_mode_available:
                 kwargs['wait_time'] = self.wait_time
             else:
@@ -1471,11 +1369,11 @@ class DAQ_Detector(QObject):
                             if self.average_done:
                                 break
                     else:
-                        QThread.msleep(self.wait_time) #if in live mode apply a waiting time after acquisition
+                        QThread.msleep(self.wait_time)  # if in grab mode apply a waiting time after acquisition
                     if not self.grab_state:
-                        break
+                        break   # if not in grab mode  breaks the while loop
                     if self.detector.live_mode_available:
-                        break
+                        break  # if live can be done in the plugin breaks the while loop
                 except Exception as e:
                     self.logger.exception(str(e))
             self.status_sig.emit(ThreadCommand('grab_stopped'))
@@ -1484,19 +1382,24 @@ class DAQ_Detector(QObject):
             self.logger.exception(str(e))
 
     def close(self):
+        """ Call the close method of the instrument plugin class
         """
-            close the current instance of DAQ_Detector.
-        """
-        try:
-            self.detector.stop()
-            status = self.detector.close()
-        except Exception as e:
-            self.logger.exception(str(e))
-            status = str(e)
+        status = self.detector.close()
         return status
 
 
 def prepare_docks(area, title):
+    """ Static method to init docks to be used within a DAQ_Viewer
+
+    Parameters
+    ----------
+    area
+    title
+
+    Returns
+    -------
+
+    """
     dock_settings = Dock(title + " settings", size=(150, 250))
     dock_viewer = Dock(title + " viewer", size=(350, 350))
     area.addDock(dock_settings)
@@ -1505,6 +1408,8 @@ def prepare_docks(area, title):
 
 
 def main(init_qt=True, init_det=False):
+    """ Method called to start the DAQ_Viewer in standalone mode"""
+
     if init_qt:  # used for the test suite
         app = QtWidgets.QApplication(sys.argv)
         if config('style', 'darkstyle'):

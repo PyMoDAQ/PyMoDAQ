@@ -328,7 +328,7 @@ class DAQ_Move_base(QObject):
         else:
             raise NotImplementedError
 
-    def emit_status(self, status):
+    def emit_status(self, status: ThreadCommand):
         """
             | Emit the statut signal from the given status parameter.
             |

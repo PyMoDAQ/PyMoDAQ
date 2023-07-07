@@ -7,7 +7,7 @@ Created the 03/10/2022
 from easydict import EasyDict as edict
 
 from qtpy import QtCore
-from qtpy.QtCore import Signal, QObject
+from qtpy.QtCore import Signal, QObject, Qt
 from pymodaq.utils.gui_utils import CustomApp
 from pymodaq.utils.daq_utils import ThreadCommand, get_plugins, find_dict_in_list_from_key_val
 from pymodaq.utils.config import Config
@@ -113,6 +113,103 @@ class ControlModule(QObject):
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.title}'
+
+    def thread_status(self, status: ThreadCommand, control_module_type='detector'):
+        """Get back info (using the ThreadCommand object) from the hardware
+
+        And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
+
+
+        Parameters
+        ----------
+        status: ThreadCommand
+            The info returned from the hardware, the command (str) can be either:
+                * Update_Status: display messages and log info
+                * close: close the current thread and delete corresponding attribute on cascade.
+                * update_settings: Update the "detector setting" node in the settings tree.
+                * update_main_settings: update the "main setting" node in the settings tree
+                * raise_timeout:
+                * show_splash: Display the splash screen with attribute as message
+                * close_splash
+        """
+
+        if status.command == "Update_Status":
+            if len(status.attribute) > 1:
+                self.update_status(status.attribute[0], log=status.attribute[1])
+            else:
+                self.update_status(status.attribute[0])
+
+        elif status.command == "close":
+            try:
+                self.update_status(status.attribute[0])
+                self._hardware_thread.quit()
+                self._hardware_thread.wait()
+                finished = self._hardware_thread.isFinished()
+                if finished:
+                    pass
+                else:
+                    print('Thread still running')
+                    self._hardware_thread.terminate()
+                    self.update_status('thread is locked?!', 'log')
+            except Exception as e:
+                self.logger.exception(str(e))
+
+            self._initialized_state = False
+            self.init_signal.emit(self._initialized_state)
+
+        elif status.command == 'update_main_settings':
+            # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
+            try:
+                if status.attribute[2] == 'value':
+                    self.settings.child('main_settings', *status.attribute[0]).setValue(status.attribute[1])
+                elif status.attribute[2] == 'limits':
+                    self.settings.child('main_settings', *status.attribute[0]).setLimits(status.attribute[1])
+                elif status.attribute[2] == 'options':
+                    self.settings.child('main_settings', *status.attribute[0]).setOpts(**status.attribute[1])
+            except Exception as e:
+                self.logger.exception(str(e))
+
+        elif status.command == 'update_settings':
+            # using this the settings shown in the UI for the plugin reflects the real plugin settings
+            try:
+                self.settings.sigTreeStateChanged.disconnect(
+                    self.parameter_tree_changed)  # any changes on the detcetor settings will update accordingly the gui
+            except Exception as e:
+                self.logger.exception(str(e))
+            try:
+                if status.attribute[2] == 'value':
+                    self.settings.child(f'{control_module_type}_settings',
+                                        *status.attribute[0]).setValue(status.attribute[1])
+                elif status.attribute[2] == 'limits':
+                    self.settings.child(f'{control_module_type}_settings',
+                                        *status.attribute[0]).setLimits(status.attribute[1])
+                elif status.attribute[2] == 'options':
+                    self.settings.child(f'{control_module_type}_settings',
+                                        *status.attribute[0]).setOpts(**status.attribute[1])
+                elif status.attribute[2] == 'childAdded':
+                    child = Parameter.create(name='tmp')
+                    child.restoreState(status.attribute[1][0])
+                    self.settings.child(f'{control_module_type}_settings',
+                                        *status.attribute[0]).addChild(status.attribute[1][0])
+
+            except Exception as e:
+                self.logger.exception(str(e))
+            self.settings.sigTreeStateChanged.connect(self.parameter_tree_changed)
+
+        elif status.command == 'raise_timeout':
+            self.raise_timeout()
+
+        elif status.command == 'show_splash':
+            self.settings_tree.setEnabled(False)
+            self.splash_sc.show()
+            self.splash_sc.raise_()
+            self.splash_sc.showMessage(status.attribute, color=Qt.white)
+
+        elif status.command == 'close_splash':
+            self.splash_sc.close()
+            self.settings_tree.setEnabled(True)
+
+        self.custom_sig.emit(status)  # to be used if needed in custom application connected to this module
 
     @property
     def module_type(self):

@@ -16,7 +16,7 @@ from qtpy import QtWidgets
 
 from easydict import EasyDict as edict
 
-from pymodaq.utils.logger import set_logger, get_module_name, get_module_name
+from pymodaq.utils.logger import set_logger, get_module_name
 from pymodaq.control_modules.utils import ControlModule
 from pymodaq.utils.parameter import ioxml
 from pymodaq.control_modules.daq_move_ui import DAQ_Move_UI, ThreadCommand
@@ -31,7 +31,7 @@ from pymodaq.utils import config as config_mod
 from pymodaq.utils.exceptions import ActuatorError
 from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.h5modules import module_saving
-from pymodaq.utils.data import DataRaw, DataFromPlugins, DataToExport, Axis, DataDistribution
+from pymodaq.utils.data import DataRaw, DataToExport
 from pymodaq.utils.h5modules.backends import Node
 
 
@@ -74,7 +74,6 @@ class DAQ_Move(ParameterManager, ControlModule):
     _update_settings_signal = Signal(edict)
     bounds_signal = Signal(bool)
 
-    
     params = daq_move_params
 
     def __init__(self, parent=None, title="DAQ Move"):
@@ -100,7 +99,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         if parent is not None:
             self.ui = DAQ_Move_UI(parent, title)
         else:
-            self.ui = None
+            self.ui: DAQ_Move_UI = None
 
         if self.ui is not None:
             self.ui.actuators = ACTUATOR_TYPES
@@ -235,10 +234,6 @@ class DAQ_Move(ParameterManager, ControlModule):
         elif move_command.move_type == 'home':
             self.move_home(move_command.value)
 
-    def move_Abs(self, value, send_to_tcpip=False):
-        deprecation_msg(f'The method *move_Abs* should not be used anymore, use *move_abs*')
-        self.move_abs(value, send_to_tcpip=send_to_tcpip)
-
     def move_abs(self, value, send_to_tcpip=False):
         """Move the connected hardware to the absolute value
 
@@ -265,10 +260,6 @@ class DAQ_Move(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def move_Home(self, send_to_tcpip=False):
-        self.move_home(send_to_tcpip)
-        deprecation_msg(f'The method *move_Home* is deprecated, use *move_home*')
-
     def move_home(self, send_to_tcpip=False):
         """Move the connected actuator to its home value (if any)
 
@@ -288,10 +279,6 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         except Exception as e:
             self.logger.exception(str(e))
-
-    def move_Rel(self, rel_value, send_to_tcpip=False):
-        deprecation_msg(f'The method *move_Rel* should not be used anymore, use *move_rel*')
-        self.move_rel(rel_value, send_to_tcpip=send_to_tcpip)
 
     def move_rel(self, rel_value, send_to_tcpip=False):
         """Move the connected hardware to the relative value
@@ -319,14 +306,6 @@ class DAQ_Move(ParameterManager, ControlModule):
         except Exception as e:
             self.logger.exception(str(e))
 
-    def move_Rel_p(self):
-        deprecation_msg(f'The method *move_Rel_p* should not be used anymore, use *move_rel_p*')
-        self.move_rel_p()
-
-    def move_Rel_m(self):
-        deprecation_msg(f'The method *move_Rel_m* should not be used anymore, use *move_rel_m*')
-        self.move_rel_m()
-
     def move_rel_p(self):
         self.move_rel(self._relative_value)
 
@@ -346,10 +325,6 @@ class DAQ_Move(ParameterManager, ControlModule):
             self.ui.get_action('quit').trigger()
         self.quit_signal.emit()
 
-    def ini_stage_fun(self):
-        deprecation_msg(f'The function *ini_stage_fun* is deprecated, use init_hardware')
-        self.init_hardware(True)
-
     def init_hardware_ui(self, do_init=True):
         """Programmatic actuator's Initialization
 
@@ -364,7 +339,7 @@ class DAQ_Move(ParameterManager, ControlModule):
         self.ui.do_init(do_init)
 
     def init_hardware(self, do_init=True):
-
+        """ Init or desinit the selected instrument plugin class """
         if not do_init:
             try:
                 self.command_hardware.emit(ThreadCommand(command="close"))
@@ -397,10 +372,11 @@ class DAQ_Move(ParameterManager, ControlModule):
 
     @property
     def move_done_bool(self):
-        """bool: status of the actuator's action (done or not)"""
+        """bool: status of the actuator's status (done or not)"""
         return self._move_done_bool
 
     def value_changed(self, param):
+        """ Apply changes of value in the settings"""
         if param.name() == 'connect_server':
             if param.value():
                 self.connect_tcp_ip()
@@ -424,58 +400,48 @@ class DAQ_Move(ParameterManager, ControlModule):
                     self._command_tcpip.emit(ThreadCommand('send_info', dict(path=path, param=param)))
 
     def param_deleted(self, param):
+        """ Apply deletion of settings """
         if param.name() not in putils.iter_children(self.settings.child('main_settings'), []):
             self._update_settings_signal.emit(edict(path=['move_settings'], param=param, change='parent'))
 
     def child_added(self, param, data):
+        """ Apply addition of settings """
         path = self.settings.childPath(param)
         if 'main_settings' not in path:
             self._update_settings_signal.emit(edict(path=path, param=data[0].saveState(), change='childAdded'))
 
-    @Slot()
     def raise_timeout(self):
-        """Update status with "Timeout occurred" statement and change the timeout flag.
+        """ Update status with "Timeout occurred" statement and change the timeout flag.
         """
         self.update_status("Timeout occurred")
         self.wait_position_flag = False
 
     @Slot(ThreadCommand)
-    def thread_status(self, status):  # general function to get datas/infos from all threads back to the main
-        """
-            | General function to get datas/infos from all threads back to the main0
-            |
+    def thread_status(self, status: ThreadCommand):  # general function to get datas/infos from all threads back to the main
+        """Get back info (using the ThreadCommand object) from the hardware
 
-            Interpret a command from the command given by the ThreadCommand status :
-                * In case of **'Update_status'** command, call the update_status method with status attribute as parameters
-                * In case of **'ini_stage'** command, initialise a Stage from status attribute
-                * In case of **'close'** command, close the launched stage thread
-                * In case of **'check_position'** command, set the current_value value from status attribute
-                * In case of **'move_done'** command, set the current_value value, make profile of move_done and send the move done signal with status attribute
-                * In case of **'Move_Not_Done'** command, set the current position value from the status attribute, make profile of Not_move_done and send the Thread Command "move_abs"
-                * In case of **'update_settings'** command, create child "Move Settings" from  status attribute (if possible)
+        And re-emit this ThreadCommand using the custom_sig signal if it should be used in a higher level module
 
-            ================ ================= ======================================================
-            **Parameters**     **Type**         **Description**
+        Commands valid for all control modules are defined in the parent class, here are described only the specific
+        ones
 
-            *status*          ThreadCommand()   instance of ThreadCommand containing two attribute :
+        Parameters
+        ----------
+        status: ThreadCommand
+            Possible values are:
 
-                                                 * *command*    str
-                                                 * *attribute* list
-
-            ================ ================= ======================================================
-
-            See Also
-            --------
-            update_status, set_enabled_move_buttons, get_actuator_value, DAQ_utils.ThreadCommand, parameter_tree_changed, raise_timeout
+            * **ini_stage**: obtains info from the initialization
+            * **get_actuator_value**: update the UI current value
+            * **move_done**: update the UI current value and emits the move_done signal
+            * **outofbounds**: emits the bounds_signal signal with a True argument
+            * **set_allowed_values**: used to change the behaviour of the spinbox controlling absolute values (see
+              :meth:`daq_move_ui.set_abs_spinbox_properties`
+            * stop: stop the motion
         """
 
-        if status.command == "Update_Status":
-            if len(status.attribute) > 2:
-                self.update_status(status.attribute[0], log=status.attribute[1])
-            else:
-                self.update_status(status.attribute[0])
+        super().thread_status(status, 'move')
 
-        elif status.command == "ini_stage":
+        if status.command == "ini_stage":
             # status.attribute[0]=edict(initialized=bool,info="", controller=)
             self.update_status("Stage initialized: {:} info: {:}".format(status.attribute[0]['initialized'],
                                                                          status.attribute[0]['info']))
@@ -488,22 +454,6 @@ class DAQ_Move(ParameterManager, ControlModule):
                 self._initialized_state = False
             if self._initialized_state:
                 self.get_actuator_value()
-            self.init_signal.emit(self._initialized_state)
-
-        elif status.command == "close":
-            try:
-                self.update_status(status.attribute[0])
-                self._hardware_thread.exit()
-                self._hardware_thread.wait()
-                finished = self._hardware_thread.isFinished()
-                if finished:
-                    pass
-                    delattr(self, 'hardware_thread')
-                else:
-                    self.update_status('thread is locked?!', STATUS_WAIT_TIME, 'log')
-            except Exception as e:
-                self.logger.exception(str(e))
-            self._initialized_state = False
             self.init_signal.emit(self._initialized_state)
 
         elif status.command == "get_actuator_value" or status.command == 'check_position':
@@ -524,74 +474,15 @@ class DAQ_Move(ParameterManager, ControlModule):
             if self.settings.child('main_settings', 'tcpip', 'tcp_connected').value() and self._send_to_tcpip:
                 self._command_tcpip.emit(ThreadCommand('move_done', status.attribute))
 
-        elif status.command == "Move_Not_Done":
-            if self.ui is not None:
-                self.ui.display_value(status.attribute[0])
-                self.ui.move_done = False
-
-            self._current_value = status.attribute[0]
-            self._move_done_bool = False
-            self.command_hardware.emit(ThreadCommand(command="move_abs", attribute=[self._target_value]))
-
-        elif status.command == 'update_main_settings':
-            # this is a way for the plugins to update main settings of the ui (solely values, limits and options)
-            try:
-                if status.attribute[2] == 'value':
-                    self.settings.child('main_settings', *status.attribute[0]).setValue(status.attribute[1])
-                elif status.attribute[2] == 'limits':
-                    self.settings.child('main_settings', *status.attribute[0]).setLimits(status.attribute[1])
-                elif status.attribute[2] == 'options':
-                    self.settings.child('main_settings', *status.attribute[0]).setOpts(**status.attribute[1])
-            except Exception as e:
-                self.logger.exception(str(e))
-
-        elif status.command == 'update_settings':
-            # ThreadCommand(command='update_settings',attribute=[path,data,change]))
-            try:
-                self.settings.sigTreeStateChanged.disconnect(
-                    self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
-            except Exception:
-                pass
-            try:
-                if status.attribute[2] == 'value':
-                    self.settings.child('move_settings', *status.attribute[0]).setValue(status.attribute[1])
-                elif status.attribute[2] == 'limits':
-                    self.settings.child('move_settings', *status.attribute[0]).setLimits(status.attribute[1])
-                elif status.attribute[2] == 'options':
-                    self.settings.child('move_settings', *status.attribute[0]).setOpts(**status.attribute[1])
-                elif status.attribute[2] == 'childAdded':
-                    child = Parameter.create(name='tmp')
-                    child.restoreState(status.attribute[1][0])
-                    self.settings.child('move_settings', *status.attribute[0]).addChild(status.attribute[1][0])
-
-            except Exception as e:
-                self.logger.exception(str(e))
-            self.settings.sigTreeStateChanged.connect(
-                self.parameter_tree_changed)  # any changes on the settings will update accordingly the detector
-
-        elif status.command == 'raise_timeout':
-            self.raise_timeout()
-
         elif status.command == 'outofbounds':
             self.bounds_signal.emit(True)
 
-        elif status.command == 'show_splash':
-            self.settings_tree.setEnabled(False)
-            self.splash_sc.show()
-            self.splash_sc.raise_()
-            self.splash_sc.showMessage(status.attribute[0], color=Qt.white)
-
-        elif status.command == 'close_splash':
-            self.splash_sc.close()
-            self.settings_tree.setEnabled(True)
-
         elif status.command == 'set_allowed_values':
             if self.ui is not None:
-                self.ui.set_spinbox_properties(**status.attribute)
+                self.ui.set_abs_spinbox_properties(**status.attribute)
 
-    def get_position(self):
-        deprecation_msg(f'This method is deprecated , please use `get_actuator_value`')
-        self.get_actuator_value()
+        elif status.command == 'stop':
+            self.stop_motion()
 
     def get_actuator_value(self):
         """Get the current actuator value via the "get_actuator_value" command send to the hardware
@@ -901,27 +792,27 @@ class DAQ_Move_Hardware(QObject):
     @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
         """Interpret command send by DAQ_Move class
-                * In case of **'ini_stage'** command, init a stage from command attribute.
-                * In case of **'close'** command, unitinalise the stage closing hardware and emitting the corresponding status signal
-                * In case of **'move_abs'** command, call the move_Abs method with position from command attribute
-                * In case of **'move_rel'** command, call the move_Rel method with the relative position from the command attribute.
-                * In case of **'move_home'** command, call the move_home method
-                * In case of **'get_actuator_value'** command, get the current position from the check_position method
-                * In case of **'Stop_motion'** command, stop any motion via the stop_Motion method
-                * In case of **'reset_stop_motion'** command, set the motion_stopped attribute to false
+                * **ini_stage** command, init a stage from command attribute.
+                * **close** command, unitinalise the stage closing hardware and emitting the corresponding status signal
+                * **move_abs** command, call the move_Abs method with position from command attribute
+                * **move_rel** command, call the move_Rel method with the relative position from the command attribute.
+                * **move_home** command, call the move_home method
+                * **get_actuator_value** command, get the current position from the check_position method
+                * **Stop_motion** command, stop any motion via the stop_Motion method
+                * **reset_stop_motion** command, set the motion_stopped attribute to false
 
         Parameters
         ----------
         command: ThreadCommand
             Possible commands are:
-            * **'ini_stage'** command, init a stage from command attribute.
-            * **'close'** command, unitinalise the stage closing hardware and emitting the corresponding status signal
-            * **'move_abs'** command, call the move_abs method with position from command attribute
-            * **'move_rel'** command, call the move_rel method with the relative position from the command attribute.
-            * **'move_home'** command, call the move_home method
-            * **'get_actuator_value'** command, get the current position from the check_position method
-            * **'stop_motion'** command, stop any motion via the stop_Motion method
-            * **'reset_stop_motion'** command, set the motion_stopped attribute to false
+            * **ini_stage** command, init a stage from command attribute.
+            * **close** command, unitinalise the stage closing hardware and emitting the corresponding status signal
+            * **move_abs** command, call the move_abs method with position from command attribute
+            * **move_rel** command, call the move_rel method with the relative position from the command attribute.
+            * **move_home** command, call the move_home method
+            * **get_actuator_value** command, get the current position from the check_position method
+            * **stop_motion** command, stop any motion via the stop_Motion method
+            * **reset_stop_motion** command, set the motion_stopped attribute to false
         """
         try:
             if command.command == "ini_stage":
