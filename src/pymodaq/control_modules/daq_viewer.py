@@ -1056,14 +1056,6 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         elif status.command == 'grab_stopped':
             self.grab_status.emit(False)
 
-        elif status.command == "x_axis":
-            deprecation_msg(f'using emit_x_axis in plugins is deprecated use data emission with correct axis to set it.'
-                            f'To send it only once, use the data_grabed_signal_temp')
-
-        elif status.command == "y_axis":
-            deprecation_msg(f'using emit_y_axis in plugins is deprecated use data emission with correct axis to set it.'
-                            f'To send it only once, use the data_grabed_signal_temp')
-
         elif status.command == "update_channels":
             pass
 
@@ -1234,12 +1226,10 @@ class DAQ_Detector(QObject):
         self.Naverage = None
         self.average_done = False
         self.hardware_averaging = False
-        #self.live_averaging = settings_parameter['main_settings', 'live_averaging']
         self.show_averaging = False
         self.wait_time = settings_parameter['main_settings', 'wait_time']
         self.daq_type = DAQTypesEnum[settings_parameter['main_settings', 'DAQ_type']]
 
-    @Slot(edict)
     def update_settings(self, settings_parameter_dict):
         """ Apply a Parameter serialized as a dict to the instrument plugin class or to self
 
@@ -1263,7 +1253,6 @@ class DAQ_Detector(QObject):
         elif path[0] == 'detector_settings':
             self.detector.update_settings(settings_parameter_dict)
 
-    @Slot(ThreadCommand)
     def queue_command(self, command: ThreadCommand):
         """Transfer command from the main module to the hardware module
 
@@ -1279,7 +1268,6 @@ class DAQ_Detector(QObject):
             * stop_all
             * update_scanner
             * move_at_navigator
-            * update_com
             * update_wait_time
             * get_axis
             * any string that the hardware is able to understand
@@ -1318,9 +1306,6 @@ class DAQ_Detector(QObject):
         elif command.command == 'move_at_navigator':
             self.detector.move_at_navigator(*command.attribute)
 
-        elif command.command == 'update_com':
-            self.detector.update_com()
-
         elif command.command == 'update_wait_time':
             self.wait_time = command.attribute[0]
 
@@ -1347,12 +1332,12 @@ class DAQ_Detector(QObject):
             # status="Not initialized"
             status = edict(initialized=False, info="", x_axis=None, y_axis=None)
             det_params, class_ = get_viewer_plugins(self.daq_type.name, self.detector_name)
-            self.detector = class_(self, params_state)
+            self.detector: DAQ_Viewer_base = class_(self, params_state)
 
             try:
-                self.detector.data_grabed_signal.connect(self.data_ready)
-                self.detector.data_grabed_signal_temp.connect(self.emit_temp_data)
-                infos = self.detector.ini_detector(controller)  # return edict(info="", controller=, stage=)
+                self.detector.dte_signal.connect(self.data_ready)
+                self.detector.dte_signal_temp.connect(self.emit_temp_data)
+                infos = self.detector.ini_detector(controller)
                 status.controller = self.detector.controller
 
             except Exception as e:
@@ -1387,20 +1372,18 @@ class DAQ_Detector(QObject):
 
     def data_ready(self, data: Union[DataToExport, list]):
         """
-            | Update the local datas attribute from the given datas parameter if the averaging has to be done software wise.
-            |
-            | Else emit the data detector signals with datas parameter as an attribute.
 
-            =============== ===================== =========================
-            **Parameters**    **Type**             **Description**
-            *datas*           list                the datas to be emitted.
-            =============== ===================== =========================
+        Parameters
+        ----------
+        data: DataToExport
 
-            See Also
-            --------
-            daq_utils.ThreadCommand
+
+        Returns
+        -------
+
         """
         if isinstance(data, list):
+            deprecation_msg(f'Data emitted from the instrument plugins should be a DataToExport instance')
             data = DataToExport('temp', data)
 
         do_averaging = self.Naverage > 1 and not self.hardware_averaging
