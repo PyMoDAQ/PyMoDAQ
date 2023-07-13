@@ -1,3 +1,5 @@
+.. _extensions:
+
 Extensions
 ==========
 
@@ -12,6 +14,7 @@ The DashBoard module can load extensions to perform dedicated tasks, such as aut
    /extensions_folder/daq_logger
    /extensions_folder/pid_module
    /extensions_folder/h5browser
+   /extensions/console
 
 
 
