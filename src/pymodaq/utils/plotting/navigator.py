@@ -6,8 +6,6 @@ from qtpy.QtCore import Qt, QObject, Slot, Signal
 import sys
 import os
 import numpy as np
-import tables
-
 from pymodaq.utils.data import DataToExport, DataFromPlugins, DataDim, enum_checker, DataWithAxes
 from pymodaq.utils.h5modules.data_saving import DataLoader
 from pymodaq.utils.managers.parameter_manager import ParameterManager

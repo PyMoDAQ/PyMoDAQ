@@ -22,7 +22,7 @@ from qtpy.QtCore import Qt, QObject, Signal, QByteArray
 
 import pymodaq.utils.parameter.ioxml
 
-from pymodaq.utils.tree_layout.tree_layout_main import TreeLayout
+from pymodaq.utils.gui_utils.widgets.tree_layout import TreeLayout
 from pymodaq.utils.daq_utils import capitalize
 from pymodaq.utils.data import Axis
 from pymodaq.utils.gui_utils.utils import h5tree_to_QTree, pngbinary2Qlabel
