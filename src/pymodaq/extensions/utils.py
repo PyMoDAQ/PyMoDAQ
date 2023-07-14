@@ -17,12 +17,14 @@ def get_extensions():
 
     Returns
     -------
-    list: list of disct containting the name and module of the found extension
+    list: list of dict containting the name and module of the found extension
     """
     extension_import = []
-    entry_points = metadata.entry_points()
-    if 'pymodaq.extensions' in entry_points:
-        discovered_extension = entry_points['pymodaq.extensions']
+    if hasattr(metadata, 'metadata.SelectableGroups'):
+        discovered_extension = metadata.entry_points('pymodaq.extensions')
+    else:
+        discovered_extension = metadata.entry_points()['pymodaq.extensions']
+    if len(discovered_extension) > 0:
 
         for pkg in discovered_extension:
             try:

@@ -574,7 +574,10 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
 
     """
     plugins_import = []
-    discovered_plugins = metadata.entry_points()['pymodaq.plugins']
+    if hasattr(metadata, 'metadata.SelectableGroups'):
+        discovered_plugins = metadata.entry_points('pymodaq.plugins')
+    else:
+        discovered_plugins = metadata.entry_points()['pymodaq.plugins']
 
     for module in discovered_plugins:
         try:
