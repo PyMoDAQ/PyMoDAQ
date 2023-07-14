@@ -324,9 +324,8 @@ class DAQ_Move(ParameterManager, ControlModule):
 
         if self._initialized_state:
             self.init_hardware(False)
-        if self.ui is not None:
-            self.ui.get_action('quit').trigger()
         self.quit_signal.emit()
+        self.parent.close()
 
     def init_hardware_ui(self, do_init=True):
         """Programmatic actuator's Initialization

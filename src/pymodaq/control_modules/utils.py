@@ -100,6 +100,7 @@ class ControlModule(QObject):
     quit_signal = Signal()
     _update_settings_signal = Signal(edict)
     status_sig = Signal(str)
+    custom_sig = Signal(ThreadCommand)
 
     def __init__(self):
         super().__init__()
