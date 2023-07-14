@@ -194,9 +194,11 @@ def get_models(model_name=None):
     """
     from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
-    entry_points = metadata.entry_points()
-    if 'pymodaq.pid_models' in entry_points:
-        discovered_models = entry_points['pymodaq.pid_models']
+    if hasattr(metadata, 'metadata.SelectableGroups'):
+        discovered_models = metadata.entry_points('pymodaq.pid_models')
+    else:
+        discovered_models = metadata.entry_points()['pymodaq.pid_models']
+    if len(discovered_models) > 0:
         for pkg in discovered_models:
             try:
                 module = importlib.import_module(pkg.value)
