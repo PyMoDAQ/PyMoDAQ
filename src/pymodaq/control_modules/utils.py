@@ -14,6 +14,7 @@ from pymodaq.utils.config import Config
 from pymodaq.utils.parameter import Parameter
 from pymodaq.utils.enums import BaseEnum, enum_checker
 from pymodaq.utils.plotting.data_viewers.viewer import ViewersEnum
+from pymodaq.utils.exceptions import DetectorError
 
 
 class DAQTypesEnum(BaseEnum):
@@ -58,6 +59,8 @@ DET_TYPES = {'DAQ0D': get_plugins('daq_0Dviewer'),
              'DAQ2D': get_plugins('daq_2Dviewer'),
              'DAQND': get_plugins('daq_NDviewer'),}
 
+if len(DET_TYPES['DAQ0D']) == 0:
+    raise DetectorError('No installed Detector')
 
 config = Config()
 

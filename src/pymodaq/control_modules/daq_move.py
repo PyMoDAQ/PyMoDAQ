@@ -42,6 +42,9 @@ config = config_mod.Config()
 
 DAQ_Move_Actuators = utils.get_plugins('daq_move')
 ACTUATOR_TYPES = [mov['name'] for mov in DAQ_Move_Actuators]
+if len(ACTUATOR_TYPES) == 0:
+    raise ActuatorError('No installed Actuator')
+
 
 STATUS_WAIT_TIME = 1000
 
