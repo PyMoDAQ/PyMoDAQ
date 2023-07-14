@@ -580,29 +580,26 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
         discovered_plugins = metadata.entry_points()['pymodaq.plugins']
 
     for module in discovered_plugins:
-        try:
-            if plugin_type == 'daq_move':
-                submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
-            else:
-                submodule = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
-                                                    module.value)
-            plugin_list = [{'name': mod[len(plugin_type) + 1:],
-                            'module': submodule} for mod in [mod[1] for
-                                                             mod in pkgutil.iter_modules([submodule.path.parent])]
-                           if plugin_type in mod]
-            # check if modules are importable
+        if plugin_type == 'daq_move':
+            submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
+        else:
+            submodule = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
+                                                module.value)
+        plugin_list = [{'name': mod[len(plugin_type) + 1:],
+                        'module': submodule} for mod in [mod[1] for
+                                                         mod in pkgutil.iter_modules([str(submodule.path.parent)])]
+                       if plugin_type in mod]
+        # check if modules are importable
 
-            for mod in plugin_list:
-                try:
-                    if plugin_type == 'daq_move':
-                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
-                    else:
-                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
-                    plugins_import.append(mod)
-                except Exception as e:  # pragma: no cover
-                    pass
-        except Exception as e:  # pragma: no cover
-            logger.warning(str(e))
+        for mod in plugin_list:
+            try:
+                if plugin_type == 'daq_move':
+                    importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
+                else:
+                    importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
+                plugins_import.append(mod)
+            except Exception as e:  # pragma: no cover
+                pass
 
     #add utility plugin for PID
     if plugin_type == 'daq_move':
