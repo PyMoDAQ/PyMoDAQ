@@ -70,4 +70,14 @@ Here are some definitions of the specific terms used in the PyMoDAQ documentatio
     Entry points python mechanism is used to let know PyMoDAQ of installed Instrument, PID models or extension plugins
 
 
+.. glossary::
+
+  Module
+     A module in the python sense is an importable object either a directory containing an *__init__.py* file or a
+     python file containing data, functions or classes.
+
+.. note::
+    If there is code that can be executed within your module but you don't want it to be executed when importing,
+    make sure to protect the execution using a : ``if __name__ == '__main__':`` clause.
+
 

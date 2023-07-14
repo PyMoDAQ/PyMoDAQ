@@ -123,6 +123,7 @@ Please see :doc:`the changelog </changelog>`.
    :caption: Contents:
 
    features
+   whats_new
    user
    developer
    tutorials

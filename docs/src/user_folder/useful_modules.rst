@@ -286,3 +286,19 @@ Remote Manager
 --------------
 
 In construction
+
+
+.. _chrono_timer:
+
+ChronoTimer
+-----------
+
+Fig. :ref:`chrono_timer_fig` shows a user interface to be used for timing things. Not really
+part of PyMoDAQ but well could be useful (Used it to time a roller event in my lab ;-) )
+
+
+.. _chrono_timer_fig:
+
+.. figure:: /image/Utils/chrono_timer.png
+
+    User Interface of the Chrono/Timer UI

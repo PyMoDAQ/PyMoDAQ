@@ -3,9 +3,6 @@ class DAQ_ScanException(Exception):
     pass
 
 
-
-
-
 class DetectorError(Exception):
     pass
 

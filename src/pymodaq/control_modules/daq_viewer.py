@@ -39,7 +39,7 @@ from pymodaq.utils.messenger import deprecation_msg
 from pymodaq.utils.gui_utils import DockArea, get_splash_sc, Dock
 from pymodaq.utils.managers.parameter_manager import ParameterManager, Parameter
 from pymodaq.control_modules.daq_viewer_ui import DAQ_Viewer_UI
-from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum
+from pymodaq.control_modules.utils import DET_TYPES, get_viewer_plugins, DAQTypesEnum, DetectorError
 from pymodaq.utils.plotting.data_viewers.viewer import ViewerBase, ViewersEnum
 from pymodaq.utils.enums import enum_checker
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base
@@ -146,6 +146,8 @@ class DAQ_Viewer(ParameterManager, ControlModule):
         self._detectors: List[str] = [det_dict['name'] for det_dict in DET_TYPES[self.daq_type.name]]
         if len(self._detectors) > 0:  # will be 0 if no valid plugins are installed
             self._detector: str = self._detectors[0]
+        else:
+            raise DetectorError('No detected Detector')
         self.settings.child('main_settings', 'detector_type').setValue(self._detector)
 
         self._grabing: bool = False
