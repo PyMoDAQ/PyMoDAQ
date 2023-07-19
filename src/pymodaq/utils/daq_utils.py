@@ -596,6 +596,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     plugins_import = []
     discovered_plugins = get_entrypoints(group='pymodaq.plugins')
+    logger.info(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     for module in discovered_plugins:
         try:
             if plugin_type == 'daq_move':
@@ -605,7 +606,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
                                                     module.value)
             plugin_list = [{'name': mod[len(plugin_type) + 1:],
                             'module': submodule} for mod in [mod[1] for
-                                                             mod in pkgutil.iter_modules([submodule.path.parent])]
+                                                             mod in pkgutil.iter_modules([str(submodule.path.parent)])]
                            if plugin_type in mod]
             # check if modules are importable
 
