@@ -561,6 +561,27 @@ def find_dict_in_list_from_key_val(dicts, key, value, return_index=False):
         return None
 
 
+def get_entrypoints(group='pymodaq.plugins'):
+    """ Get the list of modules defined from a group entry point
+
+    Because of evolution in the package, one or another of the forms below may be deprecated.
+    We start from the newer way down to the older
+
+    Parameters
+    ----------
+    group: str
+        the name of the group
+    """
+    try:
+        discovered_entrypoints = metadata.entry_points(group=group)
+    except TypeError:
+        try:
+            discovered_entrypoints = metadata.entry_points().select(group=group)
+        except AttributeError:
+            discovered_entrypoints = metadata.entry_points().get(group, [])
+    return discovered_entrypoints
+
+
 def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     Get plugins names as a list
@@ -574,11 +595,7 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
 
     """
     plugins_import = []
-    if hasattr(metadata, 'metadata.SelectableGroups'):
-        discovered_plugins = metadata.entry_points('pymodaq.plugins')
-    else:
-        discovered_plugins = metadata.entry_points()['pymodaq.plugins']
-
+    discovered_plugins = get_entrypoints(group='pymodaq.plugins')
     for module in discovered_plugins:
         if plugin_type == 'daq_move':
             submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
