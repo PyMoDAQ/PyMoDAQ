@@ -596,27 +596,33 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
     """
     plugins_import = []
     discovered_plugins = get_entrypoints(group='pymodaq.plugins')
+    logger.info(f'Found {len(discovered_plugins)} installed plugins, trying to import them')
     for module in discovered_plugins:
-        if plugin_type == 'daq_move':
-            submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
-        else:
-            submodule = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
-                                                module.value)
-        plugin_list = [{'name': mod[len(plugin_type) + 1:],
-                        'module': submodule} for mod in [mod[1] for
-                                                         mod in pkgutil.iter_modules([str(submodule.path.parent)])]
-                       if plugin_type in mod]
-        # check if modules are importable
+        try:
+            if plugin_type == 'daq_move':
+                submodule = importlib.import_module(f'{module.value}.daq_move_plugins', module.value)
+            else:
+                submodule = importlib.import_module(f'{module.value}.daq_viewer_plugins.plugins_{plugin_type[4:6]}',
+                                                    module.value)
+            plugin_list = [{'name': mod[len(plugin_type) + 1:],
+                            'module': submodule} for mod in [mod[1] for
+                                                             mod in pkgutil.iter_modules([str(submodule.path.parent)])]
+                           if plugin_type in mod]
+            # check if modules are importable
 
-        for mod in plugin_list:
-            try:
-                if plugin_type == 'daq_move':
-                    importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
-                else:
-                    importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
-                plugins_import.append(mod)
-            except Exception as e:  # pragma: no cover
-                pass
+            for mod in plugin_list:
+                try:
+                    if plugin_type == 'daq_move':
+                        importlib.import_module(f'{submodule.__package__}.daq_move_{mod["name"]}')
+                    else:
+                        importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
+                    plugins_import.append(mod)
+                except Exception as e:  # pragma: no cover
+                    """If an error is generated at the import, then exclude this plugin"""
+                    logger.warning(f'Impossible to import {mod["name"]}')
+                    print(f'Impossible to import Instrument plugin {mod["name"]} from module: {submodule.__package__}')
+        except Exception as e:  # pragma: no cover
+            logger.warning(str(e))
 
     #add utility plugin for PID
     if plugin_type == 'daq_move':
