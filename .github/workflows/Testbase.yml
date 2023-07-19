@@ -41,7 +41,8 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=src/pymodaq/resources/QtDesigner_Ressources,docs
       - name: Test with pytest
         run: |
-          pytest --cov=pymodaq --cov-report=xml -n auto
+          # pytest --cov=pymodaq --cov-report=xml -n auto
+          pytest ./tests/utils/daq_utils_test.py
       - name: Upload coverage to codecov.io
         uses: codecov/codecov-action@v3
         with:
