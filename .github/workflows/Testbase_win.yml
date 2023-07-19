@@ -28,8 +28,8 @@ jobs:
           python -m pip install --upgrade pip
           set QT_DEBUG_PLUGINS=1
           pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }}
+          git branch
           pip install -e .
-          pip install git+https://github.com/PyMoDAQ/pymodaq_plugins_mock
       - name: Linting with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names

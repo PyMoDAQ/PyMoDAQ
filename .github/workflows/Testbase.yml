@@ -29,6 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           export QT_DEBUG_PLUGINS=1
           pip install flake8 pytest pytest-cov pytest-qt pytest-xdist pytest-xvfb setuptools wheel numpy h5py ${{ inputs.qt5 }}
+          git branch
           pip install -e .    
       - name: create local pymodaq folder and setting permissions
         run: |
