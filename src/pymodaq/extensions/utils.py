@@ -5,9 +5,8 @@ Created the 27/10/2022
 @author: Sebastien Weber
 """
 import importlib
-from importlib import metadata
 from pymodaq.utils import logger as logger_module
-
+from pymodaq.utils.daq_utils import get_entrypoints
 logger = logger_module.set_logger(logger_module.get_module_name(__file__))
 
 
@@ -20,10 +19,7 @@ def get_extensions():
     list: list of dict containting the name and module of the found extension
     """
     extension_import = []
-    if hasattr(metadata, 'metadata.SelectableGroups'):  # python>=10
-        discovered_extension = metadata.entry_points('pymodaq.extensions')
-    else:
-        discovered_extension = metadata.entry_points().get('pymodaq.extensions', [])
+    discovered_extension = get_entrypoints(group='pymodaq.extensions')
     if len(discovered_extension) > 0:
         for pkg in discovered_extension:
             try:

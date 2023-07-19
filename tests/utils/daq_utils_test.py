@@ -162,6 +162,16 @@ def test_elt_as_first_element_dicts():
 #     assert utils.get_plugins('daq_move')
     
 
+def test_get_entry_points():
+    discovered_entrypoints = utils.get_entrypoints('pymodaq.plugins')
+    assert len(discovered_entrypoints) > 0
+
+    names = [entry.name for entry in discovered_entrypoints]
+    assert 'mock' in names
+
+    discovered_entrypoints = utils.get_entrypoints('pymodaq.pid_models')
+    discovered_entrypoints = utils.get_entrypoints('pymodaq.extensions')
+
 def test_check_vals_in_iterable():
     with pytest.raises(Exception):
         utils.check_vals_in_iterable([1, ], [])

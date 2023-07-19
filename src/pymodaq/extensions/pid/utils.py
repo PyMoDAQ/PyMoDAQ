@@ -1,13 +1,12 @@
 import importlib
 import inspect
 import pkgutil
-from importlib import metadata
 from pathlib import Path
 
 from pymodaq.utils.gui_utils.dock import DockArea
 from pymodaq.utils.daq_utils import get_plugins
 from pymodaq.utils.logger import get_module_name, set_logger
-from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val
+from pymodaq.utils.daq_utils import find_dict_in_list_from_key_val, get_entrypoints
 
 logger = set_logger(get_module_name(__file__))
 
@@ -194,10 +193,7 @@ def get_models(model_name=None):
     """
     from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
-    if hasattr(metadata, 'metadata.SelectableGroups'):  # python>=10
-        discovered_models = metadata.entry_points('pymodaq.pid_models')
-    else:
-        discovered_models = metadata.entry_points().get('pymodaq.pid_models', [])
+    discovered_models = get_entrypoints(group='pymodaq.pid_models')
     if len(discovered_models) > 0:
         for pkg in discovered_models:
             try:
