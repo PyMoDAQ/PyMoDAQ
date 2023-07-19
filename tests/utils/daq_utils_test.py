@@ -171,7 +171,7 @@ def test_get_entry_points():
 
 
 def test_get_plugins():  # run on local with pytest option --import-mode=importlib
-    assert utils.get_plugins()
+    assert 'Mock' in [plug['name'] for plug in utils.get_plugins()]
     assert 'Mock' in [plug['name'] for plug in utils.get_plugins('daq_move')]
     assert 'Mock' in [plug['name'] for plug in utils.get_plugins('daq_0Dviewer')]
     assert 'Mock' in [plug['name'] for plug in utils.get_plugins('daq_1Dviewer')]

@@ -617,7 +617,9 @@ def get_plugins(plugin_type='daq_0Dviewer'):  # pragma: no cover
                         importlib.import_module(f'{submodule.__package__}.daq_{plugin_type[4:6]}viewer_{mod["name"]}')
                     plugins_import.append(mod)
                 except Exception as e:  # pragma: no cover
-                    pass
+                    """If an error is generated at the import, then exclude this plugin"""
+                    logger.warning(f'Impossible to import {mod["name"]}')
+                    print(f'Impossible to import Instrument plugin {mod["name"]} from module: {submodule.__package__}')
         except Exception as e:  # pragma: no cover
             logger.warning(str(e))
 
