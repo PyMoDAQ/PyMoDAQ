@@ -197,7 +197,7 @@ def get_models(model_name=None):
     if hasattr(metadata, 'metadata.SelectableGroups'):
         discovered_models = metadata.entry_points('pymodaq.pid_models')
     else:
-        discovered_models = metadata.entry_points()['pymodaq.pid_models']
+        discovered_models = metadata.entry_points().get('pymodaq.pid_models', [])
     if len(discovered_models) > 0:
         for pkg in discovered_models:
             try:

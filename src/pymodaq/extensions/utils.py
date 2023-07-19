@@ -23,9 +23,8 @@ def get_extensions():
     if hasattr(metadata, 'metadata.SelectableGroups'):
         discovered_extension = metadata.entry_points('pymodaq.extensions')
     else:
-        discovered_extension = metadata.entry_points()['pymodaq.extensions']
+        discovered_extension = metadata.entry_points().get('pymodaq.extensions', [])
     if len(discovered_extension) > 0:
-
         for pkg in discovered_extension:
             try:
                 module = importlib.import_module(pkg.value)
