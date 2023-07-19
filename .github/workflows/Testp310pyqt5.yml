@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   call_workflow:
-    uses: PyMoDAQ/PyMoDAQ/.github/workflows/Testbase.yml@pymodaq-dev
+    uses: ./.github/workflows/Testbase.yml
     with:
       python: '3.10'
       qt5: 'pyqt5'
