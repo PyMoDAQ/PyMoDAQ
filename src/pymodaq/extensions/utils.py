@@ -20,7 +20,7 @@ def get_extensions():
     list: list of dict containting the name and module of the found extension
     """
     extension_import = []
-    if hasattr(metadata, 'metadata.SelectableGroups'):
+    if hasattr(metadata, 'metadata.SelectableGroups'):  # python>=10
         discovered_extension = metadata.entry_points('pymodaq.extensions')
     else:
         discovered_extension = metadata.entry_points().get('pymodaq.extensions', [])

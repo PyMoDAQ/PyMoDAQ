@@ -194,7 +194,7 @@ def get_models(model_name=None):
     """
     from pymodaq.extensions.pid.utils import PIDModelGeneric
     models_import = []
-    if hasattr(metadata, 'metadata.SelectableGroups'):
+    if hasattr(metadata, 'metadata.SelectableGroups'):  # python>=10
         discovered_models = metadata.entry_points('pymodaq.pid_models')
     else:
         discovered_models = metadata.entry_points().get('pymodaq.pid_models', [])
