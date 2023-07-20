@@ -206,7 +206,7 @@ class DAQ_Viewer_UI(ControlModuleUI, ViewerDispatcher):
 
         self.add_action('show_controls', 'Show Controls', 'Settings', "Show Controls to set DAQ and Detector type",
                         checkable=True)
-        self.add_action('show_settings', 'Show Settings', 'Settings', "Show Settings", checkable=True)
+        self.add_action('show_settings', 'Show Settings', 'tree', "Show Settings", checkable=True)
 
         self.add_action('quit', 'Quit the module', 'close2')
         self.add_action('log', 'Show Log file', 'information2')
